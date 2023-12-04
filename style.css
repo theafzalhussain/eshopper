@@ -1,12 +1,13 @@
-/* *{
-margin: 0;
-}
+
 p{
     background-color: pink;
     padding: 10px;
     text-align: justify;
 
-} */
+}
+  table{
+        background-color:pink;
+      }
 *{
     margin: 5px 0;
 }
