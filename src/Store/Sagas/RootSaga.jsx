@@ -1,5 +1,4 @@
-import {all} from "redux-saga/effects"
-
+import { all } from "redux-saga/effects"
 import { maincategorySaga } from "./MaincategorySaga"
 import { subcategorySaga } from "./SubcategorySaga"
 import { brandSaga } from "./BrandSaga"
@@ -11,8 +10,17 @@ import { checkoutSaga } from "./CheckoutSaga"
 import { contactSaga } from "./ContactSaga"
 import { newslatterSaga } from "./NewslatterSaga"
 
-
-
-export default function* RootSaga(){
-    yield all ([maincategorySaga(),subcategorySaga(),brandSaga(),productSaga(),userSaga(),cartSaga(),wishlistSaga(),checkoutSaga(),contactSaga(),newslatterSaga()])
+export default function* RootSaga() {
+    yield all([
+        maincategorySaga(),
+        subcategorySaga(),
+        brandSaga(),
+        productSaga(),
+        userSaga(),
+        cartSaga(),
+        wishlistSaga(),
+        checkoutSaga(),
+        contactSaga(),
+        newslatterSaga()
+    ])
 }

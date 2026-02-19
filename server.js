@@ -1,13 +1,10 @@
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary'); // Check this line
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 require('dotenv').config();
-
-// ... baaki poora code wahi rahega jo maine pichle message mein diya tha
 
 const app = express();
 app.use(cors());
@@ -23,20 +20,27 @@ mongoose.connect(MONGODB_URI)
 cloudinary.config({
     cloud_name: process.env.CLOUD_NAME || 'dtfvoxw1p',
     api_key: process.env.CLOUD_API_KEY || '519639537482594',
-    api_secret: process.env.CLOUD_API_SECRET // Ye .env file se aayega
+    api_secret: process.env.CLOUD_API_SECRET 
 });
 
-// --- 3. Cloudinary Storage Setup for Multer ---
+// --- 3. Cloudinary Storage for Multiple Images ---
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'eshoper_uploads',
+        folder: 'eshoper_products',
         allowedFormats: ['jpg', 'png', 'jpeg'],
     },
 });
-const upload = multer({ storage: storage });
 
-// --- 4. Helper to make MongoDB behave like JSON-SERVER ---
+// 4 Images handle karne ke liye fields setup
+const upload = multer({ storage: storage }).fields([
+    { name: 'pic1', maxCount: 1 },
+    { name: 'pic2', maxCount: 1 },
+    { name: 'pic3', maxCount: 1 },
+    { name: 'pic4', maxCount: 1 }
+]);
+
+// --- 4. Helper for JSON-SERVER format ---
 const toJSONCustom = {
     virtuals: true,
     versionKey: false,
@@ -46,89 +50,76 @@ const toJSONCustom = {
     }
 };
 
-// --- 5. Mongoose Schemas & Models ---
+// --- 5. Models ---
 const ProductSchema = new mongoose.Schema({
     name: String, maincategory: String, subcategory: String, brand: String,
     color: String, size: String, baseprice: Number, discount: Number,
-    finalprice: Number, stock: String, description: String, image: String
+    finalprice: Number, stock: String, description: String,
+    pic1: String, pic2: String, pic3: String, pic4: String // 4 pics support
 });
 ProductSchema.set('toJSON', toJSONCustom);
 const Product = mongoose.model('Product', ProductSchema);
 
-const NewslatterSchema = new mongoose.Schema({ email: { type: String, unique: true } });
-NewslatterSchema.set('toJSON', toJSONCustom);
-const Newslatter = mongoose.model('Newslatter', NewslatterSchema);
+const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }));
+const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }));
+const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }));
+const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }));
 
-const CatSchema = new mongoose.Schema({ name: String });
-CatSchema.set('toJSON', toJSONCustom);
-const Maincategory = mongoose.model('Maincategory', CatSchema);
-const Subcategory = mongoose.model('Subcategory', CatSchema);
-const Brand = mongoose.model('Brand', CatSchema);
+// --- 6. ROUTES ---
 
-// --- 6. API ROUTES ---
-
-const createSimpleRoute = (path, Model) => {
+// Simple CRUD for Categories & Brands
+const createRoutes = (path, Model) => {
     app.get(path, async (req, res) => {
         const data = await Model.find().sort({ _id: -1 });
-        res.send(data);
+        res.send(data.map(item => ({...item._doc, id: item._id})));
     });
     app.post(path, async (req, res) => {
         try {
             const data = new Model(req.body);
             await data.save();
-            res.send(data);
+            res.send({...data._doc, id: data._id});
         } catch (e) { res.status(400).send(e); }
     });
     app.delete(`${path}/:id`, async (req, res) => {
-        try {
-            await Model.findByIdAndDelete(req.params.id);
-            res.send({ result: "Done" });
-        } catch (e) { res.status(400).send(e); }
+        await Model.findByIdAndDelete(req.params.id);
+        res.send({ result: "Done" });
     });
 };
 
-createSimpleRoute('/maincategory', Maincategory);
-createSimpleRoute('/subcategory', Subcategory);
-createSimpleRoute('/brand', Brand);
+createRoutes('/maincategory', Maincategory);
+createRoutes('/subcategory', Subcategory);
+createRoutes('/brand', Brand);
+createRoutes('/newslatter', Newslatter);
 
-// Product Routes
+// --- Product Routes (Multiple Images) ---
 app.get('/product', async (req, res) => {
     const data = await Product.find().sort({ _id: -1 });
-    res.send(data);
+    res.send(data.map(item => ({...item._doc, id: item._id})));
 });
 
-app.post('/product', upload.single('image'), async (req, res) => {
+app.post('/product', upload, async (req, res) => {
     try {
         const data = new Product(req.body);
-        if (req.file) data.image = req.file.path;
+        // req.files mein saari images aayengi
+        if (req.files) {
+            if (req.files.pic1) data.pic1 = req.files.pic1[0].path;
+            if (req.files.pic2) data.pic2 = req.files.pic2[0].path;
+            if (req.files.pic3) data.pic3 = req.files.pic3[0].path;
+            if (req.files.pic4) data.pic4 = req.files.pic4[0].path;
+        }
         await data.save();
-        res.send(data);
-    } catch (error) { res.status(400).send(error); }
+        res.send({...data._doc, id: data._id});
+    } catch (error) { 
+        console.log(error);
+        res.status(400).send(error); 
+    }
 });
 
 app.delete('/product/:id', async (req, res) => {
-    try {
-        await Product.findByIdAndDelete(req.params.id);
-        res.send({ result: "Done" });
-    } catch (e) { res.status(400).send(e); }
-});
-
-// Newsletter Routes
-app.get('/newslatter', async (req, res) => {
-    const data = await Newslatter.find().sort({ _id: -1 });
-    res.send(data);
-});
-
-app.post('/newslatter', async (req, res) => {
-    try {
-        const data = new Newslatter(req.body);
-        await data.save();
-        res.send(data);
-    } catch (error) { res.status(400).send(error); }
+    await Product.findByIdAndDelete(req.params.id);
+    res.send({ result: "Done" });
 });
 
 // --- 7. Server Start ---
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server started on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Backend Live on Port ${PORT}`));
