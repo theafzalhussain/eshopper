@@ -1,12 +1,12 @@
 import { BASE_URL } from "../constants";
 
-// Generic function for all GET requests
+// Helper function for GET requests
 async function getAPI(endpoint) {
     let response = await fetch(`${BASE_URL}${endpoint}`);
     return await response.json();
 }
 
-// Generic function for POST/PUT/DELETE
+// Helper function for POST/PUT/DELETE
 async function mutationAPI(endpoint, method, data) {
     let isFormData = data instanceof FormData;
     let response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -36,17 +36,43 @@ export const updateBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "put", 
 export const deleteBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "delete");
 
 // --- PRODUCT ---
-export const createProductAPI = (data) => mutationAPI("/product", "post", data); // FormData compatible
+export const createProductAPI = (data) => mutationAPI("/product", "post", data); 
 export const getProductAPI = () => getAPI("/product");
 export const updateProductAPI = (data) => mutationAPI(`/product/${data.id}`, "put", data);
 export const deleteProductAPI = (data) => mutationAPI(`/product/${data.id}`, "delete");
-
-// --- NEWSLATTER ---
-export const createNewslatterAPI = (data) => mutationAPI("/newslatter", "post", data);
-export const getNewslatterAPI = () => getAPI("/newslatter");
-export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "delete");
 
 // --- USER ---
 export const createUserAPI = (data) => mutationAPI("/user", "post", data);
 export const getUserAPI = () => getAPI("/user");
 export const updateUserAPI = (data) => mutationAPI(`/user/${data.id}`, "put", data);
+export const deleteUserAPI = (data) => mutationAPI(`/user/${data.id}`, "delete");
+
+// --- CART ---
+export const createCartAPI = (data) => mutationAPI("/cart", "post", data);
+export const getCartAPI = () => getAPI("/cart");
+export const updateCartAPI = (data) => mutationAPI(`/cart/${data.id}`, "put", data);
+export const deleteCartAPI = (data) => mutationAPI(`/cart/${data.id}`, "delete");
+
+// --- WISHLIST ---
+export const createWishlistAPI = (data) => mutationAPI("/wishlist", "post", data);
+export const getWishlistAPI = () => getAPI("/wishlist");
+export const updateWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "put", data);
+export const deleteWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "delete");
+
+// --- CHECKOUT ---
+export const createCheckoutAPI = (data) => mutationAPI("/checkout", "post", data);
+export const getCheckoutAPI = () => getAPI("/checkout");
+export const updateCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "put", data);
+export const deleteCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "delete");
+
+// --- CONTACT ---
+export const createContactAPI = (data) => mutationAPI("/contact", "post", data);
+export const getContactAPI = () => getAPI("/contact");
+export const updateContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "put", data);
+export const deleteContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "delete");
+
+// --- NEWSLATTER ---
+export const createNewslatterAPI = (data) => mutationAPI("/newslatter", "post", data);
+export const getNewslatterAPI = () => getAPI("/newslatter");
+export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "put", data);
+export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "delete");
