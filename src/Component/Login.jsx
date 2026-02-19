@@ -1,73 +1,48 @@
-import React, { useState,useEffect } from 'react'
-import { Link,useNavigate } from 'react-router-dom'
-import { useSelector,useDispatch } from 'react-redux'
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
 import { getUser } from '../Store/ActionCreaters/UserActionCreators'
 
 export default function Login() {
-    var [data, setdata] = useState({
-        username: "",
-        password: ""
-    })
-    var users = useSelector((state)=>state.UserStateData)
+    var [data, setdata] = useState({ username: "", password: "" })
+    var users = useSelector((state) => state.UserStateData)
     var dispatch = useDispatch()
     var navigate = useNavigate()
-    function getData(e) {
-        var name = e.target.name
-        var value = e.target.value
-        setdata((old) => {
-            return {
-                ...old,
-                [name]: value
-            }
-        })
-    }
+
     function postData(e) {
         e.preventDefault()
-        var user = users.find((item)=>item.username===data.username && item.password===data.password)
-        if(user){
-            localStorage.setItem("login",true)
-            localStorage.setItem("name",user.name)
-            localStorage.setItem("username",user.username)
-            localStorage.setItem("userid",user.id)
-            localStorage.setItem("role",user.role)
-            navigate("/profile")
+        var user = users.find((item) => item.username === data.username && item.password === data.password)
+        if (user) {
+            localStorage.setItem("login", true)
+            localStorage.setItem("name", user.name)
+            localStorage.setItem("username", user.username)
+            localStorage.setItem("userid", user.id) // MongoDB String ID
+            localStorage.setItem("role", user.role)
+            if (user.role === "Admin") navigate("/admin-home")
+            else navigate("/profile")
+        } else {
+            alert("Invalid Username or Password!!!")
         }
-        else
-        alert("Invalid Username or Password!!!")
     }
-    useEffect(()=>{
-        dispatch(getUser())
-    },[])
+
+    useEffect(() => { dispatch(getUser()) }, [dispatch])
+
     return (
-        <>
-            <div className="hero-wrap hero-bread">
-                <div className="container">
-                    <div className="row no-gutters slider-text align-items-center justify-content-center">
-                        <div className="col-md-9 ftco-animate text-center">
-                            <div className="container-fluid w-100">
-                                <div className='m-auto w-100'>
-                                    <h5 className='text-center bg-secondary p-2 text-light'>Login Section</h5>
-                                    <form className='' onSubmit={postData}>
-                                        <div className="mb-3">
-                                            <input type="text" name="username" id="username" onChange={getData} placeholder='Enter Username : ' className='form-control' />
-                                        </div>
-                                        <div className="mb-3">
-                                            <input type="password" name="password" id="password" onChange={getData} placeholder='Enter Password : ' className='form-control' />
-                                        </div>
-                                        <div className="mb-3">
-                                            <button className='btn btn-secondary w-100 btn-lg' type='submit'>Login</button>
-                                        </div>
-                                    </form>
-                                    <div className='d-flex justify-content-between'>
-                                        <Link className='text-dark' to="#">Forget Password</Link>
-                                        <Link className='text-dark' to="/signup">New User?Create a Free Account</Link>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        <div className="container my-5 py-5">
+            <div className="row justify-content-center">
+                <div className="col-md-5 bg-light p-4 rounded shadow">
+                    <h5 className='text-center bg-info p-2 text-light rounded'>Login to Eshopper</h5>
+                    <form onSubmit={postData}>
+                        <input type="text" name="username" onChange={(e) => setdata({ ...data, username: e.target.value })} placeholder='Username' className='form-control mb-3' required />
+                        <input type="password" name="password" onChange={(e) => setdata({ ...data, password: e.target.value })} placeholder='Password' className='form-control mb-3' required />
+                        <button className='btn btn-info w-100 mb-3' type='submit'>Login</button>
+                    </form>
+                    <div className='d-flex justify-content-between small'>
+                        <Link to="#">Forgot Password?</Link>
+                        <Link to="/signup">New User? Create Account</Link>
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     )
 }
