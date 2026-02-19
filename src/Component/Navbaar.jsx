@@ -33,14 +33,20 @@ export default function Navbar() {
                             <li className="nav-item"><Link to="/" className="nav-link">Home</Link></li>
                             <li className="nav-item"><Link to="/shop/All/" className="nav-link">Shop</Link></li>
                             <li className="nav-item"><Link to="/contact" className="nav-link">Contact</Link></li>
-                            {localStorage.getItem("role") === "Admin" && <li className="nav-item"><Link to="/admin-home" className="nav-link">Admin</Link></li>}
+                            
+                            {/* FIX: Admin link visible only for Admin role */}
+                            {localStorage.getItem("role") === "Admin" ? 
+                                <li className="nav-item"><Link to="/admin-home" className="nav-link">Admin</Link></li> : ""
+                            }
+
+                            <li className="nav-item cta cta-colored"><Link to="/cart" className="nav-link"><span className="icon-shopping_cart"></span></Link></li>
+                            
                             {
                                 localStorage.getItem("login") ?
                                     <li className="nav-item dropdown">
                                         <Link className="nav-link dropdown-toggle" to="#" id="dropdown04" data-toggle="dropdown">{localStorage.getItem("name")}</Link>
                                         <div className="dropdown-menu">
                                             <Link className="dropdown-item" to="/profile">Profile</Link>
-                                            <Link className="dropdown-item" to="/cart">Cart</Link>
                                             <button className="dropdown-item" onClick={logout}>Logout</button>
                                         </div>
                                     </li> :

@@ -4,166 +4,86 @@ import { useSelector, useDispatch } from 'react-redux'
 import { getUser } from "../Store/ActionCreaters/UserActionCreators"
 import { deleteCart, getCart } from "../Store/ActionCreaters/CartActionCreators"
 import { addCheckout } from "../Store/ActionCreaters/CheckoutActionCreators"
-
 import BuyerProfile from './BuyerProfile'
+
 export default function Checkout() {
-    var [mode,setMode] = useState("COD")
+    var [mode, setMode] = useState("COD")
     var users = useSelector((state) => state.UserStateData)
     var [user, setuser] = useState({})
-    var dispatch = useDispatch()
+    var carts = useSelector((state) => state.CartStateData)
     var [cart, setcart] = useState([])
     var [total, settotal] = useState(0)
     var [shipping, setshipping] = useState(0)
     var [final, setfinal] = useState(0)
-    var carts = useSelector((state) => state.CartStateData)
+    
+    var dispatch = useDispatch()
     var navigate = useNavigate()
-    function placeOrder(){
-        var item = {
-            userid:localStorage.getItem("userid"),
-            paymentmode:mode,
-            orderstatus:"Order Placed",
-            paymentstatus:"Pending",
-            time:new Date(),
-            totalAmount:total,
-            shippingAmount:shipping,
-            finalAmount:final,
-            products:cart
-        }
-        dispatch(addCheckout(item))
-        for(let item of cart){
-            dispatch(deleteCart({id:item.id}))
-        }
-        navigate("/confirmation")
-    }
-    function getData(e){
-        setMode(e.target.value)
-    }
+
     function getAPIData() {
         dispatch(getUser())
-        var data = users.find((item) => item.id === Number(localStorage.getItem("userid")))
-        if (data)
-            setuser(data)
-
         dispatch(getCart())
-        data = carts.filter((item) => item.userid === localStorage.getItem("userid"))
-        if (data) {
-            setcart(data)
-            var total = 0
-            var shipping = 0
-            var final = 0
-            for (let item of data) {
-                total = total + item.total
-            }
-            if (total > 0 && total <= 1000)
-                shipping = 150
-            final = total + shipping
-            settotal(total)
-            setshipping(shipping)
-            setfinal(final)
+
+        // FIX: Removed Number() for MongoDB ID
+        var currentUserId = localStorage.getItem("userid")
+        var userData = users.find((item) => item.id === currentUserId)
+        if (userData) setuser(userData)
+
+        var userCart = carts.filter((item) => item.userid === currentUserId)
+        if (userCart) {
+            setcart(userCart)
+            var sum = 0
+            for (let item of userCart) { sum += Number(item.total) }
+            var ship = (sum > 0 && sum <= 1000) ? 150 : 0
+            settotal(sum); setshipping(ship); setfinal(sum + ship)
         }
+    }
+
+    function placeOrder() {
+        var item = {
+            userid: localStorage.getItem("userid"),
+            paymentmode: mode,
+            orderstatus: "Order Placed",
+            paymentstatus: "Pending",
+            time: new Date(),
+            totalAmount: total,
+            shippingAmount: shipping,
+            finalAmount: final,
+            products: cart
+        }
+        dispatch(addCheckout(item))
+        for (let c of cart) { dispatch(deleteCart({ id: c.id })) }
+        navigate("/confirmation")
     }
 
     useEffect(() => {
         getAPIData()
-    }, [users.length,carts.length])
-	return (
-		
-		<>
-			{/* <div className="hero-wrap hero-bread" style={{backgroundImage: "url('assets/images/bg_6.jpg')"}}>
-      <div className="container">
-        <div className="row no-gutters slider-text align-items-center justify-content-center">
-          <div className="col-md-9 ftco-animate text-center">
-          	<p className="breadcrumbs"><span className="mr-2"><Link to="/">Home</Link></span> <span>Checkout</span></p>
-            <h1 className="mb-0 bread">Checkout</h1>
-          </div>
-        </div>
-      </div>
-    </div> */}
+    }, [users.length, carts.length])
 
-			<section className="ftco-section">
-				<div className="container">
-					<div className="row ">
-						<div className="col-md-6 col-12 ftco-animate mb-3">
-							<BuyerProfile user={user}/>
-						</div>
-					
-						<div className="col-md-6 ftco-animate">
-						<div className="table-responsive mb-3"style={{width:"110%"}}>
-                                <table className="mytable">
-                                    <thead className="thead-primary">
-                                        <tr className="text-center">
-                                            <th></th>
-                                            <th>Product</th>
-                                            <th>Color</th>
-                                            <th>Size</th>
-                                            <th>Price</th>
-                                            <th>Quantity</th>
-                                            <th>Total</th>
-                                   
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {
-                                            cart.map((item, index) => {
-                                                return <tr key={index} className="text-center" >
-                                                    <td className="image-prod"><img src={`assets/productimages/${item.pic}`} height="75px" width="90px" className=' img rounded float-left' alt="" /></td>
-                                                    <td className="product-name"><h3>{item.name}</h3></td>
-                                                    <td className="product-name"><p>{item.color}</p></td>
-                                                    <td className="product-name"><p>{item.size}</p></td>
-
-                                                    <td className="price">&#8377;{item.price}</td>
-
-                                                    <td className="price">{item.qty}</td>
-
-                                                    <td className="total">&#8377;{item.total}</td>
-                                                </tr>
-                                            })
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-							<div className="d-flex"style={{width:"110%",height:"260px"}}>
-                                <div className="cart-detail cart-total bg-light p-3 p-md-4">
-                                    <h3 className="billing-heading mb-4">Cart Total</h3>
-                                    <p className="d-flex">
-                                        <span>Subtotal</span>
-                                        <span>&#8377;{total}</span>
-                                    </p>
-                                    <p className="d-flex">
-                                        <span>Shipping</span>
-                                        <span>&#8377;{shipping}</span>
-                                    </p>
-                                    <hr />
-                                    <p className="d-flex total-price">
-                                        <span>Final</span>
-                                        <span>&#8377;{final}</span>
-                                    </p>
-                                </div>
-                            </div>
-                            <div className=""style={{width:"110%"}}>
-                                <div className="cart-detail bg-light p-3 p-md-4 mt-2">
-                                    <h3 className="billing-heading mb-4">Payment Method</h3>
-                                    <div className="form-group">
-                                        <div className="col-md-12">
-                                            <div className="radio">
-                                                <label><input type="radio" onChange={getData} name="mode" className="mr-2" value="NetBanking" /> Net Banking/Card/UPI</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="form-group">
-                                        <div className="col-md-12">
-                                            <div className="radio">
-                                                <label><input type="radio" onChange={getData} name="mode" className="mr-2" value="COD" checked /> Cash on Delivery</label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <p><button className="btn btn-primary w-100" onClick={placeOrder}>Place an order</button></p>
-                                </div>
-                            </div>
+    return (
+        <section className="ftco-section">
+            <div className="container">
+                <div className="row">
+                    <div className="col-md-6"><BuyerProfile user={user} /></div>
+                    <div className="col-md-6">
+                        <table className="table bg-light">
+                            {cart.map((item, index) => (
+                                <tr key={index}>
+                                    <td><img src={item.pic} width="50px" alt="" /></td>
+                                    <td>{item.name}</td>
+                                    <td>{item.qty} x ₹{item.price}</td>
+                                    <td>₹{item.total}</td>
+                                </tr>
+                            ))}
+                        </table>
+                        <div className="cart-total p-3 bg-light">
+                            <p className="d-flex"><span>Subtotal:</span> <span>₹{total}</span></p>
+                            <p className="d-flex"><span>Shipping:</span> <span>₹{shipping}</span></p>
+                            <h3>Total: ₹{final}</h3>
+                            <button className="btn btn-primary w-100 mt-2" onClick={placeOrder}>Place Order</button>
                         </div>
                     </div>
                 </div>
-            </section>
-        </>
+            </div>
+        </section>
     )
 }
