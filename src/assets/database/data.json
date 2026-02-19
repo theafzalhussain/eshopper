@@ -1,0 +1,660 @@
+{
+  "maincategory": [
+    {
+      "id": 1,
+      "name": "Male"
+    },
+    {
+      "id": 2,
+      "name": "Female"
+    },
+    {
+      "id": 3,
+      "name": "Kids"
+    }
+  ],
+  "subcategory": [
+    {
+      "name": "Jeans",
+      "id": 1
+    },
+    {
+      "name": "Tshirt",
+      "id": 2
+    },
+    {
+      "name": "Shirt",
+      "id": 3
+    },
+    {
+      "id": 4,
+      "name": "Trouer"
+    },
+    {
+      "name": "Lehnga",
+      "id": 5
+    },
+    {
+      "name": "Suit",
+      "id": 6
+    },
+    {
+      "name": "Top",
+      "id": 7
+    },
+    {
+      "name": "Denim",
+      "id": 8
+    },
+    {
+      "name": "Jacket",
+      "id": 9
+    },
+    {
+      "name": "Frocks",
+      "id": 10
+    }
+  ],
+  "brand": [
+    {
+      "name": "Adidas",
+      "id": 1
+    },
+    {
+      "id": 2,
+      "name": "Mufti"
+    },
+    {
+      "id": 3,
+      "name": "Levi's"
+    },
+    {
+      "name": "Zara",
+      "id": 4
+    },
+    {
+      "id": 5,
+      "name": "Superme"
+    },
+    {
+      "id": 6,
+      "name": "Lee"
+    },
+    {
+      "name": "H&M",
+      "id": 7
+    },
+    {
+      "name": "Puma",
+      "id": 8
+    },
+    {
+      "name": "Boss",
+      "id": 9
+    },
+    {
+      "name": "Gucci",
+      "id": 10
+    }
+  ],
+  "product": [
+    {
+      "id": 1,
+      "name": "Male Jeans zara",
+      "maincategory": "Male",
+      "subcategory": "Jeans",
+      "brand": "Zara",
+      "color": "blue",
+      "size": "35",
+      "baseprice": 1800,
+      "discount": 50,
+      "finalprice": 900,
+      "stock": "In Stock",
+      "description": "",
+      "pic1": "greg-raines-rqFBIR6vQXg-unsplash.jpg",
+      "pic2": "man-looks-out-window.jpg",
+      "pic3": "mens-fashion-man-in-shirt-and-jeans-leaning-on-bicycle.jpg",
+      "pic4": "mens-fashion-loose-cotton-shirt-and-rolled-up-jeans.jpg"
+    },
+    {
+      "name": "Female denim H&M",
+      "maincategory": "Female",
+      "subcategory": "Denim",
+      "brand": "H&M",
+      "color": "Blue & Black",
+      "size": "40",
+      "baseprice": 3000,
+      "discount": 55,
+      "finalprice": 1350,
+      "stock": "In Stock",
+      "description": "",
+      "pic1": "product-16.jpg",
+      "pic2": "woman-playing-with-blonde-hair.jpg",
+      "pic3": "young-woman-in-sunglasses-with-rings.jpg",
+      "pic4": "product-18.jpg",
+      "id": 2
+    },
+    {
+      "id": 3,
+      "name": "male Tshirt  levi's",
+      "maincategory": "Male",
+      "subcategory": "Tshirt",
+      "brand": "Levi's",
+      "color": "White",
+      "size": "30",
+      "baseprice": 1300,
+      "discount": 25,
+      "finalprice": 975,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "florencia-simonini-PDZAMYvduVk-unsplash.jpg",
+      "pic2": "jessica-radanavong-mkC_PTByS_E-unsplash.jpg",
+      "pic3": "anomaly-WWesmHEgXDs-unsplash.jpg",
+      "pic4": "pexels-j-sarkar-991509.jpg"
+    },
+    {
+      "name": "kids Jacket Boss",
+      "maincategory": "Kids",
+      "subcategory": "Jacket",
+      "brand": "Boss",
+      "color": "coloefull",
+      "size": "35",
+      "baseprice": 2500,
+      "discount": 30,
+      "finalprice": 1750,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "kin-li-a--1--Cmut8-unsplash.jpg",
+      "pic2": "patrick-echers-OPTW9ruQPyc-unsplash.jpg",
+      "pic3": "product-2.jpg",
+      "pic4": "patrick-echers-OPTW9ruQPyc-unsplash.jpg",
+      "id": 4
+    },
+    {
+      "id": 5,
+      "name": "Female Lehnga Mufti",
+      "maincategory": "Female",
+      "subcategory": "Lehnga",
+      "brand": "Mufti",
+      "color": "coloefull",
+      "size": "45",
+      "baseprice": 5800,
+      "discount": 45,
+      "finalprice": 3190,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "pexels-keith-lobo-8881954.jpg",
+      "pic2": "pexels-rakshit-dutta-6197902.jpg",
+      "pic3": "product-10.jpg",
+      "pic4": "pexels-rakshit-dutta-6197902.jpg"
+    },
+    {
+      "id": 6,
+      "name": "Male shirt Lee",
+      "maincategory": "Male",
+      "subcategory": "Shirt",
+      "brand": "Lee",
+      "color": "coloefull",
+      "size": "40",
+      "baseprice": 2499,
+      "discount": 60,
+      "finalprice": 999,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "man-looks-at-feet.jpg",
+      "pic2": "pexels-jeffrey-reed-769732.jpg",
+      "pic3": "pexels-rahul-shah-1043148.jpg",
+      "pic4": "pexels-bruno-mendes-15185502.jpg"
+    },
+    {
+      "id": 7,
+      "name": "Kids Frock Gucci",
+      "maincategory": "Kids",
+      "subcategory": "Frocks",
+      "brand": "Gucci",
+      "color": "coloefull",
+      "size": "30",
+      "baseprice": 3000,
+      "discount": 50,
+      "finalprice": 1500,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "bn-1.jpg",
+      "pic2": "girl-by-brick-wall.jpg",
+      "pic3": "girl-framed-by-heart.jpg",
+      "pic4": "young-girl-with-new-backpack-for-school.jpg"
+    },
+    {
+      "id": 8,
+      "name": "Mens Suit Zara",
+      "maincategory": "Male",
+      "subcategory": "Suit",
+      "brand": "Zara",
+      "color": "blue",
+      "size": "40",
+      "baseprice": 5200,
+      "discount": 32,
+      "finalprice": 3536,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "man-in-tailored-suit.jpg",
+      "pic2": "product-25.jpg",
+      "pic3": "mens-business-fashion.jpg",
+      "pic4": "man-in-suit-on-stairs.jpg"
+    },
+    {
+      "name": "Female Jeans H&M",
+      "maincategory": "Female",
+      "subcategory": "Jeans",
+      "brand": "H&M",
+      "color": "blue",
+      "size": "35",
+      "baseprice": 1800,
+      "discount": 28,
+      "finalprice": 1296,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "alexis-mora-M2bDuEzzRsk-unsplash.jpg",
+      "pic2": "product-13.jpg",
+      "pic3": "gallery-7-star-wn4hVCMLpG0-unsplash.jpg",
+      "pic4": "sina-rezakhani-stkwfXDpB7k-unsplash.jpg",
+      "id": 9
+    },
+    {
+      "id": 10,
+      "name": "Female frock suit ",
+      "maincategory": "Female",
+      "subcategory": "Frocks",
+      "brand": "Mufti",
+      "color": "Pink",
+      "size": "45",
+      "baseprice": 2560,
+      "discount": 50,
+      "finalprice": 1280,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "aiony-haust-WQk1BFwl1TY-unsplash.jpg",
+      "pic2": "brown-eyed-girl.jpg",
+      "pic3": "pink-floral-outfit.jpg",
+      "pic4": "woman-wearing-floral-dress.jpg"
+    },
+    {
+      "id": 11,
+      "name": "Male Denim  Boss",
+      "maincategory": "Male",
+      "subcategory": "Denim",
+      "brand": "Boss",
+      "color": "Dark and Light",
+      "size": "40",
+      "baseprice": 2200,
+      "discount": 25,
+      "finalprice": 1650,
+      "stock": "In Stock",
+      "description": "",
+      "pic1": "pedram-normohamadian-M3-eH4_UNpQ-unsplash.jpg",
+      "pic2": "man-looks-to-the-left-on-a-fall-day.jpg",
+      "pic3": "pedram-normohamadian-_q4zr9i_IAs-unsplash.jpg",
+      "pic4": "fashionable-woman-in-toronto.jpg"
+    },
+    {
+      "id": 12,
+      "name": "Male Tshirt Boss",
+      "maincategory": "Male",
+      "subcategory": "Tshirt",
+      "brand": "Boss",
+      "color": "Black",
+      "size": "40",
+      "baseprice": 1600,
+      "discount": 18,
+      "finalprice": 1312,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "bastian-ignacio-vega-cani-9UAfLTqMoS0-unsplash.jpg",
+      "pic2": "angel-d-sarria-ponce-9JLlDS7NCrY-unsplash.jpg",
+      "pic3": "black-long-sleeved-mens-fashion-on-black-wall.jpg",
+      "pic4": "close-up-portrait-of-young-adult-in-black-tee.jpg"
+    },
+    {
+      "name": "Female Suit Lee",
+      "maincategory": "Female",
+      "subcategory": "Suit",
+      "brand": "Lee",
+      "color": "colorfull",
+      "size": "45",
+      "baseprice": 3500,
+      "discount": 50,
+      "finalprice": 1750,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "product-12.jpg",
+      "pic2": "dollar-gill-8BN_AR4RJjo-unsplash.jpg",
+      "pic3": "qu-nh-le-m-nh-Xkn5EDaEgPc-unsplash.jpg",
+      "pic4": "dollar-gill-nDmMJM_DOUs-unsplash.jpg",
+      "id": 13
+    },
+    {
+      "name": "kids Jeans ",
+      "maincategory": "Kids",
+      "subcategory": "Jeans",
+      "brand": "Puma",
+      "color": "black & Blue",
+      "size": "20",
+      "baseprice": 1200,
+      "discount": 28,
+      "finalprice": 864,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "alyssa-henson-MbRK-Vy5GzQ-unsplash.jpg",
+      "pic2": "christopher-luther-gwOLhTqWcaA-unsplash.jpg",
+      "pic3": "craig-pattenaude-z1nUU6UD_YA-unsplash.jpg",
+      "pic4": "casual-boys-fashion.jpg",
+      "id": 14
+    },
+    {
+      "name": "Female Top zara ",
+      "maincategory": "Female",
+      "subcategory": "Top",
+      "brand": "Zara",
+      "color": "colorfull",
+      "size": "45",
+      "baseprice": 3000,
+      "discount": 27,
+      "finalprice": 2190,
+      "stock": "In Stock",
+      "description": "This is Sample Product",
+      "pic1": "woman-in-summer-floral-fashion.jpg",
+      "pic2": "woman-wearing-summer-dress.jpg",
+      "pic3": "crop-top-and-dress.jpg",
+      "pic4": "product-17.jpg",
+      "id": 15
+    }
+  ],
+  "user": [
+    {
+      "id": 1,
+      "name": "Afzal Hussain",
+      "username": "theafzalhussain",
+      "email": "mh208131@gmail.com",
+      "phone": "8447859784",
+      "password": "0786",
+      "addressline1": "17/18",
+      "addressline2": "B Block Gali  no-23 Dass Garden",
+      "addressline3": "Baprola Vihar Najfgharh",
+      "pin": "110043",
+      "city": "Delhi",
+      "state": "New Delhi",
+      "pic": "jessica-radanavong-mkC_PTByS_E-unsplash.jpg",
+      "role": "User"
+    },
+    {
+      "id": 2,
+      "name": "zoya ",
+      "username": "zoya123",
+      "email": "mh208131@gmail.com",
+      "phone": "9716490533",
+      "password": "0786",
+      "addressline1": "17/18",
+      "addressline2": "B Block Gali No 23 ",
+      "addressline3": "Dass Garden Baprula Vihar Najfgharh",
+      "pin": "110043",
+      "city": "Delhi",
+      "state": "New Delhi",
+      "pic": "bn-1.jpg",
+      "role": "User"
+    }
+  ],
+  "cart": [
+    {
+      "id": 0
+    },
+    {
+      "productid": 9,
+      "userid": "1",
+      "name": "Female Jeans H&M",
+      "color": "blue",
+      "size": "35",
+      "price": 1296,
+      "qty": 1,
+      "total": 1296,
+      "pic": "alexis-mora-M2bDuEzzRsk-unsplash.jpg",
+      "id": 1
+    }
+  ],
+  "wishlist": [
+    {
+      "id": 0
+    },
+    {
+      "productid": 5,
+      "userid": "1",
+      "name": "Female Lehnga Mufti",
+      "color": "coloefull",
+      "size": "45",
+      "price": 3190,
+      "pic": "pexels-keith-lobo-8881954.jpg",
+      "id": 1
+    }
+  ],
+  "checkout": [
+    {
+      "id": 0
+    },
+    {
+      "userid": "1",
+      "paymentmode": "COD",
+      "orderstatus": "Order Placed",
+      "paymentstatus": "Pending",
+      "time": "2023-02-21T08:25:50.349Z",
+      "totalAmount": 4050,
+      "shippingAmount": 0,
+      "finalAmount": 4050,
+      "products": [
+        {
+          "productid": 2,
+          "userid": "1",
+          "name": "Female denim H&M",
+          "color": "Blue & Black",
+          "size": "40",
+          "price": 1350,
+          "qty": 3,
+          "total": 4050,
+          "pic": "product-16.jpg",
+          "id": 1
+        }
+      ],
+      "id": 1
+    },
+    {
+      "userid": "1",
+      "paymentmode": "COD",
+      "orderstatus": "Order Placed",
+      "paymentstatus": "Pending",
+      "time": "2023-02-21T08:39:32.176Z",
+      "totalAmount": 5346,
+      "shippingAmount": 0,
+      "finalAmount": 5346,
+      "products": [
+        {
+          "productid": 2,
+          "userid": "1",
+          "name": "Female denim H&M",
+          "color": "Blue & Black",
+          "size": "40",
+          "price": 1350,
+          "qty": 3,
+          "total": 4050,
+          "pic": "product-16.jpg",
+          "id": 1
+        },
+        {
+          "productid": 9,
+          "userid": "1",
+          "name": "Female Jeans H&M",
+          "color": "blue",
+          "size": "35",
+          "price": 1296,
+          "qty": 1,
+          "total": 1296,
+          "pic": "alexis-mora-M2bDuEzzRsk-unsplash.jpg",
+          "id": 2
+        }
+      ],
+      "id": 2
+    },
+    {
+      "userid": "1",
+      "paymentmode": "COD",
+      "orderstatus": "Order Placed",
+      "paymentstatus": "Pending",
+      "time": "2023-02-22T08:22:06.691Z",
+      "totalAmount": 1350,
+      "shippingAmount": 0,
+      "finalAmount": 1350,
+      "products": [
+        {
+          "productid": 2,
+          "userid": "1",
+          "name": "Female denim H&M",
+          "color": "Blue & Black",
+          "size": "40",
+          "price": 1350,
+          "qty": 1,
+          "total": 1350,
+          "pic": "product-16.jpg",
+          "id": 1
+        }
+      ],
+      "id": 3
+    },
+    {
+      "userid": "1",
+      "paymentmode": "COD",
+      "orderstatus": "Order Placed",
+      "paymentstatus": "Pending",
+      "time": "2023-02-22T08:23:18.560Z",
+      "totalAmount": 3500,
+      "shippingAmount": 0,
+      "finalAmount": 3500,
+      "products": [
+        {
+          "productid": 4,
+          "userid": "1",
+          "name": "kids Jacket Boss",
+          "color": "coloefull",
+          "size": "35",
+          "price": 1750,
+          "qty": 2,
+          "total": 3500,
+          "pic": "kin-li-a--1--Cmut8-unsplash.jpg",
+          "id": 1
+        }
+      ],
+      "id": 4
+    },
+    {
+      "userid": "2",
+      "paymentmode": "NetBanking",
+      "orderstatus": "Order Placed",
+      "paymentstatus": "Pending",
+      "time": "2023-03-09T08:54:40.579Z",
+      "totalAmount": 1728,
+      "shippingAmount": 0,
+      "finalAmount": 1728,
+      "products": [
+        {
+          "productid": 14,
+          "userid": "2",
+          "name": "kids Jeans ",
+          "color": "black & Blue",
+          "size": "20",
+          "price": 864,
+          "qty": 2,
+          "total": 1728,
+          "pic": "alyssa-henson-MbRK-Vy5GzQ-unsplash.jpg",
+          "id": 2
+        }
+      ],
+      "id": 5
+    }
+  ],
+  "contact": [
+    {
+      "id": 0
+    },
+    {
+      "name": "Afzal hussain",
+      "email": "theafzalhussain0786@gmail.com",
+      "phone": "8447859784",
+      "subject": "hiiasyygxa",
+      "message": "asdjh",
+      "status": "Active",
+      "time": "2023-02-22T09:49:21.188Z",
+      "id": 1
+    }
+  ],
+  "newslatter": [
+    {
+      "id": 0
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 1
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 2
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 3
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 4
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 5
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 6
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 7
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 8
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 9
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 10
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 11
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 12
+    },
+    {
+      "email": "theafzalhussain0786@gmail.com",
+      "id": 13
+    },
+    {
+      "email": "safsgah@gmail.com",
+      "id": 14
+    },
+    {
+      "email": "mh208131@gmail.com",
+      "id": 15
+    }
+  ]
+}

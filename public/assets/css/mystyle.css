@@ -1,0 +1,63 @@
+
+.mytable{
+width: 100%;
+
+}
+.mytable th,td{
+    border: 1px solid rgb(237, 234, 234);
+}
+.icon{
+    font-size: 30px;
+}
+.mytable .thead-primary {
+    background: #dbcc8f; }
+    .mytable .thead-primary tr th {
+      padding: 5px 10px;
+      color: #fff !important;
+      border: 1px solid transparent !important; }
+    
+        .mytable tbody tr td.product-name h3 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700; }
+
+
+            .mytable tbody tr td.image-prod .img {
+                display: block;
+                margin-top: 3px;
+                width: 110px;
+                height: 100px;
+             
+                }
+                .mywish{
+                    background-color: rgb(236, 248, 248);
+                    text-align: center;
+                    padding: 5px;
+                    font-size: 18px;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                    font-weight: 700; 
+                
+                }
+                .mywish1{
+                    background-color: rgb(236, 248, 248);
+                    text-align: center;
+                    padding: 5px;
+                    font-size: 18px;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                    font-weight: 700; 
+                   
+                }
+             .Mytbody th{
+                padding: 5px;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                font-weight: 700; 
+             }
+             .Mytbody td{
+                text-align:justify;
+                padding:0 5px ;
+             }
