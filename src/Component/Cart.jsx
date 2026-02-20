@@ -4,83 +4,101 @@ import { deleteCart, getCart, updateCart } from "../Store/ActionCreaters/CartAct
 import { Link } from 'react-router-dom'
 
 export default function Cart() {
-    var [cart, setcart] = useState([])
-    var [total, settotal] = useState(0)
-    var [shipping, setshipping] = useState(0)
-    var [final, setfinal] = useState(0)
-    var carts = useSelector((state) => state.CartStateData)
-    var dispatch = useDispatch()
+    let [cart, setcart] = useState([])
+    let [subtotal, setSubtotal] = useState(0)
+    let [shipping, setShipping] = useState(0)
+    
+    let carts = useSelector((state) => state.CartStateData)
+    let dispatch = useDispatch()
 
     function getAPIData() {
         dispatch(getCart())
-        const userId = localStorage.getItem("userid")
-        var userCarts = carts.filter((item) => item.userid === userId)
-        if (userCarts) {
-            setcart(userCarts)
+        let userId = localStorage.getItem("userid")
+        let userCart = carts.filter((item) => item.userid === userId)
+        
+        if (userCart) {
+            setcart(userCart)
             let sum = 0
-            userCarts.forEach(item => {
-                sum += (Number(item.price) * Number(item.qty))
+            userCart.forEach(item => {
+                sum += Number(item.total) || (Number(item.price) * Number(item.qty))
             })
-            var ship = (sum > 0 && sum < 1000) ? 150 : 0
-            settotal(sum); setshipping(ship); setfinal(sum + ship)
+            setSubtotal(sum)
+            setShipping(sum > 0 && sum < 1000 ? 150 : 0)
         }
     }
 
-    function update(id, op) {
-        var item = carts.find((item) => item.id === id)
+    function updateQty(item, op) {
         if (op === "dec" && item.qty === 1) return
+        
+        let updatedItem = { ...item }
         if (op === "dec") {
-            item.qty -= 1
-            item.total -= item.price
+            updatedItem.qty -= 1
         } else {
-            item.qty += 1
-            item.total = Number(item.total) + Number(item.price)
+            updatedItem.qty += 1
         }
-        dispatch(updateCart(item))
+        updatedItem.total = Number(updatedItem.qty) * Number(updatedItem.price)
+        dispatch(updateCart(updatedItem))
+        getAPIData()
     }
 
     useEffect(() => { getAPIData() }, [carts.length])
 
     return (
-        <section className="ftco-section">
+        <section className="ftco-section bg-light">
             <div className="container">
-                <table className="table">
-                    <thead className="thead-primary">
-                        <tr className="text-center">
-                            <th>Image</th>
-                            <th>Product</th>
-                            <th>Price</th>
-                            <th>Qty</th>
-                            <th>Total</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {cart.map((item, index) => (
-                            <tr key={index} className="text-center">
-                                {/* SAHI LINE: Cloudinary URL directly */}
-                                <td><img src={item.pic} width="80px" className="rounded" alt="" /></td>
-                                <td>{item.name}</td>
-                                <td>₹{item.price}</td>
-                                <td>
-                                    <button onClick={() => update(item.id, "dec")} className="btn btn-sm">-</button>
-                                    {item.qty}
-                                    <button onClick={() => update(item.id, "inc")} className="btn btn-sm">+</button>
-                                </td>
-                                <td>₹{item.total}</td>
-                                <td><button onClick={() => dispatch(deleteCart({id: item.id}))} className="btn btn-danger">X</button></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                <div className="row justify-content-end p-3">
-                    <div className="col-md-4 bg-light p-4">
-                        <h3>Cart Totals</h3>
-                        <p>Subtotal: ₹{total}</p>
-                        <p>Shipping: ₹{shipping}</p>
-                        <hr />
-                        <h4>Total: ₹{final}</h4>
-                        <Link to="/checkout" className="btn btn-primary w-100">Checkout</Link>
+                <div className="row">
+                    <div className="col-md-12">
+                        <div className="table-responsive shadow-sm rounded bg-white">
+                            <table className="table table-borderless text-center align-middle">
+                                <thead className="thead-primary" style={{backgroundColor:"#b19d5e", color:"white"}}>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Name</th>
+                                        <th>Price</th>
+                                        <th>Quantity</th>
+                                        <th>Total</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {cart.map((item, index) => (
+                                        <tr key={index} className="border-bottom">
+                                            <td className="p-3">
+                                                <img src={item.pic} width="80px" height="80px" style={{objectFit:"cover"}} className="rounded shadow-sm" alt="" />
+                                            </td>
+                                            <td className="align-middle"><strong>{item.name}</strong><br/><small>{item.color} / {item.size}</small></td>
+                                            <td className="align-middle">₹{item.price}</td>
+                                            <td className="align-middle">
+                                                <div className="d-flex justify-content-center align-items-center">
+                                                    <button onClick={() => updateQty(item, "dec")} className="btn btn-sm btn-light border">-</button>
+                                                    <span className="mx-3">{item.qty}</span>
+                                                    <button onClick={() => updateQty(item, "inc")} className="btn btn-sm btn-light border">+</button>
+                                                </div>
+                                            </td>
+                                            <td className="align-middle font-weight-bold">₹{item.total}</td>
+                                            <td className="align-middle">
+                                                <button onClick={() => dispatch(deleteCart({id: item.id}))} className="btn btn-sm btn-link text-danger h4">×</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="row justify-content-end mt-5">
+                    <div className="col-md-4">
+                        <div className="cart-total bg-white p-4 shadow-sm rounded">
+                            <h4 className="mb-4">Order Summary</h4>
+                            <p className="d-flex justify-content-between"><span>Subtotal</span> <span>₹{subtotal}</span></p>
+                            <p className="d-flex justify-content-between"><span>Shipping</span> <span>₹{shipping}</span></p>
+                            <hr />
+                            <h3 className="d-flex justify-content-between text-info">
+                                <span>Total</span> <span>₹{subtotal + shipping}</span>
+                            </h3>
+                            <Link to="/checkout" className="btn btn-info btn-block btn-lg mt-4 py-3">PROCEED TO CHECKOUT</Link>
+                        </div>
                     </div>
                 </div>
             </div>
