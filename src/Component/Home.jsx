@@ -71,7 +71,7 @@ export default function Home() {
                                 initial="hidden" animate="visible" variants={heroVariants}
                                 className="position-relative text-right"
                             >
-                                <img src="/assets/images/bg_1.png" className="img-fluid floating-anim" alt="Luxury Model" style={{ maxHeight: '85vh', filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.12))' }} />
+                                <img src="/assets/images/banner-3.png" className="img-fluid floating-anim" alt="Luxury Model" style={{ maxHeight: '85vh', filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.12))' }} />
                                 <div className="abstract-shape bg-info opacity-10"></div>
                             </motion.div>
                         </div>
