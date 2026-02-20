@@ -31,11 +31,10 @@ export default function Navbar() {
                     <Link className="navbar-brand" style={{fontWeight:"800", letterSpacing:"1px"}} to="/">Eshopper</Link>
                     <div className="collapse navbar-collapse" id="ftco-nav">
                         <ul className="navbar-nav ml-auto">
-                            <li className="nav-item"><Link to="/" className="nav-link">Home</Link></li>
+                            <li className="nav-item active"><Link to="/" className="nav-link">Home</Link></li>
                             <li className="nav-item"><Link to="/shop/All/" className="nav-link">Shop</Link></li>
                             <li className="nav-item"><Link to="/contact" className="nav-link">Contact</Link></li>
                             
-                            {/* ADMIN LINK: Only visible if role is Admin */}
                             {role === "Admin" && (
                                 <li className="nav-item"><Link to="/admin-home" className="nav-link text-danger" style={{fontWeight:"bold"}}>Admin Panel</Link></li>
                             )}
@@ -47,6 +46,8 @@ export default function Navbar() {
                                     <Link className="nav-link dropdown-toggle" to="#" data-toggle="dropdown">{name}</Link>
                                     <div className="dropdown-menu">
                                         <Link className="dropdown-item" to="/profile">My Profile</Link>
+                                        {/* UPDATE: Added Wishlist Link */}
+                                        <Link className="dropdown-item" to="/wishlist">My Wishlist</Link>
                                         <button className="dropdown-item" onClick={logout}>Logout</button>
                                     </div>
                                 </li>

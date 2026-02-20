@@ -22,7 +22,6 @@ export default function SingleProductPage() {
         dispatch(getProduct())
         dispatch(getCart())
         dispatch(getWishlist())
-        // FIX: MongoDB ID is a string, removed Number()
         let data = product.find((item) => item.id === id)
         if (data) {
             setp(data)
@@ -31,23 +30,52 @@ export default function SingleProductPage() {
     }
 
     function addToCart() {
-        let d = cart.find((item) => item.productid === id && item.userid === localStorage.getItem("userid"))
-        if (d) {
-            navigate("/cart")
+        // UPDATE: Login Check for Cart
+        if (!localStorage.getItem("login")) {
+            navigate("/login")
         } else {
-            let item = {
-                productid: p.id,
-                userid: localStorage.getItem("userid"),
-                name: p.name,
-                color: p.color,
-                size: p.size,
-                price: Number(p.finalprice),
-                qty: Number(qty),
-                total: Number(p.finalprice) * Number(qty),
-                pic: p.pic1,
+            let d = cart.find((item) => item.productid === id && item.userid === localStorage.getItem("userid"))
+            if (d) {
+                navigate("/cart")
+            } else {
+                let item = {
+                    productid: p.id,
+                    userid: localStorage.getItem("userid"),
+                    name: p.name,
+                    color: p.color,
+                    size: p.size,
+                    price: Number(p.finalprice),
+                    qty: Number(qty),
+                    total: Number(p.finalprice) * Number(qty),
+                    pic: p.pic1,
+                }
+                dispatch(addCart(item))
+                navigate("/cart")
             }
-            dispatch(addCart(item))
-            navigate("/cart")
+        }
+    }
+
+    // UPDATE: New Wishlist Function with Login Check
+    function addToWishlist() {
+        if (!localStorage.getItem("login")) {
+            navigate("/login")
+        } else {
+            let d = wishlist.find((item) => item.productid === id && item.userid === localStorage.getItem("userid"))
+            if (d) {
+                navigate("/profile")
+            } else {
+                let item = {
+                    productid: p.id,
+                    userid: localStorage.getItem("userid"),
+                    name: p.name,
+                    color: p.color,
+                    size: p.size,
+                    price: Number(p.finalprice),
+                    pic: p.pic1,
+                }
+                dispatch(addWishlist(item))
+                navigate("/profile")
+            }
         }
     }
 
@@ -58,7 +86,6 @@ export default function SingleProductPage() {
     return (
         <div className="container my-5 py-5">
             <div className="row">
-                {/* Left Side: Image Gallery */}
                 <div className="col-lg-6">
                     <div className="main-img-container shadow-sm border rounded mb-3">
                         <img src={mainImage || p.pic1} className="img-fluid w-100" style={{ height: "500px", objectFit: "contain" }} alt={p.name} />
@@ -79,7 +106,6 @@ export default function SingleProductPage() {
                     </div>
                 </div>
 
-                {/* Right Side: Product Details */}
                 <div className="col-lg-6 pl-lg-5">
                     <nav aria-label="breadcrumb">
                         <ol className="breadcrumb bg-transparent p-0">
@@ -102,12 +128,8 @@ export default function SingleProductPage() {
                     </div>
 
                     <div className="row mb-4">
-                        <div className="col-md-6">
-                            <strong>Color:</strong> <span className="ml-2">{p.color}</span>
-                        </div>
-                        <div className="col-md-6">
-                            <strong>Size:</strong> <span className="ml-2">{p.size}</span>
-                        </div>
+                        <div className="col-md-6"><strong>Color:</strong> <span className="ml-2">{p.color}</span></div>
+                        <div className="col-md-6"><strong>Size:</strong> <span className="ml-2">{p.size}</span></div>
                     </div>
 
                     <div className="d-flex align-items-center mb-4">
@@ -130,7 +152,8 @@ export default function SingleProductPage() {
                             </button>
                         </div>
                         <div className="col-sm-6">
-                            <button onClick={() => navigate("/profile")} className="btn btn-outline-danger btn-lg btn-block mb-2">
+                            {/* UPDATE: Calling new addToWishlist function */}
+                            <button onClick={addToWishlist} className="btn btn-outline-danger btn-lg btn-block mb-2">
                                 <i className="icon-heart mr-2"></i> WISHLIST
                             </button>
                         </div>

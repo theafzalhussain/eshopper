@@ -37,6 +37,7 @@ import AdminAddWishlist from './Admin/AdminAddWishlist'
 import AdminWishlist from './Admin/AdminWishlist'
 import AdminUpdateWishlist from './Admin/AdminUpdateWishlist'
 import Confirmation from './confirmation'
+import Wishlist from './Wishlist'
 
 
 
@@ -55,6 +56,7 @@ export default function App() {
         <Route path='/cart' element = {<Cart/>}/>
         <Route path='/checkout' element = {<Checkout/>}/>
         <Route path='/single-product/:id' element = {<SingleProductPage/>}/>
+         <Route path='/single-product/:id' element = {<Wishlist/>}/>
         <Route path='/login' element = {<Login/>}/>
         <Route path='/signup' element = {<SingUp/>}/>
         <Route path='/profile' element = {<Profile/>}/>
