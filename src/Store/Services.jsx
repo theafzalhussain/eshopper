@@ -49,8 +49,12 @@ export const deleteProductAPI = (data) => mutationAPI(`/product/${data.id}`, "de
 export const createUserAPI = (data) => mutationAPI("/user", "post", data);
 export const getUserAPI = () => getAPI("/user");
 export const updateUserAPI = (data) => {
-    // FIX: Get ID from FormData if exists
-    const id = data instanceof FormData ? data.get("id") : data.id;
+    let id;
+    if (data instanceof FormData) {
+        id = data.get("id"); // FormData se ID nikaalne ka sahi tareeka
+    } else {
+        id = data.id;
+    }
     return mutationAPI(`/user/${id}`, "put", data);
 }
 export const deleteUserAPI = (data) => mutationAPI(`/user/${data.id}`, "delete");
