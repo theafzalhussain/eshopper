@@ -11,7 +11,7 @@ async function mutationAPI(endpoint, method, data) {
     let isFormData = data instanceof FormData;
     let response = await fetch(`${BASE_URL}${endpoint}`, {
         method: method,
-        headers: isFormData ? {} : { "content-type": "application/json" },
+        headers: isFormData ? {} : { "content-type": "application/json" }, // FormData me header empty hona chahiye
         body: isFormData ? data : JSON.stringify(data)
     });
     return await response.json();
@@ -38,13 +38,21 @@ export const deleteBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "delete
 // --- PRODUCT ---
 export const createProductAPI = (data) => mutationAPI("/product", "post", data); 
 export const getProductAPI = () => getAPI("/product");
-export const updateProductAPI = (data) => mutationAPI(`/product/${data.id}`, "put", data);
+export const updateProductAPI = (data) => {
+    // FIX: Get ID from FormData if exists
+    const id = data instanceof FormData ? data.get("id") : data.id;
+    return mutationAPI(`/product/${id}`, "put", data);
+}
 export const deleteProductAPI = (data) => mutationAPI(`/product/${data.id}`, "delete");
 
 // --- USER ---
 export const createUserAPI = (data) => mutationAPI("/user", "post", data);
 export const getUserAPI = () => getAPI("/user");
-export const updateUserAPI = (data) => mutationAPI(`/user/${data.id}`, "put", data);
+export const updateUserAPI = (data) => {
+    // FIX: Get ID from FormData if exists
+    const id = data instanceof FormData ? data.get("id") : data.id;
+    return mutationAPI(`/user/${id}`, "put", data);
+}
 export const deleteUserAPI = (data) => mutationAPI(`/user/${data.id}`, "delete");
 
 // --- CART ---

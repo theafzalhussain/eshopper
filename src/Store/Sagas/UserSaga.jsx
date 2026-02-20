@@ -8,23 +8,29 @@ function* createUserSaga(action) {
         yield put({ type: ADD_USER_RED, data: response })
     } catch (e) { console.log("User Signup Error:", e) }
 }
+
 function* getUserSaga() {
     try {
         let response = yield getUserAPI()
         yield put({ type: GET_USER_RED, data: response })
     } catch (e) { console.log("User Fetch Error:", e) }
 }
+
 function* deleteUserSaga(action) {
     try {
         yield deleteUserAPI(action.payload)
         yield put({ type: DELETE_USER_RED, data: action.payload })
     } catch (e) { console.log("User Delete Error:", e) }
 }
+
 function* updateUserSaga(action) {
     try {
-        yield updateUserAPI(action.payload)
-        yield put({ type: UPDATE_USER_RED, data: action.payload })
-    } catch (e) { console.log("User Update Error:", e) }
+        // response me backend se naya updated user data aayega
+        let response = yield updateUserAPI(action.payload)
+        yield put({ type: UPDATE_USER_RED, data: response })
+    } catch (e) { 
+        console.log("User Update Error:", e) 
+    }
 }
 
 export function* userSaga() {
