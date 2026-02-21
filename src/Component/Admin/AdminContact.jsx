@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react'
-import { DataGrid } from '@mui/x-data-grid';
-import { useSelector, useDispatch } from 'react-redux';
+import React, { useEffect } from 'react'
+import { useSelector, useDispatch } from 'react-redux'
 import LefNav from './LefNav'
-import { deleteContact, getContact } from '../../Store/ActionCreaters/ContactActionCreators';
+import { deleteContact, getContact } from '../../Store/ActionCreaters/ContactActionCreators'
 import { motion } from 'framer-motion'
-import { MessageSquare, Trash2 } from 'lucide-react'
+import { MessageSquare, Trash2, Mail } from 'lucide-react'
 
 export default function AdminContact() {
     const contacts = useSelector((state) => state.ContactStateData)
@@ -14,40 +13,49 @@ export default function AdminContact() {
         dispatch(getContact()) 
     }, [dispatch])
 
-    // ZAROORI FIX: MongoDB ki _id ko DataGrid ke liye map karna
-    const rows = Array.isArray(contacts) ? contacts.map((item) => ({
-        ...item,
-        id: item._id || item.id 
-    })) : []
-
-    const columns = [
-        { field: 'id', headerName: 'ID', width: 90 },
-        { field: 'name', headerName: 'Name', width: 150 },
-        { field: 'email', headerName: 'Email', width: 200 },
-        { field: 'subject', headerName: 'Subject', width: 150 },
-        { field: 'message', headerName: 'Message', width: 300 },
-        {
-            field: "delete", headerName: "Action", width: 100,
-            renderCell: ({ row }) => (
-                <button className="btn text-danger" onClick={() => {if(window.confirm("Delete Message?")) dispatch(deleteContact({ id: row.id }))}}>
-                    <Trash2 size={18} />
-                </button>
-            ),
-        }
-    ];
-
     return (
-        <div className="container-fluid my-5">
-            <div className="row">
-                <div className="col-lg-2"><LefNav /></div>
-                <div className="col-lg-10">
-                    <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="bg-white shadow-lg rounded-2xl p-4 border-0">
-                        <h4 className="font-weight-bold mb-4 d-flex align-items-center"><MessageSquare className="mr-2 text-info"/> Customer Inquiries</h4>
-                        <div style={{ height: 500, width: '100%' }}>
-                            {/* rows={rows} ka use kiya hai */}
-                            <DataGrid rows={rows} columns={columns} pageSize={10} disableSelectionOnClick />
-                        </div>
-                    </motion.div>
+        <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
+            <div className="container-fluid">
+                <div className="row">
+                    <div className="col-lg-2 mb-4"><LefNav /></div>
+                    <div className="col-lg-10">
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-lg rounded-2xl p-4 overflow-hidden border-0">
+                            <h4 className="font-weight-bold mb-4 d-flex align-items-center text-dark">
+                                <MessageSquare className="mr-2 text-info" /> Customer Queries ({contacts.length})
+                            </h4>
+                            <div className="table-responsive">
+                                <table className="table table-hover border-0">
+                                    <thead className="bg-light text-secondary uppercase small">
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Contact Info</th>
+                                            <th>Subject</th>
+                                            <th>Message</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {contacts && contacts.length > 0 ? contacts.map((item, index) => (
+                                            <tr key={index} className="border-bottom">
+                                                <td className="align-middle font-weight-bold">{item.name}</td>
+                                                <td className="align-middle small">
+                                                    <div className='d-flex align-items-center'><Mail size={12} className="mr-1"/> {item.email}</div>
+                                                    <div>📞 {item.phone}</div>
+                                                </td>
+                                                <td className="align-middle text-muted small">{item.subject}</td>
+                                                <td className="align-middle small" style={{maxWidth: "300px"}}>{item.message}</td>
+                                                <td className="align-middle text-right">
+                                                    <button onClick={() => {if(window.confirm("Delete?")) dispatch(deleteContact({id: item.id || item._id}))}} className="btn btn-sm text-danger">
+                                                        <Trash2 size={18}/>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )) : <tr><td colSpan="5" className="text-center p-5 text-muted">No messages found in database.</td></tr>}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </motion.div>
+                    </div>
                 </div>
             </div>
         </div>
