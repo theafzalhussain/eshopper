@@ -37,7 +37,7 @@ import AdminWishlist from './Admin/AdminWishlist'
 import AdminUpdateWishlist from './Admin/AdminUpdateWishlist'
 import Confirmation from './confirmation'
 import Wishlist from './Wishlist'
-import ForgetPassword from './Component/ForgetPassword'
+import ForgetPassword from './ForgetPassword'
 
 export default function App() {
   return (
