@@ -4,12 +4,18 @@ export function NewslatterReducer(state = [], action) {
     switch (action.type) {
         case ADD_NEWSLATTER_RED:
             return [...state, action.data]
+
         case GET_NEWSLATTER_RED:
             return action.data
+
         case DELETE_NEWSLATTER_RED:
-            return state.filter(item => (item._id || item.id) !== (action.data._id || action.data.id))
+            return state.filter(item => (item.id || item._id) !== (action.data.id || action.data._id))
+
         case UPDATE_NEWSLATTER_RED:
-            return state.map(item => (item._id || item.id) === (action.data._id || action.data.id) ? action.data : item)
+            return state.map(item => 
+                (item.id || item._id) === (action.data.id || action.data._id) ? action.data : item
+            )
+
         default:
             return state
     }
