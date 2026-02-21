@@ -1,12 +1,11 @@
 import { BASE_URL } from "../constants";
 
-// Helper function for GET requests
+// --- Helper Functions ---
 async function getAPI(endpoint) {
     let response = await fetch(`${BASE_URL}${endpoint}`);
     return await response.json();
 }
 
-// Helper function for POST/PUT/DELETE
 async function mutationAPI(endpoint, method, data) {
     let isFormData = data instanceof FormData;
     let response = await fetch(`${BASE_URL}${endpoint}`, {
