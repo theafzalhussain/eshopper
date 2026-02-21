@@ -7,27 +7,29 @@ const multer = require('multer');
 require('dotenv').config();
 
 const app = express();
+
+// --- 1. Middleware ---
 app.use(cors());
 app.use(express.json());
 
-// --- 1. MongoDB Connection ---
+// --- 2. MongoDB Connection ---
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
 mongoose.connect(MONGODB_URI)
-    .then(() => console.log("✅ MongoDB Atlas Connected"))
-    .catch(err => console.error("❌ DB Connection Error:", err));
+    .then(() => console.log("✅ Connected to MongoDB Atlas"))
+    .catch(err => console.error("❌ MongoDB Connection Error:", err));
 
-// --- 2. Cloudinary Config ---
+// --- 3. Cloudinary Config ---
 cloudinary.config({
     cloud_name: process.env.CLOUD_NAME || 'dtfvoxw1p',
     api_key: process.env.CLOUD_API_KEY || '519639537482594',
     api_secret: process.env.CLOUD_API_SECRET 
 });
 
-// --- 3. Cloudinary Storage Setup for Multiple Images ---
+// --- 4. Multer & Cloudinary Storage (For Multiple Images) ---
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
-        folder: 'eshoper_uploads',
+        folder: 'eshoper_live',
         allowedFormats: ['jpg', 'png', 'jpeg'],
     },
 });
@@ -37,10 +39,10 @@ const upload = multer({ storage: storage }).fields([
     { name: 'pic2', maxCount: 1 },
     { name: 'pic3', maxCount: 1 },
     { name: 'pic4', maxCount: 1 },
-    { name: 'pic', maxCount: 1 }
+    { name: 'pic', maxCount: 1 } // For User Profile
 ]);
 
-// --- 4. Helper for JSON-SERVER Compatibility (id vs _id fix) ---
+// --- 5. JSON Compatibility Helper ---
 const toJSONCustom = {
     virtuals: true,
     versionKey: false,
@@ -50,42 +52,37 @@ const toJSONCustom = {
     }
 };
 
-// --- 5. Mongoose Models ---
-const createModel = (name, schemaObj) => {
-    const schema = new mongoose.Schema(schemaObj);
+// --- 6. Mongoose Models ---
+const createSchema = (obj) => {
+    const schema = new mongoose.Schema(obj);
     schema.set('toJSON', toJSONCustom);
-    return mongoose.model(name, schema);
+    return schema;
 };
 
-const Maincategory = createModel('Maincategory', { name: String });
-const Subcategory = createModel('Subcategory', { name: String });
-const Brand = createModel('Brand', { name: String });
-const Newslatter = createModel('Newslatter', { email: { type: String, unique: true } });
+const Maincategory = mongoose.model('Maincategory', createSchema({ name: String }));
+const Subcategory = mongoose.model('Subcategory', createSchema({ name: String }));
+const Brand = mongoose.model('Brand', createSchema({ name: String }));
+const Newslatter = mongoose.model('Newslatter', createSchema({ email: { type: String, unique: true } }));
+const Contact = mongoose.model('Contact', createSchema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" }, time: { type: Date, default: Date.now } }));
 
-const Contact = createModel('Contact', { 
-    name: String, email: String, phone: String, subject: String, 
-    message: String, status: { type: String, default: "Active" }, 
-    time: { type: Date, default: Date.now } 
-});
-
-const Product = createModel('Product', {
+const Product = mongoose.model('Product', createSchema({
     name: String, maincategory: String, subcategory: String, brand: String,
     color: String, size: String, baseprice: Number, discount: Number,
     finalprice: Number, stock: String, description: String,
     pic1: String, pic2: String, pic3: String, pic4: String
-});
+}));
 
-const User = createModel('User', {
+const User = mongoose.model('User', createSchema({
     name: String, username: { type: String, unique: true }, email: String, phone: String, 
     password: String, addressline1: String, addressline2: String, addressline3: String,
     pin: String, city: String, state: String, pic: String, role: { type: String, default: "User" }
-});
+}));
 
-const Cart = createModel('Cart', { userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String });
-const Wishlist = createModel('Wishlist', { userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String });
+const Cart = mongoose.model('Cart', createSchema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }));
+const Wishlist = mongoose.model('Wishlist', createSchema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }));
 
-// --- NEW: Checkout Model (Isliye data nahi dikh raha tha) ---
-const Checkout = createModel('Checkout', {
+// CHECKOUT MODEL (Specifically defined to fix your error)
+const Checkout = mongoose.model('Checkout', createSchema({
     userid: String,
     paymentmode: String,
     orderstatus: { type: String, default: "Order Placed" },
@@ -94,58 +91,64 @@ const Checkout = createModel('Checkout', {
     totalAmount: Number,
     shippingAmount: Number,
     finalAmount: Number,
-    products: Array // Array of items from cart
-});
+    products: Array 
+}));
 
-// --- 6. API ROUTES ---
+// --- 7. API ROUTES ---
 
-const setupSimpleRoutes = (path, Model) => {
-    app.get(path, async (req, res) => {
-        try {
-            const data = await Model.find().sort({ _id: -1 });
-            res.send(data);
-        } catch (e) { res.status(500).send(e); }
-    });
+// Helper for Simple Routes
+const setupRoutes = (path, Model) => {
+    app.get(path, async (req, res) => { res.send(await Model.find().sort({ _id: -1 })); });
     app.post(path, async (req, res) => {
-        try {
-            const data = new Model(req.body);
-            await data.save();
-            res.send(data);
-        } catch (e) { res.status(400).send(e); }
+        try { const d = new Model(req.body); await d.save(); res.send(d); } 
+        catch (e) { res.status(400).send(e); }
     });
-    app.delete(`${path}/:id`, async (req, res) => {
-        try {
-            await Model.findByIdAndDelete(req.params.id);
-            res.send({ result: "Done" });
-        } catch (e) { res.status(400).send(e); }
-    });
+    app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.send({ result: "Done" }); });
     app.put(`${path}/:id`, async (req, res) => {
-        try {
-            const data = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
-            res.send(data);
-        } catch (e) { res.status(400).send(e); }
+        try { const d = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true }); res.send(d); }
+        catch (e) { res.status(400).send(e); }
     });
 };
 
-setupSimpleRoutes('/maincategory', Maincategory);
-setupSimpleRoutes('/subcategory', Subcategory);
-setupSimpleRoutes('/brand', Brand);
-setupSimpleRoutes('/newslatter', Newslatter);
-setupSimpleRoutes('/cart', Cart);
-setupSimpleRoutes('/wishlist', Wishlist);
-setupSimpleRoutes('/contact', Contact);
-setupSimpleRoutes('/checkout', Checkout); // FIXED: Added Checkout Route
+setupRoutes('/maincategory', Maincategory);
+setupRoutes('/subcategory', Subcategory);
+setupRoutes('/brand', Brand);
+setupRoutes('/newslatter', Newslatter);
+setupRoutes('/cart', Cart);
+setupRoutes('/wishlist', Wishlist);
+setupRoutes('/contact', Contact);
 
-// --- Special Routes for Files (User & Product) ---
-app.get('/user', async (req, res) => res.send(await User.find().sort({ _id: -1 })));
+// EXPLICIT CHECKOUT ROUTES (To fix 404)
+app.get('/checkout', async (req, res) => {
+    const data = await Checkout.find().sort({ _id: -1 });
+    res.send(data);
+});
+
+app.post('/checkout', async (req, res) => {
+    try {
+        const data = new Checkout(req.body);
+        await data.save();
+        res.status(201).send(data);
+    } catch (e) {
+        console.error("Checkout POST Error:", e);
+        res.status(400).send(e);
+    }
+});
+
+app.delete('/checkout/:id', async (req, res) => {
+    await Checkout.findByIdAndDelete(req.params.id);
+    res.send({ result: "Done" });
+});
+
+// --- Special Image Routes (User & Product) ---
 app.post('/user', upload, async (req, res) => {
     try {
         const data = new User(req.body);
         if (req.files && req.files.pic) data.pic = req.files.pic[0].path;
-        await data.save();
-        res.send(data);
+        await data.save(); res.send(data);
     } catch (e) { res.status(400).send(e); }
 });
+
 app.put('/user/:id', upload, async (req, res) => {
     try {
         let updateData = { ...req.body };
@@ -155,7 +158,8 @@ app.put('/user/:id', upload, async (req, res) => {
     } catch (e) { res.status(400).send(e); }
 });
 
-app.get('/product', async (req, res) => res.send(await Product.find().sort({ _id: -1 })));
+app.get('/user', async (req, res) => res.send(await User.find().sort({ _id: -1 })));
+
 app.post('/product', upload, async (req, res) => {
     try {
         const data = new Product(req.body);
@@ -165,15 +169,19 @@ app.post('/product', upload, async (req, res) => {
             if (req.files.pic3) data.pic3 = req.files.pic3[0].path;
             if (req.files.pic4) data.pic4 = req.files.pic4[0].path;
         }
-        await data.save();
-        res.send(data);
+        await data.save(); res.send(data);
     } catch (error) { res.status(400).send(error); }
 });
+
+app.get('/product', async (req, res) => res.send(await Product.find().sort({ _id: -1 })));
+
 app.delete('/product/:id', async (req, res) => {
     await Product.findByIdAndDelete(req.params.id);
     res.send({ result: "Done" });
 });
 
-// --- 7. Server Start ---
+// --- 8. Server Start ---
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 Server started on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Final Server Live on Port ${PORT}`);
+});
