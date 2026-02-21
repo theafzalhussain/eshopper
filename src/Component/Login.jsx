@@ -2,22 +2,24 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { getUser } from '../Store/ActionCreaters/UserActionCreators'
+import { motion } from 'framer-motion'
+import { LogIn, User, Lock, Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
-    var [data, setdata] = useState({ username: "", password: "" })
-    var users = useSelector((state) => state.UserStateData)
-    var dispatch = useDispatch()
-    var navigate = useNavigate()
-    var location = useLocation() // URL history check karne ke liye
+    const [data, setdata] = useState({ username: "", password: "" })
+    const [showPass, setShowPass] = useState(false)
+    const users = useSelector((state) => state.UserStateData)
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+    const location = useLocation()
 
     function getData(e) {
-        var { name, value } = e.target
-        setdata((old) => ({ ...old, [name]: value }))
+        setdata({ ...data, [e.target.name]: e.target.value })
     }
 
     function postData(e) {
         e.preventDefault()
-        var user = users.find((item) => item.username === data.username && item.password === data.password)
+        const user = users.find(x => x.username === data.username && x.password === data.password)
         if (user) {
             localStorage.setItem("login", true)
             localStorage.setItem("name", user.name)
@@ -25,34 +27,70 @@ export default function Login() {
             localStorage.setItem("userid", user.id)
             localStorage.setItem("role", user.role)
 
-            // Logic: Agar koi "previous path" hai toh wahan jao, warna Home page jao
-            const backUrl = location.state?.from || "/"
+            // Redirect Logic: Go back to previous page or Home
+            const backUrl = location.state?.from || (user.role === "Admin" ? "/admin-home" : "/profile")
             navigate(backUrl)
         } else {
-            alert("Invalid Username or Password!!!")
+            alert("Invalid Credentials!")
         }
     }
 
-    useEffect(() => {
-        dispatch(getUser())
-    }, [dispatch])
+    useEffect(() => { dispatch(getUser()) }, [dispatch])
 
     return (
-        <div className="container my-5 py-5">
-            <div className="row justify-content-center">
-                <div className="col-md-5 bg-light p-5 shadow rounded">
-                    <h5 className='text-center bg-secondary p-2 text-light rounded'>Login Section</h5>
-                    <form onSubmit={postData}>
-                        <input type="text" name="username" onChange={getData} placeholder='Username' className='form-control mb-3' />
-                        <input type="password" name="password" onChange={getData} placeholder='Password' className='form-control mb-3' />
-                        <button className='btn btn-secondary w-100' type='submit'>Login</button>
-                    </form>
-                    <div className='mt-3 small d-flex justify-content-between'>
-                        <Link to="#">Forget Password?</Link>
-                        <Link to="/signup">Create Account</Link>
-                    </div>
+        <div className="login-wrapper d-flex align-items-center justify-content-center" 
+             style={{ minHeight: "100vh", background: "url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=80') center/cover" }}>
+            
+            {/* Glassmorphism Card */}
+            <motion.div 
+                initial={{ y: 50, opacity: 0 }} 
+                animate={{ y: 0, opacity: 1 }}
+                className="login-card p-5 shadow-2xl"
+                style={{ width: "450px", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", borderRadius: "30px", border: "1px solid rgba(255,255,255,0.3)" }}
+            >
+                <div className="text-center mb-5">
+                    <h2 className="font-weight-bold text-dark" style={{ letterSpacing: "2px" }}>ESHOPPER<span className="text-info">.</span></h2>
+                    <p className="text-muted small text-uppercase">Exclusive Member Access</p>
                 </div>
-            </div>
+
+                <form onSubmit={postData}>
+                    <div className="input-lux mb-4">
+                        <User size={18} className="text-muted mr-2" />
+                        <input type="text" name="username" placeholder="Username" onChange={getData} required />
+                    </div>
+
+                    <div className="input-lux mb-4 position-relative">
+                        <Lock size={18} className="text-muted mr-2" />
+                        <input type={showPass ? "text" : "password"} name="password" placeholder="Password" onChange={getData} required />
+                        <span className="position-absolute cursor-pointer" style={{ right: "15px" }} onClick={() => setShowPass(!showPass)}>
+                            {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </span>
+                    </div>
+
+                    <div className="text-right mb-4">
+                        <Link to="#" className="small text-info font-weight-bold">Forgot Password?</Link>
+                    </div>
+
+                    <motion.button 
+                        whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
+                        className="btn btn-dark btn-block py-3 rounded-pill shadow-xl font-weight-bold"
+                    >
+                        SIGN IN <LogIn size={18} className="ml-2" />
+                    </motion.button>
+                </form>
+
+                <div className="text-center mt-5">
+                    <p className="small text-muted">New to Eshopper? <Link to="/signup" className="text-info font-weight-bold border-bottom border-info pb-1">Create Account</Link></p>
+                </div>
+            </motion.div>
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                .input-lux { display: flex; align-items: center; border-bottom: 2px solid #eee; padding: 10px 5px; transition: 0.3s; }
+                .input-lux:focus-within { border-color: #17a2b8; }
+                .input-lux input { border: none; background: transparent; width: 100%; outline: none; font-size: 15px; }
+                .cursor-pointer { cursor: pointer; }
+                .shadow-2xl { box-shadow: 0 50px 100px rgba(0,0,0,0.2) !important; }
+            `}} />
         </div>
     )
 }
