@@ -3,52 +3,46 @@ import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { getNewslatter, deleteNewslatter } from '../../Store/ActionCreaters/NewslatterActionCreators';
-import { motion } from 'framer-motion'
-import { Send, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 
 export default function AdminNewsletter() {
-    const newsletters = useSelector((state) => state.NewslatterStateData)
     const dispatch = useDispatch()
+    const newslettersData = useSelector((state) => state.NewslatterStateData)
 
-    useEffect(() => { 
-        dispatch(getNewslatter()) 
+    useEffect(() => {
+        dispatch(getNewslatter())
     }, [dispatch])
 
-    // FIX: Mapping MongoDB _id to id for MUI DataGrid
-    const rows = newsletters?.map((item) => ({
+    // FIX: Mapping MongoDB _id to id
+    const rows = newslettersData ? newslettersData.map((item) => ({
         ...item,
         id: item._id || item.id
-    })) || []
+    })) : []
 
     const columns = [
-        { field: 'id', headerName: 'ID', width: 250 },
-        { field: 'email', headerName: 'Subscriber Email', width: 400, renderCell: ({row}) => <span className="font-weight-bold">{row.email}</span> },
+        { field: 'id', headerName: 'Subscriber ID', width: 250 },
+        { field: 'email', headerName: 'Email Address', width: 400 },
         {
-            field: "action", headerName: "Action", width: 150,
+            field: "action", headerName: "Remove", width: 120,
             renderCell: ({ row }) => (
-                <button className="btn btn-sm btn-outline-danger rounded-pill px-4 shadow-sm" onClick={() => { if(window.confirm("Remove Subscriber?")) dispatch(deleteNewslatter({ id: row.id })) }}>
-                    <Trash2 size={14} className="mr-1" /> Delete
+                <button className="btn text-danger" onClick={() => dispatch(deleteNewslatter({ id: row.id }))}>
+                    <Trash2 size={18} />
                 </button>
             )
         }
     ];
 
     return (
-        <div className="container-fluid my-5" style={{ minHeight: "80vh" }}>
+        <div className="container-fluid my-5">
             <div className="row">
                 <div className="col-lg-2"><LefNav /></div>
                 <div className="col-lg-10">
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-lg rounded-2xl p-4 border">
-                        <div className="d-flex justify-content-between align-items-center mb-4">
-                            <h4 className="font-weight-bold mb-0 d-flex align-items-center">
-                                <Send className="mr-2 text-info"/> Newsletter List
-                            </h4>
-                            <span className="badge badge-info p-2">Subscribers: {newsletters.length}</span>
-                        </div>
+                    <div className="bg-white p-4 shadow-sm rounded-lg border">
+                        <h4 className="mb-4 font-weight-bold text-info">Newsletter List</h4>
                         <div style={{ height: 500, width: '100%' }}>
-                            <DataGrid rows={rows} columns={columns} pageSize={10} disableSelectionOnClick />
+                            <DataGrid rows={rows} columns={columns} pageSize={10} />
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
         </div>

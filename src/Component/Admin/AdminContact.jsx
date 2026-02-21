@@ -3,33 +3,32 @@ import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteContact, getContact } from '../../Store/ActionCreaters/ContactActionCreators';
-import { motion } from 'framer-motion'
-import { Trash2, MailOpen } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 
 export default function AdminContact() {
-    const contacts = useSelector((state) => state.ContactStateData)
     const dispatch = useDispatch()
+    const contactsData = useSelector((state) => state.ContactStateData)
 
-    useEffect(() => { 
-        dispatch(getContact()) 
+    useEffect(() => {
+        dispatch(getContact())
     }, [dispatch])
 
-    // FIX: DataGrid needs 'id', so we map MongoDB '_id' to 'id'
-    const rows = contacts?.map((item) => ({
+    // FIX: Mapping MongoDB _id to id inside the component
+    const rows = contactsData ? contactsData.map((item) => ({
         ...item,
         id: item._id || item.id 
-    })) || []
+    })) : []
 
     const columns = [
-        { field: 'id', headerName: 'ID', width: 90 },
-        { field: 'name', headerName: 'Customer', width: 150 },
+        { field: 'id', headerName: 'ID', width: 100 },
+        { field: 'name', headerName: 'Name', width: 150 },
         { field: 'email', headerName: 'Email', width: 200 },
         { field: 'subject', headerName: 'Subject', width: 150 },
-        { field: 'message', headerName: 'Message', width: 250 },
+        { field: 'message', headerName: 'Message', width: 300 },
         {
-            field: "action", headerName: "Delete", width: 100,
+            field: "delete", headerName: "Delete", width: 80,
             renderCell: ({ row }) => (
-                <button className="btn text-danger p-0" onClick={() => { if(window.confirm("Delete Message?")) dispatch(deleteContact({ id: row.id })) }}>
+                <button className="btn text-danger" onClick={() => { if(window.confirm("Delete?")) dispatch(deleteContact({ id: row.id })) }}>
                     <Trash2 size={18} />
                 </button>
             )
@@ -41,12 +40,18 @@ export default function AdminContact() {
             <div className="row">
                 <div className="col-lg-2"><LefNav /></div>
                 <div className="col-lg-10">
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-lg rounded-2xl p-4 border">
-                        <h4 className="font-weight-bold mb-4 d-flex align-items-center"><MailOpen className="mr-2 text-info"/> Customer Queries</h4>
+                    <div className="bg-white p-4 shadow-sm rounded-lg" style={{ border: "1px solid #ddd" }}>
+                        <h4 className="mb-4 font-weight-bold text-info">Customer Queries</h4>
                         <div style={{ height: 500, width: '100%' }}>
-                            <DataGrid rows={rows} columns={columns} pageSize={10} disableSelectionOnClick />
+                            <DataGrid 
+                                rows={rows} 
+                                columns={columns} 
+                                pageSize={10} 
+                                disableSelectionOnClick 
+                                autoHeight={false}
+                            />
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             </div>
         </div>
