@@ -68,7 +68,7 @@ export default function Login() {
                     </div>
 
                     <div className="text-right mb-4">
-                      <Link to="/forget-password" className="small text-info font-weight-bold">Forgot Password?</Link>
+                     <Link to="/forget-password">Forgot Password?</Link>
                     </div>
 
                     <motion.button 
