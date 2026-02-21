@@ -1,59 +1,45 @@
-import React,{ useState , useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
+import { getMaincategory, updateMaincategory } from '../../Store/ActionCreaters/MaincategoryActionCreators'
 import LefNav from './LefNav'
-import {  updateMaincategory, getMaincategory } from '../../Store/ActionCreaters/MaincategoryActionCreators'
-import { useNavigate } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
 
 export default function AdminUpdateMaincategory() {
-    var [name, setname] = useState("")
-    var {id} = useParams()
-    var maincategory = useSelector((state) => state.MaincategoryStateData)
-    var navigate = useNavigate()
-    var dispatch = useDispatch()
-    function getData(e) {
-        setname(e.target.value)
-    }
+    const [name, setName] = useState("")
+    const { id } = useParams()
+    const maincategory = useSelector((state) => state.MaincategoryStateData)
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        dispatch(getMaincategory())
+        const item = maincategory.find((x) => (x._id || x.id) === id)
+        if (item) setName(item.name)
+    }, [maincategory.length])
+
     function postData(e) {
         e.preventDefault()
-        var item = maincategory.find((item) => item.name === name)
-        if (item)
-            alert("Maincategory Name is Already Exist")
-        else {
-            dispatch(updateMaincategory({ id:id, name: name }))
-            navigate("/admin-maincategory")
-        }
+        dispatch(updateMaincategory({ id: id, name: name }))
+        navigate("/admin-maincategory")
     }
-     useEffect(()=>{
-        dispatch(getMaincategory())
-        var item = maincategory.find((item)=> item.id===Number(id))
-        setname(item.name)
-     },[])
+
     return (
-        <>
-            <div className="container-fluid my-5">
-                <div className="row">
-                    <div className="col-lg-2 col-12" >
-                        <LefNav />
-                    </div>
-                    <div className="col-lg-10 col-12 mt-2">
-                        <h5 className='bg-info text-center text-light p-2'>Maincategory <Link to="/admin-add-maincategory" className='float-right'><span className="material-symbols-outlined text-light">add</span></Link></h5>
-                        <form className='p-3' onSubmit={postData}>
-                            <div className="mb-3 p-3">
-                                <label htmlFor='name'>Name</label>
-                                <input type="text" name="name" id="name" placeholder='Enter Maincategory Name :' className='form-control' onChange={getData} value={name} />
-                            </div>
+        <div className="container-fluid my-5">
+            <div className="row">
+                <div className="col-lg-3"><LefNav /></div>
+                <div className="col-lg-6 text-left">
+                    <div className="bg-white p-5 shadow rounded-3xl">
+                        <h4 className="bg-dark p-2 text-light rounded mb-4 text-center">Edit Category</h4>
+                        <form onSubmit={postData}>
                             <div className="mb-3">
-                                <button type='submit' className='btn btn-info w-100  btn-lg'>Update</button>
+                                <label>New Category Name</label>
+                                <input type="text" value={name} className="form-control" onChange={(e) => setName(e.target.value)} required />
                             </div>
+                            <button type='submit' className='btn btn-info w-100 rounded-pill'>SAVE CHANGES</button>
                         </form>
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     )
 }
-
-
-
-

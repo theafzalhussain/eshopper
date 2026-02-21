@@ -12,9 +12,17 @@ export default function AdminSubcategory() {
     const dispatch = useDispatch()
     const navigate = useNavigate()
 
+    useEffect(() => { dispatch(getSubcategory()) }, [dispatch])
+
+    // 🎯 FIXED: Mapping MongoDB _id to id so DataGrid works
+    const rows = subcategory?.map((item) => ({
+        ...item,
+        id: item._id || item.id 
+    })) || []
+
     const columns = [
         { field: 'id', headerName: 'ID', width: 220 },
-        { field: 'name', headerName: 'Subcategory', width: 300 },
+        { field: 'name', headerName: 'Subcategory Name', width: 300, renderCell: (p) => <span className="font-weight-bold">{p.value}</span> },
         {
             field: "edit", headerName: "Edit", width: 100,
             renderCell: ({ row }) => (
@@ -35,23 +43,21 @@ export default function AdminSubcategory() {
         },
     ];
 
-    useEffect(() => { dispatch(getSubcategory()) }, [dispatch])
-
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "90vh" }} className="py-5">
             <div className="container-fluid px-lg-5">
                 <div className="row">
                     <div className="col-lg-3"><LefNav /></div>
                     <div className="col-lg-9">
-                        <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-white shadow-xl rounded-2xl p-4 border-0">
+                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} className="bg-white shadow-xl rounded-2xl p-4 border-0">
                             <div className="d-flex justify-content-between align-items-center mb-4">
-                                <h4 className="font-weight-bold d-flex align-items-center"><Grid className="mr-2 text-info"/> Sub-Categories</h4>
+                                <h4 className="font-weight-bold d-flex align-items-center"><Grid className="mr-2 text-info"/> Subcategories</h4>
                                 <Link to="/admin-add-subcategory" className='btn btn-info rounded-pill px-4 shadow-sm font-weight-bold'>
-                                    <Plus size={18} className="mr-1"/> ADD
+                                    <Plus size={18} className="mr-1"/> ADD NEW
                                 </Link>
                             </div>
                             <div style={{ height: 450, width: '100%' }}>
-                                <DataGrid rows={subcategory || []} columns={columns} pageSize={7} disableSelectionOnClick />
+                                <DataGrid rows={rows} columns={columns} pageSize={7} disableSelectionOnClick />
                             </div>
                         </motion.div>
                     </div>
