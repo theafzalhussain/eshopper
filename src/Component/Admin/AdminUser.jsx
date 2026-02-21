@@ -1,68 +1,82 @@
 import React, { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteUser, getUser } from '../../Store/ActionCreaters/UserActionCreators';
-import Button from '@mui/material/Button';
-
+import { motion } from 'framer-motion'
+import { Trash2, Shield, User as UserIcon, Mail, Phone } from 'lucide-react'
 
 export default function AdminUsers() {
-    var User = useSelector((state) => state.UserStateData)
-    var dispatch = useDispatch()
-    var columns = [
-        { field: 'id', headerName: 'ID', width: 50 },
-        { field: 'name', headerName: 'Name', width: 130 },
-        { field: 'username', headerName: 'User Name', width: 150 },
-        { field: 'email', headerName: 'Email', width: 200 },
+    const users = useSelector((state) => state.UserStateData)
+    const dispatch = useDispatch()
+
+    const columns = [
+        { field: 'id', headerName: 'ID', width: 100 },
+        { 
+            field: 'name', 
+            headerName: 'Full Name', 
+            width: 200, 
+            renderCell: ({row}) => (
+                <div className="d-flex align-items-center">
+                    <div className="bg-light rounded-circle p-2 mr-2"><UserIcon size={14}/></div>
+                    <span className="font-weight-bold">{row.name}</span>
+                </div>
+            )
+        },
+        { field: 'username', headerName: 'Username', width: 150 },
+        { field: 'email', headerName: 'Email', width: 220 },
         { field: 'phone', headerName: 'Phone', width: 130 },
-        { field: 'role', headerName: 'Role', width: 130 },
+        { 
+            field: 'role', 
+            headerName: 'Role', 
+            width: 120,
+            renderCell: ({row}) => (
+                <span className={`badge rounded-pill px-3 py-2 ${row.role === 'Admin' ? 'badge-danger' : 'badge-info'}`}>
+                    {row.role}
+                </span>
+            )
+        },
         {
             field: "delete",
-            headerName: "Delete",
-            sortable: false,
-            renderCell: ({ row }) =>
-                <Button onClick={() => {
-                    dispatch(deleteUser({ id: row.id }))
-                }}>
-                    <span className="material-symbols-outlined">
-                        delete_forever
-                    </span>
-                </Button>,
+            headerName: "Action",
+            width: 100,
+            renderCell: ({ row }) => (
+                <button 
+                    className="btn btn-sm btn-outline-danger rounded-circle border-0"
+                    onClick={() => { if(window.confirm("Permanent delete this user?")) dispatch(deleteUser({ id: row.id })) }}
+                >
+                    <Trash2 size={18} />
+                </button>
+            ),
         }
     ];
 
-    var rows = []
-    for (let item of User) {
-        rows.push(item)
-    }
-    function getAPIData(){
-        dispatch(getUser())
-    }
-    useEffect(() => {
-       getAPIData()
-    }, [])
+    useEffect(() => { dispatch(getUser()) }, [dispatch])
+
     return (
-        <>
-            <div className="contain-fluid my-5">
+        <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-4">
+            <div className="container-fluid">
                 <div className="row">
-                    <div className="col-lg-2 col-12">
-                        <LefNav/>
-                    </div>
-                    <div className="col-lg-10 col-12">
-                        <h5 className='bg-secondary text-center text-light p-1'>User </h5>
-                        <div style={{ height: 400, width: '100%' }}>
-                            <DataGrid
-                                rows={rows}
-                                columns={columns}
-                                pageSize={5}
-                                rowsPerPageOptions={[5]}
-                            // checkboxSelection
-                            />
-                        </div>
+                    <div className="col-lg-2"><LefNav /></div>
+                    <div className="col-lg-10">
+                        <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="bg-white shadow-lg rounded-2xl p-4 border-0">
+                            <div className="d-flex align-items-center mb-4">
+                                <Shield className="text-info mr-2" />
+                                <h4 className="font-weight-bold mb-0">Registered Users</h4>
+                            </div>
+                            <div style={{ height: 600, width: '100%' }}>
+                                <DataGrid 
+                                    rows={users} 
+                                    columns={columns} 
+                                    pageSize={10} 
+                                    disableSelectionOnClick
+                                    className="border-0"
+                                />
+                            </div>
+                        </motion.div>
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     )
 }

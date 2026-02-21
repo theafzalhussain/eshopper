@@ -1,80 +1,70 @@
 import React, { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteWishlist, getWishlist } from '../../Store/ActionCreaters/WishlistActionCreators';
-import Button from '@mui/material/Button';
+import { motion } from 'framer-motion'
+import { Heart, Trash2, ExternalLink } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export default function AdminWishlist() {
-    var wishlist = useSelector((state) => state.WishlistStateData)
-    var dispatch = useDispatch()
-    var navigate = useNavigate()
+    const wishlist = useSelector((state) => state.WishlistStateData)
+    const dispatch = useDispatch()
+
     const columns = [
-        { field: 'id', headerName: 'ID', width: 70 },
-        { field: 'name', headerName: 'Name', width: 130 },
-
-        {
-            field: "edit",
-            headerName: "Edit",
-            sortable: false,
-            renderCell: ({ row }) =>
-                <Button onClick={() => {
-                    navigate("/admin-update-wishlist/" + row.id)
-                }}>
-                    <span className="material-symbols-outlined">
-                        edit
-                    </span>
-                </Button>
-
+        { field: 'id', headerName: 'ID', width: 100 },
+        { 
+            field: 'pic', 
+            headerName: 'Product', 
+            width: 80, 
+            renderCell: ({row}) => <img src={row.pic} height="40px" width="40px" className="rounded shadow-sm" style={{objectFit:'cover'}} /> 
         },
+        { field: 'name', headerName: 'Product Name', width: 250, renderCell:({row})=> <span className="small font-weight-bold">{row.name}</span> },
+        { field: 'userid', headerName: 'User ID', width: 220, renderCell:({row})=><span className="text-muted small">{row.userid}</span> },
+        { field: 'price', headerName: 'Price', width: 120, renderCell:({row})=><span className="text-info font-weight-bold">₹{row.price}</span> },
         {
             field: "delete",
-            headerName: "Delete",
-            sortable: false,
-            renderCell: ({ row }) =>
-                <Button onClick={() => dispatch(deleteWishlist({ id: row.id }))}>
-                    <span className="material-symbols-outlined">
-                        delete_forever
-                    </span>
-                </Button >
-
-        },
+            headerName: "Remove",
+            width: 120,
+            renderCell: ({ row }) => (
+                <button 
+                    className="btn btn-sm btn-light text-danger rounded-pill px-3 shadow-sm border"
+                    onClick={() => { if(window.confirm("Remove from global wishlist?")) dispatch(deleteWishlist({ id: row.id })) }}
+                >
+                    <Trash2 size={14} className="mr-1" /> Delete
+                </button>
+            ),
+        }
     ];
 
+    useEffect(() => { dispatch(getWishlist()) }, [dispatch])
 
-    var rows = []
-    for (let item of wishlist){
-        rows.push(item)
-    }
-    function getAPIData(){
-        dispatch(getWishlist())
-    }
-    useEffect(() => {
-       getAPIData()
-    }, [])
     return (
-        <>
-            <div className="container-fluid my-5">
+        <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-4">
+            <div className="container-fluid">
                 <div className="row">
-                    <div className="col-lg-2 col-12" >
-                        <LefNav />
-                    </div>
-                    <div className="col-lg-10 col-12 mt-2">
-                        <h5 className='bg-info text-center text-light p-2'>Wishlist <Link to="/admin-add-wishlist" className='float-right'><span className="material-symbols-outlined text-light">add</span></Link></h5>
-                        <div style={{ height: 400, width: '100%' }}>
-                            <DataGrid
-                                rows={rows}
-                                columns={columns}
-                                pageSize={5}
-                                rowsPerPageOptions={[5]}
-                            // checkboxSelection
-                            />
-                        </div>
+                    <div className="col-lg-2"><LefNav /></div>
+                    <div className="col-lg-10">
+                        <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="bg-white shadow-lg rounded-2xl p-4 border-0">
+                            <div className="d-flex justify-content-between align-items-center mb-4">
+                                <div className="d-flex align-items-center">
+                                    <Heart className="text-danger mr-2" fill="#ff4757" />
+                                    <h4 className="font-weight-bold mb-0">Customer Wishlists</h4>
+                                </div>
+                                <span className="badge badge-light p-2 border">Total items: {wishlist.length}</span>
+                            </div>
+                            <div style={{ height: 550, width: '100%' }}>
+                                <DataGrid 
+                                    rows={wishlist} 
+                                    columns={columns} 
+                                    pageSize={8} 
+                                    disableSelectionOnClick
+                                />
+                            </div>
+                        </motion.div>
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     )
 }
-
