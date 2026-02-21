@@ -1,7 +1,11 @@
 import { takeEvery, put } from "redux-saga/effects"
-// SAHI LINE: Yahan 'forgetPasswordAPI' add kar diya hai
 import { createUserAPI, deleteUserAPI, getUserAPI, updateUserAPI, forgetPasswordAPI } from "../Services" 
-import { ADD_USER, ADD_USER_RED, DELETE_USER, DELETE_USER_RED, GET_USER, GET_USER_RED, UPDATE_USER, UPDATE_USER_RED } from "../Constant"
+import { 
+    ADD_USER, ADD_USER_RED, 
+    DELETE_USER, DELETE_USER_RED, 
+    GET_USER, GET_USER_RED, 
+    UPDATE_USER, UPDATE_USER_RED 
+} from "../Constant"
 
 function* createUserSaga(action) {
     try {
@@ -31,9 +35,9 @@ function* updateUserSaga(action) {
     } catch (e) { console.log("User Update Error:", e) }
 }
 
-// Forget Password Saga (If you added it)
 function* forgetPasswordSaga(action) {
     try {
+        // Services se sahi se import ho gaya hai ab
         let response = yield forgetPasswordAPI(action.payload)
         yield put({ type: UPDATE_USER_RED, data: response })
     } catch (e) { console.log("Forget Password Error:", e) }
@@ -44,5 +48,6 @@ export function* userSaga() {
     yield takeEvery(GET_USER, getUserSaga)
     yield takeEvery(DELETE_USER, deleteUserSaga)
     yield takeEvery(UPDATE_USER, updateUserSaga)
-    yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga) // Added if needed
+    // "FORGET_PASSWORD" action aapke login page ya component se dispatch hoga
+    yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga) 
 }

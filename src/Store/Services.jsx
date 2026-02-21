@@ -11,7 +11,7 @@ async function mutationAPI(endpoint, method, data) {
     let isFormData = data instanceof FormData;
     let response = await fetch(`${BASE_URL}${endpoint}`, {
         method: method,
-        headers: isFormData ? {} : { "content-type": "application/json" }, // FormData me header empty hona chahiye
+        headers: isFormData ? {} : { "content-type": "application/json" },
         body: isFormData ? data : JSON.stringify(data)
     });
     return await response.json();
@@ -39,7 +39,6 @@ export const deleteBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "delete
 export const createProductAPI = (data) => mutationAPI("/product", "post", data); 
 export const getProductAPI = () => getAPI("/product");
 export const updateProductAPI = (data) => {
-    // FIX: Get ID from FormData if exists
     const id = data instanceof FormData ? data.get("id") : data.id;
     return mutationAPI(`/product/${id}`, "put", data);
 }
@@ -49,12 +48,7 @@ export const deleteProductAPI = (data) => mutationAPI(`/product/${data.id}`, "de
 export const createUserAPI = (data) => mutationAPI("/user", "post", data);
 export const getUserAPI = () => getAPI("/user");
 export const updateUserAPI = (data) => {
-    let id;
-    if (data instanceof FormData) {
-        id = data.get("id"); // FormData se ID nikaalne ka sahi tareeka
-    } else {
-        id = data.id;
-    }
+    const id = data instanceof FormData ? data.get("id") : data.id;
     return mutationAPI(`/user/${id}`, "put", data);
 }
 export const deleteUserAPI = (data) => mutationAPI(`/user/${data.id}`, "delete");
@@ -89,6 +83,5 @@ export const getNewslatterAPI = () => getAPI("/newslatter");
 export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "put", data);
 export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "delete");
 
-// pasword
-// Is line ko Services.jsx mein check karein ya add karein:
+// --- FORGET PASSWORD ---
 export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);
