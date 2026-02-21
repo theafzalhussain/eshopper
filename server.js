@@ -81,7 +81,6 @@ const User = mongoose.model('User', createSchema({
 const Cart = mongoose.model('Cart', createSchema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }));
 const Wishlist = mongoose.model('Wishlist', createSchema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }));
 
-// CHECKOUT MODEL (Specifically defined to fix your error)
 const Checkout = mongoose.model('Checkout', createSchema({
     userid: String,
     paymentmode: String,
@@ -118,7 +117,7 @@ setupRoutes('/cart', Cart);
 setupRoutes('/wishlist', Wishlist);
 setupRoutes('/contact', Contact);
 
-// EXPLICIT CHECKOUT ROUTES (To fix 404)
+// EXPLICIT CHECKOUT ROUTES
 app.get('/checkout', async (req, res) => {
     const data = await Checkout.find().sort({ _id: -1 });
     res.send(data);
@@ -138,6 +137,19 @@ app.post('/checkout', async (req, res) => {
 app.delete('/checkout/:id', async (req, res) => {
     await Checkout.findByIdAndDelete(req.params.id);
     res.send({ result: "Done" });
+});
+
+// --- Admin Stats Route (NEW UPDATE) ---
+app.get('/admin/stats', async (req, res) => {
+    try {
+        const uCount = await User.countDocuments();
+        const pCount = await Product.countDocuments();
+        const oCount = await Checkout.countDocuments();
+        const cCount = await Contact.countDocuments();
+        res.send({ users: uCount, products: pCount, orders: oCount, contacts: cCount });
+    } catch (e) {
+        res.status(500).send(e);
+    }
 });
 
 // --- Special Image Routes (User & Product) ---
@@ -179,13 +191,14 @@ app.delete('/product/:id', async (req, res) => {
     await Product.findByIdAndDelete(req.params.id);
     res.send({ result: "Done" });
 });
+
 // --- Forget Password Route ---
 app.post('/user/forget-password', async (req, res) => {
     try {
         const { username, password } = req.body;
         const user = await User.findOne({ username: username });
         if (user) {
-            user.password = password; // Naya password set karein
+            user.password = password; 
             await user.save();
             res.status(200).send({ result: "Done", message: "Password Updated Successfully" });
         } else {

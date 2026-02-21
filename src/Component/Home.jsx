@@ -2,21 +2,19 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
-import { getUser } from '../Store/ActionCreaters/UserActionCreators'; // User logic added
+import { getUser } from '../Store/ActionCreaters/UserActionCreators';
 import Newslatter from './Newslatter';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Home() {
     const product = useSelector((state) => state.ProductStateData)
-    const users = useSelector((state) => state.UserStateData)
     const dispatch = useDispatch()
     const navigate = useNavigate()
     
     const [currentSlide, setCurrentSlide] = useState(0);
     const [welcomeUser, setWelcomeUser] = useState("")
 
-    // --- ⚡ FAST LOADING & PERFORMANCE OPTIMIZATION ---
-    // Memoize display products to avoid heavy calculations on every render
+    // --- ⚡ PERFORMANCE OPTIMIZATION ---
     const displayProducts = useMemo(() => {
         return [...product].reverse().slice(0, 8);
     }, [product]);
@@ -25,18 +23,15 @@ export default function Home() {
         dispatch(getProduct())
         dispatch(getUser())
 
-        // Personalization: LocalStorage se name uthana
         const storedName = localStorage.getItem("name")
         if(storedName) setWelcomeUser(storedName)
 
-        // Auto-slide logic for Hero Section
         const timer = setInterval(() => {
             setCurrentSlide((prev) => (prev === sliderData.length - 1 ? 0 : prev + 1));
         }, 5000);
         return () => clearInterval(timer);
     }, [dispatch])
 
-    // --- PREMIUM SLIDER DATA (Fully Working Links) ---
     const sliderData = [
         {
             title: "Summer Elegance",
@@ -56,16 +51,15 @@ export default function Home() {
         }
     ];
 
-    // Animation Config
     const fadeUp = {
         hidden: { opacity: 0, y: 30 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
     }
 
     return (
-        <div className="home-premium-wrapper" style={{ backgroundColor: "#ffffff" }}>
+        <div className="home-premium-wrapper" style={{ backgroundColor: "#ffffff", overflowX: 'hidden' }}>
             
-            {/* --- 1. PREMIUM HERO CAROUSEL --- */}
+            {/* --- 1. PREMIUM HERO CAROUSEL WITH DECOR --- */}
             <section className="hero-slider position-relative overflow-hidden" style={{ height: '90vh' }}>
                 <AnimatePresence mode="wait">
                     <motion.div 
@@ -77,7 +71,7 @@ export default function Home() {
                         className="w-100 h-100 d-flex align-items-center"
                         style={{ backgroundColor: sliderData[currentSlide].color }}
                     >
-                        <div className="container">
+                        <div className="container position-relative z-index-10">
                             <div className="row align-items-center">
                                 <div className="col-lg-6">
                                     <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{delay: 0.3}}>
@@ -95,15 +89,17 @@ export default function Home() {
                                         </Link>
                                     </motion.div>
                                 </div>
-                                <div className="col-lg-6 text-center d-none d-lg-block">
+                                <div className="col-lg-6 text-center d-none d-lg-block position-relative">
                                     <motion.img 
                                         initial={{ scale: 0.8, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
                                         src={sliderData[currentSlide].img} 
-                                        className="img-fluid hero-floating-img"
+                                        className="img-fluid hero-floating-img z-index-10 position-relative"
                                         alt="Main banner"
                                         style={{ maxHeight: '75vh', filter: 'drop-shadow(20px 20px 60px rgba(0,0,0,0.1))' }}
                                     />
+                                    {/* Decor Circle from update */}
+                                    <div className="decor-circle bg-info"></div>
                                 </div>
                             </div>
                         </div>
@@ -117,7 +113,19 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* --- 2. LUXURY BENTO CATEGORY GRID --- */}
+            {/* --- 2. BRAND IDENTITY BAR (Newly Added) --- */}
+            <section className="py-4 bg-white border-top border-bottom text-center">
+                <div className="container">
+                    <div className="row text-uppercase font-weight-bold align-items-center" style={{letterSpacing:'3px', opacity:0.5, fontSize: '0.9rem'}}>
+                        <div className="col-6 col-md-3 mb-2 mb-md-0">ADIDAS</div>
+                        <div className="col-6 col-md-3 mb-2 mb-md-0">ZARA</div>
+                        <div className="col-6 col-md-3 mb-2 mb-md-0">GUCCI</div>
+                        <div className="col-6 col-md-3 mb-2 mb-md-0">PRADA</div>
+                    </div>
+                </div>
+            </section>
+
+            {/* --- 3. LUXURY BENTO CATEGORY GRID --- */}
             <section className="py-5 mt-5">
                 <div className="container">
                     <div className="row g-4">
@@ -145,7 +153,7 @@ export default function Home() {
                                         <p className="small mb-3">Styles that keep up with their imagination.</p>
                                         <Link to="/shop/Kids" className="btn btn-outline-light rounded-pill btn-sm px-4">EXPLORE</Link>
                                     </div>
-                                    <img src="/assets/images/banner-3.png" className="position-absolute h-100" style={{ right: '-30px', bottom: '-20px', filter: 'grayscale(0.2)' }} alt="" />
+                                    <img src="/assets/images/banner-3.png" className="position-absolute h-100" style={{ right: '-30px', bottom: '-20px' }} alt="" />
                                 </motion.div>
                             </div>
                         </div>
@@ -153,7 +161,7 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* --- 3. TRENDING REPORT (NO STRETCH IMAGES) --- */}
+            {/* --- 4. TRENDING REPORT --- */}
             <section className="py-5 mt-5">
                 <div className="container">
                     <div className="text-center mb-5">
@@ -179,12 +187,12 @@ export default function Home() {
                                             <button className="p-btn shadow"><i className="icon-heart"></i></button>
                                         </div>
                                     </div>
-                                    <div className="p-3">
+                                    <div className="p-3 text-center">
                                         <span className="small text-info font-weight-bold text-uppercase" style={{ fontSize: '9px', letterSpacing: '1.5px' }}>{item.brand}</span>
                                         <h3 className="h6 font-weight-bold mb-2">
                                             <Link to={`/single-product/${item.id}`} className="text-dark hover-text-info">{item.name}</Link>
                                         </h3>
-                                        <div className="d-flex align-items-baseline">
+                                        <div className="d-flex justify-content-center align-items-baseline">
                                             <span className="h6 font-weight-bold mb-0">₹{item.finalprice}</span>
                                             {item.baseprice > item.finalprice && <del className="ml-2 text-muted x-small">₹{item.baseprice}</del>}
                                         </div>
@@ -192,7 +200,6 @@ export default function Home() {
                                 </div>
                             </motion.div>
                         )) : (
-                            // Elegant Pulse Loader
                             [1, 2, 3, 4].map(i => <div key={i} className="col-lg-3 col-6 mb-4"><div className="skeleton-p shadow-sm rounded-2xl h-350"></div></div>)
                         )}
                     </div>
@@ -201,7 +208,6 @@ export default function Home() {
 
             <Newslatter />
 
-            {/* --- PREMIUM DYNAMIC CSS --- */}
             <style dangerouslySetInnerHTML={{ __html: `
                 .line-height-1 { line-height: 1; }
                 .rounded-2xl { border-radius: 24px !important; }
@@ -209,19 +215,23 @@ export default function Home() {
                 .transition-slow { transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
                 .hover-up:hover { transform: translateY(-5px); }
                 .letter-spacing-2 { letter-spacing: 2px; }
+                .z-index-10 { z-index: 10; }
                 
-                .object-fit-cover { object-fit: cover; }
+                /* Floating and Decor Elements */
                 .hero-floating-img { animation: hero-float 6s ease-in-out infinite; }
-                @keyframes hero-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+                @keyframes hero-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-18px); } }
+                
+                .decor-circle { 
+                    position: absolute; top: 10%; right: 10%; width: 400px; height: 400px; 
+                    border-radius: 50%; opacity: 0.08; z-index: 1; background: #17a2b8;
+                }
 
-                /* Bento Style Elements */
                 .category-content-overlay {
                     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                     background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
                     display: flex; flex-direction: column; justify-content: flex-end;
                 }
 
-                /* Product Image Standardization */
                 .aspect-ratio-standard { width: 100%; aspect-ratio: 10/12; }
                 .product-luxury-card:hover .luxury-img-main { transform: scale(1.1); }
                 
@@ -236,10 +246,6 @@ export default function Home() {
                 
                 .p-btn { width: 45px; height: 45px; border-radius: 50%; border: none; background: white; color: #111; display: flex; align-items: center; justify-content: center; }
                 .p-btn:hover { background: #17a2b8; color: white; transform: scale(1.1); }
-
-                /* Loading Skeleton */
-                .skeleton-p { height: 400px; background: #eee; animation: p-shimmer 1.5s infinite linear; }
-                @keyframes p-shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
                 .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; cursor: pointer; transition: 0.3s; }
                 .dot.active { width: 30px; border-radius: 5px; background: #17a2b8; }
