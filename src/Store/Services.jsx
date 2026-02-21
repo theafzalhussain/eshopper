@@ -1,6 +1,6 @@
 import { BASE_URL } from "../constants";
 
-// Helper Functions
+// Helper functions for common logic
 async function getAPI(endpoint) {
     let response = await fetch(`${BASE_URL}${endpoint}`);
     return await response.json();
@@ -43,7 +43,7 @@ export const updateProductAPI = (data) => {
 }
 export const deleteProductAPI = (data) => mutationAPI(`/product/${data.id}`, "delete");
 
-// USER
+// USER (Special attention for FORGET_PASSWORD)
 export const createUserAPI = (data) => mutationAPI("/user", "post", data);
 export const getUserAPI = () => getAPI("/user");
 export const updateUserAPI = (data) => {
@@ -51,6 +51,8 @@ export const updateUserAPI = (data) => {
     return mutationAPI(`/user/${id}`, "put", data);
 }
 export const deleteUserAPI = (data) => mutationAPI(`/user/${data.id}`, "delete");
+
+// 🎯 YE RAHA VO FUNCTION JO MISSING SHOW HO RAHA THA:
 export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);
 
 // CART
@@ -62,23 +64,23 @@ export const deleteCartAPI = (data) => mutationAPI(`/cart/${data.id}`, "delete")
 // WISHLIST
 export const createWishlistAPI = (data) => mutationAPI("/wishlist", "post", data);
 export const getWishlistAPI = () => getAPI("/wishlist");
-export const updateWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "put", data); // Added for Saga
+export const updateWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "put", data);
 export const deleteWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "delete");
 
 // CHECKOUT
 export const createCheckoutAPI = (data) => mutationAPI("/checkout", "post", data);
 export const getCheckoutAPI = () => getAPI("/checkout");
 export const updateCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "put", data);
-export const deleteCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "delete"); // Added for Saga
+export const deleteCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "delete");
 
 // CONTACT
 export const createContactAPI = (data) => mutationAPI("/contact", "post", data);
 export const getContactAPI = () => getAPI("/contact");
-export const updateContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "put", data); // Added for Saga
+export const updateContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "put", data);
 export const deleteContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "delete");
 
-// NEWSLATTER (Note: spelling with 'a' as per your Constants)
+// NEWSLATTER
 export const createNewslatterAPI = (data) => mutationAPI("/newslatter", "post", data);
 export const getNewslatterAPI = () => getAPI("/newslatter");
-export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "put", data); // Added for Saga
+export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "put", data);
 export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "delete");
