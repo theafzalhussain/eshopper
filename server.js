@@ -37,7 +37,7 @@ const upload = multer({ storage: storage }).fields([
     { name: 'pic2', maxCount: 1 },
     { name: 'pic3', maxCount: 1 },
     { name: 'pic4', maxCount: 1 },
-    { name: 'pic', maxCount: 1 } // Profile pic ke liye
+    { name: 'pic', maxCount: 1 }
 ]);
 
 // --- 4. Helper for JSON-SERVER Compatibility (id vs _id fix) ---
@@ -61,7 +61,12 @@ const Maincategory = createModel('Maincategory', { name: String });
 const Subcategory = createModel('Subcategory', { name: String });
 const Brand = createModel('Brand', { name: String });
 const Newslatter = createModel('Newslatter', { email: { type: String, unique: true } });
-const Contact = createModel('Contact', { name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" }, time: { type: Date, default: Date.now } });
+
+const Contact = createModel('Contact', { 
+    name: String, email: String, phone: String, subject: String, 
+    message: String, status: { type: String, default: "Active" }, 
+    time: { type: Date, default: Date.now } 
+});
 
 const Product = createModel('Product', {
     name: String, maincategory: String, subcategory: String, brand: String,
@@ -79,13 +84,27 @@ const User = createModel('User', {
 const Cart = createModel('Cart', { userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String });
 const Wishlist = createModel('Wishlist', { userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String });
 
+// --- NEW: Checkout Model (Isliye data nahi dikh raha tha) ---
+const Checkout = createModel('Checkout', {
+    userid: String,
+    paymentmode: String,
+    orderstatus: { type: String, default: "Order Placed" },
+    paymentstatus: { type: String, default: "Pending" },
+    time: { type: Date, default: Date.now },
+    totalAmount: Number,
+    shippingAmount: Number,
+    finalAmount: Number,
+    products: Array // Array of items from cart
+});
+
 // --- 6. API ROUTES ---
 
-// Generic Routes for Simple CRUD
 const setupSimpleRoutes = (path, Model) => {
     app.get(path, async (req, res) => {
-        const data = await Model.find().sort({ _id: -1 });
-        res.send(data);
+        try {
+            const data = await Model.find().sort({ _id: -1 });
+            res.send(data);
+        } catch (e) { res.status(500).send(e); }
     });
     app.post(path, async (req, res) => {
         try {
@@ -95,12 +114,16 @@ const setupSimpleRoutes = (path, Model) => {
         } catch (e) { res.status(400).send(e); }
     });
     app.delete(`${path}/:id`, async (req, res) => {
-        await Model.findByIdAndDelete(req.params.id);
-        res.send({ result: "Done" });
+        try {
+            await Model.findByIdAndDelete(req.params.id);
+            res.send({ result: "Done" });
+        } catch (e) { res.status(400).send(e); }
     });
     app.put(`${path}/:id`, async (req, res) => {
-        const data = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.send(data);
+        try {
+            const data = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
+            res.send(data);
+        } catch (e) { res.status(400).send(e); }
     });
 };
 
@@ -111,12 +134,10 @@ setupSimpleRoutes('/newslatter', Newslatter);
 setupSimpleRoutes('/cart', Cart);
 setupSimpleRoutes('/wishlist', Wishlist);
 setupSimpleRoutes('/contact', Contact);
+setupSimpleRoutes('/checkout', Checkout); // FIXED: Added Checkout Route
 
-// User Routes (With Profile Pic Upload)
-app.get('/user', async (req, res) => {
-    res.send(await User.find().sort({ _id: -1 }));
-});
-
+// --- Special Routes for Files (User & Product) ---
+app.get('/user', async (req, res) => res.send(await User.find().sort({ _id: -1 })));
 app.post('/user', upload, async (req, res) => {
     try {
         const data = new User(req.body);
@@ -125,7 +146,6 @@ app.post('/user', upload, async (req, res) => {
         res.send(data);
     } catch (e) { res.status(400).send(e); }
 });
-
 app.put('/user/:id', upload, async (req, res) => {
     try {
         let updateData = { ...req.body };
@@ -135,11 +155,7 @@ app.put('/user/:id', upload, async (req, res) => {
     } catch (e) { res.status(400).send(e); }
 });
 
-// Product Routes (With 4 Pics Upload)
-app.get('/product', async (req, res) => {
-    res.send(await Product.find().sort({ _id: -1 }));
-});
-
+app.get('/product', async (req, res) => res.send(await Product.find().sort({ _id: -1 })));
 app.post('/product', upload, async (req, res) => {
     try {
         const data = new Product(req.body);
@@ -153,7 +169,6 @@ app.post('/product', upload, async (req, res) => {
         res.send(data);
     } catch (error) { res.status(400).send(error); }
 });
-
 app.delete('/product/:id', async (req, res) => {
     await Product.findByIdAndDelete(req.params.id);
     res.send({ result: "Done" });

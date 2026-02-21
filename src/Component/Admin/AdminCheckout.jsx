@@ -2,7 +2,9 @@ import React, { useEffect } from 'react'
 import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
-import { getCheckout } from '../../Store/ActionCreaters/CheckoutActionCreators';
+import { getCheckout, deleteCheckout } from '../../Store/ActionCreaters/CheckoutActionCreators';
+import { motion } from 'framer-motion'
+import { ShoppingBag, Trash2 } from 'lucide-react'
 
 export default function AdminCheckout() {
     const dispatch = useDispatch()
@@ -12,31 +14,55 @@ export default function AdminCheckout() {
         dispatch(getCheckout())
     }, [dispatch])
 
-    // FIX: Mapping MongoDB _id to id
+    // FIX: Mapping MongoDB _id to id for DataGrid
     const rows = checkoutData ? checkoutData.map((item) => ({
         ...item,
-        id: item._id || item.id
+        id: item._id || item.id 
     })) : []
 
     const columns = [
         { field: 'id', headerName: 'Order ID', width: 200 },
         { field: 'userid', headerName: 'User ID', width: 200 },
         { field: 'paymentmode', headerName: 'Payment', width: 120 },
-        { field: 'orderstatus', headerName: 'Status', width: 150 },
-        { field: 'finalAmount', headerName: 'Total', width: 130, renderCell: ({row}) => <strong>₹{row.finalAmount}</strong> },
+        { 
+            field: 'orderstatus', 
+            headerName: 'Status', 
+            width: 150,
+            renderCell: ({row}) => (
+                <span className={`badge px-3 py-2 rounded-pill ${row.orderstatus === 'Order Placed' ? 'badge-warning' : 'badge-success'}`}>
+                    {row.orderstatus}
+                </span>
+            )
+        },
+        { field: 'finalAmount', headerName: 'Total Amount', width: 130, renderCell: ({row}) => <strong>₹{row.finalAmount}</strong> },
+        {
+            field: "delete", headerName: "Action", width: 80,
+            renderCell: ({ row }) => (
+                <button className="btn text-danger" onClick={() => { if(window.confirm("Delete Order?")) dispatch(deleteCheckout({ id: row.id })) }}>
+                    <Trash2 size={18} />
+                </button>
+            )
+        }
     ];
 
     return (
-        <div className="container-fluid my-5">
+        <div className="container-fluid my-5" style={{ minHeight: "80vh" }}>
             <div className="row">
                 <div className="col-lg-2"><LefNav /></div>
                 <div className="col-lg-10">
-                    <div className="bg-white p-4 shadow-sm rounded-lg border">
-                        <h4 className="mb-4 font-weight-bold text-info">Manage Orders</h4>
-                        <div style={{ height: 550, width: '100%' }}>
-                            <DataGrid rows={rows} columns={columns} pageSize={10} />
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-lg rounded-2xl p-4 border">
+                        <h4 className="font-weight-bold mb-4 d-flex align-items-center">
+                            <ShoppingBag className="mr-2 text-info"/> Manage All Orders
+                        </h4>
+                        <div style={{ height: 600, width: '100%' }}>
+                            <DataGrid 
+                                rows={rows} 
+                                columns={columns} 
+                                pageSize={10} 
+                                disableSelectionOnClick 
+                            />
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
         </div>
