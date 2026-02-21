@@ -1,5 +1,12 @@
 import { takeEvery, put } from "redux-saga/effects"
-import { createUserAPI, deleteUserAPI, getUserAPI, updateUserAPI, forgetPasswordAPI } from "../Services" 
+// SAHI LINE: 'forgetPasswordAPI' import kar li gayi hai
+import { 
+    createUserAPI, 
+    deleteUserAPI, 
+    getUserAPI, 
+    updateUserAPI, 
+    forgetPasswordAPI 
+} from "../Services" 
 import { 
     ADD_USER, ADD_USER_RED, 
     DELETE_USER, DELETE_USER_RED, 
@@ -11,36 +18,37 @@ function* createUserSaga(action) {
     try {
         let response = yield createUserAPI(action.payload)
         yield put({ type: ADD_USER_RED, data: response })
-    } catch (e) { console.log("User Signup Error:", e) }
+    } catch (e) { console.log("User Add Error", e) }
 }
 
 function* getUserSaga() {
     try {
         let response = yield getUserAPI()
         yield put({ type: GET_USER_RED, data: response })
-    } catch (e) { console.log("User Fetch Error:", e) }
+    } catch (e) { console.log("User Fetch Error", e) }
 }
 
 function* deleteUserSaga(action) {
     try {
         yield deleteUserAPI(action.payload)
         yield put({ type: DELETE_USER_RED, data: action.payload })
-    } catch (e) { console.log("User Delete Error:", e) }
+    } catch (e) { console.log("User Delete Error", e) }
 }
 
 function* updateUserSaga(action) {
     try {
         let response = yield updateUserAPI(action.payload)
         yield put({ type: UPDATE_USER_RED, data: response })
-    } catch (e) { console.log("User Update Error:", e) }
+    } catch (e) { console.log("User Update Error", e) }
 }
 
+// 🎯 FORGET PASSWORD SAGA
 function* forgetPasswordSaga(action) {
     try {
-        // Services se sahi se import ho gaya hai ab
         let response = yield forgetPasswordAPI(action.payload)
+        // Reducer mein updated user data jayega
         yield put({ type: UPDATE_USER_RED, data: response })
-    } catch (e) { console.log("Forget Password Error:", e) }
+    } catch (e) { console.error("Forget Password Error:", e) }
 }
 
 export function* userSaga() {
@@ -48,6 +56,5 @@ export function* userSaga() {
     yield takeEvery(GET_USER, getUserSaga)
     yield takeEvery(DELETE_USER, deleteUserSaga)
     yield takeEvery(UPDATE_USER, updateUserSaga)
-    // "FORGET_PASSWORD" action aapke login page ya component se dispatch hoga
-    yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga) 
+    yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga)
 }

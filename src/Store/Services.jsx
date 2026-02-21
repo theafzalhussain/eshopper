@@ -53,6 +53,9 @@ export const updateUserAPI = (data) => {
 }
 export const deleteUserAPI = (data) => mutationAPI(`/user/${data.id}`, "delete");
 
+// 🎯 FORGET PASSWORD API (FIXED DEFINITION)
+export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);
+
 // --- CART ---
 export const createCartAPI = (data) => mutationAPI("/cart", "post", data);
 export const getCartAPI = () => getAPI("/cart");
@@ -62,26 +65,19 @@ export const deleteCartAPI = (data) => mutationAPI(`/cart/${data.id}`, "delete")
 // --- WISHLIST ---
 export const createWishlistAPI = (data) => mutationAPI("/wishlist", "post", data);
 export const getWishlistAPI = () => getAPI("/wishlist");
-export const updateWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "put", data);
 export const deleteWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "delete");
 
 // --- CHECKOUT ---
 export const createCheckoutAPI = (data) => mutationAPI("/checkout", "post", data);
 export const getCheckoutAPI = () => getAPI("/checkout");
 export const updateCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "put", data);
-export const deleteCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "delete");
 
 // --- CONTACT ---
 export const createContactAPI = (data) => mutationAPI("/contact", "post", data);
 export const getContactAPI = () => getAPI("/contact");
-export const updateContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "put", data);
 export const deleteContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "delete");
 
 // --- NEWSLATTER ---
 export const createNewslatterAPI = (data) => mutationAPI("/newslatter", "post", data);
 export const getNewslatterAPI = () => getAPI("/newslatter");
-export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "put", data);
 export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "delete");
-
-// --- FORGET PASSWORD ---
-export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);
