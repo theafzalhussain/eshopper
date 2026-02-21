@@ -51,14 +51,13 @@ export default function App() {
         <Route path='/contact' element = {<Contact/>}/>
         <Route path='/cart' element = {<Cart/>}/>
         <Route path='/checkout' element = {<Checkout/>}/>
-        <Route path='/single-product/:id' element = {<SingleProductPage/>}/>
-        
-        {/* FIXED: Wishlist path was wrong, now corrected */}
-        <Route path='/wishlist' element = {<Wishlist/>}/> 
+      <Route path='/single-product/:id' element = {<SingleProductPage/>}/>
+<Route path='/wishlist' element = {<Wishlist/>}/> 
+<Route path='/forget-password' element={<ForgetPassword />} />
         
         <Route path='/login' element = {<Login/>}/>
         <Route path='/signup' element = {<SingUp/>}/>
-        <Route path='/forget-password' element={<ForgetPassword />} />
+        {/* <Route path='/forget-password' element={<ForgetPassword />} /> */}
         <Route path='/profile' element = {<Profile/>}/>
         <Route path='/update-profile' element = {<Updateprofile/>}/>
         <Route path='/confirmation' element = {<Confirmation/>}/>
