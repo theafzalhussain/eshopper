@@ -3,17 +3,17 @@ import { ADD_CONTACT_RED, DELETE_CONTACT_RED, GET_CONTACT_RED, UPDATE_CONTACT_RE
 export function ContactReducer(state = [], action) {
     switch (action.type) {
         case ADD_CONTACT_RED:
-            return [...state, action.data]
+            return [...state, { ...action.data, id: action.data._id }]; // Mapping id immediately
 
         case GET_CONTACT_RED:
-            // FIX: MongoDB ki _id ko DataGrid ke liye id mein convert kar rahe hain
-            return action.data.map(item => ({ ...item, id: item._id || item.id }))
+            // FIX: Saare data ko map karke _id ki value id me dal rahe hain
+            return action.data.map(item => ({ 
+                ...item, 
+                id: item._id || item.id 
+            }));
 
         case DELETE_CONTACT_RED:
-            return state.filter(item => (item.id || item._id) !== (action.data.id || action.data._id))
-
-        case UPDATE_CONTACT_RED:
-            return state.map(item => (item.id || item._id) === (action.data.id || action.data._id) ? action.data : item)
+            return state.filter(item => item.id !== action.data);
 
         default:
             return state
