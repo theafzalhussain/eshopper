@@ -88,3 +88,6 @@ export const createNewslatterAPI = (data) => mutationAPI("/newslatter", "post", 
 export const getNewslatterAPI = () => getAPI("/newslatter");
 export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "put", data);
 export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "delete");
+
+// pasword
+export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);

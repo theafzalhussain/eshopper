@@ -37,6 +37,7 @@ import AdminWishlist from './Admin/AdminWishlist'
 import AdminUpdateWishlist from './Admin/AdminUpdateWishlist'
 import Confirmation from './confirmation'
 import Wishlist from './Wishlist'
+import ForgetPassword from './Component/ForgetPassword'
 
 export default function App() {
   return (
@@ -57,6 +58,7 @@ export default function App() {
         
         <Route path='/login' element = {<Login/>}/>
         <Route path='/signup' element = {<SingUp/>}/>
+        <Route path='/forget-password' element={<ForgetPassword />} />
         <Route path='/profile' element = {<Profile/>}/>
         <Route path='/update-profile' element = {<Updateprofile/>}/>
         <Route path='/confirmation' element = {<Confirmation/>}/>

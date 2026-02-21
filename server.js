@@ -179,6 +179,22 @@ app.delete('/product/:id', async (req, res) => {
     await Product.findByIdAndDelete(req.params.id);
     res.send({ result: "Done" });
 });
+// --- Forget Password Route ---
+app.post('/user/forget-password', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await User.findOne({ username: username });
+        if (user) {
+            user.password = password; // Naya password set karein
+            await user.save();
+            res.status(200).send({ result: "Done", message: "Password Updated Successfully" });
+        } else {
+            res.status(404).send({ result: "Fail", message: "Invalid Username" });
+        }
+    } catch (e) {
+        res.status(500).send(e);
+    }
+});
 
 // --- 8. Server Start ---
 const PORT = process.env.PORT || 8000;

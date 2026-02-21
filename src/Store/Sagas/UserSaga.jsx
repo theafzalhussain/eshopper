@@ -39,3 +39,13 @@ export function* userSaga() {
     yield takeEvery(DELETE_USER, deleteUserSaga)
     yield takeEvery(UPDATE_USER, updateUserSaga)
 }
+// Function
+function* forgetPasswordSaga(action) {
+    try {
+        let response = yield forgetPasswordAPI(action.payload)
+        yield put({ type: UPDATE_USER_RED, data: response }) // Hum update reducer use kar lenge
+    } catch (e) { console.log(e) }
+}
+
+// Watcher (userSaga ke andar add karein)
+// yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga)
