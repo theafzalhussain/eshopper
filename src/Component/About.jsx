@@ -1,184 +1,106 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import Newslatter from './Newslatter'
 
 export default function About() {
-  return (
-    <>
-     <div className="hero-wrap hero-bread" style={{backgroundImage: "url('assets/images/bg_6.jpg')"}}>
-      <div className="container">
-        <div className="row no-gutters slider-text align-items-center justify-content-center">
-          <div className="col-md-9 ftco-animate text-center">
-          	<p className="breadcrumbs"><span className="mr-2"><Link to="/">Home</Link></span> <span>About</span></p>
-            <h1 className="mb-0 bread">About Us</h1>
-          </div>
+    return (
+        <div style={{ backgroundColor: "#ffffff" }}>
+            {/* --- HERO SECTION --- */}
+            <section className="py-5" style={{ background: "#111", color: "white" }}>
+                <div className="container py-5">
+                    <div className="row align-items-center">
+                        <motion.div 
+                            className="col-md-6"
+                            initial={{ opacity: 0, x: -50 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                        >
+                            <h1 className="display-3 font-weight-bold mb-4">Our Story of <span className="text-info">Elegance</span></h1>
+                            <p className="lead opacity-75 mb-5">Since 2024, Eshopper has been defining the future of premium fashion, bringing global trends directly to your doorstep with uncompromised quality.</p>
+                        </motion.div>
+                        <div className="col-md-6 text-center">
+                            <motion.img 
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                whileInView={{ scale: 1, opacity: 1 }}
+                                src="/assets/images/about.jpg" 
+                                className="img-fluid rounded-2xl shadow-2xl border border-secondary"
+                                alt="About Us"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* --- CORE VALUES (Kept similar to image but Premium) --- */}
+            <section className="py-5 mt-5">
+                <div className="container">
+                    <div className="row text-center">
+                        {[
+                            { icon: "flaticon-bag", title: "Global Reach", bg: "#f8f9fa" },
+                            { icon: "flaticon-heart-box", title: "Handcrafted", bg: "#f0faff" },
+                            { icon: "flaticon-payment-security", title: "Total Privacy", bg: "#fffaf0" },
+                            { icon: "flaticon-customer-service", title: "Expert Care", bg: "#f5f0ff" }
+                        ].map((item, i) => (
+                            <motion.div key={i} className="col-lg-3 col-md-6 mb-4" whileHover={{ y: -15 }}>
+                                <div className="p-5 rounded-2xl shadow-sm h-100" style={{ backgroundColor: item.bg }}>
+                                    <span className={`${item.icon} display-4 text-info mb-3 d-block`}></span>
+                                    <h5 className="font-weight-bold">{item.title}</h5>
+                                    <p className="small text-muted">Excellence in every stitch and every service we provide.</p>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* --- PREMIUM STATS SECTION --- */}
+            <section className="py-5 bg-info text-white text-center">
+                <div className="container">
+                    <div className="row">
+                        <div className="col-md-3">
+                            <h2 className="font-weight-bold">10K+</h2>
+                            <p className="small uppercase font-weight-bold">Happy Customers</p>
+                        </div>
+                        <div className="col-md-3">
+                            <h2 className="font-weight-bold">50+</h2>
+                            <p className="small uppercase font-weight-bold">Global Brands</p>
+                        </div>
+                        <div className="col-md-3">
+                            <h2 className="font-weight-bold">24H</h2>
+                            <p className="small uppercase font-weight-bold">Response Time</p>
+                        </div>
+                        <div className="col-md-3">
+                            <h2 className="font-weight-bold">100%</h2>
+                            <p className="small uppercase font-weight-bold">Original Quality</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* --- IMAGES SECTION (Same as your request but attractive) --- */}
+            <section className="py-5 bg-light">
+                <div className="container text-center mb-5">
+                    <h2 className="font-weight-bold display-4">Crafting the Future</h2>
+                    <p className="text-muted">Behind the scenes of our premium production line</p>
+                </div>
+                <div className="container-fluid px-lg-5">
+                    <div className="row no-gutters overflow-hidden rounded-2xl shadow-lg">
+                        <div className="col-md-4"><img src="assets/images/choose-1.jpg" className="w-100 img-zoom" alt="" /></div>
+                        <div className="col-md-4"><img src="assets/images/choose-2.jpg" className="w-100 img-zoom" alt="" /></div>
+                        <div className="col-md-4"><img src="/assets/productimages/kid.jpg" className="w-100 img-zoom" alt="" /></div>
+                    </div>
+                </div>
+            </section>
+
+            <Newslatter />
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                .rounded-2xl { border-radius: 30px !important; }
+                .img-zoom { transition: 0.8s all ease; height: 400px; object-fit: cover; }
+                .img-zoom:hover { transform: scale(1.1); }
+                .shadow-2xl { box-shadow: 0 40px 80px rgba(0,0,0,0.3) !important; }
+                .uppercase { text-transform: uppercase; letter-spacing: 2px; }
+                .btn-white { background: white; color: black; font-weight: bold; border-radius: 50px; }
+            `}} />
         </div>
-      </div>
-    </div>
-
-    <section className="ftco-section ftco-no-pt ftco-no-pb">
-			<div className="container">
-				<div className="row no-gutters ftco-services">
-          <div className="col-lg-4 text-center d-flex align-self-stretch ftco-animate">
-            <div className="media block-6 services p-4 py-md-5">
-              <div className="icon d-flex justify-content-center align-items-center mb-4">
-            		<span className="flaticon-bag"></span>
-              </div>
-              <div className="media-body">
-                <h3 className="heading">Free Shipping</h3>
-                <p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia, there live the blind texts.</p>
-              </div>
-            </div>      
-          </div>
-          <div className="col-lg-4 text-center d-flex align-self-stretch ftco-animate">
-            <div className="media block-6 services p-4 py-md-5">
-              <div className="icon d-flex justify-content-center align-items-center mb-4">
-            		<span className="flaticon-customer-service"></span>
-              </div>
-              <div className="media-body">
-                <h3 className="heading">Support Customer</h3>
-                <p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia, there live the blind texts.</p>
-              </div>
-            </div>    
-          </div>
-          <div className="col-lg-4 text-center d-flex align-self-stretch ftco-animate">
-            <div className="media block-6 services p-4 py-md-5">
-              <div className="icon d-flex justify-content-center align-items-center mb-4">
-            		<span className="flaticon-payment-security"></span>
-              </div>
-              <div className="media-body">
-                <h3 className="heading">Secure Payments</h3>
-                <p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia, there live the blind texts.</p>
-              </div>
-            </div>      
-          </div>
-        </div>
-			</div>
-		</section>
-
-    <section className="ftco-section ftco-no-pb ftco-no-pt bg-light">
-			<div className="container">
-				<div className="row">
-					<div className="col-md-5 p-md-5 img img-2 d-flex justify-content-center align-items-center" style={{backgroundImage: "url('assets/images/about.jpg')"}}>
-						<Link to="#" className="icon popup-vimeo d-flex justify-content-center align-items-center">
-							<span className="icon-play"></span>
-						</Link>
-					</div>
-					<div className="col-md-7 py-md-5 wrap-about pb-md-5 ftco-animate">
-	          <div className="heading-section-bold mb-4 mt-md-5">
-	          	<div className="ml-md-0">
-		            <h2 className="mb-4">Stablished Sinced 1975</h2>
-	            </div>
-	          </div>
-	          <div className="pb-md-5 pb-4">
-							<p>But nothing the copy said could convince her and so it didn’t take long until a few insidious Copy Writers ambushed her, made her drunk with Longe and Parole and dragged her into their agency, where they abused her for their.</p>
-							<p>But nothing the copy said could convince her and so it didn’t take long until a few insidious Copy Writers ambushed her.</p>
-							<p><Link to="#" className="btn btn-primary">Shop now</Link></p>
-						</div>
-					</div>
-				</div>
-			</div>
-		</section>
-
-        <section className="ftco-section testimony-section">
-				<div className="container">
-					<div className="services-flow row">
-						<div className="services-2 p-5   d-flex ftco-animate col-lg-3 col-md-6 col-12">
-							<div className="icon">
-								<span className="flaticon-bag"></span>
-							</div>
-							<div className="text">
-								<h3>Free Shipping</h3>
-								<p className="mb-0 ">Separated they live in. A small river named Duden flows</p>
-							</div>
-						</div>
-						<div className="services-2 p-5 d-flex ftco-animate col-lg-3 col-md-6 col-12">
-							<div className="icon">
-								<span className="flaticon-heart-box"></span>
-							</div>
-							<div className="text">
-								<h3>Valuable Gifts</h3>
-								<p className="mb-0">Separated they live in. A small river named Duden flows</p>
-							</div>
-						</div>
-						<div className="services-2 p-5 d-flex ftco-animate col-lg-3 col-md-6 col-12">
-							<div className="icon">
-								<span className="flaticon-payment-security"></span>
-							</div>
-							<div className="text">
-								<h3>All Day Support</h3>
-								<p className="mb-0">Separated they live in. A small river named Duden flows</p>
-							</div>
-						</div>
-						<div className="services-2 p-5 d-flex ftco-animate col-lg-3 col-md-6 col-12">
-							<div className="icon">
-								<span className="flaticon-customer-service"></span>
-							</div>
-							<div className="text">
-								<h3>All Day Support</h3>
-								<p className="mb-0">Separated they live in. A small river named Duden flows</p>
-							</div>
-						</div>
-					</div>
-				</div>
-			</section>
-
-    <section className="ftco-gallery">
-    	<div className="container">
-    		<div className="row justify-content-center">
-    			<div className="col-md-8 heading-section text-center mb-4 ftco-animate">
-            <h2 className="mb-4">Follow Us On Instagram</h2>
-            <p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia, there live the blind texts. Separated they live in</p>
-          </div>
-    		</div>
-    	</div>
-    	<div className="container-fluid px-0">
-    		<div className="row no-gutters">
-					<div className="col-md-4 col-lg-2 ftco-animate">
-						<Link to="images/gallery-1.jpg" className="gallery image-popup img d-flex align-items-center" style={{backgroundImage: "url('assets/images/gallery-1.jpg')"}}>
-							<div className="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span className="icon-instagram"></span>
-    					</div>
-						</Link>
-					</div>
-					<div className="col-md-4 col-lg-2 ftco-animate">
-						<Link to="images/gallery-2.jpg" className="gallery image-popup img d-flex align-items-center" style={{backgroundImage: "url('assets/images/gallery-2.jpg')"}}>
-							<div className="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span className="icon-instagram"></span>
-    					</div>
-						</Link>
-					</div>
-					<div className="col-md-4 col-lg-2 ftco-animate">
-						<Link to="images/gallery-3.jpg" className="gallery image-popup img d-flex align-items-center" style={{backgroundImage: "url('assets/images/gallery-3.jpg')"}}>
-							<div className="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span className="icon-instagram"></span>
-    					</div>
-						</Link>
-					</div>
-					<div className="col-md-4 col-lg-2 ftco-animate">
-						<Link to="images/gallery-4.jpg" className="gallery image-popup img d-flex align-items-center" style={{backgroundImage: "url('assets/images/gallery-4.jpg')"}}>
-							<div className="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span className="icon-instagram"></span>
-    					</div>
-						</Link>
-					</div>
-					<div className="col-md-4 col-lg-2 ftco-animate">
-						<Link to="images/gallery-5.jpg" className="gallery image-popup img d-flex align-items-center" style={{backgroundImage: "url('assets/images/gallery-5.jpg')"}}>
-							<div className="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span className="icon-instagram"></span>
-    					</div>
-						</Link>
-					</div>
-					<div className="col-md-4 col-lg-2 ftco-animate">
-						<Link to="images/gallery-6.jpg" className="gallery image-popup img d-flex align-items-center" style={{backgroundImage: "url('assets/images/gallery-6.jpg')"}}>
-							<div className="icon mb-4 d-flex align-items-center justify-content-center">
-    						<span className="icon-instagram"></span>
-    					</div>
-						</Link>
-					</div>
-        </div>
-    	</div>
-    </section>
-
-    </>
-  )
+    )
 }
