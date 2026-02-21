@@ -139,14 +139,25 @@ app.delete('/checkout/:id', async (req, res) => {
     res.send({ result: "Done" });
 });
 
-// --- Admin Stats Route (NEW UPDATE) ---
+// --- Admin Stats Route (NEW REVENUE LOGIC UPDATED) ---
 app.get('/admin/stats', async (req, res) => {
     try {
-        const uCount = await User.countDocuments();
-        const pCount = await Product.countDocuments();
-        const oCount = await Checkout.countDocuments();
-        const cCount = await Contact.countDocuments();
-        res.send({ users: uCount, products: pCount, orders: oCount, contacts: cCount });
+        const users = await User.countDocuments();
+        const products = await Product.countDocuments();
+        const contacts = await Contact.countDocuments();
+        
+        // Revenue calculate karna: Sabhi orders ka total sum
+        const checkouts = await Checkout.find();
+        const ordersCount = checkouts.length;
+        const totalRevenue = checkouts.reduce((sum, order) => sum + (Number(order.finalAmount) || 0), 0);
+
+        res.status(200).send({
+            totalUsers: users,
+            totalProducts: products,
+            totalOrders: ordersCount,
+            totalRevenue: totalRevenue,
+            totalInquiries: contacts
+        });
     } catch (e) {
         res.status(500).send(e);
     }
