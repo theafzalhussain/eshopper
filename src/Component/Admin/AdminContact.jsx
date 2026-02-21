@@ -2,14 +2,23 @@ import React, { useEffect } from 'react'
 import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
-import { getContact, deleteContact } from '../../Store/ActionCreaters/ContactActionCreators';
+import { deleteContact, getContact } from '../../Store/ActionCreaters/ContactActionCreators';
+import { motion } from 'framer-motion'
 import { Trash2, MailOpen } from 'lucide-react'
 
 export default function AdminContact() {
     const contacts = useSelector((state) => state.ContactStateData)
     const dispatch = useDispatch()
 
-    useEffect(() => { dispatch(getContact()) }, [dispatch])
+    useEffect(() => { 
+        dispatch(getContact()) 
+    }, [dispatch])
+
+    // FIX: DataGrid needs 'id', so we map MongoDB '_id' to 'id'
+    const rows = contacts?.map((item) => ({
+        ...item,
+        id: item._id || item.id 
+    })) || []
 
     const columns = [
         { field: 'id', headerName: 'ID', width: 90 },
@@ -20,7 +29,7 @@ export default function AdminContact() {
         {
             field: "action", headerName: "Delete", width: 100,
             renderCell: ({ row }) => (
-                <button className="btn text-danger" onClick={() => { if(window.confirm("Delete?")) dispatch(deleteContact({ id: row.id })) }}>
+                <button className="btn text-danger p-0" onClick={() => { if(window.confirm("Delete Message?")) dispatch(deleteContact({ id: row.id })) }}>
                     <Trash2 size={18} />
                 </button>
             )
@@ -28,16 +37,16 @@ export default function AdminContact() {
     ];
 
     return (
-        <div className="container-fluid my-5">
+        <div className="container-fluid my-5" style={{ minHeight: "80vh" }}>
             <div className="row">
                 <div className="col-lg-2"><LefNav /></div>
                 <div className="col-lg-10">
-                    <div className="bg-white p-4 shadow rounded-2xl">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-lg rounded-2xl p-4 border">
                         <h4 className="font-weight-bold mb-4 d-flex align-items-center"><MailOpen className="mr-2 text-info"/> Customer Queries</h4>
                         <div style={{ height: 500, width: '100%' }}>
-                            <DataGrid rows={contacts || []} columns={columns} pageSize={10} disableSelectionOnClick />
+                            <DataGrid rows={rows} columns={columns} pageSize={10} disableSelectionOnClick />
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
         </div>

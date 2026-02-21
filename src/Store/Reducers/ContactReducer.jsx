@@ -6,15 +6,14 @@ export function ContactReducer(state = [], action) {
             return [...state, action.data]
 
         case GET_CONTACT_RED:
-            return action.data
+            // FIX: MongoDB ki _id ko DataGrid ke liye id mein convert kar rahe hain
+            return action.data.map(item => ({ ...item, id: item._id || item.id }))
 
         case DELETE_CONTACT_RED:
             return state.filter(item => (item.id || item._id) !== (action.data.id || action.data._id))
 
         case UPDATE_CONTACT_RED:
-            return state.map(item => 
-                (item.id || item._id) === (action.data.id || action.data._id) ? action.data : item
-            )
+            return state.map(item => (item.id || item._id) === (action.data.id || action.data._id) ? action.data : item)
 
         default:
             return state

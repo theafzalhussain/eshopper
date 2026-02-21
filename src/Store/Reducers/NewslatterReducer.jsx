@@ -6,15 +6,11 @@ export function NewslatterReducer(state = [], action) {
             return [...state, action.data]
 
         case GET_NEWSLATTER_RED:
-            return action.data
+            // FIX: Convert _id to id for DataGrid
+            return action.data.map(item => ({ ...item, id: item._id || item.id }))
 
         case DELETE_NEWSLATTER_RED:
             return state.filter(item => (item.id || item._id) !== (action.data.id || action.data._id))
-
-        case UPDATE_NEWSLATTER_RED:
-            return state.map(item => 
-                (item.id || item._id) === (action.data.id || action.data._id) ? action.data : item
-            )
 
         default:
             return state
