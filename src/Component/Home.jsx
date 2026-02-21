@@ -2,31 +2,41 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
+import { getUser } from '../Store/ActionCreaters/UserActionCreators'; // User logic added
 import Newslatter from './Newslatter';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Home() {
     const product = useSelector((state) => state.ProductStateData)
+    const users = useSelector((state) => state.UserStateData)
     const dispatch = useDispatch()
     const navigate = useNavigate()
     
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [welcomeUser, setWelcomeUser] = useState("")
 
-    // --- ⚡ PERFORMANCE OPTIMIZATION ---
+    // --- ⚡ FAST LOADING & PERFORMANCE OPTIMIZATION ---
+    // Memoize display products to avoid heavy calculations on every render
     const displayProducts = useMemo(() => {
         return [...product].reverse().slice(0, 8);
     }, [product]);
 
     useEffect(() => {
         dispatch(getProduct())
-        // Auto-slide for Hero
+        dispatch(getUser())
+
+        // Personalization: LocalStorage se name uthana
+        const storedName = localStorage.getItem("name")
+        if(storedName) setWelcomeUser(storedName)
+
+        // Auto-slide logic for Hero Section
         const timer = setInterval(() => {
             setCurrentSlide((prev) => (prev === sliderData.length - 1 ? 0 : prev + 1));
         }, 5000);
         return () => clearInterval(timer);
     }, [dispatch])
 
-    // --- PREMIUM SLIDER DATA ---
+    // --- PREMIUM SLIDER DATA (Fully Working Links) ---
     const sliderData = [
         {
             title: "Summer Elegance",
@@ -46,7 +56,7 @@ export default function Home() {
         }
     ];
 
-    // --- ANIMATION VARIANTS ---
+    // Animation Config
     const fadeUp = {
         hidden: { opacity: 0, y: 30 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
@@ -55,7 +65,7 @@ export default function Home() {
     return (
         <div className="home-premium-wrapper" style={{ backgroundColor: "#ffffff" }}>
             
-            {/* --- 1. DYNAMIC PREMIUM HERO CAROUSEL --- */}
+            {/* --- 1. PREMIUM HERO CAROUSEL --- */}
             <section className="hero-slider position-relative overflow-hidden" style={{ height: '90vh' }}>
                 <AnimatePresence mode="wait">
                     <motion.div 
@@ -70,30 +80,20 @@ export default function Home() {
                         <div className="container">
                             <div className="row align-items-center">
                                 <div className="col-lg-6">
-                                    <motion.span 
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        className="text-info font-weight-bold letter-spacing-2 mb-3 d-block"
-                                    >
-                                        {sliderData[currentSlide].subtitle}
-                                    </motion.span>
-                                    <motion.h1 
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="display-2 font-weight-bold mb-4"
-                                    >
-                                        {sliderData[currentSlide].title}
-                                    </motion.h1>
-                                    <motion.p 
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        className="lead text-muted mb-5"
-                                    >
-                                        {sliderData[currentSlide].desc}
-                                    </motion.p>
-                                    <Link to={sliderData[currentSlide].link} className="btn btn-dark btn-lg px-5 py-3 rounded-pill shadow-lg">
-                                        EXPLORE COLLECTION
-                                    </Link>
+                                    <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{delay: 0.3}}>
+                                        <span className="text-info font-weight-bold letter-spacing-2 mb-3 d-block uppercase small">
+                                            {welcomeUser ? `Welcome, ${welcomeUser.split(' ')[0]} | ` : ""}{sliderData[currentSlide].subtitle}
+                                        </span>
+                                        <h1 className="display-2 font-weight-bold mb-4 text-dark line-height-1">
+                                            {sliderData[currentSlide].title}
+                                        </h1>
+                                        <p className="lead text-muted mb-5">
+                                            {sliderData[currentSlide].desc}
+                                        </p>
+                                        <Link to={sliderData[currentSlide].link} className="btn btn-dark btn-lg px-5 py-3 rounded-0 shadow-lg transition hover-up">
+                                            SHOP THE COLLECTION
+                                        </Link>
+                                    </motion.div>
                                 </div>
                                 <div className="col-lg-6 text-center d-none d-lg-block">
                                     <motion.img 
@@ -101,8 +101,8 @@ export default function Home() {
                                         animate={{ scale: 1, opacity: 1 }}
                                         src={sliderData[currentSlide].img} 
                                         className="img-fluid hero-floating-img"
-                                        alt="Hero"
-                                        style={{ maxHeight: '70vh' }}
+                                        alt="Main banner"
+                                        style={{ maxHeight: '75vh', filter: 'drop-shadow(20px 20px 60px rgba(0,0,0,0.1))' }}
                                     />
                                 </div>
                             </div>
@@ -110,7 +110,6 @@ export default function Home() {
                     </motion.div>
                 </AnimatePresence>
                 
-                {/* Slider Dots */}
                 <div className="slider-dots">
                     {sliderData.map((_, i) => (
                         <div key={i} onClick={() => setCurrentSlide(i)} className={`dot ${currentSlide === i ? 'active' : ''}`}></div>
@@ -118,35 +117,35 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* --- 2. LUXURY BENTO CATEGORIES --- */}
+            {/* --- 2. LUXURY BENTO CATEGORY GRID --- */}
             <section className="py-5 mt-5">
                 <div className="container">
                     <div className="row g-4">
                         <div className="col-md-7">
-                            <motion.div whileHover={{y:-10}} className="category-card large shadow-sm rounded-xl overflow-hidden position-relative">
-                                <img src="assets/images/choose-1.jpg" className="w-100 h-100 object-fit-cover" alt="Male" style={{minHeight:'500px'}} />
-                                <div className="category-content-overlay">
+                            <motion.div whileHover={{ scale: 0.98 }} className="category-card large shadow rounded-2xl overflow-hidden position-relative h-100" style={{minHeight:'550px'}}>
+                                <img src="assets/images/choose-1.jpg" className="w-100 h-100 object-fit-cover transition-slow" alt="Men" />
+                                <div className="category-content-overlay p-5 d-flex flex-column justify-content-end">
                                     <h2 className="text-white display-4 font-weight-bold">MEN</h2>
-                                    <Link to="/shop/Male" className="btn btn-light rounded-pill px-4">Shop Now</Link>
+                                    <Link to="/shop/Male" className="btn btn-white w-max px-5 rounded-0 font-weight-bold">SHOP NOW</Link>
                                 </div>
                             </motion.div>
                         </div>
                         <div className="col-md-5">
                             <div className="d-flex flex-column h-100 gap-4">
-                                <motion.div whileHover={{y:-10}} className="category-card shadow-sm rounded-xl overflow-hidden position-relative mb-4" style={{flex:1}}>
-                                    <img src="assets/images/choose-2.jpg" className="w-100 h-100 object-fit-cover" alt="Female" />
-                                    <div className="category-content-overlay">
-                                        <h3 className="text-white font-weight-bold">WOMEN</h3>
-                                        <Link to="/shop/Female" className="text-white border-bottom">Discover</Link>
+                                <motion.div whileHover={{ scale: 0.98 }} className="category-card shadow rounded-2xl overflow-hidden position-relative mb-4 border" style={{ flex: 1 }}>
+                                    <img src="assets/images/choose-2.jpg" className="w-100 h-100 object-fit-cover transition-slow" alt="Women" />
+                                    <div className="category-content-overlay p-4">
+                                        <h3 className="text-white font-weight-bold h2 mb-0">WOMEN</h3>
+                                        <Link to="/shop/Female" className="text-white border-bottom small font-weight-bold mt-2 d-inline-block">VIEW LOOKBOOK</Link>
                                     </div>
                                 </motion.div>
-                                <motion.div whileHover={{y:-10}} className="category-card shadow-sm rounded-xl overflow-hidden position-relative bg-info" style={{flex:1, minHeight: '235px'}}>
-                                    <div className="p-4 text-white">
-                                        <h3 className="font-weight-bold">KIDS WEAR</h3>
-                                        <p className="small">Playful styles for little ones.</p>
-                                        <Link to="/shop/Kids" className="btn btn-outline-light btn-sm rounded-pill mt-2">View All</Link>
+                                <motion.div whileHover={{ scale: 0.98 }} className="category-card shadow rounded-2xl overflow-hidden position-relative bg-info p-5 d-flex align-items-center" style={{ flex: 1 }}>
+                                    <div className="text-white position-relative z-index-10">
+                                        <h3 className="font-weight-bold h1">KIDS</h3>
+                                        <p className="small mb-3">Styles that keep up with their imagination.</p>
+                                        <Link to="/shop/Kids" className="btn btn-outline-light rounded-pill btn-sm px-4">EXPLORE</Link>
                                     </div>
-                                    <img src="/assets/images/banner-3.png" className="position-absolute" style={{bottom:'-20px', right:'-20px', height:'120%'}} alt="" />
+                                    <img src="/assets/images/banner-3.png" className="position-absolute h-100" style={{ right: '-30px', bottom: '-20px', filter: 'grayscale(0.2)' }} alt="" />
                                 </motion.div>
                             </div>
                         </div>
@@ -154,133 +153,100 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* --- 3. TRENDING PRODUCTS (FIXED STRETCHING) --- */}
-            <section className="py-5 bg-light">
+            {/* --- 3. TRENDING REPORT (NO STRETCH IMAGES) --- */}
+            <section className="py-5 mt-5">
                 <div className="container">
                     <div className="text-center mb-5">
-                        <h6 className="text-info font-weight-bold text-uppercase letter-spacing-2">Curated for you</h6>
-                        <h2 className="display-4 font-weight-bold">The Trend Report</h2>
+                        <h2 className="display-4 font-weight-bold">Trending Report</h2>
+                        <div className="mx-auto bg-info" style={{ height: '3px', width: '70px' }}></div>
                     </div>
 
                     <div className="row">
-                        {displayProducts.length > 0 ? displayProducts.map((item) => (
-                            <div key={item.id} className="col-6 col-md-4 col-lg-3 mb-4">
-                                <motion.div 
-                                    variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
-                                    className="product-premium-card bg-white rounded-xl shadow-hover overflow-hidden h-100 d-flex flex-column"
-                                >
-                                    <div className="position-relative overflow-hidden aspect-ratio-box">
+                        {displayProducts.length > 0 ? displayProducts.map((item, index) => (
+                            <motion.div 
+                                key={item.id} className="col-6 col-md-4 col-lg-3 mb-5"
+                                initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+                                transition={{ delay: index * 0.1 }}
+                            >
+                                <div className="product-luxury-card group bg-white shadow-hover transition">
+                                    <div className="position-relative overflow-hidden aspect-ratio-standard rounded-2xl shadow-sm">
                                         <Link to={`/single-product/${item.id}`}>
-                                            <img 
-                                                src={item.pic1} 
-                                                loading="lazy"
-                                                className="product-img-main w-100 h-100" 
-                                                alt={item.name} 
-                                            />
+                                            <img src={item.pic1} loading="lazy" className="w-100 h-100 object-fit-cover luxury-img-main" alt={item.name} />
                                         </Link>
-                                        {item.discount > 0 && <span className="discount-tag">-{item.discount}%</span>}
-                                        <div className="product-actions-hover">
-                                            <button onClick={() => navigate(`/single-product/${item.id}`)} className="btn-action shadow"><i className="icon-shopping_cart"></i></button>
-                                            <button className="btn-action shadow"><i className="icon-heart"></i></button>
+                                        {item.discount > 0 && <span className="p-badge">{item.discount}% OFF</span>}
+                                        <div className="p-card-overlay">
+                                            <button onClick={() => navigate(`/single-product/${item.id}`)} className="p-btn shadow"><i className="icon-eye"></i></button>
+                                            <button className="p-btn shadow"><i className="icon-heart"></i></button>
                                         </div>
                                     </div>
-                                    <div className="p-3 mt-auto">
-                                        <p className="text-muted small mb-1 text-uppercase letter-spacing-1">{item.brand}</p>
-                                        <h6 className="font-weight-bold mb-2">
-                                            <Link to={`/single-product/${item.id}`} className="text-dark text-decoration-none">{item.name}</Link>
-                                        </h6>
-                                        <div className="d-flex align-items-center">
-                                            <span className="h6 font-weight-bold text-info mb-0">₹{item.finalprice}</span>
+                                    <div className="p-3">
+                                        <span className="small text-info font-weight-bold text-uppercase" style={{ fontSize: '9px', letterSpacing: '1.5px' }}>{item.brand}</span>
+                                        <h3 className="h6 font-weight-bold mb-2">
+                                            <Link to={`/single-product/${item.id}`} className="text-dark hover-text-info">{item.name}</Link>
+                                        </h3>
+                                        <div className="d-flex align-items-baseline">
+                                            <span className="h6 font-weight-bold mb-0">₹{item.finalprice}</span>
                                             {item.baseprice > item.finalprice && <del className="ml-2 text-muted x-small">₹{item.baseprice}</del>}
                                         </div>
                                     </div>
-                                </motion.div>
-                            </div>
+                                </div>
+                            </motion.div>
                         )) : (
-                            // Skeleton loader during fetch
-                            [1,2,3,4].map(i => <div key={i} className="col-lg-3 mb-4"><div className="skeleton-box rounded-xl"></div></div>)
+                            // Elegant Pulse Loader
+                            [1, 2, 3, 4].map(i => <div key={i} className="col-lg-3 col-6 mb-4"><div className="skeleton-p shadow-sm rounded-2xl h-350"></div></div>)
                         )}
-                    </div>
-                </div>
-            </section>
-
-            {/* --- 4. EXCLUSIVE FLASH SALE BANNER --- */}
-            <section className="py-5 my-5">
-                <div className="container">
-                    <div className="flash-sale-banner rounded-3xl p-5 d-flex align-items-center justify-content-between flex-wrap shadow-lg" style={{background: 'linear-gradient(45deg, #17a2b8, #0056b3)'}}>
-                        <div className="text-white mb-4 mb-md-0">
-                            <h2 className="display-4 font-weight-bold">Season End Sale</h2>
-                            <p className="lead opacity-75">Get up to <span className="h2 font-weight-bold">70% OFF</span> on all luxury brands.</p>
-                        </div>
-                        <div className="d-flex gap-4">
-                            <Link to="/shop/All" className="btn btn-light btn-lg rounded-pill px-5 shadow">SHOP THE SALE</Link>
-                        </div>
                     </div>
                 </div>
             </section>
 
             <Newslatter />
 
-            {/* --- 💎 PREMIUM CSS (STYLING & NO-STRETCH) --- */}
+            {/* --- PREMIUM DYNAMIC CSS --- */}
             <style dangerouslySetInnerHTML={{ __html: `
-                .rounded-xl { border-radius: 20px !important; }
-                .rounded-3xl { border-radius: 40px !important; }
+                .line-height-1 { line-height: 1; }
+                .rounded-2xl { border-radius: 24px !important; }
+                .transition { transition: all 0.3s ease; }
+                .transition-slow { transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
+                .hover-up:hover { transform: translateY(-5px); }
                 .letter-spacing-2 { letter-spacing: 2px; }
-                .letter-spacing-1 { letter-spacing: 1px; }
-                .x-small { font-size: 0.75rem; }
+                
+                .object-fit-cover { object-fit: cover; }
+                .hero-floating-img { animation: hero-float 6s ease-in-out infinite; }
+                @keyframes hero-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
 
-                /* Prevent Image Stretching */
-                .aspect-ratio-box {
-                    width: 100%;
-                    aspect-ratio: 4 / 5; /* Standard Fashion Ratio */
-                    background: #f8f9fa;
-                }
-                .product-img-main {
-                    object-fit: cover; /* This prevents stretching */
-                    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-                }
-                .product-premium-card:hover .product-img-main { transform: scale(1.08); }
-
-                /* Hero Floating Animation */
-                .hero-floating-img { animation: float 6s ease-in-out infinite; }
-                @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-
-                /* Custom Slider Dots */
-                .slider-dots { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
-                .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(0,0,0,0.1); cursor: pointer; transition: 0.3s; }
-                .dot.active { width: 30px; border-radius: 10px; background: #17a2b8; }
-
-                /* Category Overlays */
-                .category-card { height: 100%; min-height: 250px; }
+                /* Bento Style Elements */
                 .category-content-overlay {
                     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                    background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
-                    display: flex; flex-direction: column; justify-content: flex-end; padding: 40px;
+                    background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
+                    display: flex; flex-direction: column; justify-content: flex-end;
                 }
 
-                /* Product Hover Actions */
-                .product-actions-hover {
-                    position: absolute; bottom: -60px; left: 0; width: 100%;
-                    display: flex; justify-content: center; gap: 10px;
-                    padding: 20px; transition: 0.4s ease;
-                }
-                .product-premium-card:hover .product-actions-hover { bottom: 0; }
-                .btn-action { width: 45px; height: 45px; border-radius: 50%; border: none; background: white; color: #333; display: flex; align-items: center; justify-content: center; }
-                .btn-action:hover { background: #17a2b8; color: white; }
-
-                .discount-tag { position: absolute; top: 15px; right: 15px; background: #ff4757; color: white; padding: 4px 12px; border-radius: 50px; font-weight: bold; font-size: 11px; }
+                /* Product Image Standardization */
+                .aspect-ratio-standard { width: 100%; aspect-ratio: 10/12; }
+                .product-luxury-card:hover .luxury-img-main { transform: scale(1.1); }
                 
-                .shadow-hover { transition: 0.3s; }
-                .product-premium-card:hover { shadow: 0 15px 35px rgba(0,0,0,0.1) !important; }
+                .p-badge { position: absolute; top: 15px; left: 15px; background: #ff4757; color: white; padding: 4px 10px; border-radius: 5px; font-weight: bold; font-size: 10px; }
 
-                .skeleton-box { height: 350px; background: #eee; position: relative; overflow: hidden; }
-                .skeleton-box::after {
-                    content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
-                    transform: translateX(-100%);
-                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-                    animation: shimmer 1.5s infinite;
+                .p-card-overlay {
+                    position: absolute; bottom: -60px; left: 0; width: 100%; height: 100%;
+                    background: rgba(0,0,0,0.15); display: flex; justify-content: center; align-items: flex-end;
+                    padding-bottom: 25px; transition: 0.4s; gap: 12px;
                 }
-                @keyframes shimmer { 100% { transform: translateX(100%); } }
+                .product-luxury-card:hover .p-card-overlay { bottom: 0; }
+                
+                .p-btn { width: 45px; height: 45px; border-radius: 50%; border: none; background: white; color: #111; display: flex; align-items: center; justify-content: center; }
+                .p-btn:hover { background: #17a2b8; color: white; transform: scale(1.1); }
+
+                /* Loading Skeleton */
+                .skeleton-p { height: 400px; background: #eee; animation: p-shimmer 1.5s infinite linear; }
+                @keyframes p-shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+                .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; cursor: pointer; transition: 0.3s; }
+                .dot.active { width: 30px; border-radius: 5px; background: #17a2b8; }
+                .slider-dots { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 50; }
+                .btn-white { background: white; color: #000; border: none; font-weight: 800; padding: 12px 25px; transition: 0.3s; }
+                .btn-white:hover { background: #17a2b8; color: white; }
+                .w-max { width: max-content; }
             `}} />
         </div>
     )
