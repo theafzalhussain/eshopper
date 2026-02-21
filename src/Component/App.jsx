@@ -12,6 +12,12 @@ import Shop from './Shop'
 import SingleProductPage from './SingleProductPage'
 import SingUp from './SingUp'
 import Profile from './Profile'
+import Updateprofile from './UpdateProfile'
+import Confirmation from './confirmation'
+import Wishlist from './Wishlist'
+import ForgetPassword from './ForgetPassword'
+
+// Admin Components
 import AdminHome from './Admin/AdminHome'
 import AdminAddMaincategory from './Admin/AdminAddMaincategory'
 import AdminMaincategory from './Admin/AdminMaincategory'
@@ -28,64 +34,57 @@ import AdminUpdateProduct from './Admin/AdminUpdateProduct'
 import AdminAddUser from './Admin/AdminAddUser'
 import AdminUser from './Admin/AdminUser'
 import AdminUpdateUser from './Admin/AdminUpdateUser'
-import Updateprofile from './UpdateProfile'
 import AdminAddCart from './Admin/AdminAddCart'
 import AdminCart from './Admin/AdminCart'
 import AdminUpdateCart from './Admin/AdminUpdateCart'
 import AdminAddWishlist from './Admin/AdminAddWishlist'
 import AdminWishlist from './Admin/AdminWishlist'
 import AdminUpdateWishlist from './Admin/AdminUpdateWishlist'
-import Confirmation from './confirmation'
-import Wishlist from './Wishlist'
-import ForgetPassword from './ForgetPassword'
 
 export default function App() {
   return (
-    <>
     <BrowserRouter>
-    <Navbaar/>
-    <Routes>
-        <Route path='/' element = {<Home/>}/>
-        <Route path='/about' element = {<About/>}/>
+      <Navbaar />
+      <Routes>
+        {/* User Routes */}
+        <Route path='/' element={<Home />} />
+        <Route path='/about' element={<About />} />
         <Route path='/shop/:maincat/' element={<Shop />} />
-        <Route path='/contact' element = {<Contact/>}/>
-        <Route path='/cart' element = {<Cart/>}/>
-        <Route path='/checkout' element = {<Checkout/>}/>
-      <Route path='/single-product/:id' element = {<SingleProductPage/>}/>
-<Route path='/wishlist' element = {<Wishlist/>}/> 
-<Route path='/forget-password' element={<ForgetPassword />} />
-        
-        <Route path='/login' element = {<Login/>}/>
-        <Route path='/signup' element = {<SingUp/>}/>
-        {/* <Route path='/forget-password' element={<ForgetPassword />} /> */}
-        <Route path='/profile' element = {<Profile/>}/>
-        <Route path='/update-profile' element = {<Updateprofile/>}/>
-        <Route path='/confirmation' element = {<Confirmation/>}/>
+        <Route path='/contact' element={<Contact />} />
+        <Route path='/cart' element={<Cart />} />
+        <Route path='/checkout' element={<Checkout />} />
+        <Route path='/single-product/:id' element={<SingleProductPage />} />
+        <Route path='/wishlist' element={<Wishlist />} />
+        <Route path='/forget-password' element={<ForgetPassword />} />
+        <Route path='/login' element={<Login />} />
+        <Route path='/signup' element={<SingUp />} />
+        <Route path='/profile' element={<Profile />} />
+        <Route path='/update-profile' element={<Updateprofile />} />
+        <Route path='/confirmation' element={<Confirmation />} />
 
         {/* Admin Routes */}
-        <Route path='/admin-home' element = {<AdminHome/>}/>
-        <Route path='/admin-maincategory' element = {<AdminMaincategory/>}/>
-        <Route path='/admin-add-maincategory' element = {<AdminAddMaincategory/>}/>
-        <Route path='/admin-update-maincategory/:id' element = {<AdminUpdateMaincategory/>}/>
-        <Route path='/admin-subcategory' element = {<AdminSubcategory/>}/>
-        <Route path='/admin-add-subcategory' element = {<AdminAddSubcategory/>}/>
-        <Route path='/admin-update-subcategory/:id' element = {<AdminUpdateSubcategory/>}/>
-        <Route path='/admin-brand' element = {<AdminBrand/>}/>
-        <Route path='/admin-add-brand' element = {<AdminAddBrand/>}/>
-        <Route path='/admin-update-brand/:id' element = {<AdminUpdateBrand/>}/>
-        <Route path='/admin-product' element = {<AdminProduct/>}/>
-        <Route path='/admin-add-product' element = {<AdminAddProduct/>}/>
-        <Route path='/admin-update-product/:id' element = {<AdminUpdateProduct/>}/>
-        <Route path='/admin-user' element = {<AdminUser/>}/>
-        <Route path='/admin-cart' element = {<AdminCart/>}/>
-        <Route path='/admin-add-cart' element = {<AdminAddCart/>}/>
-        <Route path='/admin-update-cart/:id' element = {<AdminUpdateCart/>}/>
-        <Route path='/admin-wishlist' element = {<AdminWishlist/>}/>
-        <Route path='/admin-add-wishlist' element = {<AdminAddWishlist/>}/>
-        <Route path='/admin-update-wishlist/:id' element = {<AdminUpdateWishlist/>}/>
-    </Routes>
-    <Footer/>
+        <Route path='/admin-home' element={<AdminHome />} />
+        <Route path='/admin-maincategory' element={<AdminMaincategory />} />
+        <Route path='/admin-add-maincategory' element={<AdminAddMaincategory />} />
+        <Route path='/admin-update-maincategory/:id' element={<AdminUpdateMaincategory />} />
+        <Route path='/admin-subcategory' element={<AdminSubcategory />} />
+        <Route path='/admin-add-subcategory' element={<AdminAddSubcategory />} />
+        <Route path='/admin-update-subcategory/:id' element={<AdminUpdateSubcategory />} />
+        <Route path='/admin-brand' element={<AdminBrand />} />
+        <Route path='/admin-add-brand' element={<AdminAddBrand />} />
+        <Route path='/admin-update-brand/:id' element={<AdminUpdateBrand />} />
+        <Route path='/admin-product' element={<AdminProduct />} />
+        <Route path='/admin-add-product' element={<AdminAddProduct />} />
+        <Route path='/admin-update-product/:id' element={<AdminUpdateProduct />} />
+        <Route path='/admin-user' element={<AdminUser />} />
+        <Route path='/admin-cart' element={<AdminCart />} />
+        <Route path='/admin-add-cart' element={<AdminAddCart />} />
+        <Route path='/admin-update-cart/:id' element={<AdminUpdateCart />} />
+        <Route path='/admin-wishlist' element={<AdminWishlist />} />
+        <Route path='/admin-add-wishlist' element={<AdminAddWishlist />} />
+        <Route path='/admin-update-wishlist/:id' element={<AdminUpdateWishlist />} />
+      </Routes>
+      <Footer />
     </BrowserRouter>
-    </>
   )
 }
