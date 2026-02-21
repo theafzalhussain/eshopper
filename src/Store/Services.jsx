@@ -90,4 +90,5 @@ export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}
 export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "delete");
 
 // pasword
+// Is line ko Services.jsx mein check karein ya add karein:
 export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);

@@ -1,5 +1,6 @@
 import { takeEvery, put } from "redux-saga/effects"
-import { createUserAPI, deleteUserAPI, getUserAPI, updateUserAPI } from "../Services"
+// SAHI LINE: Yahan 'forgetPasswordAPI' add kar diya hai
+import { createUserAPI, deleteUserAPI, getUserAPI, updateUserAPI, forgetPasswordAPI } from "../Services" 
 import { ADD_USER, ADD_USER_RED, DELETE_USER, DELETE_USER_RED, GET_USER, GET_USER_RED, UPDATE_USER, UPDATE_USER_RED } from "../Constant"
 
 function* createUserSaga(action) {
@@ -25,12 +26,17 @@ function* deleteUserSaga(action) {
 
 function* updateUserSaga(action) {
     try {
-        // response me backend se naya updated user data aayega
         let response = yield updateUserAPI(action.payload)
         yield put({ type: UPDATE_USER_RED, data: response })
-    } catch (e) { 
-        console.log("User Update Error:", e) 
-    }
+    } catch (e) { console.log("User Update Error:", e) }
+}
+
+// Forget Password Saga (If you added it)
+function* forgetPasswordSaga(action) {
+    try {
+        let response = yield forgetPasswordAPI(action.payload)
+        yield put({ type: UPDATE_USER_RED, data: response })
+    } catch (e) { console.log("Forget Password Error:", e) }
 }
 
 export function* userSaga() {
@@ -38,14 +44,5 @@ export function* userSaga() {
     yield takeEvery(GET_USER, getUserSaga)
     yield takeEvery(DELETE_USER, deleteUserSaga)
     yield takeEvery(UPDATE_USER, updateUserSaga)
+    yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga) // Added if needed
 }
-// Function
-function* forgetPasswordSaga(action) {
-    try {
-        let response = yield forgetPasswordAPI(action.payload)
-        yield put({ type: UPDATE_USER_RED, data: response }) // Hum update reducer use kar lenge
-    } catch (e) { console.log(e) }
-}
-
-// Watcher (userSaga ke andar add karein)
-// yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga)
