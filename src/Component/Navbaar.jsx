@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion' // Advanced animations
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Navbaar() {
     const navigate = useNavigate()
@@ -10,10 +10,10 @@ export default function Navbaar() {
     const role = localStorage.getItem("role")
     const name = localStorage.getItem("name")
 
-    // Scroll effect logic
+    // Scroll handler to manage sticky look
     useEffect(() => {
         const handleScroll = () => {
-            if (window.scrollY > 50) setIsScrolled(true)
+            if (window.scrollY > 40) setIsScrolled(true)
             else setIsScrolled(false)
         }
         window.addEventListener('scroll', handleScroll)
@@ -21,214 +21,194 @@ export default function Navbaar() {
     }, [])
 
     function logout() {
-        if (window.confirm("Logout from your session?")) {
+        if (window.confirm("Do you want to logout?")) {
             localStorage.clear()
             navigate("/login")
         }
     }
 
-    // Active link highlighting logic
     const isActive = (path) => location.pathname === path
 
     return (
-        <>
-            {/* --- 1. MINIMAL TOP NOTIFICATION BAR --- */}
-            <div className="py-2 bg-black text-white overflow-hidden d-none d-lg-block">
-                <div className="container">
-                    <div className="row align-items-center">
+        <header className={`header-main ${isScrolled ? 'header-fixed shadow-sm' : ''}`}>
+            {/* --- 1. TOP BAR (FIXED HEIGHT) --- */}
+            <div className={`top-bar bg-black text-white d-none d-lg-block transition-all ${isScrolled ? 'top-bar-hidden' : ''}`}>
+                <div className="container h-100">
+                    <div className="row h-100 align-items-center">
                         <div className="col-md-6">
-                            <motion.span 
-                                initial={{ opacity: 0 }} 
-                                animate={{ opacity: 1 }} 
-                                className="small opacity-75 font-weight-bold"
-                                style={{ letterSpacing: '2px' }}
-                            >
-                                FREE SHIPPING ON ALL ORDERS OVER ₹1999
-                            </motion.span>
+                            <span className="small font-weight-bold opacity-75" style={{ letterSpacing: '1px' }}>
+                                ✨ LUXURY FASHION EXPERIENCE
+                            </span>
                         </div>
                         <div className="col-md-6 text-right">
-                            <div className="d-inline-flex gap-4 small opacity-75">
-                                <span className="mr-3"><i className="icon-phone mr-1"></i> +91 8447859784</span>
-                                <span><i className="icon-envelope mr-1"></i> theafzalhussain786@gmail.com</span>
-                            </div>
+                            <span className="small opacity-75 mr-4"><i className="icon-phone mr-1"></i> +91 8447859784</span>
+                            <span className="small opacity-75"><i className="icon-envelope mr-1"></i> info@eshopper.com</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* --- 2. LUXURY STICKY NAVBAR --- */}
-            <nav className={`navbar navbar-expand-lg navbar-light main-navbar transition-all ${isScrolled ? 'navbar-glass shadow-lg py-2' : 'py-4'}`}>
+            {/* --- 2. MAIN NAVBAR --- */}
+            <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom">
                 <div className="container">
-                    {/* LOGO ANIMATION */}
+                    {/* PREMIUM LOGO */}
                     <Link className="navbar-brand" to="/">
                         <motion.div 
-                            whileHover={{ scale: 1.05 }}
-                            className="font-weight-bold d-flex align-items-center"
-                            style={{ fontSize: '26px', letterSpacing: '4px', color: '#111' }}
+                            whileHover={{ scale: 1.02 }}
+                            className="font-weight-bold"
+                            style={{ fontSize: '24px', letterSpacing: '3px', color: '#000' }}
                         >
                             ESHOPPER<span className="text-info">.</span>
                         </motion.div>
                     </Link>
 
-                    <button className="navbar-toggler border-0" type="button" data-toggle="collapse" data-target="#eshopNav">
+                    <button className="navbar-toggler border-0 shadow-none" type="button" data-toggle="collapse" data-target="#eshopNav">
                         <span className="icon-menu h4 mb-0"></span>
                     </button>
 
                     <div className="collapse navbar-collapse" id="eshopNav">
-                        <ul className="navbar-nav mx-auto align-items-center">
+                        <ul className="navbar-nav mx-auto">
                             {[
                                 { name: "Home", path: "/" },
                                 { name: "Shop", path: "/shop/All/" },
-                                { name: "About", path: "/about" }, // About Tab Added
+                                { name: "About", path: "/about" },
                                 { name: "Contact", path: "/contact" }
                             ].map((link) => (
                                 <li className="nav-item mx-lg-3" key={link.name}>
-                                    <Link to={link.path} className={`nav-link premium-link ${isActive(link.path) ? 'active' : ''}`}>
+                                    <Link to={link.path} className={`nav-link premium-nav-link ${isActive(link.path) ? 'active' : ''}`}>
                                         {link.name}
                                         {isActive(link.path) && (
-                                            <motion.div layoutId="underline" className="active-dot" />
+                                            <motion.div layoutId="nav-line" className="nav-active-line" />
                                         )}
                                     </Link>
                                 </li>
                             ))}
 
-                            {/* ADMIN PORTAL ACCESS */}
                             {role === "Admin" && (
                                 <li className="nav-item mx-lg-2">
                                     <Link to="/admin-home" className="nav-link">
-                                        <span className="badge badge-info px-3 py-2 rounded-pill font-weight-bold">ADMIN PANEL</span>
+                                        <span className="admin-pill shadow-sm">ADMIN</span>
                                     </Link>
                                 </li>
                             )}
                         </ul>
 
-                        {/* --- 3. ACTION ICONS & USER SECTION --- */}
-                        <div className="d-flex align-items-center">
-                            {/* CART ICON WITH BREATHING EFFECT */}
-                            <motion.div whileHover={{ scale: 1.1 }} className="position-relative mr-4">
-                                <Link to="/cart" className="text-dark h5 mb-0">
-                                    <i className="icon-shopping_cart"></i>
-                                    <span className="cart-badge bg-info"></span>
-                                </Link>
-                            </motion.div>
+                        {/* --- 3. RIGHT ICONS & USER --- */}
+                        <div className="navbar-right d-flex align-items-center">
+                            {/* CART ICON */}
+                            <Link to="/cart" className="text-dark position-relative mr-4 nav-icon-link">
+                                <i className="icon-shopping_cart h5 mb-0"></i>
+                                <span className="badge-dot bg-info"></span>
+                            </Link>
 
-                            {/* USER LOGIN / DROPDOWN */}
-                            <AnimatePresence mode="wait">
-                                {localStorage.getItem("login") ? (
-                                    <div className="dropdown ml-2">
-                                        <motion.button 
-                                            initial={{ opacity: 0, x: 10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            className="btn btn-dark rounded-pill px-4 py-2 d-flex align-items-center shadow-sm"
-                                            data-toggle="dropdown"
-                                        >
-                                            <i className="icon-user-circle-o mr-2"></i>
-                                            <span className="small font-weight-bold">{name?.split(' ')[0]}</span>
-                                        </motion.button>
-                                        <div className="dropdown-menu dropdown-menu-right border-0 shadow-xl rounded-2xl mt-3 p-2">
-                                            <Link className="dropdown-item rounded-lg py-2" to="/profile">
-                                                <i className="icon-vcard-o mr-2"></i> My Profile
-                                            </Link>
-                                            <Link className="dropdown-item rounded-lg py-2" to="/cart">
-                                                <i className="icon-shopping_basket mr-2"></i> My Cart
-                                            </Link>
-                                            <div className="dropdown-divider mx-2"></div>
-                                            <button className="dropdown-item rounded-lg py-2 text-danger font-weight-bold" onClick={logout}>
-                                                <i className="icon-power-off mr-2"></i> Logout
-                                            </button>
-                                        </div>
+                            {/* USER ACCOUNT */}
+                            {localStorage.getItem("login") ? (
+                                <div className="dropdown ml-2">
+                                    <button className="btn btn-dark user-profile-btn rounded-pill px-4 py-2 shadow-sm" data-toggle="dropdown">
+                                        <i className="icon-user mr-2"></i>
+                                        <span className="small font-weight-bold">{name?.split(' ')[0]}</span>
+                                    </button>
+                                    <div className="dropdown-menu dropdown-menu-right border-0 shadow-xl rounded-xl mt-2">
+                                        <Link className="dropdown-item py-2" to="/profile"><i className="icon-vcard-o mr-2"></i> Profile</Link>
+                                        <Link className="dropdown-item py-2" to="/cart"><i className="icon-shopping_basket mr-2"></i> My Orders</Link>
+                                        <div className="dropdown-divider"></div>
+                                        <button className="dropdown-item py-2 text-danger" onClick={logout}>
+                                            <i className="icon-power-off mr-2"></i> Sign Out
+                                        </button>
                                     </div>
-                                ) : (
-                                    <Link to="/login">
-                                        <motion.button 
-                                            whileHover={{ scale: 1.05 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            className="btn btn-info rounded-pill px-5 py-2 font-weight-bold shadow-lg"
-                                        >
-                                            LOGIN
-                                        </motion.button>
-                                    </Link>
-                                )}
-                            </AnimatePresence>
+                                </div>
+                            ) : (
+                                <Link to="/login" className="btn btn-info btn-login rounded-pill px-4 font-weight-bold">
+                                    LOGIN
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>
             </nav>
 
-            {/* --- CUSTOM CSS FOR HIGH-END UI --- */}
+            {/* --- CUSTOM CSS FOR THE OVERLAP FIX --- */}
             <style dangerouslySetInnerHTML={{ __html: `
-                .main-navbar {
-                    position: fixed;
+                .header-main {
                     width: 100%;
-                    top: 0;
-                    z-index: 1000;
-                    background: transparent;
-                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+                    z-index: 1100;
+                    position: relative;
+                    background: white;
                 }
                 
-                .navbar-glass {
-                    background: rgba(255, 255, 255, 0.85) !important;
-                    backdrop-filter: blur(15px) saturate(180%);
-                    -webkit-backdrop-filter: blur(15px);
-                    border-bottom: 1px solid rgba(0,0,0,0.05);
+                .header-fixed {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    animation: slideDown 0.4s ease-out;
                 }
 
-                .premium-link {
+                @keyframes slideDown {
+                    from { transform: translateY(-100%); }
+                    to { transform: translateY(0); }
+                }
+
+                .top-bar { height: 40px; transition: 0.3s all ease; }
+                .top-bar-hidden { height: 0; overflow: hidden; opacity: 0; }
+
+                .navbar { padding: 1rem 0; background: white !important; }
+                .header-fixed .navbar { padding: 0.6rem 0; }
+
+                .premium-nav-link {
                     font-size: 13px !important;
                     font-weight: 700 !important;
                     text-transform: uppercase;
-                    letter-spacing: 2px;
-                    color: #444 !important;
+                    letter-spacing: 1.5px;
+                    color: #555 !important;
                     position: relative;
-                    padding: 10px 0 !important;
                 }
 
-                .premium-link.active { color: #17a2b8 !important; }
+                .premium-nav-link.active { color: #17a2b8 !important; }
 
-                .active-dot {
-                    width: 5px;
-                    height: 5px;
+                .nav-active-line {
+                    height: 2px;
                     background: #17a2b8;
-                    border-radius: 50%;
-                    margin: 2px auto 0;
+                    width: 100%;
+                    position: absolute;
+                    bottom: -5px;
+                    left: 0;
                 }
 
-                .cart-badge {
+                .admin-pill {
+                    background: #ff4757;
+                    color: white !important;
+                    padding: 4px 12px;
+                    border-radius: 50px;
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                }
+
+                .badge-dot {
                     position: absolute;
-                    top: -5px;
-                    right: -5px;
-                    width: 10px;
-                    height: 10px;
+                    top: -2px;
+                    right: -2px;
+                    width: 8px;
+                    height: 8px;
                     border-radius: 50%;
                     border: 2px solid white;
                 }
 
-                .rounded-2xl { border-radius: 18px !important; }
-                .rounded-lg { border-radius: 10px !important; }
+                .user-profile-btn { border: none; font-size: 13px; }
+                .rounded-xl { border-radius: 15px !important; }
                 
-                .shadow-xl {
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.12) !important;
-                }
-
-                .dropdown-item {
-                    transition: 0.2s all ease;
-                    font-size: 14px;
-                }
+                .shadow-xl { box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important; }
                 
-                .dropdown-item:hover {
-                    background-color: #f0faff !important;
-                    color: #17a2b8 !important;
-                    transform: translateX(5px);
-                }
+                .dropdown-item { font-size: 14px; font-weight: 600; padding: 10px 20px; }
+                .dropdown-item:hover { background: #f8f9fa; color: #17a2b8; transform: translateX(5px); transition: 0.2s; }
 
-                /* Fixed padding for content below sticky nav */
-                body { padding-top: 0px; } 
+                .transition-all { transition: all 0.3s ease; }
 
                 @media (max-width: 991px) {
-                    .main-navbar { background: white !important; padding: 15px 0 !important; }
-                    .navbar-collapse { padding-top: 20px; }
+                    .navbar-collapse { background: white; padding: 20px; border-radius: 15px; margin-top: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+                    .header-fixed { position: fixed; }
                 }
             `}} />
-        </>
+        </header>
     )
 }
