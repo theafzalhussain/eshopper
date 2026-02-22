@@ -23,8 +23,11 @@ import AdminProduct from './Admin/AdminProduct'
 import AdminAddProduct from './Admin/AdminAddProduct'
 import AdminUpdateProduct from './Admin/AdminUpdateProduct'
 
-// User Sections
+// User & Support Sections
 import AdminUser from './Admin/AdminUser'
+import AdminContact from './Admin/AdminContact'
+import AdminNewsletter from './Admin/AdminNewsletter'
+import AdminCheckout from './Admin/AdminCheckout'
 import Login from './Login'
 
 export default function App() {
@@ -35,7 +38,7 @@ export default function App() {
         <Route path='/' element={<Home />} />
         <Route path='/login' element={<Login />} />
         
-        {/* Admin Logic Routes - Inhe dhyan se check karein */}
+        {/* Admin Logic Routes */}
         <Route path='/admin-home' element={<AdminHome />} />
         
         {/* MAINCATEGORY */}
@@ -58,10 +61,13 @@ export default function App() {
         <Route path='/admin-add-product' element={<AdminAddProduct />} />
         <Route path='/admin-update-product/:id' element={<AdminUpdateProduct />} />
 
-        {/* USERS */}
+        {/* USERS & SUPPORT */}
         <Route path='/admin-user' element={<AdminUser />} />
+        <Route path='/admin-contact' element={<AdminContact />} />
+        <Route path='/admin-newsletter' element={<AdminNewsletter />} />
+        <Route path='/admin-checkout' element={<AdminCheckout />} />
 
-        {/* Error Redirect logic */}
+        {/* Error Redirect logic: Catch all bad paths and send to Home */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <Footer />
