@@ -1,67 +1,43 @@
 import { takeEvery, put } from "redux-saga/effects"
-// Ensure the name here matches exactly with the export in Services.jsx
-import { 
-    createUserAPI, 
-    deleteUserAPI, 
-    getUserAPI, 
-    updateUserAPI, 
-    forgetPasswordAPI 
-} from "../Services" 
-import { 
-    ADD_USER, ADD_USER_RED, 
-    DELETE_USER, DELETE_USER_RED, 
-    GET_USER, GET_USER_RED, 
-    UPDATE_USER, UPDATE_USER_RED 
-} from "../Constant"
+import { createUserAPI, deleteUserAPI, getUserAPI, updateUserAPI, forgetPasswordAPI } from "../Services" 
+import { ADD_USER, ADD_USER_RED, DELETE_USER, DELETE_USER_RED, GET_USER, GET_USER_RED, UPDATE_USER, UPDATE_USER_RED } from "../Constant"
 
 function* createUserSaga(action) {
     try {
         let response = yield createUserAPI(action.payload)
         yield put({ type: ADD_USER_RED, data: response })
-    } catch (e) {
-        console.error("❌ Signup API Failed:", e)
-    }
+    } catch (e) { console.error("❌ Signup Failed:", e) }
 }
 
 function* getUserSaga() {
     try {
         let response = yield getUserAPI()
         yield put({ type: GET_USER_RED, data: response })
-    } catch (e) {
-        console.error("❌ Fetch Users Failed:", e)
-    }
+    } catch (e) { console.error("❌ Fetch Failed:", e) }
 }
 
 function* deleteUserSaga(action) {
     try {
         yield deleteUserAPI(action.payload)
         yield put({ type: DELETE_USER_RED, data: action.payload })
-    } catch (e) {
-        console.error("❌ Delete User Failed:", e)
-    }
+    } catch (e) { console.error("❌ Delete Failed:", e) }
 }
 
-// 🔥 UPDATED: updateUserSaga with FormData and Cloudinary response handling
 function* updateUserSaga(action) {
     try {
-        // action.payload is FormData
+        // response me backend se naya updated user data (Cloudinary URL ke sath) aayega
         let response = yield updateUserAPI(action.payload)
-        // Put the actual server response (with Cloudinary URL) into Redux
         yield put({ type: UPDATE_USER_RED, data: response })
-    } catch (e) {
-        console.error("Critical Update Failure:", e)
+    } catch (e) { 
+        console.error("❌ Update Saga Error:", e) 
     }
 }
 
 function* forgetPasswordSaga(action) {
     try {
-        // Logic: Naya password save karne ke liye forgetPasswordAPI call ho rahi hai
         let response = yield forgetPasswordAPI(action.payload)
-        // Redux store mein user data update karne ke liye wahi same RED use karenge
         yield put({ type: UPDATE_USER_RED, data: response })
-    } catch (e) { 
-        console.error("❌ Forget Password Saga Error:", e) 
-    }
+    } catch (e) { console.error("❌ Forget Password Error:", e) }
 }
 
 export function* userSaga() {
@@ -69,6 +45,5 @@ export function* userSaga() {
     yield takeEvery(GET_USER, getUserSaga)
     yield takeEvery(DELETE_USER, deleteUserSaga)
     yield takeEvery(UPDATE_USER, updateUserSaga)
-    // "FORGET_PASSWORD" action aapke login page ya reset form se trigger hona chahiye
-    yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga) 
+    yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga)
 }

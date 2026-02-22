@@ -94,22 +94,34 @@ app.post('/user', upload, async (req, res) => {
     } catch (e) { res.status(400).json(e); }
 });
 
-// 🔥 FIXED USER UPDATE (No more 500 errors)
+// 🔥 UPDATED & FIXED USER UPDATE (Bcrypt safe + Error Proof)
 app.put('/user/:id', upload, async (req, res) => {
     try {
         let user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        let upData = { ...req.body };
-        if (req.files && req.files.pic) upData.pic = req.files.pic[0].path;
+        let updateData = { ...req.body };
         
-        if (req.body.password && req.body.password.length < 20) {
-            const salt = await bcrypt.genSalt(10);
-            upData.password = await bcrypt.hash(req.body.password, salt);
+        // Handle Profile Pic Update
+        if (req.files && req.files.pic) {
+            updateData.pic = req.files.pic[0].path;
         }
-        const data = await User.findByIdAndUpdate(req.params.id, upData, { new: true });
+
+        // 🔥 FIX: Password logic check
+        if (req.body.password && req.body.password.length > 0 && req.body.password.length < 20) {
+            const salt = await bcrypt.genSalt(10);
+            updateData.password = await bcrypt.hash(req.body.password, salt);
+        } else {
+            // Password blank bheja hai ya already hashed hai, toh use mat badlo
+            delete updateData.password;
+        }
+
+        const data = await User.findByIdAndUpdate(req.params.id, updateData, { new: true });
         res.send(data);
-    } catch (e) { res.status(400).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("User Update Error:", e.message);
+        res.status(500).json({ error: "Server Error", details: e.message }); 
+    }
 });
 
 // --- 6. UNIVERSAL CRUD HANDLER ---

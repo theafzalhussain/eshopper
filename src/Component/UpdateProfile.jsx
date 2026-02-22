@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { getUser, updateUser } from '../Store/ActionCreaters/UserActionCreators'
 import { motion } from 'framer-motion'
-import { Save, Camera, Loader2 } from 'lucide-react'
+import { Save, Camera, Loader2, User, Mail, Phone, MapPin } from 'lucide-react'
 
 export default function Updateprofile() {
     const [data, setdata] = useState({
@@ -27,6 +27,10 @@ export default function Updateprofile() {
         }
     }, [users.length])
 
+    function getData(e) {
+        setdata({ ...data, [e.target.name]: e.target.value })
+    }
+
     function getFile(e) {
         const file = e.target.files[0]
         setdata({ ...data, pic: file })
@@ -35,12 +39,12 @@ export default function Updateprofile() {
 
     async function postData(e) {
         e.preventDefault()
-        setLoading(true) // Start Animation
+        setLoading(true) 
         
         const userId = localStorage.getItem("userid")
         let formData = new FormData()
         
-        formData.append("id", userId) // 🎯 MUST: Sagas needs this
+        formData.append("id", userId)
         formData.append("name", data.name)
         formData.append("email", data.email)
         formData.append("phone", data.phone)
@@ -49,6 +53,7 @@ export default function Updateprofile() {
         formData.append("state", data.state || "")
         formData.append("pin", data.pin || "")
         
+        // Sirf tabhi pic bhejein agar user ne naya file select kiya hai
         if (data.pic && typeof data.pic !== "string") {
             formData.append("pic", data.pic)
         }
@@ -56,42 +61,65 @@ export default function Updateprofile() {
         dispatch(updateUser(formData))
         localStorage.setItem("name", data.name)
 
-        // Give server 2 seconds to process image before redirect
+        // Give server time to process before moving back
         setTimeout(() => {
             setLoading(false)
-            alert("Profile Synchronized Successfully!")
             navigate("/profile")
         }, 3000)
     }
 
     return (
         <div className="container-fluid my-5 py-5 bg-light min-vh-100">
-            <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} className="row justify-content-center">
-                <div className="col-md-6 bg-white p-5 shadow-2xl rounded-3xl border-0">
-                    <h3 className="font-weight-bold mb-5 text-center text-dark ls-2">SECURE PROFILE UPDATE</h3>
+            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="row justify-content-center">
+                <div className="col-md-8 col-lg-6 bg-white p-5 shadow-2xl rounded-3xl border-0">
+                    <h3 className="font-weight-bold mb-5 text-center text-dark ls-2">EDIT ACCOUNT PROFILE</h3>
                     
                     <form onSubmit={postData}>
                         <div className="text-center mb-5 position-relative">
-                            <label htmlFor="pic" className="cursor-pointer">
-                                <img src={preview || "/assets/images/noimage.png"} className="rounded-circle shadow-lg border-info" style={{width:"130px", height:"130px", objectFit:"cover", border:"4px solid"}} alt="User"/>
-                                <div className="cam-icon bg-info text-white p-2 rounded-circle position-absolute" style={{bottom:0, right:"35%"}}><Camera size={16}/></div>
+                            <label htmlFor="pic" className="cursor-pointer d-inline-block">
+                                <img src={preview || "/assets/images/noimage.png"} className="rounded-circle shadow-lg border-info" style={{width:"140px", height:"140px", objectFit:"cover", border:"5px solid"}} alt="User"/>
+                                <div className="cam-icon bg-info text-white p-2 rounded-circle position-absolute" style={{bottom:"5px", right:"10px shadow"}}><Camera size={20}/></div>
                             </label>
                             <input type="file" id="pic" className="d-none" onChange={getFile} />
                         </div>
 
                         <div className="row">
-                            <div className="col-md-6 mb-3"><label className="small font-weight-bold">FULL NAME</label><input type="text" className='form-control p-4 rounded-xl shadow-none border' value={data.name} onChange={(e)=>setdata({...data, name: e.target.value})} required/></div>
-                            <div className="col-md-6 mb-3"><label className="small font-weight-bold">CONTACT</label><input type="text" className='form-control p-4 rounded-xl shadow-none border' value={data.phone} onChange={(e)=>setdata({...data, phone: e.target.value})}/></div>
+                            <div className="col-md-6 mb-4">
+                                <label className="small font-weight-bold">FULL NAME</label>
+                                <div className="input-group border rounded-xl overflow-hidden p-1 bg-light">
+                                    <span className="p-2 text-muted"><User size={18}/></span>
+                                    <input type="text" name="name" className='form-control border-0 bg-transparent' value={data.name} onChange={getData} required/>
+                                </div>
+                            </div>
+                            <div className="col-md-6 mb-4">
+                                <label className="small font-weight-bold">PHONE NUMBER</label>
+                                <div className="input-group border rounded-xl overflow-hidden p-1 bg-light">
+                                    <span className="p-2 text-muted"><Phone size={18}/></span>
+                                    <input type="text" name="phone" className='form-control border-0 bg-transparent' value={data.phone} onChange={getData}/>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="mb-4"><label className="small font-weight-bold">LOCALITY / ADDRESS</label><input type="text" className='form-control p-4 rounded-xl border' value={data.addressline1} onChange={(e)=>setdata({...data, addressline1: e.target.value})}/></div>
+                        <div className="mb-4">
+                            <label className="small font-weight-bold">RESIDENTIAL ADDRESS</label>
+                            <div className="input-group border rounded-xl overflow-hidden p-1 bg-light">
+                                <span className="p-2 text-muted"><MapPin size={18}/></span>
+                                <input type="text" name="addressline1" className='form-control border-0 bg-transparent' value={data.addressline1} onChange={getData} placeholder="House No, Street, Locality"/>
+                            </div>
+                        </div>
 
-                        <button className="btn btn-info btn-block py-3 rounded-pill font-weight-bold shadow-lg" disabled={loading}>
-                            {loading ? <><Loader2 className="animate-spin mr-2 d-inline" /> SAVING TO CLOUD...</> : <><Save size={18} className="mr-2"/> UPDATE DATABASE</>}
+                        <button className="btn btn-info btn-block py-3 rounded-pill font-weight-bold shadow-lg mt-4" disabled={loading}>
+                            {loading ? <><Loader2 className="animate-spin mr-2 d-inline" /> SYNCING WITH CLOUD...</> : <><Save size={18} className="mr-2"/> SAVE CHANGES</>}
                         </button>
                     </form>
                 </div>
             </motion.div>
+            <style dangerouslySetInnerHTML={{ __html: `
+                .rounded-3xl { border-radius: 35px !important; }
+                .rounded-xl { border-radius: 15px !important; }
+                .shadow-2xl { box-shadow: 0 40px 80px rgba(0,0,0,0.1) !important; }
+                .ls-2 { letter-spacing: 2px; }
+            `}} />
         </div>
     )
 }
