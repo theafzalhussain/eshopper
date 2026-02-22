@@ -65,7 +65,7 @@ export default function Navbaar() {
                             <li className="nav-item mx-1"><Link to="/contact" className={`nav-link premium-nav-link ${isActive('/contact')?'active-link':''}`}>Contact</Link></li>
                             {role === "Admin" && (
                                 <li className="nav-item">
-                                    <Link to="/admin-home" className="badge-admin-pill" style={{padding: "0px 10px"}}>ADMIN</Link>
+                                    <Link to="/admin-home" className="badge-admin-pill" style={{margin: " 10px"}}>ADMIN</Link>
                                 </li>
                             )}
                         </ul>
