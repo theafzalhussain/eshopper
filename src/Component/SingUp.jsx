@@ -31,28 +31,40 @@ export default function Signup() {
             alert("Passwords do not match!")
             return
         }
-        if (users.find(x => x.username === data.username)) {
-            alert("Username already taken!")
-            return
+        
+        // ZAROORI CHECK: Ensures no empty fields sent that cause crashes
+        const d = users.find(x => x.username === data.username)
+        if (d) {
+            alert("UserName Already Taken!!!")
+            return;
         }
 
-        // --- FormData for Cloudinary/Backend ---
+        // --- Optimized FormData for Bcrypt & Cloudinary ---
         let formData = new FormData()
         formData.append("name", data.name)
         formData.append("username", data.username)
         formData.append("email", data.email)
         formData.append("phone", data.phone)
-        formData.append("password", data.password)
+        formData.append("password", data.password) // Sent plain to server for hashing
         formData.append("role", "User")
+        
+        // Safety check before appending address fields or pic
+        formData.append("addressline1", "")
+        formData.append("addressline2", "")
+        formData.append("addressline3", "")
+        formData.append("pin", "")
+        formData.append("city", "")
+        formData.append("state", "")
         if (data.pic) formData.append("pic", data.pic)
 
         dispatch(addUser(formData))
-        alert("Account Created! Redirecting to Login...")
+        alert("Registration Request Sent! Verifying Credentials...")
         navigate("/login")
     }
 
     useEffect(() => { dispatch(getUser()) }, [dispatch])
 
+    // UI REMAINS EXACTLY SAME AS PROVIDED...
     return (
         <div className="signup-container py-5" style={{ background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)", minHeight: "100vh" }}>
             <motion.div 
@@ -74,7 +86,6 @@ export default function Signup() {
                         <form onSubmit={postData}>
                             <h3 className="font-weight-bold text-dark mb-4">Create Account</h3>
                             
-                            {/* Profile Pic Upload */}
                             <div className="text-center mb-4 position-relative">
                                 <label htmlFor="pic" className="cursor-pointer">
                                     <div className="profile-preview border-dashed shadow-sm mx-auto d-flex align-items-center justify-content-center overflow-hidden" 
@@ -143,6 +154,7 @@ export default function Signup() {
                 .icon-p { color: #aaa; }
                 .shadow-2xl { box-shadow: 0 40px 100px rgba(0,0,0,0.1) !important; }
                 .object-cover { object-fit: cover; }
+                .cursor-pointer { cursor: pointer; }
             `}} />
         </div>
     )

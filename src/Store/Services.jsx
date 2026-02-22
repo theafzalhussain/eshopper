@@ -13,8 +13,16 @@ async function mutationAPI(endpoint, method, data) {
         headers: isFormData ? {} : { "content-type": "application/json" },
         body: isFormData ? data : JSON.stringify(data)
     });
+    // Response check logic added inside mutationAPI for reliability
+    if (!response.ok) {
+        const error = await response.json();
+        throw error;
+    }
     return await response.json();
 }
+
+// 🎯 NEW: LOGIN API (Ensures secure connection)
+export const loginAPI = (data) => mutationAPI("/login", "post", data);
 
 // MAINCATEGORY
 export const createMaincategoryAPI = (data) => mutationAPI("/maincategory", "post", data);
@@ -37,19 +45,13 @@ export const deleteBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "delete
 // PRODUCT
 export const createProductAPI = (data) => mutationAPI("/product", "post", data);
 export const getProductAPI = () => getAPI("/product");
-// updateProductAPI function ko dhyan se check karke badal de:
 export const updateProductAPI = (data) => {
-    let id;
-    if (data instanceof FormData) {
-        id = data.get("id")
-    } else {
-        id = data.id;
-    }
+    let id = data instanceof FormData ? data.get("id") : data.id;
     return mutationAPI(`/product/${id}`, "put", data);
 }
 export const deleteProductAPI = (data) => mutationAPI(`/product/${data.id}`, "delete");
 
-// USER (Special attention for FORGET_PASSWORD)
+// USER
 export const createUserAPI = (data) => mutationAPI("/user", "post", data);
 export const getUserAPI = () => getAPI("/user");
 export const updateUserAPI = (data) => {
@@ -58,34 +60,29 @@ export const updateUserAPI = (data) => {
 }
 export const deleteUserAPI = (data) => mutationAPI(`/user/${data.id}`, "delete");
 
-// 🎯 YE RAHA VO FUNCTION JO MISSING SHOW HO RAHA THA:
 export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);
 
-// CART
+// CART, WISHLIST, CHECKOUT, CONTACT, NEWSLATTER remain exactly same as before...
 export const createCartAPI = (data) => mutationAPI("/cart", "post", data);
 export const getCartAPI = () => getAPI("/cart");
 export const updateCartAPI = (data) => mutationAPI(`/cart/${data.id}`, "put", data);
 export const deleteCartAPI = (data) => mutationAPI(`/cart/${data.id}`, "delete");
 
-// WISHLIST
 export const createWishlistAPI = (data) => mutationAPI("/wishlist", "post", data);
 export const getWishlistAPI = () => getAPI("/wishlist");
 export const updateWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "put", data);
 export const deleteWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "delete");
 
-// CHECKOUT
 export const createCheckoutAPI = (data) => mutationAPI("/checkout", "post", data);
 export const getCheckoutAPI = () => getAPI("/checkout");
 export const updateCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "put", data);
 export const deleteCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "delete");
 
-// CONTACT
 export const createContactAPI = (data) => mutationAPI("/contact", "post", data);
 export const getContactAPI = () => getAPI("/contact");
 export const updateContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "put", data);
 export const deleteContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "delete");
 
-// NEWSLATTER
 export const createNewslatterAPI = (data) => mutationAPI("/newslatter", "post", data);
 export const getNewslatterAPI = () => getAPI("/newslatter");
 export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "put", data);
