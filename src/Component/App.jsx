@@ -1,11 +1,36 @@
-import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+
+// Layout & Global
 import Navbaar from './Navbaar'
 import Footer from './Footer'
 import Home from './Home'
-import AdminHome from './Admin/AdminHome'
+import About from './About'
+import Contact from './Contact'
 
-// Category Sections
+// Product & Shopping
+import Shop from './Shop'
+import Cart from './Cart'
+import Wishlist from './Wishlist'
+import Checkout from './Checkout'
+import SingleProductPage from './SingleProductPage'
+import Confirmation from './confirmation'
+
+// Auth & User Profile
+import Login from './Login'
+import SingUp from './SingUp'
+import ForgetPassword from './ForgetPassword'
+import Profile from './Profile'
+import Updateprofile from './UpdateProfile'
+
+// Admin Home & Monitoring
+import AdminHome from './Admin/AdminHome'
+import AdminUser from './Admin/AdminUser'
+import AdminContact from './Admin/AdminContact'
+import AdminNewsletter from './Admin/AdminNewsletter'
+import AdminCheckout from './Admin/AdminCheckout'
+
+// Admin Category CRUD
 import AdminMaincategory from './Admin/AdminMaincategory'
 import AdminAddMaincategory from './Admin/AdminAddMaincategory'
 import AdminUpdateMaincategory from './Admin/AdminUpdateMaincategory'
@@ -18,58 +43,78 @@ import AdminBrand from './Admin/AdminBrand'
 import AdminAddBrand from './Admin/AdminAddBrand'
 import AdminUpdateBrand from './Admin/AdminUpdateBrand'
 
-// Product Section
+// Admin Product CRUD
 import AdminProduct from './Admin/AdminProduct'
 import AdminAddProduct from './Admin/AdminAddProduct'
 import AdminUpdateProduct from './Admin/AdminUpdateProduct'
 
-// User & Support Sections
-import AdminUser from './Admin/AdminUser'
-import AdminContact from './Admin/AdminContact'
-import AdminNewsletter from './Admin/AdminNewsletter'
-import AdminCheckout from './Admin/AdminCheckout'
-import Login from './Login'
+// --- HELPER: Scroll to top on navigation ---
+const ScrollToTop = () => {
+    const { pathname } = useLocation();
+    useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+    return null;
+}
 
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop /> {/* Extra Premium: Auto scroll to top */}
       <Navbaar />
+      
       <Routes>
-        <Route path='/' element={<Home />} />
-        <Route path='/login' element={<Login />} />
+        {/* --- 1. PUBLIC ROUTES (Main Website) --- */}
+        <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/shop/:maincat" element={<Shop />} />
+        <Route path="/single-product/:id" element={<SingleProductPage />} />
         
-        {/* Admin Logic Routes */}
-        <Route path='/admin-home' element={<AdminHome />} />
-        
-        {/* MAINCATEGORY */}
-        <Route path='/admin-maincategory' element={<AdminMaincategory />} />
-        <Route path='/admin-add-maincategory' element={<AdminAddMaincategory />} />
-        <Route path='/admin-update-maincategory/:id' element={<AdminUpdateMaincategory />} />
+        {/* --- 2. AUTHENTICATION --- */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SingUp />} />
+        <Route path="/forget-password" element={<ForgetPassword />} />
 
-        {/* SUBCATEGORY */}
-        <Route path='/admin-subcategory' element={<AdminSubcategory />} />
-        <Route path='/admin-add-subcategory' element={<AdminAddSubcategory />} />
-        <Route path='/admin-update-subcategory/:id' element={<AdminUpdateSubcategory />} />
+        {/* --- 3. CUSTOMER DASHBOARD (Requires Login Check in components) --- */}
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/update-profile" element={<Updateprofile />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/confirmation" element={<Confirmation />} />
 
-        {/* BRAND */}
-        <Route path='/admin-brand' element={<AdminBrand />} />
-        <Route path='/admin-add-brand' element={<AdminAddBrand />} />
-        <Route path='/admin-update-brand/:id' element={<AdminUpdateBrand />} />
+        {/* --- 4. ADMIN CONTROL PANEL ROUTES --- */}
+        <Route path="/admin-home" element={<AdminHome />} />
+        <Route path="/admin-user" element={<AdminUser />} />
+        <Route path="/admin-contact" element={<AdminContact />} />
+        <Route path="/admin-newsletter" element={<AdminNewsletter />} />
+        <Route path="/admin-checkout" element={<AdminCheckout />} />
 
-        {/* PRODUCT */}
-        <Route path='/admin-product' element={<AdminProduct />} />
-        <Route path='/admin-add-product' element={<AdminAddProduct />} />
-        <Route path='/admin-update-product/:id' element={<AdminUpdateProduct />} />
+        {/* Admin: Maincategory */}
+        <Route path="/admin-maincategory" element={<AdminMaincategory />} />
+        <Route path="/admin-add-maincategory" element={<AdminAddMaincategory />} />
+        <Route path="/admin-update-maincategory/:id" element={<AdminUpdateMaincategory />} />
 
-        {/* USERS & SUPPORT */}
-        <Route path='/admin-user' element={<AdminUser />} />
-        <Route path='/admin-contact' element={<AdminContact />} />
-        <Route path='/admin-newsletter' element={<AdminNewsletter />} />
-        <Route path='/admin-checkout' element={<AdminCheckout />} />
+        {/* Admin: Subcategory */}
+        <Route path="/admin-subcategory" element={<AdminSubcategory />} />
+        <Route path="/admin-add-subcategory" element={<AdminAddSubcategory />} />
+        <Route path="/admin-update-subcategory/:id" element={<AdminUpdateSubcategory />} />
 
-        {/* Error Redirect logic: Catch all bad paths and send to Home */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* Admin: Brand */}
+        <Route path="/admin-brand" element={<AdminBrand />} />
+        <Route path="/admin-add-brand" element={<AdminAddBrand />} />
+        <Route path="/admin-update-brand/:id" element={<AdminUpdateBrand />} />
+
+        {/* Admin: Product Inventory */}
+        <Route path="/admin-product" element={<AdminProduct />} />
+        <Route path="/admin-add-product" element={<AdminAddProduct />} />
+        <Route path="/admin-update-product/:id" element={<AdminUpdateProduct />} />
+
+        {/* --- 5. REDIRECT PROTECTION --- */}
+        {/* Agar upar se koi path match na kare toh redirect home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
       <Footer />
     </BrowserRouter>
   )
