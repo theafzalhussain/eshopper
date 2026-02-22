@@ -13,62 +13,82 @@ app.use(express.json());
 
 // --- 1. DB & CLOUDINARY ---
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
-mongoose.connect(MONGODB_URI).then(() => console.log("✅ DB Atlas Active")).catch(e => console.log(e));
+mongoose.connect(MONGODB_URI).then(() => console.log("✅ DB Connected")).catch(e => console.log(e));
 
 cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '519639537482594', api_secret: process.env.CLOUD_API_SECRET });
 
-const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_premium', allowedFormats: ['jpg', 'png', 'jpeg'] } });
+const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
 const upload = multer({ storage: storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
 
-// --- 2. HELPERS & MODELS ---
+// --- 2. JSON CONVERSION HELPER ---
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
-const schemaOpts = { toJSON: toJSONCustom };
+const opts = { toJSON: toJSONCustom };
 
-const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: String, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String }, schemaOpts));
-const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, schemaOpts));
-const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, schemaOpts));
+// --- 3. MODELS ---
+const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String }, opts));
+const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
+const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
+const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
+const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" } }, opts));
+const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
+const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
+const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: String, paymentstatus: String, totalAmount: Number, products: Array }, opts));
+const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
 
-// --- 3. ROUTES ---
-
-// 🎯 SECURE LOGIN
+// --- 4. SECURE AUTH ROUTES ---
 app.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        const user = await User.findOne({ username });
-        if (!user) return res.status(404).send({ message: "User not found!" });
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (isMatch) res.send(user);
-        else res.status(401).send({ message: "Invalid Password!" });
+        const user = await User.findOne({ username: req.body.username });
+        if (!user) return res.status(404).send({ message: "Not found" });
+        const match = await bcrypt.compare(req.body.password, user.password);
+        if (match) res.send(user); else res.status(401).send({ message: "Invalid" });
     } catch (e) { res.status(500).send(e); }
 });
 
-// 📝 SECURE SIGNUP (Hashed Password)
-app.post('/user', upload, async (req, res) => {
+// --- 5. EXPLICIT PRODUCT ROUTES (Avoiding 404) ---
+app.get('/product', async (req, res) => res.send(await Product.find().sort({ _id: -1 })));
+app.post('/product', upload, async (req, res) => {
     try {
-        const existing = await User.findOne({ username: req.body.username });
-        if (existing) return res.status(400).send({ message: "Username already taken" });
-
-        const data = new User(req.body);
-        if (req.files && req.files.pic) data.pic = req.files.pic[0].path;
-
-        const salt = await bcrypt.genSalt(10);
-        data.password = await bcrypt.hash(req.body.password, salt);
-
-        await data.save();
-        res.send(data);
+        const d = new Product(req.body);
+        if (req.files) {
+            if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
+            if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
+            if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
+            if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
+        }
+        await d.save(); res.send(d);
     } catch (e) { res.status(400).send(e); }
 });
 
-// CART, WISHLIST GENERIC ROUTES (To stop 404)
-const crud = (path, Model) => {
+// --- 6. UNIVERSAL ROUTE HANDLER (For Categories, Contacts etc.) ---
+const setupRoutes = (path, Model) => {
     app.get(path, async (req, res) => res.send(await Model.find().sort({ _id: -1 })));
     app.post(path, async (req, res) => { try { const d = new Model(req.body); await d.save(); res.send(d); } catch (e) { res.status(400).send(e); } });
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.send({ result: "Done" }); });
     app.put(`${path}/:id`, async (req, res) => { const d = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true }); res.send(d); });
 };
-crud('/cart', Cart);
-crud('/wishlist', Wishlist);
+
+setupRoutes('/maincategory', Maincategory);
+setupRoutes('/subcategory', Subcategory);
+setupRoutes('/brand', Brand);
+setupRoutes('/newslatter', Newslatter);
+setupRoutes('/contact', Contact);
+setupRoutes('/cart', Cart);
+setupRoutes('/wishlist', Wishlist);
+setupRoutes('/checkout', Checkout);
+
+// Special case for Users to handle encryption and images
+app.get('/user', async (req, res) => res.send(await User.find().sort({ _id: -1 })));
+app.post('/user', upload, async (req, res) => {
+    try {
+        const data = new User(req.body);
+        if (req.files && req.files.pic) data.pic = req.files.pic[0].path;
+        const salt = await bcrypt.genSalt(10);
+        data.password = await bcrypt.hash(req.body.password, salt);
+        await data.save(); res.send(data);
+    } catch (e) { res.status(400).send(e); }
+});
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 Ready on ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 API active on ${PORT}`));
