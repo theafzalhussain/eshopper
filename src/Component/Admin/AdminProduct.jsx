@@ -1,72 +1,66 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
+import React, { useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { DataGrid } from '@mui/x-data-grid';
+import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
+import { deleteProduct, getProduct } from '../../Store/ActionCreaters/ProductActionCreators';
 import { motion } from 'framer-motion'
-import { Image as ImageIcon, PlusCircle, ArrowLeft, LayoutDashboard } from 'lucide-react'
+import { Plus, Edit3, Trash2, LayoutGrid } from 'lucide-react'
 
-// Essential Actions (Confirm name match with yours)
-import { getProduct, addProduct } from '../../Store/ActionCreaters/ProductActionCreators'
-
-export default function AdminAddProduct() {
-    const [data, setdata] = useState({ name:"", baseprice:0, discount:0, finalprice:0, color:"", size:"", stock:"In Stock", description:"", pic1:"", pic2:"", pic3:"", pic4:"" })
-    
-    const navigate = useNavigate()
+export default function AdminProduct() {
+    const productData = useSelector((state) => state.ProductStateData)
     const dispatch = useDispatch()
+    const navigate = useNavigate()
 
-    function getFile(e) { setdata(old => ({ ...old, [e.target.name]: e.target.files[0] })) }
+    useEffect(() => { dispatch(getProduct()) }, [dispatch])
 
-    function postData(e) {
-        e.preventDefault()
-        let fp = Math.round(data.baseprice - (data.baseprice * data.discount / 100))
-        let formData = new FormData()
-        formData.append("name", data.name); formData.append("finalprice", fp);
-        formData.append("pic1", data.pic1); if(data.pic2) formData.append("pic2", data.pic2)
-        // Add others as needed...
-        
-        dispatch(addProduct(formData))
-        navigate("/admin-product")
-    }
+    // FIX: Mapping MongoDB _id to DataGrid 'id'
+    const rows = productData?.map((item) => ({
+        ...item, 
+        id: item._id || item.id 
+    })) || []
+
+    const columns = [
+        { field: 'pic1', headerName: 'Design', width: 100, renderCell: (p) => <img src={p.value} height="50px" width="50px" style={{objectFit:'cover', borderRadius:'10px'}} alt="" /> },
+        { field: 'name', headerName: 'Product Title', width: 220, renderCell: (p) => <span className="font-weight-bold">{p.value}</span> },
+        { field: 'maincategory', headerName: 'Collection', width: 130 },
+        { field: 'brand', headerName: 'Label', width: 100 },
+        { field: 'finalprice', headerName: 'Value', width: 100, renderCell: (p) => <strong className="text-info">₹{p.value}</strong> },
+        {
+            field: "actions", headerName: "System Actions", width: 180,
+            renderCell: ({ row }) => (
+                <div className="d-flex align-items-center">
+                    {/* Ye Edit Button aapka Naya Premium Form kholega */}
+                    <button className="btn btn-info-soft rounded-circle mr-3" onClick={() => navigate("/admin-update-product/" + row.id)}>
+                        <Edit3 size={16} />
+                    </button>
+                    <button className="btn btn-danger-soft rounded-circle" onClick={() => { if(window.confirm("Overwrite: Delete record?")) dispatch(deleteProduct({id: row.id})) }}>
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            )
+        },
+    ];
 
     return (
-        <div style={{ backgroundColor: "#fbfbfb", minHeight: "100vh" }} className="py-5 text-dark">
+        <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
             <div className="container-fluid px-lg-5">
                 <div className="row">
                     <div className="col-lg-2"><LefNav /></div>
-                    <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="col-lg-10 bg-white p-5 shadow rounded-3xl">
-                        <div className="d-flex align-items-center mb-5 pb-3 border-bottom">
-                             <Link to="/admin-product" className="mr-3 text-info"><ArrowLeft /></Link>
-                             <h4 className="font-weight-bold mb-0">Craft New High-Fashion Product</h4>
-                        </div>
-                        
-                        <form onSubmit={postData}>
-                            <div className="row">
-                                <div className="col-md-7">
-                                    <div className="form-group mb-4"><label className="small-label">Product Name</label><input type="text" className="form-control rounded-pill p-3 border-info" onChange={(e)=>setdata({...data, name:e.target.value})} required /></div>
-                                    <div className="row">
-                                        <div className="col-6 mb-4"><label className="small-label">Base Price</label><input type="number" className="form-control" onChange={(e)=>setdata({...data, baseprice:e.target.value})} /></div>
-                                        <div className="col-6 mb-4"><label className="small-label">Discount %</label><input type="number" className="form-control" onChange={(e)=>setdata({...data, discount:e.target.value})} /></div>
-                                    </div>
-                                    <div className="form-group mb-4"><label className="small-label">Curated Description</label><textarea className="form-control rounded-xl" rows="4" onChange={(e)=>setdata({...data, description:e.target.value})}></textarea></div>
-                                </div>
-                                <div className="col-md-5">
-                                    <div className="bg-light p-4 rounded-3xl border-dashed h-100 text-center d-flex flex-column align-items-center justify-content-center">
-                                        <ImageIcon className="text-info mb-3" size={40}/>
-                                        <span className="small text-muted font-weight-bold">Primary Hero Shot (pic1)</span>
-                                        <input type="file" name="pic1" onChange={getFile} className="form-control-file mt-3" required />
-                                        <div className="mt-4 opacity-50 d-flex gap-2">
-                                            <div className="p-2 border bg-white">pic2</div>
-                                            <div className="p-2 border bg-white">pic3</div>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div className="col-lg-10">
+                        <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-white shadow-xl rounded-3xl p-4 border-0">
+                            <div className="d-flex justify-content-between align-items-center mb-4">
+                                <h4 className="font-weight-bold d-flex align-items-center"><LayoutGrid className="mr-2 text-info"/> Product Catalog</h4>
+                                <Link to="/admin-add-product" className='btn btn-dark rounded-pill px-4 shadow-sm font-weight-bold'><Plus size={16} className="mr-1"/> CREATE ENTRY</Link>
                             </div>
-                            <button type="submit" className="btn btn-dark btn-block mt-5 py-3 rounded-pill font-weight-bold ls-1 shadow-lg">CREATE PRESET PRODUCT</button>
-                        </form>
-                    </motion.div>
+                            <div style={{ height: 600, width: '100%' }}>
+                                <DataGrid rows={rows} columns={columns} pageSize={10} disableSelectionOnClick className="premium-grid" />
+                            </div>
+                        </motion.div>
+                    </div>
                 </div>
             </div>
-            <style>{`.small-label { text-transform: uppercase; font-size: 10px; font-weight: 800; color: #17a2b8; letter-spacing: 1px; }`}</style>
+            <style>{`.rounded-3xl{border-radius:28px !important} .btn-info-soft{background:#e0f7fa; color:#17a2b8} .btn-danger-soft{background:#fff1f0; color:#ff4d4f} .premium-grid{border:none !important}`}</style>
         </div>
     )
 }

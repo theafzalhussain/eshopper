@@ -163,10 +163,28 @@ export default function Shop() {
                                             )}
 
                                             <Link to={`/single-product/${item.id}`} className="img-wrap">
-                                                <img src={item.pic1} className="w-100" style={{ height: "320px", objectFit: "cover" }} alt={item.name} />
-                                                <div className="card-overlay">
-                                                    <span className="btn btn-white btn-sm px-4 rounded-pill">View Detail</span>
-                                                </div>
+                                                <motion.img 
+                                                    src={item.pic1} 
+                                                    className="w-100" 
+                                                    style={{ height: "320px", objectFit: "cover" }} 
+                                                    alt={item.name}
+                                                    whileHover={{ scale: 1.1, rotate: 2 }}
+                                                    transition={{ duration: 0.3 }}
+                                                />
+                                                <motion.div 
+                                                    className="card-overlay"
+                                                    whileHover={{ opacity: 1 }}
+                                                    initial={{ opacity: 0 }}
+                                                    transition={{ duration: 0.3 }}
+                                                >
+                                                    <motion.span 
+                                                        className="btn btn-white btn-sm px-4 rounded-pill"
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                    >
+                                                        View Detail
+                                                    </motion.span>
+                                                </motion.div>
                                             </Link>
 
                                             <div className="p-4">
@@ -225,14 +243,12 @@ export default function Shop() {
                 }
                 .img-wrap { position: relative; display: block; overflow: hidden; }
                 .img-wrap img { transition: 0.6s all ease; }
-                .product-card-premium:hover .img-wrap img { transform: scale(1.1); }
                 
                 .card-overlay {
                     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
                     background: rgba(0,0,0,0.2); display: flex; align-items: center;
                     justify-content: center; opacity: 0; transition: 0.3s;
                 }
-                .img-wrap:hover .card-overlay { opacity: 1; }
                 
                 .premium-badge {
                     position: absolute; top: 15px; left: 15px; z-index: 10;
