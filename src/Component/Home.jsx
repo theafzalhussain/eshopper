@@ -3,11 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
 import { getUser } from '../Store/ActionCreaters/UserActionCreators';
+import { getCart, addCart } from '../Store/ActionCreaters/CartActionCreators'; // Cart actions added
+import { getWishlist, addWishlist } from '../Store/ActionCreaters/WishlistActionCreators'; // Wishlist actions added
 import Newslatter from './Newslatter';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Home() {
     const product = useSelector((state) => state.ProductStateData)
+    const cart = useSelector((state) => state.CartStateData) // Selected Cart State
+    const wishlist = useSelector((state) => state.WishlistStateData) // Selected Wishlist State
     const dispatch = useDispatch()
     const navigate = useNavigate()
     
@@ -22,6 +26,9 @@ export default function Home() {
     useEffect(() => {
         dispatch(getProduct())
         dispatch(getUser())
+        dispatch(getCart()) // Initializing Cart Data
+        dispatch(getWishlist()) // Initializing Wishlist Data
+        
         const storedName = localStorage.getItem("name")
         if(storedName) setWelcomeUser(storedName)
 
@@ -30,6 +37,56 @@ export default function Home() {
         }, 5000);
         return () => clearInterval(timer);
     }, [dispatch])
+
+    // --- LOGIC: ADD TO CART FROM HOME ---
+    function addToCart(p) {
+        if (!localStorage.getItem("login")) {
+            navigate("/login")
+        } else {
+            let d = cart.find((item) => item.productid === p.id && item.userid === localStorage.getItem("userid"))
+            if (d) {
+                navigate("/cart")
+            } else {
+                let item = {
+                    productid: p.id,
+                    userid: localStorage.getItem("userid"),
+                    name: p.name,
+                    color: p.color,
+                    size: p.size,
+                    price: Number(p.finalprice),
+                    qty: 1,
+                    total: Number(p.finalprice),
+                    pic: p.pic1,
+                }
+                dispatch(addCart(item))
+                navigate("/cart")
+            }
+        }
+    }
+
+    // --- LOGIC: ADD TO WISHLIST FROM HOME ---
+    function addToWishlist(p) {
+        if (!localStorage.getItem("login")) {
+            navigate("/login")
+        } else {
+            let d = wishlist.find((item) => item.productid === p.id && item.userid === localStorage.getItem("userid"))
+            if (d) {
+                navigate("/profile") // Navigating to profile where wishlist is usually located
+            } else {
+                let item = {
+                    productid: p.id,
+                    userid: localStorage.getItem("userid"),
+                    name: p.name,
+                    color: p.color,
+                    size: p.size,
+                    price: Number(p.finalprice),
+                    pic: p.pic1,
+                }
+                dispatch(addWishlist(item))
+                navigate("/profile")
+            }
+        }
+    }
 
     const sliderData = [
         { title: "Summer Elegance", sub: "NEW ARRIVALS 2024", img: "/assets/images/banner-1.png", color: "#fdfdfd", link: "/shop/Female" },
@@ -106,7 +163,7 @@ export default function Home() {
                                         <h2 className="display-4 font-weight-bold">KIDS LAB</h2>
                                         <Link to="/shop/Kids" className="btn btn-white btn-sm px-4 font-weight-bold rounded-pill mt-3 shadow-sm">DISCOVER ALL</Link>
                                     </div>
-                                    <img src="/assets/images/bn-5.png" className="position-absolute h-110" style={{right:'-20px', bottom:'-30px', transform: 'rotate(-5deg)'}} alt=""/>
+                                    <img src="/assets/images/banner-3.png" className="position-absolute h-110" style={{right:'-20px', bottom:'-30px', transform: 'rotate(-5deg)'}} alt=""/>
                                 </motion.div>
                             </div>
                         </div>
@@ -114,13 +171,12 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* --- 3. PREMIUM PRODUCT SHOWCASE (UPDATED WITH BACKEND LOADING LOGIC) --- */}
+            {/* --- 3. PREMIUM PRODUCT SHOWCASE --- */}
             <section className="py-5 bg-light shadow-inner">
                 <div className="container py-5 text-center">
                     <h2 className="luxury-font display-4 mb-2 text-dark">Trending Curations</h2>
                     <div className="mx-auto bg-info mb-5" style={{ height: '3px', width: '80px' }}></div>
 
-                    {/* Logic updated here as requested */}
                     <div className="container">
                         {displayProducts.length > 0 ? (
                             <div className="row">
@@ -136,8 +192,14 @@ export default function Home() {
                                                 </Link>
                                                 {item.discount > 0 && <div className="lux-tag">-{item.discount}%</div>}
                                                 <div className="action-layer">
-                                                    <button onClick={() => navigate(`/single-product/${item.id}`)} className="p-icon-btn"><i className="icon-eye"></i></button>
-                                                    <button className="p-icon-btn"><i className="icon-shopping_cart"></i></button>
+                                                    {/* VIEW BUTTON */}
+                                                    <button onClick={() => navigate(`/single-product/${item.id}`)} className="p-icon-btn" title="View Details"><i className="icon-eye"></i></button>
+                                                    
+                                                    {/* NEW: ADD TO CART BUTTON */}
+                                                    <button onClick={() => addToCart(item)} className="p-icon-btn" title="Add to Cart"><i className="icon-shopping_cart"></i></button>
+                                                    
+                                                    {/* NEW: ADD TO WISHLIST BUTTON */}
+                                                    <button onClick={() => addToWishlist(item)} className="p-icon-btn" title="Add to Wishlist"><i className="icon-heart"></i></button>
                                                 </div>
                                             </div>
                                             <div className="p-4 flex-grow-1 d-flex flex-column text-left">
@@ -172,7 +234,6 @@ export default function Home() {
 
             <Newslatter />
 
-            {/* --- PREMIUM DYNAMIC STYLING (GLOBAL) --- */}
             <style dangerouslySetInnerHTML={{ __html: `
                 @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;600;800&display=swap');
                 
@@ -199,12 +260,12 @@ export default function Home() {
                 .luxury-image { transition: 1s ease-in-out; }
                 .fashion-card:hover .luxury-image { transform: scale(1.15); }
                 .action-layer {
-                    position: absolute; bottom: -50px; left: 0; width: 100%;
+                    position: absolute; bottom: -60px; left: 0; width: 100%;
                     background: rgba(255,255,255,0.7); backdrop-filter: blur(8px);
                     padding: 15px; display: flex; justify-content: center; gap: 15px; transition: 0.4s;
                 }
                 .fashion-card:hover .action-layer { bottom: 0; }
-                .p-icon-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: #fff; color: #111; display: flex; align-items: center; justify-content: center; }
+                .p-icon-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: #fff; color: #111; display: flex; align-items: center; justify-content: center; transition: 0.3s; cursor: pointer; }
                 .p-icon-btn:hover { background: #17a2b8; color: #fff; transform: scale(1.1); }
                 .lux-tag { position: absolute; top: 15px; left: 15px; background: #000; color: #fff; padding: 5px 12px; font-weight: bold; font-size: 10px; border-radius: 4px; }
                 .shadow-hover:hover { box-shadow: 0 20px 50px rgba(0,0,0,0.12) !important; transform: translateY(-5px); border: 1px solid #17a2b8 !important; }
