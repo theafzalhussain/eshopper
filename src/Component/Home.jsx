@@ -26,7 +26,7 @@ export default function Home() {
         if(storedName) setWelcomeUser(storedName)
 
         const timer = setInterval(() => {
-            setCurrentSlide((prev) => (prev === 2 ? 0 : prev + 1));
+            setCurrentSlide((prev) => (prev === 1 ? 0 : prev + 1));
         }, 5000);
         return () => clearInterval(timer);
     }, [dispatch])
@@ -72,7 +72,7 @@ export default function Home() {
                 </AnimatePresence>
             </section>
 
-            {/* --- 2. EDITORIAL CATEGORY SECTION (As per screenshot "Current Stories") --- */}
+            {/* --- 2. EDITORIAL CATEGORY SECTION --- */}
             <section className="py-5 bg-white border-bottom">
                 <div className="container py-5">
                     <div className="d-flex justify-content-between align-items-end mb-5">
@@ -114,50 +114,62 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* --- 3. PREMIUM PRODUCT SHOWCASE (As per "Trending Objects") --- */}
+            {/* --- 3. PREMIUM PRODUCT SHOWCASE (UPDATED WITH BACKEND LOADING LOGIC) --- */}
             <section className="py-5 bg-light shadow-inner">
                 <div className="container py-5 text-center">
                     <h2 className="luxury-font display-4 mb-2 text-dark">Trending Curations</h2>
                     <div className="mx-auto bg-info mb-5" style={{ height: '3px', width: '80px' }}></div>
 
-                    <div className="row">
-                        {displayProducts.length > 0 ? displayProducts.map((item, index) => (
-                            <motion.div 
-                                key={item.id} className="col-6 col-md-4 col-lg-3 mb-5"
-                                initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}
-                            >
-                                <div className="fashion-card shadow-hover transition-slow h-100 d-flex flex-column bg-white rounded-2xl overflow-hidden border">
-                                    <div className="position-relative img-holder overflow-hidden" style={{ aspectSratio:'10/13' }}>
-                                        <Link to={`/single-product/${item.id}`}>
-                                            <img src={item.pic1} loading="lazy" className="w-100 h-100 object-cover luxury-image" alt={item.name} />
-                                        </Link>
-                                        {item.discount > 0 && <div className="lux-tag">-{item.discount}%</div>}
-                                        <div className="action-layer">
-                                            <button onClick={() => navigate(`/single-product/${item.id}`)} className="p-icon-btn"><i className="icon-eye"></i></button>
-                                            <button className="p-icon-btn"><i className="icon-shopping_cart"></i></button>
+                    {/* Logic updated here as requested */}
+                    <div className="container">
+                        {displayProducts.length > 0 ? (
+                            <div className="row">
+                                {displayProducts.map((item, index) => (
+                                    <motion.div 
+                                        key={item.id} className="col-6 col-md-4 col-lg-3 mb-5"
+                                        initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}
+                                    >
+                                        <div className="fashion-card shadow-hover transition-slow h-100 d-flex flex-column bg-white rounded-2xl overflow-hidden border">
+                                            <div className="position-relative img-holder overflow-hidden" style={{ aspectRatio:'10/13' }}>
+                                                <Link to={`/single-product/${item.id}`}>
+                                                    <img src={item.pic1} loading="lazy" className="w-100 h-100 object-cover luxury-image" alt={item.name} />
+                                                </Link>
+                                                {item.discount > 0 && <div className="lux-tag">-{item.discount}%</div>}
+                                                <div className="action-layer">
+                                                    <button onClick={() => navigate(`/single-product/${item.id}`)} className="p-icon-btn"><i className="icon-eye"></i></button>
+                                                    <button className="p-icon-btn"><i className="icon-shopping_cart"></i></button>
+                                                </div>
+                                            </div>
+                                            <div className="p-4 flex-grow-1 d-flex flex-column text-left">
+                                                <div className="d-flex justify-content-between mb-1">
+                                                    <span className="small text-info font-weight-bold text-uppercase">{item.brand}</span>
+                                                    <span className="small text-muted font-weight-bold">⭐ 4.9</span>
+                                                </div>
+                                                <h3 className="h6 font-weight-bold mb-3">
+                                                    <Link to={`/single-product/${item.id}`} className="text-dark no-underline hover-info">{item.name}</Link>
+                                                </h3>
+                                                <div className="mt-auto pt-2 border-top d-flex align-items-center">
+                                                    <span className="h5 font-weight-bold text-dark mb-0">₹{item.finalprice}</span>
+                                                    {item.baseprice > item.finalprice && <del className="ml-2 text-muted x-small">₹{item.baseprice}</del>}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="p-4 flex-grow-1 d-flex flex-column text-left">
-                                        <div className="d-flex justify-content-between mb-1">
-                                            <span className="small text-info font-weight-bold text-uppercase">{item.brand}</span>
-                                            <span className="small text-muted font-weight-bold">⭐ 4.9</span>
-                                        </div>
-                                        <h3 className="h6 font-weight-bold mb-3">
-                                            <Link to={`/single-product/${item.id}`} className="text-dark no-underline hover-info">{item.name}</Link>
-                                        </h3>
-                                        <div className="mt-auto pt-2 border-top d-flex align-items-center">
-                                            <span className="h5 font-weight-bold text-dark mb-0">₹{item.finalprice}</span>
-                                            {item.baseprice > item.finalprice && <del className="ml-2 text-muted x-small">₹{item.baseprice}</del>}
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )) : [1,2,3,4].map(i => <div key={i} className="col-lg-3 col-6"><div className="skeleton-p mb-5"></div></div>)}
+                                    </motion.div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-5">
+                                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="h2 text-info">
+                                <i className="icon-refresh"></i>
+                                </motion.div>
+                                <h4 className="mt-3 font-weight-bold text-dark">Initializing Premium Collection...</h4>
+                                <p className="text-muted small text-uppercase ls-2">Backend is waking up (may take 30s)...</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>
 
-            {/* Baaki sections without change as requested */}
             <Newslatter />
 
             {/* --- PREMIUM DYNAMIC STYLING (GLOBAL) --- */}
@@ -167,6 +179,7 @@ export default function Home() {
                 .home-ultimate-root { font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
                 .luxury-font { font-family: 'Bodoni Moda', serif; }
                 .ls-4 { letter-spacing: 4px; }
+                .ls-2 { letter-spacing: 2px; }
                 .rounded-2xl { border-radius: 20px !important; }
                 .rounded-3xl { border-radius: 35px !important; }
                 .object-cover { object-fit: cover; }
@@ -182,7 +195,6 @@ export default function Home() {
                 }
                 .btn-luxury:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.15); background: #333; color: #fff; }
 
-                /* Trending Section Styling */
                 .img-holder { background: #f2f2f2; height: 350px; position: relative; }
                 .luxury-image { transition: 1s ease-in-out; }
                 .fashion-card:hover .luxury-image { transform: scale(1.15); }
@@ -197,15 +209,9 @@ export default function Home() {
                 .lux-tag { position: absolute; top: 15px; left: 15px; background: #000; color: #fff; padding: 5px 12px; font-weight: bold; font-size: 10px; border-radius: 4px; }
                 .shadow-hover:hover { box-shadow: 0 20px 50px rgba(0,0,0,0.12) !important; transform: translateY(-5px); border: 1px solid #17a2b8 !important; }
 
-                /* Editorial Overlays */
                 .story-overlay { position: absolute; top:0; left:0; width: 100%; height: 100%; background: linear-gradient(transparent 30%, rgba(0,0,0,0.9)); }
                 .story-overlay-light { position: absolute; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.25); }
                 .btn-white { background: #fff; border: none; color: #000; }
-                .btn-circle { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-
-                /* Skeletons */
-                .skeleton-p { height: 400px; width: 100%; background: #eee; border-radius: 24px; animation: p-shimmer 1.5s infinite; }
-                @keyframes p-shimmer { 0% { opacity:0.5; } 50% { opacity: 1; } 100% { opacity:0.5; } }
             `}} />
         </div>
     )

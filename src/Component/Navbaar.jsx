@@ -101,13 +101,15 @@ export default function Navbaar() {
                                 <span className="badge-dot bg-info"></span>
                             </Link>
 
-                            {/* USER ACCOUNT */}
+                            {/* USER ACCOUNT (UPDATED) */}
                             {localStorage.getItem("login") ? (
                                 <div className="dropdown ml-2">
-                                    <button className="btn btn-dark user-profile-btn rounded-pill px-4 py-2 shadow-sm" data-toggle="dropdown">
-                                        <i className="icon-user mr-2"></i>
-                                        <span className="small font-weight-bold">{name?.split(' ')[0]}</span>
-                                    </button>
+                                    {/* NEW DROPDOWN TOGGLE LINK */}
+                                    <Link className="nav-link dropdown-toggle user-name-btn rounded-pill px-3" to="#" id="userDropdown" data-toggle="dropdown">
+                                        <i className="icon-user-o mr-2"></i>
+                                        {localStorage.getItem("name") ? localStorage.getItem("name").split(' ')[0] : "Account"}
+                                    </Link>
+                                    
                                     <div className="dropdown-menu dropdown-menu-right border-0 shadow-xl rounded-xl mt-2">
                                         <Link className="dropdown-item py-2" to="/profile"><i className="icon-vcard-o mr-2"></i> Profile</Link>
                                         <Link className="dropdown-item py-2" to="/cart"><i className="icon-shopping_basket mr-2"></i> My Orders</Link>
@@ -127,7 +129,7 @@ export default function Navbaar() {
                 </div>
             </nav>
 
-            {/* --- CUSTOM CSS FOR THE OVERLAP FIX --- */}
+            {/* --- CUSTOM CSS --- */}
             <style dangerouslySetInnerHTML={{ __html: `
                 .header-main {
                     width: 100%;
@@ -194,9 +196,14 @@ export default function Navbaar() {
                     border: 2px solid white;
                 }
 
-                .user-profile-btn { border: none; font-size: 13px; }
-                .rounded-xl { border-radius: 15px !important; }
+                .user-name-btn { 
+                    font-size: 14px; 
+                    font-weight: 700; 
+                    color: #333 !important;
+                    background: #f8f9fa;
+                }
                 
+                .rounded-xl { border-radius: 15px !important; }
                 .shadow-xl { box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important; }
                 
                 .dropdown-item { font-size: 14px; font-weight: 600; padding: 10px 20px; }
