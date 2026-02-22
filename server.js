@@ -14,59 +14,40 @@ app.use(express.json());
 // --- 1. DB & CLOUDINARY ---
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
 mongoose.connect(MONGODB_URI)
-    .then(() => console.log("✅ DB Connected: Atlas Secured"))
+    .then(() => console.log("✅ MongoDB Atlas Connected"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
 cloudinary.config({ 
     cloud_name: 'dtfvoxw1p', 
     api_key: '519639537482594', 
-    api_secret: process.env.CLOUD_API_SECRET // Ensure this is set in Render
+    api_secret: process.env.CLOUD_API_SECRET 
 });
 
 const storage = new CloudinaryStorage({ 
     cloudinary: cloudinary, 
-    params: { 
-        folder: 'eshoper_master', 
-        allowedFormats: ['jpg', 'png', 'jpeg'] 
-    } 
+    params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } 
 });
 
 const upload = multer({ storage: storage }).fields([
-    { name: 'pic', maxCount: 1 }, 
-    { name: 'pic1', maxCount: 1 }, 
-    { name: 'pic2', maxCount: 1 }, 
-    { name: 'pic3', maxCount: 1 }, 
+    { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, 
+    { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, 
     { name: 'pic4', maxCount: 1 }
 ]);
 
 // --- 2. JSON CONVERSION HELPER ---
 const toJSONCustom = { 
-    virtuals: true, 
-    versionKey: false, 
+    virtuals: true, versionKey: false, 
     transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } 
 };
 const opts = { toJSON: toJSONCustom };
 
 // --- 3. MODELS ---
-const UserSchema = new mongoose.Schema({ 
-    name: String, 
-    username: { type: String, unique: true }, 
-    email: String,
-    phone: String,
-    password: { type: String, required: true }, 
-    addressline1: { type: String, default: "" },
-    addressline2: { type: String, default: "" },
-    addressline3: { type: String, default: "" },
-    pin: { type: String, default: "" },
-    city: { type: String, default: "" },
-    state: { type: String, default: "" },
-    role: { type: String, default: "User" }, 
-    pic: String 
-}, opts);
+const User = mongoose.model('User', new mongoose.Schema({ 
+    name: String, username: { type: String, unique: true }, email: String, phone: String, 
+    password: { type: String, required: true }, addressline1: String, city: String, 
+    state: String, pin: String, role: { type: String, default: "User" }, pic: String 
+}, opts));
 
-const User = mongoose.model('User', UserSchema);
-
-// Rest of models...
 const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
 const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
 const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
@@ -81,13 +62,13 @@ const Product = mongoose.model('Product', new mongoose.Schema({ name: String, ma
 app.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ username: req.body.username });
-        if (!user) return res.status(404).send({ message: "Invalid Credentials" });
+        if (!user) return res.status(404).json({ message: "User not found" });
         const match = await bcrypt.compare(req.body.password, user.password);
-        if (match) res.send(user); else res.status(401).send({ message: "Invalid Credentials" });
-    } catch (e) { res.status(500).send(e); }
+        if (match) res.json(user); else res.status(401).json({ message: "Invalid Password" });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- 5. EXPLICIT PRODUCT ROUTES ---
+// --- 5. PRODUCT & USER ROUTES (Files Handling) ---
 app.get('/product', async (req, res) => res.send(await Product.find().sort({ _id: -1 })));
 app.post('/product', upload, async (req, res) => {
     try {
@@ -99,23 +80,9 @@ app.post('/product', upload, async (req, res) => {
             if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
         }
         await d.save(); res.send(d);
-    } catch (e) { res.status(400).send(e); }
-});
-app.put('/product/:id', upload, async (req, res) => {
-    try {
-        let upData = { ...req.body };
-        if (req.files) {
-            if (req.files.pic1) upData.pic1 = req.files.pic1[0].path;
-            if (req.files.pic2) upData.pic2 = req.files.pic2[0].path;
-            if (req.files.pic3) upData.pic3 = req.files.pic3[0].path;
-            if (req.files.pic4) upData.pic4 = req.files.pic4[0].path;
-        }
-        const data = await Product.findByIdAndUpdate(req.params.id, upData, { new: true });
-        res.send(data);
-    } catch (e) { res.status(400).send(e); }
+    } catch (e) { res.status(400).json(e); }
 });
 
-// --- 6. USER SPECIAL ROUTES (Encryption + Image) ---
 app.get('/user', async (req, res) => res.send(await User.find().sort({ _id: -1 })));
 app.post('/user', upload, async (req, res) => {
     try {
@@ -124,31 +91,31 @@ app.post('/user', upload, async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         data.password = await bcrypt.hash(req.body.password, salt);
         await data.save(); res.send(data);
-    } catch (e) { res.status(400).send(e); }
+    } catch (e) { res.status(400).json(e); }
 });
 
-// 🔥 THE MISSING LINK: User PUT Route for Profile Updates
+// 🔥 FIXED USER UPDATE (No more 500 errors)
 app.put('/user/:id', upload, async (req, res) => {
     try {
-        let updateData = { ...req.body };
-        // Check for new Profile Picture
-        if (req.files && req.files.pic) {
-            updateData.pic = req.files.pic[0].path;
-        }
-        // Logic for Password change (optional)
-        if (updateData.password && updateData.password.length < 20) {
+        let user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        let upData = { ...req.body };
+        if (req.files && req.files.pic) upData.pic = req.files.pic[0].path;
+        
+        if (req.body.password && req.body.password.length < 20) {
             const salt = await bcrypt.genSalt(10);
-            updateData.password = await bcrypt.hash(updateData.password, salt);
+            upData.password = await bcrypt.hash(req.body.password, salt);
         }
-        const data = await User.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        const data = await User.findByIdAndUpdate(req.params.id, upData, { new: true });
         res.send(data);
-    } catch (e) { res.status(400).send(e); }
+    } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
-// --- 7. UNIVERSAL ROUTE HANDLER (For Simple Logic) ---
+// --- 6. UNIVERSAL CRUD HANDLER ---
 const setupRoutes = (path, Model) => {
     app.get(path, async (req, res) => res.send(await Model.find().sort({ _id: -1 })));
-    app.post(path, async (req, res) => { try { const d = new Model(req.body); await d.save(); res.send(d); } catch (e) { res.status(400).send(e); } });
+    app.post(path, async (req, res) => { try { const d = new Model(req.body); await d.save(); res.send(d); } catch (e) { res.status(400).json(e); } });
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.send({ result: "Done" }); });
     app.put(`${path}/:id`, async (req, res) => { const d = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true }); res.send(d); });
 };
@@ -163,4 +130,4 @@ setupRoutes('/wishlist', Wishlist);
 setupRoutes('/checkout', Checkout);
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 Master Backend Live on Port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Master Server on Port ${PORT}`));

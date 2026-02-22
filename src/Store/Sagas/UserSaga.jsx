@@ -41,12 +41,15 @@ function* deleteUserSaga(action) {
     }
 }
 
+// 🔥 UPDATED: updateUserSaga with FormData and Cloudinary response handling
 function* updateUserSaga(action) {
     try {
+        // action.payload is FormData
         let response = yield updateUserAPI(action.payload)
+        // Put the actual server response (with Cloudinary URL) into Redux
         yield put({ type: UPDATE_USER_RED, data: response })
     } catch (e) {
-        console.error("❌ Update Profile Failed:", e)
+        console.error("Critical Update Failure:", e)
     }
 }
 

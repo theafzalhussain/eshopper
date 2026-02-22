@@ -1,11 +1,12 @@
 import { BASE_URL } from "../constants";
 
-// Helper functions for common logic
+// Helper for GET
 async function getAPI(endpoint) {
     let response = await fetch(`${BASE_URL}${endpoint}`);
     return await response.json();
 }
 
+// Helper for POST/PUT/DELETE with JSON vs FormData handling
 async function mutationAPI(endpoint, method, data) {
     let isFormData = data instanceof FormData;
     let response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -13,45 +14,44 @@ async function mutationAPI(endpoint, method, data) {
         headers: isFormData ? {} : { "content-type": "application/json" },
         body: isFormData ? data : JSON.stringify(data)
     });
-    // Response check logic added inside mutationAPI for reliability
-    if (!response.ok) {
-        const error = await response.json();
-        throw error;
+
+    // Check content type to prevent parsing HTML as JSON (fix for "Unexpected token <")
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+        const result = await response.json();
+        if (!response.ok) throw result;
+        return result;
+    } else {
+        const errorText = await response.text();
+        throw new Error("Server error: " + errorText.substring(0, 100));
     }
-    return await response.json();
 }
 
-// 🎯 NEW: LOGIN API (Ensures secure connection)
 export const loginAPI = (data) => mutationAPI("/login", "post", data);
 
-// MAINCATEGORY
 export const createMaincategoryAPI = (data) => mutationAPI("/maincategory", "post", data);
 export const getMaincategoryAPI = () => getAPI("/maincategory");
 export const updateMaincategoryAPI = (data) => mutationAPI(`/maincategory/${data.id}`, "put", data);
 export const deleteMaincategoryAPI = (data) => mutationAPI(`/maincategory/${data.id}`, "delete");
 
-// SUBCATEGORY
 export const createSubcategoryAPI = (data) => mutationAPI("/subcategory", "post", data);
 export const getSubcategoryAPI = () => getAPI("/subcategory");
 export const updateSubcategoryAPI = (data) => mutationAPI(`/subcategory/${data.id}`, "put", data);
 export const deleteSubcategoryAPI = (data) => mutationAPI(`/subcategory/${data.id}`, "delete");
 
-// BRAND
 export const createBrandAPI = (data) => mutationAPI("/brand", "post", data);
 export const getBrandAPI = () => getAPI("/brand");
 export const updateBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "put", data);
 export const deleteBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "delete");
 
-// PRODUCT
 export const createProductAPI = (data) => mutationAPI("/product", "post", data);
 export const getProductAPI = () => getAPI("/product");
 export const updateProductAPI = (data) => {
-    let id = data instanceof FormData ? data.get("id") : data.id;
+    const id = data instanceof FormData ? data.get("id") : data.id;
     return mutationAPI(`/product/${id}`, "put", data);
 }
 export const deleteProductAPI = (data) => mutationAPI(`/product/${data.id}`, "delete");
 
-// USER
 export const createUserAPI = (data) => mutationAPI("/user", "post", data);
 export const getUserAPI = () => getAPI("/user");
 export const updateUserAPI = (data) => {
@@ -59,10 +59,8 @@ export const updateUserAPI = (data) => {
     return mutationAPI(`/user/${id}`, "put", data);
 }
 export const deleteUserAPI = (data) => mutationAPI(`/user/${data.id}`, "delete");
-
 export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);
 
-// CART, WISHLIST, CHECKOUT, CONTACT, NEWSLATTER remain exactly same as before...
 export const createCartAPI = (data) => mutationAPI("/cart", "post", data);
 export const getCartAPI = () => getAPI("/cart");
 export const updateCartAPI = (data) => mutationAPI(`/cart/${data.id}`, "put", data);
