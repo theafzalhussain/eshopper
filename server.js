@@ -11,10 +11,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- 1. DB & CLOUDINARY ---
+// --- 1. DB & CLOUDINARY CONFIG ---
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
 mongoose.connect(MONGODB_URI)
-    .then(() => console.log("✅ MongoDB Atlas Connected"))
+    .then(() => console.log("✅ MongoDB Connected Successfully"))
     .catch(err => console.log("❌ DB Connection Error:", err));
 
 cloudinary.config({ 
@@ -34,7 +34,7 @@ const upload = multer({ storage: storage }).fields([
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// --- 2. JSON CONVERSION HELPER ---
+// --- 2. JSON CONVERSION HELPER (Fixes DataGrid ID issues) ---
 const toJSONCustom = { 
     virtuals: true, versionKey: false, 
     transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } 
@@ -64,67 +64,35 @@ app.post('/login', async (req, res) => {
         const user = await User.findOne({ username: req.body.username });
         if (!user) return res.status(404).json({ message: "User not found" });
         const match = await bcrypt.compare(req.body.password, user.password);
-        if (match) res.json(user); else res.status(401).json({ message: "Invalid Password" });
+        if (match) res.json(user); else res.status(401).json({ message: "Invalid Credentials" });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- 5. PRODUCT & USER ROUTES (Files Handling) ---
-app.get('/product', async (req, res) => res.send(await Product.find().sort({ _id: -1 })));
-app.post('/product', upload, async (req, res) => {
-    try {
-        const d = new Product(req.body);
-        if (req.files) {
-            if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
-            if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
-            if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
-            if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
-        }
-        await d.save(); res.send(d);
-    } catch (e) { res.status(400).json(e); }
-});
+// --- 5. DYNAMIC UPDATE ROUTES (Fixed 500 & 404 Errors) ---
 
-app.get('/user', async (req, res) => res.send(await User.find().sort({ _id: -1 })));
-app.post('/user', upload, async (req, res) => {
-    try {
-        const data = new User(req.body);
-        if (req.files && req.files.pic) data.pic = req.files.pic[0].path;
-        const salt = await bcrypt.genSalt(10);
-        data.password = await bcrypt.hash(req.body.password, salt);
-        await data.save(); res.send(data);
-    } catch (e) { res.status(400).json(e); }
-});
-
-// 🔥 UPDATED & FIXED USER UPDATE (Bcrypt safe + Error Proof)
+// User Update logic with Pic & Password Security
 app.put('/user/:id', upload, async (req, res) => {
     try {
         let user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ message: "User not found" });
 
         let updateData = { ...req.body };
+        if (req.files && req.files.pic) updateData.pic = req.files.pic[0].path;
         
-        // Handle Profile Pic Update
-        if (req.files && req.files.pic) {
-            updateData.pic = req.files.pic[0].path;
-        }
-
-        // 🔥 FIX: Password logic check
+        // Only hash if password is new and not already hashed
         if (req.body.password && req.body.password.length > 0 && req.body.password.length < 20) {
             const salt = await bcrypt.genSalt(10);
             updateData.password = await bcrypt.hash(req.body.password, salt);
         } else {
-            // Password blank bheja hai ya already hashed hai, toh use mat badlo
             delete updateData.password;
         }
 
         const data = await User.findByIdAndUpdate(req.params.id, updateData, { new: true });
-        res.send(data);
-    } catch (e) { 
-        console.error("User Update Error:", e.message);
-        res.status(500).json({ error: "Server Error", details: e.message }); 
-    }
+        res.json(data);
+    } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
-// --- 6. UNIVERSAL CRUD HANDLER ---
+// Generic CRUD
 const setupRoutes = (path, Model) => {
     app.get(path, async (req, res) => res.send(await Model.find().sort({ _id: -1 })));
     app.post(path, async (req, res) => { try { const d = new Model(req.body); await d.save(); res.send(d); } catch (e) { res.status(400).json(e); } });
@@ -141,5 +109,20 @@ setupRoutes('/cart', Cart);
 setupRoutes('/wishlist', Wishlist);
 setupRoutes('/checkout', Checkout);
 
+// Product Special Case
+app.get('/product', async (req, res) => res.send(await Product.find().sort({ _id: -1 })));
+app.post('/product', upload, async (req, res) => {
+    try {
+        const d = new Product(req.body);
+        if (req.files) {
+            if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
+            if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
+            if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
+            if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
+        }
+        await d.save(); res.send(d);
+    } catch (e) { res.status(400).json(e); }
+});
+
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 Master Server on Port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Final Master Server Running on Port ${PORT}`));
