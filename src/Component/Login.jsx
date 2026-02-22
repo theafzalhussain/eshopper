@@ -18,21 +18,32 @@ export default function Login() {
     }
 
     function postData(e) {
-        e.preventDefault()
-        const user = users.find(x => x.username === data.username && x.password === data.password)
-        if (user) {
-            localStorage.setItem("login", true)
-            localStorage.setItem("name", user.name)
-            localStorage.setItem("username", user.username)
-            localStorage.setItem("userid", user.id)
-            localStorage.setItem("role", user.role)
+        e.preventDefault();
+        
+        // 🔥 Backend API Call for Secure Authentication
+        fetch("https://eshopper-ukgu.onrender.com/login", {
+            method: "post",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then((user) => {
+            if (user.username) {
+                // Storing Secure User Data
+                localStorage.setItem("login", true);
+                localStorage.setItem("name", user.name);
+                localStorage.setItem("username", user.username);
+                localStorage.setItem("userid", user.id);
+                localStorage.setItem("role", user.role);
 
-            // Redirect Logic: Go back to previous page or Home
-            const backUrl = location.state?.from || (user.role === "Admin" ? "/admin-home" : "/profile")
-            navigate(backUrl)
-        } else {
-            alert("Invalid Credentials!")
-        }
+                // Redirect Logic: Go back to previous page (like Cart) or Dashboard
+                const backUrl = location.state?.from || (user.role === "Admin" ? "/admin-home" : "/profile")
+                navigate(backUrl);
+            } else {
+                alert("Invalid Credentials!!!");
+            }
+        })
+        .catch(() => alert("Something went wrong with the server!"));
     }
 
     useEffect(() => { dispatch(getUser()) }, [dispatch])

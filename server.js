@@ -4,6 +4,7 @@ const cors = require('cors');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
+const bcrypt = require('bcryptjs'); // 🔥 Bcrypt Added
 require('dotenv').config();
 
 const app = express();
@@ -139,14 +140,13 @@ app.delete('/checkout/:id', async (req, res) => {
     res.send({ result: "Done" });
 });
 
-// --- Admin Stats Route (NEW REVENUE LOGIC UPDATED) ---
+// --- Admin Stats Route ---
 app.get('/admin/stats', async (req, res) => {
     try {
         const users = await User.countDocuments();
         const products = await Product.countDocuments();
         const contacts = await Contact.countDocuments();
         
-        // Revenue calculate karna: Sabhi orders ka total sum
         const checkouts = await Checkout.find();
         const ordersCount = checkouts.length;
         const totalRevenue = checkouts.reduce((sum, order) => sum + (Number(order.finalAmount) || 0), 0);
@@ -163,13 +163,39 @@ app.get('/admin/stats', async (req, res) => {
     }
 });
 
-// --- Special Image Routes (User & Product) ---
+// --- 🔥 USER SIGNUP (UPDATED WITH BCRYPT) ---
 app.post('/user', upload, async (req, res) => {
     try {
         const data = new User(req.body);
         if (req.files && req.files.pic) data.pic = req.files.pic[0].path;
-        await data.save(); res.send(data);
+
+        // Password Hashing
+        const salt = await bcrypt.genSalt(10);
+        data.password = await bcrypt.hash(data.password, salt);
+
+        await data.save();
+        res.send(data);
     } catch (e) { res.status(400).send(e); }
+});
+
+// --- 🔥 LOGIN ROUTE (NEWLY ADDED) ---
+app.post('/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await User.findOne({ username: username });
+
+        if (!user) {
+            return res.status(400).send({ result: "Fail", message: "User not found" });
+        }
+
+        // Compare Hash
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (isMatch) {
+            res.send(user);
+        } else {
+            res.status(400).send({ result: "Fail", message: "Incorrect Password" });
+        }
+    } catch (e) { res.status(500).send(e); }
 });
 
 app.put('/user/:id', upload, async (req, res) => {
@@ -183,26 +209,34 @@ app.put('/user/:id', upload, async (req, res) => {
 
 app.get('/user', async (req, res) => res.send(await User.find().sort({ _id: -1 })));
 
+// --- PRODUCT ROUTES ---
+app.post('/product', upload, async (req, res) => {
+    try {
+        const data = new Product(req.body);
+        if (req.files) {
+            if (req.files.pic1) data.pic1 = req.files.pic1[0].path;
+            if (req.files.pic2) data.pic2 = req.files.pic2[0].path;
+            if (req.files.pic3) data.pic3 = req.files.pic3[0].path;
+            if (req.files.pic4) data.pic4 = req.files.pic4[0].path;
+        }
+        await data.save(); res.send(data);
+    } catch (error) { res.status(400).send(error); }
+});
+
 app.put('/product/:id', upload, async (req, res) => {
     try {
         let updateData = { ...req.body };
-        
-        // Agar nayi image upload hui hai, toh purani ki jagah nayi ka rasta daalein
         if (req.files) {
             if (req.files.pic1) updateData.pic1 = req.files.pic1[0].path;
             if (req.files.pic2) updateData.pic2 = req.files.pic2[0].path;
             if (req.files.pic3) updateData.pic3 = req.files.pic3[0].path;
             if (req.files.pic4) updateData.pic4 = req.files.pic4[0].path;
         }
-
-        // MongoDB Atlas update command
         const data = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true });
         res.status(200).send(data);
-    } catch (e) {
-        console.log("Product Update Error:", e);
-        res.status(400).send(e);
-    }
+    } catch (e) { res.status(400).send(e); }
 });
+
 app.get('/product', async (req, res) => res.send(await Product.find().sort({ _id: -1 })));
 
 app.delete('/product/:id', async (req, res) => {
@@ -216,7 +250,9 @@ app.post('/user/forget-password', async (req, res) => {
         const { username, password } = req.body;
         const user = await User.findOne({ username: username });
         if (user) {
-            user.password = password; 
+            // Consistent hashing for forget password
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(password, salt);
             await user.save();
             res.status(200).send({ result: "Done", message: "Password Updated Successfully" });
         } else {
