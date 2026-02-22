@@ -1,31 +1,24 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X, Info, Phone, Mail } from 'lucide-react'
+import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X, Phone, Mail } from 'lucide-react'
 
 export default function Navbaar() {
     const navigate = useNavigate()
     const location = useLocation()
     const [isScrolled, setIsScrolled] = useState(false)
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [isMobileOpen, setIsMobileOpen] = useState(false)
 
     const role = localStorage.getItem("role")
     const name = localStorage.getItem("name")
     const isLoggedIn = localStorage.getItem("login")
 
-    // Handle scroll for glassmorphism
+    // Handle Navbar transparency & height on scroll
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 20)
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
-
-    const logout = () => {
-        if (window.confirm("Disconnect from luxury portal?")) {
-            localStorage.clear()
-            navigate("/login")
-        }
-    }
 
     const navLinks = [
         { name: "Home", path: "/" },
@@ -34,193 +27,188 @@ export default function Navbaar() {
         { name: "Contact", path: "/contact" },
     ]
 
+    const closeMobileMenu = () => setIsMobileOpen(false)
+
     return (
         <>
-            {/* --- 1. THE EXCLUSIVE GRADIENT RIBBON --- */}
-            <div className="luxury-top-ribbon d-none d-lg-flex">
-                <div className="container d-flex justify-content-between align-items-center">
-                    <div className="small-info font-weight-bold">
-                        <motion.span animate={{ opacity: [0.5, 1, 0.5] }} transition={{ repeat: Infinity, duration: 3 }}>
-                            ✨ ENJOY FREE CONCIERGE SHIPPING ON ORDERS OVER ₹1999
-                        </motion.span>
-                    </div>
-                    <div className="top-contacts d-flex gap-4">
-                        <span className="mr-3 small"><Phone size={12} className="text-info mr-1" /> +91 8447859784</span>
-                        <span className="small"><Mail size={12} className="text-info mr-1" /> support@eshopper.com</span>
+            {/* --- 1. LUXURY TOP RIBBON (Responsive stacking) --- */}
+            <div className="top-luxury-bar">
+                <div className="container h-100 d-flex justify-content-between align-items-center">
+                    <span className="ribbon-text font-weight-bold">
+                        ESHOPPER CONCIERGE: COMPLIMENTARY SHIPPING
+                    </span>
+                    <div className="ribbon-contact d-none d-md-flex align-items-center opacity-75">
+                        <span className="small mr-3"><Phone size={12} className="mr-1" /> +91 8447859784</span>
+                        <span className="small"><Mail size={12} className="mr-1" /> SUPPORT@ESHOPPER.COM</span>
                     </div>
                 </div>
             </div>
 
-            {/* --- 2. THE MAIN LUXURY BAR --- */}
-            <nav className={`navbar-wrapper ${isScrolled ? 'nav-scrolled' : ''}`}>
-                <div className="container d-flex align-items-center justify-content-between">
+            {/* --- 2. MASTER NAVBAR (Glassmorphism + Responsive Design) --- */}
+            <header className={`nav-master ${isScrolled ? 'nav-scrolled' : ''}`}>
+                <div className="container h-100 d-flex align-items-center justify-content-between">
                     
-                    {/* --- THE ATTRACTIVE LOGO --- */}
-                    <Link to="/" className="luxury-logo-link">
-                        <motion.div whileHover={{ scale: 1.05 }} className="premium-logo">
-                            <span className="brand-e">E</span>
-                            <span className="brand-text">SHOPPER<span className="logo-dot">.</span></span>
-                            <div className="logo-underline"></div>
-                        </motion.div>
+                    {/* Hamburger Button (Mobile Only - Left Side) */}
+                    <button className="d-lg-none menu-trigger btn p-0 border-0" onClick={() => setIsMobileOpen(true)}>
+                        <Menu size={26} strokeWidth={1.5} />
+                    </button>
+
+                    {/* --- DESIGNER LOGO (Centered on mobile, Left on desktop) --- */}
+                    <Link to="/" className="brand-box text-center text-lg-left">
+                        <div className="logo-concept">
+                            <span className="logo-e shadow-sm">E</span>
+                            <span className="logo-text d-none d-sm-inline">SHOPPER<span className="logo-dot-teal">.</span></span>
+                        </div>
                     </Link>
 
-                    {/* --- DESKTOP NAVIGATION --- */}
-                    <div className="d-none d-lg-block">
-                        <ul className="nav-menu-premium d-flex align-items-center mb-0">
+                    {/* --- DESKTOP MENU (Hidden on Mobile) --- */}
+                    <nav className="d-none d-lg-block">
+                        <ul className="premium-list-links mb-0 p-0 d-flex">
                             {navLinks.map((link) => (
-                                <li key={link.name} className="nav-item">
-                                    <Link to={link.path} className={`lux-nav-link ${location.pathname === link.path ? 'active' : ''}`}>
+                                <li key={link.name} className="nav-item-lux mx-3">
+                                    <Link to={link.path} className={`nav-link-premium ${location.pathname === link.path ? 'is-active' : ''}`}>
                                         {link.name}
                                         {location.pathname === link.path && (
-                                            <motion.div layoutId="nav-line" className="nav-active-bar" />
+                                            <motion.div layoutId="navline" className="active-indicator" />
                                         )}
                                     </Link>
                                 </li>
                             ))}
-                            {/* ADMIN PILL - Only for admins */}
                             {role === "Admin" && (
-                                <li className="nav-item ml-3">
-                                    <Link to="/admin-home" className="admin-access-badge">
-                                        <LayoutDashboard size={14} className="mr-1" /> ADMIN PORTAL
-                                    </Link>
+                                <li className="nav-item-lux">
+                                    <Link to="/admin-home" className="admin-pill-badge">ADMIN</Link>
                                 </li>
                             )}
                         </ul>
-                    </div>
+                    </nav>
 
-                    {/* --- ACTION GROUP (Cart/Profile) --- */}
-                    <div className="action-hub d-flex align-items-center">
-                        <Link to="/cart" className="cart-icon-luxury position-relative mr-4">
+                    {/* --- ACTION HUBS (Icons stay together) --- */}
+                    <div className="action-hub d-flex align-items-center justify-content-end">
+                        <Link to="/cart" className="action-link-premium position-relative mr-3 mr-md-4">
                             <ShoppingCart size={22} strokeWidth={1.5} />
-                            <span className="premium-cart-dot shadow-sm"></span>
+                            <span className="cart-dot-indicator"></span>
                         </Link>
 
-                        {isLoggedIn ? (
-                            <div className="dropdown user-auth-area">
-                                <motion.button 
-                                    whileTap={{ scale: 0.95 }}
-                                    className="btn btn-profile-premium rounded-pill shadow-sm"
-                                    data-toggle="dropdown"
-                                >
-                                    <User size={18} className="mr-2" />
-                                    <span>{name?.split(' ')[0]}</span>
-                                </motion.button>
-                                <div className="dropdown-menu dropdown-menu-right premium-dropdown shadow-2xl border-0">
-                                    <div className="dropdown-header border-bottom mb-2 pb-2">
-                                        <p className="mb-0 font-weight-bold text-dark">{name}</p>
-                                        <small className="text-muted">Personal Membership ID</small>
-                                    </div>
-                                    <Link className="dropdown-item" to="/profile">
-                                        <div className="d-flex align-items-center"><User size={14} className="mr-2"/> Dashboard Profile</div>
-                                    </Link>
-                                    <Link className="dropdown-item" to="/cart">
-                                        <div className="d-flex align-items-center"><ShoppingCart size={14} className="mr-2"/> Bag Settings</div>
-                                    </Link>
-                                    <div className="dropdown-divider"></div>
-                                    <button className="dropdown-item text-danger font-weight-bold" onClick={logout}>
-                                        <div className="d-flex align-items-center"><LogOut size={14} className="mr-2"/> End Session</div>
+                        <div className="auth-profile-hub">
+                            {isLoggedIn ? (
+                                <div className="dropdown">
+                                    <button className="user-access-btn rounded-pill border shadow-sm" data-toggle="dropdown">
+                                        <User size={16} className="mr-md-2" />
+                                        <span className="d-none d-md-inline">{name?.split(' ')[0]}</span>
                                     </button>
+                                    <div className="dropdown-menu dropdown-menu-right lux-popover-shadow border-0 rounded-2xl p-2 mt-3">
+                                        <Link className="dropdown-item py-2 rounded-lg" to="/profile"><User size={14} className="mr-2"/> Profile</Link>
+                                        <Link className="dropdown-item py-2 rounded-lg" to="/cart"><ShoppingCart size={14} className="mr-2"/> My Bag</Link>
+                                        <div className="dropdown-divider"></div>
+                                        <button className="dropdown-item text-danger py-2 rounded-lg" onClick={() => { localStorage.clear(); navigate("/login"); }}><LogOut size={14} className="mr-2"/> Logout</button>
+                                    </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <Link to="/login">
-                                <motion.button whileHover={{ y: -2 }} className="btn btn-login-luxury">
-                                    MEMBERSHIP
-                                </motion.button>
-                            </Link>
-                        )}
-
-                        {/* Mobile Toggle */}
-                        <button className="btn d-lg-none ml-3" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-                            <Menu />
-                        </button>
+                            ) : (
+                                <Link to="/login">
+                                    <button className="premium-login-pill shadow transition">SIGN IN</button>
+                                </Link>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </nav>
+            </header>
 
-            {/* --- 3. MOBILE MENU OVERLAY --- */}
+            {/* --- 3. RESPONSIVE SIDEBAR MENU (Framer Motion Drawer) --- */}
             <AnimatePresence>
-                {isMobileMenuOpen && (
-                    <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: "spring", stiffness: 100, damping: 20 }} className="mobile-overlay-menu bg-white p-4">
-                        <div className="d-flex justify-content-between align-items-center mb-5">
-                             <h2 className="font-weight-bold">ESHOPPER</h2>
-                             <button className="btn" onClick={() => setIsMobileMenuOpen(false)}><X /></button>
-                        </div>
-                        <ul className="list-unstyled">
-                            {navLinks.map((link) => (
-                                <li key={link.name} className="mb-4">
-                                    <Link onClick={() => setIsMobileMenuOpen(false)} className="display-4 font-weight-bold text-dark h2" to={link.path}>{link.name}</Link>
-                                </li>
-                            ))}
-                            {role === "Admin" && <li><Link onClick={() => setIsMobileMenuOpen(false)} className="text-danger h3" to="/admin-home">Admin Access</Link></li>}
-                        </ul>
-                    </motion.div>
+                {isMobileOpen && (
+                    <div className="mobile-overlay-fixed" onClick={closeMobileMenu}>
+                        <motion.div 
+                            initial={{ x: "-100%" }} 
+                            animate={{ x: 0 }} 
+                            exit={{ x: "-100%" }} 
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            className="mobile-drawer shadow-2xl"
+                            onClick={(e) => e.stopPropagation()} // Stop menu from closing when clicking inside
+                        >
+                            <div className="drawer-header p-4 d-flex justify-content-between align-items-center border-bottom bg-light">
+                                <h4 className="mb-0 ls-2 font-weight-bold">ESHOPPER.</h4>
+                                <button className="btn p-1" onClick={closeMobileMenu}><X size={28}/></button>
+                            </div>
+                            <div className="drawer-body p-4">
+                                {navLinks.map((link) => (
+                                    <Link key={link.name} onClick={closeMobileMenu} to={link.path} className={`drawer-link ${location.pathname === link.path ? 'text-info' : 'text-dark'}`}>
+                                        {link.name}
+                                    </Link>
+                                ))}
+                                <hr />
+                                {role === "Admin" && (
+                                    <Link onClick={closeMobileMenu} to="/admin-home" className="drawer-link text-danger font-weight-bold">Admin Dashboard</Link>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
 
-            {/* --- PREMIUM GLOBAL CSS --- */}
+            {/* --- PREMIUM RESPONSIVE CSS --- */}
             <style dangerouslySetInnerHTML={{ __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter:wght@400;600;800&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+                
+                body { padding-top: 100px; font-family: 'Inter', sans-serif; }
 
-                .navbar-wrapper {
-                    position: fixed; top: 45px; left: 0; width: 100%; z-index: 1000;
-                    background: transparent; padding: 25px 0; transition: 0.4s all cubic-bezier(0.25, 1, 0.5, 1);
+                /* HEADER SETTINGS */
+                .top-luxury-bar { 
+                    position: fixed; top: 0; left: 0; width: 100%; height: 40px;
+                    background: #111; color: white; z-index: 2005; 
+                    display: flex; font-size: 11px; letter-spacing: 1px;
                 }
-                .luxury-top-ribbon {
-                    height: 45px; background: linear-gradient(90deg, #0a0a0a, #1a1a1a, #0a0a0a);
-                    color: rgba(255,255,255,0.7); position: fixed; top: 0; width: 100%; z-index: 1001;
-                    font-size: 11px; letter-spacing: 2px;
+                .nav-master {
+                    position: fixed; top: 40px; left: 0; width: 100%; height: 75px;
+                    background: #fff; z-index: 2000; transition: all 0.3s ease;
+                    border-bottom: 1px solid #f1f1f1;
                 }
                 .nav-scrolled {
-                    top: 0; padding: 12px 0;
-                    background: rgba(255,255,255,0.85) !important;
-                    backdrop-filter: blur(20px) saturate(160%);
-                    box-shadow: 0 4px 30px rgba(0,0,0,0.05);
+                    top: 0; height: 70px;
+                    background: rgba(255,255,255,0.9) !important;
+                    backdrop-filter: blur(15px); box-shadow: 0 10px 30px rgba(0,0,0,0.04);
                 }
 
                 /* LOGO STYLING */
-                .premium-logo { position: relative; font-family: 'Cinzel', serif; letter-spacing: 5px; color: #000; font-weight: 800; display: flex; align-items: center; }
-                .brand-e { font-size: 32px; background: #000; color: #fff; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; margin-right: 5px; }
-                .brand-text { font-size: 22px; }
-                .logo-dot { color: #17a2b8; font-size: 35px; line-height: 0; }
-                .logo-underline { height: 2px; width: 0%; background: #000; position: absolute; bottom: -5px; transition: 0.3s; }
-                .premium-logo:hover .logo-underline { width: 100%; }
+                .logo-concept { display: flex; align-items: center; cursor: pointer; }
+                .logo-e { background: #000; color: #fff; font-family: serif; padding: 2px 8px; border-radius: 4px; font-size: 24px; font-weight: bold; margin-right: 8px; }
+                .logo-text { font-family: 'Montserrat', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: 4px; color: #000; }
+                .logo-dot-teal { color: #17a2b8; font-size: 30px; }
 
-                /* NAVIGATION LINKS */
-                .lux-nav-link { 
-                    position: relative; padding: 10px 0; color: #555 !important; font-weight: 700;
-                    font-size: 13px; text-transform: uppercase; letter-spacing: 2px; transition: 0.3s;
+                /* LINKS DESKTOP */
+                .nav-link-premium {
+                    color: #555 !important; font-size: 12px; font-weight: 700;
+                    text-transform: uppercase; letter-spacing: 2px; text-decoration: none !important;
+                    transition: 0.3s ease; position: relative;
                 }
-                .lux-nav-link:hover { color: #000 !important; }
-                .lux-nav-link.active { color: #17a2b8 !important; }
-                .nav-active-bar { height: 2px; background: #17a2b8; width: 100%; position: absolute; bottom: 0; border-radius: 20px; }
-                .nav-item { margin: 0 15px; }
+                .nav-link-premium:hover { color: #17a2b8 !important; }
+                .nav-link-premium.is-active { color: #000 !important; }
+                .active-indicator { height: 2px; background: #17a2b8; width: 100%; position: absolute; bottom: -5px; }
 
-                /* ADMIN PILL */
-                .admin-access-badge {
-                    background: #ff4757; color: white !important; font-size: 10px; font-weight: 800;
-                    padding: 6px 15px; border-radius: 50px; text-decoration: none !important;
-                    box-shadow: 0 5px 15px rgba(255,71,87,0.3);
+                /* MOBILE RESPONSIVITY */
+                @media (max-width: 991px) {
+                    .nav-master { top: 40px; height: 65px; }
+                    .brand-box { position: absolute; left: 50%; transform: translateX(-50%); }
+                    body { padding-top: 105px; }
                 }
 
-                /* ICONS & BUTTONS */
-                .btn-login-luxury {
-                    background: #000; color: #fff; padding: 12px 30px; border-radius: 50px;
-                    font-size: 11px; font-weight: 800; letter-spacing: 2px; border: none; shadow: 0 10px 20px rgba(0,0,0,0.15);
+                /* BUTTONS */
+                .premium-login-pill {
+                    background: #000; color: #fff; border: none; padding: 8px 24px;
+                    border-radius: 50px; font-size: 10px; font-weight: 800; letter-spacing: 2px;
                 }
-                .btn-profile-premium { background: #f4f4f4; border: 1px solid #ddd; font-weight: 700; font-size: 13px; padding: 10px 20px; }
-                .cart-icon-luxury { color: #222; }
-                .premium-cart-dot {
-                    position: absolute; top: -5px; right: -5px; width: 10px; height: 10px;
-                    background: #17a2b8; border-radius: 50%; border: 2px solid #fff;
-                }
+                .user-access-btn { background: #fff; padding: 6px 14px; font-weight: 700; display: flex; align-items: center; transition: 0.3s; }
+                
+                /* ICONS */
+                .cart-dot-indicator { position: absolute; top: -5px; right: -5px; height: 8px; width: 8px; background: #17a2b8; border-radius: 50%; border: 1.5px solid white; }
 
-                .premium-dropdown { margin-top: 15px; padding: 10px; border-radius: 20px; min-width: 220px; }
-                .dropdown-item { font-size: 13px; font-weight: 600; padding: 10px 15px; transition: 0.2s; border-radius: 10px; }
-                .dropdown-item:hover { background: #f0faff !important; color: #17a2b8; transform: translateX(5px); }
-
-                /* MOBILE MENU */
-                .mobile-overlay-menu { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2000; }
+                /* MOBILE DRAWER SYSTEM */
+                .mobile-overlay-fixed { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 5000; }
+                .mobile-drawer { position: absolute; top: 0; left: 0; width: 300px; height: 100%; background: #fff; display: flex; flex-direction: column; }
+                .drawer-link { display: block; padding: 18px 0; font-size: 22px; font-weight: 800; border-bottom: 1px solid #f9f9f9; text-transform: uppercase; text-decoration: none !important; }
+                
+                .lux-popover-shadow { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2); }
+                .ls-2 { letter-spacing: 2px; }
+                .admin-pill-badge { background: #ff4757; color: white !important; font-size: 9px; padding: 3px 10px; border-radius: 50px; font-weight: 800; }
             `}} />
         </>
     )
