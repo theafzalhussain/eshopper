@@ -12,8 +12,7 @@ export default function AdminAddMaincategory() {
     function postData(e) {
         e.preventDefault()
         dispatch(addMaincategory({ name: name }))
-        alert("Maincategory Added!")
-        navigate("/admin-maincategory") // This will now work properly
+        navigate("/admin-maincategory")
     }
 
     return (
@@ -21,14 +20,11 @@ export default function AdminAddMaincategory() {
             <div className="row">
                 <div className="col-lg-3"><LefNav /></div>
                 <div className="col-lg-6">
-                    <div className="bg-white p-5 shadow-lg rounded-3xl">
-                        <h4 className="text-center bg-info p-2 text-light rounded mb-4">Add Maincategory</h4>
+                    <div className="bg-white p-5 shadow rounded-2xl border-0">
+                        <h4 className="text-center font-weight-bold mb-4">New Maincategory</h4>
                         <form onSubmit={postData}>
-                            <div className="mb-3">
-                                <label className="font-weight-bold">Category Name</label>
-                                <input type="text" className="form-control" onChange={(e) => setName(e.target.value)} placeholder="Enter Name" required />
-                            </div>
-                            <button type='submit' className='btn btn-info w-100 py-3 font-weight-bold rounded-pill shadow'>ADD CATEGORY</button>
+                            <input type="text" className="form-control mb-4" placeholder="Enter Name" onChange={(e) => setName(e.target.value)} required />
+                            <button className="btn btn-info w-100 py-3 rounded-pill font-weight-bold">SAVE CATEGORY</button>
                         </form>
                     </div>
                 </div>

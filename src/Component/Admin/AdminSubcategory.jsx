@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteSubcategory, getSubcategory } from '../../Store/ActionCreaters/SubcategoryActionCreators';
 import { motion } from 'framer-motion'
-import { Plus, Edit3, Trash2, Grid } from 'lucide-react'
+import { Edit3, Trash2, Plus, Grid } from 'lucide-react'
 
 export default function AdminSubcategory() {
     const subcategory = useSelector((state) => state.SubcategoryStateData)
@@ -14,52 +14,32 @@ export default function AdminSubcategory() {
 
     useEffect(() => { dispatch(getSubcategory()) }, [dispatch])
 
-    // 🎯 FIXED: Mapping MongoDB _id to id so DataGrid works
-    const rows = subcategory?.map((item) => ({
-        ...item,
-        id: item._id || item.id 
-    })) || []
+    const rows = subcategory?.map((item) => ({ ...item, id: item.id || item._id })) || []
 
     const columns = [
         { field: 'id', headerName: 'ID', width: 220 },
-        { field: 'name', headerName: 'Subcategory Name', width: 300, renderCell: (p) => <span className="font-weight-bold">{p.value}</span> },
+        { field: 'name', headerName: 'Subcategory', width: 250 },
         {
             field: "edit", headerName: "Edit", width: 100,
             renderCell: ({ row }) => (
-                <button className="btn btn-outline-info rounded-circle p-2" 
-                    onClick={() => navigate(`/admin-update-subcategory/${row.id}`)}>
-                    <Edit3 size={18} />
-                </button>
+                <button className="btn btn-outline-info rounded-circle" onClick={() => navigate(`/admin-update-subcategory/${row.id}`)}><Edit3 size={18}/></button>
             )
         },
         {
             field: "delete", headerName: "Delete", width: 100,
             renderCell: ({ row }) => (
-                <button className="btn btn-outline-danger rounded-circle p-2" 
-                    onClick={() => { if(window.confirm("Are you sure?")) dispatch(deleteSubcategory({ id: row.id })) }}>
-                    <Trash2 size={18} />
-                </button>
+                <button className="btn btn-outline-danger rounded-circle" onClick={() => dispatch(deleteSubcategory({id: row.id}))}><Trash2 size={18}/></button>
             )
-        },
+        }
     ];
 
     return (
-        <div style={{ backgroundColor: "#f8f9fa", minHeight: "90vh" }} className="py-5">
+        <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
             <div className="container-fluid px-lg-5">
                 <div className="row">
                     <div className="col-lg-3"><LefNav /></div>
                     <div className="col-lg-9">
-                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} className="bg-white shadow-xl rounded-2xl p-4 border-0">
-                            <div className="d-flex justify-content-between align-items-center mb-4">
-                                <h4 className="font-weight-bold d-flex align-items-center"><Grid className="mr-2 text-info"/> Subcategories</h4>
-                                <Link to="/admin-add-subcategory" className='btn btn-info rounded-pill px-4 shadow-sm font-weight-bold'>
-                                    <Plus size={18} className="mr-1"/> ADD NEW
-                                </Link>
-                            </div>
-                            <div style={{ height: 450, width: '100%' }}>
-                                <DataGrid rows={rows} columns={columns} pageSize={7} disableSelectionOnClick />
-                            </div>
-                        </motion.div>
+                        <div className="bg-white p-4 shadow rounded-2xl"><div className="d-flex justify-content-between mb-4"><h4 className="font-weight-bold"><Grid size={22}/> Subcategories</h4><Link to="/admin-add-subcategory" className='btn btn-info px-4 rounded-pill font-weight-bold'>+ ADD NEW</Link></div><DataGrid rows={rows} columns={columns} autoHeight /></div>
                     </div>
                 </div>
             </div>

@@ -4,8 +4,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteBrand, getBrand } from '../../Store/ActionCreaters/BrandActionCreators';
-import { motion } from 'framer-motion'
-import { Plus, Edit3, Trash2, Tag } from 'lucide-react'
+import { Tag, Edit, Trash2 } from 'lucide-react'
 
 export default function AdminBrand() {
     const brand = useSelector((state) => state.BrandStateData)
@@ -13,56 +12,23 @@ export default function AdminBrand() {
     const navigate = useNavigate()
 
     useEffect(() => { dispatch(getBrand()) }, [dispatch])
-
-    // 🎯 FIXED: Mapping MongoDB _id to id so Edit button gets the URL
-    const rows = brand?.map((item) => ({
-        ...item,
-        id: item._id || item.id
-    })) || []
+    const rows = brand?.map(item => ({ ...item, id: item.id || item._id })) || []
 
     const columns = [
-        { field: 'id', headerName: 'ID', width: 220 },
-        { field: 'name', headerName: 'Brand Name', width: 300, renderCell: (p) => <span className="font-weight-bold">{p.value}</span> },
+        { field: 'id', headerName: 'Brand ID', width: 220 },
+        { field: 'name', headerName: 'Brand Name', width: 300 },
         {
-            field: "edit", headerName: "Edit", width: 100,
+            field: "action", headerName: "Edit/Delete", width: 200,
             renderCell: ({ row }) => (
-                <button className="btn btn-outline-info rounded-circle p-2" 
-                    onClick={() => navigate(`/admin-update-brand/${row.id}`)}>
-                    <Edit3 size={18} />
-                </button>
+                <div className="d-flex align-items-center">
+                    <button className="btn btn-outline-info rounded-circle mr-3" onClick={() => navigate(`/admin-update-brand/${row.id}`)}><Edit size={16}/></button>
+                    <button className="btn btn-outline-danger rounded-circle" onClick={() => dispatch(deleteBrand({id: row.id}))}><Trash2 size={16}/></button>
+                </div>
             )
-        },
-        {
-            field: "delete", headerName: "Delete", width: 100,
-            renderCell: ({ row }) => (
-                <button className="btn btn-outline-danger rounded-circle p-2" 
-                    onClick={() => { if(window.confirm("Sure want to delete brand?")) dispatch(deleteBrand({ id: row.id })) }}>
-                    <Trash2 size={18} />
-                </button>
-            )
-        },
+        }
     ];
 
     return (
-        <div style={{ backgroundColor: "#f8f9fa", minHeight: "90vh" }} className="py-5">
-            <div className="container-fluid px-lg-5">
-                <div className="row">
-                    <div className="col-lg-3"><LefNav /></div>
-                    <div className="col-lg-9">
-                        <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} className="bg-white shadow-xl rounded-2xl p-4 border-0">
-                            <div className="d-flex justify-content-between align-items-center mb-4">
-                                <h4 className="font-weight-bold d-flex align-items-center"><Tag className="mr-2 text-info"/> Brands</h4>
-                                <Link to="/admin-add-brand" className='btn btn-info rounded-pill px-4 shadow-sm font-weight-bold'>
-                                    <Plus size={18} className="mr-1"/> ADD NEW BRAND
-                                </Link>
-                            </div>
-                            <div style={{ height: 450, width: '100%' }}>
-                                <DataGrid rows={rows} columns={columns} pageSize={7} disableSelectionOnClick />
-                            </div>
-                        </motion.div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div className="container-fluid my-5 py-3"><div className="row"><div className="col-lg-2"><LefNav /></div><div className="col-lg-10"><div className="bg-white p-4 shadow-xl rounded-2xl"><div className="d-flex justify-content-between mb-4"><h4 className="font-weight-bold">Partner Brands</h4><Link to="/admin-add-brand" className='btn btn-info px-4 rounded-pill'>+ BRAND</Link></div><DataGrid rows={rows} columns={columns} autoHeight disableSelectionOnClick /></div></div></div></div>
     )
 }
