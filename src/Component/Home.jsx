@@ -163,7 +163,7 @@ export default function Home() {
                                         <h2 className="display-4 font-weight-bold">KIDS LAB</h2>
                                         <Link to="/shop/Kids" className="btn btn-white btn-sm px-4 font-weight-bold rounded-pill mt-3 shadow-sm">DISCOVER ALL</Link>
                                     </div>
-                                    <img src="/assets/images/bn-2.png" className="position-absolute h-110" style={{right:'-20px', bottom:'-30px', transform: 'rotate(-5deg)'}} alt=""/>
+                                    <img src="/assets/images/bn-4.png" className="position-absolute h-110" style={{right:'-20px', bottom:'-30px', transform: 'rotate(-5deg)'}} alt=""/>
                                 </motion.div>
                             </div>
                         </div>
