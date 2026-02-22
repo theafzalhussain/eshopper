@@ -35,10 +35,16 @@ export const updateBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "put", 
 export const deleteBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "delete");
 
 // PRODUCT
-export const createProductAPI = (data) => mutationAPI("/product", "post", data); 
+export const createProductAPI = (data) => mutationAPI("/product", "post", data);
 export const getProductAPI = () => getAPI("/product");
+// updateProductAPI function ko dhyan se check karke badal de:
 export const updateProductAPI = (data) => {
-    const id = data instanceof FormData ? data.get("id") : data.id;
+    let id;
+    if (data instanceof FormData) {
+        id = data.get("id")
+    } else {
+        id = data.id;
+    }
     return mutationAPI(`/product/${id}`, "put", data);
 }
 export const deleteProductAPI = (data) => mutationAPI(`/product/${data.id}`, "delete");

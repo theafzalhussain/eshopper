@@ -45,38 +45,37 @@ export default function AdminUpdateProduct() {
         setdata((old) => ({ ...old, [name]: files[0] }))
     }
 
-    function postData(e) {
-        e.preventDefault()
-        // Logical conversion
-        let bp = Number(data.baseprice)
-        let d = Number(data.discount)
-        let fp = Math.round(bp - (bp * d) / 100)
+function postData(e) {
+    e.preventDefault();
+    
+    let bp = Number(data.baseprice);
+    let d = Number(data.discount);
+    let fp = Math.round(bp - (bp * d) / 100);
 
-        let formData = new FormData()
-        formData.append("id", id) // Targets original record for Overwrite
-        formData.append("name", data.name)
-        formData.append("maincategory", data.maincategory)
-        formData.append("subcategory", data.subcategory)
-        formData.append("brand", data.brand)
-        formData.append("baseprice", bp)
-        formData.append("discount", d)
-        formData.append("finalprice", fp)
-        formData.append("color", data.color)
-        formData.append("size", data.size)
-        formData.append("stock", data.stock)
-        formData.append("description", data.description)
+    let formData = new FormData();
+    formData.append("id", id); // 🔥 Ye sabse zaroori line hai (ID backend ko jaayegi)
+    formData.append("name", data.name);
+    formData.append("maincategory", data.maincategory);
+    formData.append("subcategory", data.subcategory);
+    formData.append("brand", data.brand);
+    formData.append("baseprice", bp);
+    formData.append("discount", d);
+    formData.append("finalprice", fp);
+    formData.append("color", data.color);
+    formData.append("size", data.size);
+    formData.append("stock", data.stock);
+    formData.append("description", data.description);
 
-        // Sync Assets: Add file object only if a new file is chosen
-        if (data.pic1 && typeof data.pic1 === "object") formData.append("pic1", data.pic1)
-        if (data.pic2 && typeof data.pic2 === "object") formData.append("pic2", data.pic2)
-        if (data.pic3 && typeof data.pic3 === "object") formData.append("pic3", data.pic3)
-        if (data.pic4 && typeof data.pic4 === "object") formData.append("pic4", data.pic4)
+    // Agar image ki field mein File object hai tabhi use add karein
+    if (data.pic1 && typeof data.pic1 === 'object') formData.append("pic1", data.pic1);
+    if (data.pic2 && typeof data.pic2 === 'object') formData.append("pic2", data.pic2);
+    if (data.pic3 && typeof data.pic3 === 'object') formData.append("pic3", data.pic3);
+    if (data.pic4 && typeof data.pic4 === 'object') formData.append("pic4", data.pic4);
 
-        dispatch(updateProduct(formData))
-        alert("Success: Master Product details synchronized with database!")
-        navigate("/admin-product")
-    }
-
+    dispatch(updateProduct(formData));
+    alert("Re-calibrating Success: Data Synced with Atlas!");
+    navigate("/admin-product");
+}
     return (
         <div style={{ backgroundColor: "#fcfcfc", minHeight: "100vh" }} className="py-5">
             <div className="container-fluid px-lg-5">

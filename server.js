@@ -183,19 +183,26 @@ app.put('/user/:id', upload, async (req, res) => {
 
 app.get('/user', async (req, res) => res.send(await User.find().sort({ _id: -1 })));
 
-app.post('/product', upload, async (req, res) => {
+app.put('/product/:id', upload, async (req, res) => {
     try {
-        const data = new Product(req.body);
+        let updateData = { ...req.body };
+        
+        // Agar nayi image upload hui hai, toh purani ki jagah nayi ka rasta daalein
         if (req.files) {
-            if (req.files.pic1) data.pic1 = req.files.pic1[0].path;
-            if (req.files.pic2) data.pic2 = req.files.pic2[0].path;
-            if (req.files.pic3) data.pic3 = req.files.pic3[0].path;
-            if (req.files.pic4) data.pic4 = req.files.pic4[0].path;
+            if (req.files.pic1) updateData.pic1 = req.files.pic1[0].path;
+            if (req.files.pic2) updateData.pic2 = req.files.pic2[0].path;
+            if (req.files.pic3) updateData.pic3 = req.files.pic3[0].path;
+            if (req.files.pic4) updateData.pic4 = req.files.pic4[0].path;
         }
-        await data.save(); res.send(data);
-    } catch (error) { res.status(400).send(error); }
-});
 
+        // MongoDB Atlas update command
+        const data = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        res.status(200).send(data);
+    } catch (e) {
+        console.log("Product Update Error:", e);
+        res.status(400).send(e);
+    }
+});
 app.get('/product', async (req, res) => res.send(await Product.find().sort({ _id: -1 })));
 
 app.delete('/product/:id', async (req, res) => {
