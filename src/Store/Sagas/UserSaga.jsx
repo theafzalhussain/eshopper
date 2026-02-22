@@ -6,21 +6,21 @@ function* createUserSaga(action) {
     try {
         let response = yield createUserAPI(action.payload)
         yield put({ type: ADD_USER_RED, data: response })
-    } catch (e) { console.error("❌ Signup Failed:", e) }
+    } catch (e) { console.error("❌ Signup API Failed:", e) }
 }
 
 function* getUserSaga() {
     try {
         let response = yield getUserAPI()
         yield put({ type: GET_USER_RED, data: response })
-    } catch (e) { console.error("❌ Fetch Failed:", e) }
+    } catch (e) { console.error("❌ Fetch Users Failed:", e) }
 }
 
 function* deleteUserSaga(action) {
     try {
         yield deleteUserAPI(action.payload)
         yield put({ type: DELETE_USER_RED, data: action.payload })
-    } catch (e) { console.error("❌ Delete Failed:", e) }
+    } catch (e) { console.error("❌ Delete User Failed:", e) }
 }
 
 function* updateUserSaga(action) {
@@ -29,7 +29,7 @@ function* updateUserSaga(action) {
         let response = yield updateUserAPI(action.payload)
         yield put({ type: UPDATE_USER_RED, data: response })
     } catch (e) { 
-        console.error("❌ Update Saga Error:", e) 
+        console.error("❌ Update Saga Error: Server crash or ID Mismatch", e) 
     }
 }
 
