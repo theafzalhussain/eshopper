@@ -1,60 +1,4 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { sendOtpAPI, resetPasswordAPI } from '../Store/Services'
-import { motion } from 'framer-motion'
-import { KeyRound, ShieldCheck, Loader2 } from 'lucide-react'
-
-export default function ForgetPassword() {
-    const [data, setdata] = useState({ username: "", password: "", cpassword: "" })
-    const [step, setStep] = useState(1)
-    const [loading, setLoading] = useState(false)
-    const [userOtp, setUserOtp] = useState("")
-    const navigate = useNavigate()
-
-    async function handleRequestOTP(e) {
-        e.preventDefault(); setLoading(true);
-        try {
-            const res = await sendOtpAPI({ email: data.username, type: 'forget' })
-            if (res.result === "Done") { setStep(2); alert("Verification code sent!") }
-        } catch (err) { alert("Identity not found!") }
-        setLoading(false)
-    }
-
-    async function handleReset(e) {
-        e.preventDefault();
-        if (data.password !== data.cpassword) return alert("Passwords mismatch!")
-        setLoading(true);
-        try {
-            const res = await resetPasswordAPI({ ...data, otp: userOtp })
-            if (res.result === "Done") { alert("Credentials Updated!"); navigate("/login") }
-        } catch (err) { alert("Invalid Code!") }
-        setLoading(false)
-    }
-
-    return (
-        <div className="container py-5 mt-5">
-            <motion.div initial={{opacity:0}} animate={{opacity:1}} className="col-md-5 mx-auto p-5 bg-white shadow-lg rounded-3xl">
-                <div className="text-center mb-4"><KeyRound size={40} className="text-info"/></div>
-                {step === 1 ? (
-                    <form onSubmit={handleRequestOTP}>
-                        <h3 className="text-center font-weight-bold mb-4">Find Account</h3>
-                        <input type="text" placeholder="Username or Email" className="form-control mb-4 p-4 bg-light border-0" onChange={e => setdata({...data, username: e.target.value})} required />
-                        <button className="btn btn-info btn-block py-3 rounded-pill font-weight-bold" disabled={loading}>{loading ? <Loader2 className="animate-spin mx-auto"/> : "SEND RESET CODE"}</button>
-                    </form>
-                ) : (
-                    <form onSubmit={handleReset}>
-                        <h3 className="text-center font-weight-bold mb-4">Reset Password</h3>
-                        <input type="text" placeholder="6-Digit OTP" maxLength="6" className="form-control mb-3 text-center font-weight-bold" onChange={e => setUserOtp(e.target.value)} required />
-                        <input type="password" placeholder="New Password" className="form-control mb-3" onChange={e => setdata({...data, password: e.target.value})} required />
-                        <input type="password" placeholder="Confirm Password" className="form-control mb-4" onChange={e => setdata({...data, cpassword: e.target.value})} required />
-                        <button className="btn btn-dark btn-block py-3 rounded-pill font-weight-bold">UPDATE PASSWORD</button>
-                    </form>
-                )}
-                <div className="text-center mt-4"><Link to="/login" className="small text-muted">Back to Login</Link></div>
-            </motion.div>
-        </div>
-    )
-}import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { sendOtpAPI, resetPasswordAPI } from '../Store/Services'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -65,11 +9,11 @@ export default function ForgetPassword() {
     const [step, setStep] = useState(1) // 1: Find Account, 2: Reset
     const [loading, setLoading] = useState(false)
     const [userOtp, setUserOtp] = useState("")
-    const [timer, setTimer] = useState(0) // OTP Resend Timer
+    const [timer, setTimer] = useState(0)
     
     const navigate = useNavigate()
 
-    // Timer Logic for Premium UX
+    // Timer Logic
     useEffect(() => {
         let interval;
         if (timer > 0) {
@@ -83,7 +27,6 @@ export default function ForgetPassword() {
         if(e) e.preventDefault();
         setLoading(true);
         try {
-            // Hum backend ko identity (username/email) bhejte hain
             const res = await sendOtpAPI({ email: data.username, type: 'forget' })
             if (res.result === "Done") {
                 setStep(2);
@@ -190,7 +133,7 @@ export default function ForgetPassword() {
                                         <label className="field-label">NEW PASSWORD</label>
                                         <div className="input-wrap">
                                             <Lock size={18} className="field-icon" />
-                                            <input type="password" placeholder="········" onChange={e => setdata({...data, password: e.target.value})} required />
+                                            <input type="password" placeholder="••••••••" onChange={e => setdata({...data, password: e.target.value})} required />
                                         </div>
                                     </div>
 
@@ -198,7 +141,7 @@ export default function ForgetPassword() {
                                         <label className="field-label">CONFIRM PASSWORD</label>
                                         <div className="input-wrap">
                                             <CheckCircle2 size={18} className="field-icon" />
-                                            <input type="password" placeholder="········" onChange={e => setdata({...data, cpassword: e.target.value})} required />
+                                            <input type="password" placeholder="••••••••" onChange={e => setdata({...data, cpassword: e.target.value})} required />
                                         </div>
                                     </div>
 
@@ -243,26 +186,15 @@ export default function ForgetPassword() {
                 .brand-logo { font-weight: 800; letter-spacing: 5px; font-size: 2.2rem; color: #111; }
                 .dot { color: #17a2b8; }
                 .subtitle { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #777; margin-top: -15px; }
-                
                 .premium-field .field-label { font-size: 11px; font-weight: 800; color: #222; margin-bottom: 8px; letter-spacing: 1px; }
                 .input-wrap { display: flex; align-items: center; border-bottom: 2px solid #ddd; padding: 5px 0; transition: 0.3s; }
                 .input-wrap:focus-within { border-color: #17a2b8; }
                 .input-wrap input { border: none; background: transparent; width: 100%; outline: none; font-size: 16px; padding: 10px; color: #111; }
                 .field-icon { color: #888; }
-                
-                .submit-lux { 
-                    width: 100%; background: #000; color: white; border: none; 
-                    padding: 18px; border-radius: 50px; font-weight: 800; font-size: 13px;
-                    letter-spacing: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-                    transition: 0.3s;
-                }
-                .submit-lux:hover { background: #333; transform: translateY(-2px); }
-                
+                .submit-lux { width: 100%; background: #000; color: white; border: none; padding: 18px; border-radius: 50px; font-weight: 800; font-size: 13px; letter-spacing: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
                 .timer-text { font-size: 11px; color: #777; font-weight: bold; }
                 .resend-btn { border: none; background: transparent; font-size: 11px; color: #17a2b8; font-weight: bold; cursor: pointer; }
                 .back-link { color: #111; font-weight: 800; letter-spacing: 1px; font-size: 12px; text-decoration: none !important; display: flex; align-items: center; justify-content: center; }
-                
-                @media (max-width: 576px) { .forget-card-main { border-radius: 0; min-height: 100vh; } }
             `}} />
         </div>
     )
