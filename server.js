@@ -63,6 +63,7 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({
 
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
 
 // --- 3. SPECIAL ROUTES ---
 
@@ -84,13 +85,13 @@ app.get('/admin/stats', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// User Update Fix (Merging Updated Logic)
+// User Update (Updated Logic)
 app.put('/user/:id', upload, async (req, res) => {
     try {
         let upData = { ...req.body };
         if (req.files && req.files.pic) upData.pic = req.files.pic[0].path;
 
-        // Hash password only if it's new (length check ensures it's not already a hash)
+        // Password Hash logic
         if (req.body.password && req.body.password.length < 20) {
             const salt = await bcrypt.genSalt(10);
             upData.password = await bcrypt.hash(req.body.password, salt);
@@ -103,7 +104,7 @@ app.put('/user/:id', upload, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Product Update Fix (Merging Updated Logic)
+// Product Update (Updated Logic)
 app.put('/product/:id', upload, async (req, res) => {
     try {
         let upData = { ...req.body };
@@ -118,7 +119,7 @@ app.put('/product/:id', upload, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- 4. UNIVERSAL HANDLER (GET, POST, PUT, DELETE) ---
+// --- 4. UNIVERSAL HANDLER ---
 const setup = (path, Model) => {
     app.get(path, async (req, res) => res.send(await Model.find().sort({ _id: -1 })));
     
@@ -147,11 +148,10 @@ setup('/maincategory', mongoose.model('Maincategory', new mongoose.Schema({ name
 setup('/subcategory', mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts)));
 setup('/brand', mongoose.model('Brand', new mongoose.Schema({ name: String }, opts)));
 setup('/cart', Cart);
-setup('/wishlist', mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts)));
+setup('/wishlist', Wishlist);
 setup('/checkout', Checkout);
 setup('/contact', Contact);
 setup('/newslatter', Newslatter);
-// Base routes for POST/GET
 setup('/user', User);
 setup('/product', Product);
 

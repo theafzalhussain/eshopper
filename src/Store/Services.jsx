@@ -10,7 +10,7 @@ const getID = (data) => {
 
 // --- 2. CORE API HANDLERS ---
 
-// GET Handler
+// GET Handler (Existing logic kept for fetching lists)
 async function getAPI(endpoint) {
     let response = await fetch(`${BASE_URL}${endpoint}`);
     const contentType = response.headers.get("content-type");
@@ -21,26 +21,30 @@ async function getAPI(endpoint) {
     throw new Error("Backend is waking up... Please wait 10 seconds and refresh.");
 }
 
-// POST/PUT/DELETE Handler
+// POST/PUT/DELETE Handler (Updated as per your new logic)
 async function mutationAPI(endpoint, method, data) {
     let isFormData = data instanceof FormData;
     let response = await fetch(`${BASE_URL}${endpoint}`, {
         method: method,
-        // FormData ke liye headers browser set karta hai, baaki ke liye JSON header zaroori hai
         headers: isFormData ? {} : { "content-type": "application/json" },
         body: isFormData ? data : (data ? JSON.stringify(data) : undefined)
     });
 
+    // Check if response is JSON
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
         const result = await response.json();
-        if (!response.ok) throw result; // Error handled here
+        if (!response.ok) throw result; // Agar server error bhejta hai (400, 500 etc)
         return result;
-    } else {
-        // Agar delete operation hai ya server non-json return kare
-        if (response.ok) return { result: "Done" };
-        throw new Error("API Failure: Server responded with non-JSON format.");
     }
+
+    // Agar response JSON nahi hai toh error throw karega (Server Crash safety)
+    if (!response.ok) {
+        throw new Error("Server Crash: Received non-JSON response.");
+    }
+
+    // Special case for Delete or Empty Success response
+    return { result: "Done" };
 }
 
 // --- 3. EXPORTED FUNCTIONS ---
@@ -49,13 +53,13 @@ async function mutationAPI(endpoint, method, data) {
 export const loginAPI = (data) => mutationAPI("/login", "post", data);
 export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);
 
-// USER (Updated)
+// USER
 export const getUserAPI = () => getAPI("/user");
 export const createUserAPI = (data) => mutationAPI("/user", "post", data);
 export const updateUserAPI = (data) => mutationAPI(`/user/${getID(data)}`, "put", data);
 export const deleteUserAPI = (data) => mutationAPI(`/user/${getID(data)}`, "delete");
 
-// PRODUCT (Updated)
+// PRODUCT
 export const getProductAPI = () => getAPI("/product");
 export const createProductAPI = (data) => mutationAPI("/product", "post", data);
 export const updateProductAPI = (data) => mutationAPI(`/product/${getID(data)}`, "put", data);
