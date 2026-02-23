@@ -1,37 +1,30 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux' // <-- Added useDispatch
 import { motion } from 'framer-motion'
 import { KeyRound, User, Lock, CheckCircle2 } from 'lucide-react'
-import { BASE_URL } from '../constants'
 
 export default function ForgetPassword() {
     const [data, setdata] = useState({ username: "", password: "", cpassword: "" })
-    const users = useSelector(state => state.UserStateData)
     const navigate = useNavigate()
+    const dispatch = useDispatch() // <-- Initialized dispatch
 
-    async function postData(e) {
-        e.preventDefault()
-        if (data.password !== data.cpassword) {
-            alert("Passwords do not match!")
-            return
-        }
+    function postData(e) {
+        e.preventDefault();
         
-        const user = users.find(x => x.username === data.username)
-        if (user) {
-            // Password update logic directly to live backend
-            let response = await fetch(`${BASE_URL}/user/${user.id}`, {
-                method: "put",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ ...user, password: data.password })
-            })
-            if(response.ok){
-                alert("Password Updated Successfully! Please Login.")
-                navigate("/login")
-            }
-        } else {
-            alert("Username not found in our database!")
+        // 1. Password Matching Check
+        if (data.password !== data.cpassword) {
+            alert("Password & Confirm Password doesn't match!");
+            return;
         }
+
+        // 2. Dispatch Action to Saga
+        // Ye action aapke userSaga mein "FORGET_PASSWORD" catch karega
+        dispatch({ type: "FORGET_PASSWORD", payload: data });
+
+        // 3. Feedback and Navigation
+        alert("Password Updated! Redirecting to Login...");
+        navigate("/login");
     }
 
     return (
@@ -56,7 +49,13 @@ export default function ForgetPassword() {
                         <label className="small font-weight-bold text-muted mb-0">Username</label>
                         <div className="d-flex align-items-center">
                             <User size={18} className="text-info mr-2" />
-                            <input type="text" placeholder="Enter Username" className="form-control border-0 bg-transparent shadow-none" onChange={(e) => setdata({ ...data, username: e.target.value })} required />
+                            <input 
+                                type="text" 
+                                placeholder="Enter Username" 
+                                className="form-control border-0 bg-transparent shadow-none" 
+                                onChange={(e) => setdata({ ...data, username: e.target.value })} 
+                                required 
+                            />
                         </div>
                     </div>
 
@@ -64,7 +63,13 @@ export default function ForgetPassword() {
                         <label className="small font-weight-bold text-muted mb-0">New Password</label>
                         <div className="d-flex align-items-center">
                             <Lock size={18} className="text-info mr-2" />
-                            <input type="password" placeholder="••••••••" className="form-control border-0 bg-transparent shadow-none" onChange={(e) => setdata({ ...data, password: e.target.value })} required />
+                            <input 
+                                type="password" 
+                                placeholder="••••••••" 
+                                className="form-control border-0 bg-transparent shadow-none" 
+                                onChange={(e) => setdata({ ...data, password: e.target.value })} 
+                                required 
+                            />
                         </div>
                     </div>
 
@@ -72,11 +77,22 @@ export default function ForgetPassword() {
                         <label className="small font-weight-bold text-muted mb-0">Confirm Password</label>
                         <div className="d-flex align-items-center">
                             <CheckCircle2 size={18} className="text-info mr-2" />
-                            <input type="password" placeholder="••••••••" className="form-control border-0 bg-transparent shadow-none" onChange={(e) => setdata({ ...data, cpassword: e.target.value })} required />
+                            <input 
+                                type="password" 
+                                placeholder="••••••••" 
+                                className="form-control border-0 bg-transparent shadow-none" 
+                                onChange={(e) => setdata({ ...data, cpassword: e.target.value })} 
+                                required 
+                            />
                         </div>
                     </div>
 
-                    <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} type="submit" className="btn btn-info btn-block py-3 rounded-pill shadow-lg font-weight-bold mt-2">
+                    <motion.button 
+                        whileHover={{ y: -2 }} 
+                        whileTap={{ scale: 0.95 }} 
+                        type="submit" 
+                        className="btn btn-info btn-block py-3 rounded-pill shadow-lg font-weight-bold mt-2"
+                    >
                         UPDATE PASSWORD
                     </motion.button>
                 </form>

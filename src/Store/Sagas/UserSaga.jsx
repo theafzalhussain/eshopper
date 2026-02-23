@@ -2,6 +2,7 @@ import { takeEvery, put } from "redux-saga/effects"
 import { createUserAPI, deleteUserAPI, getUserAPI, updateUserAPI, forgetPasswordAPI } from "../Services" 
 import { ADD_USER, ADD_USER_RED, DELETE_USER, DELETE_USER_RED, GET_USER, GET_USER_RED, UPDATE_USER, UPDATE_USER_RED } from "../Constant"
 
+// 1. Create User
 function* createUserSaga(action) {
     try {
         let response = yield createUserAPI(action.payload)
@@ -11,6 +12,7 @@ function* createUserSaga(action) {
     }
 }
 
+// 2. Get Users
 function* getUserSaga() {
     try {
         let response = yield getUserAPI()
@@ -20,6 +22,7 @@ function* getUserSaga() {
     }
 }
 
+// 3. Delete User
 function* deleteUserSaga(action) {
     try {
         yield deleteUserAPI(action.payload)
@@ -29,6 +32,7 @@ function* deleteUserSaga(action) {
     }
 }
 
+// 4. Update User (Profile Update Logic)
 function* updateUserSaga(action) {
     try {
         // action.payload is FormData (for pic update)
@@ -46,19 +50,24 @@ function* updateUserSaga(action) {
     }
 }
 
+// 5. Forget Password (UPDATED LOGIC)
 function* forgetPasswordSaga(action) {
     try {
-        let response = yield forgetPasswordAPI(action.payload)
-        yield put({ type: UPDATE_USER_RED, data: response })
-    } catch (e) { 
-        console.error("❌ Forget Password API Error:", e) 
+        let response = yield forgetPasswordAPI(action.payload);
+        // Password update hone ke baad reducer mein user data update karega
+        yield put({ type: UPDATE_USER_RED, data: response });
+    } catch (e) {
+        console.error("Forget Password Failed:", e);
+        // Invalid username hone par user ko alert dikhayega
+        alert("Invalid Username!");
     }
 }
 
+// --- WATCHER SAGA ---
 export function* userSaga() {
     yield takeEvery(ADD_USER, createUserSaga)
     yield takeEvery(GET_USER, getUserSaga)
     yield takeEvery(DELETE_USER, deleteUserSaga)
     yield takeEvery(UPDATE_USER, updateUserSaga)
-    yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga)
+    yield takeEvery("FORGET_PASSWORD", forgetPasswordSaga) // Action name string format mein
 }

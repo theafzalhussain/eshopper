@@ -21,7 +21,7 @@ import Login from './Login'
 import SingUp from './SingUp'
 import ForgetPassword from './ForgetPassword'
 import Profile from './Profile'
-import Updateprofile from './UpdateProfile'
+import UpdateProfile from './UpdateProfile' // Ensure case-sensitivity matches your file name
 
 // Admin Home & Monitoring
 import AdminHome from './Admin/AdminHome'
@@ -58,7 +58,7 @@ const ScrollToTop = () => {
 export default function App() {
   return (
     <BrowserRouter>
-      <ScrollToTop /> {/* Extra Premium: Auto scroll to top */}
+      <ScrollToTop /> {/* Auto scroll to top on every route change */}
       <Navbaar />
       
       <Routes>
@@ -70,14 +70,14 @@ export default function App() {
         <Route path="/shop/:maincat" element={<Shop />} />
         <Route path="/single-product/:id" element={<SingleProductPage />} />
         
-        {/* --- 2. AUTHENTICATION --- */}
+        {/* --- 2. AUTHENTICATION (Updated) --- */}
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SingUp />} />
         <Route path="/forget-password" element={<ForgetPassword />} />
 
-        {/* --- 3. CUSTOMER DASHBOARD (Requires Login Check in components) --- */}
+        {/* --- 3. CUSTOMER DASHBOARD --- */}
         <Route path="/profile" element={<Profile />} />
-        <Route path="/update-profile" element={<Updateprofile />} />
+        <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/checkout" element={<Checkout />} />
@@ -111,7 +111,7 @@ export default function App() {
         <Route path="/admin-update-product/:id" element={<AdminUpdateProduct />} />
 
         {/* --- 5. REDIRECT PROTECTION --- */}
-        {/* Agar upar se koi path match na kare toh redirect home */}
+        {/* Agar koi bhi route match nahi hota, toh user Home par jayega */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
