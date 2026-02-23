@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux' // <-- Added useDispatch
+import { useDispatch } from 'react-redux' 
 import { motion } from 'framer-motion'
 import { KeyRound, User, Lock, CheckCircle2 } from 'lucide-react'
 
 export default function ForgetPassword() {
     const [data, setdata] = useState({ username: "", password: "", cpassword: "" })
     const navigate = useNavigate()
-    const dispatch = useDispatch() // <-- Initialized dispatch
+    const dispatch = useDispatch()
 
     function postData(e) {
         e.preventDefault();
@@ -19,11 +19,11 @@ export default function ForgetPassword() {
         }
 
         // 2. Dispatch Action to Saga
-        // Ye action aapke userSaga mein "FORGET_PASSWORD" catch karega
+        // Note: Ye userSaga mein "FORGET_PASSWORD" ko trigger karega
         dispatch({ type: "FORGET_PASSWORD", payload: data });
 
-        // 3. Feedback and Navigation
-        alert("Password Updated! Redirecting to Login...");
+        // 3. Success Feedback
+        alert("If the username exists, your password has been updated. Redirecting to Login...");
         navigate("/login");
     }
 
@@ -32,12 +32,13 @@ export default function ForgetPassword() {
              style={{ minHeight: "100vh", background: "url('https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=1600&q=80') center/cover" }}>
             
             <motion.div 
-                initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-                className="p-5 shadow-lg"
-                style={{ width: "450px", background: "rgba(255,255,255,0.9)", backdropFilter: "blur(15px)", borderRadius: "30px", border: "1px solid rgba(255,255,255,0.3)" }}
+                initial={{ opacity: 0, y: 30 }} 
+                animate={{ opacity: 1, y: 0 }}
+                className="p-5 shadow-lg bg-white"
+                style={{ width: "450px", backdropFilter: "blur(15px)", borderRadius: "30px", border: "1px solid rgba(0,0,0,0.1)" }}
             >
                 <div className="text-center mb-5">
-                    <div className="bg-info-light d-inline-block p-3 rounded-circle mb-3">
+                    <div className="bg-light d-inline-block p-3 rounded-circle mb-3">
                         <KeyRound size={40} className="text-info" />
                     </div>
                     <h2 className="font-weight-bold text-dark">Reset Password</h2>
@@ -45,7 +46,7 @@ export default function ForgetPassword() {
                 </div>
 
                 <form onSubmit={postData}>
-                    <div className="form-group mb-4 border-bottom">
+                    <div className="form-group mb-4 border-bottom pb-2">
                         <label className="small font-weight-bold text-muted mb-0">Username</label>
                         <div className="d-flex align-items-center">
                             <User size={18} className="text-info mr-2" />
@@ -59,7 +60,7 @@ export default function ForgetPassword() {
                         </div>
                     </div>
 
-                    <div className="form-group mb-4 border-bottom">
+                    <div className="form-group mb-4 border-bottom pb-2">
                         <label className="small font-weight-bold text-muted mb-0">New Password</label>
                         <div className="d-flex align-items-center">
                             <Lock size={18} className="text-info mr-2" />
@@ -73,7 +74,7 @@ export default function ForgetPassword() {
                         </div>
                     </div>
 
-                    <div className="form-group mb-4 border-bottom">
+                    <div className="form-group mb-4 border-bottom pb-2">
                         <label className="small font-weight-bold text-muted mb-0">Confirm Password</label>
                         <div className="d-flex align-items-center">
                             <CheckCircle2 size={18} className="text-info mr-2" />
@@ -98,7 +99,7 @@ export default function ForgetPassword() {
                 </form>
 
                 <div className="text-center mt-4">
-                    <Link to="/login" className="text-muted small">Back to Login</Link>
+                    <Link to="/login" className="text-info font-weight-bold small">Back to Login</Link>
                 </div>
             </motion.div>
         </div>
