@@ -1,45 +1,42 @@
-import { BASE_URL } from "../constants"; // Ensure base url is correct
+import { BASE_URL } from "../constants";
 
-// --- UTILITY: Get ID correctly from Object or FormData ---
+// --- 1. UTILITY HELPER ---
+// Ye helper MongoDB ki _id aur frontend ki id dono ko handle karega
 const getID = (data) => {
     if (data instanceof FormData) return data.get("id");
-    return data.id || data._id;
+    if (typeof data === "object" && data !== null) return data.id || data._id;
+    return data; // If it's already a string ID
 };
 
-// --- CORE: GET Request Handler ---
+// --- 2. CORE API HANDLERS ---
 async function getAPI(endpoint) {
     let response = await fetch(`${BASE_URL}${endpoint}`);
     const contentType = response.headers.get("content-type");
-    
     if (contentType && contentType.includes("application/json")) {
         return await response.json();
     }
-    // Prevent "Unexpected token <" crash when Render is waking up
-    throw new Error("Backend is starting up... Please wait and refresh.");
+    throw new Error("Backend is waking up... Please wait 10 seconds and refresh.");
 }
 
-// --- CORE: POST/PUT/DELETE Request Handler ---
 async function mutationAPI(endpoint, method, data) {
     let isFormData = data instanceof FormData;
-    
     let response = await fetch(`${BASE_URL}${endpoint}`, {
         method: method,
-        // FormData ke waqt header empty hona chahiye (Browser boundary khud set karta hai)
         headers: isFormData ? {} : { "content-type": "application/json" },
-        body: isFormData ? data : JSON.stringify(data)
+        body: isFormData ? data : (data ? JSON.stringify(data) : undefined)
     });
 
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
         const result = await response.json();
-        if (!response.ok) throw result; 
+        if (!response.ok) throw result;
         return result;
     } else {
-        throw new Error("Server Error: Received non-JSON response.");
+        return { result: "Done" }; // For Delete operations which might return text
     }
 }
 
-// --- EXPORTED API FUNCTIONS ---
+// --- 3. EXPORTED FUNCTIONS (Fixed all Missing Exports) ---
 
 // AUTH
 export const loginAPI = (data) => mutationAPI("/login", "post", data);
@@ -57,17 +54,19 @@ export const createProductAPI = (data) => mutationAPI("/product", "post", data);
 export const updateProductAPI = (data) => mutationAPI(`/product/${getID(data)}`, "put", data);
 export const deleteProductAPI = (data) => mutationAPI(`/product/${getID(data)}`, "delete");
 
-// CATEGORIES
+// MAINCATEGORY
 export const getMaincategoryAPI = () => getAPI("/maincategory");
 export const createMaincategoryAPI = (data) => mutationAPI("/maincategory", "post", data);
 export const updateMaincategoryAPI = (data) => mutationAPI(`/maincategory/${getID(data)}`, "put", data);
 export const deleteMaincategoryAPI = (data) => mutationAPI(`/maincategory/${getID(data)}`, "delete");
 
+// SUBCATEGORY
 export const getSubcategoryAPI = () => getAPI("/subcategory");
 export const createSubcategoryAPI = (data) => mutationAPI("/subcategory", "post", data);
 export const updateSubcategoryAPI = (data) => mutationAPI(`/subcategory/${getID(data)}`, "put", data);
 export const deleteSubcategoryAPI = (data) => mutationAPI(`/subcategory/${getID(data)}`, "delete");
 
+// BRAND
 export const getBrandAPI = () => getAPI("/brand");
 export const createBrandAPI = (data) => mutationAPI("/brand", "post", data);
 export const updateBrandAPI = (data) => mutationAPI(`/brand/${getID(data)}`, "put", data);
@@ -76,14 +75,29 @@ export const deleteBrandAPI = (data) => mutationAPI(`/brand/${getID(data)}`, "de
 // CART
 export const getCartAPI = () => getAPI("/cart");
 export const createCartAPI = (data) => mutationAPI("/cart", "post", data);
+export const updateCartAPI = (data) => mutationAPI(`/cart/${getID(data)}`, "put", data);
 export const deleteCartAPI = (data) => mutationAPI(`/cart/${getID(data)}`, "delete");
 
-// CHECKOUT & SUPPORT
+// WISHLIST
+export const getWishlistAPI = () => getAPI("/wishlist");
+export const createWishlistAPI = (data) => mutationAPI("/wishlist", "post", data);
+export const updateWishlistAPI = (data) => mutationAPI(`/wishlist/${getID(data)}`, "put", data);
+export const deleteWishlistAPI = (data) => mutationAPI(`/wishlist/${getID(data)}`, "delete");
+
+// CHECKOUT
 export const getCheckoutAPI = () => getAPI("/checkout");
 export const createCheckoutAPI = (data) => mutationAPI("/checkout", "post", data);
+export const updateCheckoutAPI = (data) => mutationAPI(`/checkout/${getID(data)}`, "put", data);
+export const deleteCheckoutAPI = (data) => mutationAPI(`/checkout/${getID(data)}`, "delete");
 
+// CONTACT
 export const getContactAPI = () => getAPI("/contact");
 export const createContactAPI = (data) => mutationAPI("/contact", "post", data);
+export const updateContactAPI = (data) => mutationAPI(`/contact/${getID(data)}`, "put", data);
+export const deleteContactAPI = (data) => mutationAPI(`/contact/${getID(data)}`, "delete");
 
+// NEWSLATTER
 export const getNewslatterAPI = () => getAPI("/newslatter");
 export const createNewslatterAPI = (data) => mutationAPI("/newslatter", "post", data);
+export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${getID(data)}`, "put", data);
+export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${getID(data)}`, "delete");

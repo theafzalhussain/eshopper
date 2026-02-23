@@ -11,28 +11,28 @@ function* createProductSaga(action) {
     try {
         const response = yield createProductAPI(action.payload)
         yield put({ type: ADD_PRODUCT_RED, data: response })
-    } catch (e) { console.error("Product Create Error", e) }
+    } catch (e) { console.error("❌ Product Create Error:", e) }
 }
 
 function* getProductSaga() {
     try {
         const response = yield getProductAPI()
         yield put({ type: GET_PRODUCT_RED, data: response })
-    } catch (e) { console.error("Product Fetch Error", e) }
+    } catch (e) { console.error("❌ Product Fetch Error:", e) }
 }
 
 function* deleteProductSaga(action) {
     try {
         yield deleteProductAPI(action.payload)
         yield put({ type: DELETE_PRODUCT_RED, data: action.payload })
-    } catch (e) { console.error("Product Delete Error", e) }
+    } catch (e) { console.error("❌ Product Delete Error:", e) }
 }
 
 function* updateProductSaga(action) {
     try {
         const response = yield updateProductAPI(action.payload)
         yield put({ type: UPDATE_PRODUCT_RED, data: response })
-    } catch (e) { console.error("Product Update Error", e) }
+    } catch (e) { console.error("❌ Product Update Error:", e) }
 }
 
 export function* productSaga() {
