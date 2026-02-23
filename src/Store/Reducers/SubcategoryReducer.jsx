@@ -2,24 +2,18 @@ import { ADD_SUBCATEGORY_RED, DELETE_SUBCATEGORY_RED, GET_SUBCATEGORY_RED, UPDAT
 
 export function SubcategoryReducer(state = [], action) {
     switch (action.type) {
-        case ADD_SUBCATEGORY_RED:
-            return [...state, action.data]
-
         case GET_SUBCATEGORY_RED:
-            // Ensure data has ID for MUI grid
             return (action.data || []).map(item => ({ ...item, id: item.id || item._id }));
 
-        case DELETE_SUBCATEGORY_RED:
-            return state.filter(item => (item.id || item._id) !== action.data);
+        case ADD_SUBCATEGORY_RED:
+            return [...state, action.data];
 
         case UPDATE_SUBCATEGORY_RED:
-            // CRITICAL FIX: Use map to avoid undefined crash
-            return state.map((item) => {
-                if ((item.id || item._id) === action.data.id) {
-                    return { ...item, ...action.data };
-                }
-                return item;
-            });
+            return state.map(item => (item.id === action.data.id) ? { ...item, ...action.data } : item);
+
+        case DELETE_SUBCATEGORY_RED:
+            const subId = action.data.id || action.data._id || action.data;
+            return state.filter(item => (item.id || item._id) !== subId);
 
         default:
             return state;

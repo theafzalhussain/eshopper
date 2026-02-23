@@ -2,7 +2,7 @@ import { BASE_URL } from "../constants";
 
 /**
  * --- 1. UTILITY HELPER ---
- * Handling MongoDB _id and Frontend id mismatch for all data types
+ * Handle ID logic for all types of data
  */
 const getID = (data) => {
     if (data instanceof FormData) return data.get("id");
@@ -13,105 +13,96 @@ const getID = (data) => {
 /**
  * --- 2. CORE API HANDLERS ---
  */
-
-// GET Handler (For fetching data)
 async function getAPI(endpoint) {
     let response = await fetch(`${BASE_URL}${endpoint}`);
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
         return await response.json();
     }
-    // Render free tier protection logic
-    throw new Error("Backend is waking up... Please wait 10 seconds and refresh.");
+    throw new Error("Backend is waking up... Please refresh in 10 seconds.");
 }
 
-// Mutation Handler (For POST, PUT, DELETE)
 async function mutationAPI(endpoint, method, data) {
-    let isFormData = data instanceof FormData;
+    let isFD = data instanceof FormData;
     let response = await fetch(`${BASE_URL}${endpoint}`, {
         method: method,
-        headers: isFormData ? {} : { "content-type": "application/json" },
-        body: isFormData ? data : (data ? JSON.stringify(data) : undefined)
+        headers: isFD ? {} : { "content-type": "application/json" },
+        body: isFD ? data : (data ? JSON.stringify(data) : undefined)
     });
 
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-        const result = await response.json();
-        if (!response.ok) throw result; 
-        return result;
+    if (response.ok) {
+        const text = await response.text();
+        return text ? JSON.parse(text) : { result: "Done" };
     } else {
-        // Handle non-JSON responses (like 500 HTML errors or successful deletes)
-        if (response.ok) return { result: "Done" };
         const errorText = await response.text();
-        console.error("Critical Server Error:", errorText.substring(0, 200));
-        throw new Error("Server Crash: Received non-JSON response from Backend.");
+        throw new Error(errorText || "API Failure");
     }
 }
 
 /**
- * --- 3. EXPORTED FUNCTIONS (ALL PROJECT MODULES) ---
+ * --- 3. EXPORTED FUNCTIONS (ALL PERMUTATIONS INCLUDED) ---
  */
 
 // --- AUTHENTICATION ---
-export const loginAPI = (data) => mutationAPI("/login", "post", data);
-export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);
+export const loginAPI = (d) => mutationAPI("/login", "post", d);
+export const forgetPasswordAPI = (d) => mutationAPI("/user/forget-password", "post", d);
 
 // --- USER MODULE ---
 export const getUserAPI = () => getAPI("/user");
-export const createUserAPI = (data) => mutationAPI("/user", "post", data);
-export const updateUserAPI = (data) => mutationAPI(`/user/${getID(data)}`, "put", data);
-export const deleteUserAPI = (data) => mutationAPI(`/user/${getID(data)}`, "delete");
+export const createUserAPI = (d) => mutationAPI("/user", "post", d);
+export const updateUserAPI = (d) => mutationAPI(`/user/${getID(d)}`, "put", d);
+export const deleteUserAPI = (d) => mutationAPI(`/user/${getID(d)}`, "delete");
 
 // --- PRODUCT MODULE ---
 export const getProductAPI = () => getAPI("/product");
-export const createProductAPI = (data) => mutationAPI("/product", "post", data);
-export const updateProductAPI = (data) => mutationAPI(`/product/${getID(data)}`, "put", data);
-export const deleteProductAPI = (data) => mutationAPI(`/product/${getID(data)}`, "delete");
+export const createProductAPI = (d) => mutationAPI("/product", "post", d);
+export const updateProductAPI = (d) => mutationAPI(`/product/${getID(d)}`, "put", d);
+export const deleteProductAPI = (d) => mutationAPI(`/product/${getID(d)}`, "delete");
 
 // --- MAINCATEGORY MODULE ---
 export const getMaincategoryAPI = () => getAPI("/maincategory");
-export const createMaincategoryAPI = (data) => mutationAPI("/maincategory", "post", data);
-export const updateMaincategoryAPI = (data) => mutationAPI(`/maincategory/${getID(data)}`, "put", data);
-export const deleteMaincategoryAPI = (data) => mutationAPI(`/maincategory/${getID(data)}`, "delete");
+export const createMaincategoryAPI = (d) => mutationAPI("/maincategory", "post", d);
+export const updateMaincategoryAPI = (d) => mutationAPI(`/maincategory/${getID(d)}`, "put", d);
+export const deleteMaincategoryAPI = (d) => mutationAPI(`/maincategory/${getID(d)}`, "delete");
 
 // --- SUBCATEGORY MODULE ---
 export const getSubcategoryAPI = () => getAPI("/subcategory");
-export const createSubcategoryAPI = (data) => mutationAPI("/subcategory", "post", data);
-export const updateSubcategoryAPI = (data) => mutationAPI(`/subcategory/${getID(data)}`, "put", data);
-export const deleteSubcategoryAPI = (data) => mutationAPI(`/subcategory/${getID(data)}`, "delete");
+export const createSubcategoryAPI = (d) => mutationAPI("/subcategory", "post", d);
+export const updateSubcategoryAPI = (d) => mutationAPI(`/subcategory/${getID(d)}`, "put", d);
+export const deleteSubcategoryAPI = (d) => mutationAPI(`/subcategory/${getID(d)}`, "delete");
 
 // --- BRAND MODULE ---
 export const getBrandAPI = () => getAPI("/brand");
-export const createBrandAPI = (data) => mutationAPI("/brand", "post", data);
-export const updateBrandAPI = (data) => mutationAPI(`/brand/${getID(data)}`, "put", data);
-export const deleteBrandAPI = (data) => mutationAPI(`/brand/${getID(data)}`, "delete");
+export const createBrandAPI = (d) => mutationAPI("/brand", "post", d);
+export const updateBrandAPI = (d) => mutationAPI(`/brand/${getID(d)}`, "put", d);
+export const deleteBrandAPI = (d) => mutationAPI(`/brand/${getID(d)}`, "delete");
 
 // --- CART MODULE ---
 export const getCartAPI = () => getAPI("/cart");
-export const createCartAPI = (data) => mutationAPI("/cart", "post", data);
-export const updateCartAPI = (data) => mutationAPI(`/cart/${getID(data)}`, "put", data);
-export const deleteCartAPI = (data) => mutationAPI(`/cart/${getID(data)}`, "delete");
+export const createCartAPI = (d) => mutationAPI("/cart", "post", d);
+export const updateCartAPI = (d) => mutationAPI(`/cart/${getID(d)}`, "put", d);
+export const deleteCartAPI = (d) => mutationAPI(`/cart/${getID(d)}`, "delete");
 
 // --- WISHLIST MODULE ---
 export const getWishlistAPI = () => getAPI("/wishlist");
-export const createWishlistAPI = (data) => mutationAPI("/wishlist", "post", data);
-export const updateWishlistAPI = (data) => mutationAPI(`/wishlist/${getID(data)}`, "put", data);
-export const deleteWishlistAPI = (data) => mutationAPI(`/wishlist/${getID(data)}`, "delete");
+export const createWishlistAPI = (d) => mutationAPI("/wishlist", "post", d);
+export const updateWishlistAPI = (d) => mutationAPI(`/wishlist/${getID(d)}`, "put", d);
+export const deleteWishlistAPI = (d) => mutationAPI(`/wishlist/${getID(d)}`, "delete");
 
 // --- CHECKOUT / ORDERS ---
 export const getCheckoutAPI = () => getAPI("/checkout");
-export const createCheckoutAPI = (data) => mutationAPI("/checkout", "post", data);
-export const updateCheckoutAPI = (data) => mutationAPI(`/checkout/${getID(data)}`, "put", data);
-export const deleteCheckoutAPI = (data) => mutationAPI(`/checkout/${getID(data)}`, "delete");
+export const createCheckoutAPI = (d) => mutationAPI("/checkout", "post", d);
+export const updateCheckoutAPI = (d) => mutationAPI(`/checkout/${getID(d)}`, "put", d);
+export const deleteCheckoutAPI = (d) => mutationAPI(`/checkout/${getID(d)}`, "delete");
 
 // --- CONTACT INQUIRIES ---
 export const getContactAPI = () => getAPI("/contact");
-export const createContactAPI = (data) => mutationAPI("/contact", "post", data);
-export const updateContactAPI = (data) => mutationAPI(`/contact/${getID(data)}`, "put", data);
-export const deleteContactAPI = (data) => mutationAPI(`/contact/${getID(data)}`, "delete");
+export const createContactAPI = (d) => mutationAPI("/contact", "post", d);
+export const updateContactAPI = (d) => mutationAPI(`/contact/${getID(d)}`, "put", d);
+export const deleteContactAPI = (d) => mutationAPI(`/contact/${getID(d)}`, "delete");
 
 // --- NEWSLETTER ---
 export const getNewslatterAPI = () => getAPI("/newslatter");
-export const createNewslatterAPI = (data) => mutationAPI("/newslatter", "post", data);
-export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${getID(data)}`, "put", data);
-export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${getID(data)}`, "delete");
+export const createNewslatterAPI = (d) => mutationAPI("/newslatter", "post", d);
+export const updateNewslatterAPI = (d) => mutationAPI(`/newslatter/${getID(d)}`, "put", d);
+export const deleteNewslatterAPI = (d) => mutationAPI(`/newslatter/${getID(d)}`, "delete");
