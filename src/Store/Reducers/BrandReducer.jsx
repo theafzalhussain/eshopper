@@ -1,20 +1,20 @@
 import { ADD_BRAND_RED, DELETE_BRAND_RED, GET_BRAND_RED, UPDATE_BRAND_RED } from "../Constant";
 
-export function BrandReducer(state=[],action){
-    switch(action.type){
+export function BrandReducer(state = [], action) {
+    switch (action.type) {
         case ADD_BRAND_RED:
-        state.push(action.data)    
-        return state
+            return [...state, action.data] // Immutable way
+
         case GET_BRAND_RED:
             return action.data
-            case DELETE_BRAND_RED:
-                var newState= state.filter(item=>item.id!==action.data.id)
-                return newState
-                case UPDATE_BRAND_RED:
-                    var index = state.findIndex((item)=>item.id===Number(action.data.id))
-                    state[index].name = action.data.name
-                    return state
-            default:
+
+        case DELETE_BRAND_RED:
+            return state.filter(item => (item.id || item._id) !== action.data)
+
+        case UPDATE_BRAND_RED:
+            return state.map(item => (item.id || item._id) === action.data.id ? action.data : item)
+
+        default:
             return state
     }
 }

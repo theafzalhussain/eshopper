@@ -18,7 +18,7 @@ mongoose.connect(MONGODB_URI).then(() => console.log("✅ MongoDB Live")).catch(
 cloudinary.config({ 
     cloud_name: 'dtfvoxw1p', 
     api_key: '519639537482594', 
-    api_secret: process.env.CLOUD_API_SECRET || 'YOUR_SECRET_HERE' 
+    api_secret: process.env.CLOUD_API_SECRET 
 });
 
 const storage = new CloudinaryStorage({ 
@@ -64,7 +64,7 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- 3. ROUTES ---
+// --- 3. SPECIAL ROUTES ---
 
 // Login
 app.post('/login', async (req, res) => {
@@ -75,24 +75,20 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// Admin Stats
-app.get('/admin/stats', async (req, res) => {
-    const users = await User.countDocuments();
-    const products = await Product.countDocuments();
-    const checkouts = await Checkout.find();
-    const revenue = checkouts.reduce((sum, item) => sum + (item.finalAmount || 0), 0);
-    res.send({ totalUsers: users, totalProducts: products, totalOrders: checkouts.length, totalRevenue: revenue });
-});
-
-// Update User
+// Update User (Fixed 500 Error)
 app.put('/user/:id', upload, async (req, res) => {
     try {
         let upData = { ...req.body };
         if (req.files && req.files.pic) upData.pic = req.files.pic[0].path;
-        if (req.body.password && req.body.password.length < 20) {
+        
+        // Only hash if password is provided and it's a new password
+        if (req.body.password && req.body.password.length < 25) {
             const salt = await bcrypt.genSalt(10);
             upData.password = await bcrypt.hash(req.body.password, salt);
-        } else { delete upData.password; }
+        } else {
+            delete upData.password;
+        }
+
         const data = await User.findByIdAndUpdate(req.params.id, upData, { new: true });
         res.json(data);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -113,25 +109,39 @@ app.put('/product/:id', upload, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Universal Route Setup
+// --- 4. UNIVERSAL HANDLER (Now includes PUT) ---
 const setup = (path, Model) => {
     app.get(path, async (req, res) => res.send(await Model.find().sort({ _id: -1 })));
+    
     app.post(path, async (req, res) => { 
         try { const d = new Model(req.body); await d.save(); res.send(d); } 
         catch (e) { res.status(400).json(e); } 
     });
-    app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.send({ result: "Done" }); });
+
+    app.put(`${path}/:id`, async (req, res) => {
+        try {
+            const d = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
+            res.send(d);
+        } catch (e) { res.status(400).json(e); }
+    });
+
+    app.delete(`${path}/:id`, async (req, res) => { 
+        await Model.findByIdAndDelete(req.params.id); 
+        res.send({ result: "Done" }); 
+    });
 };
 
+// Initialize All Routes
 setup('/maincategory', mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts)));
 setup('/subcategory', mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts)));
 setup('/brand', mongoose.model('Brand', new mongoose.Schema({ name: String }, opts)));
 setup('/cart', Cart);
+setup('/wishlist', mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts)));
 setup('/checkout', Checkout);
 setup('/contact', Contact);
 setup('/newslatter', Newslatter);
-setup('/user', User); // Base route for signup
-setup('/product', Product); // Base route for add product
+setup('/user', User);
+setup('/product', Product);
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 Master Server on ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Master Server Live on ${PORT}`));
