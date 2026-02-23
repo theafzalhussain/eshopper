@@ -2,25 +2,29 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { sendOtpAPI, createUserAPI } from '../Store/Services'
 import { useNavigate, Link } from 'react-router-dom'
-import { ShieldCheck, User, Mail, Lock, Loader2, ArrowRight } from 'lucide-react'
+import { ShieldCheck, User, Mail, Lock, Loader2, CheckCircle } from 'lucide-react'
 
 export default function SingUp() {
     const [data, setdata] = useState({ name: "", email: "", username: "", password: "" })
-    const [step, setStep] = useState(1)
+    const [step, setStep] = useState(1) // 1: Form, 2: OTP
     const [loading, setLoading] = useState(false)
     const [userOtp, setUserOtp] = useState("")
     const [serverOtp, setServerOtp] = useState("")
     const navigate = useNavigate()
 
     async function handleSendOTP(e) {
-        e.preventDefault(); setLoading(true);
+        e.preventDefault();
+        setLoading(true);
         try {
-            const res = await sendOtpAPI({ email: data.email, type: 'signup' })
+            const res = await sendOtpAPI({ email: data.email });
             if (res.result === "Done") {
-                setServerOtp(res.otp); setStep(2);
-                alert("Verification vault opened! Check your email.");
+                setServerOtp(res.otp);
+                setStep(2);
+                alert("Verification code sent to " + data.email);
             }
-        } catch (err) { alert("Identity exists or server waking up. Retry in 10s."); }
+        } catch (err) {
+            alert("Backend is starting up. Please wait 30 seconds and try again.");
+        }
         setLoading(false);
     }
 
@@ -28,42 +32,57 @@ export default function SingUp() {
         e.preventDefault();
         if (userOtp === serverOtp || userOtp === "123456") {
             setLoading(true);
-            const res = await createUserAPI(data)
-            if (res.id) { alert("Master Identity Verified!"); navigate("/login"); }
+            const res = await createUserAPI(data);
+            if (res.id) {
+                alert("Account Verified Successfully!");
+                navigate("/login");
+            }
             setLoading(false);
-        } else { alert("Breach: Invalid Code."); }
+        } else {
+            alert("Incorrect OTP Code!");
+        }
     }
 
     return (
-        <div className="premium-auth-container">
-            <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} className="glass-card p-5">
+        <div className="signup-master-root">
+            <div className="luxury-bg"></div>
+            <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="signup-card shadow-2xl p-5 bg-white">
                 <AnimatePresence mode="wait">
                     {step === 1 ? (
-                        <motion.form key="f1" initial={{x:-20}} animate={{x:0}} exit={{x:20}} onSubmit={handleSendOTP}>
-                            <h2 className="text-center mb-4">Create Account</h2>
-                            <input type="text" placeholder="Full Name" className="p-input" onChange={e => setdata({...data, name: e.target.value})} required />
-                            <input type="email" placeholder="Email Address" className="p-input" onChange={e => setdata({...data, email: e.target.value})} required />
-                            <input type="text" placeholder="Username" className="p-input" onChange={e => setdata({...data, username: e.target.value})} required />
-                            <input type="password" placeholder="Password" className="p-input" onChange={e => setdata({...data, password: e.target.value})} required />
-                            <button className="p-btn mt-4" disabled={loading}>{loading ? <Loader2 className="animate-spin" /> : "SEND OTP"}</button>
+                        <motion.form key="step1" initial={{x:-10, opacity:0}} animate={{x:0, opacity:1}} exit={{x:10, opacity:0}} onSubmit={handleSendOTP}>
+                            <h2 className="text-center font-weight-bold mb-4">Create Master Account</h2>
+                            <input type="text" placeholder="Full Name" className="premium-input" onChange={e => setdata({...data, name: e.target.value})} required />
+                            <input type="email" placeholder="Email Address" className="premium-input" onChange={e => setdata({...data, email: e.target.value})} required />
+                            <input type="text" placeholder="Username" className="premium-input" onChange={e => setdata({...data, username: e.target.value})} required />
+                            <input type="password" placeholder="Password" className="premium-input" onChange={e => setdata({...data, password: e.target.value})} required />
+                            <button className="master-btn mt-4" disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin mx-auto" /> : "SEND VERIFICATION CODE"}
+                            </button>
                         </motion.form>
                     ) : (
-                        <motion.form key="f2" initial={{x:20}} animate={{x:0}} onSubmit={verifyAndSignup} className="text-center">
+                        <motion.form key="step2" initial={{x:10, opacity:0}} animate={{x:0, opacity:1}} onSubmit={verifyAndSignup} className="text-center">
                             <ShieldCheck size={60} className="text-info mx-auto mb-3" />
-                            <h3>Verify Identity</h3>
-                            <input type="text" maxLength="6" className="otp-input" onChange={e => setUserOtp(e.target.value)} required />
-                            <button className="p-btn mt-4">VERIFY & REGISTER</button>
+                            <h3 className="font-weight-bold">Verify Identity</h3>
+                            <p className="text-muted small mb-4">Enter code sent to {data.email}</p>
+                            <input type="text" maxLength="6" className="otp-input" placeholder="000000" onChange={e => setUserOtp(e.target.value)} required />
+                            <button className="master-btn mt-5" disabled={loading}>
+                                {loading ? "Verifying..." : "COMPLETE REGISTRATION"}
+                            </button>
+                            <p className="mt-3 small text-info cursor-pointer" onClick={() => setStep(1)}><u>Edit Details</u></p>
                         </motion.form>
                     )}
                 </AnimatePresence>
-                <Link to="/login" className="d-block text-center mt-4 small text-muted">Back to Login</Link>
+                <div className="text-center mt-4"><Link to="/login" className="small text-muted font-weight-bold">ALREADY A MEMBER? LOGIN</Link></div>
             </motion.div>
             <style>{`
-                .premium-auth-container { min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0f172a; }
-                .glass-card { background:white; border-radius:30px; width:100%; max-width:450px; }
-                .p-input { width:100%; border:none; border-bottom:2px solid #eee; padding:15px; margin-bottom:10px; outline:none; }
-                .p-btn { width:100%; background:#17a2b8; color:white; border:none; padding:15px; border-radius:50px; font-weight:800; }
-                .otp-input { width:100%; font-size:40px; text-align:center; letter-spacing:15px; border:none; border-bottom:3px solid #17a2b8; outline:none; }
+                .signup-master-root { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a0a0a; position: relative; overflow: hidden; }
+                .luxury-bg { position: absolute; width: 100%; height: 100%; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80') center/cover; opacity: 0.2; }
+                .signup-card { position: relative; z-index: 10; width: 100%; max-width: 460px; border-radius: 40px; }
+                .premium-input { width: 100%; border: none; border-bottom: 2px solid #eee; padding: 15px; margin-bottom: 10px; outline: none; font-weight: 600; }
+                .premium-input:focus { border-color: #17a2b8; }
+                .master-btn { width: 100%; background: #000; color: white; border: none; padding: 18px; border-radius: 50px; font-weight: 800; letter-spacing: 1px; transition: 0.3s; }
+                .master-btn:hover { background: #17a2b8; }
+                .otp-input { width: 100%; text-align: center; font-size: 3rem; letter-spacing: 15px; border: none; border-bottom: 3px solid #17a2b8; outline: none; font-weight: 800; color: #111; }
             `}</style>
         </div>
     )
