@@ -13,9 +13,13 @@ app.use(express.json());
 
 // --- 1. DATABASE CONNECTION ---
 const MONGODB_URI = "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
-mongoose.connect(MONGODB_URI).then(() => console.log("✅ API ENGINE LIVE")).catch(e => console.log("❌ DB Error", e));
+mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
 
-cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '551368853328319', api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' });
+cloudinary.config({ 
+    cloud_name: 'dtfvoxw1p', 
+    api_key: '551368853328319', 
+    api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' 
+});
 
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
 const upload = multer({ storage: storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
@@ -35,63 +39,23 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- 3. EXPLICIT ROUTES (FIXES ALL 404 & 500 ERRORS) ---
+// --- 3. EXPLICIT ROUTES ---
 
-app.get('/', (req, res) => res.send("🚀 Eshopper API is Running!"));
+app.get('/', (req, res) => res.send("🚀 Eshopper API Live!"));
 
-// Generic Handler for GET, POST, PUT, DELETE
-const setup = (path, Model, useUpload = false) => {
-    app.get(path, async (req, res) => res.json(await Model.find().sort({ _id: -1 })));
-    
-    app.post(path, useUpload ? upload : async (req, res, next) => next(), async (req, res) => {
-        try {
-            let data = new Model(req.body);
-            if (req.files) {
-                if (req.files.pic1) data.pic1 = req.files.pic1[0].path;
-                if (req.files.pic) data.pic = req.files.pic[0].path;
-            }
-            await data.save();
-            res.status(201).json(data);
-        } catch (e) { res.status(400).json(e); }
-    });
+// SIGNUP (Fixed Hashing Bug)
+app.post('/user', upload, async (req, res) => {
+    try {
+        let data = new User(req.body);
+        if (req.files && req.files.pic) data.pic = req.files.pic[0].path;
+        const salt = await bcrypt.genSalt(10);
+        data.password = await bcrypt.hash(data.password, salt);
+        await data.save();
+        res.status(201).json(data);
+    } catch (e) { res.status(400).json({ error: "Username already exists" }); }
+});
 
-    app.put(`${path}/:id`, useUpload ? upload : async (req, res, next) => next(), async (req, res) => {
-        try {
-            let upData = { ...req.body };
-            if (req.files) {
-                if (req.files.pic1) upData.pic1 = req.files.pic1[0].path;
-                if (req.files.pic) upData.pic = req.files.pic[0].path;
-            }
-            // Password hashing logic for user update
-            if (path === '/user' && req.body.password && req.body.password.length < 25) {
-                const salt = await bcrypt.genSalt(10);
-                upData.password = await bcrypt.hash(req.body.password, salt);
-            } else if (path === '/user') { delete upData.password; }
-
-            const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true });
-            res.json(d);
-        } catch (e) { res.status(500).json({ error: e.message }); }
-    });
-
-    app.delete(`${path}/:id`, async (req, res) => {
-        await Model.findByIdAndDelete(req.params.id);
-        res.json({ result: "Done" });
-    });
-};
-
-// Initialize All Routes
-setup('/maincategory', Maincategory);
-setup('/subcategory', Subcategory);
-setup('/brand', Brand);
-setup('/product', Product, true);
-setup('/user', User, true);
-setup('/cart', Cart);
-setup('/wishlist', Wishlist);
-setup('/checkout', Checkout);
-setup('/contact', Contact);
-setup('/newslatter', Newslatter);
-
-// Login
+// LOGIN
 app.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ username: req.body.username });
@@ -100,5 +64,62 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
+// FORGET PASSWORD (New Route Added)
+app.post('/user/forget-password', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        const user = await User.findOne({ username });
+        if (user) {
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(password, salt);
+            await user.save();
+            res.json({ result: "Done" });
+        } else res.status(404).json({ message: "User not found" });
+    } catch (e) { res.status(500).json(e); }
+});
+
+// USER UPDATE (Fixed 500 crashes)
+app.put('/user/:id', upload, async (req, res) => {
+    try {
+        let upData = { ...req.body };
+        if (req.files && req.files.pic) upData.pic = req.files.pic[0].path;
+        if (req.body.password && String(req.body.password).length < 25) {
+            const salt = await bcrypt.genSalt(10);
+            upData.password = await bcrypt.hash(String(req.body.password), salt);
+        } else { delete upData.password; }
+        const data = await User.findByIdAndUpdate(req.params.id, upData, { new: true });
+        res.json(data);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- 4. UNIVERSAL HANDLER FOR REMAINING MODULES ---
+const setup = (path, Model, useUpload = false) => {
+    app.get(path, async (req, res) => res.json(await Model.find().sort({ _id: -1 })));
+    app.post(path, useUpload ? upload : async (req, res, next) => next(), async (req, res) => {
+        try {
+            let d = new Model(req.body);
+            if (req.files && req.files.pic1) d.pic1 = req.files.pic1[0].path;
+            await d.save(); res.send(d);
+        } catch (e) { res.status(400).json(e); }
+    });
+    app.put(`${path}/:id`, useUpload ? upload : async (req, res, next) => next(), async (req, res) => {
+        let upData = { ...req.body };
+        if (req.files && req.files.pic1) upData.pic1 = req.files.pic1[0].path;
+        const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true });
+        res.send(d);
+    });
+    app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.send({ result: "Done" }); });
+};
+
+setup('/maincategory', Maincategory);
+setup('/subcategory', Subcategory);
+setup('/brand', Brand);
+setup('/product', Product, true);
+setup('/cart', Cart);
+setup('/wishlist', Wishlist);
+setup('/checkout', Checkout);
+setup('/contact', Contact);
+setup('/newslatter', Newslatter);
+
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 Master Server Live on ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 API Engine on ${PORT}`));
