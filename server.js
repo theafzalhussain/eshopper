@@ -12,11 +12,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- 1. DATABASE CONNECTION ---
+// --- 1. DB CONNECTION ---
 const MONGODB_URI = "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
 
-// --- 2. CLOUDINARY & NODEMAILER CONFIG ---
+// --- 2. CONFIGURATIONS ---
 cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '551368853328319', api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' });
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
 const upload = multer({ storage: storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
@@ -41,30 +41,30 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- 4. EXPLICIT ROUTES ---
-
-app.get('/', (req, res) => res.send("🚀 Master API is Online!"));
-
-// LOGIN & AUTH
-app.post('/login', async (req, res) => {
-    try {
-        const user = await User.findOne({ username: req.body.username });
-        if (user && await bcrypt.compare(req.body.password, user.password)) res.json(user);
-        else res.status(401).json({ message: "Invalid Credentials" });
-    } catch (e) { res.status(500).json(e); }
-});
+// --- 4. AUTH & OTP ROUTES (FIXED LOGIC) ---
 
 app.post('/api/send-otp', async (req, res) => {
     try {
         const { email, type } = req.body;
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
         if (type === 'forget') {
             const user = await User.findOne({ $or: [{ email }, { username: email }] });
-            if (!user) return res.status(404).json({ message: "User not found" });
+            if (!user) return res.status(404).json({ message: "Identity not found" });
+            user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
         }
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        await User.findOneAndUpdate({ email }, { otp, otpExpires: new Date(Date.now() + 10 * 60000) });
-        await transporter.sendMail({ from: 'Eshopper', to: email, subject: '🔐 OTP Verification', html: `<h2>Verification Code: ${otp}</h2>` });
-        res.json({ result: "Done", otp }); 
+
+        await transporter.sendMail({
+            from: '"Eshopper Security" <theafzalhussain786@gmail.com>',
+            to: email,
+            subject: '🔐 Your Verification Code',
+            html: `<div style="font-family:Arial; padding:20px; border:1px solid #ddd; border-radius:10px; text-align:center;">
+                    <h2 style="color:#17a2b8;">Verification Code</h2>
+                    <h1 style="letter-spacing:10px; color:#333;">${otp}</h1>
+                    <p>This code is valid for 10 minutes.</p>
+                   </div>`
+        });
+        res.json({ result: "Done", otp }); // Returning OTP for easy front-end sync
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -79,44 +79,42 @@ app.post('/api/reset-password', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// UPDATE LOGIC FOR ALL (Fixed 500 crashes)
-const handleUpdate = async (req, res, Model, path) => {
+app.post('/login', async (req, res) => {
     try {
-        let upData = { ...req.body };
-        if (req.files) {
-            if (req.files.pic) upData.pic = req.files.pic[0].path;
-            if (req.files.pic1) upData.pic1 = req.files.pic1[0].path;
-        }
-        if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
-            const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
-        } else if (path === '/user') { delete upData.password; }
-        const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true });
-        res.json(d);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-};
+        const user = await User.findOne({ username: req.body.username });
+        if (user && await bcrypt.compare(req.body.password, user.password)) res.json(user);
+        else res.status(401).json({ message: "Invalid Credentials" });
+    } catch (e) { res.status(500).json(e); }
+});
 
-// --- REGISTER ROUTES MANUALLY ---
-const modules = [
-    { path: '/user', model: User, upload: true }, { path: '/product', model: Product, upload: true },
-    { path: '/maincategory', model: Maincategory }, { path: '/subcategory', model: Subcategory },
-    { path: '/brand', model: Brand }, { path: '/cart', model: Cart },
-    { path: '/wishlist', model: Wishlist }, { path: '/checkout', model: Checkout },
-    { path: '/contact', model: Contact }, { path: '/newslatter', model: Newslatter }
-];
-
-modules.forEach(m => {
-    app.get(m.path, async (req, res) => res.json(await m.model.find().sort({_id:-1})));
-    app.post(m.path, m.upload ? upload : (req,res,next)=>next(), async (req, res) => {
+// --- 5. DYNAMIC CRUD HANDLER ---
+const handle = (path, Model, useUpload = false) => {
+    app.get(path, async (req, res) => res.json(await Model.find().sort({ _id: -1 })));
+    app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
-            let d = new m.model(req.body);
+            let d = new Model(req.body);
             if (req.files) { if (req.files.pic) d.pic = req.files.pic[0].path; if (req.files.pic1) d.pic1 = req.files.pic1[0].path; }
-            if (m.path === '/user') { const salt = await bcrypt.genSalt(10); d.password = await bcrypt.hash(d.password, salt); }
+            if (path === '/user') { const salt = await bcrypt.genSalt(10); d.password = await bcrypt.hash(d.password, salt); }
             await d.save(); res.status(201).json(d);
         } catch (e) { res.status(400).json(e); }
     });
-    app.put(`${m.path}/:id`, m.upload ? upload : (req,res,next)=>next(), (req, res) => handleUpdate(req, res, m.model, m.path));
-    app.delete(`${m.path}/:id`, async (req, res) => { await m.model.findByIdAndDelete(req.params.id); res.json({result: "Done"}); });
-});
+    app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
+        try {
+            let upData = { ...req.body };
+            if (req.files) { if (req.files.pic) upData.pic = req.files.pic[0].path; if (req.files.pic1) upData.pic1 = req.files.pic1[0].path; }
+            if (path === '/user' && req.body.password && req.body.password.length < 25) {
+                const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
+            } else if (path === '/user') { delete upData.password; }
+            const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d);
+        } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+    app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
+};
+
+handle('/user', User, true); handle('/product', Product, true); handle('/maincategory', Maincategory);
+handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Cart);
+handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
+handle('/newslatter', Newslatter);
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Engine live on ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Engine Live on ${PORT}`));
