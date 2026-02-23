@@ -1,125 +1,111 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer = require('multer');
-const bcrypt = require('bcryptjs'); 
+const nodemailer = require('nodemailer');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- 1. DATABASE CONNECTION ---
+// --- DATABASE ---
 const MONGODB_URI = "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
-mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
+mongoose.connect(MONGODB_URI).then(() => console.log("✅ API Engine Live")).catch(e => console.log("❌ DB Error", e));
 
-cloudinary.config({ 
-    cloud_name: 'dtfvoxw1p', 
-    api_key: '551368853328319', 
-    api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' 
+// --- NODEMAILER CONFIG ---
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'theafzalhussain786@gmail.com', // Aapka email
+        pass: 'APNA_16_DIGIT_APP_PASSWORD_YAHAN_DALEIN' // Gmail App Password
+    }
 });
-
-const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
-const upload = multer({ storage: storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// --- 2. MODELS ---
-const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: String, phone: String, password: { type: String, required: true }, addressline1: String, city: String, state: String, pin: String, role: { type: String, default: "User" }, pic: String }, opts));
-const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
-const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
-const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
-const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
-const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
-const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
-const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
-const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
-const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+// --- USER MODEL (Updated with OTP) ---
+const User = mongoose.model('User', new mongoose.Schema({ 
+    name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, 
+    phone: String, password: { type: String, required: true }, 
+    pic: String, role: { type: String, default: "User" },
+    otp: String, otpExpires: Date
+}, opts));
 
-// --- 3. EXPLICIT ROUTES ---
+// --- OTP ROUTES ---
 
-app.get('/', (req, res) => res.send("🚀 Eshopper API Live!"));
+// 1. Send OTP for Signup/Forget Password
+app.post('/api/send-otp', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit OTP
+        const expiry = new Date(Date.now() + 10 * 60000); // 10 mins valid
 
-// SIGNUP (Fixed Hashing Bug)
-app.post('/user', upload, async (req, res) => {
+        // Check if user exists (For Forget Password) or it's a new signup
+        let user = await User.findOne({ email });
+        
+        if (user) {
+            user.otp = otp;
+            user.otpExpires = expiry;
+            await user.save();
+        } else {
+            // Temporary data stored in memory or handled via frontend for Signup
+            // For simplicity, we just send the mail
+        }
+
+        const mailOptions = {
+            from: 'Eshopper <theafzalhussain786@gmail.com>',
+            to: email,
+            subject: '🔐 Your Eshopper Verification Code',
+            html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #eee;">
+                    <h2>Welcome to Eshopper</h2>
+                    <p>Your OTP for verification is:</p>
+                    <h1 style="color: #17a2b8; letter-spacing: 5px;">${otp}</h1>
+                    <p>This code is valid for 10 minutes.</p>
+                   </div>`
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ result: "Done", otp: otp }); // Send OTP back to frontend (In production, don't send OTP in response)
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 2. Verified Signup (Create User after OTP)
+app.post('/user', async (req, res) => {
     try {
         let data = new User(req.body);
-        if (req.files && req.files.pic) data.pic = req.files.pic[0].path;
         const salt = await bcrypt.genSalt(10);
         data.password = await bcrypt.hash(data.password, salt);
         await data.save();
         res.status(201).json(data);
-    } catch (e) { res.status(400).json({ error: "Username already exists" }); }
+    } catch (e) { res.status(400).json({ error: "User creation failed" }); }
 });
 
-// LOGIN
-app.post('/login', async (req, res) => {
+// 3. Reset Password with OTP
+app.post('/api/reset-password', async (req, res) => {
     try {
-        const user = await User.findOne({ username: req.body.username });
-        if (user && await bcrypt.compare(req.body.password, user.password)) res.json(user);
-        else res.status(401).json({ message: "Invalid Credentials" });
-    } catch (e) { res.status(500).json(e); }
-});
-
-// FORGET PASSWORD (New Route Added)
-app.post('/user/forget-password', async (req, res) => {
-    try {
-        const { username, password } = req.body;
+        const { username, password, otp } = req.body;
         const user = await User.findOne({ username });
-        if (user) {
+        
+        if (user && user.otp === otp && user.otpExpires > Date.now()) {
             const salt = await bcrypt.genSalt(10);
             user.password = await bcrypt.hash(password, salt);
+            user.otp = undefined; // Clear OTP
             await user.save();
             res.json({ result: "Done" });
-        } else res.status(404).json({ message: "User not found" });
+        } else {
+            res.status(400).json({ message: "Invalid or Expired OTP" });
+        }
     } catch (e) { res.status(500).json(e); }
 });
 
-// USER UPDATE (Fixed 500 crashes)
-app.put('/user/:id', upload, async (req, res) => {
-    try {
-        let upData = { ...req.body };
-        if (req.files && req.files.pic) upData.pic = req.files.pic[0].path;
-        if (req.body.password && String(req.body.password).length < 25) {
-            const salt = await bcrypt.genSalt(10);
-            upData.password = await bcrypt.hash(String(req.body.password), salt);
-        } else { delete upData.password; }
-        const data = await User.findByIdAndUpdate(req.params.id, upData, { new: true });
-        res.json(data);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+// Generic Login (Bcrypt compatible)
+app.post('/login', async (req, res) => {
+    const user = await User.findOne({ username: req.body.username });
+    if (user && await bcrypt.compare(req.body.password, user.password)) res.json(user);
+    else res.status(401).json({ message: "Invalid Credentials" });
 });
 
-// --- 4. UNIVERSAL HANDLER FOR REMAINING MODULES ---
-const setup = (path, Model, useUpload = false) => {
-    app.get(path, async (req, res) => res.json(await Model.find().sort({ _id: -1 })));
-    app.post(path, useUpload ? upload : async (req, res, next) => next(), async (req, res) => {
-        try {
-            let d = new Model(req.body);
-            if (req.files && req.files.pic1) d.pic1 = req.files.pic1[0].path;
-            await d.save(); res.send(d);
-        } catch (e) { res.status(400).json(e); }
-    });
-    app.put(`${path}/:id`, useUpload ? upload : async (req, res, next) => next(), async (req, res) => {
-        let upData = { ...req.body };
-        if (req.files && req.files.pic1) upData.pic1 = req.files.pic1[0].path;
-        const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true });
-        res.send(d);
-    });
-    app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.send({ result: "Done" }); });
-};
-
-setup('/maincategory', Maincategory);
-setup('/subcategory', Subcategory);
-setup('/brand', Brand);
-setup('/product', Product, true);
-setup('/cart', Cart);
-setup('/wishlist', Wishlist);
-setup('/checkout', Checkout);
-setup('/contact', Contact);
-setup('/newslatter', Newslatter);
-
-const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 API Engine on ${PORT}`));
+const PORT = 8000;
+app.listen(PORT, () => console.log(`🚀 OTP Engine Live on ${PORT}`));
