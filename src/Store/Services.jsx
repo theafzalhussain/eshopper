@@ -6,18 +6,12 @@ const getID = (data) => {
     return data;
 };
 
-async function getAPI(endpoint) {
-    let res = await fetch(`${BASE_URL}${endpoint}`);
-    if (res.ok) return await res.json();
-    throw new Error("Backend waking up... Please wait.");
-}
-
-async function mutationAPI(endpoint, method, data) {
-    let isFD = data instanceof FormData;
-    let res = await fetch(`${BASE_URL}${endpoint}`, {
-        method: method,
+async function fastAPI(endpoint, method = "GET", data = null) {
+    const isFD = data instanceof FormData;
+    const res = await fetch(`${BASE_URL}${endpoint}`, {
+        method,
         headers: isFD ? {} : { "content-type": "application/json" },
-        body: isFD ? data : (data ? JSON.stringify(data) : undefined)
+        body: isFD ? data : (data ? JSON.stringify(data) : null)
     });
     if (res.ok) {
         const text = await res.text();
@@ -26,70 +20,70 @@ async function mutationAPI(endpoint, method, data) {
     throw new Error("API Failure");
 }
 
-// --- ALL PROJECT EXPORTS (SYNCED WITH SERVER & SAGAS) ---
+// --- EXPORT ALL SYNCED FUNCTIONS ---
 
 // AUTH & OTP
-export const loginAPI = (d) => mutationAPI("/login", "post", d);
-export const sendOtpAPI = (d) => mutationAPI("/api/send-otp", "post", d);
-export const resetPasswordAPI = (d) => mutationAPI("/api/reset-password", "post", d);
-export const forgetPasswordAPI = (d) => mutationAPI("/user/forget-password", "post", d);
+export const loginAPI = (d) => fastAPI("/login", "POST", d);
+export const sendOtpAPI = (d) => fastAPI("/api/send-otp", "POST", d);
+export const resetPasswordAPI = (d) => fastAPI("/api/reset-password", "POST", d);
+export const forgetPasswordAPI = (d) => fastAPI("/user/forget-password", "POST", d);
 
-// USER
-export const getUserAPI = () => getAPI("/user");
-export const createUserAPI = (d) => mutationAPI("/user", "post", d);
-export const updateUserAPI = (d) => mutationAPI(`/user/${getID(d)}`, "put", d);
-export const deleteUserAPI = (d) => mutationAPI(`/user/${getID(d)}`, "delete");
+// USER MODULE
+export const getUserAPI = () => fastAPI("/user");
+export const createUserAPI = (d) => fastAPI("/user", "POST", d);
+export const updateUserAPI = (d) => fastAPI(`/user/${getID(d)}`, "PUT", d);
+export const deleteUserAPI = (d) => fastAPI(`/user/${getID(d)}`, "DELETE");
 
-// PRODUCT
-export const getProductAPI = () => getAPI("/product");
-export const createProductAPI = (d) => mutationAPI("/product", "post", d);
-export const updateProductAPI = (d) => mutationAPI(`/product/${getID(d)}`, "put", d);
-export const deleteProductAPI = (d) => mutationAPI(`/product/${getID(d)}`, "delete");
+// PRODUCT MODULE
+export const getProductAPI = () => fastAPI("/product");
+export const createProductAPI = (d) => fastAPI("/product", "POST", d);
+export const updateProductAPI = (d) => fastAPI(`/product/${getID(d)}`, "PUT", d);
+export const deleteProductAPI = (d) => fastAPI(`/product/${getID(d)}`, "DELETE");
 
 // MAINCATEGORY
-export const getMaincategoryAPI = () => getAPI("/maincategory");
-export const createMaincategoryAPI = (d) => mutationAPI("/maincategory", "post", d);
-export const updateMaincategoryAPI = (d) => mutationAPI(`/maincategory/${getID(d)}`, "put", d);
-export const deleteMaincategoryAPI = (d) => mutationAPI(`/maincategory/${getID(d)}`, "delete");
+export const getMaincategoryAPI = () => fastAPI("/maincategory");
+export const createMaincategoryAPI = (d) => fastAPI("/maincategory", "POST", d);
+export const updateMaincategoryAPI = (d) => fastAPI(`/maincategory/${getID(d)}`, "PUT", d);
+export const deleteMaincategoryAPI = (d) => fastAPI(`/maincategory/${getID(d)}`, "DELETE");
 
 // SUBCATEGORY
-export const getSubcategoryAPI = () => getAPI("/subcategory");
-export const createSubcategoryAPI = (d) => mutationAPI("/subcategory", "post", d);
-export const updateSubcategoryAPI = (d) => mutationAPI(`/subcategory/${getID(d)}`, "put", d);
-export const deleteSubcategoryAPI = (d) => mutationAPI(`/subcategory/${getID(d)}`, "delete");
+export const getSubcategoryAPI = () => fastAPI("/subcategory");
+export const createSubcategoryAPI = (d) => fastAPI("/subcategory", "POST", d);
+export const updateSubcategoryAPI = (d) => fastAPI(`/subcategory/${getID(d)}`, "PUT", d);
+export const deleteSubcategoryAPI = (d) => fastAPI(`/subcategory/${getID(d)}`, "DELETE");
 
 // BRAND
-export const getBrandAPI = () => getAPI("/brand");
-export const createBrandAPI = (d) => mutationAPI("/brand", "post", d);
-export const updateBrandAPI = (d) => mutationAPI(`/brand/${getID(d)}`, "put", d);
-export const deleteBrandAPI = (d) => mutationAPI(`/brand/${getID(d)}`, "delete");
+export const getBrandAPI = () => fastAPI("/brand");
+export const createBrandAPI = (d) => fastAPI("/brand", "POST", d);
+export const updateBrandAPI = (d) => fastAPI(`/brand/${getID(d)}`, "PUT", d);
+export const deleteBrandAPI = (d) => fastAPI(`/brand/${getID(d)}`, "DELETE");
 
 // CART
-export const getCartAPI = () => getAPI("/cart");
-export const createCartAPI = (d) => mutationAPI("/cart", "post", d);
-export const updateCartAPI = (d) => mutationAPI(`/cart/${getID(d)}`, "put", d);
-export const deleteCartAPI = (d) => mutationAPI(`/cart/${getID(d)}`, "delete");
+export const getCartAPI = () => fastAPI("/cart");
+export const createCartAPI = (d) => fastAPI("/cart", "POST", d);
+export const updateCartAPI = (d) => fastAPI(`/cart/${getID(d)}`, "PUT", d);
+export const deleteCartAPI = (d) => fastAPI(`/cart/${getID(d)}`, "DELETE");
 
 // WISHLIST
-export const getWishlistAPI = () => getAPI("/wishlist");
-export const createWishlistAPI = (d) => mutationAPI("/wishlist", "post", d);
-export const updateWishlistAPI = (d) => mutationAPI(`/wishlist/${getID(d)}`, "put", d);
-export const deleteWishlistAPI = (d) => mutationAPI(`/wishlist/${getID(d)}`, "delete");
+export const getWishlistAPI = () => fastAPI("/wishlist");
+export const createWishlistAPI = (d) => fastAPI("/wishlist", "POST", d);
+export const updateWishlistAPI = (d) => fastAPI(`/wishlist/${getID(d)}`, "PUT", d);
+export const deleteWishlistAPI = (d) => fastAPI(`/wishlist/${getID(d)}`, "DELETE");
 
-// CHECKOUT
-export const getCheckoutAPI = () => getAPI("/checkout");
-export const createCheckoutAPI = (d) => mutationAPI("/checkout", "post", d);
-export const updateCheckoutAPI = (d) => mutationAPI(`/checkout/${getID(d)}`, "put", d);
-export const deleteCheckoutAPI = (d) => mutationAPI(`/checkout/${getID(d)}`, "delete");
+// CHECKOUT / ORDERS
+export const getCheckoutAPI = () => fastAPI("/checkout");
+export const createCheckoutAPI = (d) => fastAPI("/checkout", "POST", d);
+export const updateCheckoutAPI = (d) => fastAPI(`/checkout/${getID(d)}`, "PUT", d);
+export const deleteCheckoutAPI = (d) => fastAPI(`/checkout/${getID(d)}`, "DELETE");
 
-// CONTACT
-export const getContactAPI = () => getAPI("/contact");
-export const createContactAPI = (d) => mutationAPI("/contact", "post", d);
-export const updateContactAPI = (d) => mutationAPI(`/contact/${getID(d)}`, "put", d);
-export const deleteContactAPI = (d) => mutationAPI(`/contact/${getID(d)}`, "delete");
+// CONTACT INQUIRIES
+export const getContactAPI = () => fastAPI("/contact");
+export const createContactAPI = (d) => fastAPI("/contact", "POST", d);
+export const updateContactAPI = (d) => fastAPI(`/contact/${getID(d)}`, "PUT", d);
+export const deleteContactAPI = (d) => fastAPI(`/contact/${getID(d)}`, "DELETE");
 
 // NEWSLETTER
-export const getNewslatterAPI = () => getAPI("/newslatter");
-export const createNewslatterAPI = (d) => mutationAPI("/newslatter", "post", d);
-export const updateNewslatterAPI = (d) => mutationAPI(`/newslatter/${getID(d)}`, "put", d);
-export const deleteNewslatterAPI = (d) => mutationAPI(`/newslatter/${getID(d)}`, "delete");
+export const getNewslatterAPI = () => fastAPI("/newslatter");
+export const createNewslatterAPI = (d) => fastAPI("/newslatter", "POST", d);
+export const updateNewslatterAPI = (d) => fastAPI(`/newslatter/${getID(d)}`, "PUT", d);
+export const deleteNewslatterAPI = (d) => fastAPI(`/newslatter/${getID(d)}`, "DELETE");
