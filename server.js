@@ -11,9 +11,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- DATABASE CONNECTION ---
+// --- 1. DB CONNECTION ---
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
-mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master DB Connected")).catch(e => console.log("❌ DB Error", e));
+mongoose.connect(MONGODB_URI).then(() => console.log("✅ API Engine Live")).catch(e => console.log("❌ DB Error", e));
 
 cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '519639537482594', api_secret: process.env.CLOUD_API_SECRET });
 
@@ -23,11 +23,16 @@ const upload = multer({ storage: storage }).fields([{ name: 'pic', maxCount: 1 }
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// --- MODELS ---
+// --- 2. MODELS ---
 const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: String, phone: String, password: { type: String, required: true }, addressline1: String, city: String, state: String, pin: String, role: { type: String, default: "User" }, pic: String }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
+const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
+const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
+const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
+const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
+const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- 🔥 AUTH & PROFILE ROUTES ---
+// --- 3. EXPLICIT ROUTES (Fixes 404 & 500) ---
 
 // Login
 app.post('/login', async (req, res) => {
@@ -38,43 +43,21 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// Update User (The 500 Error Fix)
+// Update User (Fixes 500 crashing)
 app.put('/user/:id', upload, async (req, res) => {
     try {
         let upData = { ...req.body };
         if (req.files && req.files.pic) upData.pic = req.files.pic[0].path;
-
-        // Secure password update: Hash only if it's a new plain-text password
-        if (req.body.password && req.body.password.trim() !== "" && req.body.password.length < 25) {
+        if (req.body.password && req.body.password.length < 25) {
             const salt = await bcrypt.genSalt(10);
             upData.password = await bcrypt.hash(req.body.password, salt);
-        } else {
-            delete upData.password; // Don't touch if not provided or already hashed
-        }
-
+        } else { delete upData.password; }
         const data = await User.findByIdAndUpdate(req.params.id, upData, { new: true });
         res.json(data);
-    } catch (e) { 
-        console.error("Update Error:", e);
-        res.status(500).json({ error: e.message }); 
-    }
+    } catch (e) { res.status(500).send("Update Failed: " + e.message); }
 });
 
-// Forget Password API
-app.post('/user/forget-password', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        const user = await User.findOne({ username });
-        if (user) {
-            const salt = await bcrypt.genSalt(10);
-            user.password = await bcrypt.hash(password, salt);
-            await user.save();
-            res.json(user);
-        } else res.status(404).json({ message: "Invalid Username" });
-    } catch (e) { res.status(500).json(e); }
-});
-
-// --- UNIVERSAL CRUD HANDLER ---
+// --- 4. UNIVERSAL HANDLER FOR ALL OTHER ROUTES ---
 const setup = (path, Model) => {
     app.get(path, async (req, res) => res.send(await Model.find().sort({ _id: -1 })));
     app.post(path, async (req, res) => { try { const d = new Model(req.body); await d.save(); res.send(d); } catch (e) { res.status(400).json(e); } });
@@ -92,11 +75,17 @@ const setup = (path, Model) => {
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.send({ result: "Done" }); });
 };
 
+// Map All Models to Routes
 setup('/maincategory', mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts)));
 setup('/subcategory', mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts)));
 setup('/brand', mongoose.model('Brand', new mongoose.Schema({ name: String }, opts)));
 setup('/product', Product);
-setup('/cart', mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts)));
+setup('/cart', Cart);
+setup('/checkout', Checkout);
+setup('/wishlist', Wishlist);
+setup('/contact', Contact);
+setup('/newslatter', Newslatter);
+setup('/user', User); // For GET all users and signup
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 Master Server Ready on ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Master Server Live on ${PORT}`));
