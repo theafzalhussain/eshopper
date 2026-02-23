@@ -5,9 +5,15 @@ import RootReducer from "./Reducers/RootReducer"
 import RootSaga from "./Sagas/RootSaga"
 
 const sagaMiddleware = createSagaMiddleware()
+
 const Store = configureStore({
-    reducer:RootReducer,
-    middleware:()=>[sagaMiddleware]
+    reducer: RootReducer,
+    // Modern Toolkit way to handle saga middleware
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware({
+        serializableCheck: false // Necessary for FormData handling
+    }).concat(sagaMiddleware)
 })
-export default Store
+
 sagaMiddleware.run(RootSaga)
+
+export default Store

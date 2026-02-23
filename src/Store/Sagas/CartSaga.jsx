@@ -6,25 +6,28 @@ function* createCartSaga(action) {
     try {
         let response = yield createCartAPI(action.payload)
         yield put({ type: ADD_CART_RED, data: response })
-    } catch (e) { console.log("Cart Add Error:", e) }
+    } catch (e) { console.error("❌ Cart Add Error:", e) }
 }
+
 function* getCartSaga() {
     try {
         let response = yield getCartAPI()
         yield put({ type: GET_CART_RED, data: response })
-    } catch (e) { console.log("Cart Fetch Error:", e) }
+    } catch (e) { console.error("❌ Cart Fetch Error:", e) }
 }
+
 function* deleteCartSaga(action) {
     try {
         yield deleteCartAPI(action.payload)
         yield put({ type: DELETE_CART_RED, data: action.payload })
-    } catch (e) { console.log("Cart Delete Error:", e) }
+    } catch (e) { console.error("❌ Cart Delete Error:", e) }
 }
+
 function* updateCartSaga(action) {
     try {
         yield updateCartAPI(action.payload)
         yield put({ type: UPDATE_CART_RED, data: action.payload })
-    } catch (e) { console.log("Cart Update Error:", e) }
+    } catch (e) { console.error("❌ Cart Update Error:", e) }
 }
 
 export function* cartSaga() {
