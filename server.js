@@ -1,111 +1,88 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const nodemailer = require('nodemailer');
-const bcrypt = require('bcryptjs');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const multer = require('multer');
+const bcrypt = require('bcryptjs'); 
 require('dotenv').config();
 
 const app = express();
+
+// --- 1. MIDDLEWARE ---
 app.use(cors());
 app.use(express.json());
 
-// --- DATABASE ---
+// --- 2. DB CONNECTION ---
 const MONGODB_URI = "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
-mongoose.connect(MONGODB_URI).then(() => console.log("✅ API Engine Live")).catch(e => console.log("❌ DB Error", e));
+mongoose.connect(MONGODB_URI).then(() => console.log("✅ Database Connected")).catch(e => console.log("❌ DB Error", e));
 
-// --- NODEMAILER CONFIG ---
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: 'theafzalhussain786@gmail.com', // Aapka email
-        pass: 'APNA_16_DIGIT_APP_PASSWORD_YAHAN_DALEIN' // Gmail App Password
-    }
-});
+// --- 3. CLOUDINARY CONFIG ---
+cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '551368853328319', api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' });
+const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
+const upload = multer({ storage: storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// --- USER MODEL (Updated with OTP) ---
-const User = mongoose.model('User', new mongoose.Schema({ 
-    name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, 
-    phone: String, password: { type: String, required: true }, 
-    pic: String, role: { type: String, default: "User" },
-    otp: String, otpExpires: Date
-}, opts));
+// --- 4. MODELS ---
+const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, addressline1: String, city: String, state: String, pin: String, role: { type: String, default: "User" }, pic: String, otp: String, otpExpires: Date }, opts));
+const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
+const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
+const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
+const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
+const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
+const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
+const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
+const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
 
-// --- OTP ROUTES ---
+// --- 5. EXPLICIT ROUTES (No Helpers, No 404s) ---
 
-// 1. Send OTP for Signup/Forget Password
-app.post('/api/send-otp', async (req, res) => {
+app.get('/', (req, res) => res.send("🚀 Eshopper API Live!"));
+
+// PRODUCT ROUTES
+app.get('/product', async (req, res) => res.json(await Product.find().sort({ _id: -1 })));
+app.post('/product', upload, async (req, res) => { try { const d = new Product(req.body); if (req.files && req.files.pic1) d.pic1 = req.files.pic1[0].path; await d.save(); res.json(d); } catch (e) { res.status(400).json(e); } });
+app.put('/product/:id', upload, async (req, res) => { try { let upData = { ...req.body }; if (req.files && req.files.pic1) upData.pic1 = req.files.pic1[0].path; const d = await Product.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d); } catch (e) { res.status(500).json(e); } });
+app.delete('/product/:id', async (req, res) => { await Product.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
+
+// USER ROUTES
+app.get('/user', async (req, res) => res.json(await User.find().sort({ _id: -1 })));
+app.post('/user', upload, async (req, res) => { try { let d = new User(req.body); if (req.files && req.files.pic) d.pic = req.files.pic[0].path; const salt = await bcrypt.genSalt(10); d.password = await bcrypt.hash(d.password, salt); await d.save(); res.json(d); } catch (e) { res.status(400).json(e); } });
+app.put('/user/:id', upload, async (req, res) => { try { let upData = { ...req.body }; if (req.files && req.files.pic) upData.pic = req.files.pic[0].path; if (req.body.password && req.body.password.length < 25) { const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(req.body.password, salt); } else { delete upData.password; } const d = await User.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d); } catch (e) { res.status(500).json(e); } });
+
+// CART ROUTES
+app.get('/cart', async (req, res) => res.json(await Cart.find()));
+app.post('/cart', async (req, res) => { const d = new Cart(req.body); await d.save(); res.json(d); });
+app.delete('/cart/:id', async (req, res) => { await Cart.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
+
+// WISHLIST ROUTES
+app.get('/wishlist', async (req, res) => res.json(await Wishlist.find()));
+app.post('/wishlist', async (req, res) => { const d = new Wishlist(req.body); await d.save(); res.json(d); });
+app.delete('/wishlist/:id', async (req, res) => { await Wishlist.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
+
+// CHECKOUT & OTHERS
+app.get('/checkout', async (req, res) => res.json(await Checkout.find().sort({_id:-1})));
+app.post('/checkout', async (req, res) => { const d = new Checkout(req.body); await d.save(); res.json(d); });
+app.get('/newslatter', async (req, res) => res.json(await Newslatter.find()));
+app.post('/newslatter', async (req, res) => { try{const d = new Newslatter(req.body); await d.save(); res.json(d);}catch(e){res.status(400).json(e)} });
+app.get('/contact', async (req, res) => res.json(await Contact.find()));
+app.post('/contact', async (req, res) => { const d = new Contact(req.body); await d.save(); res.json(d); });
+
+// CATEGORY SIMPLE ROUTES
+app.get('/maincategory', async (req, res) => res.json(await Maincategory.find()));
+app.get('/subcategory', async (req, res) => res.json(await Subcategory.find()));
+app.get('/brand', async (req, res) => res.json(await Brand.find()));
+
+// LOGIN
+app.post('/login', async (req, res) => {
     try {
-        const { email } = req.body;
-        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit OTP
-        const expiry = new Date(Date.now() + 10 * 60000); // 10 mins valid
-
-        // Check if user exists (For Forget Password) or it's a new signup
-        let user = await User.findOne({ email });
-        
-        if (user) {
-            user.otp = otp;
-            user.otpExpires = expiry;
-            await user.save();
-        } else {
-            // Temporary data stored in memory or handled via frontend for Signup
-            // For simplicity, we just send the mail
-        }
-
-        const mailOptions = {
-            from: 'Eshopper <theafzalhussain786@gmail.com>',
-            to: email,
-            subject: '🔐 Your Eshopper Verification Code',
-            html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #eee;">
-                    <h2>Welcome to Eshopper</h2>
-                    <p>Your OTP for verification is:</p>
-                    <h1 style="color: #17a2b8; letter-spacing: 5px;">${otp}</h1>
-                    <p>This code is valid for 10 minutes.</p>
-                   </div>`
-        };
-
-        await transporter.sendMail(mailOptions);
-        res.status(200).json({ result: "Done", otp: otp }); // Send OTP back to frontend (In production, don't send OTP in response)
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// 2. Verified Signup (Create User after OTP)
-app.post('/user', async (req, res) => {
-    try {
-        let data = new User(req.body);
-        const salt = await bcrypt.genSalt(10);
-        data.password = await bcrypt.hash(data.password, salt);
-        await data.save();
-        res.status(201).json(data);
-    } catch (e) { res.status(400).json({ error: "User creation failed" }); }
-});
-
-// 3. Reset Password with OTP
-app.post('/api/reset-password', async (req, res) => {
-    try {
-        const { username, password, otp } = req.body;
-        const user = await User.findOne({ username });
-        
-        if (user && user.otp === otp && user.otpExpires > Date.now()) {
-            const salt = await bcrypt.genSalt(10);
-            user.password = await bcrypt.hash(password, salt);
-            user.otp = undefined; // Clear OTP
-            await user.save();
-            res.json({ result: "Done" });
-        } else {
-            res.status(400).json({ message: "Invalid or Expired OTP" });
-        }
+        const user = await User.findOne({ username: req.body.username });
+        if (user && await bcrypt.compare(req.body.password, user.password)) res.json(user);
+        else res.status(401).json({ message: "Invalid Credentials" });
     } catch (e) { res.status(500).json(e); }
 });
 
-// Generic Login (Bcrypt compatible)
-app.post('/login', async (req, res) => {
-    const user = await User.findOne({ username: req.body.username });
-    if (user && await bcrypt.compare(req.body.password, user.password)) res.json(user);
-    else res.status(401).json({ message: "Invalid Credentials" });
-});
-
-const PORT = 8000;
-app.listen(PORT, () => console.log(`🚀 OTP Engine Live on ${PORT}`));
+const PORT = process.env.PORT || 8000;
+app.listen(PORT, () => console.log(`🚀 Explicit Engine Live on ${PORT}`));

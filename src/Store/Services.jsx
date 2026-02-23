@@ -2,31 +2,36 @@ import { BASE_URL } from "../constants";
 
 /**
  * --- 1. UTILITY HELPER ---
- * Handling MongoDB _id and Frontend id mismatch
+ * Handling MongoDB _id and Frontend id mismatch for all sections
+ * Also extracts ID from FormData for image uploads
  */
 const getID = (data) => {
     if (data instanceof FormData) return data.get("id");
     if (typeof data === "object" && data !== null) return data.id || data._id;
-    return data;
+    return data; // If data is already a string ID
 };
 
 /**
  * --- 2. CORE API HANDLERS ---
  */
+
+// General GET Request Handler
 async function getAPI(endpoint) {
     let response = await fetch(`${BASE_URL}${endpoint}`);
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
         return await response.json();
     }
-    // Render free tier wake-up protection
+    // Safety check for Render.com free tier wake-up
     throw new Error("Backend is waking up... Please wait 10 seconds and refresh.");
 }
 
+// General POST/PUT/DELETE Request Handler
 async function mutationAPI(endpoint, method, data) {
     let isFD = data instanceof FormData;
     let response = await fetch(`${BASE_URL}${endpoint}`, {
         method: method,
+        // Headers only for JSON, not for FormData
         headers: isFD ? {} : { "content-type": "application/json" },
         body: isFD ? data : (data ? JSON.stringify(data) : undefined)
     });
@@ -37,7 +42,7 @@ async function mutationAPI(endpoint, method, data) {
         if (!response.ok) throw result; 
         return result;
     } else {
-        // Handle non-JSON or successful text responses
+        // Handle successful deletions or non-json responses
         if (response.ok) return { result: "Done" };
         const errorText = await response.text();
         throw new Error(errorText || "Server Crash: Received non-JSON response.");
@@ -45,70 +50,70 @@ async function mutationAPI(endpoint, method, data) {
 }
 
 /**
- * --- 3. EXPORTED FUNCTIONS (SYNCED WITH ALL MODULES) ---
+ * --- 3. EXPORTED FUNCTIONS (ALL PROJECT MODULES) ---
  */
 
-// --- AUTH & OTP MODULE ---
+// --- 🔐 AUTHENTICATION & SECURITY (OTP FIX) ---
 export const loginAPI = (d) => mutationAPI("/login", "post", d);
 export const sendOtpAPI = (d) => mutationAPI("/api/send-otp", "post", d);
 export const resetPasswordAPI = (d) => mutationAPI("/api/reset-password", "post", d);
 export const forgetPasswordAPI = (d) => mutationAPI("/user/forget-password", "post", d);
 
-// --- USER MODULE ---
+// --- 👤 USER & PROFILE MODULE ---
 export const getUserAPI = () => getAPI("/user");
 export const createUserAPI = (d) => mutationAPI("/user", "post", d);
 export const updateUserAPI = (d) => mutationAPI(`/user/${getID(d)}`, "put", d);
 export const deleteUserAPI = (d) => mutationAPI(`/user/${getID(d)}`, "delete");
 
-// --- PRODUCT MODULE ---
+// --- 📦 PRODUCT MODULE ---
 export const getProductAPI = () => getAPI("/product");
 export const createProductAPI = (d) => mutationAPI("/product", "post", d);
 export const updateProductAPI = (d) => mutationAPI(`/product/${getID(d)}`, "put", d);
 export const deleteProductAPI = (d) => mutationAPI(`/product/${getID(d)}`, "delete");
 
-// --- MAINCATEGORY MODULE ---
+// --- 🏷️ MAINCATEGORY MODULE ---
 export const getMaincategoryAPI = () => getAPI("/maincategory");
 export const createMaincategoryAPI = (d) => mutationAPI("/maincategory", "post", d);
 export const updateMaincategoryAPI = (d) => mutationAPI(`/maincategory/${getID(d)}`, "put", d);
 export const deleteMaincategoryAPI = (d) => mutationAPI(`/maincategory/${getID(d)}`, "delete");
 
-// --- SUBCATEGORY MODULE ---
+// --- 📂 SUBCATEGORY MODULE ---
 export const getSubcategoryAPI = () => getAPI("/subcategory");
 export const createSubcategoryAPI = (d) => mutationAPI("/subcategory", "post", d);
 export const updateSubcategoryAPI = (d) => mutationAPI(`/subcategory/${getID(d)}`, "put", d);
 export const deleteSubcategoryAPI = (d) => mutationAPI(`/subcategory/${getID(d)}`, "delete");
 
-// --- BRAND MODULE ---
+// --- 🏢 BRAND MODULE ---
 export const getBrandAPI = () => getAPI("/brand");
 export const createBrandAPI = (d) => mutationAPI("/brand", "post", d);
 export const updateBrandAPI = (d) => mutationAPI(`/brand/${getID(d)}`, "put", d);
 export const deleteBrandAPI = (d) => mutationAPI(`/brand/${getID(d)}`, "delete");
 
-// --- CART MODULE ---
+// --- 🛒 CART MODULE ---
 export const getCartAPI = () => getAPI("/cart");
 export const createCartAPI = (d) => mutationAPI("/cart", "post", d);
 export const updateCartAPI = (d) => mutationAPI(`/cart/${getID(d)}`, "put", d);
 export const deleteCartAPI = (d) => mutationAPI(`/cart/${getID(d)}`, "delete");
 
-// --- WISHLIST MODULE ---
+// --- ❤️ WISHLIST MODULE ---
 export const getWishlistAPI = () => getAPI("/wishlist");
 export const createWishlistAPI = (d) => mutationAPI("/wishlist", "post", d);
 export const updateWishlistAPI = (d) => mutationAPI(`/wishlist/${getID(d)}`, "put", d);
 export const deleteWishlistAPI = (d) => mutationAPI(`/wishlist/${getID(d)}`, "delete");
 
-// --- CHECKOUT / ORDERS ---
+// --- 💳 CHECKOUT / ORDERS ---
 export const getCheckoutAPI = () => getAPI("/checkout");
 export const createCheckoutAPI = (d) => mutationAPI("/checkout", "post", d);
 export const updateCheckoutAPI = (d) => mutationAPI(`/checkout/${getID(d)}`, "put", d);
 export const deleteCheckoutAPI = (d) => mutationAPI(`/checkout/${getID(d)}`, "delete");
 
-// --- CONTACT INQUIRIES ---
+// --- 📧 CONTACT INQUIRIES ---
 export const getContactAPI = () => getAPI("/contact");
 export const createContactAPI = (d) => mutationAPI("/contact", "post", d);
 export const updateContactAPI = (d) => mutationAPI(`/contact/${getID(d)}`, "put", d);
 export const deleteContactAPI = (d) => mutationAPI(`/contact/${getID(d)}`, "delete");
 
-// --- NEWSLETTER ---
+// --- 📰 NEWSLETTER MODULE ---
 export const getNewslatterAPI = () => getAPI("/newslatter");
 export const createNewslatterAPI = (d) => mutationAPI("/newslatter", "post", d);
 export const updateNewslatterAPI = (d) => mutationAPI(`/newslatter/${getID(d)}`, "put", d);
