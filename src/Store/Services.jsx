@@ -20,7 +20,7 @@ async function fastAPI(endpoint, method = "GET", data = null) {
     throw new Error("API Failure");
 }
 
-// --- EXPORT ALL SYNCED FUNCTIONS ---
+// --- ALL PROJECT EXPORTS (SYNCED WITH SERVER & SAGAS) ---
 
 // AUTH & OTP
 export const loginAPI = (d) => fastAPI("/login", "POST", d);
