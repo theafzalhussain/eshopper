@@ -12,9 +12,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- 1. DB CONNECTION ---
+// --- 1. DATABASE CONNECTION ---
 const MONGODB_URI = "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
-mongoose.connect(MONGODB_URI).then(() => console.log("✅ API Master Engine Live")).catch(e => console.log("❌ DB Error", e));
+mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
 
 // --- 2. CONFIGURATIONS (Cloudinary & Mailer) ---
 cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '551368853328319', api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' });
@@ -30,7 +30,7 @@ const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) 
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
 // --- 3. ALL MODELS ---
-const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, otp: String, otpExpires: Date }, opts));
+const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
 const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
 const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
@@ -41,11 +41,11 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- 4. SPECIAL AUTH & OTP ROUTES ---
+// --- 4. ROUTES ENGINE ---
 
-app.get('/', (req, res) => res.send("🚀 Eshopper Master API Live!"));
+app.get('/', (req, res) => res.send("🚀 Eshopper Master API is Ready!"));
 
-// LOGIN
+// --- AUTH & SECURITY ROUTES ---
 app.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ username: req.body.username });
@@ -54,22 +54,20 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// OTP SENDER (Signup & Forget)
 app.post('/api/send-otp', async (req, res) => {
     try {
         const { email, type } = req.body;
         if (type === 'forget') {
             const user = await User.findOne({ $or: [{ email: email }, { username: email }] });
-            if (!user) return res.status(404).json({ message: "Account not found" });
+            if (!user) return res.status(404).json({ message: "Identity not found" });
         }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        await User.findOneAndUpdate({ email }, { otp, otpExpires: new Date(Date.now() + 10 * 60000) });
-        await transporter.sendMail({ from: 'Eshopper', to: email, subject: '🔐 Verification Code', html: `<h3>Code: ${otp}</h3>` });
+        await User.findOneAndUpdate({ email: email }, { otp, otpExpires: new Date(Date.now() + 10 * 60000) });
+        await transporter.sendMail({ from: 'Eshopper', to: email, subject: '🔐 Verification Code', html: `<h2>Your OTP: ${otp}</h2>` });
         res.json({ result: "Done", otp }); 
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// RESET PASSWORD
 app.post('/api/reset-password', async (req, res) => {
     try {
         const { username, password, otp } = req.body;
@@ -77,11 +75,11 @@ app.post('/api/reset-password', async (req, res) => {
         if (user && user.otp === otp && user.otpExpires > Date.now()) {
             const salt = await bcrypt.genSalt(10); user.password = await bcrypt.hash(password, salt);
             user.otp = undefined; await user.save(); res.json({ result: "Done" });
-        } else res.status(400).send("Invalid OTP");
+        } else res.status(400).send("Invalid/Expired OTP");
     } catch (e) { res.status(500).json(e); }
 });
 
-// --- 5. UNIVERSAL MODULE HANDLER ---
+// --- DYNAMIC CRUD HANDLER (Handles ALL Modules) ---
 const handle = (path, Model, useUpload = false) => {
     app.get(path, async (req, res) => res.json(await Model.find().sort({ _id: -1 })));
     app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
@@ -105,11 +103,11 @@ const handle = (path, Model, useUpload = false) => {
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
 };
 
-// INITIALIZE ALL
+// INITIALIZE ALL PROJECT MODULES
 handle('/user', User, true); handle('/product', Product, true); handle('/maincategory', Maincategory);
 handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Cart);
 handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`🚀 Master Server Live on ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Master Server on ${PORT}`));

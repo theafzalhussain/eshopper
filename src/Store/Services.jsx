@@ -9,7 +9,7 @@ const getID = (data) => {
 async function getAPI(endpoint) {
     let res = await fetch(`${BASE_URL}${endpoint}`);
     if (res.ok) return await res.json();
-    throw new Error("Backend waking up...");
+    throw new Error("Backend waking up... Please wait.");
 }
 
 async function mutationAPI(endpoint, method, data) {
@@ -23,8 +23,10 @@ async function mutationAPI(endpoint, method, data) {
         const text = await res.text();
         return text ? JSON.parse(text) : { result: "Done" };
     }
-    throw new Error("API Error");
+    throw new Error("API Failure");
 }
+
+// --- ALL PROJECT EXPORTS (SYNCED WITH SERVER & SAGAS) ---
 
 // AUTH & OTP
 export const loginAPI = (d) => mutationAPI("/login", "post", d);
@@ -32,52 +34,61 @@ export const sendOtpAPI = (d) => mutationAPI("/api/send-otp", "post", d);
 export const resetPasswordAPI = (d) => mutationAPI("/api/reset-password", "post", d);
 export const forgetPasswordAPI = (d) => mutationAPI("/user/forget-password", "post", d);
 
-// ALL MODULES (Fixed 33 Red Errors)
+// USER
 export const getUserAPI = () => getAPI("/user");
 export const createUserAPI = (d) => mutationAPI("/user", "post", d);
 export const updateUserAPI = (d) => mutationAPI(`/user/${getID(d)}`, "put", d);
 export const deleteUserAPI = (d) => mutationAPI(`/user/${getID(d)}`, "delete");
 
+// PRODUCT
 export const getProductAPI = () => getAPI("/product");
 export const createProductAPI = (d) => mutationAPI("/product", "post", d);
 export const updateProductAPI = (d) => mutationAPI(`/product/${getID(d)}`, "put", d);
 export const deleteProductAPI = (d) => mutationAPI(`/product/${getID(d)}`, "delete");
 
+// MAINCATEGORY
 export const getMaincategoryAPI = () => getAPI("/maincategory");
 export const createMaincategoryAPI = (d) => mutationAPI("/maincategory", "post", d);
 export const updateMaincategoryAPI = (d) => mutationAPI(`/maincategory/${getID(d)}`, "put", d);
 export const deleteMaincategoryAPI = (d) => mutationAPI(`/maincategory/${getID(d)}`, "delete");
 
+// SUBCATEGORY
 export const getSubcategoryAPI = () => getAPI("/subcategory");
 export const createSubcategoryAPI = (d) => mutationAPI("/subcategory", "post", d);
 export const updateSubcategoryAPI = (d) => mutationAPI(`/subcategory/${getID(d)}`, "put", d);
 export const deleteSubcategoryAPI = (d) => mutationAPI(`/subcategory/${getID(d)}`, "delete");
 
+// BRAND
 export const getBrandAPI = () => getAPI("/brand");
 export const createBrandAPI = (d) => mutationAPI("/brand", "post", d);
 export const updateBrandAPI = (d) => mutationAPI(`/brand/${getID(d)}`, "put", d);
 export const deleteBrandAPI = (d) => mutationAPI(`/brand/${getID(d)}`, "delete");
 
+// CART
 export const getCartAPI = () => getAPI("/cart");
 export const createCartAPI = (d) => mutationAPI("/cart", "post", d);
 export const updateCartAPI = (d) => mutationAPI(`/cart/${getID(d)}`, "put", d);
 export const deleteCartAPI = (d) => mutationAPI(`/cart/${getID(d)}`, "delete");
 
+// WISHLIST
 export const getWishlistAPI = () => getAPI("/wishlist");
 export const createWishlistAPI = (d) => mutationAPI("/wishlist", "post", d);
 export const updateWishlistAPI = (d) => mutationAPI(`/wishlist/${getID(d)}`, "put", d);
 export const deleteWishlistAPI = (d) => mutationAPI(`/wishlist/${getID(d)}`, "delete");
 
+// CHECKOUT
 export const getCheckoutAPI = () => getAPI("/checkout");
 export const createCheckoutAPI = (d) => mutationAPI("/checkout", "post", d);
 export const updateCheckoutAPI = (d) => mutationAPI(`/checkout/${getID(d)}`, "put", d);
 export const deleteCheckoutAPI = (d) => mutationAPI(`/checkout/${getID(d)}`, "delete");
 
+// CONTACT
 export const getContactAPI = () => getAPI("/contact");
 export const createContactAPI = (d) => mutationAPI("/contact", "post", d);
 export const updateContactAPI = (d) => mutationAPI(`/contact/${getID(d)}`, "put", d);
 export const deleteContactAPI = (d) => mutationAPI(`/contact/${getID(d)}`, "delete");
 
+// NEWSLETTER
 export const getNewslatterAPI = () => getAPI("/newslatter");
 export const createNewslatterAPI = (d) => mutationAPI("/newslatter", "post", d);
 export const updateNewslatterAPI = (d) => mutationAPI(`/newslatter/${getID(d)}`, "put", d);
