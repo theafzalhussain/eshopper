@@ -66,7 +66,7 @@ const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { t
 
 // --- 3. SPECIAL ROUTES ---
 
-// Login
+// Login logic
 app.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ username: req.body.username });
@@ -75,18 +75,27 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// Update User (Fixed 500 Error)
+// Admin Stats
+app.get('/admin/stats', async (req, res) => {
+    try {
+        const users = await User.countDocuments();
+        const products = await Product.countDocuments();
+        res.send({ totalUsers: users, totalProducts: products });
+    } catch (e) { res.status(500).json(e); }
+});
+
+// User Update Fix (Merging Updated Logic)
 app.put('/user/:id', upload, async (req, res) => {
     try {
         let upData = { ...req.body };
         if (req.files && req.files.pic) upData.pic = req.files.pic[0].path;
-        
-        // Only hash if password is provided and it's a new password
-        if (req.body.password && req.body.password.length < 25) {
+
+        // Hash password only if it's new (length check ensures it's not already a hash)
+        if (req.body.password && req.body.password.length < 20) {
             const salt = await bcrypt.genSalt(10);
             upData.password = await bcrypt.hash(req.body.password, salt);
         } else {
-            delete upData.password;
+            delete upData.password; 
         }
 
         const data = await User.findByIdAndUpdate(req.params.id, upData, { new: true });
@@ -94,7 +103,7 @@ app.put('/user/:id', upload, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Update Product
+// Product Update Fix (Merging Updated Logic)
 app.put('/product/:id', upload, async (req, res) => {
     try {
         let upData = { ...req.body };
@@ -109,7 +118,7 @@ app.put('/product/:id', upload, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- 4. UNIVERSAL HANDLER (Now includes PUT) ---
+// --- 4. UNIVERSAL HANDLER (GET, POST, PUT, DELETE) ---
 const setup = (path, Model) => {
     app.get(path, async (req, res) => res.send(await Model.find().sort({ _id: -1 })));
     
@@ -126,12 +135,14 @@ const setup = (path, Model) => {
     });
 
     app.delete(`${path}/:id`, async (req, res) => { 
-        await Model.findByIdAndDelete(req.params.id); 
-        res.send({ result: "Done" }); 
+        try {
+            await Model.findByIdAndDelete(req.params.id); 
+            res.send({ result: "Done" }); 
+        } catch (e) { res.status(400).json(e); }
     });
 };
 
-// Initialize All Routes
+// --- 5. INITIALIZE ALL ROUTES ---
 setup('/maincategory', mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts)));
 setup('/subcategory', mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts)));
 setup('/brand', mongoose.model('Brand', new mongoose.Schema({ name: String }, opts)));
@@ -140,6 +151,7 @@ setup('/wishlist', mongoose.model('Wishlist', new mongoose.Schema({ userid: Stri
 setup('/checkout', Checkout);
 setup('/contact', Contact);
 setup('/newslatter', Newslatter);
+// Base routes for POST/GET
 setup('/user', User);
 setup('/product', Product);
 
