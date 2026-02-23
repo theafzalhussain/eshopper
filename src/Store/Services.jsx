@@ -1,6 +1,14 @@
 import { BASE_URL } from "../constants";
 
-// --- 1. HELPER FUNCTIONS (Robust Logic to prevent crashes) ---
+// --- 1. UTILITY HELPERS ---
+
+// Helper to extract ID correctly from either plain Object or FormData
+const getID = (data) => {
+    if (data instanceof FormData) return data.get("id");
+    return data.id || data._id;
+};
+
+// --- 2. CORE API HANDLERS (With HTML-Crash Protection) ---
 
 async function getAPI(endpoint) {
     let response = await fetch(`${BASE_URL}${endpoint}`);
@@ -9,15 +17,15 @@ async function getAPI(endpoint) {
     if (contentType && contentType.includes("application/json")) {
         return await response.json();
     }
-    // Agar server HTML bhej raha hai (crash hone par), toh error throw karein taaki frontend handle kar sake
-    throw new Error("Server Error: Expected JSON but received HTML. Backend might be warming up.");
+    // Prevent "Unexpected token <" by catching HTML errors early
+    throw new Error("Backend is starting up... Please wait 10 seconds and refresh.");
 }
 
 async function mutationAPI(endpoint, method, data) {
     let isFormData = data instanceof FormData;
     let response = await fetch(`${BASE_URL}${endpoint}`, {
         method: method,
-        // FormData bhejte waqt headers browser khud handle karta hai
+        // FormData bhejte waqt headers empty hona chahiye, browser boundary khud set karta hai
         headers: isFormData ? {} : { "content-type": "application/json" },
         body: isFormData ? data : JSON.stringify(data)
     });
@@ -25,83 +33,76 @@ async function mutationAPI(endpoint, method, data) {
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
         const result = await response.json();
-        if (!response.ok) throw result; // Backend se aane wali error messages (400, 401)
+        if (!response.ok) throw result; // Error cases from backend (400, 401, 500)
         return result;
     } else {
-        // "Unexpected token <" wali error ko yahan roka jata hai
         const errorText = await response.text();
-        throw new Error("Backend Logic Error: " + errorText.substring(0, 100));
+        throw new Error("Server Error: Received HTML instead of JSON. Details: " + errorText.substring(0, 50));
     }
 }
 
-// --- 2. AUTHENTICATION ---
+// --- 3. EXPORTED API FUNCTIONS ---
+
+// AUTHENTICATION
 export const loginAPI = (data) => mutationAPI("/login", "post", data);
 export const forgetPasswordAPI = (data) => mutationAPI("/user/forget-password", "post", data);
 
-// --- 3. MAINCATEGORY (CRUD) ---
+// MAINCATEGORY
 export const createMaincategoryAPI = (data) => mutationAPI("/maincategory", "post", data);
 export const getMaincategoryAPI = () => getAPI("/maincategory");
-export const updateMaincategoryAPI = (data) => mutationAPI(`/maincategory/${data.id}`, "put", data);
-export const deleteMaincategoryAPI = (data) => mutationAPI(`/maincategory/${data.id}`, "delete");
+export const updateMaincategoryAPI = (data) => mutationAPI(`/maincategory/${getID(data)}`, "put", data);
+export const deleteMaincategoryAPI = (data) => mutationAPI(`/maincategory/${getID(data)}`, "delete");
 
-// --- 4. SUBCATEGORY (CRUD) ---
+// SUBCATEGORY
 export const createSubcategoryAPI = (data) => mutationAPI("/subcategory", "post", data);
 export const getSubcategoryAPI = () => getAPI("/subcategory");
-export const updateSubcategoryAPI = (data) => mutationAPI(`/subcategory/${data.id}`, "put", data);
-export const deleteSubcategoryAPI = (data) => mutationAPI(`/subcategory/${data.id}`, "delete");
+export const updateSubcategoryAPI = (data) => mutationAPI(`/subcategory/${getID(data)}`, "put", data);
+export const deleteSubcategoryAPI = (data) => mutationAPI(`/subcategory/${getID(data)}`, "delete");
 
-// --- 5. BRAND (CRUD) ---
+// BRAND
 export const createBrandAPI = (data) => mutationAPI("/brand", "post", data);
 export const getBrandAPI = () => getAPI("/brand");
-export const updateBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "put", data);
-export const deleteBrandAPI = (data) => mutationAPI(`/brand/${data.id}`, "delete");
+export const updateBrandAPI = (data) => mutationAPI(`/brand/${getID(data)}`, "put", data);
+export const deleteBrandAPI = (data) => mutationAPI(`/brand/${getID(data)}`, "delete");
 
-// --- 6. PRODUCT (Handling FormData for Image Uploads) ---
+// PRODUCT (Handling Images & String IDs)
 export const createProductAPI = (data) => mutationAPI("/product", "post", data); 
 export const getProductAPI = () => getAPI("/product");
-export const updateProductAPI = (data) => {
-    // 🎯 FormData se ID nikalne ka sahi tareeka taaki 'undefined' 404 error na aaye
-    const id = data instanceof FormData ? data.get("id") : data.id;
-    return mutationAPI(`/product/${id}`, "put", data);
-}
-export const deleteProductAPI = (data) => mutationAPI(`/product/${data.id}`, "delete");
+export const updateProductAPI = (data) => mutationAPI(`/product/${getID(data)}`, "put", data);
+export const deleteProductAPI = (data) => mutationAPI(`/product/${getID(data)}`, "delete");
 
-// --- 7. USER (Profile & Management) ---
+// USER (Profile & Settings)
 export const getUserAPI = () => getAPI("/user");
 export const createUserAPI = (data) => mutationAPI("/user", "post", data);
-export const updateUserAPI = (data) => {
-    // 🎯 Profile Pic update logic with proper ID extraction
-    const id = data instanceof FormData ? data.get("id") : data.id;
-    return mutationAPI(`/user/${id}`, "put", data);
-}
-export const deleteUserAPI = (data) => mutationAPI(`/user/${data.id}`, "delete");
+export const updateUserAPI = (data) => mutationAPI(`/user/${getID(data)}`, "put", data);
+export const deleteUserAPI = (data) => mutationAPI(`/user/${getID(data)}`, "delete");
 
-// --- 8. CART ---
+// CART
 export const createCartAPI = (data) => mutationAPI("/cart", "post", data);
-export const getCartAPI = () => getAPI("/getcart"); // User specific carts check backend
-export const updateCartAPI = (data) => mutationAPI(`/cart/${data.id}`, "put", data);
-export const deleteCartAPI = (data) => mutationAPI(`/cart/${data.id}`, "delete");
+export const getCartAPI = () => getAPI("/cart"); // Adjust to /getcart/${uid} if backend changes
+export const updateCartAPI = (data) => mutationAPI(`/cart/${getID(data)}`, "put", data);
+export const deleteCartAPI = (data) => mutationAPI(`/cart/${getID(data)}`, "delete");
 
-// --- 9. WISHLIST ---
+// WISHLIST
 export const createWishlistAPI = (data) => mutationAPI("/wishlist", "post", data);
 export const getWishlistAPI = () => getAPI("/wishlist");
-export const updateWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "put", data);
-export const deleteWishlistAPI = (data) => mutationAPI(`/wishlist/${data.id}`, "delete");
+export const updateWishlistAPI = (data) => mutationAPI(`/wishlist/${getID(data)}`, "put", data);
+export const deleteWishlistAPI = (data) => mutationAPI(`/wishlist/${getID(data)}`, "delete");
 
-// --- 10. CHECKOUT / ORDERS ---
+// CHECKOUT / ORDERS
 export const createCheckoutAPI = (data) => mutationAPI("/checkout", "post", data);
 export const getCheckoutAPI = () => getAPI("/checkout");
-export const updateCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "put", data);
-export const deleteCheckoutAPI = (data) => mutationAPI(`/checkout/${data.id}`, "delete");
+export const updateCheckoutAPI = (data) => mutationAPI(`/checkout/${getID(data)}`, "put", data);
+export const deleteCheckoutAPI = (data) => mutationAPI(`/checkout/${getID(data)}`, "delete");
 
-// --- 11. CONTACT INQUIRIES ---
+// CONTACT INQUIRIES
 export const createContactAPI = (data) => mutationAPI("/contact", "post", data);
 export const getContactAPI = () => getAPI("/contact");
-export const updateContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "put", data);
-export const deleteContactAPI = (data) => mutationAPI(`/contact/${data.id}`, "delete");
+export const updateContactAPI = (data) => mutationAPI(`/contact/${getID(data)}`, "put", data);
+export const deleteContactAPI = (data) => mutationAPI(`/contact/${getID(data)}`, "delete");
 
-// --- 12. NEWSLATTER ---
+// NEWSLATTER
 export const createNewslatterAPI = (data) => mutationAPI("/newslatter", "post", data);
 export const getNewslatterAPI = () => getAPI("/newslatter");
-export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "put", data);
-export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${data.id}`, "delete");
+export const updateNewslatterAPI = (data) => mutationAPI(`/newslatter/${getID(data)}`, "put", data);
+export const deleteNewslatterAPI = (data) => mutationAPI(`/newslatter/${getID(data)}`, "delete");
