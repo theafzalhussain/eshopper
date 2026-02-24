@@ -10,41 +10,52 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ CORS FIX: Vercel और Localhost दोनों के लिए
-app.use(cors({ origin: true, credentials: true }));
+const allowedOrigins = ['https://eshopperr.vercel.app', 'http://localhost:3000'];
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS identity blocked'));
+        }
+    },
+    credentials: true
+}));
+
 app.use(express.json());
 
-// --- DB Connection ---
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
 
-// --- Cloudinary Config ---
-cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '551368853328319', api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' });
+cloudinary.config({ 
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dtfvoxw1p', 
+    api_key: process.env.CLOUDINARY_API_KEY || '551368853328319', 
+    api_secret: process.env.CLOUDINARY_API_SECRET || '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' 
+});
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
-const upload = multer({ storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
+const upload = multer({ storage }).fields([
+    { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, 
+    { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, 
+    { name: 'pic4', maxCount: 1 }
+]);
 
-// ✅ BREVO HTTP API SYSTEM (Securely using Env Variable)
 const sendMail = (to, otp) => {
     return new Promise((resolve, reject) => {
-        // यहाँ हमने सीधा की (Key) नहीं लिखी, बल्कि process.env का इस्तेमाल किया है
-        const BREVO_KEY = process.env.BREVO_API_KEY; 
+        const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null; 
         
         if (!BREVO_KEY) {
-            console.error("❌ BREVO_API_KEY is missing in Render Variables");
-            return reject(new Error("API Key Missing"));
+            return reject(new Error("API Key Missing in Render Env"));
         }
 
         const payload = JSON.stringify({
-            sender: { name: "Eshopper Security", email: "theafzalhussain786@gmail.com" },
+            sender: { name: "eshopper", email: "theafzalhussain786@gmail.com" },
             to: [{ email: to }],
-            subject: "🔐 OTP Verification - Eshopper",
-            htmlContent: `
-                <div style="font-family:Arial;padding:20px;text-align:center;background:#f4f4f4;border-radius:10px;">
-                    <h2 style="color:#17a2b8;">Eshopper Verification</h2>
-                    <p>Your unique security code is:</p>
-                    <h1 style="letter-spacing:10px;color:#333;background:#fff;padding:15px;display:inline-block;border-radius:5px;">${otp}</h1>
-                    <p>This code is valid for 10 minutes only.</p>
-                </div>`
+            subject: "🔐 Security Verification - Eshopper",
+            htmlContent: `<div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;border-radius:10px;">
+                <h2 style="color:#333;">Verification Code</h2>
+                <h1 style="letter-spacing:10px;color:#17a2b8;background:#fff;padding:15px;display:inline-block;border-radius:5px;">${otp}</h1>
+                <p style="color:#666;">This code is valid for 10 minutes only.</p>
+            </div>`
         });
 
         const options = {
@@ -59,16 +70,23 @@ const sendMail = (to, otp) => {
         };
 
         const req = https.request(options, (res) => {
-            if (res.statusCode === 201) resolve(true);
-            else reject(new Error(`Brevo Error: ${res.statusCode}`));
+            let resData = '';
+            res.on('data', d => resData += d);
+            res.on('end', () => {
+                if (res.statusCode === 201) resolve(true);
+                else {
+                    console.error("❌ Brevo API Rejection:", resData);
+                    reject(new Error(resData));
+                }
+            });
         });
+
         req.on('error', e => reject(e));
         req.write(payload);
         req.end();
     });
 };
 
-// --- Models (Synced with your project) ---
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
@@ -84,7 +102,6 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- Auth Routes ---
 app.post('/api/send-otp', async (req, res) => {
     try {
         const { email, type } = req.body;
@@ -92,14 +109,20 @@ app.post('/api/send-otp', async (req, res) => {
         const user = await User.findOne({ $or: [{ email }, { username: email }] });
 
         if (type === 'forget' && !user) return res.status(404).json({ message: "User not found" });
-        if (type === 'signup' && user) return res.status(400).json({ message: "Email registered" });
+        if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
 
-        if (user) { user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save(); }
-        else { await OTPRecord.findOneAndUpdate({ email }, { otp }, { upsert: true }); }
+        if (user) {
+            user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
+        } else {
+            await OTPRecord.findOneAndUpdate({ email }, { otp }, { upsert: true });
+        }
 
-        sendMail(email, otp).catch(e => console.error("Mail failed background"));
-        res.json({ result: "Done", otp }); 
-    } catch (e) { res.status(500).json({ error: e.message }); }
+        await sendMail(email, otp);
+        res.json({ result: "Done", message: "OTP sent successfully" });
+    } catch (e) { 
+        console.error("❌ Email Error:", e.message);
+        res.status(500).json({ error: "Failed to send OTP. Please try again.", details: e.message }); 
+    }
 });
 
 app.post('/api/reset-password', async (req, res) => {
@@ -121,7 +144,6 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// --- Dynamic CRUD Handler ---
 const handle = (path, Model, useUpload = false) => {
     app.get(path, async (req, res) => res.json(await Model.find().sort({_id:-1})));
     app.get(`${path}/:id`, async (req, res) => res.json(await Model.findById(req.params.id)));
@@ -129,25 +151,43 @@ const handle = (path, Model, useUpload = false) => {
         try {
             if (path === '/user' && req.body.otp) {
                 const record = await OTPRecord.findOne({ email: req.body.email, otp: req.body.otp });
-                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "OTP Error" });
+                if (!record) return res.status(400).json({ message: "Invalid OTP" });
                 await OTPRecord.deleteOne({ email: req.body.email });
             }
             if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
-            let d = new Model(req.body); await d.save(); res.status(201).json(d);
+            let d = new Model(req.body);
+            if (req.files) {
+                if (req.files.pic) d.pic = req.files.pic[0].path;
+                if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
+                if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
+                if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
+                if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
+            }
+            await d.save(); res.status(201).json(d);
         } catch (e) { res.status(400).json(e); }
     });
     app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             let upData = { ...req.body };
+            if (req.files) { if (req.files.pic) upData.pic = req.files.pic[0].path; if (req.files.pic1) upData.pic1 = req.files.pic1[0].path; }
+            if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
+                const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
+            } else if (path === '/user') { delete upData.password; }
             const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d);
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
 };
 
-handle('/user', User, true); handle('/product', Product, true); handle('/maincategory', Maincategory);
-handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Cart);
-handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
+handle('/user', User, true); 
+handle('/product', Product, true); 
+handle('/maincategory', Maincategory);
+handle('/subcategory', Subcategory); 
+handle('/brand', Brand); 
+handle('/cart', Cart);
+handle('/wishlist', Wishlist); 
+handle('/checkout', Checkout); 
+handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
 const PORT = process.env.PORT || 10000;
