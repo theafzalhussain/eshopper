@@ -5,28 +5,24 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs'); 
-const nodemailer = require('nodemailer');
+const https = require('https'); // ✅ Built-in Node.js — no install needed
 require('dotenv').config();
 
 const app = express();
 
-// ✅ CORS FIX: Allowing BOTH Vercel and Localhost
-// ⚠️ CHECK RENDER LOGS FOR: "⚠️ CORS Blocked Origin: https://..."
-// Copy that URL and add it here in allowedOrigins array
+// ✅ CORS FIX
 const allowedOrigins = [
-  'https://eshopperr.vercel.app', // Production Link
-  'http://localhost:3000',         // Your Local Computer Link
-  // 'https://YOUR-OTHER-DOMAIN.vercel.app' // ADD HERE if needed
+  'https://eshopperr.vercel.app',
+  'http://localhost:3000',
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            console.warn("⚠️ CORS Blocked Origin:", origin); // CHECK THIS IN RENDER LOGS
+            console.warn("⚠️ CORS Blocked Origin:", origin);
             callback(new Error('CORS Error: Identity not allowed'));
         }
     },
@@ -48,45 +44,79 @@ const upload = multer({ storage }).fields([
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// ✅ MAIL FIX: Gmail SMTP Render par ETIMEDOUT deta hai — Brevo use karo
+// ✅ MAIL FIX: Brevo HTTP API (port 443) — SMTP Render par block hai, HTTP nahi
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// STEPS TO SETUP BREVO (FREE — 300 emails/day):
-// 1. https://app.brevo.com par free account banao (Gmail se login kar sakte ho)
-// 2. Top-right menu > SMTP & API click karo
-// 3. "SMTP" tab mein jaao
-// 4. "Generate a new SMTP key" click karo
-// 5. Woh key copy karo aur:
-//    - Render Dashboard > Environment Variables mein jaao
-//    - BREVO_USER = tumhara email (jo Brevo par register kiya)
-//    - BREVO_PASS = woh SMTP key
+// Render par SMTP (port 465/587) block hota hai — isliye ETIMEDOUT aata tha
+// HTTP API port 443 use karta hai — yeh kabhi block nahi hota
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STEPS TO GET BREVO API KEY:
+// 1. https://app.brevo.com par jaao
+// 2. Top-right corner mein apna naam > "SMTP & API" click karo
+// 3. "API Keys" tab mein jaao
+// 4. "Generate a new API key" click karo — name: "eshopper"
+// 5. Woh key copy karo
+// 6. Render Dashboard > Environment Variables mein add karo:
+//    BREVO_API_KEY = xkeysib-xxxxxxxxxxxxxxxx...
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const BREVO_USER = process.env.BREVO_USER || 'theafzalhussain786@gmail.com';
-const BREVO_PASS = process.env.BREVO_PASS || 'PASTE_YOUR_BREVO_SMTP_KEY_HERE';
+const sendMail = (to, otp) => {
+    return new Promise((resolve, reject) => {
+        const BREVO_API_KEY = process.env.BREVO_API_KEY || 'YOUR_BREVO_API_KEY_HERE';
+        
+        const payload = JSON.stringify({
+            sender: { name: "Eshopper Luxury", email: "theafzalhussain786@gmail.com" },
+            to: [{ email: to }],
+            subject: "🔐 Verification Code - Eshopper",
+            htmlContent: `<div style="font-family:Arial;padding:20px;background:#f5f5f5;text-align:center">
+                <h2 style="color:#333">Your OTP Verification Code</h2>
+                <h1 style="color:#e91e63;letter-spacing:8px;font-size:40px">${otp}</h1>
+                <p style="color:#666">This code expires in 10 minutes.</p>
+                <p style="color:#999;font-size:12px">If you didn't request this, ignore this email.</p>
+            </div>`
+        });
 
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com', // ✅ Brevo SMTP — 100% works on Render
-    port: 587,
-    secure: false,
-    auth: {
-        user: BREVO_USER,
-        pass: BREVO_PASS
-    },
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 45000
-});
+        const options = {
+            hostname: 'api.brevo.com',
+            path: '/v3/smtp/email',
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': BREVO_API_KEY,
+                'content-type': 'application/json',
+                'content-length': Buffer.byteLength(payload)
+            }
+        };
 
-// ✅ Verify mail connection on startup
-transporter.verify((err, success) => {
-    if (err) console.error("❌ Mail Config Error:", err.message);
-    else console.log("✅ Mail Server Ready");
-});
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                if (res.statusCode === 201) {
+                    console.log("✅ OTP Mail sent to:", to);
+                    resolve(true);
+                } else {
+                    console.error("❌ Brevo API Error:", res.statusCode, data);
+                    reject(new Error(`Brevo API: ${res.statusCode} - ${data}`));
+                }
+            });
+        });
+
+        req.on('error', (err) => {
+            console.error("❌ Mail Request Error:", err.message);
+            reject(err);
+        });
+
+        req.write(payload);
+        req.end();
+    });
+};
+
+console.log("✅ Mail System Ready (Brevo HTTP API)");
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// --- 3. ALL MODELS (Home, Shop, Admin सब सुरक्षित हैं) ---
+// --- 3. ALL MODELS ---
 const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
 const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
@@ -99,7 +129,7 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- 4. SECURE AUTH & OTP ROUTES ---
+// --- 4. AUTH & OTP ROUTES ---
 app.post('/api/send-otp', async (req, res) => {
     try {
         const { email, type } = req.body;
@@ -109,28 +139,15 @@ app.post('/api/send-otp', async (req, res) => {
         if (type === 'forget' && !user) return res.status(404).json({ message: "Identity not found" });
         if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
 
-        // Save OTP first so user gets fast response
+        // Save OTP first
         if (type === 'forget') {
             user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
         } else {
             await OTPRecord.findOneAndUpdate({ email }, { otp }, { upsert: true });
         }
 
-        // ✅ Send mail async — non-blocking
-        transporter.sendMail({
-            from: '"Eshopper Luxury" <theafzalhussain786@gmail.com>',
-            to: email,
-            subject: '🔐 Verification Code - Eshopper',
-            html: `<div style="font-family:Arial;padding:20px;background:#f5f5f5">
-                     <h2 style="color:#333">Your OTP Verification Code</h2>
-                     <h1 style="color:#e91e63;letter-spacing:8px">${otp}</h1>
-                     <p>This code expires in 10 minutes.</p>
-                   </div>`
-        }).then(() => {
-            console.log("✅ OTP Mail sent to:", email);
-        }).catch(err => {
-            console.error("❌ Mail Error:", err.message, "| Code:", err.code);
-        });
+        // ✅ Send via Brevo HTTP API — non-blocking
+        sendMail(email, otp).catch(err => console.error("Mail failed:", err.message));
 
         res.json({ result: "Done", otp }); 
     } catch (e) { res.status(500).json({ error: e.message }); }
