@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom' // 🔥 Link added here
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators'
 import { getMaincategory } from '../Store/ActionCreaters/MaincategoryActionCreators'
 import { getBrand } from '../Store/ActionCreaters/BrandActionCreators'
 import { addCart, getCart } from '../Store/ActionCreaters/CartActionCreators'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Filter, ShoppingCart, ChevronDown, Star, X } from 'lucide-react'
+import { Search, Filter, ShoppingCart, Star } from 'lucide-react' // 🛠 Removed unused ChevronDown and X
 
 export default function Shop() {
     const { maincat } = useParams()
@@ -26,10 +26,11 @@ export default function Shop() {
     const [selectedSize, setSelectedSize] = useState("All")
     const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 })
     const [sortOrder, setSortOrder] = useState("newest")
-    const [localSizes, setLocalSizes] = useState({}) // Har card ke liye alag size
+    const [localSizes, setLocalSizes] = useState({}) 
 
     useEffect(() => {
         dispatch(getProduct()); dispatch(getMaincategory()); dispatch(getBrand()); dispatch(getCart());
+        window.scrollTo(0, 0);
     }, [dispatch])
 
     useEffect(() => {
@@ -60,7 +61,7 @@ export default function Shop() {
             navigate("/login")
             return
         }
-        const sizeToBuy = localSizes[p.id] || p.size.split(',')[0] // Default first size if not selected
+        const sizeToBuy = localSizes[p.id] || p.size.split(',')[0]
         
         const existing = cart.find(item => item.productid === p.id && item.userid === localStorage.getItem("userid"))
         if (existing) {
@@ -87,13 +88,11 @@ export default function Shop() {
                                 <Filter size={20} className="mr-2 text-info" /> Refining Tools
                             </h4>
 
-                            {/* Search */}
                             <div className="search-box-lux mb-4">
                                 <Search size={18} className="search-icon" />
                                 <input type="text" placeholder="Search trends..." value={search} onChange={(e) => setSearch(e.target.value)} />
                             </div>
 
-                            {/* Categories */}
                             <div className="filter-group mb-4">
                                 <label className="filter-label">COLLECTIONS</label>
                                 <select className="lux-select" value={selectedCat} onChange={e => setSelectedCat(e.target.value)}>
@@ -102,7 +101,6 @@ export default function Shop() {
                                 </select>
                             </div>
 
-                            {/* Size Filter */}
                             <div className="filter-group mb-4">
                                 <label className="filter-label">SELECT SIZE</label>
                                 <div className="size-chip-grid">
@@ -114,7 +112,6 @@ export default function Shop() {
                                 </div>
                             </div>
 
-                            {/* Brand Filter */}
                             <div className="filter-group mb-4">
                                 <label className="filter-label">DESIGNER LABELS</label>
                                 <select className="lux-select" value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)}>
@@ -123,7 +120,6 @@ export default function Shop() {
                                 </select>
                             </div>
 
-                            {/* Price Range */}
                             <div className="filter-group">
                                 <label className="filter-label">PRICE RANGE (₹)</label>
                                 <div className="d-flex gap-2">
@@ -167,7 +163,6 @@ export default function Shop() {
                                                 </Link>
                                                 {p.discount > 0 && <div className="lux-badge">-{p.discount}%</div>}
                                                 
-                                                {/* Hover Quick Actions */}
                                                 <div className="card-hover-overlay p-3">
                                                     <div className="size-selector-mini mb-2">
                                                         {p.size.split(',').map(s => (
@@ -214,7 +209,6 @@ export default function Shop() {
                 .letter-spacing-1 { letter-spacing: 1px; }
                 .no-underline { text-decoration: none !important; }
                 
-                /* Sidebar Styling */
                 .search-box-lux { position: relative; }
                 .search-box-lux input { width: 100%; border: 1px solid #eee; padding: 12px 15px 12px 40px; border-radius: 15px; outline: none; background: #f9f9f9; }
                 .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #aaa; }
@@ -228,7 +222,6 @@ export default function Shop() {
                 
                 .sort-minimal { border: none; background: transparent; font-weight: 800; outline: none; cursor: pointer; }
 
-                /* Card Styling */
                 .img-container-lux { aspect-ratio: 10 / 13; background: #f2f2f2; }
                 .transition-slow { transition: 0.6s all cubic-bezier(0.165, 0.84, 0.44, 1); }
                 .product-card-premium:hover .transition-slow { transform: scale(1.1); }
