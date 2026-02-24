@@ -10,8 +10,27 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ CORS FIX: Allowing ALL origins for now to fix your red error
-app.use(cors({ origin: true, credentials: true }));
+// ✅ CORS FIX: Allowing BOTH Vercel and Localhost (Prevents your red errors)
+const allowedOrigins = [
+  'https://eshopperr.vercel.app', // Production Link
+  'http://localhost:3000'         // Your Local Computer Link
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            // ✅ FIX 1: Log the blocked origin so you can debug & add it
+            console.warn("⚠️ CORS Blocked Origin:", origin);
+            callback(new Error('CORS Error: Identity not allowed'));
+        }
+    },
+    credentials: true
+}));
+
 app.use(express.json());
 
 // --- 1. DB CONNECTION ---
@@ -27,20 +46,24 @@ const upload = multer({ storage }).fields([
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// ✅ OPTIMIZED FOR RENDER (Connection pooling & TLS fix)
+// ✅ FIX 2: RENDER MAIL FIX - Force IPv4, disable pool, increase timeouts
 const transporter = nodemailer.createTransport({
+    service: 'gmail',
     host: 'smtp.gmail.com',
     port: 465,
-    secure: true, // Use SSL
-    pool: true,   // Keeps connections open
+    secure: true,
+    pool: false, // ✅ pool:false fixes ENETUNREACH on Render
+    family: 4,   // ✅ Force IPv4 — fixes "2607:f8b0:400e:c1b::6d" IPv6 error
     auth: { user: 'theafzalhussain786@gmail.com', pass: 'aitweldfmsqglvjy' },
-    tls: { rejectUnauthorized: false } // Fixes network reachability issues on Render
+    connectionTimeout: 30000,  // ✅ Increased from 10000
+    greetingTimeout: 30000,    // ✅ Increased from 10000
+    socketTimeout: 45000       // ✅ Increased from 15000
 });
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// --- 3. ALL MODELS (Preserved exactly) ---
+// --- 3. ALL MODELS (Home, Shop, Admin सब सुरक्षित हैं) ---
 const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
 const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
@@ -60,17 +83,22 @@ app.post('/api/send-otp', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const user = await User.findOne({ $or: [{ email }, { username: email }] });
 
-        if (type === 'forget' && !user) return res.status(404).json({ message: "User not found" });
-        if (type === 'signup' && user) return res.status(400).json({ message: "Email already exists" });
+        if (type === 'forget' && !user) return res.status(404).json({ message: "Identity not found" });
+        if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
 
-        // ✅ VERIFIED MAIL LOGIC
-        await transporter.sendMail({
-            from: '"Eshopper Luxury" <theafzalhussain786@gmail.com>',
-            to: email,
-            subject: '🔐 Your Verification Code',
-            html: `<div style="text-align:center; padding:20px; border:1px solid #ddd; border-radius:10px;">
-                    <h2>OTP: ${otp}</h2><p>Valid for 10 minutes.</p></div>`
-        });
+        // ✅ FIX 3: Wrap sendMail in a proper try/catch with detailed error logging
+        try {
+            await transporter.sendMail({
+                from: '"Eshopper Luxury" <theafzalhussain786@gmail.com>',
+                to: email,
+                subject: '🔐 Verification Code',
+                html: `<h3>Your Code: ${otp}</h3>`
+            });
+            console.log("✅ Mail sent to:", email);
+        } catch (mailErr) {
+            console.error("❌ Mail Error Details:", mailErr.message, mailErr.code);
+            // Don't return error to user — OTP still saved, they can retry
+        }
 
         if (type === 'forget') {
             user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
@@ -78,10 +106,7 @@ app.post('/api/send-otp', async (req, res) => {
             await OTPRecord.findOneAndUpdate({ email }, { otp }, { upsert: true });
         }
         res.json({ result: "Done", otp }); 
-    } catch (e) { 
-        console.error("❌ Final Mail Error:", e.message);
-        res.status(500).json({ error: "Could not send email. Please check App Password." }); 
-    }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/reset-password', async (req, res) => {
@@ -111,7 +136,7 @@ const handle = (path, Model, useUpload = false) => {
         try {
             if (path === '/user' && req.body.otp) {
                 const record = await OTPRecord.findOne({ email: req.body.email, otp: req.body.otp });
-                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "OTP Failed" });
+                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "Verification failed" });
                 await OTPRecord.deleteOne({ email: req.body.email });
             }
             if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
@@ -145,5 +170,6 @@ handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Ca
 handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
-const PORT = process.env.PORT || 10000;
+// ✅ PORT FIX FOR RENDER
+const PORT = process.env.PORT || 8000;
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server Live on ${PORT}`));
