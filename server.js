@@ -12,11 +12,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- 1. DB CONNECTION ---
+// --- 1. DATABASE CONNECTION ---
 const MONGODB_URI = "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
 
-// --- 2. CONFIGURATIONS ---
+// --- 2. CONFIGURATIONS (Cloudinary & Mailer) ---
 cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '551368853328319', api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' });
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
 const upload = multer({ storage: storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
@@ -41,56 +41,9 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- 4. EXPLICIT ROUTES ---
+// --- 4. AUTH & OTP ROUTES ---
 
-app.get('/', (req, res) => res.send("🚀 Eshopper API Operational!"));
-
-// OTP SENDER (Signup & Forget)
-app.post('/api/send-otp', async (req, res) => {
-    try {
-        const { email, type } = req.body;
-        const user = await User.findOne({ $or: [{ email: email }, { username: email }] });
-
-        if (type === 'forget' && !user) return res.status(404).json({ message: "Identity not found" });
-        if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
-
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // Save OTP to DB if user exists (Forget case)
-        if (user) {
-            user.otp = otp;
-            user.otpExpires = new Date(Date.now() + 10 * 60000);
-            await user.save();
-        }
-
-        await transporter.sendMail({
-            from: '"Eshopper Security" <theafzalhussain786@gmail.com>',
-            to: email,
-            subject: '🔐 Verification Code',
-            html: `<div style="font-family:Arial; text-align:center; padding:20px; border:1px solid #eee;">
-                    <h2 style="color:#17a2b8;">Account Security</h2>
-                    <p>Your 6-digit OTP is:</p>
-                    <h1 style="letter-spacing:10px;">${otp}</h1>
-                    <p>This code will expire in 10 minutes.</p>
-                   </div>`
-        });
-        res.json({ result: "Done", otp }); 
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// PASSWORD RESET
-app.post('/api/reset-password', async (req, res) => {
-    try {
-        const { username, password, otp } = req.body;
-        const user = await User.findOne({ $or: [{ email: username }, { username: username }] });
-        if (user && user.otp === otp && user.otpExpires > Date.now()) {
-            const salt = await bcrypt.genSalt(10);
-            user.password = await bcrypt.hash(password, salt);
-            user.otp = undefined; await user.save();
-            res.json({ result: "Done" });
-        } else res.status(400).send("Invalid/Expired OTP");
-    } catch (e) { res.status(500).json(e); }
-});
+app.get('/', (req, res) => res.send("🚀 Eshopper Master API is Ready!"));
 
 // LOGIN
 app.post('/login', async (req, res) => {
@@ -101,7 +54,47 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// --- 5. DYNAMIC CRUD HANDLER (Fixes ALL 404s) ---
+// OTP SYSTEM (Signup & Forget Password Fix)
+app.post('/api/send-otp', async (req, res) => {
+    try {
+        const { email, type } = req.body;
+        const userExists = await User.findOne({ email });
+
+        if (type === 'forget' && !userExists) return res.status(404).json({ message: "Identity not found" });
+        if (type === 'signup' && userExists) return res.status(400).json({ message: "Identity already registered" });
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Agar user pehle se hai toh OTP DB mein save karo
+        if (userExists) {
+            userExists.otp = otp;
+            userExists.otpExpires = new Date(Date.now() + 10 * 60000);
+            await userExists.save();
+        }
+
+        await transporter.sendMail({
+            from: 'Eshopper Security',
+            to: email,
+            subject: '🔐 Verification Code',
+            html: `<h3>Hello, Your Eshopper OTP is: <b style="color:#17a2b8; font-size:24px;">${otp}</b></h3>`
+        });
+        res.json({ result: "Done", otp }); 
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// RESET PASSWORD
+app.post('/api/reset-password', async (req, res) => {
+    try {
+        const { username, password, otp } = req.body;
+        const user = await User.findOne({ $or: [{ email: username }, { username: username }] });
+        if (user && user.otp === otp && user.otpExpires > Date.now()) {
+            const salt = await bcrypt.genSalt(10); user.password = await bcrypt.hash(password, salt);
+            user.otp = undefined; await user.save(); res.json({ result: "Done" });
+        } else res.status(400).send("Invalid/Expired OTP");
+    } catch (e) { res.status(500).json(e); }
+});
+
+// --- 5. DYNAMIC CRUD HANDLER (Handles ALL Modules) ---
 const handle = (path, Model, useUpload = false) => {
     app.get(path, async (req, res) => res.json(await Model.find().sort({ _id: -1 })));
     
@@ -124,9 +117,11 @@ const handle = (path, Model, useUpload = false) => {
                 if (req.files.pic) upData.pic = req.files.pic[0].path; 
                 if (req.files.pic1) upData.pic1 = req.files.pic1[0].path; 
             }
+            // Password logic for Profile Update
             if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
                 const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
             } else if (path === '/user') { delete upData.password; }
+            
             const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d);
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
@@ -134,11 +129,11 @@ const handle = (path, Model, useUpload = false) => {
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
 };
 
-// INITIALIZE ALL SECTIONS
+// INITIALIZE ALL PROJECT MODULES
 handle('/user', User, true); handle('/product', Product, true); handle('/maincategory', Maincategory);
 handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Cart);
 handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
 const PORT = process.env.PORT || 8000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server Live on ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server on ${PORT}`));
