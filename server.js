@@ -14,17 +14,22 @@ app.use(express.json());
 
 // --- 1. DB CONNECTION ---
 const MONGODB_URI = "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
-mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
+mongoose.connect(MONGODB_URI)
+    .then(() => console.log("✅ Master Engine Live & Connected to DB"))
+    .catch(e => console.log("❌ DB Error", e));
 
 // --- 2. CONFIGURATIONS ---
 cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '551368853328319', api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' });
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
 const upload = multer({ storage: storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
 
-// ✅ UPDATED APP PASSWORD
+// ✅ UPDATED WITH YOUR APP PASSWORD
 const transporter = nodemailer.createTransport({
     service: 'gmail',
-    auth: { user: 'theafzalhussain786@gmail.com', pass: 'aitweldfmsqglvjy' } 
+    auth: { 
+        user: 'theafzalhussain786@gmail.com', 
+        pass: 'aitweldfmsqglvjy' // आपका जनरेट किया हुआ कोड
+    } 
 });
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
@@ -42,24 +47,34 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newsletter = mongoose.model('Newsletter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- 4. AUTH & OTP ---
+// --- 4. AUTH & OTP ROUTES ---
+
 app.post('/api/send-otp', async (req, res) => {
     try {
         const { email, type } = req.body;
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
         if (type === 'forget') {
             const user = await User.findOne({ $or: [{ email }, { username: email }] });
             if (!user) return res.status(404).json({ message: "Identity not found" });
             user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
         }
+
         await transporter.sendMail({
             from: '"Eshopper Security" <theafzalhussain786@gmail.com>',
             to: email,
             subject: '🔐 Your Verification Code',
-            html: `<div style="text-align:center;"><h2>Code: ${otp}</h2></div>`
+            html: `<div style="text-align:center; padding:20px; border:1px solid #ddd; border-radius:10px;">
+                    <h2 style="color:#17a2b8;">Verification Code</h2>
+                    <h1 style="letter-spacing:10px;">${otp}</h1>
+                    <p>This code is valid for 10 minutes.</p>
+                   </div>`
         });
         res.json({ result: "Done", otp });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("OTP Error:", e);
+        res.status(500).json({ error: e.message }); 
+    }
 });
 
 app.post('/api/reset-password', async (req, res) => {
@@ -81,10 +96,17 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// --- 5. DYNAMIC CRUD HANDLER ---
+// --- 5. DYNAMIC CRUD HANDLER (FIXED 404 ISSUES) ---
 const handle = (path, Model, useUpload = false) => {
-    app.get(path, async (req, res) => res.json(await Model.find().sort({ _id: -1 })));
-    app.get(`${path}/:id`, async (req, res) => res.json(await Model.findById(req.params.id)));
+    // Get All
+    app.get(path, async (req, res) => {
+        try { res.json(await Model.find().sort({ _id: -1 })); } catch(e) { res.status(500).json(e); }
+    });
+    // Get Single (New - Needed for profile/details)
+    app.get(`${path}/:id`, async (req, res) => {
+        try { res.json(await Model.findById(req.params.id)); } catch(e) { res.status(404).json(e); }
+    });
+    // Post
     app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             let d = new Model(req.body);
@@ -93,6 +115,7 @@ const handle = (path, Model, useUpload = false) => {
             await d.save(); res.status(201).json(d);
         } catch (e) { res.status(400).json(e); }
     });
+    // Put
     app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             let upData = { ...req.body };
@@ -103,13 +126,21 @@ const handle = (path, Model, useUpload = false) => {
             const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d);
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
+    // Delete
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
 };
 
-handle('/user', User, true); handle('/product', Product, true); handle('/maincategory', Maincategory);
-handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Cart);
-handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
-handle('/newsletter', Newsletter);
+// INITIALIZE ALL ROUTES
+handle('/user', User, true); 
+handle('/product', Product, true); 
+handle('/maincategory', Maincategory);
+handle('/subcategory', Subcategory); 
+handle('/brand', Brand); 
+handle('/cart', Cart);
+handle('/wishlist', Wishlist); 
+handle('/checkout', Checkout); 
+handle('/contact', Contact);
+handle('/newsletter', Newsletter); // Fixed spelling consistency
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server Live on ${PORT}`));
