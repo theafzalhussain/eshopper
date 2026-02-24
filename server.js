@@ -10,8 +10,29 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ CORS FIX: Allowing everything to ensure no frontend blocks
-app.use(cors({ origin: true, credentials: true }));
+// ✅ CORS FIX: Allowing BOTH Vercel and Localhost
+// ⚠️ CHECK RENDER LOGS FOR: "⚠️ CORS Blocked Origin: https://..."
+// Copy that URL and add it here in allowedOrigins array
+const allowedOrigins = [
+  'https://eshopperr.vercel.app', // Production Link
+  'http://localhost:3000',         // Your Local Computer Link
+  // 'https://YOUR-OTHER-DOMAIN.vercel.app' // ADD HERE if needed
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.warn("⚠️ CORS Blocked Origin:", origin); // CHECK THIS IN RENDER LOGS
+            callback(new Error('CORS Error: Identity not allowed'));
+        }
+    },
+    credentials: true
+}));
+
 app.use(express.json());
 
 // --- 1. DB CONNECTION ---
@@ -27,25 +48,45 @@ const upload = multer({ storage }).fields([
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// ✅ RESILIENT TRANSPORTER FOR RENDER (Port 587 is better for Cloud)
+// ✅ MAIL FIX: Gmail SMTP Render par ETIMEDOUT deta hai — Brevo use karo
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STEPS TO SETUP BREVO (FREE — 300 emails/day):
+// 1. https://app.brevo.com par free account banao (Gmail se login kar sakte ho)
+// 2. Top-right menu > SMTP & API click karo
+// 3. "SMTP" tab mein jaao
+// 4. "Generate a new SMTP key" click karo
+// 5. Woh key copy karo aur:
+//    - Render Dashboard > Environment Variables mein jaao
+//    - BREVO_USER = tumhara email (jo Brevo par register kiya)
+//    - BREVO_PASS = woh SMTP key
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const BREVO_USER = process.env.BREVO_USER || 'theafzalhussain786@gmail.com';
+const BREVO_PASS = process.env.BREVO_PASS || 'PASTE_YOUR_BREVO_SMTP_KEY_HERE';
+
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: 'smtp-relay.brevo.com', // ✅ Brevo SMTP — 100% works on Render
     port: 587,
-    secure: false, // STARTTLS के लिए false रखें
-    auth: { 
-        user: 'theafzalhussain786@gmail.com', 
-        pass: 'aitweldfmsqglvjy' 
+    secure: false,
+    auth: {
+        user: BREVO_USER,
+        pass: BREVO_PASS
     },
-    tls: {
-        rejectUnauthorized: false,
-        minVersion: 'TLSv1.2'
-    }
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 45000
+});
+
+// ✅ Verify mail connection on startup
+transporter.verify((err, success) => {
+    if (err) console.error("❌ Mail Config Error:", err.message);
+    else console.log("✅ Mail Server Ready");
 });
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// --- 3. ALL MODELS (Preserved exactly as before) ---
+// --- 3. ALL MODELS (Home, Shop, Admin सब सुरक्षित हैं) ---
 const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
 const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
@@ -65,28 +106,34 @@ app.post('/api/send-otp', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const user = await User.findOne({ $or: [{ email }, { username: email }] });
 
-        if (type === 'forget' && !user) return res.status(404).json({ message: "User not found" });
-        if (type === 'signup' && user) return res.status(400).json({ message: "Email already exists" });
+        if (type === 'forget' && !user) return res.status(404).json({ message: "Identity not found" });
+        if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
 
-        // ✅ Background mail attempt
-        transporter.sendMail({
-            from: '"Eshopper Security" <theafzalhussain786@gmail.com>',
-            to: email,
-            subject: '🔐 Your Verification Code',
-            text: `Verification Code: ${otp}`,
-            html: `<div style="text-align:center; padding:20px; border:1px solid #ddd; border-radius:10px;"><h2>OTP: ${otp}</h2></div>`
-        }).catch(err => console.error("❌ Silent Mail Error:", err.message));
-
+        // Save OTP first so user gets fast response
         if (type === 'forget') {
             user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
         } else {
             await OTPRecord.findOneAndUpdate({ email }, { otp }, { upsert: true });
         }
-        // हम यहाँ रिस्पॉन्स भेज रहे हैं ताकि नेटवर्क टाइमआउट न हो
+
+        // ✅ Send mail async — non-blocking
+        transporter.sendMail({
+            from: '"Eshopper Luxury" <theafzalhussain786@gmail.com>',
+            to: email,
+            subject: '🔐 Verification Code - Eshopper',
+            html: `<div style="font-family:Arial;padding:20px;background:#f5f5f5">
+                     <h2 style="color:#333">Your OTP Verification Code</h2>
+                     <h1 style="color:#e91e63;letter-spacing:8px">${otp}</h1>
+                     <p>This code expires in 10 minutes.</p>
+                   </div>`
+        }).then(() => {
+            console.log("✅ OTP Mail sent to:", email);
+        }).catch(err => {
+            console.error("❌ Mail Error:", err.message, "| Code:", err.code);
+        });
+
         res.json({ result: "Done", otp }); 
-    } catch (e) { 
-        res.status(500).json({ error: e.message }); 
-    }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/reset-password', async (req, res) => {
@@ -108,7 +155,7 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// --- 5. DYNAMIC CRUD HANDLER (Preserving all sections) ---
+// --- 5. DYNAMIC CRUD HANDLER ---
 const handle = (path, Model, useUpload = false) => {
     app.get(path, async (req, res) => res.json(await Model.find().sort({_id:-1})));
     app.get(`${path}/:id`, async (req, res) => res.json(await Model.findById(req.params.id)));
@@ -116,7 +163,7 @@ const handle = (path, Model, useUpload = false) => {
         try {
             if (path === '/user' && req.body.otp) {
                 const record = await OTPRecord.findOne({ email: req.body.email, otp: req.body.otp });
-                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "OTP Failed" });
+                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "Verification failed" });
                 await OTPRecord.deleteOne({ email: req.body.email });
             }
             if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
@@ -150,5 +197,6 @@ handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Ca
 handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
-const PORT = process.env.PORT || 10000;
+// ✅ PORT FIX FOR RENDER
+const PORT = process.env.PORT || 8000;
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server Live on ${PORT}`));
