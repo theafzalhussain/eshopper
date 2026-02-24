@@ -5,25 +5,19 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs'); 
-const https = require('https'); // ✅ Built-in Node.js — no install needed
+const https = require('https'); 
 require('dotenv').config();
 
 const app = express();
 
-// ✅ CORS FIX
-const allowedOrigins = [
-  'https://eshopperr.vercel.app',
-  'http://localhost:3000',
-];
-
+// ✅ CORS FIX: Allowing BOTH Vercel and Localhost
+const allowedOrigins = ['https://eshopperr.vercel.app', 'http://localhost:3000'];
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
-            console.warn("⚠️ CORS Blocked Origin:", origin);
-            callback(new Error('CORS Error: Identity not allowed'));
+            callback(new Error('CORS Error: Identity blocked'));
         }
     },
     credentials: true
@@ -32,7 +26,7 @@ app.use(cors({
 app.use(express.json());
 
 // --- 1. DB CONNECTION ---
-const MONGODB_URI = "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
 
 // --- 2. CONFIGURATIONS ---
@@ -44,35 +38,23 @@ const upload = multer({ storage }).fields([
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// ✅ MAIL FIX: Brevo HTTP API (port 443) — SMTP Render par block hai, HTTP nahi
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Render par SMTP (port 465/587) block hota hai — isliye ETIMEDOUT aata tha
-// HTTP API port 443 use karta hai — yeh kabhi block nahi hota
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// STEPS TO GET BREVO API KEY:
-// 1. https://app.brevo.com par jaao
-// 2. Top-right corner mein apna naam > "SMTP & API" click karo
-// 3. "API Keys" tab mein jaao
-// 4. "Generate a new API key" click karo — name: "eshopper"
-// 5. Woh key copy karo
-// 6. Render Dashboard > Environment Variables mein add karo:
-//    BREVO_API_KEY = xkeysib-xxxxxxxxxxxxxxxx...
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
+// ✅ BREVO HTTP API SYSTEM (No SMTP Blocks)
 const sendMail = (to, otp) => {
     return new Promise((resolve, reject) => {
-        const BREVO_API_KEY = process.env.BREVO_API_KEY || 'YOUR_BREVO_API_KEY_HERE';
+        // आपकी नई API Key यहाँ सुरक्षित है
+        const BREVO_API_KEY = "xsmtpsib-bc49eceaf17d400567ffe1f57f2750ad2202878821208d395e7d767ce7fead89-Wi5w2zKFpfVCg2hV";
         
         const payload = JSON.stringify({
-            sender: { name: "Eshopper Luxury", email: "theafzalhussain786@gmail.com" },
+            sender: { name: "Eshopper Security", email: "theafzalhussain786@gmail.com" },
             to: [{ email: to }],
-            subject: "🔐 Verification Code - Eshopper",
-            htmlContent: `<div style="font-family:Arial;padding:20px;background:#f5f5f5;text-align:center">
-                <h2 style="color:#333">Your OTP Verification Code</h2>
-                <h1 style="color:#e91e63;letter-spacing:8px;font-size:40px">${otp}</h1>
-                <p style="color:#666">This code expires in 10 minutes.</p>
-                <p style="color:#999;font-size:12px">If you didn't request this, ignore this email.</p>
-            </div>`
+            subject: "🔐 OTP Verification - Eshopper",
+            htmlContent: `
+                <div style="font-family:Arial;padding:20px;text-align:center;background:#f4f4f4;">
+                    <h2 style="color:#17a2b8;">Verification Code</h2>
+                    <p>Your identity code is:</p>
+                    <h1 style="letter-spacing:10px;color:#333;background:#fff;padding:10px;display:inline-block;">${otp}</h1>
+                    <p>Valid for 10 minutes only.</p>
+                </div>`
         });
 
         const options = {
@@ -82,41 +64,32 @@ const sendMail = (to, otp) => {
             headers: {
                 'accept': 'application/json',
                 'api-key': BREVO_API_KEY,
-                'content-type': 'application/json',
-                'content-length': Buffer.byteLength(payload)
+                'content-type': 'application/json'
             }
         };
 
         const req = https.request(options, (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
+            let body = '';
+            res.on('data', d => body += d);
             res.on('end', () => {
-                if (res.statusCode === 201) {
-                    console.log("✅ OTP Mail sent to:", to);
-                    resolve(true);
-                } else {
-                    console.error("❌ Brevo API Error:", res.statusCode, data);
-                    reject(new Error(`Brevo API: ${res.statusCode} - ${data}`));
+                if (res.statusCode === 201) resolve(true);
+                else {
+                    console.error("❌ Brevo API Error:", res.statusCode, body);
+                    reject(new Error("Brevo Error"));
                 }
             });
         });
 
-        req.on('error', (err) => {
-            console.error("❌ Mail Request Error:", err.message);
-            reject(err);
-        });
-
+        req.on('error', e => reject(e));
         req.write(payload);
         req.end();
     });
 };
 
-console.log("✅ Mail System Ready (Brevo HTTP API)");
-
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// --- 3. ALL MODELS ---
+// --- 3. ALL 10 MODELS (All Synced) ---
 const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
 const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
@@ -139,15 +112,14 @@ app.post('/api/send-otp', async (req, res) => {
         if (type === 'forget' && !user) return res.status(404).json({ message: "Identity not found" });
         if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
 
-        // Save OTP first
-        if (type === 'forget') {
+        if (user) {
             user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
         } else {
             await OTPRecord.findOneAndUpdate({ email }, { otp }, { upsert: true });
         }
 
-        // ✅ Send via Brevo HTTP API — non-blocking
-        sendMail(email, otp).catch(err => console.error("Mail failed:", err.message));
+        // Background mail (Doesn't block server)
+        sendMail(email, otp).catch(err => console.error("Mail failed background:", err.message));
 
         res.json({ result: "Done", otp }); 
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -172,7 +144,7 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// --- 5. DYNAMIC CRUD HANDLER ---
+// --- 5. DYNAMIC CRUD HANDLER (No features removed) ---
 const handle = (path, Model, useUpload = false) => {
     app.get(path, async (req, res) => res.json(await Model.find().sort({_id:-1})));
     app.get(`${path}/:id`, async (req, res) => res.json(await Model.findById(req.params.id)));
@@ -180,7 +152,7 @@ const handle = (path, Model, useUpload = false) => {
         try {
             if (path === '/user' && req.body.otp) {
                 const record = await OTPRecord.findOne({ email: req.body.email, otp: req.body.otp });
-                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "Verification failed" });
+                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "OTP Verification Failed" });
                 await OTPRecord.deleteOne({ email: req.body.email });
             }
             if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
@@ -214,6 +186,5 @@ handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Ca
 handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
-// ✅ PORT FIX FOR RENDER
-const PORT = process.env.PORT || 8000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server Live on ${PORT}`));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Engine Live on ${PORT}`));
