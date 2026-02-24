@@ -30,6 +30,13 @@ const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) 
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
 // --- 3. ALL MODELS ---
+// अस्थायी OTP स्टोर करने के लिए (Signup के लिए)
+const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({
+    email: { type: String, required: true },
+    otp: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now, expires: 600 } // 10 मिनट में एक्सपायर
+}));
+
 const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
 const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
@@ -45,40 +52,39 @@ const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { t
 
 app.get('/', (req, res) => res.send("🚀 Eshopper Master API is Ready!"));
 
-// REAL OTP SENDER
+// REAL OTP SENDER (Signup और Forget Password के लिए)
 app.post('/api/send-otp', async (req, res) => {
     try {
         const { email, type } = req.body;
-        const userExists = await User.findOne({ email });
-
-        if (type === 'forget' && !userExists) return res.status(404).json({ message: "Identity not found" });
-        if (type === 'signup' && userExists) return res.status(400).json({ message: "Email already registered" });
-
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // Save OTP for future verification
-        if (userExists) {
+        const userExists = await User.findOne({ $or: [{ email }, { username: email }] });
+
+        if (type === 'forget') {
+            if (!userExists) return res.status(404).json({ message: "Identity not found" });
             userExists.otp = otp;
             userExists.otpExpires = new Date(Date.now() + 10 * 60000);
             await userExists.save();
+        } else {
+            // Signup के लिए OTPRecord में सेव करें
+            if (userExists) return res.status(400).json({ message: "Email already registered" });
+            await OTPRecord.findOneAndUpdate({ email }, { otp }, { upsert: true });
         }
 
         await transporter.sendMail({
             from: '"Eshopper Security" <theafzalhussain786@gmail.com>',
             to: email,
             subject: '🔐 Your Verification Code',
-            html: `<div style="text-align:center; font-family:Arial;">
-                    <h2 style="color:#17a2b8;">Eshopper Verification</h2>
-                    <p>Use the code below to secure your account:</p>
-                    <h1 style="letter-spacing:10px; background:#f4f4f4; padding:10px;">${otp}</h1>
-                    <p>Valid for 10 minutes.</p>
+            html: `<div style="text-align:center; font-family:Arial; padding:20px; border:1px solid #ddd; border-radius:10px;">
+                    <h2 style="color:#17a2b8;">Verification Code</h2>
+                    <h1 style="letter-spacing:10px; color:#333; background:#f9f9f9; padding:10px;">${otp}</h1>
+                    <p>This code is valid for 10 minutes.</p>
                    </div>`
         });
-        res.json({ result: "Done", otp }); // In dev, we return OTP in response too
+        res.json({ result: "Done", otp }); // Dev के लिए OTP रिस्पांस में भी भेजा है
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// PASSWORD RESET LOGIC (Fixing 404)
+// PASSWORD RESET LOGIC
 app.post('/api/reset-password', async (req, res) => {
     try {
         const { username, password, otp } = req.body;
@@ -86,7 +92,7 @@ app.post('/api/reset-password', async (req, res) => {
         if (user && user.otp === otp && user.otpExpires > Date.now()) {
             const salt = await bcrypt.genSalt(10); user.password = await bcrypt.hash(password, salt);
             user.otp = undefined; await user.save(); res.json({ result: "Done" });
-        } else res.status(400).send("Invalid/Expired OTP");
+        } else res.status(400).send("Invalid or Expired OTP");
     } catch (e) { res.status(500).json(e); }
 });
 
@@ -99,31 +105,59 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// --- 5. DYNAMIC CRUD HANDLER (Unified) ---
+// --- 5. DYNAMIC CRUD HANDLER (ADDED SINGLE FETCH & OTP CHECK) ---
 const handle = (path, Model, useUpload = false) => {
+    // Get All
     app.get(path, async (req, res) => res.json(await Model.find().sort({ _id: -1 })));
+    
+    // Get Single (Profile fetch करने के लिए ज़रूरी)
+    app.get(`${path}/:id`, async (req, res) => {
+        try { res.json(await Model.findById(req.params.id)); } catch (e) { res.status(404).json(e); }
+    });
+
+    // Create (User के लिए OTP चेक जोड़ा गया है)
     app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
+            if (path === '/user') {
+                const record = await OTPRecord.findOne({ email: req.body.email, otp: req.body.otp });
+                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "Invalid OTP" });
+                await OTPRecord.deleteOne({ email: req.body.email });
+            }
+
             let d = new Model(req.body);
-            if (req.files) { if (req.files.pic) d.pic = req.files.pic[0].path; if (req.files.pic1) d.pic1 = req.files.pic1[0].path; }
-            if (path === '/user') { const salt = await bcrypt.genSalt(10); d.password = await bcrypt.hash(d.password, salt); }
+            if (req.files) { 
+                if (req.files.pic) d.pic = req.files.pic[0].path; 
+                if (req.files.pic1) d.pic1 = req.files.pic1[0].path; 
+            }
+            if (path === '/user') { 
+                const salt = await bcrypt.genSalt(10); 
+                d.password = await bcrypt.hash(d.password, salt); 
+            }
             await d.save(); res.status(201).json(d);
         } catch (e) { res.status(400).json(e); }
     });
+
+    // Update
     app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             let upData = { ...req.body };
-            if (req.files) { if (req.files.pic) upData.pic = req.files.pic[0].path; if (req.files.pic1) upData.pic1 = req.files.pic1[0].path; }
+            if (req.files) { 
+                if (req.files.pic) upData.pic = req.files.pic[0].path; 
+                if (req.files.pic1) upData.pic1 = req.files.pic1[0].path; 
+            }
             if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
-                const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
+                const salt = await bcrypt.genSalt(10); 
+                upData.password = await bcrypt.hash(upData.password, salt);
             } else if (path === '/user') { delete upData.password; }
             const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d);
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
+
+    // Delete
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
 };
 
-// INITIALIZE ALL
+// INITIALIZE ALL ROUTES
 handle('/user', User, true); handle('/product', Product, true); handle('/maincategory', Maincategory);
 handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Cart);
 handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);

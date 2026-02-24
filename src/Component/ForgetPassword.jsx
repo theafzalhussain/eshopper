@@ -26,7 +26,7 @@ export default function ForgetPassword() {
         if(e) e.preventDefault();
         setLoading(true);
         try {
-            // Type 'forget' ensures backend checks if user exists
+            // Type 'forget' triggers server to check existing identity
             const res = await sendOtpAPI({ email: data.username, type: 'forget' })
             if (res.result === "Done") {
                 setStep(2);
@@ -34,7 +34,7 @@ export default function ForgetPassword() {
                 alert("Security vault opened! Check your email for the verification code.");
             }
         } catch (err) {
-            alert("Identity not found or Server Lag. Please wait 30s and retry.");
+            alert("No account found with this username/email. Please verify.");
         }
         setLoading(false);
     }
@@ -49,13 +49,14 @@ export default function ForgetPassword() {
 
         setLoading(true);
         try {
+            // Ensure otp is sent with the payload
             const res = await resetPasswordAPI({ ...data, otp: userOtp })
             if (res.result === "Done") {
                 alert("Credentials Synchronized Successfully!");
                 navigate("/login");
             }
         } catch (err) {
-            alert("Invalid or Expired Code. Access Denied.");
+            alert("Verification Failed. Invalid or Expired Code.");
         }
         setLoading(false);
     }

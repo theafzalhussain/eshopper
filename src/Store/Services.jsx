@@ -17,30 +17,32 @@ async function fastAPI(endpoint, method = "GET", data = null) {
         const text = await res.text();
         return text ? JSON.parse(text) : { result: "Done" };
     }
-    throw new Error("API Failure: " + endpoint);
+    const errText = await res.text();
+    throw new Error(errText || "API Failure: " + endpoint);
 }
 
 // --- FULL SYNCED EXPORTS ---
 
-// AUTH & OTP
+// AUTH & SECURITY
 export const loginAPI = (d) => fastAPI("/login", "POST", d);
 export const sendOtpAPI = (d) => fastAPI("/api/send-otp", "POST", d);
 export const resetPasswordAPI = (d) => fastAPI("/api/reset-password", "POST", d);
-export const forgetPasswordAPI = (d) => fastAPI("/user/forget-password", "POST", d);
 
 // USER
 export const getUserAPI = () => fastAPI("/user");
+export const getSingleUserAPI = (id) => fastAPI(`/user/${id}`); // प्रोफाइल के लिए नया
 export const createUserAPI = (d) => fastAPI("/user", "POST", d);
 export const updateUserAPI = (d) => fastAPI(`/user/${getID(d)}`, "PUT", d);
 export const deleteUserAPI = (d) => fastAPI(`/user/${getID(d)}`, "DELETE");
 
 // PRODUCT
 export const getProductAPI = () => fastAPI("/product");
+export const getSingleProductAPI = (id) => fastAPI(`/product/${id}`); // सिंगल प्रोडक्ट के लिए नया
 export const createProductAPI = (d) => fastAPI("/product", "POST", d);
 export const updateProductAPI = (d) => fastAPI(`/product/${getID(d)}`, "PUT", d);
 export const deleteProductAPI = (d) => fastAPI(`/product/${getID(d)}`, "DELETE");
 
-// CATEGORIES
+// CATEGORIES & BRANDS
 export const getMaincategoryAPI = () => fastAPI("/maincategory");
 export const createMaincategoryAPI = (d) => fastAPI("/maincategory", "POST", d);
 export const updateMaincategoryAPI = (d) => fastAPI(`/maincategory/${getID(d)}`, "PUT", d);
@@ -67,7 +69,7 @@ export const createWishlistAPI = (d) => fastAPI("/wishlist", "POST", d);
 export const updateWishlistAPI = (d) => fastAPI(`/wishlist/${getID(d)}`, "PUT", d);
 export const deleteWishlistAPI = (d) => fastAPI(`/wishlist/${getID(d)}`, "DELETE");
 
-// CHECKOUT & CONTACT
+// CHECKOUT, CONTACT & NEWSLETTER
 export const getCheckoutAPI = () => fastAPI("/checkout");
 export const createCheckoutAPI = (d) => fastAPI("/checkout", "POST", d);
 export const updateCheckoutAPI = (d) => fastAPI(`/checkout/${getID(d)}`, "PUT", d);

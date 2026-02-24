@@ -21,7 +21,6 @@ export default function SingUp() {
         e.preventDefault();
         setLoading(true);
         try {
-            // Type 'signup' tells backend to allow new email
             const res = await sendOtpAPI({ email: data.email, type: 'signup' })
             if (res.result === "Done") {
                 setServerOtp(res.otp);
@@ -29,7 +28,7 @@ export default function SingUp() {
                 alert("Verification vault opened! Check your email.");
             }
         } catch (err) {
-            alert("Email already registered or Server Lag. Retry in 10s.");
+            alert("This email is already registered or server error. Please retry.");
         }
         setLoading(false);
     }
@@ -37,12 +36,18 @@ export default function SingUp() {
     // --- STEP 2: VERIFY & CREATE ---
     async function verifyAndSignup(e) {
         e.preventDefault();
+        // Frontend validation for speed
         if (userOtp === serverOtp || userOtp === "123456") {
             setLoading(true);
-            const res = await createUserAPI(data)
-            if (res.id) {
-                alert("Master Identity Verified. Welcome.");
-                navigate("/login")
+            try {
+                // Backend updated route now expects OTP in the body for verification
+                const res = await createUserAPI({ ...data, otp: userOtp })
+                if (res.id) {
+                    alert("Master Identity Verified. Welcome to Eshopper.");
+                    navigate("/login")
+                }
+            } catch (err) {
+                alert("Server Verification Failed. Please try again.");
             }
             setLoading(false);
         } else {
@@ -75,7 +80,7 @@ export default function SingUp() {
                                     <h3 className="verify-title">Verify Email</h3>
                                     <p className="verify-text mb-5">Code sent to <b>{data.email}</b></p>
                                     <input type="text" maxLength="6" placeholder="000000" className="p-otp-input mb-5" onChange={e => setUserOtp(e.target.value)} required />
-                                    <button className="p-submit-btn">COMPLETE REGISTRATION</button>
+                                    <button className="p-submit-btn" disabled={loading}>{loading ? <Loader2 className="animate-spin mx-auto"/> : "COMPLETE REGISTRATION"}</button>
                                 </motion.form>
                             )}
                         </AnimatePresence>
