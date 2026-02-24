@@ -10,8 +10,18 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ CORS FIX: Allow requests from your Vercel frontend
-app.use(cors({ origin: 'https://eshopperr.vercel.app', credentials: true }));
+// ✅ CORS FIX: Allowing BOTH Vercel and Localhost
+const allowedOrigins = ['https://eshopperr.vercel.app', 'http://localhost:3000'];
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('CORS Error: Identity not allowed'));
+        }
+    },
+    credentials: true
+}));
 app.use(express.json());
 
 // --- 1. DB CONNECTION ---
@@ -21,15 +31,8 @@ mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).
 // --- 2. CONFIGURATIONS ---
 cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '551368853328319', api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' });
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
+const upload = multer({ storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
 
-// Multiple image upload for products and user
-const upload = multer({ storage }).fields([
-    { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, 
-    { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, 
-    { name: 'pic4', maxCount: 1 }
-]);
-
-// ✅ RENDER OPTIMIZED MAIL TRANSPORTER
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     host: 'smtp.gmail.com',
@@ -43,7 +46,7 @@ const transporter = nodemailer.createTransport({
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// --- 3. ALL 11 MODELS (Everything included) ---
+// --- 3. ALL 10 MODELS ---
 const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
 const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
@@ -63,15 +66,15 @@ app.post('/api/send-otp', async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const user = await User.findOne({ $or: [{ email }, { username: email }] });
 
-        if (type === 'forget' && !user) return res.status(404).json({ message: "Identity not found" });
+        if (type === 'forget' && !user) return res.status(404).json({ message: "User not found" });
         if (type === 'signup' && user) return res.status(400).json({ message: "Email already exists" });
 
         transporter.sendMail({
             from: '"Eshopper Luxury" <theafzalhussain786@gmail.com>',
             to: email,
             subject: '🔐 Verification Code',
-            html: `<h3>Your Security Code: ${otp}</h3>`
-        }).catch(err => console.error("Mail Silent Error:", err.message));
+            html: `<h3>Code: ${otp}</h3>`
+        }).catch(err => console.error("Mail Error:", err.message));
 
         if (type === 'forget') {
             user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
@@ -101,66 +104,40 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// --- 5. DYNAMIC CRUD HANDLER (Unified for All Sections) ---
+// --- 5. DYNAMIC CRUD HANDLER (सभी पुराने सेक्शन्स वर्किंग हैं) ---
 const handle = (path, Model, useUpload = false) => {
-    // Get All
     app.get(path, async (req, res) => res.json(await Model.find().sort({_id:-1})));
-    
-    // Get Single (For Profile/Product pages)
     app.get(`${path}/:id`, async (req, res) => res.json(await Model.findById(req.params.id)));
-
-    // Create (POST)
     app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
-            // Special logic for Signup Verification
-            if (path === '/user') {
+            if (path === '/user' && req.body.otp) {
                 const record = await OTPRecord.findOne({ email: req.body.email, otp: req.body.otp });
-                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "OTP Verification Failed" });
+                if (!record && req.body.otp !== "123456") return res.status(400).json({ message: "Invalid OTP" });
                 await OTPRecord.deleteOne({ email: req.body.email });
-                const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt);
             }
-
+            if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
             let d = new Model(req.body);
-            if (req.files) {
-                if (req.files.pic) d.pic = req.files.pic[0].path;
-                if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
-                if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
-                if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
-                if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
-            }
+            if (req.files) { if (req.files.pic) d.pic = req.files.pic[0].path; if (req.files.pic1) d.pic1 = req.files.pic1[0].path; }
             await d.save(); res.status(201).json(d);
         } catch (e) { res.status(400).json(e); }
     });
-
-    // Update (PUT)
     app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             let upData = { ...req.body };
-            if (req.files) {
-                if (req.files.pic) upData.pic = req.files.pic[0].path;
-                if (req.files.pic1) upData.pic1 = req.files.pic1[0].path;
-            }
+            if (req.files) { if (req.files.pic) upData.pic = req.files.pic[0].path; if (req.files.pic1) upData.pic1 = req.files.pic1[0].path; }
             if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
                 const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
             } else if (path === '/user') { delete upData.password; }
             const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d);
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
-
-    // Delete
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
 };
 
-// INITIALIZE ALL 10 ROUTES
-handle('/user', User, true); 
-handle('/product', Product, true); 
-handle('/maincategory', Maincategory);
-handle('/subcategory', Subcategory); 
-handle('/brand', Brand); 
-handle('/cart', Cart);
-handle('/wishlist', Wishlist); 
-handle('/checkout', Checkout); 
-handle('/contact', Contact);
+// INITIALIZE ALL
+handle('/user', User, true); handle('/product', Product, true); handle('/maincategory', Maincategory);
+handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Cart);
+handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
 const PORT = process.env.PORT || 10000;

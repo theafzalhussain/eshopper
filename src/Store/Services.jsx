@@ -21,29 +21,24 @@ async function fastAPI(endpoint, method = "GET", data = null) {
     throw new Error(errText || "API Failure: " + endpoint);
 }
 
-// --- FULL SYNCED EXPORTS ---
-
-// AUTH & OTP
+// --- ALL SYNCED EXPORTS ---
 export const loginAPI = (d) => fastAPI("/login", "POST", d);
 export const sendOtpAPI = (d) => fastAPI("/api/send-otp", "POST", d);
 export const resetPasswordAPI = (d) => fastAPI("/api/reset-password", "POST", d);
 export const forgetPasswordAPI = (d) => fastAPI("/api/reset-password", "POST", d);
 
-// USER
 export const getUserAPI = () => fastAPI("/user");
 export const getSingleUserAPI = (id) => fastAPI(`/user/${id}`);
 export const createUserAPI = (d) => fastAPI("/user", "POST", d);
 export const updateUserAPI = (d) => fastAPI(`/user/${getID(d)}`, "PUT", d);
 export const deleteUserAPI = (d) => fastAPI(`/user/${getID(d)}`, "DELETE");
 
-// PRODUCT
 export const getProductAPI = () => fastAPI("/product");
 export const getSingleProductAPI = (id) => fastAPI(`/product/${id}`);
 export const createProductAPI = (d) => fastAPI("/product", "POST", d);
 export const updateProductAPI = (d) => fastAPI(`/product/${getID(d)}`, "PUT", d);
 export const deleteProductAPI = (d) => fastAPI(`/product/${getID(d)}`, "DELETE");
 
-// ADMIN SECTIONS
 export const getMaincategoryAPI = () => fastAPI("/maincategory");
 export const createMaincategoryAPI = (d) => fastAPI("/maincategory", "POST", d);
 export const updateMaincategoryAPI = (d) => fastAPI(`/maincategory/${getID(d)}`, "PUT", d);
@@ -59,7 +54,6 @@ export const createBrandAPI = (d) => fastAPI("/brand", "POST", d);
 export const updateBrandAPI = (d) => fastAPI(`/brand/${getID(d)}`, "PUT", d);
 export const deleteBrandAPI = (d) => fastAPI(`/brand/${getID(d)}`, "DELETE");
 
-// SHOPPING FEATURES
 export const getCartAPI = () => fastAPI("/cart");
 export const createCartAPI = (d) => fastAPI("/cart", "POST", d);
 export const updateCartAPI = (d) => fastAPI(`/cart/${getID(d)}`, "PUT", d);
