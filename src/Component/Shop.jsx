@@ -1,143 +1,147 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux';
-import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
-import { getMaincategory } from '../Store/ActionCreaters/MaincategoryActionCreators';
-import { getSubcategory } from '../Store/ActionCreaters/SubcategoryActionCreators';
-import { getBrand } from '../Store/ActionCreaters/BrandActionCreators';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useSelector, useDispatch } from 'react-redux'
+import { useParams, useNavigate } from 'react-router-dom'
+import { getProduct } from '../Store/ActionCreaters/ProductActionCreators'
+import { getMaincategory } from '../Store/ActionCreaters/MaincategoryActionCreators'
+import { getBrand } from '../Store/ActionCreaters/BrandActionCreators'
+import { addCart, getCart } from '../Store/ActionCreaters/CartActionCreators'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, Filter, ShoppingCart, ChevronDown, Star, X } from 'lucide-react'
 
 export default function Shop() {
-    var { maincat } = useParams()
-    var dispatch = useDispatch()
+    const { maincat } = useParams()
+    const dispatch = useDispatch()
+    const navigate = useNavigate()
 
-    // --- STATES ---
-    var [mc, setmc] = useState(maincat)
-    var [sc, setsc] = useState("All")
-    var [br, setbr] = useState("All")
-    var [size, setSize] = useState("All")
-    var [min, setmin] = useState(1)
-    var [max, setmax] = useState(10000)
-    var [search, setSearch] = useState("")
-    var [sortBy, setSortBy] = useState("newest")
+    // --- Redux State ---
+    const allProducts = useSelector(state => state.ProductStateData)
+    const categories = useSelector(state => state.MaincategoryStateData)
+    const brands = useSelector(state => state.BrandStateData)
+    const cart = useSelector(state => state.CartStateData)
 
-    var product = useSelector((state) => state.ProductStateData)
-    var maincategory = useSelector((state) => state.MaincategoryStateData)
-    var subcategory = useSelector((state) => state.SubcategoryStateData)
-    var brand = useSelector((state) => state.BrandStateData)
+    // --- Filter States ---
+    const [search, setSearch] = useState("")
+    const [selectedCat, setSelectedCat] = useState(maincat || "All")
+    const [selectedBrand, setSelectedBrand] = useState("All")
+    const [selectedSize, setSelectedSize] = useState("All")
+    const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 })
+    const [sortOrder, setSortOrder] = useState("newest")
+    const [localSizes, setLocalSizes] = useState({}) // Har card ke liye alag size
 
-    // --- LOAD DATA ---
     useEffect(() => {
-        dispatch(getProduct())
-        dispatch(getMaincategory())
-        dispatch(getSubcategory())
-        dispatch(getBrand())
+        dispatch(getProduct()); dispatch(getMaincategory()); dispatch(getBrand()); dispatch(getCart());
     }, [dispatch])
 
-    useEffect(() => { setmc(maincat) }, [maincat])
+    useEffect(() => {
+        if (maincat) setSelectedCat(maincat)
+    }, [maincat])
 
-    // --- SMART FILTERING LOGIC (For Fast Loading) ---
+    // --- 🧮 Smart Filtering Logic ---
     const filteredProducts = useMemo(() => {
-        let temp = [...product];
+        let list = [...allProducts]
 
-        if (mc !== 'All') temp = temp.filter(x => x.maincategory === mc);
-        if (sc !== 'All') temp = temp.filter(x => x.subcategory === sc);
-        if (br !== 'All') temp = temp.filter(x => x.brand === br);
-        if (size !== 'All') temp = temp.filter(x => x.size === size);
+        if (search) list = list.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+        if (selectedCat !== "All") list = list.filter(p => p.maincategory === selectedCat)
+        if (selectedBrand !== "All") list = list.filter(p => p.brand === selectedBrand)
+        if (selectedSize !== "All") list = list.filter(p => p.size.includes(selectedSize))
         
-        // Price Filter
-        temp = temp.filter(x => x.finalprice >= min && x.finalprice <= max);
+        list = list.filter(p => p.finalprice >= priceRange.min && p.finalprice <= priceRange.max)
 
-        // Search Filter
-        if (search) {
-            temp = temp.filter(x => x.name.toLowerCase().includes(search.toLowerCase()));
+        if (sortOrder === "low") list.sort((a, b) => a.finalprice - b.finalprice)
+        if (sortOrder === "high") list.sort((a, b) => b.finalprice - a.finalprice)
+        if (sortOrder === "newest") list.reverse()
+
+        return list
+    }, [allProducts, search, selectedCat, selectedBrand, selectedSize, priceRange, sortOrder])
+
+    // --- Add to Cart Handler ---
+    const handleAddToCart = (p) => {
+        if (!localStorage.getItem("login")) {
+            navigate("/login")
+            return
         }
-
-        // Sorting
-        if (sortBy === "low") temp.sort((a, b) => a.finalprice - b.finalprice);
-        else if (sortBy === "high") temp.sort((a, b) => b.finalprice - a.finalprice);
-        else temp.reverse(); // newest
-
-        return temp;
-    }, [product, mc, sc, br, size, min, max, search, sortBy]);
+        const sizeToBuy = localSizes[p.id] || p.size.split(',')[0] // Default first size if not selected
+        
+        const existing = cart.find(item => item.productid === p.id && item.userid === localStorage.getItem("userid"))
+        if (existing) {
+            navigate("/cart")
+        } else {
+            dispatch(addCart({
+                productid: p.id, userid: localStorage.getItem("userid"),
+                name: p.name, color: p.color, size: sizeToBuy,
+                price: p.finalprice, qty: 1, total: p.finalprice, pic: p.pic1
+            }))
+            navigate("/cart")
+        }
+    }
 
     return (
-        <div style={{ backgroundColor: "#fcfcfc" }}>
-            {/* --- TOP PREMIUM BANNER --- */}
-            <div className="hero-wrap py-5" style={{ background: 'linear-gradient(45deg, #17a2b8, #0056b3)', position: 'relative' }}>
-                <div className="container text-center py-4">
-                    <motion.h1 initial={{y:-20, opacity:0}} animate={{y:0, opacity:1}} className="text-white font-weight-bold display-4">Shop Premium</motion.h1>
-                    <p className="text-white-50">Discover curated collections tailored for your style</p>
-                </div>
-            </div>
-
-            <section className="container-fluid px-lg-5 py-5">
+        <div className="shop-premium-root">
+            <div className="container-fluid px-lg-5 py-5">
                 <div className="row">
+                    
                     {/* --- SIDEBAR FILTERS --- */}
-                    <div className="col-lg-3">
-                        <div className="sticky-top" style={{ top: '100px' }}>
-                            <div className="bg-white shadow-sm p-4 rounded-xl mb-4 border-0">
-                                <h5 className="font-weight-bold mb-4">Search & Filter</h5>
-                                
-                                {/* Search Bar */}
-                                <div className="input-group mb-4 shadow-sm rounded-pill overflow-hidden border">
-                                    <div className="input-group-prepend">
-                                        <span className="input-group-text bg-white border-0"><i className="icon-search"></i></span>
-                                    </div>
-                                    <input type="text" className="form-control border-0" placeholder="Search products..." onChange={(e) => setSearch(e.target.value)} />
-                                </div>
+                    <div className="col-lg-3 pr-lg-5 mb-5">
+                        <div className="sticky-filter-panel p-4 bg-white shadow-sm rounded-3xl">
+                            <h4 className="font-weight-bold mb-4 d-flex align-items-center">
+                                <Filter size={20} className="mr-2 text-info" /> Refining Tools
+                            </h4>
 
-                                {/* Main Category */}
-                                <div className="mb-4">
-                                    <p className="small font-weight-bold text-uppercase text-info mb-2">Category</p>
-                                    <select className="form-control custom-select-sm" value={mc} onChange={(e) => setmc(e.target.value)}>
-                                        <option value="All">All Categories</option>
-                                        {maincategory.map((item, i) => <option key={i} value={item.name}>{item.name}</option>)}
-                                    </select>
-                                </div>
+                            {/* Search */}
+                            <div className="search-box-lux mb-4">
+                                <Search size={18} className="search-icon" />
+                                <input type="text" placeholder="Search trends..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                            </div>
 
-                                {/* Size Selection (New Feature) */}
-                                <div className="mb-4">
-                                    <p className="small font-weight-bold text-uppercase text-info mb-2">Select Size</p>
-                                    <div className="d-flex flex-wrap gap-2">
-                                        {["All", "S", "M", "L", "XL", "XXL", "38", "40", "42"].map((s, i) => (
-                                            <button key={i} onClick={() => setSize(s)} className={`btn btn-sm m-1 rounded-pill ${size === s ? 'btn-info shadow' : 'btn-outline-light text-dark'}`}>
-                                                {s}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                            {/* Categories */}
+                            <div className="filter-group mb-4">
+                                <label className="filter-label">COLLECTIONS</label>
+                                <select className="lux-select" value={selectedCat} onChange={e => setSelectedCat(e.target.value)}>
+                                    <option value="All">All Categories</option>
+                                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                </select>
+                            </div>
 
-                                {/* Brands */}
-                                <div className="mb-4">
-                                    <p className="small font-weight-bold text-uppercase text-info mb-2">Brands</p>
-                                    <select className="form-control" onChange={(e) => setbr(e.target.value)}>
-                                        <option value="All">All Brands</option>
-                                        {brand.map((item, i) => <option key={i} value={item.name}>{item.name}</option>)}
-                                    </select>
+                            {/* Size Filter */}
+                            <div className="filter-group mb-4">
+                                <label className="filter-label">SELECT SIZE</label>
+                                <div className="size-chip-grid">
+                                    {["All", "S", "M", "L", "XL", "XXL", "38", "40", "42"].map(s => (
+                                        <button key={s} 
+                                                className={`size-chip ${selectedSize === s ? 'active' : ''}`}
+                                                onClick={() => setSelectedSize(s)}>{s}</button>
+                                    ))}
                                 </div>
+                            </div>
 
-                                {/* Price Range */}
-                                <div className="mb-2">
-                                    <p className="small font-weight-bold text-uppercase text-info mb-2">Price Range (₹)</p>
-                                    <div className="d-flex align-items-center">
-                                        <input type="number" className="form-control form-control-sm" placeholder="Min" onChange={(e) => setmin(e.target.value)} />
-                                        <span className="mx-2">-</span>
-                                        <input type="number" className="form-control form-control-sm" placeholder="Max" onChange={(e) => setmax(e.target.value)} />
-                                    </div>
+                            {/* Brand Filter */}
+                            <div className="filter-group mb-4">
+                                <label className="filter-label">DESIGNER LABELS</label>
+                                <select className="lux-select" value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)}>
+                                    <option value="All">All Brands</option>
+                                    {brands.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                                </select>
+                            </div>
+
+                            {/* Price Range */}
+                            <div className="filter-group">
+                                <label className="filter-label">PRICE RANGE (₹)</label>
+                                <div className="d-flex gap-2">
+                                    <input type="number" placeholder="Min" className="form-control lux-input" onChange={e => setPriceRange({...priceRange, min: e.target.value})} />
+                                    <input type="number" placeholder="Max" className="form-control lux-input" onChange={e => setPriceRange({...priceRange, max: e.target.value})} />
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* --- MAIN SHOP AREA --- */}
+                    {/* --- PRODUCT GRID --- */}
                     <div className="col-lg-9">
-                        <div className="d-flex justify-content-between align-items-center mb-4 bg-white p-3 shadow-sm rounded-lg">
-                            <span className="text-muted small">Showing <strong>{filteredProducts.length}</strong> Products</span>
+                        <div className="d-flex justify-content-between align-items-center mb-5 flex-wrap">
+                            <p className="text-muted mb-0 font-weight-bold">SHOWING <span className="text-dark">{filteredProducts.length}</span> CURATED PIECES</p>
                             <div className="d-flex align-items-center">
-                                <span className="small mr-2 d-none d-md-block">Sort by:</span>
-                                <select className="form-control form-control-sm border-0 bg-light" onChange={(e) => setSortBy(e.target.value)}>
-                                    <option value="newest">Newest First</option>
+                                <span className="small font-weight-bold mr-3 text-muted">SORT BY:</span>
+                                <select className="sort-minimal" onChange={e => setSortOrder(e.target.value)}>
+                                    <option value="newest">Newest Arrivals</option>
                                     <option value="low">Price: Low to High</option>
                                     <option value="high">Price: High to Low</option>
                                 </select>
@@ -146,70 +150,51 @@ export default function Shop() {
 
                         <div className="row">
                             <AnimatePresence>
-                                {filteredProducts.map((item, index) => (
+                                {filteredProducts.map((p, index) => (
                                     <motion.div 
-                                        key={item.id}
+                                        key={p.id}
                                         layout
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="col-md-6 col-lg-4 mb-4"
+                                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                                        className="col-6 col-md-4 mb-5"
                                     >
-                                        <div className="product-card-premium h-100 bg-white shadow-sm overflow-hidden position-relative">
-                                            {/* Discount Badge */}
-                                            {item.discount > 0 && (
-                                                <div className="premium-badge">{item.discount}% OFF</div>
-                                            )}
-
-                                            <Link to={`/single-product/${item.id}`} className="img-wrap">
-                                                <motion.img 
-                                                    src={item.pic1} 
-                                                    className="w-100" 
-                                                    style={{ height: "320px", objectFit: "cover" }} 
-                                                    alt={item.name}
-                                                    whileHover={{ scale: 1.1, rotate: 2 }}
-                                                    transition={{ duration: 0.3 }}
-                                                />
-                                                <motion.div 
-                                                    className="card-overlay"
-                                                    whileHover={{ opacity: 1 }}
-                                                    initial={{ opacity: 0 }}
-                                                    transition={{ duration: 0.3 }}
-                                                >
-                                                    <motion.span 
-                                                        className="btn btn-white btn-sm px-4 rounded-pill"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                    >
-                                                        View Detail
-                                                    </motion.span>
-                                                </motion.div>
-                                            </Link>
-
-                                            <div className="p-4">
-                                                <div className="d-flex justify-content-between mb-1">
-                                                    <span className="text-muted small uppercase">{item.brand}</span>
-                                                    {/* Rating System */}
-                                                    <div className="text-warning small">
-                                                        <i className="fa fa-star"></i>
-                                                        <i className="fa fa-star"></i>
-                                                        <i className="fa fa-star"></i>
-                                                        <i className="fa fa-star"></i>
-                                                        <i className="fa fa-star-half-o"></i>
+                                        <div className="product-card-premium h-100 bg-white">
+                                            <div className="img-container-lux rounded-2xl overflow-hidden shadow-sm position-relative">
+                                                <Link to={`/single-product/${p.id}`}>
+                                                    <img src={p.pic1} className="w-100 h-100 object-fit-cover transition-slow" alt={p.name} />
+                                                </Link>
+                                                {p.discount > 0 && <div className="lux-badge">-{p.discount}%</div>}
+                                                
+                                                {/* Hover Quick Actions */}
+                                                <div className="card-hover-overlay p-3">
+                                                    <div className="size-selector-mini mb-2">
+                                                        {p.size.split(',').map(s => (
+                                                            <button 
+                                                                key={s} 
+                                                                className={`mini-size-btn ${localSizes[p.id] === s ? 'active' : ''}`}
+                                                                onClick={() => setLocalSizes({...localSizes, [p.id]: s})}
+                                                            >{s}</button>
+                                                        ))}
                                                     </div>
+                                                    <button onClick={() => handleAddToCart(p)} className="btn btn-info btn-block rounded-pill font-weight-bold py-2 shadow-lg">
+                                                        <ShoppingCart size={16} className="mr-2" /> ADD TO CART
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-3">
+                                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                                    <span className="small text-info font-weight-bold uppercase letter-spacing-1">{p.brand}</span>
+                                                    <div className="d-flex align-items-center text-warning small"><Star size={12} fill="currentColor" className="mr-1" /> 4.9</div>
                                                 </div>
                                                 <h3 className="h6 font-weight-bold mb-3">
-                                                    <Link to={`/single-product/${item.id}`} className="text-dark">{item.name}</Link>
+                                                    <Link to={`/single-product/${p.id}`} className="text-dark no-underline text-capitalize hover-info">{p.name}</Link>
                                                 </h3>
-                                                <div className="d-flex align-items-end justify-content-between">
-                                                    <div>
-                                                        <span className="h5 font-weight-bold text-info mb-0">₹{item.finalprice}</span>
-                                                        <del className="text-muted small ml-2">₹{item.baseprice}</del>
-                                                    </div>
-                                                    <button onClick={() => window.location.href=`/single-product/${item.id}`} className="btn btn-info btn-sm rounded-circle shadow-sm">
-                                                        <i className="icon-shopping_cart"></i>
-                                                    </button>
+                                                <div className="d-flex align-items-baseline">
+                                                    <span className="h5 font-weight-bold text-dark mb-0">₹{p.finalprice}</span>
+                                                    {p.baseprice > p.finalprice && <del className="ml-2 text-muted x-small">₹{p.baseprice}</del>}
                                                 </div>
                                             </div>
                                         </div>
@@ -217,47 +202,52 @@ export default function Shop() {
                                 ))}
                             </AnimatePresence>
                         </div>
-
-                        {/* If No Products */}
-                        {filteredProducts.length === 0 && (
-                            <div className="text-center py-5">
-                                <img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" width="120" className="opacity-50 mb-3" />
-                                <h4 className="text-muted">Oops! No products match your filters.</h4>
-                                <button className="btn btn-info mt-3 rounded-pill" onClick={() => window.location.reload()}>Clear All Filters</button>
-                            </div>
-                        )}
                     </div>
                 </div>
-            </section>
+            </div>
 
             <style dangerouslySetInnerHTML={{ __html: `
-                .rounded-xl { border-radius: 20px !important; }
-                .product-card-premium {
-                    border-radius: 20px;
-                    transition: all 0.4s ease;
-                    border: 1px solid #f0f0f0;
-                }
-                .product-card-premium:hover {
-                    transform: translateY(-10px);
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.1) !important;
-                }
-                .img-wrap { position: relative; display: block; overflow: hidden; }
-                .img-wrap img { transition: 0.6s all ease; }
+                .shop-premium-root { background: #fafafa; min-height: 100vh; font-family: 'Inter', sans-serif; }
+                .rounded-2xl { border-radius: 20px !important; }
+                .rounded-3xl { border-radius: 35px !important; }
+                .uppercase { text-transform: uppercase; }
+                .letter-spacing-1 { letter-spacing: 1px; }
+                .no-underline { text-decoration: none !important; }
                 
-                .card-overlay {
-                    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                    background: rgba(0,0,0,0.2); display: flex; align-items: center;
-                    justify-content: center; opacity: 0; transition: 0.3s;
-                }
+                /* Sidebar Styling */
+                .search-box-lux { position: relative; }
+                .search-box-lux input { width: 100%; border: 1px solid #eee; padding: 12px 15px 12px 40px; border-radius: 15px; outline: none; background: #f9f9f9; }
+                .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #aaa; }
                 
-                .premium-badge {
-                    position: absolute; top: 15px; left: 15px; z-index: 10;
-                    background: #ff4757; color: white; padding: 4px 12px;
-                    border-radius: 50px; font-size: 11px; font-weight: bold;
-                    box-shadow: 0 4px 10px rgba(255,71,87,0.3);
+                .filter-label { font-size: 10px; font-weight: 800; color: #aaa; letter-spacing: 2px; margin-bottom: 15px; display: block; }
+                .lux-select { width: 100%; border: 1px solid #eee; padding: 12px; border-radius: 15px; background: #f9f9f9; outline: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+                
+                .size-chip-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+                .size-chip { border: 1px solid #eee; background: #f9f9f9; padding: 8px; border-radius: 10px; font-size: 11px; font-weight: bold; transition: 0.3s; }
+                .size-chip.active { background: #17a2b8; color: white; border-color: #17a2b8; }
+                
+                .sort-minimal { border: none; background: transparent; font-weight: 800; outline: none; cursor: pointer; }
+
+                /* Card Styling */
+                .img-container-lux { aspect-ratio: 10 / 13; background: #f2f2f2; }
+                .transition-slow { transition: 0.6s all cubic-bezier(0.165, 0.84, 0.44, 1); }
+                .product-card-premium:hover .transition-slow { transform: scale(1.1); }
+                
+                .lux-badge { position: absolute; top: 15px; left: 15px; background: #ff4757; color: white; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 10px; z-index: 5; }
+                
+                .card-hover-overlay {
+                    position: absolute; bottom: -100px; left: 0; width: 100%;
+                    background: linear-gradient(to top, rgba(255,255,255,0.95), transparent);
+                    transition: 0.4s ease; display: flex; flex-direction: column; align-items: center;
                 }
-                .gap-2 { gap: 10px; }
-                .btn-white { background: white; color: black; border: none; font-weight: bold; }
+                .product-card-premium:hover .card-hover-overlay { bottom: 0; }
+                
+                .size-selector-mini { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+                .mini-size-btn { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #ddd; background: white; font-size: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+                .mini-size-btn.active { background: #111; color: white; border-color: #111; }
+                .mini-size-btn:hover:not(.active) { border-color: #17a2b8; color: #17a2b8; }
+
+                .hover-info:hover { color: #17a2b8 !important; }
             `}} />
         </div>
     )
