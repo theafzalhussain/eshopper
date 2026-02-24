@@ -49,7 +49,7 @@ export default function ForgetPassword() {
 
         setLoading(true);
         try {
-            // Ensure otp is sent with the payload
+            // Payload includes new password and OTP for server-side verification
             const res = await resetPasswordAPI({ ...data, otp: userOtp })
             if (res.result === "Done") {
                 alert("Credentials Synchronized Successfully!");
