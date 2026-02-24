@@ -10,7 +10,7 @@ require('dotenv').config();
 
 const app = express();
 
-// ✅ CORS FIX: Allowing your Vercel domain
+// ✅ CORS FIX for Production
 app.use(cors({ origin: 'https://eshopperr.vercel.app', credentials: true }));
 app.use(express.json());
 
@@ -20,19 +20,26 @@ mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).
 
 // --- 2. CONFIGURATIONS ---
 cloudinary.config({ cloud_name: 'dtfvoxw1p', api_key: '551368853328319', api_secret: '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' });
-const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
-const upload = multer({ storage: storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
+const storage = new CloudinaryStorage({ cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
+const upload = multer({ storage }).fields([{ name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, { name: 'pic4', maxCount: 1 }]);
 
-// ✅ USING YOUR VERIFIED APP PASSWORD
+// ✅ CLOUD SERVER OPTIMIZED TRANSPORTER
 const transporter = nodemailer.createTransport({
     service: 'gmail',
-    auth: { user: 'theafzalhussain786@gmail.com', pass: 'aitweldfmsqglvjy' } 
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    pool: true, // Connection reuse ke liye
+    auth: { user: 'theafzalhussain786@gmail.com', pass: 'aitweldfmsqglvjy' },
+    connectionTimeout: 10000, // 10 seconds timeout
+    greetingTimeout: 10000,
+    socketTimeout: 15000
 });
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// --- 3. ALL 10 MODELS (Spelling synced with your project) ---
+// --- 3. ALL MODELS ---
 const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String }, opts));
 const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
@@ -44,22 +51,23 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-// --- 4. AUTH & OTP ROUTES ---
+// --- 4. SECURE AUTH & OTP ROUTES ---
 app.post('/api/send-otp', async (req, res) => {
     try {
         const { email, type } = req.body;
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const user = await User.findOne({ $or: [{ email }, { username: email }] });
 
-        if (type === 'forget' && !user) return res.status(404).json({ message: "Identity not found" });
-        if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
+        if (type === 'forget' && !user) return res.status(404).json({ message: "User not found" });
+        if (type === 'signup' && user) return res.status(400).json({ message: "Email already exists" });
 
-        await transporter.sendMail({
+        // Background me mail bhejein bina server block kiye
+        transporter.sendMail({
             from: '"Eshopper Luxury" <theafzalhussain786@gmail.com>',
             to: email,
             subject: '🔐 Verification Code',
-            html: `<h3>Your Code is: ${otp}</h3><p>Valid for 10 minutes.</p>`
-        });
+            html: `<h3>Your Code: ${otp}</h3>`
+        }).catch(err => console.error("Mail Silent Error:", err.message));
 
         if (user) { user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save(); }
         res.json({ result: "Done", otp }); 
@@ -85,9 +93,9 @@ app.post('/login', async (req, res) => {
     } catch (e) { res.status(500).json(e); }
 });
 
-// --- 5. UNIFIED CRUD HANDLER (कुछ भी रिमूव नहीं होगा) ---
+// --- 5. DYNAMIC CRUD HANDLER ---
 const handle = (path, Model, useUpload = false) => {
-    app.get(path, async (req, res) => res.json(await Model.find().sort({ _id: -1 })));
+    app.get(path, async (req, res) => res.json(await Model.find().sort({_id:-1})));
     app.get(`${path}/:id`, async (req, res) => res.json(await Model.findById(req.params.id)));
     app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
@@ -110,11 +118,12 @@ const handle = (path, Model, useUpload = false) => {
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
 };
 
-// INITIALIZE ALL ROUTES
+// INITIALIZE ALL
 handle('/user', User, true); handle('/product', Product, true); handle('/maincategory', Maincategory);
 handle('/subcategory', Subcategory); handle('/brand', Brand); handle('/cart', Cart);
 handle('/wishlist', Wishlist); handle('/checkout', Checkout); handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
+// ✅ RENDER PORT FIX
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server Live on ${PORT}`));
