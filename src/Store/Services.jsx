@@ -21,11 +21,10 @@ async function fastAPI(endpoint, method = "GET", data = null) {
     throw new Error(errText || "API Failure");
 }
 
-// --- SYNCED EXPORTS ---
 export const loginAPI = (d) => fastAPI("/login", "POST", d);
 export const sendOtpAPI = (d) => fastAPI("/api/send-otp", "POST", d);
 export const resetPasswordAPI = (d) => fastAPI("/api/reset-password", "POST", d);
-export const forgetPasswordAPI = (d) => fastAPI("/api/reset-password", "POST", d); // Fixed for Saga
+export const forgetPasswordAPI = (d) => fastAPI("/api/reset-password", "POST", d);
 
 export const getUserAPI = () => fastAPI("/user");
 export const getSingleUserAPI = (id) => fastAPI(`/user/${id}`);
