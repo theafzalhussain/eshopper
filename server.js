@@ -10,7 +10,11 @@ require('dotenv').config();
 
 const app = express();
 
-const allowedOrigins = ['https://eshopperr.vercel.app', 'http://localhost:3000'];
+const allowedOrigins = [
+    'https://eshopperr.vercel.app',
+    process.env.FRONTEND_URL || 'https://eshopperr.vercel.app',
+    'http://localhost:3000'
+];
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
