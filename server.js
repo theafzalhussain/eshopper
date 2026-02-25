@@ -29,8 +29,11 @@ app.use(cors({
 
 app.use(express.json());
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://theafzalhussain786_db_user_new:Afzal0786@cluster0.kygjjc4.mongodb.net/eshoper?retryWrites=true&w=majority";
-mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+if (!MONGO_URI) {
+    console.error("❌ Missing MONGO_URI in environment");
+    process.exit(1);
+}
 
 cloudinary.config({ 
     cloud_name: process.env.CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || 'dtfvoxw1p', 
@@ -195,5 +198,34 @@ handle('/checkout', Checkout);
 handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server Live on ${PORT}`));
+const PORT = process.env.PORT || 5000;
+
+async function startServer() {
+    try {
+        await mongoose.connect(MONGO_URI, {
+            autoIndex: true,
+            serverSelectionTimeoutMS: 10000
+        });
+        console.log("✅ MongoDB connected");
+        app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server Live on ${PORT}`));
+    } catch (e) {
+        console.error("❌ DB Error:", e.message);
+        process.exit(1);
+    }
+}
+
+process.on("unhandledRejection", (err) => {
+    console.error("❌ Unhandled Rejection:", err?.message || err);
+    process.exit(1);
+});
+
+process.on("SIGINT", async () => {
+    try {
+        await mongoose.connection.close(false);
+    } catch (e) {
+        console.error("❌ Error closing MongoDB:", e?.message || e);
+    }
+    process.exit(0);
+});
+
+startServer();

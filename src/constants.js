@@ -52,7 +52,7 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // ===== ENV VARIABLES FOR REFERENCE =====
 // Required Render Environment Variables:
-// - MONGODB_URI: MongoDB connection string
+// - MONGO_URI: MongoDB connection string
 // - BREVO_API_KEY: Email service API key
 // - CLOUD_NAME: Cloudinary cloud name
 // - CLOUD_API_KEY: Cloudinary API key
