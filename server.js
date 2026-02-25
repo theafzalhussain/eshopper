@@ -13,6 +13,7 @@ const app = express();
 const allowedOrigins = [
     'https://eshopperr.vercel.app',
     process.env.FRONTEND_URL || 'https://eshopperr.vercel.app',
+    process.env.REACT_APP_FRONTEND_URL || 'https://eshopperr.vercel.app',
     'http://localhost:3000'
 ];
 app.use(cors({
@@ -32,9 +33,9 @@ const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://theafzalhussain786
 mongoose.connect(MONGODB_URI).then(() => console.log("✅ Master Engine Live")).catch(e => console.log("❌ DB Error", e));
 
 cloudinary.config({ 
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dtfvoxw1p', 
-    api_key: process.env.CLOUDINARY_API_KEY || '551368853328319', 
-    api_secret: process.env.CLOUDINARY_API_SECRET || '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' 
+    cloud_name: process.env.CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || 'dtfvoxw1p', 
+    api_key: process.env.CLOUD_API_KEY || process.env.CLOUDINARY_API_KEY || '551368853328319', 
+    api_secret: process.env.CLOUD_API_SECRET || process.env.CLOUDINARY_API_SECRET || '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' 
 });
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
 const upload = multer({ storage }).fields([
