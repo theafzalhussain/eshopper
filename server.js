@@ -13,16 +13,27 @@ const app = express();
 const allowedOrigins = [
     'https://eshopperr.vercel.app',
     process.env.FRONTEND_URL || 'https://eshopperr.vercel.app',
-    process.env.REACT_APP_FRONTEND_URL || 'https://eshopperr.vercel.app',
-    'http://localhost:3000'
+    process.env.REACT_APP_FRONTEND_URL || 'https://eshopperr.vercel.app'
 ];
+
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('CORS identity blocked'));
+        // Allow if no origin (like mobile apps or server requests)
+        if (!origin) {
+            return callback(null, true);
         }
+        
+        // Allow localhost (any port) for development
+        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+            return callback(null, true);
+        }
+        
+        // Allow production URLs
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
+        }
+        
+        callback(new Error('CORS identity blocked'));
     },
     credentials: true
 }));

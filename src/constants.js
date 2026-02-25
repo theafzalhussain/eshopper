@@ -1,9 +1,7 @@
 // ===== API BASE URL =====
-// Localhost wala band kar dein
-// export const BASE_URL = "http://localhost:8000"; 
-
-// Render wala URL yahan daalein
-export const BASE_URL = process.env.REACT_APP_API_URL || "https://eshopper-ukgu.onrender.com";
+// Localhost for development, Render for production
+const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+export const BASE_URL = process.env.REACT_APP_API_URL || (isDev ? "http://localhost:5000" : "https://eshopper-ukgu.onrender.com");
 
 // ===== FRONTEND URLs =====
 export const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL || "https://eshopperr.vercel.app";
