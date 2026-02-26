@@ -4,8 +4,8 @@ const cors = require('cors');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const bcrypt = require('bcryptjs'); 
-const https = require('https'); 
+const bcrypt = require('bcryptjs');
+const SibApiV3Sdk = require('@getbrevo/brevo');
 require('dotenv').config();
 
 const app = express();
@@ -40,11 +40,16 @@ app.use(cors({
 
 app.use(express.json());
 
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+// 🔧 ENHANCED MONGODB CONNECTION SETUP
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+
 if (!MONGO_URI) {
-    console.error("❌ Missing MONGO_URI in environment");
+    console.error("❌ CRITICAL: Missing MONGODB_URI or MONGO_URI in environment variables");
+    console.error("   Please set MONGODB_URI in your Railway/Render environment");
     process.exit(1);
 }
+
+console.log("🔍 Attempting MongoDB connection...");
 
 cloudinary.config({ 
     cloud_name: process.env.CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || 'dtfvoxw1p', 
@@ -58,51 +63,50 @@ const upload = multer({ storage }).fields([
     { name: 'pic4', maxCount: 1 }
 ]);
 
+// Configure Brevo SDK
+const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+let brevoConfigured = false;
+
+const configureBrevo = () => {
+    if (!brevoConfigured && process.env.BREVO_API_KEY) {
+        apiInstance.setApiKey(SibApiV3Sdk.ApiClient.instance.authentications['api-key'], process.env.BREVO_API_KEY.trim());
+        brevoConfigured = true;
+    }
+};
+
 const sendMail = (to, otp) => {
     return new Promise((resolve, reject) => {
-        const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null; 
+        const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
         
         if (!BREVO_KEY) {
-            return reject(new Error("API Key Missing in Render Env"));
+            return reject(new Error("❌ Brevo API Key Missing in Environment"));
         }
 
-        const payload = JSON.stringify({
-            sender: { name: "eshopper", email: "theafzalhussain786@gmail.com" },
-            to: [{ email: to }],
-            subject: "🔐 Security Verification - Eshopper",
-            htmlContent: `<div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;border-radius:10px;">
+        configureBrevo();
+
+        const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+        sendSmtpEmail.subject = "🔐 Security Verification - Eshopper";
+        sendSmtpEmail.htmlContent = `
+            <div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;border-radius:10px;">
                 <h2 style="color:#333;">Verification Code</h2>
-                <h1 style="letter-spacing:10px;color:#17a2b8;background:#fff;padding:15px;display:inline-block;border-radius:5px;">${otp}</h1>
-                <p style="color:#666;">This code is valid for 10 minutes only.</p>
-            </div>`
-        });
+                <h1 style="letter-spacing:10px;color:#17a2b8;background:#fff;padding:15px;display:inline-block;border-radius:5px;font-weight:bold;">${otp}</h1>
+                <p style="color:#666;font-size:14px;">This code is valid for 10 minutes only.</p>
+                <p style="color:#999;font-size:12px;">If you didn't request this, please ignore this email.</p>
+            </div>
+        `;
+        sendSmtpEmail.sender = { name: "Eshopper", email: "theafzalhussain786@gmail.com" };
+        sendSmtpEmail.to = [{ email: to }];
+        sendSmtpEmail.replyTo = { email: "support@eshopper.com" };
 
-        const options = {
-            hostname: 'api.brevo.com',
-            path: '/v3/smtp/email',
-            method: 'POST',
-            headers: {
-                'accept': 'application/json',
-                'api-key': BREVO_KEY,
-                'content-type': 'application/json'
-            }
-        };
-
-        const req = https.request(options, (res) => {
-            let resData = '';
-            res.on('data', d => resData += d);
-            res.on('end', () => {
-                if (res.statusCode === 201) resolve(true);
-                else {
-                    console.error("❌ Brevo API Rejection:", resData);
-                    reject(new Error(resData));
-                }
+        apiInstance.sendTransacEmail(sendSmtpEmail)
+            .then(() => {
+                console.log("✅ OTP Email Sent Successfully to:", to);
+                resolve(true);
+            })
+            .catch((error) => {
+                console.error("❌ Brevo Email Error:", error.response?.body || error.message);
+                reject(new Error(`Failed to send OTP: ${error.message}`));
             });
-        });
-
-        req.on('error', e => reject(e));
-        req.write(payload);
-        req.end();
     });
 };
 
@@ -215,12 +219,23 @@ async function startServer() {
     try {
         await mongoose.connect(MONGO_URI, {
             autoIndex: true,
-            serverSelectionTimeoutMS: 10000
+            serverSelectionTimeoutMS: 10000,
+            socketTimeoutMS: 45000,
+            retryWrites: true,
+            w: 'majority'
         });
-        console.log("✅ MongoDB connected");
-        app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Master Server Live on ${PORT}`));
+        
+        console.log("✅ MongoDB connected successfully");
+        console.log(`📊 Database: ${mongoose.connection.name}`);
+        console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
+        
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 Master Server Live on ${PORT}`);
+        });
     } catch (e) {
-        console.error("❌ DB Error:", e.message);
+        console.error("❌ MongoDB Connection Failed:", e.message);
+        console.error("   Details:", e.code || e.codeName);
+        console.error("   URI (masked):", MONGO_URI.replace(/mongodb\+srv:\/\/(.+)@/, 'mongodb+srv://***@'));
         process.exit(1);
     }
 }
@@ -231,12 +246,27 @@ process.on("unhandledRejection", (err) => {
 });
 
 process.on("SIGINT", async () => {
+    console.log("\n🛑 Shutting down gracefully...");
     try {
         await mongoose.connection.close(false);
+        console.log("✅ MongoDB connection closed");
     } catch (e) {
         console.error("❌ Error closing MongoDB:", e?.message || e);
     }
     process.exit(0);
+});
+
+// 📡 MONITOR MONGOOSE CONNECTION EVENTS
+mongoose.connection.on('connected', () => {
+    console.log('✅ Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('❌ Mongoose connection error:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.warn('⚠️  Mongoose disconnected from MongoDB');
 });
 
 startServer();
