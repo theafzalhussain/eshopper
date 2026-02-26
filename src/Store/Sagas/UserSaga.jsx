@@ -1,7 +1,7 @@
 import { takeEvery, put } from "redux-saga/effects"
 // यहाँ हमने forgetPasswordAPI की जगह resetPasswordAPI कर दिया है
 import { getUserAPI, updateUserAPI, resetPasswordAPI, createUserAPI } from "../Services" 
-import { ADD_USER, ADD_USER_RED, GET_USER, GET_USER_RED, UPDATE_USER, UPDATE_USER_RED } from "../Constant"
+import { ADD_USER, ADD_USER_RED, GET_USER, GET_USER_RED, UPDATE_USER, UPDATE_USER_RED, FORGET_PASSWORD } from "../Constant"
 
 function* getUserSaga() {
     try {
@@ -44,5 +44,5 @@ export function* userSaga() {
     yield takeEvery(GET_USER, getUserSaga);
     yield takeEvery(ADD_USER, createUserSaga);
     yield takeEvery(UPDATE_USER, updateUserSaga);
-    yield takeEvery("FORGET_PASSWORD", forgetSaga);
+    yield takeEvery(FORGET_PASSWORD, forgetSaga);
 }

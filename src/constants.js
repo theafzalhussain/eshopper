@@ -51,14 +51,15 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 // ===== ENV VARIABLES FOR REFERENCE =====
 // Required Railway Environment Variables:
 // - MONGODB_URI: MongoDB connection string
-// - BREVO_API_KEY: Email service API key (Brevo v3 API)
+// - BREVO_API_KEY: Email service API key (Brevo v4 SDK)
+// - SENDER_EMAIL: Sender email address (e.g. support@eshopperr.me)
 // - CLOUD_NAME: Cloudinary cloud name
 // - CLOUD_API_KEY: Cloudinary API key
 // - CLOUD_API_SECRET: Cloudinary API secret
-// - PORT: Server port (Railway auto-assigns)
 // - FRONTEND_URL: Your frontend URL (https://eshopperr.me)
-// - SENTRY_DSN: Sentry error tracking DSN (Optional but recommended)
+// - SENTRY_DSN: Sentry error tracking DSN (Optional)
 // - NODE_ENV: production
+// Note: PORT is auto-assigned by Railway, do not set manually
 
 // Required Vercel Environment Variables (in .env.local):
 // - REACT_APP_API_URL: Your production API URL (https://api.eshopperr.me)

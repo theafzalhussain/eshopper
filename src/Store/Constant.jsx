@@ -47,7 +47,8 @@ export const UPDATE_USER = "UPDATE_USER"
 export const UPDATE_USER_RED = "UPDATE_USER_RED"
 export const DELETE_USER = "DELETE_USER"
 export const DELETE_USER_RED = "DELETE_USER_RED"
-export const FORGET_PASSWORD = "FORGET_PASSWORD" // 🔥 Added for Security Logic
+export const FORGET_PASSWORD = "FORGET_PASSWORD"
+export const FORGET_PASSWORD_RED = "FORGET_PASSWORD_RED"
 
 // CART
 export const ADD_CART = "ADD_CART"

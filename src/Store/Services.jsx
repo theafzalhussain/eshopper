@@ -7,12 +7,7 @@ const getID = (data) => {
 };
 
 const getAuthToken = () => {
-    try {
-        const user = JSON.parse(localStorage.getItem("user") || "{}");
-        return user?.token || null;
-    } catch {
-        return null;
-    }
+    return localStorage.getItem("userid") || null;
 };
 
 // With timeout and better error handling
