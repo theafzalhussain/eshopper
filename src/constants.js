@@ -1,7 +1,7 @@
 // ===== API BASE URL =====
-// Localhost for development, Railway/Render for production
+// Production API endpoint on Railway
 const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-export const BASE_URL = process.env.REACT_APP_API_URL || (isDev ? "http://localhost:5000" : "https://your-railway-app.up.railway.app");
+export const BASE_URL = process.env.REACT_APP_API_URL || (isDev ? "http://localhost:5000" : "https://api.eshopperr.me");
 
 // ===== FRONTEND URLs =====
 export const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL || "https://eshopperr.me";
@@ -56,9 +56,10 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 // - CLOUD_API_KEY: Cloudinary API key
 // - CLOUD_API_SECRET: Cloudinary API secret
 // - PORT: Server port (Railway auto-assigns)
-// - FRONTEND_URL: Your frontend URL (e.g., https://eshopperr.me)
-// - SENTRY_DSN: (Optional) Sentry error tracking DSN
+// - FRONTEND_URL: Your frontend URL (https://eshopperr.me)
+// - SENTRY_DSN: Sentry error tracking DSN (Optional but recommended)
+// - NODE_ENV: production
 
 // Required Vercel Environment Variables (in .env.local):
-// - REACT_APP_API_URL: Your Railway backend URL (e.g., https://your-app.up.railway.app)
-// - REACT_APP_FRONTEND_URL: Your frontend URL (e.g., https://eshopperr.me)
+// - REACT_APP_API_URL: Your production API URL (https://api.eshopperr.me)
+// - REACT_APP_FRONTEND_URL: Your frontend URL (https://eshopperr.me)

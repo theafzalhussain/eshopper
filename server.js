@@ -6,15 +6,25 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const SibApiV3Sdk = require('@getbrevo/brevo');
+const Sentry = require('@sentry/node');
 require('dotenv').config();
+
+// 🔴 SENTRY ERROR TRACKING - Initialize at the top
+if (process.env.SENTRY_DSN) {
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV || 'production',
+        tracesSampleRate: 1.0,
+    });
+    console.log('✅ Sentry initialized for error tracking');
+}
 
 const app = express();
 
+// 🔒 STRICT PRODUCTION CORS - Allow ONLY production domain
 const allowedOrigins = [
     'https://eshopperr.me',
-    'https://eshopperr.vercel.app',
-    process.env.FRONTEND_URL || 'https://eshopperr.me',
-    process.env.REACT_APP_FRONTEND_URL || 'https://eshopperr.me'
+    process.env.FRONTEND_URL || 'https://eshopperr.me'
 ];
 
 app.use(cors({
@@ -41,22 +51,32 @@ app.use(cors({
 
 app.use(express.json());
 
-// 🔧 ENHANCED MONGODB CONNECTION SETUP
-const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
+// � REQUEST LOGGING MIDDLEWARE
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+});
+
+// 🔴 SENTRY REQUEST HANDLER
+if (process.env.SENTRY_DSN) {
+    app.use(Sentry.Handlers.requestHandler());
+}
+
+// �🔧 DATABASE CONNECTION SETUP
+const MONGO_URI = process.env.MONGODB_URI;
 
 if (!MONGO_URI) {
-    console.error("❌ CRITICAL: Missing MONGODB_URI or MONGO_URI in environment variables");
-    console.error("   Please set MONGODB_URI in your Railway/Render environment");
+    console.error("❌ CRITICAL: Missing MONGODB_URI in environment variables");
+    console.error("   Please set MONGODB_URI in your Railway environment");
     process.exit(1);
 }
 
 console.log("🔍 Attempting MongoDB connection...");
 
 // 🔧 CLOUDINARY CONFIGURATION SETUP
-// Railway uses CLOUD_* naming convention
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_API_KEY = process.env.CLOUD_API_KEY || process.env.CLOUDINARY_API_KEY;
-const CLOUDINARY_API_SECRET = process.env.CLOUD_API_SECRET || process.env.CLOUDINARY_API_SECRET;
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUD_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUD_API_SECRET;
 
 if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     console.error("❌ CRITICAL: Missing Cloudinary credentials in environment variables");
@@ -79,7 +99,7 @@ const upload = multer({ storage }).fields([
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// Configure Brevo SDK
+// 📧 BREVO EMAIL SERVICE - Official SDK
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 let brevoConfigured = false;
 
@@ -87,6 +107,7 @@ const configureBrevo = () => {
     if (!brevoConfigured && process.env.BREVO_API_KEY) {
         apiInstance.setApiKey(SibApiV3Sdk.ApiClient.instance.authentications['api-key'], process.env.BREVO_API_KEY.trim());
         brevoConfigured = true;
+        console.log('✅ Brevo SDK configured successfully');
     }
 };
 
@@ -121,6 +142,7 @@ const sendMail = (to, otp) => {
             })
             .catch((error) => {
                 console.error("❌ Brevo Email Error:", error.response?.body || error.message);
+                Sentry.captureException(error);
                 reject(new Error(`Failed to send OTP: ${error.message}`));
             });
     });
@@ -258,6 +280,7 @@ async function startServer() {
 
 process.on("unhandledRejection", (err) => {
     console.error("❌ Unhandled Rejection:", err?.message || err);
+    Sentry.captureException(err);
     process.exit(1);
 });
 
@@ -271,6 +294,11 @@ process.on("SIGINT", async () => {
     }
     process.exit(0);
 });
+
+// 🔴 SENTRY ERROR HANDLER - Must be after all routes
+if (process.env.SENTRY_DSN) {
+    app.use(Sentry.Handlers.errorHandler());
+}
 
 // 📡 MONITOR MONGOOSE CONNECTION EVENTS
 mongoose.connection.on('connected', () => {
