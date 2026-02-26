@@ -6,20 +6,9 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const { BrevoClient } = require('@getbrevo/brevo');
-const Sentry = require('@sentry/node');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
-
-// 🔴 SENTRY ERROR TRACKING - Initialize at the top
-if (process.env.SENTRY_DSN) {
-    Sentry.init({
-        dsn: process.env.SENTRY_DSN,
-        environment: process.env.NODE_ENV || 'production',
-        tracesSampleRate: 1.0,
-    });
-    console.log('✅ Sentry initialized for error tracking');
-}
 
 const app = express();
 
@@ -67,9 +56,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// 🔴 SENTRY REQUEST HANDLER (v8+ uses automatic instrumentation - no middleware needed)
-
-// �🔧 DATABASE CONNECTION SETUP
+// 🔧 DATABASE CONNECTION SETUP
 const MONGO_URI = process.env.MONGODB_URI;
 
 if (!MONGO_URI) {
@@ -293,7 +280,6 @@ async function startServer() {
 
 process.on("unhandledRejection", (err) => {
     console.error("❌ Unhandled Rejection:", err?.message || err);
-    Sentry.captureException(err);
     process.exit(1);
 });
 
@@ -307,11 +293,6 @@ process.on("SIGINT", async () => {
     }
     process.exit(0);
 });
-
-// 🔴 SENTRY ERROR HANDLER - Must be after all routes
-if (process.env.SENTRY_DSN) {
-    app.use(Sentry.expressErrorHandler());
-}
 
 // 📡 MONITOR MONGOOSE CONNECTION EVENTS
 mongoose.connection.on('connected', () => {
