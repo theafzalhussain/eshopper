@@ -51,11 +51,25 @@ if (!MONGO_URI) {
 
 console.log("🔍 Attempting MongoDB connection...");
 
+// 🔧 CLOUDINARY CONFIGURATION SETUP
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || process.env.CLOUD_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || process.env.CLOUD_API_SECRET;
+
+if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+    console.error("❌ CRITICAL: Missing Cloudinary credentials in environment variables");
+    console.error("   Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in Railway");
+    process.exit(1);
+}
+
 cloudinary.config({ 
-    cloud_name: process.env.CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || 'dtfvoxw1p', 
-    api_key: process.env.CLOUD_API_KEY || process.env.CLOUDINARY_API_KEY || '551368853328319', 
-    api_secret: process.env.CLOUD_API_SECRET || process.env.CLOUDINARY_API_SECRET || '6WKoU9LzhQf4v5GCjLzK-ZBgnRw' 
+    cloud_name: CLOUDINARY_CLOUD_NAME, 
+    api_key: CLOUDINARY_API_KEY, 
+    api_secret: CLOUDINARY_API_SECRET
 });
+
+console.log("✅ Cloudinary configured successfully");
+
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
 const upload = multer({ storage }).fields([
     { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, 
