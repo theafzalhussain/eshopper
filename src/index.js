@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './Component/App';
-import reportWebVitals from './reportWebVitals';
 import { Provider } from 'react-redux';
 import { datadogRum } from '@datadog/browser-rum';
 import { reactPlugin } from '@datadog/browser-rum-react';
@@ -31,4 +30,3 @@ root.render(
    </Provider>
   </React.StrictMode>
 );
-reportWebVitals();

@@ -196,8 +196,19 @@ app.post('/login', authLimiter, async (req, res) => {
 });
 
 const handle = (path, Model, useUpload = false) => {
-    app.get(path, async (req, res) => res.json(await Model.find().sort({_id:-1})));
-    app.get(`${path}/:id`, async (req, res) => res.json(await Model.findById(req.params.id)));
+    app.get(path, async (req, res) => {
+        try {
+            const data = await Model.find().sort({ _id: -1 });
+            res.json(data);
+        } catch (e) { res.status(500).json({ error: "Failed to fetch data." }); }
+    });
+    app.get(`${path}/:id`, async (req, res) => {
+        try {
+            const data = await Model.findById(req.params.id);
+            if (!data) return res.status(404).json({ error: "Not found." });
+            res.json(data);
+        } catch (e) { res.status(500).json({ error: "Failed to fetch item." }); }
+    });
     app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             if (path === '/user' && req.body.otp) {
@@ -227,7 +238,12 @@ const handle = (path, Model, useUpload = false) => {
             const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d);
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
-    app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
+    app.delete(`${path}/:id`, async (req, res) => {
+        try {
+            await Model.findByIdAndDelete(req.params.id);
+            res.json({ result: "Done" });
+        } catch (e) { res.status(500).json({ error: "Failed to delete." }); }
+    });
 };
 
 handle('/user', User, true); 
@@ -310,7 +326,20 @@ mongoose.connection.on('error', (err) => {
 });
 
 mongoose.connection.on('disconnected', () => {
-    console.warn('⚠️  Mongoose disconnected from MongoDB');
+    console.warn('⚠️  Mongoose disconnected. Attempting reconnect in 5s...');
+    setTimeout(async () => {
+        try {
+            await mongoose.connect(MONGO_URI, {
+                serverSelectionTimeoutMS: 10000,
+                socketTimeoutMS: 45000,
+                retryWrites: true,
+                w: 'majority'
+            });
+            console.log('✅ MongoDB reconnected successfully');
+        } catch (e) {
+            console.error('❌ MongoDB reconnect failed:', e.message);
+        }
+    }, 5000);
 });
 
 startServer();
