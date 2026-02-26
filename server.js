@@ -6,39 +6,43 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const { BrevoClient } = require('@getbrevo/brevo');
+const Sentry = require('@sentry/node');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// 🔴 SENTRY v10 - Must init BEFORE creating express app
+if (process.env.SENTRY_DSN) {
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV || 'production',
+        tracesSampleRate: 1.0,
+    });
+    console.log('✅ Sentry initialized');
+}
+
 const app = express();
 
 // 🔒 STRICT PRODUCTION CORS - Allow ONLY production domain
+// --- YE CODE PASTE KAREIN (PURANE CORS KI JAGAH) ---
+
 const allowedOrigins = [
     'https://eshopperr.me',
-    process.env.FRONTEND_URL || 'https://eshopperr.me'
-];
+    'https://www.eshopperr.me',
+    process.env.FRONTEND_URL
+].filter(Boolean);
 
+// purane CORS logic ko replace karein:
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow if no origin (like mobile apps or server requests)
-        if (!origin) {
-            return callback(null, true);
-        }
-        
-        // Allow localhost (any port) for development
-        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-            return callback(null, true);
-        }
-        
-        // Allow production URLs
-        if (allowedOrigins.indexOf(origin) !== -1) {
-            return callback(null, true);
-        }
-        
-        callback(new Error('CORS identity blocked'));
-    },
-    credentials: true
+    origin: ["https://eshopperr.me", "https://www.eshopperr.me", process.env.FRONTEND_URL].filter(Boolean),
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"]
 }));
+
+// 🚨 YE LINE SABSE ZAROORI HAI:
+app.options('*', cors());
+// ------------------------------------------------
 
 app.use(express.json());
 
@@ -241,6 +245,16 @@ handle('/checkout', Checkout);
 handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
+// 🧪 SENTRY TEST ROUTE - Remove after testing
+app.get('/debug-sentry', (req, res) => {
+    throw new Error('Sentry Test Error - Working!');
+});
+
+// 🔴 SENTRY ERROR HANDLER - Must be after all routes (v10 way)
+if (process.env.SENTRY_DSN) {
+    Sentry.setupExpressErrorHandler(app);
+}
+
 const PORT = process.env.PORT || 5000;
 
 async function startServer() {
@@ -281,6 +295,7 @@ async function startServer() {
 
 process.on("unhandledRejection", (err) => {
     console.error("❌ Unhandled Rejection:", err?.message || err);
+    if (process.env.SENTRY_DSN) Sentry.captureException(err);
     process.exit(1);
 });
 
