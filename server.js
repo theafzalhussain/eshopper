@@ -246,6 +246,7 @@ const PORT = process.env.PORT || 5000;
 async function startServer() {
     try {
         await mongoose.connect(MONGO_URI, {
+            dbName: process.env.DB_NAME || 'eshoper',
             autoIndex: true,
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
@@ -308,6 +309,7 @@ mongoose.connection.on('disconnected', () => {
     setTimeout(async () => {
         try {
             await mongoose.connect(MONGO_URI, {
+                dbName: process.env.DB_NAME || 'eshoper',
                 serverSelectionTimeoutMS: 10000,
                 socketTimeoutMS: 45000,
                 retryWrites: true,
