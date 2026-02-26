@@ -10,7 +10,6 @@ export default function SingUp() {
     const [loading, setLoading] = useState(false)
     const [showPass, setShowPass] = useState(false)
     const [userOtp, setUserOtp] = useState("")
-    const [serverOtp, setServerOtp] = useState("")
     
     const navigate = useNavigate()
 
@@ -23,7 +22,6 @@ export default function SingUp() {
         try {
             const res = await sendOtpAPI({ email: data.email, type: 'signup' })
             if (res.result === "Done") {
-                setServerOtp(res.otp);
                 setStep(2);
                 alert("Verification vault opened! Check your email.");
             }
@@ -36,23 +34,24 @@ export default function SingUp() {
     // --- STEP 2: VERIFY & CREATE ---
     async function verifyAndSignup(e) {
         e.preventDefault();
-        // Frontend validation for speed
-        if (userOtp === serverOtp || userOtp === "123456") {
-            setLoading(true);
-            try {
-                // Backend updated route now expects OTP in the body for verification
-                const res = await createUserAPI({ ...data, otp: userOtp })
-                if (res.id) {
-                    alert("Master Identity Verified. Welcome to Eshopper.");
-                    navigate("/login")
-                }
-            } catch (err) {
-                alert("Server Verification Failed. Please try again.");
-            }
-            setLoading(false);
-        } else {
-            alert("Incorrect verification code!");
+        if (!userOtp || userOtp.length !== 6) {
+            alert("Please enter a valid 6-digit code.");
+            return;
         }
+        setLoading(true);
+        try {
+            // OTP verification is handled on the backend
+            const res = await createUserAPI({ ...data, otp: userOtp })
+            if (res.id) {
+                alert("Master Identity Verified. Welcome to Eshopper.");
+                navigate("/login")
+            } else {
+                alert("Incorrect verification code!");
+            }
+        } catch (err) {
+            alert("Incorrect verification code or server error. Please try again.");
+        }
+        setLoading(false);
     }
 
     return (

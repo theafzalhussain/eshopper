@@ -5,8 +5,10 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
-const SibApiV3Sdk = require('@getbrevo/brevo');
+const { BrevoClient } = require('@getbrevo/brevo');
 const Sentry = require('@sentry/node');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 // 🔴 SENTRY ERROR TRACKING - Initialize at the top
@@ -51,6 +53,14 @@ app.use(cors({
 
 app.use(express.json());
 
+// 🔒 SECURITY HEADERS
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// 🔒 RATE LIMITERS
+const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
+app.use(globalLimiter);
+
 // � REQUEST LOGGING MIDDLEWARE
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
@@ -93,59 +103,35 @@ cloudinary.config({
 console.log("✅ Cloudinary configured successfully");
 
 const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
-const upload = multer({ storage }).fields([
-    { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 }, 
-    { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 }, 
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }).fields([
+    { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 },
+    { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 },
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// 📧 BREVO EMAIL SERVICE - Official SDK
-const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-let brevoConfigured = false;
+// 📧 BREVO EMAIL SERVICE - v4 SDK
+const sendMail = async (to, otp) => {
+    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
+    if (!BREVO_KEY) throw new Error("Brevo API Key Missing in Environment");
 
-const configureBrevo = () => {
-    if (!brevoConfigured && process.env.BREVO_API_KEY) {
-        apiInstance.setApiKey(SibApiV3Sdk.ApiClient.instance.authentications['api-key'], process.env.BREVO_API_KEY.trim());
-        brevoConfigured = true;
-        console.log('✅ Brevo SDK configured successfully');
-    }
-};
+    const brevo = new BrevoClient({ apiKey: BREVO_KEY });
 
-const sendMail = (to, otp) => {
-    return new Promise((resolve, reject) => {
-        const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-        
-        if (!BREVO_KEY) {
-            return reject(new Error("❌ Brevo API Key Missing in Environment"));
-        }
-
-        configureBrevo();
-
-        const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-        sendSmtpEmail.subject = "🔐 Security Verification - Eshopper";
-        sendSmtpEmail.htmlContent = `
+    await brevo.transactionalEmails.sendTransacEmail({
+        subject: "Security Verification - Eshopper",
+        htmlContent: `
             <div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;border-radius:10px;">
                 <h2 style="color:#333;">Verification Code</h2>
                 <h1 style="letter-spacing:10px;color:#17a2b8;background:#fff;padding:15px;display:inline-block;border-radius:5px;font-weight:bold;">${otp}</h1>
                 <p style="color:#666;font-size:14px;">This code is valid for 10 minutes only.</p>
                 <p style="color:#999;font-size:12px;">If you didn't request this, please ignore this email.</p>
             </div>
-        `;
-        sendSmtpEmail.sender = { name: "Eshopper", email: "theafzalhussain786@gmail.com" };
-        sendSmtpEmail.to = [{ email: to }];
-        sendSmtpEmail.replyTo = { email: "support@eshopper.com" };
-
-        apiInstance.sendTransacEmail(sendSmtpEmail)
-            .then(() => {
-                console.log("✅ OTP Email Sent Successfully to:", to);
-                resolve(true);
-            })
-            .catch((error) => {
-                console.error("❌ Brevo Email Error:", error.response?.body || error.message);
-                Sentry.captureException(error);
-                reject(new Error(`Failed to send OTP: ${error.message}`));
-            });
+        `,
+        sender: { name: "Eshopper", email: process.env.SENDER_EMAIL || "support@eshopperr.me" },
+        to: [{ email: to }],
+        replyTo: { email: "support@eshopperr.me" },
     });
+
+    console.log("✅ OTP Email Sent Successfully to:", to);
 };
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
@@ -163,13 +149,15 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
-app.post('/api/send-otp', async (req, res) => {
+app.post('/api/send-otp', authLimiter, async (req, res) => {
     try {
         const { email, type } = req.body;
+        if (!email || !type) return res.status(400).json({ message: "Email and type are required." });
+
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const user = await User.findOne({ $or: [{ email }, { username: email }] });
 
-        if (type === 'forget' && !user) return res.status(404).json({ message: "User not found" });
+        if (type === 'forget' && !user) return res.json({ result: "Done", message: "If account exists, check your email for reset code." });
         if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
 
         if (user) {
@@ -180,29 +168,31 @@ app.post('/api/send-otp', async (req, res) => {
 
         await sendMail(email, otp);
         res.json({ result: "Done", message: "OTP sent successfully" });
-    } catch (e) { 
+    } catch (e) {
         console.error("❌ Email Error:", e.message);
-        res.status(500).json({ error: "Failed to send OTP. Please try again.", details: e.message }); 
+        res.status(500).json({ error: "Failed to send OTP. Please try again." });
     }
 });
 
-app.post('/api/reset-password', async (req, res) => {
+app.post('/api/reset-password', authLimiter, async (req, res) => {
     try {
         const { username, password, otp } = req.body;
         const user = await User.findOne({ $or: [{ email: username }, { username: username }] });
         if (user && user.otp === otp && user.otpExpires > Date.now()) {
             const salt = await bcrypt.genSalt(10); user.password = await bcrypt.hash(password, salt);
             user.otp = undefined; await user.save(); res.json({ result: "Done" });
-        } else res.status(400).send("Invalid OTP");
-    } catch (e) { res.status(500).json(e); }
+        } else res.status(400).json({ message: "Invalid or expired OTP." });
+    } catch (e) { res.status(500).json({ message: "Something went wrong. Please try again." }); }
 });
 
-app.post('/login', async (req, res) => {
+app.post('/login', authLimiter, async (req, res) => {
     try {
         const user = await User.findOne({ username: req.body.username });
-        if (user && await bcrypt.compare(req.body.password, user.password)) res.json(user);
-        else res.status(401).json({ message: "Invalid Credentials" });
-    } catch (e) { res.status(500).json(e); }
+        if (user && await bcrypt.compare(req.body.password, user.password)) {
+            const { password: _pw, otp: _otp, otpExpires: _exp, ...safeUser } = user.toJSON();
+            res.json(safeUser);
+        } else res.status(401).json({ message: "Invalid Credentials" });
+    } catch (e) { res.status(500).json({ message: "Something went wrong." }); }
 });
 
 const handle = (path, Model, useUpload = false) => {

@@ -15,7 +15,7 @@ import Login from './Login'
 import SingUp from './SingUp'
 import ForgetPassword from './ForgetPassword'
 import Profile from './Profile'
-import UpdateProfile from './UpdateProfile' 
+import UpdateProfile from './UpdateProfile'
 import AdminHome from './Admin/AdminHome'
 import AdminUser from './Admin/AdminUser'
 import AdminContact from './Admin/AdminContact'
@@ -40,10 +40,19 @@ const ScrollToTop = () => {
     return null;
 }
 
+const AdminRoute = ({ children }) => {
+    const isLoggedIn = localStorage.getItem("login") === "true";
+    const role = localStorage.getItem("role");
+    if (!isLoggedIn || role !== "Admin") {
+        return <Navigate to="/login" replace />;
+    }
+    return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <ScrollToTop /> 
+      <ScrollToTop />
       <Navbaar />
       <Routes>
         <Route path="/" element={<Home />} />
@@ -60,23 +69,23 @@ export default function App() {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/confirmation" element={<Confirmation />} />
-        <Route path="/admin-home" element={<AdminHome />} />
-        <Route path="/admin-user" element={<AdminUser />} />
-        <Route path="/admin-contact" element={<AdminContact />} />
-        <Route path="/admin-newsletter" element={<AdminNewsletter />} />
-        <Route path="/admin-checkout" element={<AdminCheckout />} />
-        <Route path="/admin-maincategory" element={<AdminMaincategory />} />
-        <Route path="/admin-add-maincategory" element={<AdminAddMaincategory />} />
-        <Route path="/admin-update-maincategory/:id" element={<AdminUpdateMaincategory />} />
-        <Route path="/admin-subcategory" element={<AdminSubcategory />} />
-        <Route path="/admin-add-subcategory" element={<AdminAddSubcategory />} />
-        <Route path="/admin-update-subcategory/:id" element={<AdminUpdateSubcategory />} />
-        <Route path="/admin-brand" element={<AdminBrand />} />
-        <Route path="/admin-add-brand" element={<AdminAddBrand />} />
-        <Route path="/admin-update-brand/:id" element={<AdminUpdateBrand />} />
-        <Route path="/admin-product" element={<AdminProduct />} />
-        <Route path="/admin-add-product" element={<AdminAddProduct />} />
-        <Route path="/admin-update-product/:id" element={<AdminUpdateProduct />} />
+        <Route path="/admin-home" element={<AdminRoute><AdminHome /></AdminRoute>} />
+        <Route path="/admin-user" element={<AdminRoute><AdminUser /></AdminRoute>} />
+        <Route path="/admin-contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
+        <Route path="/admin-newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
+        <Route path="/admin-checkout" element={<AdminRoute><AdminCheckout /></AdminRoute>} />
+        <Route path="/admin-maincategory" element={<AdminRoute><AdminMaincategory /></AdminRoute>} />
+        <Route path="/admin-add-maincategory" element={<AdminRoute><AdminAddMaincategory /></AdminRoute>} />
+        <Route path="/admin-update-maincategory/:id" element={<AdminRoute><AdminUpdateMaincategory /></AdminRoute>} />
+        <Route path="/admin-subcategory" element={<AdminRoute><AdminSubcategory /></AdminRoute>} />
+        <Route path="/admin-add-subcategory" element={<AdminRoute><AdminAddSubcategory /></AdminRoute>} />
+        <Route path="/admin-update-subcategory/:id" element={<AdminRoute><AdminUpdateSubcategory /></AdminRoute>} />
+        <Route path="/admin-brand" element={<AdminRoute><AdminBrand /></AdminRoute>} />
+        <Route path="/admin-add-brand" element={<AdminRoute><AdminAddBrand /></AdminRoute>} />
+        <Route path="/admin-update-brand/:id" element={<AdminRoute><AdminUpdateBrand /></AdminRoute>} />
+        <Route path="/admin-product" element={<AdminRoute><AdminProduct /></AdminRoute>} />
+        <Route path="/admin-add-product" element={<AdminRoute><AdminAddProduct /></AdminRoute>} />
+        <Route path="/admin-update-product/:id" element={<AdminRoute><AdminUpdateProduct /></AdminRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Footer />
