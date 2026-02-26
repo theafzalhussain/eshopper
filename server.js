@@ -23,26 +23,20 @@ if (process.env.SENTRY_DSN) {
 
 const app = express();
 
-// 🔒 STRICT PRODUCTION CORS - Allow ONLY production domain
-// --- YE CODE PASTE KAREIN (PURANE CORS KI JAGAH) ---
-
+// 🔒 CORS
 const allowedOrigins = [
     'https://eshopperr.me',
     'https://www.eshopperr.me',
     process.env.FRONTEND_URL
 ].filter(Boolean);
 
-// purane CORS logic ko replace karein:
 app.use(cors({
-    origin: ["https://eshopperr.me", "https://www.eshopperr.me", process.env.FRONTEND_URL].filter(Boolean),
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"]
 }));
-
-// 🚨 YE LINE SABSE ZAROORI HAI:
 app.options('*', cors());
-// ------------------------------------------------
 
 app.use(express.json());
 
