@@ -1,4 +1,4 @@
-import {ADD_USER, DELETE_USER, GET_USER, UPDATE_USER } from "../Constant";
+import {ADD_USER, DELETE_USER, GET_USER, UPDATE_USER, FORGET_PASSWORD } from "../Constant";
 
 export function addUser(data){
     return{
@@ -9,7 +9,7 @@ export function addUser(data){
 export function getUser(){
     return{
         type:GET_USER,
-       
+
     }
 }
 export function updateUser(data){
@@ -21,6 +21,12 @@ export function updateUser(data){
 export function deleteUser(data){
     return{
         type:DELETE_USER,
+        payload:data
+    }
+}
+export function forgetPassword(data){
+    return{
+        type:FORGET_PASSWORD,
         payload:data
     }
 }

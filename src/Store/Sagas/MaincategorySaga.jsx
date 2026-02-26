@@ -6,25 +6,25 @@ function* createMaincategorySaga(action) {
     try {
         let response = yield createMaincategoryAPI(action.payload)
         yield put({ type: ADD_MAINCATEGORY_RED, data: response })
-    } catch (e) { console.log("Maincategory Add Error:", e) }
+    } catch (e) { console.error("Maincategory Add Error:", e) }
 }
 function* getMaincategorySaga() {
     try {
         let response = yield getMaincategoryAPI()
         yield put({ type: GET_MAINCATEGORY_RED, data: response })
-    } catch (e) { console.log("Maincategory Fetch Error:", e) }
+    } catch (e) { console.error("Maincategory Fetch Error:", e) }
 }
 function* deleteMaincategorySaga(action) {
     try {
         yield deleteMaincategoryAPI(action.payload)
         yield put({ type: DELETE_MAINCATEGORY_RED, data: action.payload })
-    } catch (e) { console.log("Maincategory Delete Error:", e) }
+    } catch (e) { console.error("Maincategory Delete Error:", e) }
 }
 function* updateMaincategorySaga(action) {
     try {
         yield updateMaincategoryAPI(action.payload)
         yield put({ type: UPDATE_MAINCATEGORY_RED, data: action.payload })
-    } catch (e) { console.log("Maincategory Update Error:", e) }
+    } catch (e) { console.error("Maincategory Update Error:", e) }
 }
 
 export function* maincategorySaga() {

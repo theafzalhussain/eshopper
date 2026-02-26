@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { getUser } from '../Store/ActionCreaters/UserActionCreators'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LogIn, User as UserIcon, Lock, Eye, EyeOff, AlertCircle, ChevronRight, Loader2 } from 'lucide-react'
+import { loginAPI } from '../Store/Services'
 
 export default function Login() {
     const [data, setdata] = useState({ username: "", password: "" })
@@ -24,16 +25,11 @@ export default function Login() {
         if (errorMsg) setErrorMsg("");
     }
 
-    function postData(e) {
+    async function postData(e) {
         e.preventDefault();
         setLoading(true)
-        fetch("https://eshopper-ukgu.onrender.com/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        })
-        .then(res => res.json())
-        .then(user => {
+        try {
+            const user = await loginAPI(data)
             setLoading(false)
             if (user.username) {
                 localStorage.setItem("login", true);
@@ -45,11 +41,10 @@ export default function Login() {
             } else {
                 setErrorMsg(user.message || "Invalid credentials. Please try again.");
             }
-        })
-        .catch(() => {
+        } catch (err) {
             setLoading(false)
-            setErrorMsg("Cloud server is initializing. Retry in 10s.");
-        });
+            setErrorMsg(err.message || "Login failed. Please try again.");
+        }
     }
 
     return (

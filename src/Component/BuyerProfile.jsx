@@ -22,16 +22,8 @@ export default function BuyerProfile({ user }) {
                 <div className="second p-2 border w-50">{user.phone}</div>
             </div>
             <div className='d-flex'>
-                <div className="first p-2 border w-50">Address Line1</div>
+                <div className="first p-2 border w-50">Address</div>
                 <div className="second p-2 border w-50">{user.addressline1}</div>
-            </div>
-            <div className='d-flex'>
-                <div className="first p-2 border w-50">Address Line1</div>
-                <div className="second p-2 border w-50">{user.addressline2}</div>
-            </div>
-            <div className='d-flex'>
-                <div className="first p-2 border w-50">Address Line1</div>
-                <div className="second p-2 border w-50">{user.addressline3}</div>
             </div>
             <div className='d-flex'>
                 <div className="first p-2 border w-50">Pin</div>

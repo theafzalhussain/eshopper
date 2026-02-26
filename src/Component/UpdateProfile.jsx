@@ -42,7 +42,6 @@ export default function Updateprofile() {
         }
     }
 
- // ... existing imports ...
 async function postData(e) {
     e.preventDefault();
     setLoading(true);

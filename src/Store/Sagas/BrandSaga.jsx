@@ -6,25 +6,25 @@ function* createBrandSaga(action) {
     try {
         let response = yield createBrandAPI(action.payload)
         yield put({ type: ADD_BRAND_RED, data: response })
-    } catch (e) { console.log("Brand Add Error:", e) }
+    } catch (e) { console.error("Brand Add Error:", e) }
 }
 function* getBrandSaga() {
     try {
         let response = yield getBrandAPI()
         yield put({ type: GET_BRAND_RED, data: response })
-    } catch (e) { console.log("Brand Fetch Error:", e) }
+    } catch (e) { console.error("Brand Fetch Error:", e) }
 }
 function* deleteBrandSaga(action) {
     try {
         yield deleteBrandAPI(action.payload)
         yield put({ type: DELETE_BRAND_RED, data: action.payload })
-    } catch (e) { console.log("Brand Delete Error:", e) }
+    } catch (e) { console.error("Brand Delete Error:", e) }
 }
 function* updateBrandSaga(action) {
     try {
         yield updateBrandAPI(action.payload)
         yield put({ type: UPDATE_BRAND_RED, data: action.payload })
-    } catch (e) { console.log("Brand Update Error:", e) }
+    } catch (e) { console.error("Brand Update Error:", e) }
 }
 
 export function* brandSaga() {
