@@ -257,8 +257,18 @@ async function startServer() {
         console.log(`📊 Database: ${mongoose.connection.name}`);
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
-        app.listen(PORT, '0.0.0.0', () => {
+        const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`🚀 Master Server Live on ${PORT}`);
+        });
+
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                console.error(`\n❌ Port ${PORT} already in use!`);
+                console.error(`   Run this command to fix it:`);
+                console.error(`   Windows: netstat -ano | findstr :${PORT}  →  taskkill /PID <number> /F`);
+                process.exit(1);
+            }
+            throw err;
         });
     } catch (e) {
         console.error("❌ MongoDB Connection Failed:", e.message);
