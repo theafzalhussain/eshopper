@@ -67,10 +67,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// 🔴 SENTRY REQUEST HANDLER
-if (process.env.SENTRY_DSN) {
-    app.use(Sentry.Handlers.requestHandler());
-}
+// 🔴 SENTRY REQUEST HANDLER (v8+ uses automatic instrumentation - no middleware needed)
 
 // �🔧 DATABASE CONNECTION SETUP
 const MONGO_URI = process.env.MONGODB_URI;
@@ -313,7 +310,7 @@ process.on("SIGINT", async () => {
 
 // 🔴 SENTRY ERROR HANDLER - Must be after all routes
 if (process.env.SENTRY_DSN) {
-    app.use(Sentry.Handlers.errorHandler());
+    app.use(Sentry.expressErrorHandler());
 }
 
 // 📡 MONITOR MONGOOSE CONNECTION EVENTS
