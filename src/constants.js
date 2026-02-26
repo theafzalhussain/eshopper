@@ -4,7 +4,7 @@ const isDev = window.location.hostname === 'localhost' || window.location.hostna
 export const BASE_URL = process.env.REACT_APP_API_URL || (isDev ? "http://localhost:5000" : "https://your-railway-app.up.railway.app");
 
 // ===== FRONTEND URLs =====
-export const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL || "https://eshopperr.vercel.app";
+export const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL || "https://eshopperr.me";
 
 // ===== ADMIN DASHBOARD URL (Optional) =====
 export const ADMIN_URL = process.env.REACT_APP_ADMIN_URL || window.location.origin;
@@ -52,12 +52,13 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 // Required Railway Environment Variables:
 // - MONGODB_URI: MongoDB connection string
 // - BREVO_API_KEY: Email service API key (Brevo v3 API)
-// - CLOUDINARY_CLOUD_NAME: Cloudinary cloud name
-// - CLOUDINARY_API_KEY: Cloudinary API key
-// - CLOUDINARY_API_SECRET: Cloudinary API secret
+// - CLOUD_NAME: Cloudinary cloud name
+// - CLOUD_API_KEY: Cloudinary API key
+// - CLOUD_API_SECRET: Cloudinary API secret
 // - PORT: Server port (Railway auto-assigns)
-// - FRONTEND_URL: Your Vercel frontend URL
+// - FRONTEND_URL: Your frontend URL (e.g., https://eshopperr.me)
+// - SENTRY_DSN: (Optional) Sentry error tracking DSN
 
 // Required Vercel Environment Variables (in .env.local):
 // - REACT_APP_API_URL: Your Railway backend URL (e.g., https://your-app.up.railway.app)
-// - REACT_APP_FRONTEND_URL: Your Vercel frontend URL
+// - REACT_APP_FRONTEND_URL: Your frontend URL (e.g., https://eshopperr.me)

@@ -11,9 +11,10 @@ require('dotenv').config();
 const app = express();
 
 const allowedOrigins = [
+    'https://eshopperr.me',
     'https://eshopperr.vercel.app',
-    process.env.FRONTEND_URL || 'https://eshopperr.vercel.app',
-    process.env.REACT_APP_FRONTEND_URL || 'https://eshopperr.vercel.app'
+    process.env.FRONTEND_URL || 'https://eshopperr.me',
+    process.env.REACT_APP_FRONTEND_URL || 'https://eshopperr.me'
 ];
 
 app.use(cors({
@@ -52,13 +53,14 @@ if (!MONGO_URI) {
 console.log("🔍 Attempting MongoDB connection...");
 
 // 🔧 CLOUDINARY CONFIGURATION SETUP
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || process.env.CLOUD_NAME;
-const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || process.env.CLOUD_API_KEY;
-const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || process.env.CLOUD_API_SECRET;
+// Railway uses CLOUD_* naming convention
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUD_API_KEY || process.env.CLOUDINARY_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUD_API_SECRET || process.env.CLOUDINARY_API_SECRET;
 
 if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     console.error("❌ CRITICAL: Missing Cloudinary credentials in environment variables");
-    console.error("   Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in Railway");
+    console.error("   Please set CLOUD_NAME, CLOUD_API_KEY, and CLOUD_API_SECRET in Railway");
     process.exit(1);
 }
 
