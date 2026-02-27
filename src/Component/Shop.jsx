@@ -94,7 +94,7 @@ export default function Shop() {
     useEffect(() => { setmc(maincat) }, [maincat])
     
     // --- SMART ADD TO CART FUNCTION (NO REDIRECT) ---
-    function addToCart(p, sizeFromParam = null) {
+    function addToCart(p, sizeFromParam = null, colorFromParam = null) {
         if (!localStorage.getItem("login")) {
             navigate("/login")
             return
@@ -112,12 +112,26 @@ export default function Shop() {
             setTimeout(() => setShowNotification(null), 2000)
             return
         }
+
+        // Check if color is selected (if product has color options)
+        const selectedColor = colorFromParam || selectedColors[p.id]
+        if (normalizeColors(p.color).length > 0 && !selectedColor) {
+            setShowNotification({
+                type: 'warning',
+                message: '⚠️ Please select a color first',
+                productId: p.id,
+                count: 0
+            })
+            setTimeout(() => setShowNotification(null), 2000)
+            return
+        }
         
-        // Check if product already exists in cart with this size
+        // Check if product already exists in cart with this size AND color
         let existingItem = cart.find((item) => 
             item.productid === p.id && 
             item.userid === localStorage.getItem("userid") &&
-            item.size === selectedSize
+            item.size === selectedSize &&
+            item.color === selectedColor
         )
         
         if (existingItem) {
@@ -137,7 +151,7 @@ export default function Shop() {
                 productid: p.id,
                 userid: localStorage.getItem("userid"),
                 name: p.name,
-                color: p.color,
+                color: selectedColor || p.color,
                 size: selectedSize,
                 price: Number(p.finalprice),
                 qty: 1,
@@ -397,10 +411,10 @@ export default function Shop() {
                                                 
                                                 {/* Add to Bag Button - Premium */}
                                                 <motion.button 
-                                                    onClick={() => addToCart(item, selectedSizes[item.id])} 
-                                                    className={`btn-add-bag w-100 ${!selectedSizes[item.id] ? 'size-not-selected' : ''}`}
-                                                    whileHover={selectedSizes[item.id] ? { scale: 1.02 } : {}}
-                                                    whileTap={selectedSizes[item.id] ? { scale: 0.98 } : {}}
+                                                    onClick={() => addToCart(item, selectedSizes[item.id], selectedColors[item.id])} 
+                                                    className={`btn-add-bag w-100 ${(!selectedSizes[item.id] || (normalizeColors(item.color).length > 0 && !selectedColors[item.id])) ? 'size-not-selected' : ''}`}
+                                                    whileHover={(selectedSizes[item.id] && (normalizeColors(item.color).length === 0 || selectedColors[item.id])) ? { scale: 1.02 } : {}}
+                                                    whileTap={(selectedSizes[item.id] && (normalizeColors(item.color).length === 0 || selectedColors[item.id])) ? { scale: 0.98 } : {}}
                                                 >
                                                     <span>Add to Bag</span>
                                                     <span className="bag-icon">+</span>
