@@ -1,17 +1,8 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer = require('multer');
-const bcrypt = require('bcryptjs');
-const { TransactionalEmailsApi, ContactsApi, SendSmtpEmail } = require('@getbrevo/brevo');
-const Sentry = require('@sentry/node');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+// 🔴 LOAD ENV VARIABLES FIRST
 require('dotenv').config();
 
-// 🔴 SENTRY v10 - Must init BEFORE creating express app
+// 🔴 SENTRY v10 - MUST INITIALIZE BEFORE REQUIRING EXPRESS/FRAMEWORKS
+const Sentry = require('@sentry/node');
 if (process.env.SENTRY_DSN) {
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
@@ -21,12 +12,29 @@ if (process.env.SENTRY_DSN) {
     console.log('✅ Sentry initialized');
 }
 
+// NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS (after Sentry.init)
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const multer = require('multer');
+const bcrypt = require('bcryptjs');
+const { TransactionalEmailsApi, ContactsApi, SendSmtpEmail } = require('@getbrevo/brevo');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 
 // 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
 app.set('trust proxy', 1);
 
-// 🔒 CORS - Production domain hardcoded (frontend is at eshopperr.me)
+// � SENTRY REQUEST HANDLER - MUST BE FIRST (after trust proxy)
+if (process.env.SENTRY_DSN) {
+    app.use(Sentry.Handlers.requestHandler());
+}
+
+// �🔒 CORS - Production domain hardcoded (frontend is at eshopperr.me)
 const corsOptions = {
     origin: function(origin, callback) {
         // Allow no origin (server-to-server, mobile)
