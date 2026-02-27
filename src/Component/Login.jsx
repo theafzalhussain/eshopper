@@ -322,8 +322,63 @@ export default function Login() {
                 .spinner { animation: rotate 2s linear infinite; }
                 @keyframes rotate { 100% { transform: rotate(360deg); } }
 
+                /* === 📱 FULL RESPONSIVE DESIGN === */
+                @media (max-width: 991px) {
+                    .premium-login-container { padding: 40px 20px; }
+                    .glass-master-card { max-width: 500px; padding: 50px 35px; border-radius: 35px; }
+                    .brand-name { font-size: 1.75rem; letter-spacing: 5px; }
+                    .login-subtitle { font-size: 9px; letter-spacing: 2.5px; }
+                }
+
+                @media (max-width: 768px) {
+                    .glass-master-card { max-width: 90%; padding: 45px 30px; border-radius: 30px; }
+                    .brand-shield { width: 55px; height: 55px; font-size: 1.3rem; }
+                    .brand-name { font-size: 1.6rem; letter-spacing: 4px; }
+                    .login-subtitle { font-size: 8px; }
+                    .input-label { font-size: 10px; }
+                    .luxury-input { padding: 14px 16px; font-size: 13px; }
+                    .enter-btn { padding: 15px; font-size: 14px; }
+                }
+
                 @media (max-width: 576px) {
-                    .glass-master-card { border-radius: 0; padding: 40px 20px; }
+                    .premium-login-container { padding: 20px 15px; }
+                    .glass-master-card { 
+                        border-radius: 25px; 
+                        padding: 40px 25px; 
+                        max-width: 95%;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    }
+                    .brand-shield { width: 50px; height: 50px; font-size: 1.2rem; border-radius: 15px; }
+                    .brand-name { font-size: 1.4rem; letter-spacing: 3px; margin-bottom: 3px; }
+                    .login-subtitle { font-size: 7px; letter-spacing: 2px; }
+                    .input-label { font-size: 9px; letter-spacing: 1.5px; }
+                    .luxury-input { 
+                        padding: 12px 14px; 
+                        font-size: 14px;
+                        border-radius: 12px;
+                    }
+                    .enter-btn { 
+                        padding: 14px; 
+                        font-size: 13px; 
+                        letter-spacing: 2px;
+                        border-radius: 12px;
+                    }
+                    .recover-text { font-size: 11px; }
+                    .footer-text { font-size: 9px; }
+                    .signup-link-premium { font-size: 11px; }
+                }
+
+                @media (max-width: 375px) {
+                    .glass-master-card { padding: 35px 20px; border-radius: 20px; }
+                    .brand-shield { width: 45px; height: 45px; font-size: 1.1rem; }
+                    .brand-name { font-size: 1.2rem; letter-spacing: 2px; }
+                    .login-subtitle { font-size: 6px; letter-spacing: 1.5px; }
+                    .luxury-input { padding: 11px 12px; font-size: 13px; }
+                    .enter-btn { padding: 13px; font-size: 12px; }
+                }
+
+                @media (min-height: 900px) {
+                    .premium-login-container { align-items: center !important; }
                 }
             `}} />
         </div>
