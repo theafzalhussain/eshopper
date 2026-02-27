@@ -214,7 +214,6 @@ export default function Home() {
                                                     <span className="h5 font-weight-bold text-dark mb-0 product-price">₹{item.finalprice}</span>
                                                     {item.baseprice > item.finalprice && <del className="ml-2 text-muted product-old-price">₹{item.baseprice}</del>}
                                                 </div>
-                                                </div>
                                             </div>
                                         </div>
                                     </motion.div>
