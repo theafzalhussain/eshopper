@@ -100,15 +100,14 @@ cloudinary.config({
 console.log("✅ Cloudinary configured successfully");
 console.log(`📸 Cloud Name: ${CLOUDINARY_CLOUD_NAME}`);
 
-// 📝 HELPER FUNCTION TO VERIFY CLOUDINARY URLS
-const verifyCloudinaryUrl = (url) => {
+// 📝 HELPER FUNCTION TO RETURN CLOUDINARY URLS (for GET requests)
+const sanitizeCloudinaryUrl = (url) => {
     if (!url) return null;
-    // URL should be in format: https://res.cloudinary.com/{cloud_name}/image/upload/...
-    if (url.includes('res.cloudinary.com') && url.includes(CLOUDINARY_CLOUD_NAME)) {
-        console.log(`✅ Valid Cloudinary URL: ${url.substring(0, 60)}...`);
+    // If it's already a Cloudinary URL, return as-is (already uploaded)
+    if (url.includes('res.cloudinary.com')) {
         return url;
     }
-    console.warn(`⚠️  Suspicious URL detected: ${url.substring(0, 60)}...`);
+    // Path format from multer-storage-cloudinary, return as-is
     return url;
 };
 
@@ -239,30 +238,37 @@ const handle = (path, Model, useUpload = false) => {
         try {
             const data = await Model.find().sort({ _id: -1 });
             
-            // If Product model, verify image URLs
+            // If Product model, return image URLs as-is from Cloudinary
             if (path === '/product') {
-                data.forEach(product => {
-                    if (product.pic1) product.pic1 = verifyCloudinaryUrl(product.pic1);
-                    if (product.pic2) product.pic2 = verifyCloudinaryUrl(product.pic2);
-                    if (product.pic3) product.pic3 = verifyCloudinaryUrl(product.pic3);
-                    if (product.pic4) product.pic4 = verifyCloudinaryUrl(product.pic4);
+                console.log(`📦 Fetching ${data.length} products...`);
+                data.forEach((product, idx) => {
+                    if (product.pic1) product.pic1 = sanitizeCloudinaryUrl(product.pic1);
+                    if (product.pic2) product.pic2 = sanitizeCloudinaryUrl(product.pic2);
+                    if (product.pic3) product.pic3 = sanitizeCloudinaryUrl(product.pic3);
+                    if (product.pic4) product.pic4 = sanitizeCloudinaryUrl(product.pic4);
+                    if (idx === 0 && product.pic1) {
+                        console.log(`✅ Sample Product pic1: ${product.pic1.substring(0, 60)}...`);
+                    }
                 });
             }
             
             res.json(data);
-        } catch (e) { res.status(500).json({ error: "Failed to fetch data." }); }
+        } catch (e) { 
+            console.error(`❌ Error fetching ${path}:`, e.message);
+            res.status(500).json({ error: "Failed to fetch data." }); 
+        }
     });
     app.get(`${path}/:id`, async (req, res) => {
         try {
             const data = await Model.findById(req.params.id);
             if (!data) return res.status(404).json({ error: "Not found." });
             
-            // Verify image URLs for single product
+            // Return image URLs as-is from Cloudinary for single product
             if (path === '/product') {
-                if (data.pic1) data.pic1 = verifyCloudinaryUrl(data.pic1);
-                if (data.pic2) data.pic2 = verifyCloudinaryUrl(data.pic2);
-                if (data.pic3) data.pic3 = verifyCloudinaryUrl(data.pic3);
-                if (data.pic4) data.pic4 = verifyCloudinaryUrl(data.pic4);
+                if (data.pic1) data.pic1 = sanitizeCloudinaryUrl(data.pic1);
+                if (data.pic2) data.pic2 = sanitizeCloudinaryUrl(data.pic2);
+                if (data.pic3) data.pic3 = sanitizeCloudinaryUrl(data.pic3);
+                if (data.pic4) data.pic4 = sanitizeCloudinaryUrl(data.pic4);
             }
             
             res.json(data);
