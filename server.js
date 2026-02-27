@@ -23,6 +23,9 @@ if (process.env.SENTRY_DSN) {
 
 const app = express();
 
+// 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
+app.set('trust proxy', 1);
+
 // 🔒 CORS - Production domain hardcoded (frontend is at eshopperr.me)
 const corsOptions = {
     origin: function(origin, callback) {
@@ -95,9 +98,40 @@ cloudinary.config({
 });
 
 console.log("✅ Cloudinary configured successfully");
+console.log(`📸 Cloud Name: ${CLOUDINARY_CLOUD_NAME}`);
 
-const storage = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: 'eshoper_master', allowedFormats: ['jpg', 'png', 'jpeg'] } });
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }).fields([
+// 📝 HELPER FUNCTION TO VERIFY CLOUDINARY URLS
+const verifyCloudinaryUrl = (url) => {
+    if (!url) return null;
+    // URL should be in format: https://res.cloudinary.com/{cloud_name}/image/upload/...
+    if (url.includes('res.cloudinary.com') && url.includes(CLOUDINARY_CLOUD_NAME)) {
+        console.log(`✅ Valid Cloudinary URL: ${url.substring(0, 60)}...`);
+        return url;
+    }
+    console.warn(`⚠️  Suspicious URL detected: ${url.substring(0, 60)}...`);
+    return url;
+};
+
+const storage = new CloudinaryStorage({ 
+    cloudinary: cloudinary, 
+    params: { 
+        folder: 'eshoper_master', 
+        allowedFormats: ['jpg', 'png', 'jpeg'],
+        resource_type: 'auto'
+    } 
+});
+const upload = multer({ 
+    storage, 
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg'];
+        if (allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Invalid file type: ${file.mimetype}`));
+        }
+    }
+}).fields([
     { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 },
     { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 },
     { name: 'pic4', maxCount: 1 }
@@ -204,6 +238,17 @@ const handle = (path, Model, useUpload = false) => {
     app.get(path, async (req, res) => {
         try {
             const data = await Model.find().sort({ _id: -1 });
+            
+            // If Product model, verify image URLs
+            if (path === '/product') {
+                data.forEach(product => {
+                    if (product.pic1) product.pic1 = verifyCloudinaryUrl(product.pic1);
+                    if (product.pic2) product.pic2 = verifyCloudinaryUrl(product.pic2);
+                    if (product.pic3) product.pic3 = verifyCloudinaryUrl(product.pic3);
+                    if (product.pic4) product.pic4 = verifyCloudinaryUrl(product.pic4);
+                });
+            }
+            
             res.json(data);
         } catch (e) { res.status(500).json({ error: "Failed to fetch data." }); }
     });
@@ -211,6 +256,15 @@ const handle = (path, Model, useUpload = false) => {
         try {
             const data = await Model.findById(req.params.id);
             if (!data) return res.status(404).json({ error: "Not found." });
+            
+            // Verify image URLs for single product
+            if (path === '/product') {
+                if (data.pic1) data.pic1 = verifyCloudinaryUrl(data.pic1);
+                if (data.pic2) data.pic2 = verifyCloudinaryUrl(data.pic2);
+                if (data.pic3) data.pic3 = verifyCloudinaryUrl(data.pic3);
+                if (data.pic4) data.pic4 = verifyCloudinaryUrl(data.pic4);
+            }
+            
             res.json(data);
         } catch (e) { res.status(500).json({ error: "Failed to fetch item." }); }
     });
@@ -229,25 +283,56 @@ const handle = (path, Model, useUpload = false) => {
                 if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
                 if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
                 if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
+                
+                console.log(`📤 Files uploaded for ${path}:`, {
+                    pic1: d.pic1 ? '✅' : '❌',
+                    pic2: d.pic2 ? '✅' : '❌',
+                    pic3: d.pic3 ? '✅' : '❌',
+                    pic4: d.pic4 ? '✅' : '❌'
+                });
             }
             await d.save(); res.status(201).json(d);
-        } catch (e) { res.status(400).json(e); }
+        } catch (e) { 
+            console.error(`❌ Error creating ${path}:`, e.message);
+            res.status(400).json(e); 
+        }
     });
     app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             let upData = { ...req.body };
-            if (req.files) { if (req.files.pic) upData.pic = req.files.pic[0].path; if (req.files.pic1) upData.pic1 = req.files.pic1[0].path; }
+            if (req.files) { 
+                if (req.files.pic) upData.pic = req.files.pic[0].path; 
+                if (req.files.pic1) upData.pic1 = req.files.pic1[0].path;
+                if (req.files.pic2) upData.pic2 = req.files.pic2[0].path;
+                if (req.files.pic3) upData.pic3 = req.files.pic3[0].path;
+                if (req.files.pic4) upData.pic4 = req.files.pic4[0].path;
+                
+                console.log(`📤 Files updated for ${path}:`, {
+                    pic1: upData.pic1 ? '✅' : '❌',
+                    pic2: upData.pic2 ? '✅' : '❌',
+                    pic3: upData.pic3 ? '✅' : '❌',
+                    pic4: upData.pic4 ? '✅' : '❌'
+                });
+            }
+            
             if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
                 const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
             } else if (path === '/user') { delete upData.password; }
-            const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); res.json(d);
-        } catch (e) { res.status(500).json({ error: e.message }); }
+            const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); 
+            res.json(d);
+        } catch (e) { 
+            console.error(`❌ Error updating ${path}:`, e.message);
+            res.status(500).json({ error: e.message }); 
+        }
     });
     app.delete(`${path}/:id`, async (req, res) => {
         try {
             await Model.findByIdAndDelete(req.params.id);
             res.json({ result: "Done" });
-        } catch (e) { res.status(500).json({ error: "Failed to delete." }); }
+        } catch (e) { 
+            console.error(`❌ Error deleting from ${path}:`, e.message);
+            res.status(500).json({ error: "Failed to delete." }); 
+        }
     });
 };
 
