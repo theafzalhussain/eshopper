@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from "../Store/ActionCreaters/ProductActionCreators"
 import { getCart, addCart } from "../Store/ActionCreaters/CartActionCreators"
 import { getWishlist, addWishlist } from "../Store/ActionCreaters/WishlistActionCreators"
+import { optimizeCloudinaryUrl } from '../utils/cloudinaryHelper';
 
 export default function SingleProductPage() {
     let [p, setp] = useState({ pic1: "", pic2: "", pic3: "", pic4: "" })
@@ -91,7 +92,7 @@ export default function SingleProductPage() {
                 <div className="col-lg-6">
                     <div className="main-img-container shadow-sm border rounded mb-3 bg-white">
                         <img 
-                            src={mainImage || p.pic1} 
+                            src={optimizeCloudinaryUrl(mainImage || p.pic1)} 
                             className="img-fluid w-100" 
                             style={{ height: "500px", objectFit: "contain" }} 
                             alt={p.name} 
@@ -102,7 +103,7 @@ export default function SingleProductPage() {
                             img ? (
                                 <div key={index} className="col-3">
                                     <img 
-                                        src={img} 
+                                        src={optimizeCloudinaryUrl(img)} 
                                         onClick={() => setMainImage(img)} 
                                         className={`img-thumbnail ${mainImage === img ? 'border-info border-2' : ''}`} 
                                         style={{ height: "80px", width: "100%", objectFit: "cover", cursor: "pointer" }} 

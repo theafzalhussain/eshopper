@@ -229,12 +229,23 @@ export default function Navbaar() {
                 .logo-tagline { font-size: 8px; letter-spacing: 2px; color: #17a2b8; font-weight: 700; margin-top: 2px; }
 
                 /* DESKTOP NAV */
+                .navbar-nav {
+                    flex-direction: row !important;
+                    list-style: none;
+                    margin: 0;
+                    padding: 0;
+                }
+                .nav-item {
+                    display: inline-block;
+                }
                 .premium-nav-link { 
                     font-size: 13px !important; font-weight: 700 !important; 
                     text-transform: uppercase; color: #333 !important; 
-                    text-decoration: none; padding: 8px 0;
+                    text-decoration: none; padding: 8px 16px;
                     position: relative;
                     transition: all 0.3s ease;
+                    display: inline-block;
+                    white-space: nowrap;
                 }
                 .premium-nav-link::after {
                     content: '';
