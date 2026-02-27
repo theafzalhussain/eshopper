@@ -29,9 +29,14 @@ const app = express();
 // 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
 app.set('trust proxy', 1);
 
-// � SENTRY REQUEST HANDLER - MUST BE FIRST (after trust proxy)
-if (process.env.SENTRY_DSN) {
-    app.use(Sentry.Handlers.requestHandler());
+// 🔴 SENTRY REQUEST HANDLER - Optional middleware for request tracking (check if available)
+if (process.env.SENTRY_DSN && Sentry && Sentry.Handlers && Sentry.Handlers.requestHandler) {
+    try {
+        app.use(Sentry.Handlers.requestHandler());
+        console.log('✅ Sentry request handler middleware enabled');
+    } catch (err) {
+        console.warn('⚠️  Sentry request handler not available:', err.message);
+    }
 }
 
 // �🔒 CORS - Production domain hardcoded (frontend is at eshopperr.me)

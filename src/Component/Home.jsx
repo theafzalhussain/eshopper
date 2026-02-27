@@ -220,6 +220,7 @@ export default function Home() {
                                     </div>
                                 </motion.div>
                                 <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl bg-info shadow-lg p-4 p-md-5 position-relative overflow-hidden" style={{ flex: 1, minHeight: '250px' }}>
+                                    <div className="story-overlay-kids position-absolute" style={{top:0, left:0, width:'100%', height:'100%'}}></div>
                                     <div className="position-relative z-index-10 text-white">
                                         <h4 className="font-weight-bold ls-2 small mb-2 opacity-75 uppercase">Exclusives</h4>
                                         <h2 className="font-weight-bold kids-title">KIDS LAB</h2>
@@ -974,6 +975,7 @@ export default function Home() {
                 /* Other Styles */
                 .story-overlay { position: absolute; top:0; left:0; width: 100%; height: 100%; background: linear-gradient(transparent 30%, rgba(0,0,0,0.9)); }
                 .story-overlay-light { position: absolute; top:0; left:0; width: 100%; height: 100%; background: rgba(0,0,0,0.25); }
+                .story-overlay-kids { position: absolute; top:0; left:0; width: 100%; height: 100%; background: linear-gradient(180deg, rgba(23,162,184,0.15) 0%, rgba(0,0,0,0.35) 100%); z-index: 5; }
                 .btn-white { background: #fff; border: none; color: #000; }
                 .hover-info:hover { color: #17a2b8 !important; }
                 .no-underline { text-decoration: none; }
