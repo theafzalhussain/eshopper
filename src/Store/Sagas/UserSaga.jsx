@@ -26,6 +26,10 @@ function* updateUserSaga(action) {
             localStorage.setItem("name", res.name);
         }
         yield put({ type: UPDATE_USER_RED, data: res });
+        
+        // 🔥 INSTANT REFRESH - Mongo DB से fresh data fetch करो
+        // यह ensure करता है Redux store सदा sync रहे और manual refresh न करना पड़े
+        yield put({ type: GET_USER });
     } catch (e) { console.error("Update User Error:", e) }
 }
 
