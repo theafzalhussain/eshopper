@@ -90,14 +90,42 @@ export default function Navbaar() {
                                     <span className="cart-badge bg-info"></span>
                                 </Link>
                                 {localStorage.getItem("login") ? (
-                                    <div className="dropdown d-inline">
-                                        <button className="btn-user" data-toggle="dropdown">
-                                            <User size={16} className="mr-2 text-info" style={{display:'inline'}} /> {name?.split(' ')[0]}
+                                    <div className="dropdown d-inline premium-dropdown-wrapper">
+                                        <button className="btn-user premium-user-btn" data-toggle="dropdown">
+                                            <div className="user-avatar">
+                                                <User size={18} className="text-info" />
+                                            </div>
+                                            <span className="user-name">{name?.split(' ')[0]}</span>
+                                            <svg className="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                                <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
                                         </button>
-                                        <div className="dropdown-menu dropdown-menu-right border-0 shadow-lg rounded-xl animate-up">
-                                            <Link className="dropdown-item py-2" to="/profile"><i className="icon-vcard mr-2"></i> Profile</Link>
+                                        <div className="dropdown-menu dropdown-menu-right premium-dropdown-menu">
+                                            <div className="dropdown-header-custom">
+                                                <div className="user-info-header">
+                                                    <div className="user-avatar-large">
+                                                        <User size={24} className="text-info" />
+                                                    </div>
+                                                    <div className="user-details">
+                                                        <h6 className="mb-0">{name}</h6>
+                                                        <small className="text-muted">Premium Member</small>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div className="dropdown-divider"></div>
-                                            <button className="dropdown-item py-2 text-danger font-weight-bold" onClick={logout}><i className="icon-sign-out mr-2"></i>Logout</button>
+                                            <Link className="dropdown-item premium-dropdown-item" to="/profile">
+                                                <i className="icon-vcard mr-2"></i> 
+                                                <span>My Profile</span>
+                                            </Link>
+                                            <Link className="dropdown-item premium-dropdown-item" to="/cart">
+                                                <ShoppingCart size={14} className="mr-2" style={{display:'inline'}} /> 
+                                                <span>My Orders</span>
+                                            </Link>
+                                            <div className="dropdown-divider"></div>
+                                            <button className="dropdown-item premium-dropdown-item logout-item" onClick={logout}>
+                                                <i className="icon-sign-out mr-2"></i>
+                                                <span>Logout</span>
+                                            </button>
                                         </div>
                                     </div>
                                 ) : <Link to="/login" className="btn btn-dark rounded-pill px-4 btn-sm font-weight-bold shadow-sm">LOGIN</Link>}
@@ -205,10 +233,157 @@ export default function Navbaar() {
                     font-size: 13px !important; font-weight: 700 !important; 
                     text-transform: uppercase; color: #333 !important; 
                     text-decoration: none; padding: 8px 0;
+                    position: relative;
+                    transition: all 0.3s ease;
                 }
-                .active-link { color: #17a2b8 !important; border-bottom: 2px solid #17a2b8; }
-                .badge-admin-pill { background: #ff4757; color: #fff !important; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 50px; }
-                .btn-user { background: #f8f9fa; border: 1px solid #eee; border-radius: 50px; padding: 6px 18px; font-weight: 700; font-size: 12px; color: #333; cursor: pointer; }
+                .premium-nav-link::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    width: 0;
+                    height: 2px;
+                    background: #17a2b8;
+                    transition: width 0.3s ease;
+                }
+                .premium-nav-link:hover::after,
+                .active-link::after { width: 100%; }
+                .active-link { color: #17a2b8 !important; }
+                .badge-admin-pill { background: #ff4757; color: #fff !important; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 50px; text-decoration: none; }
+                
+                /* === ULTRA PREMIUM DROPDOWN === */
+                .premium-dropdown-wrapper { position: relative; }
+                .premium-user-btn {
+                    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+                    border: 1px solid #e9ecef;
+                    border-radius: 50px;
+                    padding: 8px 16px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-weight: 700;
+                    font-size: 13px;
+                    color: #111;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                }
+                .premium-user-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(23, 162, 184, 0.15);
+                    border-color: #17a2b8;
+                }
+                .user-avatar {
+                    width: 32px;
+                    height: 32px;
+                    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white !important;
+                }
+                .user-name { font-weight: 700; color: #111; }
+                .dropdown-arrow {
+                    transition: transform 0.3s ease;
+                    color: #666;
+                }
+                .premium-user-btn[aria-expanded="true"] .dropdown-arrow {
+                    transform: rotate(180deg);
+                }
+
+                /* DROPDOWN MENU */
+                .premium-dropdown-menu {
+                    border: none !important;
+                    border-radius: 20px !important;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.12) !important;
+                    padding: 0 !important;
+                    min-width: 280px;
+                    margin-top: 12px !important;
+                    background: rgba(255,255,255,0.98);
+                    backdrop-filter: blur(20px);
+                    animation: slideDownFade 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+                    overflow: hidden;
+                }
+                @keyframes slideDownFade {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                .dropdown-header-custom {
+                    padding: 20px;
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    border-bottom: 1px solid rgba(0,0,0,0.05);
+                }
+                .user-info-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                .user-avatar-large {
+                    width: 48px;
+                    height: 48px;
+                    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white !important;
+                    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+                }
+                .user-details h6 {
+                    font-weight: 800;
+                    color: #111;
+                    font-size: 14px;
+                }
+                .user-details small {
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: #17a2b8;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .premium-dropdown-item {
+                    padding: 12px 20px !important;
+                    font-size: 13px !important;
+                    font-weight: 600 !important;
+                    color: #333 !important;
+                    transition: all 0.2s ease !important;
+                    display: flex;
+                    align-items: center;
+                    border: none !important;
+                    background: transparent !important;
+                    text-decoration: none !important;
+                }
+                .premium-dropdown-item:hover {
+                    background: #f8f9fa !important;
+                    color: #17a2b8 !important;
+                    padding-left: 24px !important;
+                }
+                .premium-dropdown-item i,
+                .premium-dropdown-item svg {
+                    opacity: 0.7;
+                    transition: opacity 0.2s;
+                }
+                .premium-dropdown-item:hover i,
+                .premium-dropdown-item:hover svg {
+                    opacity: 1;
+                }
+                .logout-item {
+                    color: #dc3545 !important;
+                    font-weight: 700 !important;
+                }
+                .logout-item:hover {
+                    background: #fff5f5 !important;
+                    color: #c82333 !important;
+                }
                 
                 /* 🍔 HAMBURGER BUTTON */
                 .hamburger-btn {
@@ -246,15 +421,25 @@ export default function Navbaar() {
 
                 /* 📱 MOBILE RESPONSIVE */
                 @media (max-width: 991px) {
-                    .logo-brand-name { font-size: 18px; letter-spacing: 2px; }
-                    .logo-e { width: 32px; height: 32px; font-size: 20px; }
-                    .logo-tagline { font-size: 7px; }
-                    .ribbon-text { font-size: 10px !important; }
+                    .logo-brand-name { font-size: 16px; letter-spacing: 2px; }
+                    .logo-e { width: 32px; height: 32px; font-size: 18px; }
+                    .logo-tagline { font-size: 6px; }
+                    .ribbon-text { font-size: 9px !important; }
+                    .top-premium-ribbon { height: 35px; }
                 }
                 
                 @media (max-width: 575px) {
-                    .mobile-nav-link { font-size: 22px; padding: 15px 0; }
+                    .mobile-nav-link { font-size: 20px; padding: 15px 0; }
                     .mobile-menu-content { padding: 60px 20px 20px; }
+                    .logo-brand-name { font-size: 14px; letter-spacing: 1.5px; }
+                    .logo-e { width: 28px; height: 28px; font-size: 16px; }
+                    .logo-tagline { font-size: 5px; }
+                    .navbar { padding: 8px 0 !important; }
+                }
+
+                @media (max-width: 375px) {
+                    .mobile-nav-link { font-size: 18px; }
+                    .logo-brand-name { font-size: 13px; letter-spacing: 1px; }
                 }
             `}} />
         </header>
