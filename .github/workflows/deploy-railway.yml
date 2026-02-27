@@ -8,9 +8,8 @@ on:
 jobs:
   railway_deploy:
     runs-on: ubuntu-latest
-    # 💡 CI=false se linting warnings ki wajah se build fail nahi hoga
     env:
-      CI: false
+      CI: false # Isse linting warnings ki wajah se build fail nahi hogi
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,14 +23,10 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      # 💡 Agar aapka sirf backend hai toh hum build skip bhi kar sakte hain, 
-      # par agar frontend bhi sath hai toh humne CI: false set kar diya hai.
-      - name: Build
-        run: npm run build --if-present
-
       - name: Deploy to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        # Yahan humne naya official CLI use kiya hai aur direct deployment ki hai
         run: |
           npm install -g @railway/cli
           railway up --service ${{ secrets.RAILWAY_SERVICE_ID }} --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
