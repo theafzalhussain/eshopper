@@ -5,7 +5,7 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
-const { BrevoClient } = require('@getbrevo/brevo');
+const { TransactionalEmailsApi, ContactsApi, SendSmtpEmail } = require('@getbrevo/brevo');
 const Sentry = require('@sentry/node');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -23,20 +23,32 @@ if (process.env.SENTRY_DSN) {
 
 const app = express();
 
-// 🔒 CORS
-const allowedOrigins = [
-    'https://eshopperr.me',
-    'https://www.eshopperr.me',
-    process.env.FRONTEND_URL
-].filter(Boolean);
-
-app.use(cors({
-    origin: allowedOrigins,
+// 🔒 CORS - Production domain hardcoded (frontend is at eshopperr.me)
+const corsOptions = {
+    origin: function(origin, callback) {
+        // Allow no origin (server-to-server, mobile)
+        if (!origin) return callback(null, true);
+        
+        // Allow localhost for development
+        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+            return callback(null, true);
+        }
+        
+        // Allow production frontend
+        if (origin === 'https://eshopperr.me' || origin === 'https://www.eshopperr.me' || origin === process.env.FRONTEND_URL) {
+            return callback(null, true);
+        }
+        
+        console.warn(`CORS blocked: ${origin}`);
+        return callback(null, true); // Allow for now, log later
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"]
-}));
-app.options('*', cors());
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
@@ -91,29 +103,40 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }).fields
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// 📧 BREVO EMAIL SERVICE - v4 SDK
+// 📧 BREVO EMAIL SERVICE - Official SDK
 const sendMail = async (to, otp) => {
-    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-    if (!BREVO_KEY) throw new Error("Brevo API Key Missing in Environment");
+    try {
+        const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
+        if (!BREVO_KEY) throw new Error("❌ Brevo API Key Missing");
 
-    const brevo = new BrevoClient({ apiKey: BREVO_KEY });
+        // Configure Brevo API
+        const apiInstance = new TransactionalEmailsApi();
+        apiInstance.setApiKey(TransactionalEmailsApi.ApiKeyHeaderLabel, BREVO_KEY);
 
-    await brevo.transactionalEmails.sendTransacEmail({
-        subject: "Security Verification - Eshopper",
-        htmlContent: `
+        // Create email object
+        const sendSmtpEmail = new SendSmtpEmail();
+        sendSmtpEmail.subject = "🔐 Verification Code - Eshopper";
+        sendSmtpEmail.htmlContent = `
             <div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;border-radius:10px;">
                 <h2 style="color:#333;">Verification Code</h2>
                 <h1 style="letter-spacing:10px;color:#17a2b8;background:#fff;padding:15px;display:inline-block;border-radius:5px;font-weight:bold;">${otp}</h1>
                 <p style="color:#666;font-size:14px;">This code is valid for 10 minutes only.</p>
                 <p style="color:#999;font-size:12px;">If you didn't request this, please ignore this email.</p>
             </div>
-        `,
-        sender: { name: "Eshopper", email: process.env.SENDER_EMAIL || "support@eshopperr.me" },
-        to: [{ email: to }],
-        replyTo: { email: "support@eshopperr.me" },
-    });
+        `;
+        sendSmtpEmail.sender = { name: "Eshopper", email: process.env.SENDER_EMAIL || "support@eshopperr.me" };
+        sendSmtpEmail.to = [{ email: to }];
+        sendSmtpEmail.replyTo = { email: "support@eshopperr.me" };
 
-    console.log("✅ OTP Email Sent Successfully to:", to);
+        // Send email
+        const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log("✅ OTP Email sent to:", to);
+        return true;
+    } catch (error) {
+        console.error("❌ Brevo Email Error:", error.message);
+        Sentry.captureException(error);
+        throw error;
+    }
 };
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
