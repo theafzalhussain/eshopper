@@ -7,7 +7,7 @@ import { getSubcategory } from '../Store/ActionCreaters/SubcategoryActionCreator
 import { getBrand } from '../Store/ActionCreaters/BrandActionCreators';
 import { getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
 import { motion, AnimatePresence } from 'framer-motion';
-import { optimizeCloudinaryUrl } from '../utils/cloudinaryHelper';
+import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 
 export default function Shop() {
     var { maincat } = useParams()
@@ -316,7 +316,9 @@ export default function Shop() {
 
                                             <Link to={`/single-product/${item.id}`} className="img-wrap">
                                                 <motion.img 
-                                                    src={optimizeCloudinaryUrl(item.pic1)} 
+                                                    src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 500, crop: 'fill' })} 
+                                                    loading="lazy"
+                                                    decoding="async"
                                                     className="w-100" 
                                                     style={{ height: "220px", objectFit: "cover" }} 
                                                     alt={item.name}

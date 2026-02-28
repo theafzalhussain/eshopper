@@ -6,7 +6,7 @@ import { getUser } from '../Store/ActionCreaters/UserActionCreators';
 import { getWishlist, addWishlist } from '../Store/ActionCreaters/WishlistActionCreators'; // Wishlist actions added
 import Newslatter from './Newslatter';
 import { motion, AnimatePresence } from 'framer-motion';
-import { optimizeCloudinaryUrl } from '../utils/cloudinaryHelper';
+import { optimizeCloudinaryUrl, optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 
 export default function Home() {
     const product = useSelector((state) => state.ProductStateData)
@@ -23,7 +23,7 @@ export default function Home() {
             title: "Summer Elegance", 
             sub: "NEW ARRIVALS 2024", 
             desc: "Discover the latest trends in summer fashion with premium fabrics and elegant designs",
-            img: "/assets/images/cr-3.png", 
+            img: "/assets/images/CR-3.png", 
             color: "linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)", 
             link: "/shop/Female" 
         },
@@ -159,6 +159,9 @@ export default function Home() {
                                             animate={{ scale: 1, opacity: 1, y: 0 }} 
                                             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
                                             src={sliderData[currentSlide]?.img} 
+                                            loading="eager"
+                                            fetchPriority="high"
+                                            decoding="async"
                                             className="img-fluid floating-hero hero-main-img" 
                                             alt={sliderData[currentSlide]?.title}
                                         />
@@ -203,7 +206,7 @@ export default function Home() {
                     <div className="row g-3 g-md-4 align-items-stretch">
                         <div className="col-12 col-md-6 mb-3 mb-md-4">
                             <motion.div whileHover={{ scale: 0.99 }} className="story-card shadow-lg rounded-3xl overflow-hidden position-relative h-100">
-                                <img src="assets/images/choose-1.jpg" className="w-100 h-100 object-cover story-img" alt="Manifesto" />
+                                <img src="/assets/images/choose-1.jpg" className="w-100 h-100 object-cover story-img" alt="Manifesto" loading="eager" decoding="async" />
                                 <div className="story-overlay p-4 p-md-5 d-flex flex-column justify-content-end">
                                     <h3 className="text-white font-weight-bold mb-3 story-title">MANIFESTO<br/>MAN</h3>
                                     <Link to="/shop/Male" className="btn btn-outline-light rounded-0 px-4 px-md-5 font-weight-bold ls-2 story-btn">EXPLORE SHOP</Link>
@@ -213,7 +216,7 @@ export default function Home() {
                         <div className="col-12 col-md-6">
                             <div className="d-flex flex-column h-100">
                                 <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl shadow-lg overflow-hidden position-relative mb-3 mb-md-4" style={{ flex: 1, minHeight: '250px' }}>
-                                    <img src="/assets/images/cr-1.png" className="w-100 h-100 object-cover opacity-75 story-img" alt="Woman" />
+                                    <img src="/assets/images/CR-1.png" className="w-100 h-100 object-cover opacity-75 story-img" alt="Woman" loading="eager" decoding="async" />
                                     <div className="story-overlay-light p-4 p-md-5">
                                         <h3 className="h2 h1-md text-white font-weight-bold mb-0">ELEGANT<br/>MODERN</h3>
                                         <Link to="/shop/Female" className="text-white font-weight-bold border-bottom pb-1 small mt-2 d-inline-block">VIEW DETAILS</Link>
@@ -232,7 +235,7 @@ export default function Home() {
                                         </motion.h2>
                                         <Link to="/shop/Kids" className="btn btn-white btn-sm px-4 font-weight-bold rounded-pill mt-3 shadow-sm">DISCOVER ALL</Link>
                                     </div>
-                                    <img src="/assets/images/kids3.png" className="position-absolute kids-img" alt=""/>
+                                    <img src="/assets/images/kids3.png" className="position-absolute kids-img" alt="" loading="lazy" decoding="async"/>
                                 </motion.div>
                             </div>
                         </div>
@@ -271,8 +274,9 @@ export default function Home() {
                                             <div className="position-relative img-holder product-img-container">
                                                 <Link to={`/single-product/${item.id}`} className="product-link">
                                                     <img 
-                                                        src={optimizeCloudinaryUrl(item.pic1)} 
+                                                        src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 700, crop: 'fill' })} 
                                                         loading="lazy" 
+                                                        decoding="async"
                                                         className="w-100 h-100 object-cover luxury-image" 
                                                         alt={item.name} 
                                                     />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux';
 import { deleteWishlist, getWishlist } from "../Store/ActionCreaters/WishlistActionCreators"
 import { Link, useNavigate } from 'react-router-dom'
+import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 
 export default function Wishlist() {
     let [wishlist, setWishlist] = useState([])
@@ -39,7 +40,7 @@ export default function Wishlist() {
                                     {wishlist.length > 0 ? wishlist.map((item, index) => (
                                         <tr key={index} className="border-bottom">
                                             <td className="p-3">
-                                                <img src={item.pic} width="80px" height="80px" style={{objectFit:"cover"}} className="rounded" alt="" />
+                                                <img src={item.pic ? optimizeCloudinaryUrlAdvanced(item.pic, { maxWidth: 240, crop: 'fill' }) : "/assets/images/noimage.png"} width="80px" height="80px" loading="lazy" decoding="async" style={{objectFit:"cover"}} className="rounded" alt="" />
                                             </td>
                                             <td className="align-middle">
                                                 <strong>{item.name}</strong>

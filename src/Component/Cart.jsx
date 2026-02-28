@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { deleteCart, getCart, updateCart } from "../Store/ActionCreaters/CartActionCreators"
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 
 export default function Cart() {
     let [cart, setcart] = useState([])
@@ -83,7 +84,9 @@ export default function Cart() {
                                             {/* Product Info */}
                                             <div className="col-12 col-md-5 mb-3 mb-md-0">
                                                 <div className="d-flex align-items-center">
-                                                    <img src={item.pic || "/assets/images/noimage.png"} 
+                                                      <img src={item.pic ? optimizeCloudinaryUrlAdvanced(item.pic, { maxWidth: 240, crop: 'fill' }) : "/assets/images/noimage.png"} 
+                                                          loading="lazy"
+                                                          decoding="async"
                                                          style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "12px" }} 
                                                          className="mr-3 border" alt="" />
                                                     <div>

@@ -25,13 +25,13 @@ export const optimizeCloudinaryUrl = (url) => {
     return url;
   }
 
-  // Insert f_auto,q_auto/ after /upload/
+  // Insert optimized transforms after /upload/
   // You can customize the transformation parameters as needed:
   // - f_auto: Auto-detect and serve the optimal format
   // - q_auto: Auto-detect and apply the optimal quality
   // - w_auto: Auto-scale based on device width
   // - dpr_auto: Auto-detect device pixel ratio
-  return `${baseUrl}f_auto,q_auto/${imagePath}`;
+  return `${baseUrl}f_auto,q_auto:good,dpr_auto,w_auto/${imagePath}`;
 };
 
 /**
@@ -59,7 +59,7 @@ export const optimizeCloudinaryUrlAdvanced = (url, options = {}) => {
   const imagePath = cloudinaryMatch[2];
 
   // Build transformation string
-  let transformations = ['f_auto', 'q_auto'];
+  let transformations = ['f_auto', 'q_auto:good', 'dpr_auto'];
 
   if (options.maxWidth) {
     transformations.push(`w_${options.maxWidth}`);

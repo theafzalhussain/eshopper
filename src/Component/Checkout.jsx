@@ -6,6 +6,7 @@ import { getCart, deleteCart } from "../Store/ActionCreaters/CartActionCreators"
 import { addCheckout } from "../Store/ActionCreaters/CheckoutActionCreators"
 import BuyerProfile from './BuyerProfile'
 import { motion } from 'framer-motion'
+import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 
 export default function Checkout() {
     var [mode, setMode] = useState("COD")
@@ -91,7 +92,7 @@ export default function Checkout() {
                             <div className="checkout-items mb-4" style={{maxHeight:'300px', overflowY:'auto'}}>
                                 {cart.map((item, index) => (
                                     <div key={index} className="d-flex align-items-center mb-3 border-bottom pb-3">
-                                        <img src={item.pic} width="70px" height="70px" className="rounded shadow-sm object-fit-cover" alt="" />
+                                        <img src={item.pic ? optimizeCloudinaryUrlAdvanced(item.pic, { maxWidth: 220, crop: 'fill' }) : "/assets/images/noimage.png"} width="70px" height="70px" loading="lazy" decoding="async" className="rounded shadow-sm object-fit-cover" alt="" />
                                         <div className="ml-3 flex-grow-1">
                                             <h6 className="mb-0 font-weight-bold text-dark">{item.name}</h6>
                                             <small className="text-muted">{item.qty} x ₹{item.price}</small>
