@@ -16,6 +16,7 @@ export default function Home() {
     
     const [currentSlide, setCurrentSlide] = useState(0);
     const [welcomeUser, setWelcomeUser] = useState("")
+    const [wishlistToast, setWishlistToast] = useState({ show: false, text: "" })
     
 
     const sliderData = [
@@ -72,6 +73,19 @@ export default function Home() {
         return () => clearInterval(timer);
     }, [dispatch, sliderData.length])
 
+    useEffect(() => {
+        if (!wishlistToast.show) return
+        const timer = setTimeout(() => {
+            setWishlistToast({ show: false, text: "" })
+        }, 1800)
+        return () => clearTimeout(timer)
+    }, [wishlistToast])
+
+    const isInWishlist = (productId) => {
+        const userId = localStorage.getItem("userid")
+        return wishlist.some((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId))
+    }
+
     // --- LOGIC: ADD TO WISHLIST FROM HOME ---
     function addToWishlist(p) {
         if (!localStorage.getItem("login")) {
@@ -79,7 +93,7 @@ export default function Home() {
         } else {
             let d = wishlist.find((item) => item.productid === p.id && item.userid === localStorage.getItem("userid"))
             if (d) {
-                navigate("/profile") // Navigating to profile where wishlist is usually located
+                setWishlistToast({ show: true, text: "Already in Wishlist" })
             } else {
                 let item = {
                     productid: p.id,
@@ -91,13 +105,18 @@ export default function Home() {
                     pic: p.pic1,
                 }
                 dispatch(addWishlist(item))
-                navigate("/profile")
+                setWishlistToast({ show: true, text: "Added to Wishlist" })
             }
         }
     }
 
     return (
         <div className="home-ultimate-root" style={{ backgroundColor: "#fff", overflowX: 'hidden' }}>
+            {wishlistToast.show && (
+                <div className="wishlist-toast-home" role="status" aria-live="polite">
+                    <i className="icon-heart mr-2"></i>{wishlistToast.text}
+                </div>
+            )}
             
             {/* --- 1. PREMIUM PARALLAX HERO --- */}
             <section className="luxury-hero">
@@ -291,7 +310,12 @@ export default function Home() {
                                                 
                                                 {/* Quick Action Buttons */}
                                                 <div className="action-layer">
-                                                    <button onClick={() => addToWishlist(item)} className="p-icon-btn btn-wishlist" title="Add to Wishlist">
+                                                    <button
+                                                        onClick={() => addToWishlist(item)}
+                                                        className={`p-icon-btn btn-wishlist ${isInWishlist(item.id) ? 'active' : ''}`}
+                                                        title={isInWishlist(item.id) ? "Already in Wishlist" : "Add to Wishlist"}
+                                                        aria-label={isInWishlist(item.id) ? "Already in Wishlist" : "Add to Wishlist"}
+                                                    >
                                                         <i className="icon-heart"></i>
                                                     </button>
                                                 </div>
@@ -611,25 +635,25 @@ export default function Home() {
                     transform: translateX(-50%);
                     display: flex;
                     align-items: center;
-                    gap: 50px;
+                    gap: 24px;
                     z-index: 100;
-                    background: rgba(255, 255, 255, 0.8);
-                    padding: 20px 40px;
-                    border-radius: 50px;
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(23, 162, 184, 0.2);
-                    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+                    background: rgba(255, 255, 255, 0.78);
+                    padding: 10px 18px;
+                    border-radius: 999px;
+                    backdrop-filter: blur(12px);
+                    border: 1px solid rgba(23, 162, 184, 0.22);
+                    box-shadow: 0 8px 24px rgba(23, 162, 184, 0.12), 0 2px 10px rgba(0,0,0,0.06);
                 }
                 .carousel-dots {
                     display: flex;
-                    gap: 14px;
+                    gap: 10px;
                     align-items: center;
                 }
                 .carousel-dots .dot {
-                    width: 14px;
-                    height: 14px;
+                    width: 12px;
+                    height: 12px;
                     background: transparent;
-                    border: 2.5px solid rgba(0,0,0,0.25);
+                    border: 2px solid rgba(0,0,0,0.26);
                     border-radius: 50%;
                     cursor: pointer;
                     transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -643,11 +667,11 @@ export default function Home() {
                     background: rgba(23, 162, 184, 0.1);
                 }
                 .carousel-dots .dot.active {
-                    width: 45px;
-                    border-radius: 8px;
+                    width: 36px;
+                    border-radius: 999px;
                     background: linear-gradient(90deg, #17a2b8 0%, #0dafcc 100%);
                     border-color: #17a2b8;
-                    box-shadow: 0 4px 15px rgba(23, 162, 184, 0.4);
+                    box-shadow: 0 3px 10px rgba(23, 162, 184, 0.35);
                 }
                 .dot-inner {
                     position: absolute;
@@ -668,16 +692,16 @@ export default function Home() {
                 .carousel-counter {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    gap: 6px;
                     font-weight: 800;
                     color: #0a0a0a;
                     background: linear-gradient(135deg, rgba(23, 162, 184, 0.1) 0%, rgba(0, 123, 255, 0.1) 100%);
-                    padding: 8px 16px;
-                    border-radius: 30px;
+                    padding: 6px 12px;
+                    border-radius: 999px;
                     border: 1px solid rgba(23, 162, 184, 0.2);
                 }
                 .carousel-counter .current {
-                    font-size: 16px;
+                    font-size: 14px;
                     color: #17a2b8;
                     font-weight: 900;
                     letter-spacing: 1px;
@@ -687,9 +711,32 @@ export default function Home() {
                     font-weight: 400;
                 }
                 .carousel-counter .total {
-                    font-size: 14px;
+                    font-size: 12px;
                     color: #999;
                     font-weight: 600;
+                }
+
+                .wishlist-toast-home {
+                    position: fixed;
+                    top: 24px;
+                    right: 20px;
+                    z-index: 1200;
+                    background: rgba(17, 17, 17, 0.9);
+                    color: #fff;
+                    border-radius: 999px;
+                    padding: 10px 16px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 0.4px;
+                    box-shadow: 0 10px 24px rgba(0,0,0,0.2);
+                    display: inline-flex;
+                    align-items: center;
+                    backdrop-filter: blur(8px);
+                    animation: wishlistToastIn 0.25s ease-out;
+                }
+                @keyframes wishlistToastIn {
+                    from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
                 }
                 
                 /* === EDITORIAL SECTION === */
@@ -906,6 +953,12 @@ export default function Home() {
                     background: rgba(255, 107, 107, 0.1);
                     border-color: #ff6b6b;
                     box-shadow: 0 6px 24px rgba(255, 107, 107, 0.45), 0 2px 12px rgba(255, 107, 107, 0.3);
+                }
+                .btn-wishlist.active {
+                    background: rgba(255, 107, 107, 0.16);
+                    border-color: #ff6b6b;
+                    color: #ff4d6d;
+                    box-shadow: 0 5px 18px rgba(255, 107, 107, 0.3), 0 2px 10px rgba(255, 107, 107, 0.2);
                 }
                 
                 /* Product Details */
@@ -1133,12 +1186,12 @@ export default function Home() {
                     .hero-main-img { max-height: 55vh; }
                     .btn-luxury-primary { padding: 16px 38px; font-size: 14px; font-weight: 700; gap: 10px; }
                     
-                    .carousel-navigation { bottom: 40px; gap: 40px; padding: 16px 32px; }
-                    .carousel-counter { padding: 6px 14px; gap: 6px; }
-                    .carousel-counter .current { font-size: 15px; }
-                    .carousel-dots { gap: 12px; }
-                    .carousel-dots .dot { width: 13px; height: 13px; }
-                    .carousel-dots .dot.active { width: 40px; }
+                    .carousel-navigation { bottom: 34px; gap: 18px; padding: 9px 14px; }
+                    .carousel-counter { padding: 5px 10px; gap: 5px; }
+                    .carousel-counter .current { font-size: 13px; }
+                    .carousel-dots { gap: 8px; }
+                    .carousel-dots .dot { width: 10px; height: 10px; }
+                    .carousel-dots .dot.active { width: 30px; }
                     
                     .hero-decoration-1, .hero-decoration-2 { display: none; }
                     
@@ -1183,14 +1236,21 @@ export default function Home() {
                     .hero-main-img { max-height: 45vh; }
                     .hero-actions { gap: 16px; margin-top: 28px; }
                     
-                    .carousel-navigation { bottom: 25px; gap: 30px; padding: 14px 24px; border-radius: 40px; }
-                    .carousel-dots { gap: 10px; }
-                    .carousel-dots .dot { width: 11px; height: 11px; }
-                    .carousel-dots .dot.active { width: 35px; }
-                    .carousel-counter { padding: 5px 12px; gap: 5px; font-size: 13px; }
-                    .carousel-counter .current { font-size: 14px; }
-                    .carousel-counter .separator { font-size: 12px; }
-                    .carousel-counter .total { font-size: 12px; }
+                    .carousel-navigation { bottom: 20px; gap: 12px; padding: 7px 10px; border-radius: 999px; }
+                    .carousel-dots { gap: 6px; }
+                    .carousel-dots .dot { width: 8px; height: 8px; border-width: 1.5px; }
+                    .carousel-dots .dot.active { width: 24px; }
+                    .carousel-counter { padding: 4px 8px; gap: 4px; font-size: 11px; }
+                    .carousel-counter .current { font-size: 12px; }
+                    .carousel-counter .separator { font-size: 10px; }
+                    .carousel-counter .total { font-size: 10px; }
+
+                    .wishlist-toast-home {
+                        top: 14px;
+                        right: 10px;
+                        font-size: 11px;
+                        padding: 8px 12px;
+                    }
                     
                     .action-layer { top: 6px; right: 6px; gap: 5px; }
                     .p-icon-btn { 
@@ -1232,7 +1292,12 @@ export default function Home() {
 
                 @media (max-width: 375px) {
                     .hero-title { font-size: 2rem; }
-                    .carousel-navigation { gap: 12px; }
+                    .carousel-navigation { gap: 8px; padding: 6px 8px; }
+                    .carousel-dots .dot { width: 7px; height: 7px; }
+                    .carousel-dots .dot.active { width: 20px; }
+                    .carousel-counter { padding: 3px 7px; }
+                    .carousel-counter .current { font-size: 11px; }
+                    .carousel-counter .total { font-size: 9px; }
                     .product-img-container { aspect-ratio: 4/5; }
                     .product-showcase-title { font-size: 1.75rem; }
                 }
