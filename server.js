@@ -162,7 +162,7 @@ const sendMail = async (to, otp) => {
         const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
             sender: { 
                 name: "Eshopper", 
-                email: "support@eshopperr.me"
+                email: process.env.BREVO_SENDER_EMAIL || "noreply@eshopper.notification.me"
             },
             to: [{ email: to }],
             subject: "Your Verification Code for Eshopper Account",
@@ -262,8 +262,9 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
         const { email, type } = req.body;
         if (!email || !type) return res.status(400).json({ message: "Email and type are required." });
 
+        const normalizedEmail = email.toLowerCase().trim();
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const user = await User.findOne({ $or: [{ email }, { username: email }] });
+        const user = await User.findOne({ $or: [{ email: normalizedEmail }, { username: email.toLowerCase() }] });
 
         if (type === 'forget' && !user) return res.json({ result: "Done", message: "If account exists, check your email for reset code." });
         if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
@@ -271,10 +272,10 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
         if (user) {
             user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
         } else {
-            await OTPRecord.findOneAndUpdate({ email }, { otp }, { upsert: true });
+            await OTPRecord.findOneAndUpdate({ email: normalizedEmail }, { otp, email: normalizedEmail }, { upsert: true });
         }
 
-        await sendMail(email, otp);
+        await sendMail(normalizedEmail, otp);
         res.json({ result: "Done", message: "OTP sent successfully" });
     } catch (e) {
         console.error("❌ Email Error:", e.message);
@@ -285,11 +286,11 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
 
 app.post('/api/reset-password', authLimiter, async (req, res) => {
     try {
-        const { username, password, otp } = req.body;
-        const user = await User.findOne({ $or: [{ email: username }, { username: username }] });
-        if (user && user.otp === otp && user.otpExpires > Date.now()) {
-            const salt = await bcrypt.genSalt(10); user.password = await bcrypt.hash(password, salt);
-            user.otp = undefined; await user.save(); res.json({ result: "Done" });
+        const searchTerm = req.body.username.toLowerCase().trim();
+        const user = await User.findOne({ $or: [{ email: searchTerm }, { username: searchTerm }] });
+        if (user && user.otp === req.body.otp && user.otpExpires > Date.now()) {
+            const salt = await bcrypt.genSalt(10); user.password = await bcrypt.hash(req.body.password, salt);
+            user.otp = undefined; user.otpExpires = undefined; await user.save(); res.json({ result: "Done" });
         } else res.status(400).json({ message: "Invalid or expired OTP." });
     } catch (e) { res.status(500).json({ message: "Something went wrong. Please try again." }); }
 });
@@ -301,7 +302,8 @@ app.post('/api/check-username', async (req, res) => {
         if (!username || username.length < 3) {
             return res.status(400).json({ message: "Username must be at least 3 characters" });
         }
-        const existingUser = await User.findOne({ username: username.toLowerCase() });
+        const normalizedUsername = username.toLowerCase().trim();
+        const existingUser = await User.findOne({ username: normalizedUsername });
         res.json({ available: !existingUser });
     } catch (e) {
         console.error("❌ Username Check Error:", e.message);
@@ -311,7 +313,8 @@ app.post('/api/check-username', async (req, res) => {
 
 app.post('/login', authLimiter, async (req, res) => {
     try {
-        const user = await User.findOne({ username: req.body.username });
+        const searchTerm = req.body.username.toLowerCase().trim();
+        const user = await User.findOne({ $or: [{ username: searchTerm }, { email: searchTerm }] });
         if (user && await bcrypt.compare(req.body.password, user.password)) {
             const { password: _pw, otp: _otp, otpExpires: _exp, ...safeUser } = user.toJSON();
             res.json(safeUser);
@@ -363,9 +366,12 @@ const handle = (path, Model, useUpload = false) => {
     app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             if (path === '/user' && req.body.otp) {
-                const record = await OTPRecord.findOne({ email: req.body.email, otp: req.body.otp });
+                const normalizedEmail = req.body.email.toLowerCase().trim();
+                const record = await OTPRecord.findOne({ email: normalizedEmail, otp: req.body.otp });
                 if (!record) return res.status(400).json({ message: "Invalid OTP" });
-                await OTPRecord.deleteOne({ email: req.body.email });
+                await OTPRecord.deleteOne({ email: normalizedEmail });
+                req.body.email = normalizedEmail;
+                req.body.username = req.body.username.toLowerCase().trim();
             }
             if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
             let d = new Model(req.body);
