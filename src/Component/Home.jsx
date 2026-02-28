@@ -322,9 +322,9 @@ export default function Home() {
                                             </div>
                                             
                                             {/* Product Details */}
-                                            <div className="px-4 py-4 px-md-4 py-md-4 flex-grow-1 d-flex flex-column">
+                                            <div className="px-3 py-3 px-md-4 py-md-3 flex-grow-1 d-flex flex-column">
                                                 {/* Brand and Rating */}
-                                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                                <div className="d-flex justify-content-between align-items-center mb-2">
                                                     <span className="product-brand text-info font-weight-bold text-uppercase">{item.brand}</span>
                                                     <div className="product-rating-wrapper d-flex align-items-center">
                                                         <span className="rating-stars">
@@ -340,14 +340,14 @@ export default function Home() {
                                                 </div>
                                                 
                                                 {/* Product Name */}
-                                                <h3 className="product-name font-weight-bold mb-3">
+                                                <h3 className="product-name font-weight-bold mb-2">
                                                     <Link to={`/single-product/${item.id}`} className="text-dark no-underline hover-info">
                                                         {item.name}
                                                     </Link>
                                                 </h3>
                                                 
                                                 {/* Product Category/Description */}
-                                                <p className="product-category text-muted mb-4">
+                                                <p className="product-category text-muted mb-3">
                                                     {item.maincategory} • {item.subcategory}
                                                 </p>
                                                 
@@ -360,7 +360,7 @@ export default function Home() {
                                                 </div>
                                                 
                                                 {/* Price Section */}
-                                                <div className="mt-auto pt-4 border-top border-light">
+                                                <div className="mt-auto pt-3 border-top border-light">
                                                     <div className="d-flex align-items-center justify-content-between">
                                                         <div className="price-group">
                                                             <span className="product-price font-weight-bold text-dark">₹{item.finalprice}</span>
@@ -808,7 +808,7 @@ export default function Home() {
                     position: relative; 
                     padding: 0;
                     overflow: hidden;
-                    height: clamp(220px, 28vw, 320px);
+                    height: clamp(210px, 26vw, 300px);
                     border-radius: 16px;
                     box-shadow: 0 4px 14px rgba(0,0,0,0.08);
                 }
@@ -974,14 +974,14 @@ export default function Home() {
                     color: #17a2b8;
                     font-weight: 900;
                     text-transform: uppercase;
-                    margin-bottom: 6px;
-                    line-height: 1.5;
+                    margin-bottom: 4px;
+                    line-height: 1.4;
                 }
                 .product-rating-wrapper {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
-                    margin-bottom: 6px;
+                    gap: 7px;
+                    margin-bottom: 4px;
                 }
                 .rating-stars { 
                     color: #f5b301; 
@@ -996,24 +996,24 @@ export default function Home() {
                     line-height: 1.4;
                 }
                 .product-name { 
-                    font-size: 17px; 
-                    line-height: 1.6;
+                    font-size: 16px; 
+                    line-height: 1.55;
                     font-weight: 800;
                     letter-spacing: -0.3px;
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
-                    margin: 0 0 8px 0;
+                    margin: 0 0 6px 0;
                     color: #0a0a0a;
                 }
                 .product-category {
                     font-size: 13px;
-                    line-height: 1.6;
+                    line-height: 1.55;
                     font-weight: 600;
                     letter-spacing: 0.3px;
                     color: #6c757d;
-                    margin-bottom: 10px;
+                    margin-bottom: 8px;
                 }
                 
                 /* Product Features */
@@ -1053,7 +1053,7 @@ export default function Home() {
                     line-height: 1.5;
                 }
                 .product-price { 
-                    font-size: 22px; 
+                    font-size: 21px; 
                     font-weight: 900;
                     color: #000;
                     letter-spacing: -0.6px;
@@ -1086,7 +1086,7 @@ export default function Home() {
                     justify-content: center;
                     gap: 10px;
                     width: 100%;
-                    padding: 18px 20px;
+                    padding: 16px 20px;
                     background: linear-gradient(135deg, #000 0%, #2c2c2c 100%);
                     color: #fff;
                     border: none;
@@ -1096,9 +1096,9 @@ export default function Home() {
                     letter-spacing: 0.7px;
                     cursor: pointer;
                     transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-                    min-height: 54px;
+                    min-height: 52px;
                     box-shadow: 0 8px 24px rgba(0,0,0,0.18);
-                    margin-top: 4px;
+                    margin-top: 2px;
                 }
                 .btn-add-cart:hover {
                     background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
