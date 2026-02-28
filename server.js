@@ -149,53 +149,36 @@ const upload = multer({
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// 📧 BREVO EMAIL SERVICE - Final fix for Sender Rejection
+// 📧 BREVO EMAIL SERVICE - Production Final Fix
 const sendMail = async (to, otp) => {
     try {
         const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-        if (!BREVO_KEY) throw new Error("❌ BREVO_API_KEY missing in environment variables");
+        if (!BREVO_KEY) throw new Error("❌ BREVO_API_KEY Missing");
 
-        // ✅ IMPORTANT: Using verified Brevo relay address (support@eshopperr.me NOT yet verified)
-        // Once you verify support@eshopperr.me in Brevo dashboard, uncomment line below:
-        // const senderEmail = "support@eshopperr.me";
-        
-        // FOR NOW: Using Brevo's relay address (already verified, 100% guaranteed to work)
-        const senderEmail = "noreply@notification.brevo.com";
-        
-        console.log(`📧 Sending OTP to: ${to} from: ${senderEmail}`);
-
-        // ✅ IMPORTANT: Using Axios for 100% control over JSON payload
         const data = {
-            sender: { name: "Eshopper", email: senderEmail },
+            // ✅ IS ADDRESS KO EXACTLY YAHI RAKHO (Kyunki ye Authenticated hai)
+            sender: { name: "Eshopper", email: "support@eshopperr.me" }, 
             to: [{ email: to }],
-            subject: "Your verification code for Eshopper",
+            subject: "Your verification code - Eshopper",
             htmlContent: `
-                <div style="font-family:Arial;text-align:center;padding:20px;border-radius:10px;background:#f9f9f9;">
-                    <h2 style="color:#333;">Login OTP</h2>
-                    <h1 style="color:#17a2b8;letter-spacing:10px;padding:15px;background:#fff;display:inline-block;">${otp}</h1>
-                    <p style="color:#666;">Expires in 10 minutes.</p>
+                <div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;">
+                    <h2>Login Verification Code</h2>
+                    <h1 style="color:#17a2b8;letter-spacing:10px;">${otp}</h1>
+                    <p>This code is valid for 10 minutes.</p>
                 </div>`,
-            textContent: `Your OTP: ${otp}\n\nExpires in 10 minutes.`
+            replyTo: { email: "support@eshopperr.me" }
         };
 
         const config = {
-            headers: {
-                'api-key': BREVO_KEY,
-                'content-type': 'application/json',
-                'accept': 'application/json'
-            }
+            headers: { 'api-key': BREVO_KEY, 'content-type': 'application/json' }
         };
 
         const response = await axios.post('https://api.brevo.com/v3/smtp/email', data, config);
-        console.log(`✅ SUCCESS! OTP Email sent. ID: ${response.data.messageId}`);
+        console.log("✅ SUCCESS! Mail sent to:", to);
         return true;
-
     } catch (error) {
-        // Detailed log to catch exact problem if it still fails
-        const reason = error.response ? error.response.data.message : error.message;
-        console.error("❌ BREVO FAILED! Reason:", reason);
-        console.error("Full Error:", error.response?.data || error.message);
-        throw new Error(reason);
+        console.error("❌ MAIL FAIL:", error.response ? error.response.data : error.message);
+        throw error;
     }
 };
 
