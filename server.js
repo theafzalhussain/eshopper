@@ -165,14 +165,57 @@ const sendMail = async (to, otp) => {
                 email: "support@eshopperr.me"
             },
             to: [{ email: to }],
-            subject: "🔐 Verification Code - Eshopper",
+            subject: "Your Verification Code for Eshopper Account",
+            textContent: `Hello,\n\nYour verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.\n\nBest regards,\nEshopper Team\nhttps://eshopperr.me`,
             htmlContent: `
-                <div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;border-radius:10px;">
-                    <h2 style="color:#333;">Verification Code</h2>
-                    <h1 style="letter-spacing:10px;color:#17a2b8;background:#fff;padding:15px;display:inline-block;border-radius:5px;font-weight:bold;">${otp}</h1>
-                    <p style="color:#666;font-size:14px;">This code is valid for 10 minutes only.</p>
-                    <p style="color:#999;font-size:12px;">If you didn't request this, please ignore this email.</p>
-                </div>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                </head>
+                <body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f4f4f4;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4;padding:20px;">
+                        <tr>
+                            <td align="center">
+                                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;">
+                                    <tr>
+                                        <td style="background-color:#17a2b8;padding:30px;text-align:center;">
+                                            <h1 style="color:#ffffff;margin:0;font-size:28px;">Eshopper</h1>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:40px 30px;">
+                                            <h2 style="color:#333333;margin:0 0 20px 0;font-size:24px;">Account Verification</h2>
+                                            <p style="color:#666666;font-size:16px;line-height:1.6;margin:0 0 30px 0;">
+                                                Thank you for choosing Eshopper. Please use the verification code below to complete your account setup:
+                                            </p>
+                                            <div style="background-color:#f8f9fa;border:2px solid #17a2b8;border-radius:8px;padding:20px;text-align:center;margin:30px 0;">
+                                                <div style="font-size:14px;color:#666666;margin-bottom:10px;">Your Verification Code:</div>
+                                                <div style="font-size:36px;font-weight:bold;color:#17a2b8;letter-spacing:8px;">${otp}</div>
+                                            </div>
+                                            <p style="color:#666666;font-size:14px;line-height:1.6;margin:20px 0;">
+                                                This code will expire in <strong>10 minutes</strong>. Please do not share this code with anyone.
+                                            </p>
+                                            <p style="color:#999999;font-size:13px;line-height:1.6;margin:30px 0 0 0;padding-top:20px;border-top:1px solid #eeeeee;">
+                                                If you didn't request this verification code, please ignore this email or contact our support team.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="background-color:#f8f9fa;padding:20px 30px;text-align:center;">
+                                            <p style="color:#999999;font-size:12px;margin:0;">
+                                                © 2026 Eshopper. All rights reserved.<br>
+                                                <a href="https://eshopperr.me" style="color:#17a2b8;text-decoration:none;">www.eshopperr.me</a>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </body>
+                </html>
             `,
             replyTo: { email: "support@eshopperr.me" }
         }, {
