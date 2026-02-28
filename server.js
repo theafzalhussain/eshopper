@@ -154,19 +154,41 @@ const sendMail = async (to, otp) => {
     try {
         const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
         if (!BREVO_KEY) throw new Error("❌ BREVO_API_KEY Missing");
+        const localPart = (to || '').split('@')[0] || 'Customer';
+        const recipientName = localPart
+            .replace(/[._-]+/g, ' ')
+            .replace(/\d+/g, ' ')
+            .trim()
+            .split(' ')
+            .filter(Boolean)
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ') || 'Customer';
 
         const data = {
-            sender: { name: "Eshopper Support", email: "support@eshopperr.me" },
+            sender: { name: "Eshopper Security Team", email: "support@eshopperr.me" },
             to: [{ email: to }],
-            subject: `🔐 Security Code: ${otp}`,
+            subject: `Your Eshopper verification code: ${otp}`,
+            textContent: `Hi ${recipientName},\n\nYour Eshopper verification code is: ${otp}\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email and secure your account.\n\nEshopper Security Team\nsupport@eshopperr.me`,
             htmlContent: `
-                <div style="font-family:sans-serif;text-align:center;padding:30px;background:#f9f9f9;border-radius:12px;">
-                    <h2 style="color:#333;">Verify Your Identity</h2>
-                    <p style="font-size:16px;color:#555;">Use the verification code below for your account:</p>
-                    <div style="font-size:42px;font-weight:bold;letter-spacing:10px;color:#17a2b8;margin:20px 0;padding:20px;background:#fff;border:2px solid #17a2b8;display:inline-block;">${otp}</div>
-                    <p style="color:#888;">Valid for 10 minutes only. Do not share this with anyone.</p>
-                    <hr style="margin:20px 0;border:0;border-top:1px solid #ddd;">
-                    <p style="font-size:12px;color:#aaa;">© 2026 Eshopper | boutique luxury</p>
+                <div style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;padding:24px;color:#1f2937;">
+                    <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+                        <div style="padding:22px 28px;background:#111827;color:#ffffff;">
+                            <div style="font-size:20px;font-weight:700;letter-spacing:0.3px;">Eshopper</div>
+                            <div style="font-size:13px;opacity:0.9;margin-top:4px;">Secure Account Verification</div>
+                        </div>
+                        <div style="padding:28px;">
+                            <p style="margin:0 0 14px 0;font-size:15px;">Hi ${recipientName},</p>
+                            <p style="margin:0 0 18px 0;font-size:15px;color:#4b5563;">Use this one-time verification code to continue securely:</p>
+                            <div style="text-align:center;margin:18px 0 20px 0;">
+                                <span style="display:inline-block;background:#f9fafb;border:1px solid #d1d5db;border-radius:10px;padding:14px 24px;font-size:34px;letter-spacing:8px;font-weight:700;color:#0f766e;">${otp}</span>
+                            </div>
+                            <p style="margin:0 0 8px 0;font-size:14px;color:#4b5563;">This code is valid for 10 minutes.</p>
+                            <p style="margin:0;font-size:14px;color:#4b5563;">If you did not request this, please ignore this email and secure your account.</p>
+                        </div>
+                        <div style="padding:16px 28px;border-top:1px solid #e5e7eb;background:#fafafa;font-size:12px;color:#6b7280;">
+                            Sent by Eshopper Security Team • support@eshopperr.me
+                        </div>
+                    </div>
                 </div>`,
             replyTo: { email: "support@eshopperr.me" }
         };
