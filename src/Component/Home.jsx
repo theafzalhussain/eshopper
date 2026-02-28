@@ -322,9 +322,9 @@ export default function Home() {
                                             </div>
                                             
                                             {/* Product Details */}
-                                            <div className="p-2 p-md-2 flex-grow-1 d-flex flex-column">
+                                            <div className="px-4 py-4 px-md-4 py-md-4 flex-grow-1 d-flex flex-column">
                                                 {/* Brand and Rating */}
-                                                <div className="d-flex justify-content-between align-items-center mb-2">
+                                                <div className="d-flex justify-content-between align-items-center mb-3">
                                                     <span className="product-brand text-info font-weight-bold text-uppercase">{item.brand}</span>
                                                     <div className="product-rating-wrapper d-flex align-items-center">
                                                         <span className="rating-stars">
@@ -340,14 +340,14 @@ export default function Home() {
                                                 </div>
                                                 
                                                 {/* Product Name */}
-                                                <h3 className="product-name font-weight-bold mb-2">
+                                                <h3 className="product-name font-weight-bold mb-3">
                                                     <Link to={`/single-product/${item.id}`} className="text-dark no-underline hover-info">
                                                         {item.name}
                                                     </Link>
                                                 </h3>
                                                 
                                                 {/* Product Category/Description */}
-                                                <p className="product-category text-muted mb-2">
+                                                <p className="product-category text-muted mb-4">
                                                     {item.maincategory} • {item.subcategory}
                                                 </p>
                                                 
@@ -360,7 +360,7 @@ export default function Home() {
                                                 </div>
                                                 
                                                 {/* Price Section */}
-                                                <div className="mt-auto pt-2 border-top border-light">
+                                                <div className="mt-auto pt-4 border-top border-light">
                                                     <div className="d-flex align-items-center justify-content-between">
                                                         <div className="price-group">
                                                             <span className="product-price font-weight-bold text-dark">₹{item.finalprice}</span>
@@ -808,11 +808,11 @@ export default function Home() {
                     position: relative; 
                     padding: 0;
                     overflow: hidden;
-                    height: clamp(200px, 24vw, 280px);
-                    border-radius: 12px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+                    height: clamp(220px, 28vw, 320px);
+                    border-radius: 16px;
+                    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
                 }
-                .img-holder { height: auto; position: relative; overflow: hidden; border-radius: 12px; }
+                .img-holder { height: auto; position: relative; overflow: hidden; border-radius: 16px; }
                 .product-link { display: block; position: relative; height: 100%; }
                 .luxury-image { 
                     transition: 0.7s ease-in-out;
@@ -834,11 +834,11 @@ export default function Home() {
                 }
                 .fashion-card {
                     transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-                    border: 1.5px solid rgba(23, 162, 184, 0.1);
-                    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+                    border: 1.5px solid rgba(23, 162, 184, 0.08);
+                    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
                     position: relative;
                     overflow: hidden;
-                    border-radius: 12px;
+                    border-radius: 18px;
                     background: #fff;
                 }
                 .fashion-card::after {
@@ -877,12 +877,12 @@ export default function Home() {
                     z-index: 5;
                 }
                 .lux-tag { 
-                    padding: 8px 16px; 
+                    padding: 10px 18px; 
                     font-weight: 800; 
                     font-size: 12px; 
-                    border-radius: 8px; 
-                    letter-spacing: 0.7px;
-                    box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+                    border-radius: 10px; 
+                    letter-spacing: 0.8px;
+                    box-shadow: 0 8px 18px rgba(0,0,0,0.25);
                     backdrop-filter: blur(12px);
                     transition: all 0.3s;
                 }
@@ -974,14 +974,14 @@ export default function Home() {
                     color: #17a2b8;
                     font-weight: 900;
                     text-transform: uppercase;
-                    margin-bottom: 2px;
-                    line-height: 1.4;
+                    margin-bottom: 6px;
+                    line-height: 1.5;
                 }
                 .product-rating-wrapper {
                     display: flex;
                     align-items: center;
-                    gap: 6px;
-                    margin-bottom: 2px;
+                    gap: 8px;
+                    margin-bottom: 6px;
                 }
                 .rating-stars { 
                     color: #f5b301; 
@@ -996,84 +996,87 @@ export default function Home() {
                     line-height: 1.4;
                 }
                 .product-name { 
-                    font-size: 16px; 
-                    line-height: 1.5;
+                    font-size: 17px; 
+                    line-height: 1.6;
                     font-weight: 800;
                     letter-spacing: -0.3px;
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
-                    margin: 0;
+                    margin: 0 0 8px 0;
                     color: #0a0a0a;
                 }
                 .product-category {
                     font-size: 13px;
-                    line-height: 1.5;
+                    line-height: 1.6;
                     font-weight: 600;
                     letter-spacing: 0.3px;
                     color: #6c757d;
-                    margin-bottom: 0;
+                    margin-bottom: 10px;
                 }
                 
                 /* Product Features */
                 .product-features {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 8px;
-                    margin-bottom: 12px;
+                    gap: 10px;
+                    margin-bottom: 16px;
                 }
                 .feature-badge {
-                    padding: 5px 12px;
+                    padding: 7px 14px;
                     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
                     border: 1.5px solid #d4d8db;
-                    border-radius: 18px;
+                    border-radius: 20px;
                     font-size: 11px;
                     font-weight: 700;
                     color: #495057;
                     text-transform: uppercase;
-                    letter-spacing: 0.4px;
+                    letter-spacing: 0.5px;
+                    line-height: 1.4;
                 }
                 .stock-badge {
                     background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
                     border-color: #b1dfbb;
                     color: #155724;
                     font-weight: 800;
+                    line-height: 1.5;
                 }
                 
                 /* Price Section */
                 .price-group {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 12px;
                     flex-wrap: wrap;
                     margin: 0;
-                    line-height: 1.3;
+                    line-height: 1.5;
                 }
                 .product-price { 
-                    font-size: 20px; 
+                    font-size: 22px; 
                     font-weight: 900;
                     color: #000;
                     letter-spacing: -0.6px;
                 }
                 .product-old-price { 
-                    font-size: 13px; 
+                    font-size: 14px; 
                     font-weight: 600;
                     color: #b0b0b0;
                     text-decoration: line-through;
+                    line-height: 1.5;
                 }
                 .save-badge {
-                    padding: 4px 10px;
+                    padding: 6px 12px;
                     background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
                     color: #c62828;
-                    border-radius: 10px;
-                    font-size: 10px;
+                    border-radius: 12px;
+                    font-size: 11px;
                     font-weight: 800;
-                    letter-spacing: 0.4px;
+                    letter-spacing: 0.5px;
                     text-transform: uppercase;
                     white-space: nowrap;
-                    line-height: 1.2;
-                    box-shadow: 0 2px 6px rgba(198, 40, 40, 0.12);
+                    line-height: 1.4;
+                    box-shadow: 0 3px 8px rgba(198, 40, 40, 0.15);
                 }
                 
                 /* Add to Cart Button - Enhanced */
@@ -1083,18 +1086,19 @@ export default function Home() {
                     justify-content: center;
                     gap: 10px;
                     width: 100%;
-                    padding: 16px 18px;
+                    padding: 18px 20px;
                     background: linear-gradient(135deg, #000 0%, #2c2c2c 100%);
                     color: #fff;
                     border: none;
-                    border-radius: 14px;
+                    border-radius: 16px;
                     font-weight: 800;
                     font-size: 15px;
-                    letter-spacing: 0.6px;
+                    letter-spacing: 0.7px;
                     cursor: pointer;
                     transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-                    min-height: 52px;
-                    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+                    min-height: 54px;
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+                    margin-top: 4px;
                 }
                 .btn-add-cart:hover {
                     background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
