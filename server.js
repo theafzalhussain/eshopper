@@ -153,7 +153,10 @@ const upload = multer({
 const sendMail = async (to, otp) => {
     try {
         const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-        if (!BREVO_KEY) throw new Error("❌ Brevo API Key Missing");
+        if (!BREVO_KEY) {
+            console.error("❌ Brevo API Key Missing - Check environment variables");
+            throw new Error("Email service not configured. Contact support.");
+        }
 
         // Configure Brevo API
         const apiInstance = new TransactionalEmailsApi();
@@ -179,7 +182,11 @@ const sendMail = async (to, otp) => {
         console.log("✅ OTP Email sent to:", to);
         return true;
     } catch (error) {
-        console.error("❌ Brevo Email Error:", error.message);
+        console.error("❌ Email Error Details:", {
+            message: error.message,
+            response: error.response?.status,
+            body: error.response?.body
+        });
         Sentry.captureException(error);
         throw error;
     }

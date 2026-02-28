@@ -16,6 +16,7 @@ export default function SingUp() {
     const [errors, setErrors] = useState({ name: "", email: "", username: "", password: "" })
     const [usernameStatus, setUsernameStatus] = useState(null) // 'available', 'taken', null
     const [checkingUsername, setCheckingUsername] = useState(false)
+    const [generalError, setGeneralError] = useState("") // For API/server errors
     
     // New features
     const [termsAccepted, setTermsAccepted] = useState(false)
@@ -103,14 +104,16 @@ export default function SingUp() {
 
     // RESEND OTP FUNCTION
     async function handleResendOTP() {
+        setGeneralError("")
         setResendTimer(60)
         try {
             const res = await sendOtpAPI({ email: data.email, type: 'signup' })
             if (res.result === "Done") {
-                alert("OTP resent to your email!")
+                alert("OTP resent successfully!")
             }
         } catch (err) {
-            alert("Failed to resend OTP. Please try again.")
+            const errorMsg = err.response?.data?.message || err.message || "Failed to resend OTP."
+            setGeneralError(errorMsg)
             setResendTimer(0)
         }
     }
@@ -118,9 +121,10 @@ export default function SingUp() {
     // --- STEP 1: SEND OTP ---
     async function handleSendOTP(e) {
         e.preventDefault();
+        setGeneralError("")
         
         if (!termsAccepted) {
-            alert("Please accept Terms & Conditions to continue")
+            setGeneralError("Please accept Terms & Conditions to continue")
             return
         }
         
@@ -133,7 +137,7 @@ export default function SingUp() {
         setErrors({ name: nameError, email: emailError, username: usernameError, password: passwordError })
 
         if (nameError || emailError || usernameError || passwordError || usernameStatus !== 'available') {
-            alert("Please fix all errors before proceeding")
+            setGeneralError("Please fix all errors before proceeding")
             return
         }
 
@@ -143,10 +147,13 @@ export default function SingUp() {
             if (res.result === "Done") {
                 setStep(2);
                 setResendTimer(60) // Start 60 second timer
+                setGeneralError("")
                 alert("Verification code sent! Check your email.");
             }
         } catch (err) {
-            alert("This email is already registered or server error. Please retry.");
+            const errorMsg = err.response?.data?.message || err.message || "Failed to send OTP. Please try again."
+            setGeneralError(errorMsg)
+            console.error("Send OTP Error:", err)
         }
         setLoading(false);
     }
@@ -154,8 +161,10 @@ export default function SingUp() {
     // --- STEP 2: VERIFY & CREATE ---
     async function verifyAndSignup(e) {
         e.preventDefault();
+        setGeneralError("")
+        
         if (!userOtp || userOtp.length !== 6) {
-            alert("Please enter a valid 6-digit code.");
+            setGeneralError("Please enter a valid 6-digit verification code");
             return;
         }
         setLoading(true);
@@ -163,13 +172,15 @@ export default function SingUp() {
             // OTP verification is handled on the backend
             const res = await createUserAPI({ ...data, otp: userOtp })
             if (res.id) {
-                alert("Master Identity Verified. Welcome to Eshopper.");
+                alert("Account created! Welcome to Eshopper.");
                 navigate("/login")
             } else {
-                alert("Incorrect verification code!");
+                setGeneralError(res.message || "Incorrect verification code!");
             }
         } catch (err) {
-            alert("Incorrect verification code or server error. Please try again.");
+            const errorMsg = err.response?.data?.message || err.message || "Incorrect verification code or server error."
+            setGeneralError(errorMsg)
+            console.error("Verify OTP Error:", err)
         }
         setLoading(false);
     }
@@ -195,6 +206,13 @@ export default function SingUp() {
                         <AnimatePresence mode="wait">
                             {step === 1 ? (
                                 <motion.form key="f1" initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 30, opacity: 0 }} onSubmit={handleSendOTP} className="text-left mt-4">
+                                    {/* GENERAL ERROR */}
+                                    {generalError && (
+                                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="general-error-box mb-3">
+                                            <AlertCircle size={18} className="inline-mr" />
+                                            {generalError}
+                                        </motion.div>
+                                    )}
                                     {/* NAME FIELD */}
                                     <div className="p-field mb-3">
                                         <label>FULL NAME</label>
@@ -290,6 +308,14 @@ export default function SingUp() {
                                 </motion.form>
                             ) : (
                                 <motion.form key="f2" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={verifyAndSignup} className="text-center mt-4">
+                                    {/* ERROR IN VERIFICATION */}
+                                    {generalError && (
+                                        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="general-error-box mb-4">
+                                            <AlertCircle size={18} />
+                                            {generalError}
+                                        </motion.div>
+                                    )}
+                                    
                                     <ShieldCheck size={60} className="text-info mx-auto mb-3 pulse-anim" />
                                     <h3 className="verify-title">Verify Your Email</h3>
                                     <p className="verify-text mb-2">Verification code sent to:</p>
@@ -355,6 +381,9 @@ export default function SingUp() {
                 .success-text { font-size: 12px; color: #28a745; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
                 .input-valid-icon { color: #28a745; flex-shrink: 0; }
                 .input-error-icon { color: #dc3545; flex-shrink: 0; }
+                
+                /* GENERAL ERROR BOX */
+                .general-error-box { background: #ffe5e5; border: 2px solid #dc3545; border-radius: 12px; padding: 12px 16px; color: #dc3545; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
                 
                 /* PASSWORD STRENGTH */
                 .password-strength-bar { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 8px; }

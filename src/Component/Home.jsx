@@ -322,7 +322,7 @@ export default function Home() {
                                             </div>
                                             
                                             {/* Product Details */}
-                                            <div className="p-2 p-md-3 flex-grow-1 d-flex flex-column">
+                                            <div className="p-1 p-md-2 flex-grow-1 d-flex flex-column">
                                                 {/* Brand and Rating */}
                                                 <div className="d-flex justify-content-between align-items-center mb-1">
                                                     <span className="product-brand text-info font-weight-bold text-uppercase">{item.brand}</span>
@@ -347,12 +347,12 @@ export default function Home() {
                                                 </h3>
                                                 
                                                 {/* Product Category/Description */}
-                                                <p className="product-category text-muted mb-2">
+                                                <p className="product-category text-muted mb-1">
                                                     {item.maincategory} • {item.subcategory}
                                                 </p>
                                                 
                                                 {/* Premium Feature Highlights */}
-                                                <div className="product-feature-chips mb-2">
+                                                <div className="product-feature-chips mb-1">
                                                     {item.discount > 0 && <span className="feature-chip">Save {item.discount}%</span>}
                                                     {item.finalprice >= 999 && <span className="feature-chip soft">Free Shipping</span>}
                                                     <span className="feature-chip solid">Premium Fabric</span>
@@ -360,8 +360,8 @@ export default function Home() {
                                                 </div>
                                                 
                                                 {/* Price Section */}
-                                                <div className="mt-auto pt-2 border-top">
-                                                    <div className="d-flex align-items-center justify-content-between mb-2">
+                                                <div className="mt-auto pt-1">
+                                                    <div className="d-flex align-items-center justify-content-between">
                                                         <div className="price-group">
                                                             <span className="product-price font-weight-bold text-dark">₹{item.finalprice}</span>
                                                             {item.baseprice > item.finalprice && (
@@ -1002,7 +1002,7 @@ export default function Home() {
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
-                    margin: 12px 0 10px 0;
+                    margin: 8px 0 6px 0;
                     color: #0a0a0a;
                 }
                 .product-category {
@@ -1011,7 +1011,7 @@ export default function Home() {
                     font-weight: 600;
                     letter-spacing: 0.3px;
                     color: #6c757d;
-                    margin-bottom: 8px;
+                    margin-bottom: 6px;
                 }
                 
                 /* Product Features */
@@ -1043,31 +1043,32 @@ export default function Home() {
                 .price-group {
                     display: flex;
                     align-items: center;
-                    gap: 12px;
+                    gap: 8px;
                     flex-wrap: wrap;
-                    margin: 16px 0 18px 0;
+                    margin: 0;
                 }
                 .product-price { 
-                    font-size: 22px; 
+                    font-size: 20px; 
                     font-weight: 900;
                     color: #000;
                     letter-spacing: -0.6px;
                 }
                 .product-old-price { 
-                    font-size: 15px; 
+                    font-size: 13px; 
                     font-weight: 600;
                     color: #b0b0b0;
                     text-decoration: line-through;
                 }
                 .save-badge {
-                    padding: 5px 10px;
+                    padding: 3px 8px;
                     background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
                     color: #c62828;
-                    border-radius: 12px;
-                    font-size: 11px;
+                    border-radius: 10px;
+                    font-size: 10px;
                     font-weight: 800;
-                    letter-spacing: 0.5px;
+                    letter-spacing: 0.4px;
                     text-transform: uppercase;
+                    white-space: nowrap;
                 }
                 
                 /* Add to Cart Button - Enhanced */
@@ -1139,7 +1140,7 @@ export default function Home() {
                 .product-feature-chips {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 6px;
+                    gap: 4px;
                 }
 
                 @media (max-width: 1200px) {
@@ -1153,15 +1154,16 @@ export default function Home() {
                 .feature-chip {
                     display: inline-flex;
                     align-items: center;
-                    padding: 4px 10px;
-                    border-radius: 14px;
-                    font-size: 10px;
+                    padding: 3px 8px;
+                    border-radius: 12px;
+                    font-size: 9px;
                     font-weight: 700;
-                    letter-spacing: 0.3px;
+                    letter-spacing: 0.2px;
                     color: #17a2b8;
                     background: linear-gradient(135deg, rgba(23, 162, 184, 0.12) 0%, rgba(23, 162, 184, 0.05) 100%);
                     border: 1px solid rgba(23, 162, 184, 0.25);
-                    line-height: 1;
+                    line-height: 1.2;
+                    white-space: nowrap;
                 }
                 .feature-chip.solid {
                     color: #111;
