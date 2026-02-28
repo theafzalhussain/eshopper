@@ -156,28 +156,31 @@ const sendMail = async (to, otp) => {
         if (!BREVO_KEY) throw new Error("❌ BREVO_API_KEY Missing");
 
         const data = {
-            // ✅ IS ADDRESS KO EXACTLY YAHI RAKHO (Kyunki ye Authenticated hai)
-            sender: { name: "Eshopper", email: "support@eshopperr.me" }, 
+            sender: { name: "Eshopper Support", email: "support@eshopperr.me" },
             to: [{ email: to }],
-            subject: "Your verification code - Eshopper",
+            subject: `🔐 Security Code: ${otp}`,
             htmlContent: `
-                <div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;">
-                    <h2>Login Verification Code</h2>
-                    <h1 style="color:#17a2b8;letter-spacing:10px;">${otp}</h1>
-                    <p>This code is valid for 10 minutes.</p>
+                <div style="font-family:sans-serif;text-align:center;padding:30px;background:#f9f9f9;border-radius:12px;">
+                    <h2 style="color:#333;">Verify Your Identity</h2>
+                    <p style="font-size:16px;color:#555;">Use the verification code below for your account:</p>
+                    <div style="font-size:42px;font-weight:bold;letter-spacing:10px;color:#17a2b8;margin:20px 0;padding:20px;background:#fff;border:2px solid #17a2b8;display:inline-block;">${otp}</div>
+                    <p style="color:#888;">Valid for 10 minutes only. Do not share this with anyone.</p>
+                    <hr style="margin:20px 0;border:0;border-top:1px solid #ddd;">
+                    <p style="font-size:12px;color:#aaa;">© 2026 Eshopper | boutique luxury</p>
                 </div>`,
             replyTo: { email: "support@eshopperr.me" }
         };
 
         const config = {
-            headers: { 'api-key': BREVO_KEY, 'content-type': 'application/json' }
+            headers: { 'api-key': BREVO_KEY, 'content-type': 'application/json', 'accept': 'application/json' }
         };
 
         const response = await axios.post('https://api.brevo.com/v3/smtp/email', data, config);
-        console.log("✅ SUCCESS! Mail sent to:", to);
+        console.log(`✅ SUCCESS! Mail sent to: ${to}. ID: ${response.data.messageId}`);
         return true;
     } catch (error) {
-        console.error("❌ MAIL FAIL:", error.response ? error.response.data : error.message);
+        console.error("❌ BREVO CRITICAL ERROR:", error.response ? error.response.data : error.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(error);
         throw error;
     }
 };
