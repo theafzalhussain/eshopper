@@ -302,9 +302,16 @@ export default function Home() {
                                                 {/* Brand and Rating */}
                                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                                     <span className="product-brand text-info font-weight-bold text-uppercase">{item.brand}</span>
-                                                    <div className="product-rating-wrapper">
-                                                        <span className="rating-stars">★★★★★</span>
-                                                        <span className="rating-text text-muted">(4.9)</span>
+                                                    <div className="product-rating-wrapper d-flex align-items-center">
+                                                        <span className="rating-stars" style={{ color: '#FFB800', fontSize: '14px', marginRight: '4px' }}>
+                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                <span key={star}>
+                                                                    {star <= Math.floor(item.rating || 4.5) ? '★' : 
+                                                                     star === Math.ceil(item.rating || 4.5) && (item.rating || 4.5) % 1 !== 0 ? '★' : '☆'}
+                                                                </span>
+                                                            ))}
+                                                        </span>
+                                                        <span className="rating-text text-muted" style={{ fontSize: '12px' }}>({(item.rating || 4.5).toFixed(1)})</span>
                                                     </div>
                                                 </div>
                                                 

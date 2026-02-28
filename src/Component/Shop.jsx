@@ -344,8 +344,16 @@ export default function Shop() {
                                             <div className="p-3 p-md-3">
                                                 <div className="d-flex justify-content-between mb-2">
                                                     <span className="product-brand-shop">{item.brand}</span>
-                                                    <div className="rating-shop">
-                                                        ★★★★★
+                                                    <div className="rating-shop d-flex align-items-center">
+                                                        <span className="stars-display" style={{ color: '#FFB800', fontSize: '14px', marginRight: '4px' }}>
+                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                <span key={star}>
+                                                                    {star <= Math.floor(item.rating || 4.5) ? '★' : 
+                                                                     star === Math.ceil(item.rating || 4.5) && (item.rating || 4.5) % 1 !== 0 ? '★' : '☆'}
+                                                                </span>
+                                                            ))}
+                                                        </span>
+                                                        <span className="rating-number" style={{ fontSize: '12px', color: '#666' }}>({(item.rating || 4.5).toFixed(1)})</span>
                                                     </div>
                                                 </div>
                                                 <h3 className="product-name-shop mb-2">

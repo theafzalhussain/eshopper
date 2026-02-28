@@ -130,6 +130,24 @@ export default function SingleProductPage() {
                         <span className="badge badge-success px-3 py-2 mr-3">{p.discount}% OFF</span>
                         <span className="text-muted">Brand: <strong className="text-dark">{p.brand}</strong></span>
                     </div>
+
+                    {/* Live Rating Display */}
+                    <div className="d-flex align-items-center mb-3" style={{ fontSize: '18px' }}>
+                        <span className="rating-stars-display" style={{ color: '#FFB800', marginRight: '8px' }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <span key={star}>
+                                    {star <= Math.floor(p.rating || 4.5) ? '★' : 
+                                     star === Math.ceil(p.rating || 4.5) && (p.rating || 4.5) % 1 !== 0 ? '★' : '☆'}
+                                </span>
+                            ))}
+                        </span>
+                        <span className="rating-value font-weight-bold" style={{ color: '#333' }}>
+                            {(p.rating || 4.5).toFixed(1)}
+                        </span>
+                        <span className="text-muted ml-2" style={{ fontSize: '14px' }}>
+                            ({p.reviews || 0} reviews)
+                        </span>
+                    </div>
                     
                     <h2 className="text-info mb-4">
                         ₹{p.finalprice} 
