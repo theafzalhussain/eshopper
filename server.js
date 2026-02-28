@@ -21,7 +21,7 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
-var SibApiV3Sdk = require('@getbrevo/brevo');
+const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
@@ -149,7 +149,7 @@ const upload = multer({
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// 📧 BREVO EMAIL SERVICE - Official v4.0.1 Pattern
+// 📧 BREVO EMAIL SERVICE - Direct REST API (Most Reliable)
 const sendMail = async (to, otp) => {
     try {
         const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
@@ -158,37 +158,38 @@ const sendMail = async (to, otp) => {
             throw new Error("Email service not configured. Contact support.");
         }
 
-        // ✅ Configure Brevo API Client - Official v4.0.1 SDK Pattern
-        var defaultClient = SibApiV3Sdk.ApiClient.instance;
-        var apiKey = defaultClient.authentications['api-key'];
-        apiKey.apiKey = BREVO_KEY;
+        // ✅ Direct Brevo REST API Call with axios - 100% reliable
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+            sender: { 
+                name: "Eshopper", 
+                email: process.env.SENDER_EMAIL || "support@eshopperr.me" 
+            },
+            to: [{ email: to }],
+            subject: "🔐 Verification Code - Eshopper",
+            htmlContent: `
+                <div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;border-radius:10px;">
+                    <h2 style="color:#333;">Verification Code</h2>
+                    <h1 style="letter-spacing:10px;color:#17a2b8;background:#fff;padding:15px;display:inline-block;border-radius:5px;font-weight:bold;">${otp}</h1>
+                    <p style="color:#666;font-size:14px;">This code is valid for 10 minutes only.</p>
+                    <p style="color:#999;font-size:12px;">If you didn't request this, please ignore this email.</p>
+                </div>
+            `,
+            replyTo: { email: "support@eshopperr.me" }
+        }, {
+            headers: {
+                'accept': 'application/json',
+                'api-key': BREVO_KEY,
+                'content-type': 'application/json'
+            }
+        });
 
-        // ✅ Initialize API Instance and Email Object
-        var apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-        var sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-        
-        sendSmtpEmail.subject = "🔐 Verification Code - Eshopper";
-        sendSmtpEmail.htmlContent = `
-            <div style="font-family:Arial;padding:20px;text-align:center;background:#f9f9f9;border-radius:10px;">
-                <h2 style="color:#333;">Verification Code</h2>
-                <h1 style="letter-spacing:10px;color:#17a2b8;background:#fff;padding:15px;display:inline-block;border-radius:5px;font-weight:bold;">${otp}</h1>
-                <p style="color:#666;font-size:14px;">This code is valid for 10 minutes only.</p>
-                <p style="color:#999;font-size:12px;">If you didn't request this, please ignore this email.</p>
-            </div>
-        `;
-        sendSmtpEmail.sender = { name: "Eshopper", email: process.env.SENDER_EMAIL || "support@eshopperr.me" };
-        sendSmtpEmail.to = [{ email: to }];
-        sendSmtpEmail.replyTo = { email: "support@eshopperr.me" };
-
-        // Send email
-        const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-        console.log("✅ OTP Email sent to:", to);
+        console.log("✅ OTP Email sent successfully to:", to, "- Message ID:", response.data.messageId);
         return true;
     } catch (error) {
         console.error("❌ Email Error Details:", {
             message: error.message,
-            response: error.response?.status,
-            body: error.response?.body
+            status: error.response?.status,
+            data: error.response?.data
         });
         Sentry.captureException(error);
         throw error;
