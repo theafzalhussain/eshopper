@@ -240,7 +240,9 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
             await OTPRecord.findOneAndUpdate({ email: normalizedEmail }, { otp, email: normalizedEmail }, { upsert: true });
         }
 
-        await sendMail(normalizedEmail, otp);
+        // 📧 CRITICAL FIX: Always send to user's actual email, not the input (which might be username)
+        const emailToSend = user ? user.email : normalizedEmail;
+        await sendMail(emailToSend, otp);
         res.json({ result: "Done", message: "OTP sent successfully" });
     } catch (e) {
         console.error("❌ Email Error:", e.message);
