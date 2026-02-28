@@ -43,13 +43,20 @@ const corsOptions = {
             return callback(null, true);
         }
         
-        // Allow production frontend
-        if (origin === 'https://eshopperr.me' || origin === 'https://www.eshopperr.me' || origin === process.env.FRONTEND_URL) {
+        // Allow production frontend domains
+        if (origin === 'https://eshopperr.me' || 
+            origin === 'https://www.eshopperr.me' || 
+            origin === process.env.FRONTEND_URL) {
             return callback(null, true);
         }
         
-        console.warn(`CORS blocked: ${origin}`);
-        return callback(null, true); // Allow for now, log later
+        // Allow all Vercel preview deployments (*.vercel.app)
+        if (origin && origin.includes('.vercel.app')) {
+            return callback(null, true);
+        }
+        
+        console.warn(`⚠️  CORS rejected: ${origin}`);
+        return callback(new Error('CORS policy: Unauthorized origin'));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
