@@ -322,9 +322,9 @@ export default function Home() {
                                             </div>
                                             
                                             {/* Product Details */}
-                                            <div className="p-1 p-md-2 flex-grow-1 d-flex flex-column">
+                                            <div className="p-2 p-md-2 flex-grow-1 d-flex flex-column">
                                                 {/* Brand and Rating */}
-                                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                                <div className="d-flex justify-content-between align-items-center mb-2">
                                                     <span className="product-brand text-info font-weight-bold text-uppercase">{item.brand}</span>
                                                     <div className="product-rating-wrapper d-flex align-items-center">
                                                         <span className="rating-stars">
@@ -340,19 +340,19 @@ export default function Home() {
                                                 </div>
                                                 
                                                 {/* Product Name */}
-                                                <h3 className="product-name font-weight-bold mb-1">
+                                                <h3 className="product-name font-weight-bold mb-2">
                                                     <Link to={`/single-product/${item.id}`} className="text-dark no-underline hover-info">
                                                         {item.name}
                                                     </Link>
                                                 </h3>
                                                 
                                                 {/* Product Category/Description */}
-                                                <p className="product-category text-muted mb-1">
+                                                <p className="product-category text-muted mb-2">
                                                     {item.maincategory} • {item.subcategory}
                                                 </p>
                                                 
                                                 {/* Premium Feature Highlights */}
-                                                <div className="product-feature-chips mb-1">
+                                                <div className="product-feature-chips mb-2">
                                                     {item.discount > 0 && <span className="feature-chip">Save {item.discount}%</span>}
                                                     {item.finalprice >= 999 && <span className="feature-chip soft">Free Shipping</span>}
                                                     <span className="feature-chip solid">Premium Fabric</span>
@@ -360,7 +360,7 @@ export default function Home() {
                                                 </div>
                                                 
                                                 {/* Price Section */}
-                                                <div className="mt-auto pt-1">
+                                                <div className="mt-auto pt-2 border-top border-light">
                                                     <div className="d-flex align-items-center justify-content-between">
                                                         <div className="price-group">
                                                             <span className="product-price font-weight-bold text-dark">₹{item.finalprice}</span>
@@ -974,13 +974,14 @@ export default function Home() {
                     color: #17a2b8;
                     font-weight: 900;
                     text-transform: uppercase;
-                    margin-bottom: 8px;
+                    margin-bottom: 2px;
+                    line-height: 1.4;
                 }
                 .product-rating-wrapper {
                     display: flex;
                     align-items: center;
                     gap: 6px;
-                    margin-bottom: 10px;
+                    margin-bottom: 2px;
                 }
                 .rating-stars { 
                     color: #f5b301; 
@@ -992,26 +993,27 @@ export default function Home() {
                     font-size: 11px; 
                     font-weight: 700;
                     color: #6c757d;
+                    line-height: 1.4;
                 }
                 .product-name { 
                     font-size: 16px; 
-                    line-height: 1.4;
+                    line-height: 1.5;
                     font-weight: 800;
                     letter-spacing: -0.3px;
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
-                    margin: 8px 0 6px 0;
+                    margin: 0;
                     color: #0a0a0a;
                 }
                 .product-category {
                     font-size: 13px;
-                    line-height: 1.4;
+                    line-height: 1.5;
                     font-weight: 600;
                     letter-spacing: 0.3px;
                     color: #6c757d;
-                    margin-bottom: 6px;
+                    margin-bottom: 0;
                 }
                 
                 /* Product Features */
@@ -1043,9 +1045,10 @@ export default function Home() {
                 .price-group {
                     display: flex;
                     align-items: center;
-                    gap: 8px;
+                    gap: 10px;
                     flex-wrap: wrap;
                     margin: 0;
+                    line-height: 1.3;
                 }
                 .product-price { 
                     font-size: 20px; 
@@ -1060,7 +1063,7 @@ export default function Home() {
                     text-decoration: line-through;
                 }
                 .save-badge {
-                    padding: 3px 8px;
+                    padding: 4px 10px;
                     background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
                     color: #c62828;
                     border-radius: 10px;
@@ -1069,6 +1072,8 @@ export default function Home() {
                     letter-spacing: 0.4px;
                     text-transform: uppercase;
                     white-space: nowrap;
+                    line-height: 1.2;
+                    box-shadow: 0 2px 6px rgba(198, 40, 40, 0.12);
                 }
                 
                 /* Add to Cart Button - Enhanced */
@@ -1140,7 +1145,8 @@ export default function Home() {
                 .product-feature-chips {
                     display: flex;
                     flex-wrap: wrap;
-                    gap: 4px;
+                    gap: 5px;
+                    line-height: 1.4;
                 }
 
                 @media (max-width: 1200px) {
@@ -1154,16 +1160,17 @@ export default function Home() {
                 .feature-chip {
                     display: inline-flex;
                     align-items: center;
-                    padding: 3px 8px;
+                    padding: 4px 10px;
                     border-radius: 12px;
                     font-size: 9px;
                     font-weight: 700;
-                    letter-spacing: 0.2px;
+                    letter-spacing: 0.3px;
                     color: #17a2b8;
-                    background: linear-gradient(135deg, rgba(23, 162, 184, 0.12) 0%, rgba(23, 162, 184, 0.05) 100%);
-                    border: 1px solid rgba(23, 162, 184, 0.25);
-                    line-height: 1.2;
+                    background: linear-gradient(135deg, rgba(23, 162, 184, 0.13) 0%, rgba(23, 162, 184, 0.06) 100%);
+                    border: 1px solid rgba(23, 162, 184, 0.28);
+                    line-height: 1.3;
                     white-space: nowrap;
+                    box-shadow: 0 1px 4px rgba(23, 162, 184, 0.08);
                 }
                 .feature-chip.solid {
                     color: #111;
