@@ -506,6 +506,306 @@ export default function ForgetPassword() {
                 .back-link { color: #111; font-weight: 800; letter-spacing: 1px; font-size: 12px; text-decoration: none !important; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
                 .back-link:hover { color: #17a2b8; }
                 
+                
+                /* === 📧 PREMIUM ANIMATIONS === */
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.05); opacity: 0.9; }
+                }
+                
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                
+                .icon-badge-premium {
+                    animation: pulse 2s ease-in-out infinite;
+                }
+                
+                .submit-lux {
+                    position: relative;
+                    overflow: hidden;
+                }
+                
+                .submit-lux::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    width: 0;
+                    height: 0;
+                    border-radius: 50%;
+                    background: rgba(255,255,255,0.2);
+                    transform: translate(-50%, -50%);
+                    transition: width 0.6s, height 0.6s;
+                }
+                
+                .submit-lux:hover::before {
+                    width: 300px;
+                    height: 300px;
+                }
+                
+                .input-wrap {
+                    position: relative;
+                }
+                
+                .input-wrap input:focus {
+                    animation: fadeIn 0.3s ease-out;
+                }
+                
+                /* === 📱 PREMIUM FULL RESPONSIVE DESIGN === */
+                
+                /* Extra Large Devices (1200px and up) */
+                @media (min-width: 1200px) {
+                    .glass-forget-card { 
+                        max-width: 520px;
+                        padding: 0;
+                        box-shadow: 0 50px 120px rgba(0,0,0,0.5);
+                    }
+                    .forget-inner-box { padding: 70px 50px !important; }
+                    .brand-logo { font-size: 2rem; }
+                    .input-wrap input { font-size: 16px; }
+                    .icon-badge-premium { width: 65px; height: 65px; }
+                }
+                
+                /* Large Devices (992px to 1199px) */
+                @media (max-width: 1199px) and (min-width: 992px) {
+                    .glass-forget-card { max-width: 500px; }
+                    .forget-inner-box { padding: 60px 45px !important; }
+                    .brand-logo { font-size: 1.9rem; }
+                }
+                
+                /* Medium Devices - Tablets (768px to 991px) */
+                @media (max-width: 991px) and (min-width: 768px) {
+                    .glass-forget-card { 
+                        max-width: 480px;
+                        border-radius: 35px;
+                    }
+                    .forget-inner-box { padding: 50px 35px !important; }
+                    .brand-logo { font-size: 1.7rem; letter-spacing: 4.5px; }
+                    .subtitle { font-size: 9.5px; letter-spacing: 2.3px; }
+                    .icon-badge-premium { width: 58px; height: 58px; }
+                    .field-label { font-size: 9.5px; }
+                    .input-wrap input { font-size: 15px; padding: 11px; }
+                    .submit-lux { padding: 17px; font-size: 12.5px; }
+                }
+                
+                /* Small Tablets & Large Phones (576px to 767px) */
+                @media (max-width: 767px) and (min-width: 576px) {
+                    .glass-forget-card { 
+                        max-width: 92%;
+                        border-radius: 32px;
+                    }
+                    .forget-inner-box { padding: 45px 32px !important; }
+                    .icon-badge-premium { width: 56px; height: 56px; border-radius: 16px; }
+                    .brand-logo { font-size: 1.6rem; letter-spacing: 4.2px; }
+                    .subtitle { font-size: 9px; letter-spacing: 2.2px; }
+                    .premium-field { margin-bottom: 22px !important; }
+                    .field-label { font-size: 9px; letter-spacing: 1.7px; }
+                    .input-wrap { padding: 7px 0; }
+                    .input-wrap input { font-size: 14.5px; padding: 10.5px; }
+                    .submit-lux { padding: 16px; font-size: 12px; border-radius: 45px; }
+                    .security-code-box { padding: 18px; border-radius: 18px; }
+                    .code-label { font-size: 11px; }
+                }
+                
+                /* Standard Mobile (480px to 575px) */
+                @media (max-width: 575px) and (min-width: 480px) {
+                    .glass-forget-card { 
+                        max-width: 94%;
+                        border-radius: 28px;
+                        box-shadow: 0 25px 70px rgba(0,0,0,0.35);
+                    }
+                    .forget-inner-box { padding: 42px 28px !important; }
+                    .icon-badge-premium { width: 54px; height: 54px; border-radius: 15px; }
+                    .brand-logo { font-size: 1.5rem; letter-spacing: 3.8px; }
+                    .subtitle { font-size: 8.5px; letter-spacing: 2px; }
+                    .premium-field { margin-bottom: 20px !important; }
+                    .field-label { font-size: 8.5px; letter-spacing: 1.6px; }
+                    .input-wrap { padding: 6px 0; }
+                    .input-wrap input { font-size: 14px; padding: 10px; }
+                    .field-icon { width: 17px; height: 17px; }
+                    .submit-lux { padding: 15px; font-size: 11.5px; border-radius: 42px; }
+                    .security-code-box { padding: 16px; border-radius: 16px; }
+                    .code-label { font-size: 10.5px; }
+                    .code-expiry { font-size: 11px; }
+                    .timer-badge { padding: 3px 10px; font-size: 11px; }
+                    .resend-btn { font-size: 11px; }
+                    .error-message { font-size: 11px; padding: 10px 12px; }
+                    .success-icon-box { width: 90px; height: 90px; }
+                    .success-title { font-size: 1.3rem; }
+                }
+                
+                /* Compact Mobile (375px to 479px) */
+                @media (max-width: 479px) and (min-width: 375px) {
+                    .glass-forget-card { 
+                        max-width: 95%;
+                        border-radius: 25px;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    }
+                    .forget-inner-box { padding: 38px 24px !important; }
+                    .icon-badge-premium { width: 52px; height: 52px; border-radius: 14px; }
+                    .brand-logo { font-size: 1.4rem; letter-spacing: 3.5px; }
+                    .subtitle { font-size: 8px; letter-spacing: 1.8px; }
+                    .premium-field { margin-bottom: 18px !important; }
+                    .field-label { font-size: 8px; letter-spacing: 1.5px; margin-bottom: 7px; }
+                    .input-wrap { padding: 5px 0; }
+                    .input-wrap input { font-size: 13.5px; padding: 9.5px; }
+                    .field-icon { width: 16px; height: 16px; }
+                    .submit-lux { padding: 14px; font-size: 11px; border-radius: 40px; }
+                    .security-code-box { padding: 14px; border-radius: 15px; }
+                    .code-label { font-size: 10px; }
+                    .code-expiry { font-size: 10.5px; }
+                    .timer-badge { padding: 3px 9px; font-size: 10.5px; }
+                    .resend-btn { font-size: 10.5px; }
+                    .max-attempts-msg { font-size: 10.5px; }
+                    .error-message { font-size: 10.5px; padding: 9px 11px; border-radius: 10px; }
+                    .info-box { padding: 11px 14px; font-size: 11px; }
+                    .success-icon-box { width: 85px; height: 85px; }
+                    .success-title { font-size: 1.2rem; }
+                    .success-subtitle { font-size: 12px; }
+                    .redirect-message { padding: 10px 16px; border-radius: 10px; }
+                    .redirect-message p { font-size: 12px; }
+                    .back-link { font-size: 11px; }
+                }
+                
+                /* Extra Small Mobile (320px to 374px) */
+                @media (max-width: 374px) {
+                    .forget-master-root { padding: 15px 10px; }
+                    .glass-forget-card { 
+                        max-width: 96%;
+                        border-radius: 22px;
+                        box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+                    }
+                    .forget-inner-box { padding: 32px 20px !important; }
+                    .icon-badge-premium { width: 48px; height: 48px; border-radius: 13px; }
+                    .icon-badge-premium svg { width: 28px; height: 28px; }
+                    .brand-logo { font-size: 1.25rem; letter-spacing: 3px; margin-bottom: 8px; }
+                    .subtitle { 
+                        font-size: 7px; 
+                        letter-spacing: 1.5px;
+                        margin-bottom: 35px !important;
+                    }
+                    .premium-field { margin-bottom: 16px !important; }
+                    .field-label { 
+                        font-size: 7.5px; 
+                        letter-spacing: 1.3px;
+                        margin-bottom: 6px;
+                    }
+                    .input-wrap { padding: 4px 0; }
+                    .input-wrap input { 
+                        font-size: 13px; 
+                        padding: 9px;
+                        min-height: 40px;
+                    }
+                    .field-icon { width: 15px; height: 15px; margin-right: 8px; }
+                    .submit-lux { 
+                        padding: 13px; 
+                        font-size: 10.5px;
+                        letter-spacing: 1.8px;
+                        border-radius: 38px;
+                        min-height: 48px;
+                    }
+                    .security-code-box { 
+                        padding: 12px; 
+                        border-radius: 14px;
+                        margin-top: 10px;
+                    }
+                    .code-label { font-size: 9px; margin-bottom: 8px; }
+                    .code-expiry { font-size: 9.5px; margin-top: 8px; }
+                    .timer-badge { 
+                        padding: 2px 8px; 
+                        font-size: 10px;
+                        border-radius: 15px;
+                    }
+                    .resend-btn { 
+                        font-size: 10px;
+                        padding: 4px 10px;
+                    }
+                    .max-attempts-msg { font-size: 10px; }
+                    .error-message { 
+                        font-size: 10px; 
+                        padding: 8px 10px;
+                        border-radius: 9px;
+                        margin-top: 8px;
+                    }
+                    .info-box { 
+                        padding: 10px 12px; 
+                        font-size: 10px;
+                        border-radius: 10px;
+                    }
+                    .info-box svg { width: 14px; height: 14px; }
+                    .success-icon-box { width: 75px; height: 75px; margin: 0 auto; }
+                    .success-icon-box svg { width: 45px; height: 45px; }
+                    .success-title { 
+                        font-size: 1.1rem;
+                        margin-top: 20px !important;
+                        margin-bottom: 10px !important;
+                    }
+                    .success-subtitle { font-size: 11px; }
+                    .redirect-message { 
+                        padding: 9px 14px; 
+                        border-radius: 9px;
+                        margin-bottom: 20px !important;
+                    }
+                    .redirect-message p { font-size: 11px; }
+                    .redirect-message strong { font-size: 14px; }
+                    .back-link { 
+                        font-size: 10px;
+                        letter-spacing: 0.8px;
+                    }
+                    .back-link svg { width: 14px; height: 14px; }
+                }
+                
+                /* Touch-Friendly Enhancements for Mobile */
+                @media (max-width: 767px) {
+                    .input-wrap {
+                        min-height: 44px;
+                    }
+                    .submit-lux {
+                        min-height: 50px;
+                        touch-action: manipulation;
+                    }
+                    .resend-btn {
+                        padding: 6px 12px;
+                        min-height: 36px;
+                        touch-action: manipulation;
+                    }
+                    .back-link {
+                        padding: 10px;
+                        min-height: 40px;
+                        display: inline-flex;
+                    }
+                }
+                
+                /* Landscape Mode Optimizations */
+                @media (max-height: 500px) and (orientation: landscape) {
+                    .forget-master-root { padding: 20px 15px; }
+                    .glass-forget-card { 
+                        margin: 20px auto;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                    }
+                    .forget-inner-box { padding: 25px 30px !important; }
+                    .icon-badge-premium { width: 45px; height: 45px; margin-bottom: 15px !important; }
+                    .brand-logo { font-size: 1.2rem; margin-bottom: 5px; }
+                    .subtitle { font-size: 7px; margin-bottom: 20px !important; }
+                    .premium-field { margin-bottom: 15px !important; }
+                    .submit-lux { padding: 12px; }
+                    .success-icon-box { width: 65px; height: 65px; }
+                    .success-title { font-size: 1rem; margin-top: 15px !important; }
+                }
+                
+                /* High Resolution Displays */
+                @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+                    .glass-forget-card {
+                        backdrop-filter: blur(25px);
+                    }
+                    .luxury-overlay {
+                        backdrop-filter: blur(15px);
+                    }
+                }
+                
                 /* --- RESPONSIVE --- */
                 @media (max-width: 576px) {
                     .glass-forget-card { border-radius: 25px; }

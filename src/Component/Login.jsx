@@ -440,63 +440,212 @@ export default function Login() {
                 .spinner { animation: rotate 2s linear infinite; }
                 @keyframes rotate { 100% { transform: rotate(360deg); } }
 
-                /* === 📱 FULL RESPONSIVE DESIGN === */
-                @media (max-width: 991px) {
+                /* === 📱 PREMIUM FULL RESPONSIVE DESIGN === */
+                
+                /* Extra Large Devices (1200px and up) */
+                @media (min-width: 1200px) {
+                    .glass-master-card { 
+                        max-width: 520px; 
+                        padding: 70px 50px;
+                        box-shadow: 0 50px 120px rgba(0,0,0,0.5);
+                    }
+                    .brand-name { font-size: 2.2rem; }
+                    .input-box input { font-size: 16px; }
+                }
+
+                /* Large Devices (992px to 1199px) */
+                @media (max-width: 1199px) and (min-width: 992px) {
+                    .premium-login-container { padding: 50px 30px; }
+                    .glass-master-card { max-width: 500px; padding: 60px 45px; }
+                }
+
+                /* Medium Devices - Tablets (768px to 991px) */
+                @media (max-width: 991px) and (min-width: 768px) {
                     .premium-login-container { padding: 40px 20px; }
-                    .glass-master-card { max-width: 500px; padding: 50px 35px; border-radius: 35px; }
+                    .glass-master-card { max-width: 480px; padding: 50px 35px; border-radius: 35px; }
                     .brand-name { font-size: 1.75rem; letter-spacing: 5px; }
                     .login-subtitle { font-size: 9px; letter-spacing: 2.5px; }
+                    .input-box input { font-size: 15px; }
+                    .master-login-btn { padding: 18px; font-size: 13px; }
                 }
 
-                @media (max-width: 768px) {
-                    .glass-master-card { max-width: 90%; padding: 45px 30px; border-radius: 30px; }
-                    .brand-shield { width: 55px; height: 55px; font-size: 1.3rem; }
-                    .brand-name { font-size: 1.6rem; letter-spacing: 4px; }
-                    .login-subtitle { font-size: 8px; }
-                    .input-label { font-size: 10px; }
-                    .luxury-input { padding: 14px 16px; font-size: 13px; }
-                    .enter-btn { padding: 15px; font-size: 14px; }
+                /* Small Tablets & Large Phones (576px to 767px) */
+                @media (max-width: 767px) and (min-width: 576px) {
+                    .glass-master-card { 
+                        max-width: 92%; 
+                        padding: 45px 32px; 
+                        border-radius: 32px; 
+                    }
+                    .brand-shield { width: 56px; height: 56px; font-size: 1.35rem; }
+                    .brand-name { font-size: 1.65rem; letter-spacing: 4.5px; }
+                    .login-subtitle { font-size: 8.5px; letter-spacing: 2.3px; }
+                    .input-field-wrap label { font-size: 9.5px; }
+                    .input-box { padding: 10px 16px; }
+                    .input-box input { padding: 11px; font-size: 14.5px; }
+                    .master-login-btn { padding: 17px; font-size: 12.5px; }
+                    .input-hint { font-size: 10.5px; }
                 }
 
-                @media (max-width: 576px) {
+                /* Standard Mobile (480px to 575px) */
+                @media (max-width: 575px) and (min-width: 480px) {
+                    .premium-login-container { padding: 25px 18px; }
+                    .glass-master-card { 
+                        border-radius: 28px; 
+                        padding: 42px 28px; 
+                        max-width: 94%;
+                        box-shadow: 0 25px 70px rgba(0,0,0,0.35);
+                    }
+                    .brand-shield { width: 52px; height: 52px; font-size: 1.25rem; border-radius: 16px; }
+                    .brand-name { font-size: 1.5rem; letter-spacing: 3.5px; }
+                    .login-subtitle { font-size: 7.5px; letter-spacing: 2.2px; }
+                    .input-field-wrap label { font-size: 9px; letter-spacing: 1.7px; }
+                    .input-box { 
+                        padding: 9px 14px;
+                        border-radius: 14px;
+                    }
+                    .input-box input { 
+                        padding: 11px; 
+                        font-size: 14px;
+                    }
+                    .master-login-btn { 
+                        padding: 16px; 
+                        font-size: 12px; 
+                        letter-spacing: 2.2px;
+                        border-radius: 18px;
+                    }
+                    .input-hint { font-size: 10px; }
+                    .remember-label { font-size: 11.5px; }
+                    .signup-link-premium { font-size: 11.5px; }
+                }
+
+                /* Compact Mobile (375px to 479px) */
+                @media (max-width: 479px) and (min-width: 375px) {
                     .premium-login-container { padding: 20px 15px; }
                     .glass-master-card { 
                         border-radius: 25px; 
-                        padding: 40px 25px; 
+                        padding: 38px 24px; 
                         max-width: 95%;
                         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
                     }
-                    .brand-shield { width: 50px; height: 50px; font-size: 1.2rem; border-radius: 15px; }
-                    .brand-name { font-size: 1.4rem; letter-spacing: 3px; margin-bottom: 3px; }
+                    .brand-shield { width: 48px; height: 48px; font-size: 1.15rem; border-radius: 14px; }
+                    .brand-name { font-size: 1.35rem; letter-spacing: 3px; margin-bottom: 3px; }
                     .login-subtitle { font-size: 7px; letter-spacing: 2px; }
-                    .input-label { font-size: 9px; letter-spacing: 1.5px; }
-                    .luxury-input { 
-                        padding: 12px 14px; 
-                        font-size: 14px;
-                        border-radius: 12px;
+                    .input-field-wrap label { font-size: 8.5px; letter-spacing: 1.5px; }
+                    .input-box { 
+                        padding: 8px 13px;
+                        border-radius: 13px;
                     }
-                    .enter-btn { 
-                        padding: 14px; 
-                        font-size: 13px; 
+                    .input-box input { 
+                        padding: 10px; 
+                        font-size: 13.5px;
+                    }
+                    .master-login-btn { 
+                        padding: 15px; 
+                        font-size: 11.5px; 
                         letter-spacing: 2px;
-                        border-radius: 12px;
+                        border-radius: 16px;
                     }
-                    .recover-text { font-size: 11px; }
-                    .footer-text { font-size: 9px; }
+                    .input-hint { font-size: 10px; margin-top: 5px; }
+                    .remember-label { font-size: 11px; }
+                    .remember-checkbox { width: 17px; height: 17px; }
+                    .luxury-divider { margin: 35px 0 20px; }
                     .signup-link-premium { font-size: 11px; }
                 }
 
-                @media (max-width: 375px) {
-                    .glass-master-card { padding: 35px 20px; border-radius: 20px; }
-                    .brand-shield { width: 45px; height: 45px; font-size: 1.1rem; }
-                    .brand-name { font-size: 1.2rem; letter-spacing: 2px; }
-                    .login-subtitle { font-size: 6px; letter-spacing: 1.5px; }
-                    .luxury-input { padding: 11px 12px; font-size: 13px; }
-                    .enter-btn { padding: 13px; font-size: 12px; }
+                /* Extra Small Mobile (320px to 374px) */
+                @media (max-width: 374px) {
+                    .premium-login-container { 
+                        padding: 15px 12px; 
+                        min-height: 100vh;
+                        display: flex;
+                        align-items: center;
+                    }
+                    .glass-master-card { 
+                        padding: 32px 20px; 
+                        border-radius: 22px;
+                        max-width: 96%;
+                        box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+                    }
+                    .brand-shield { width: 44px; height: 44px; font-size: 1.05rem; border-radius: 13px; }
+                    .brand-name { font-size: 1.2rem; letter-spacing: 2.5px; margin-bottom: 2px; }
+                    .login-subtitle { font-size: 6.5px; letter-spacing: 1.8px; }
+                    .input-field-wrap { margin-bottom: 20px; }
+                    .input-field-wrap label { font-size: 8px; letter-spacing: 1.3px; margin-bottom: 8px; }
+                    .input-box { 
+                        padding: 7px 12px;
+                        border-radius: 12px;
+                    }
+                    .input-box input { 
+                        padding: 9px; 
+                        font-size: 13px;
+                    }
+                    .icon { width: 16px; height: 16px; }
+                    .master-login-btn { 
+                        padding: 14px; 
+                        font-size: 11px; 
+                        letter-spacing: 1.8px;
+                        border-radius: 15px;
+                        margin-top: 25px;
+                    }
+                    .input-hint { font-size: 9.5px; margin-top: 5px; }
+                    .remember-me-wrapper { gap: 8px; margin-bottom: 18px; }
+                    .remember-checkbox { width: 16px; height: 16px; }
+                    .remember-label { font-size: 10.5px; gap: 7px; }
+                    .luxury-divider { margin: 30px 0 18px; }
+                    .luxury-divider span { font-size: 9px; padding: 0 12px; }
+                    .signup-link-premium { font-size: 10.5px; letter-spacing: 1.2px; }
+                    .premium-error-alert { 
+                        padding: 12px; 
+                        font-size: 11px;
+                        border-radius: 12px;
+                        margin-bottom: 20px;
+                    }
                 }
 
+                /* Tall Screens - Center Content */
                 @media (min-height: 900px) {
-                    .premium-login-container { align-items: center !important; }
+                    .premium-login-container { 
+                        align-items: center !important;
+                        justify-content: center !important;
+                    }
+                }
+
+                /* Touch-Friendly Enhancements for Mobile */
+                @media (max-width: 767px) {
+                    .input-box {
+                        min-height: 48px; /* Touch-friendly minimum */
+                    }
+                    .master-login-btn {
+                        min-height: 50px; /* Easier to tap */
+                        touch-action: manipulation; /* Prevent double-tap zoom */
+                    }
+                    .remember-checkbox {
+                        min-width: 20px;
+                        min-height: 20px;
+                    }
+                    .eye-toggle {
+                        padding: 8px;
+                        min-width: 36px;
+                        min-height: 36px;
+                    }
+                }
+
+                /* Landscape Mode Optimizations */
+                @media (max-height: 500px) and (orientation: landscape) {
+                    .premium-login-container { 
+                        padding: 20px 15px;
+                        align-items: flex-start !important;
+                    }
+                    .glass-master-card { 
+                        padding: 30px 35px;
+                        margin: 20px auto;
+                    }
+                    .brand-shield { width: 40px; height: 40px; font-size: 1rem; }
+                    .brand-name { font-size: 1.3rem; margin-bottom: 2px; }
+                    .login-subtitle { font-size: 7px; margin-bottom: 15px; }
+                    .input-field-wrap { margin-bottom: 18px; }
+                    .master-login-btn { margin-top: 20px; padding: 14px; }
+                    .luxury-divider { margin: 25px 0 15px; }
                 }
             `}} />
         </div>

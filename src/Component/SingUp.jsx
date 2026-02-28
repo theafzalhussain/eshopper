@@ -422,6 +422,397 @@ export default function SingUp() {
                 .verify-email { font-size: 14px; color: #111; font-weight: 700; }
                 .verify-help-text { font-size: 12px; color: #999; }
                 
+                
+                /* === ✨ PREMIUM ANIMATIONS === */
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.08); }
+                }
+                
+                @keyframes slideInUp {
+                    from { opacity: 0; transform: translateY(30px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                
+                @keyframes shimmer {
+                    0% { background-position: -1000px 0; }
+                    100% { background-position: 1000px 0; }
+                }
+                
+                .pulse-anim { animation: pulse 2s ease-in-out infinite; }
+                
+                .icon-badge-premium {
+                    animation: pulse 3s ease-in-out infinite;
+                    transition: all 0.3s ease;
+                }
+                
+                .icon-badge-premium:hover {
+                    transform: rotate(10deg) scale(1.1);
+                }
+                
+                .p-submit-btn {
+                    position: relative;
+                    overflow: hidden;
+                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+                
+                .p-submit-btn::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    width: 0;
+                    height: 0;
+                    border-radius: 50%;
+                    background: rgba(255,255,255,0.3);
+                    transform: translate(-50%, -50%);
+                    transition: width 0.6s, height 0.6s;
+                }
+                
+                .p-submit-btn:hover::before {
+                    width: 400px;
+                    height: 400px;
+                }
+                
+                .p-submit-btn:active {
+                    transform: scale(0.98);
+                }
+                
+                .p-input-box {
+                    transition: all 0.3s ease;
+                }
+                
+                .p-input-box:focus-within {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 20px rgba(23,162,184,0.15);
+                }
+                
+                .progress-bar {
+                    transition: width 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+                }
+                
+                /* === 📱 PREMIUM FULL RESPONSIVE DESIGN === */
+                
+                /* Extra Large Devices (1200px and up) */
+                @media (min-width: 1200px) {
+                    .glass-signup-card { 
+                        max-width: 550px;
+                        padding: 0;
+                        box-shadow: 0 50px 120px rgba(0,0,0,0.5);
+                    }
+                    .signup-inner-box { padding: 70px 50px !important; }
+                    .brand-title { font-size: 2rem; letter-spacing: 5.5px; }
+                    .icon-badge-premium { width: 65px; height: 65px; }
+                    .p-input-box input { font-size: 16px; }
+                    .p-submit-btn { font-size: 13px; padding: 18px; }
+                }
+                
+                /* Large Devices (992px to 1199px) */
+                @media (max-width: 1199px) and (min-width: 992px) {
+                    .glass-signup-card { max-width: 520px; }
+                    .signup-inner-box { padding: 60px 45px !important; }
+                    .brand-title { font-size: 1.9rem; letter-spacing: 5.2px; }
+                    .p-input-box { padding: 12px 16px; }
+                }
+                
+                /* Medium Devices - Tablets (768px to 991px) */
+                @media (max-width: 991px) and (min-width: 768px) {
+                    .glass-signup-card { 
+                        max-width: 500px;
+                        border-radius: 35px;
+                    }
+                    .signup-inner-box { padding: 50px 38px !important; }
+                    .brand-title { font-size: 1.75rem; letter-spacing: 4.8px; }
+                    .step-indicator { font-size: 9.5px; letter-spacing: 2.3px; }
+                    .icon-badge-premium { width: 58px; height: 58px; }
+                    .p-field label { font-size: 9.5px; }
+                    .p-input-box { padding: 11px 15px; border-radius: 14px; }
+                    .p-input-box input { font-size: 15px; }
+                    .p-submit-btn { padding: 16px; font-size: 12px; }
+                    .progress-indicator { margin-bottom: 22px !important; }
+                    .password-requirements { padding: 13px; }
+                }
+                
+                /* Small Tablets & Large Phones (576px to 767px) */
+                @media (max-width: 767px) and (min-width: 576px) {
+                    .signup-master-root { padding: 25px 15px; }
+                    .glass-signup-card { 
+                        max-width: 93%;
+                        border-radius: 32px;
+                    }
+                    .signup-inner-box { padding: 45px 32px !important; }
+                    .icon-badge-premium { width: 56px; height: 56px; border-radius: 16px; }
+                    .brand-title { font-size: 1.6rem; letter-spacing: 4.3px; }
+                    .step-indicator { font-size: 9px; letter-spacing: 2.2px; }
+                    .progress-indicator { margin-bottom: 20px !important; }
+                    .progress-text { font-size: 11px; }
+                    .p-field { margin-bottom: 18px !important; }
+                    .p-field label { font-size: 9px; letter-spacing: 1.7px; }
+                    .p-input-box { padding: 10px 14px; border-radius: 13px; }
+                    .p-input-box input { font-size: 14.5px; }
+                    .p-input-box svg { width: 17px; height: 17px; }
+                    .p-submit-btn { padding: 15px; font-size: 11.5px; border-radius: 42px; }
+                    .password-requirements { padding: 12px; border-radius: 12px; }
+                    .req-item { font-size: 11.5px; }
+                    .terms-checkbox { font-size: 12.5px; }
+                    .error-text { font-size: 11.5px; }
+                    .success-text { font-size: 11.5px; }
+                    .p-otp-input { font-size: 2.8rem; letter-spacing: 14px; }
+                    .verify-title { font-size: 1.4rem; }
+                }
+                
+                /* Standard Mobile (480px to 575px) */
+                @media (max-width: 575px) and (min-width: 480px) {
+                    .signup-master-root { padding: 22px 15px; }
+                    .glass-signup-card { 
+                        max-width: 94%;
+                        border-radius: 28px;
+                        box-shadow: 0 25px 70px rgba(0,0,0,0.35);
+                    }
+                    .signup-inner-box { padding: 40px 26px !important; }
+                    .icon-badge-premium { width: 54px; height: 54px; border-radius: 15px; }
+                    .brand-title { font-size: 1.5rem; letter-spacing: 4px; }
+                    .step-indicator { font-size: 8.5px; letter-spacing: 2px; }
+                    .progress-indicator { margin-bottom: 18px !important; }
+                    .progress-bar-container { height: 5px; }
+                    .progress-text { font-size: 10.5px; }
+                    .p-field { margin-bottom: 16px !important; }
+                    .p-field label { font-size: 8.5px; letter-spacing: 1.6px; }
+                    .p-input-box { padding: 10px 14px; border-radius: 12px; }
+                    .p-input-box input { font-size: 14px; }
+                    .p-input-box svg { width: 17px; height: 17px; }
+                    .p-submit-btn { padding: 14px; font-size: 11px; letter-spacing: 1.2px; border-radius: 40px; }
+                    .password-requirements { padding: 11px; border-radius: 11px; }
+                    .req-item { font-size: 11px; }
+                    .terms-checkbox { font-size: 12px; }
+                    .terms-checkbox input[type="checkbox"] { width: 17px; height: 17px; }
+                    .error-text { font-size: 11px; }
+                    .success-text { font-size: 11px; }
+                    .general-error-box { padding: 11px 13px; font-size: 11.5px; }
+                    .resend-otp-btn { padding: 10px 16px; font-size: 12px; }
+                    .p-otp-input { font-size: 2.6rem; letter-spacing: 13px; padding: 14px; }
+                    .verify-title { font-size: 1.35rem; }
+                    .verify-text { font-size: 12px; }
+                    .verify-email { font-size: 13px; }
+                }
+                
+                /* Compact Mobile (375px to 479px) */
+                @media (max-width: 479px) and (min-width: 375px) {
+                    .signup-master-root { padding: 18px 12px; }
+                    .glass-signup-card { 
+                        max-width: 95%;
+                        border-radius: 25px;
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    }
+                    .signup-inner-box { padding: 36px 22px !important; }
+                    .icon-badge-premium { width: 52px; height: 52px; border-radius: 14px; }
+                    .icon-badge-premium svg { width: 28px; height: 28px; }
+                    .brand-title { font-size: 1.4rem; letter-spacing: 3.5px; }
+                    .step-indicator { font-size: 8px; letter-spacing: 1.8px; }
+                    .progress-indicator { margin-bottom: 16px !important; }
+                    .progress-bar-container { height: 4px; }
+                    .progress-text { font-size: 10px; }
+                    .p-field { margin-bottom: 14px !important; }
+                    .p-field label { font-size: 8px; letter-spacing: 1.5px; margin-bottom: 7px; }
+                    .p-input-box { padding: 9px 13px; border-radius: 12px; }
+                    .p-input-box input { font-size: 13.5px; }
+                    .p-input-box svg { width: 16px; height: 16px; }
+                    .p-submit-btn { padding: 13px; font-size: 10.5px; letter-spacing: 1px; border-radius: 38px; }
+                    .password-requirements { padding: 10px; border-radius: 10px; }
+                    .req-item { font-size: 10.5px; }
+                    .req-item svg { width: 13px; height: 13px; }
+                    .terms-checkbox { font-size: 11.5px; }
+                    .terms-checkbox input[type="checkbox"] { width: 16px; height: 16px; }
+                    .terms-link { font-size: 11.5px; }
+                    .error-text { font-size: 10.5px; }
+                    .success-text { font-size: 10.5px; }
+                    .general-error-box { padding: 10px 12px; font-size: 11px; border-radius: 11px; }
+                    .resend-otp-btn { padding: 9px 14px; font-size: 11.5px; border-radius: 13px; }
+                    .p-otp-input { font-size: 2.5rem; letter-spacing: 12px; padding: 13px; }
+                    .verify-title { font-size: 1.3rem; }
+                    .verify-text { font-size: 11.5px; }
+                    .verify-email { font-size: 12.5px; }
+                    .verify-help-text { font-size: 11px; }
+                }
+                
+                /* Extra Small Mobile (320px to 374px) */
+                @media (max-width: 374px) {
+                    .signup-master-root { 
+                        padding: 15px 10px;
+                        min-height: 100vh;
+                        display: flex;
+                        align-items: center;
+                    }
+                    .glass-signup-card { 
+                        max-width: 96%;
+                        border-radius: 22px;
+                        box-shadow: 0 15px 50px rgba(0,0,0,0.25);
+                    }
+                    .signup-inner-box { padding: 30px 18px !important; }
+                    .icon-badge-premium { 
+                        width: 48px; 
+                        height: 48px; 
+                        border-radius: 13px;
+                        margin-bottom: 15px !important;
+                    }
+                    .icon-badge-premium svg { width: 26px; height: 26px; }
+                    .brand-title { 
+                        font-size: 1.25rem; 
+                        letter-spacing: 3px;
+                        margin-bottom: 5px;
+                    }
+                    .step-indicator { 
+                        font-size: 7px; 
+                        letter-spacing: 1.5px;
+                        margin-bottom: 25px !important;
+                    }
+                    .progress-indicator { margin-bottom: 14px !important; }
+                    .progress-bar-container { height: 3px; border-radius: 6px; }
+                    .progress-bar { border-radius: 6px; }
+                    .progress-text { font-size: 9px; margin-top: 6px; }
+                    .p-field { margin-bottom: 13px !important; }
+                    .p-field label { 
+                        font-size: 7.5px; 
+                        letter-spacing: 1.3px;
+                        margin-bottom: 6px;
+                    }
+                    .p-input-box { 
+                        padding: 8px 12px; 
+                        border-radius: 11px;
+                        min-height: 42px;
+                    }
+                    .p-input-box input { 
+                        font-size: 13px;
+                        padding: 6px;
+                    }
+                    .p-input-box svg { width: 15px; height: 15px; }
+                    .input-valid-icon, .input-error-icon { width: 16px; height: 16px; }
+                    .p-submit-btn { 
+                        padding: 12px; 
+                        font-size: 10px; 
+                        letter-spacing: 0.9px;
+                        border-radius: 36px;
+                        min-height: 46px;
+                    }
+                    .p-submit-btn svg { width: 16px; height: 16px; }
+                    .password-requirements { 
+                        padding: 9px; 
+                        border-radius: 9px;
+                        margin-top: 10px;
+                    }
+                    .req-item { 
+                        font-size: 10px;
+                        margin-bottom: 6px;
+                    }
+                    .req-item svg { width: 12px; height: 12px; }
+                    .terms-checkbox { 
+                        font-size: 11px;
+                        margin-bottom: 15px !important;
+                    }
+                    .terms-checkbox input[type="checkbox"] { 
+                        width: 15px; 
+                        height: 15px;
+                        min-width: 15px;
+                        min-height: 15px;
+                    }
+                    .terms-link { font-size: 11px; }
+                    .error-text { 
+                        font-size: 10px;
+                        margin-top: 6px;
+                    }
+                    .error-text svg { width: 12px; height: 12px; }
+                    .success-text { font-size: 10px; }
+                    .success-text svg { width: 12px; height: 12px; }
+                    .general-error-box { 
+                        padding: 9px 11px; 
+                        font-size: 10px;
+                        border-radius: 10px;
+                        margin-bottom: 15px !important;
+                    }
+                    .general-error-box svg { width: 16px; height: 16px; }
+                    .resend-otp-btn { 
+                        padding: 8px 13px; 
+                        font-size: 11px;
+                        border-radius: 12px;
+                        min-height: 40px;
+                    }
+                    .p-otp-input { 
+                        font-size: 2.3rem; 
+                        letter-spacing: 10px;
+                        padding: 12px;
+                        border-radius: 13px;
+                    }
+                    .verify-title { font-size: 1.2rem; margin-bottom: 10px; }
+                    .verify-text { font-size: 11px; }
+                    .verify-email { font-size: 12px; margin-bottom: 30px !important; }
+                    .verify-help-text { font-size: 10px; }
+                }
+                
+                /* Touch-Friendly Enhancements for Mobile */
+                @media (max-width: 767px) {
+                    .p-input-box {
+                        min-height: 46px;
+                    }
+                    .p-submit-btn {
+                        min-height: 50px;
+                        touch-action: manipulation;
+                    }
+                    .resend-otp-btn {
+                        min-height: 44px;
+                        touch-action: manipulation;
+                    }
+                    .terms-checkbox {
+                        padding: 8px 0;
+                    }
+                    .terms-checkbox input[type="checkbox"] {
+                        min-width: 18px;
+                        min-height: 18px;
+                        cursor: pointer;
+                    }
+                    .eye-toggle-btn {
+                        padding: 8px;
+                        min-width: 36px;
+                        min-height: 36px;
+                    }
+                }
+                
+                /* Landscape Mode Optimizations */
+                @media (max-height: 500px) and (orientation: landscape) {
+                    .signup-master-root { 
+                        padding: 20px 15px;
+                        align-items: flex-start !important;
+                    }
+                    .glass-signup-card { 
+                        margin: 20px auto;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                    }
+                    .signup-inner-box { padding: 25px 30px !important; }
+                    .icon-badge-premium { width: 45px; height: 45px; margin-bottom: 12px !important; }
+                    .brand-title { font-size: 1.2rem; margin-bottom: 3px; }
+                    .step-indicator { font-size: 7px; margin-bottom: 15px !important; }
+                    .progress-indicator { margin-bottom: 12px !important; }
+                    .p-field { margin-bottom: 12px !important; }
+                    .p-submit-btn { padding: 11px; }
+                    .password-requirements { padding: 8px; }
+                    .terms-checkbox { margin-bottom: 12px !important; }
+                }
+                
+                /* High Resolution Displays */
+                @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+                    .glass-signup-card {
+                        backdrop-filter: blur(25px);
+                    }
+                    .luxury-bg-overlay {
+                        backdrop-filter: blur(15px);
+                    }
+                }
+                
                 /* MOBILE RESPONSIVENESS */
                 @media (max-width: 575px) {
                     .glass-signup-card { max-width: 95vw; border-radius: 25px; }
