@@ -162,7 +162,7 @@ const sendMail = async (to, otp) => {
         const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
             sender: { 
                 name: "Eshopper", 
-                email: process.env.SENDER_EMAIL || "support@eshopperr.me" 
+                email: "support@eshopperr.me"
             },
             to: [{ email: to }],
             subject: "🔐 Verification Code - Eshopper",

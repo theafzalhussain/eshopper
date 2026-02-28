@@ -17,9 +17,9 @@ async function testEmail() {
         const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
             sender: { 
                 name: "Eshopper", 
-                email: process.env.SENDER_EMAIL || "support@eshopperr.me" 
+                email: "support@eshopperr.me"
             },
-            to: [{ email: "test@example.com" }],
+            to: [{ email: "theafzalhussain786@gmail.com" }],
             subject: "🔐 Test Email",
             htmlContent: "<h1>Test OTP: 123456</h1>"
         }, {
