@@ -11,14 +11,52 @@ export default function Login() {
     const [showPass, setShowPass] = useState(false)
     const [loading, setLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState("")
+    const [rememberMe, setRememberMe] = useState(false)
+    const [autoLoginAttempted, setAutoLoginAttempted] = useState(false)
     
     const dispatch = useDispatch()
     const navigate = useNavigate()
 
+    // --- AUTO-LOGIN ON APP START ---
     useEffect(() => { 
         dispatch(getUser()) 
         window.scrollTo(0, 0);
-    }, [dispatch])
+
+        // Check if user is already logged in (persistent login)
+        const savedUser = localStorage.getItem("userToken")
+        if (savedUser && !autoLoginAttempted) {
+            try {
+                const user = JSON.parse(savedUser)
+                if (user.id && user.username) {
+                    // Auto-login: restore user session
+                    localStorage.setItem("login", true)
+                    localStorage.setItem("name", user.name)
+                    localStorage.setItem("userid", user.id)
+                    localStorage.setItem("role", user.role)
+                    localStorage.setItem("username", user.username)
+                    navigate(user.role === "Admin" ? "/admin-home" : "/profile")
+                }
+            } catch (err) {
+                console.error("Auto-login failed:", err)
+                localStorage.removeItem("userToken")
+            }
+        }
+        setAutoLoginAttempted(true)
+    }, [dispatch, navigate])
+
+    // --- POPULATE FORM FROM LOCALSTORAGE ON MOUNT ---
+    useEffect(() => {
+        const savedCredentials = localStorage.getItem("savedCredentials")
+        if (savedCredentials) {
+            try {
+                const creds = JSON.parse(savedCredentials)
+                setdata({ username: creds.username, password: creds.password })
+                setRememberMe(true)
+            } catch (err) {
+                console.error("Error loading saved credentials:", err)
+            }
+        }
+    }, [])
 
     function getData(e) {
         setdata({ ...data, [e.target.name]: e.target.value })
@@ -32,11 +70,36 @@ export default function Login() {
             const user = await loginAPI(data)
             setLoading(false)
             if (user.username) {
+                // --- STANDARD LOGIN SETUP ---
                 localStorage.setItem("login", true);
                 localStorage.setItem("name", user.name);
                 localStorage.setItem("userid", user.id);
                 localStorage.setItem("role", user.role);
                 localStorage.setItem("username", user.username);
+
+                // --- REMEMBER ME: SAVE TOKEN & CREDENTIALS ---
+                if (rememberMe) {
+                    // Save full user object as token for auto-login
+                    const userToken = {
+                        id: user.id,
+                        username: user.username,
+                        name: user.name,
+                        role: user.role,
+                        email: user.email
+                    }
+                    localStorage.setItem("userToken", JSON.stringify(userToken))
+                    
+                    // Also save credentials for form pre-fill
+                    localStorage.setItem("savedCredentials", JSON.stringify({
+                        username: data.username,
+                        password: data.password
+                    }))
+                } else {
+                    // Clear saved credentials if "Remember Me" is unchecked
+                    localStorage.removeItem("userToken")
+                    localStorage.removeItem("savedCredentials")
+                }
+
                 navigate(user.role === "Admin" ? "/admin-home" : "/profile");
             } else {
                 setErrorMsg(user.message || "Invalid credentials. Please try again.");
@@ -94,7 +157,7 @@ export default function Login() {
                                 <label>LOGIN IDENTITY</label>
                                 <div className="input-box">
                                     <UserIcon size={18} className="icon" />
-                                    <input type="text" name="username" placeholder="Username" onChange={getData} required />
+                                    <input type="text" name="username" placeholder="Username" value={data.username} onChange={getData} required />
                                 </div>
                             </div>
 
@@ -105,11 +168,25 @@ export default function Login() {
                                 </div>
                                 <div className="input-box">
                                     <Lock size={18} className="icon" />
-                                    <input type={showPass ? "text" : "password"} name="password" placeholder="••••••••" onChange={getData} required />
+                                    <input type={showPass ? "text" : "password"} name="password" placeholder="••••••••" value={data.password} onChange={getData} required />
                                     <button type="button" className="eye-toggle" onClick={() => setShowPass(!showPass)}>
                                         {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
+                            </div>
+
+                            {/* --- REMEMBER ME CHECKBOX --- */}
+                            <div className="remember-me-wrapper mb-4">
+                                <input 
+                                    type="checkbox" 
+                                    id="rememberme" 
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="remember-checkbox"
+                                />
+                                <label htmlFor="rememberme" className="remember-label">
+                                    <span>Keep me signed in on this device</span>
+                                </label>
                             </div>
 
                             <motion.button 
@@ -241,6 +318,38 @@ export default function Login() {
                 .input-box:focus-within .icon { color: #17a2b8; }
 
                 .eye-toggle { border: none; background: transparent; color: #bbb; cursor: pointer; }
+
+                /* --- REMEMBER ME CHECKBOX STYLING --- */
+                .remember-me-wrapper {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 20px;
+                }
+
+                .remember-checkbox {
+                    width: 18px;
+                    height: 18px;
+                    cursor: pointer;
+                    accent-color: #17a2b8;
+                    border-radius: 4px;
+                }
+
+                .remember-label {
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #333;
+                    cursor: pointer;
+                    user-select: none;
+                    margin: 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .remember-label:hover {
+                    color: #17a2b8;
+                }
 
                 .master-login-btn {
                     width: 100%;
