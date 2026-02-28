@@ -8,6 +8,7 @@ if (process.env.SENTRY_DSN) {
         dsn: process.env.SENTRY_DSN,
         environment: process.env.NODE_ENV || 'production',
         tracesSampleRate: 1.0,
+        integrations: [Sentry.expressIntegration()],
     });
     console.log('✅ Sentry initialized');
 }
@@ -29,15 +30,7 @@ const app = express();
 // 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
 app.set('trust proxy', 1);
 
-// 🔴 SENTRY REQUEST HANDLER - Optional middleware for request tracking (check if available)
-if (process.env.SENTRY_DSN && Sentry && Sentry.Handlers && Sentry.Handlers.requestHandler) {
-    try {
-        app.use(Sentry.Handlers.requestHandler());
-        console.log('✅ Sentry request handler middleware enabled');
-    } catch (err) {
-        console.warn('⚠️  Sentry request handler not available:', err.message);
-    }
-}
+// 🔴 SENTRY v10 no longer uses Sentry.Handlers.requestHandler()
 
 // �🔒 CORS - Production domain hardcoded (frontend is at eshopperr.me)
 const corsOptions = {
@@ -372,7 +365,7 @@ app.get('/debug-sentry', (req, res) => {
 });
 
 // 🔴 SENTRY ERROR HANDLER - Must be after all routes (v10 way)
-if (process.env.SENTRY_DSN) {
+if (process.env.SENTRY_DSN && typeof Sentry.setupExpressErrorHandler === 'function') {
     Sentry.setupExpressErrorHandler(app);
 }
 
