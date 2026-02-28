@@ -236,6 +236,21 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
     } catch (e) { res.status(500).json({ message: "Something went wrong. Please try again." }); }
 });
 
+// CHECK USERNAME AVAILABILITY - For signup validation
+app.post('/api/check-username', async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username || username.length < 3) {
+            return res.status(400).json({ message: "Username must be at least 3 characters" });
+        }
+        const existingUser = await User.findOne({ username: username.toLowerCase() });
+        res.json({ available: !existingUser });
+    } catch (e) {
+        console.error("❌ Username Check Error:", e.message);
+        res.status(500).json({ error: "Failed to check username" });
+    }
+});
+
 app.post('/login', authLimiter, async (req, res) => {
     try {
         const user = await User.findOne({ username: req.body.username });
