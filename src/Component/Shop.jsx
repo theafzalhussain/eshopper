@@ -223,12 +223,12 @@ export default function Shop() {
                 </div>
             </div>
 
-            <section className="container-fluid px-lg-5 py-5">
+            <section className="container-fluid px-lg-5 py-5 shop-layout-section">
                 <div className="row">
                     {/* --- SIDEBAR FILTERS --- */}
-                    <div className="col-lg-3">
-                        <div className="sticky-top" style={{ top: '100px' }}>
-                            <div className="bg-white shadow-sm p-4 rounded-xl mb-4 border-0">
+                    <div className="col-lg-3 shop-sidebar">
+                        <div className="sticky-top shop-filter-sticky" style={{ top: '100px' }}>
+                            <div className="bg-white shadow-sm p-4 rounded-xl mb-4 border-0 shop-filter-panel">
                                 <h5 className="font-weight-bold mb-4">Search & Filter</h5>
                                 
                                 {/* Search Bar */}
@@ -283,8 +283,8 @@ export default function Shop() {
                     </div>
 
                     {/* --- MAIN SHOP AREA --- */}
-                    <div className="col-lg-9">
-                        <div className="d-flex justify-content-between align-items-center mb-4 bg-white p-3 shadow-sm rounded-lg">
+                    <div className="col-lg-9 shop-main-area">
+                        <div className="d-flex justify-content-between align-items-center mb-4 bg-white p-3 shadow-sm rounded-lg shop-toolbar">
                             <span className="text-muted small">Showing <strong>{filteredProducts.length}</strong> Products</span>
                             <div className="d-flex align-items-center">
                                 <span className="small mr-2 d-none d-md-block">Sort by:</span>
@@ -836,6 +836,10 @@ export default function Shop() {
                     gap: 8px;
                 }
 
+                .shop-toolbar select {
+                    min-width: 170px;
+                }
+
                 @media (hover: none) and (pointer: coarse) {
                     .product-card-premium:hover {
                         transform: none;
@@ -883,6 +887,23 @@ export default function Shop() {
                 }
                 
                 @media (max-width: 991px) {
+                    .shop-layout-section { padding: 24px 14px !important; }
+                    .shop-sidebar { margin-bottom: 10px; }
+                    .shop-filter-sticky {
+                        position: static !important;
+                        top: auto !important;
+                    }
+                    .shop-filter-panel { padding: 14px !important; margin-bottom: 12px !important; }
+                    .shop-toolbar {
+                        flex-direction: column;
+                        align-items: stretch !important;
+                        gap: 10px;
+                    }
+                    .shop-toolbar > div {
+                        width: 100%;
+                        justify-content: space-between;
+                    }
+                    .shop-toolbar select { width: 100%; }
                     .product-card-premium { border-radius: 14px; }
                     .img-wrap { border-radius: 14px 14px 0 0; }
                     .size-btn-shop { padding: 4px 6px; font-size: 9px; min-width: 30px; }
@@ -909,6 +930,17 @@ export default function Shop() {
                 }
                 
                 @media (max-width: 575px) {
+                    .shop-layout-section { padding: 16px 10px !important; }
+                    .hero-wrap .container { padding-left: 12px; padding-right: 12px; }
+                    .hero-wrap h1 { font-size: 2rem !important; }
+                    .hero-wrap p { font-size: 13px; margin-bottom: 0; }
+                    .shop-toolbar { padding: 10px !important; }
+                    .shop-toolbar span.small { font-size: 12px !important; }
+                    .shop-toolbar select { min-width: 0; height: 34px; font-size: 12px; }
+                    .shop-filter-panel h5 { font-size: 16px; margin-bottom: 12px !important; }
+                    .shop-filter-panel .mb-4 { margin-bottom: 12px !important; }
+                    .shop-main-area .row { margin-left: -6px; margin-right: -6px; }
+                    .shop-main-area .row > div { padding-left: 6px; padding-right: 6px; }
                     .product-card-premium { border-radius: 12px; margin-bottom: 12px; border: 1px solid #f0f0f0; }
                     .img-wrap { border-radius: 12px 12px 0 0; }
                     .size-btn-shop { padding: 4px 5px; font-size: 8px; flex: 0 1 calc(33.33% - 2px); }
@@ -925,9 +957,22 @@ export default function Shop() {
                 }
                 
                 @media (max-width: 375px) {
+                    .shop-layout-section { padding: 14px 8px !important; }
+                    .hero-wrap h1 { font-size: 1.65rem !important; }
+                    .hero-wrap p { font-size: 12px; }
+                    .shop-toolbar { gap: 8px; }
+                    .shop-toolbar select { height: 32px; font-size: 11px; }
                     .size-btn-shop { flex: 0 1 calc(50% - 1px); font-size: 8px; }
                                 .btn-add-bag { padding: 7px 10px; font-size: 9px; min-height: 30px; }
                     .premium-badge { font-size: 8px; padding: 4px 8px; }
+                }
+
+                @media (max-width: 425px) {
+                    .shop-main-area .row { margin-left: -5px; margin-right: -5px; }
+                    .shop-main-area .row > div { padding-left: 5px; padding-right: 5px; }
+                    .product-card-premium .p-3,
+                    .product-card-premium .p-md-3,
+                    .product-card-premium .p-md-4 { padding: 9px !important; }
                 }
             `}} />
         </div>

@@ -471,6 +471,7 @@ export default function Home() {
                     backdrop-filter: blur(12px);
                     box-shadow: 0 8px 24px rgba(23, 162, 184, 0.1);
                     margin-bottom: 20px;
+                    max-width: 100%;
                 }
                 .badge-icon { font-size: 20px; animation: pulse 2s ease-in-out infinite; }
                 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
@@ -479,6 +480,11 @@ export default function Home() {
                     font-weight: 800; 
                     letter-spacing: 1.5px;
                     color: #17a2b8;
+                    display: inline-block;
+                    max-width: 100%;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
                 
                 /* Hero Title */
@@ -807,7 +813,7 @@ export default function Home() {
                     box-shadow: 0 4px 12px rgba(0,0,0,0.06);
                 }
                 .img-holder { height: auto; position: relative; overflow: hidden; border-radius: 12px; }
-                .product-link { display: block; position: relative; }
+                .product-link { display: block; position: relative; height: 100%; }
                 .luxury-image { 
                     transition: 0.7s ease-in-out;
                     width: 100%;
@@ -1276,11 +1282,44 @@ export default function Home() {
                 }
 
                 @media (max-width: 768px) {
+                    .luxury-hero .container,
+                    .product-showcase-section .container,
+                    .py-5.bg-white.border-bottom .container {
+                        padding-left: 14px;
+                        padding-right: 14px;
+                    }
+                    .editorial-heading,
+                    .editorial-subtitle,
+                    .showcase-subtitle {
+                        text-align: center;
+                    }
+                    .story-card {
+                        border-radius: 16px !important;
+                    }
+                    .story-overlay,
+                    .story-overlay-light {
+                        padding: 16px !important;
+                    }
+                    .kids-img {
+                        height: 86%;
+                        right: -8px;
+                        bottom: -12px;
+                    }
                     .fashion-card:hover {
                         transform: translateY(-4px);
                     }
                     .home-product-col { margin-bottom: 12px !important; }
                     .product-img-container { height: clamp(170px, 42vw, 210px); }
+                    .product-img-container .luxury-image {
+                        object-fit: contain !important;
+                        object-position: center center;
+                        padding: 8px;
+                        background: #f8f9fa;
+                        transform: none !important;
+                    }
+                    .product-img-container .image-overlay {
+                        opacity: 0 !important;
+                    }
                     .action-layer {
                         opacity: 1;
                         pointer-events: auto;
@@ -1311,7 +1350,7 @@ export default function Home() {
                     .hero-badge { padding: 8px 16px; gap: 8px; }
                     .badge-icon { font-size: 16px; }
                     .hero-title { font-size: 2.35rem; line-height: 1.12; margin: 16px 0 16px 0; }
-                    .hero-subtitle { font-size: 10px; letter-spacing: 1.5px; font-weight: 800; }
+                    .hero-subtitle { font-size: 10px; letter-spacing: 1px; font-weight: 800; }
                     .hero-description { font-size: 14px; line-height: 1.65; margin-bottom: 18px; max-width: 100%; }
                     .hero-actions {
                         width: 100%;
@@ -1369,6 +1408,9 @@ export default function Home() {
                     
                     .home-product-col { margin-bottom: 10px !important; }
                     .product-img-container { height: clamp(165px, 52vw, 205px); border-radius: 10px; }
+                    .product-img-container .luxury-image {
+                        padding: 7px;
+                    }
                     .product-badges { top: 9px; left: 9px; gap: 5px; }
                     .action-layer { top: 7px; right: 7px; gap: 5px; }
                     .p-icon-btn { 
@@ -1386,6 +1428,22 @@ export default function Home() {
                     .story-img { min-height: 280px; }
                     .story-title { font-size: 1.8rem; }
                     .kids-title { font-size: 1.6rem; }
+                    .story-overlay,
+                    .story-overlay-light {
+                        padding: 14px !important;
+                    }
+                    .story-btn,
+                    .story-overlay .btn,
+                    .story-overlay-light .btn,
+                    .story-overlay-kids .btn {
+                        width: 100%;
+                        text-align: center;
+                    }
+                    .kids-img {
+                        height: 80%;
+                        right: -10px;
+                        bottom: -6px;
+                    }
                     
                     .product-showcase-section { padding: 60px 0 80px !important; }
                     .showcase-badge { font-size: 11px; padding: 8px 18px; }
@@ -1422,6 +1480,8 @@ export default function Home() {
                         padding: 8px 4px 10px;
                     }
                     .hero-main-img { max-height: 36vh; }
+                    .hero-badge { padding: 7px 12px; }
+                    .hero-subtitle { font-size: 9px; letter-spacing: 0.7px; }
                     .carousel-navigation { gap: 8px; padding: 6px 8px; }
                     .carousel-dots .dot { width: 7px; height: 7px; }
                     .carousel-dots .dot.active { width: 20px; }
@@ -1430,6 +1490,7 @@ export default function Home() {
                     .carousel-counter .total { font-size: 9px; }
                     .home-product-col { margin-bottom: 10px !important; }
                     .product-img-container { height: clamp(155px, 54vw, 195px); }
+                    .product-img-container .luxury-image { padding: 5px; }
                     .product-badges { top: 8px; left: 8px; }
                     .lux-tag { font-size: 8px; padding: 4px 8px; border-radius: 7px; }
                     .action-layer { top: 6px; right: 6px; }
@@ -1439,6 +1500,19 @@ export default function Home() {
                     .feature-chip { font-size: 7px; padding: 2px 5px; }
                     .save-badge { font-size: 7px; padding: 2px 5px; }
                     .product-showcase-title { font-size: 1.75rem; }
+                    .story-img { min-height: 240px; }
+                    .kids-title { font-size: 1.35rem; }
+                    .kids-img { height: 74%; right: -12px; }
+                }
+
+                @media (max-width: 425px) {
+                    .hero-text-section { padding-left: 12px; padding-right: 12px; }
+                    .hero-title { font-size: 2.05rem; }
+                    .hero-description { font-size: 13px; }
+                    .btn-luxury-primary { min-height: 44px; }
+                    .carousel-navigation { width: calc(100% - 20px); }
+                    .story-overlay,
+                    .story-overlay-light { padding: 12px !important; }
                 }
             `}} />
         </div>
