@@ -191,7 +191,10 @@ const sendMail = async (to, otp) => {
             status: error.response?.status,
             data: error.response?.data
         });
-        Sentry.captureException(error);
+        // Only call Sentry if it was initialized
+        if (process.env.SENTRY_DSN && typeof Sentry !== 'undefined') {
+            Sentry.captureException(error);
+        }
         throw error;
     }
 };
@@ -232,6 +235,7 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
         res.json({ result: "Done", message: "OTP sent successfully" });
     } catch (e) {
         console.error("❌ Email Error:", e.message);
+        console.error("❌ Email Error Stack:", e.stack);
         res.status(500).json({ error: "Failed to send OTP. Please try again." });
     }
 });
