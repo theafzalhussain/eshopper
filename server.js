@@ -21,7 +21,7 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
-const brevo = require('@getbrevo/brevo');
+var SibApiV3Sdk = require('@getbrevo/brevo');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
@@ -149,7 +149,7 @@ const upload = multer({
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// 📧 BREVO EMAIL SERVICE - Correct SDK v9+ Pattern
+// 📧 BREVO EMAIL SERVICE - Official v4.0.1 Pattern
 const sendMail = async (to, otp) => {
     try {
         const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
@@ -158,14 +158,14 @@ const sendMail = async (to, otp) => {
             throw new Error("Email service not configured. Contact support.");
         }
 
-        // ✅ Configure Brevo API Client - CORRECT PATTERN for v9+
-        let defaultClient = brevo.ApiClient.instance;
-        let apiKey = defaultClient.authentications['api-key'];
+        // ✅ Configure Brevo API Client - Official v4.0.1 SDK Pattern
+        var defaultClient = SibApiV3Sdk.ApiClient.instance;
+        var apiKey = defaultClient.authentications['api-key'];
         apiKey.apiKey = BREVO_KEY;
 
         // ✅ Initialize API Instance and Email Object
-        let apiInstance = new brevo.TransactionalEmailsApi();
-        let sendSmtpEmail = new brevo.SendSmtpEmail();
+        var apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+        var sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
         
         sendSmtpEmail.subject = "🔐 Verification Code - Eshopper";
         sendSmtpEmail.htmlContent = `
