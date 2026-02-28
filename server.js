@@ -252,12 +252,65 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
 app.post('/api/reset-password', authLimiter, async (req, res) => {
     try {
         const searchTerm = req.body.username.toLowerCase().trim();
+        const newPassword = req.body.password;
+        const otp = req.body.otp;
+
+        // 🔒 BACKEND PASSWORD VALIDATION
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ message: "Password must be at least 8 characters long." });
+        }
+
+        // Check for uppercase letter
+        if (!/[A-Z]/.test(newPassword)) {
+            return res.status(400).json({ message: "Password must contain at least one uppercase letter." });
+        }
+
+        // Check for special character
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+            return res.status(400).json({ message: "Password must contain at least one special character." });
+        }
+
         const user = await User.findOne({ $or: [{ email: searchTerm }, { username: searchTerm }] });
-        if (user && user.otp === req.body.otp && user.otpExpires > Date.now()) {
-            const salt = await bcrypt.genSalt(10); user.password = await bcrypt.hash(req.body.password, salt);
-            user.otp = undefined; user.otpExpires = undefined; await user.save(); res.json({ result: "Done" });
-        } else res.status(400).json({ message: "Invalid or expired OTP." });
-    } catch (e) { res.status(500).json({ message: "Something went wrong. Please try again." }); }
+        
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+
+        // ⏰ CHECK OTP VALIDITY (Exactly 10 minutes)
+        if (!user.otp || !user.otpExpires) {
+            return res.status(400).json({ message: "No OTP found. Please request a new code." });
+        }
+
+        if (Date.now() > user.otpExpires) {
+            // Clean expired OTP
+            user.otp = undefined;
+            user.otpExpires = undefined;
+            await user.save();
+            return res.status(400).json({ message: "OTP has expired. Please request a new code." });
+        }
+
+        // ✅ VERIFY OTP
+        if (user.otp !== otp) {
+            return res.status(400).json({ message: "Invalid OTP code. Please check and try again." });
+        }
+
+        // 🔐 HASH NEW PASSWORD
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        
+        // 🧹 CLEANUP: Remove OTP and expiration after successful reset
+        user.otp = undefined;
+        user.otpExpires = undefined;
+        
+        await user.save();
+        
+        console.log(`✅ Password reset successful for user: ${user.username}`);
+        res.json({ result: "Done", message: "Password updated successfully!" });
+        
+    } catch (e) {
+        console.error("❌ Password Reset Error:", e.message);
+        res.status(500).json({ message: "Something went wrong. Please try again." });
+    }
 });
 
 // CHECK USERNAME AVAILABILITY - For signup validation

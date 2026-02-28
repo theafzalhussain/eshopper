@@ -12,6 +12,8 @@ export default function ForgetPassword() {
     const [timer, setTimer] = useState(0)
     const [resendAttempts, setResendAttempts] = useState(0)
     const [maxAttempts] = useState(10)
+    const [errors, setErrors] = useState({})
+    const [redirectCountdown, setRedirectCountdown] = useState(3)
     
     const navigate = useNavigate()
 
@@ -23,28 +25,95 @@ export default function ForgetPassword() {
         return () => clearInterval(interval);
     }, [timer]);
 
+    // Auto-redirect countdown after success
+    useEffect(() => {
+        if (step === 3 && redirectCountdown > 0) {
+            const countdown = setInterval(() => {
+                setRedirectCountdown(prev => prev - 1);
+            }, 1000);
+            return () => clearInterval(countdown);
+        } else if (step === 3 && redirectCountdown === 0) {
+            navigate('/login');
+        }
+    }, [step, redirectCountdown, navigate]);
+
+    // 🔒 PASSWORD VALIDATION FUNCTION
+    const validatePassword = (password) => {
+        const validationErrors = {};
+        
+        if (password.length < 8) {
+            validationErrors.password = "Password must be at least 8 characters long";
+        } else if (!/[A-Z]/.test(password)) {
+            validationErrors.password = "Password must contain at least one uppercase letter";
+        } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+            validationErrors.password = "Password must contain at least one special character";
+        }
+        
+        return validationErrors;
+    };
+
+    // Handle password change with real-time validation
+    const handlePasswordChange = (e) => {
+        const newPassword = e.target.value;
+        setdata({...data, password: newPassword});
+        
+        // Clear errors when user starts typing
+        if (errors.password) {
+            const newErrors = {...errors};
+            delete newErrors.password;
+            setErrors(newErrors);
+        }
+        
+        // Validate on blur or after user stops typing
+        if (newPassword.length > 0) {
+            const validationErrors = validatePassword(newPassword);
+            if (Object.keys(validationErrors).length > 0) {
+                setErrors(prev => ({...prev, ...validationErrors}));
+            }
+        }
+    };
+
+    // Handle confirm password with match validation
+    const handleConfirmPasswordChange = (e) => {
+        const confirmPassword = e.target.value;
+        setdata({...data, cpassword: confirmPassword});
+        
+        // Clear match error when typing
+        if (errors.cpassword) {
+            const newErrors = {...errors};
+            delete newErrors.cpassword;
+            setErrors(newErrors);
+        }
+        
+        // Check if passwords match
+        if (confirmPassword.length > 0 && confirmPassword !== data.password) {
+            setErrors(prev => ({...prev, cpassword: "Passwords do not match"}));
+        }
+    };
+
     // --- STEP 1: REQUEST OTP ---
     async function handleRequestOTP(e) {
         if(e) e.preventDefault();
         
+        // Clear previous errors
+        setErrors({});
+        
         // Check max resend attempts
         if (resendAttempts >= maxAttempts) {
-            alert(`Maximum resend attempts (${maxAttempts}) reached. Please try again later or contact support.`);
+            setErrors({ username: `Maximum resend attempts (${maxAttempts}) reached. Please try again later.` });
             return;
         }
 
         setLoading(true);
         try {
-            // Type 'forget' triggers server to check existing identity
             const res = await sendOtpAPI({ email: data.username, type: 'forget' })
             if (res.result === "Done") {
                 setStep(2);
                 setTimer(60);
                 setResendAttempts(prev => prev + 1);
-                alert("Security code sent! Check your email for the verification code.");
             }
         } catch (err) {
-            alert("No account found with this username/email. Please verify.");
+            setErrors({ username: "No account found with this username/email. Please verify." });
         }
         setLoading(false);
     }
@@ -52,17 +121,28 @@ export default function ForgetPassword() {
     // --- STEP 2: VERIFY & RESET ---
     async function handleReset(e) {
         e.preventDefault();
+        
+        // Clear previous errors
+        setErrors({});
+        
+        // Validate password strength
+        const passwordErrors = validatePassword(data.password);
+        if (Object.keys(passwordErrors).length > 0) {
+            setErrors(passwordErrors);
+            return;
+        }
+        
+        // Check if passwords match
         if (data.password !== data.cpassword) {
-            alert("Passwords do not match!");
+            setErrors({ cpassword: "Passwords do not match" });
             return;
         }
 
         setLoading(true);
         try {
-            // Payload includes new password and OTP for server-side verification
             const res = await resetPasswordAPI({ ...data, otp: userOtp })
             if (res.result === "Done") {
-                // Clear all login data and show success screen
+                // Clear all login data
                 localStorage.removeItem("login");
                 localStorage.removeItem("userid");
                 localStorage.removeItem("name");
@@ -71,10 +151,10 @@ export default function ForgetPassword() {
                 localStorage.removeItem("userToken");
                 localStorage.removeItem("savedCredentials");
                 
-                setStep(3);  // Show success screen
+                setStep(3);  // Show success screen with countdown
             }
         } catch (err) {
-            alert("Verification Failed. Invalid or Expired Code.");
+            setErrors({ otp: err.message || "Verification failed. Invalid or expired code." });
         }
         setLoading(false);
     }
@@ -100,6 +180,15 @@ export default function ForgetPassword() {
                                             <User size={18} className="field-icon" />
                                             <input type="text" placeholder="enter identity" onChange={e => setdata({...data, username: e.target.value})} required />
                                         </div>
+                                        {errors.username && (
+                                            <motion.p 
+                                                initial={{ opacity: 0, y: -5 }} 
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="error-message"
+                                            >
+                                                {errors.username}
+                                            </motion.p>
+                                        )}
                                     </div>
                                     <button type="submit" className="submit-lux shadow-lg" disabled={loading}>
                                         {loading ? <Loader2 className="animate-spin mx-auto" /> : "REQUEST SECURITY CODE"}
@@ -108,7 +197,7 @@ export default function ForgetPassword() {
                             ) : step === 2 ? (
                                 <motion.form key="s2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handleReset} className="text-left">
                                     {/* --- SECURE OTP DISPLAY --- */}
-                                    <div className="premium-field mb-5">
+                                    <div className="premium-field mb-4">
                                         <div className="d-flex justify-content-between align-items-center mb-3">
                                             <label className="field-label">SECURITY CODE</label>
                                             {timer > 0 ? (
@@ -117,7 +206,7 @@ export default function ForgetPassword() {
                                                 resendAttempts >= maxAttempts ? (
                                                     <span className="max-attempts-msg">Max attempts reached</span>
                                                 ) : (
-                                                    <button type="button" onClick={handleRequestOTP} className="resend-btn">
+                                                    <button type="button" onClick={handleRequestOTP} className="resend-btn" disabled={timer > 0}>
                                                         Resend ({resendAttempts}/{maxAttempts})
                                                     </button>
                                                 )
@@ -138,19 +227,75 @@ export default function ForgetPassword() {
                                             </div>
                                             <div className="code-expiry">✓ Valid for 10 minutes only</div>
                                         </div>
+                                        {errors.otp && (
+                                            <motion.p 
+                                                initial={{ opacity: 0, y: -5 }} 
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="error-message"
+                                            >
+                                                {errors.otp}
+                                            </motion.p>
+                                        )}
                                     </div>
                                     
                                     <div className="premium-field mb-4">
                                         <label className="field-label">NEW PASSWORD</label>
-                                        <div className="input-wrap"><Lock size={18} className="field-icon" /><input type="password" placeholder="••••••••" onChange={e => setdata({...data, password: e.target.value})} required /></div>
+                                        <div className="input-wrap">
+                                            <Lock size={18} className="field-icon" />
+                                            <input 
+                                                type="password" 
+                                                placeholder="••••••••" 
+                                                value={data.password}
+                                                onChange={handlePasswordChange}
+                                                onBlur={(e) => {
+                                                    if (e.target.value) {
+                                                        const validationErrors = validatePassword(e.target.value);
+                                                        setErrors(prev => ({...prev, ...validationErrors}));
+                                                    }
+                                                }}
+                                                required 
+                                            />
+                                        </div>
+                                        {errors.password && (
+                                            <motion.p 
+                                                initial={{ opacity: 0, y: -5 }} 
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="error-message"
+                                            >
+                                                {errors.password}
+                                            </motion.p>
+                                        )}
+                                        <div className="password-requirements">
+                                            <small>• Minimum 8 characters • 1 Uppercase • 1 Special character</small>
+                                        </div>
                                     </div>
                                     
-                                    <div className="premium-field mb-5">
+                                    <div className="premium-field mb-4">
                                         <label className="field-label">CONFIRM PASSWORD</label>
-                                        <div className="input-wrap"><CheckCircle2 size={18} className="field-icon" /><input type="password" placeholder="••••••••" onChange={e => setdata({...data, cpassword: e.target.value})} required /></div>
+                                        <div className="input-wrap">
+                                            <CheckCircle2 size={18} className="field-icon" />
+                                            <input 
+                                                type="password" 
+                                                placeholder="••••••••" 
+                                                value={data.cpassword}
+                                                onChange={handleConfirmPasswordChange}
+                                                required 
+                                            />
+                                        </div>
+                                        {errors.cpassword && (
+                                            <motion.p 
+                                                initial={{ opacity: 0, y: -5 }} 
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="error-message"
+                                            >
+                                                {errors.cpassword}
+                                            </motion.p>
+                                        )}
                                     </div>
                                     
-                                    <button type="submit" className="submit-lux shadow-lg" disabled={loading}>{loading ? "SYNCING..." : "UPDATE CREDENTIALS"}</button>
+                                    <button type="submit" className="submit-lux shadow-lg" disabled={loading || Object.keys(errors).length > 0}>
+                                        {loading ? "SYNCING..." : "UPDATE CREDENTIALS"}
+                                    </button>
                                 </motion.form>
                             ) : (
                                 <motion.div key="s3" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="success-screen text-center">
@@ -160,10 +305,20 @@ export default function ForgetPassword() {
                                     <h3 className="success-title mt-4 mb-2">PASSWORD RESET SUCCESSFUL</h3>
                                     <p className="success-subtitle mb-4">Your master credentials have been updated securely.</p>
                                     
-                                    <div className="info-box mb-5">
+                                    <div className="info-box mb-4">
                                         <AlertCircle size={16} />
                                         <span>You have been logged out for security. Please log in again.</span>
                                     </div>
+
+                                    {/* --- REDIRECT COUNTDOWN --- */}
+                                    <motion.div 
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ delay: 0.5 }}
+                                        className="redirect-message mb-4"
+                                    >
+                                        <p>Redirecting to login in <strong>{redirectCountdown}</strong> second{redirectCountdown !== 1 ? 's' : ''}...</p>
+                                    </motion.div>
 
                                     <motion.button 
                                         whileHover={{ scale: 1.05 }}
@@ -171,7 +326,7 @@ export default function ForgetPassword() {
                                         onClick={() => navigate("/login")} 
                                         className="submit-lux shadow-lg"
                                     >
-                                        PROCEED TO LOGIN
+                                        GO TO LOGIN NOW
                                     </motion.button>
                                 </motion.div>
                             )}
@@ -219,6 +374,7 @@ export default function ForgetPassword() {
                 }
                 
                 .resend-btn:hover { color: #0f6a7a; text-decoration: underline; }
+                .resend-btn:disabled { opacity: 0.5; cursor: not-allowed; }
                 
                 .max-attempts-msg {
                     display: inline-block;
@@ -228,6 +384,30 @@ export default function ForgetPassword() {
                     border-radius: 20px;
                     font-size: 11px;
                     font-weight: 700;
+                }
+                
+                /* --- ERROR MESSAGES --- */
+                .error-message {
+                    color: #e53e3e;
+                    font-size: 11px;
+                    font-weight: 600;
+                    margin: 8px 0 0 0;
+                    padding: 6px 10px;
+                    background: #fff0f0;
+                    border-left: 3px solid #e53e3e;
+                    border-radius: 4px;
+                }
+                
+                /* --- PASSWORD REQUIREMENTS --- */
+                .password-requirements {
+                    margin-top: 8px;
+                }
+                
+                .password-requirements small {
+                    font-size: 10px;
+                    color: #666;
+                    font-weight: 500;
+                    letter-spacing: 0.5px;
                 }
                 
                 /* --- SECURITY CODE BOX --- */
@@ -300,6 +480,27 @@ export default function ForgetPassword() {
                     font-size: 12px;
                     color: #0f6a7a;
                     font-weight: 600;
+                }
+                
+                /* --- REDIRECT MESSAGE --- */
+                .redirect-message {
+                    background: linear-gradient(135deg, rgba(23,162,184,0.1) 0%, rgba(23,162,184,0.05) 100%);
+                    border: 1px solid #17a2b8;
+                    border-radius: 12px;
+                    padding: 12px 20px;
+                }
+                
+                .redirect-message p {
+                    margin: 0;
+                    font-size: 13px;
+                    color: #0f6a7a;
+                    font-weight: 600;
+                }
+                
+                .redirect-message strong {
+                    color: #17a2b8;
+                    font-size: 16px;
+                    font-weight: 800;
                 }
                 
                 .back-link { color: #111; font-weight: 800; letter-spacing: 1px; font-size: 12px; text-decoration: none !important; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
