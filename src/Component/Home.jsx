@@ -283,14 +283,14 @@ export default function Home() {
                             <div className="row">
                                 {displayProducts.map((item, index) => (
                                     <motion.div 
-                                        key={item.id} className="col-6 col-sm-6 col-md-4 col-lg-3 mb-3"
+                                        key={item.id} className="col-sm-6 col-md-4 col-lg-3 mb-4 home-product-col"
                                         initial={{ opacity: 0, y: 20 }} 
                                         whileInView={{ opacity: 1, y: 0 }} 
                                         viewport={{ once: true }}
                                         transition={{ delay: index * 0.06, duration: 0.4 }}
                                     >
                                         <div className="fashion-card shadow-hover transition-slow h-100 d-flex flex-column bg-white rounded-3xl overflow-hidden">
-                                            <div className="position-relative img-holder product-img-container" style={{ height: '220px' }}>
+                                            <div className="position-relative img-holder product-img-container">
                                                 <Link to={`/single-product/${item.id}`} className="product-link">
                                                     <img 
                                                         src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 500, crop: 'fill' })} 
@@ -325,9 +325,9 @@ export default function Home() {
                                             <div className="p-2 p-md-3 flex-grow-1 d-flex flex-column">
                                                 {/* Brand and Rating */}
                                                 <div className="d-flex justify-content-between align-items-center mb-1">
-                                                    <span className="product-brand text-info font-weight-bold text-uppercase" style={{ fontSize: '11px' }}>{item.brand}</span>
+                                                    <span className="product-brand text-info font-weight-bold text-uppercase">{item.brand}</span>
                                                     <div className="product-rating-wrapper d-flex align-items-center">
-                                                        <span className="rating-stars" style={{ color: '#FFB800', fontSize: '12px', marginRight: '3px' }}>
+                                                        <span className="rating-stars">
                                                             {[1, 2, 3, 4, 5].map((star) => (
                                                                 <span key={star}>
                                                                     {star <= Math.floor(item.rating || 4.5) ? '★' : 
@@ -335,41 +335,41 @@ export default function Home() {
                                                                 </span>
                                                             ))}
                                                         </span>
-                                                        <span className="rating-text text-muted" style={{ fontSize: '10px' }}>({(item.rating || 4.5).toFixed(1)})</span>
+                                                        <span className="rating-text text-muted">({(item.rating || 4.5).toFixed(1)})</span>
                                                     </div>
                                                 </div>
                                                 
                                                 {/* Product Name */}
-                                                <h3 className="product-name font-weight-bold mb-1" style={{ fontSize: '14px', lineHeight: '1.3' }}>
+                                                <h3 className="product-name font-weight-bold mb-1">
                                                     <Link to={`/single-product/${item.id}`} className="text-dark no-underline hover-info">
                                                         {item.name}
                                                     </Link>
                                                 </h3>
                                                 
                                                 {/* Product Category/Description */}
-                                                <p className="product-category text-muted mb-2" style={{ fontSize: '11px' }}>
+                                                <p className="product-category text-muted mb-2">
                                                     {item.maincategory} • {item.subcategory}
                                                 </p>
                                                 
                                                 {/* Premium Feature Highlights */}
                                                 <div className="product-feature-chips mb-2">
-                                                    {item.discount > 0 && <span className="feature-chip" style={{ fontSize: '9px', padding: '3px 8px' }}>Save {item.discount}%</span>}
-                                                    {item.finalprice >= 999 && <span className="feature-chip soft" style={{ fontSize: '9px', padding: '3px 8px' }}>Free Shipping</span>}
-                                                    <span className="feature-chip solid" style={{ fontSize: '9px', padding: '3px 8px' }}>Premium Fabric</span>
-                                                    {item.stock === "In Stock" && <span className="feature-chip success" style={{ fontSize: '9px', padding: '3px 8px' }}>In Stock</span>}
+                                                    {item.discount > 0 && <span className="feature-chip">Save {item.discount}%</span>}
+                                                    {item.finalprice >= 999 && <span className="feature-chip soft">Free Shipping</span>}
+                                                    <span className="feature-chip solid">Premium Fabric</span>
+                                                    {item.stock === "In Stock" && <span className="feature-chip success">In Stock</span>}
                                                 </div>
                                                 
                                                 {/* Price Section */}
                                                 <div className="mt-auto pt-2 border-top">
                                                     <div className="d-flex align-items-center justify-content-between mb-2">
                                                         <div className="price-group">
-                                                            <span className="product-price font-weight-bold text-dark" style={{ fontSize: '16px' }}>₹{item.finalprice}</span>
+                                                            <span className="product-price font-weight-bold text-dark">₹{item.finalprice}</span>
                                                             {item.baseprice > item.finalprice && (
-                                                                <del className="product-old-price text-muted ml-2" style={{ fontSize: '12px' }}>₹{item.baseprice}</del>
+                                                                <del className="product-old-price text-muted ml-2">₹{item.baseprice}</del>
                                                             )}
                                                         </div>
                                                         {item.baseprice > item.finalprice && (
-                                                            <span className="save-badge" style={{ fontSize: '10px', padding: '3px 6px' }}>
+                                                            <span className="save-badge">
                                                                 Save ₹{item.baseprice - item.finalprice}
                                                             </span>
                                                         )}
@@ -509,8 +509,8 @@ export default function Home() {
                 
                 /* Hero Section with spacing */
                 .hero-text-section {
-                    padding-left: 40px;
-                    padding-right: 60px;
+                    padding-left: 36px;
+                    padding-right: 48px;
                 }
                 
                 /* Hero Buttons */
@@ -1135,6 +1135,15 @@ export default function Home() {
                     flex-wrap: wrap;
                     gap: 6px;
                 }
+
+                @media (max-width: 1200px) {
+                    .home-product-col { margin-bottom: 14px !important; }
+                    .product-img-container { height: clamp(190px, 26vw, 235px); }
+                    .product-name { font-size: 14px; }
+                    .product-category { font-size: 11px; }
+                    .product-price { font-size: 20px; }
+                    .feature-chip { font-size: 9px; padding: 3px 8px; }
+                }
                 .feature-chip {
                     display: inline-flex;
                     align-items: center;
@@ -1173,7 +1182,49 @@ export default function Home() {
                 .no-underline { text-decoration: none; }
                 .shadow-hover:hover { box-shadow: 0 20px 50px rgba(0,0,0,0.12) !important; }
 
+                @media (hover: none) and (pointer: coarse) {
+                    .fashion-card:hover {
+                        transform: none;
+                        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+                    }
+                    .fashion-card:hover .luxury-image {
+                        transform: none;
+                        filter: none;
+                    }
+                    .action-layer {
+                        opacity: 1;
+                        pointer-events: auto;
+                        transform: none;
+                    }
+                    .p-icon-btn:hover {
+                        transform: none;
+                    }
+                    .p-icon-btn:active {
+                        transform: scale(0.95);
+                    }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .floating-hero,
+                    .fashion-card,
+                    .fashion-card::after,
+                    .luxury-image,
+                    .action-layer,
+                    .p-icon-btn,
+                    .carousel-dots .dot,
+                    .carousel-navigation {
+                        animation: none !important;
+                        transition: none !important;
+                    }
+                }
+
                 /* 📱 MOBILE RESPONSIVE */
+                @media (max-width: 1200px) {
+                    .hero-text-section { padding-left: 28px; padding-right: 28px; }
+                    .hero-title { font-size: 4.4rem; }
+                    .hero-description { font-size: 16px; max-width: 100%; }
+                }
+
                 @media (max-width: 991px) {
                     .luxury-hero { height: auto; min-height: 600px; padding: 70px 0 80px; }
                     .hero-text-section { padding-left: 20px; padding-right: 20px; }
@@ -1206,6 +1257,7 @@ export default function Home() {
                     .product-showcase-title { font-size: 2.8rem; margin: 25px 0 20px 0; }
                     .showcase-subtitle { font-size: 15px; margin-bottom: 40px; }
                     .product-img-container { aspect-ratio: 4/5; height: clamp(180px, 28vw, 240px); border-radius: 10px; }
+                    .home-product-col { margin-bottom: 12px !important; }
                     .action-layer { top: 10px; right: 10px; gap: 8px; }
                     .p-icon-btn { width: 48px; height: 48px; font-size: 18px; }
                     .product-brand { font-size: 10px; margin-bottom: 6px; }
@@ -1223,20 +1275,83 @@ export default function Home() {
                     .feature-chip { font-size: 9px; padding: 3px 8px; }
                 }
 
+                @media (max-width: 768px) {
+                    .fashion-card:hover {
+                        transform: translateY(-4px);
+                    }
+                    .home-product-col { margin-bottom: 12px !important; }
+                    .product-img-container { height: clamp(170px, 42vw, 210px); }
+                    .action-layer {
+                        opacity: 1;
+                        pointer-events: auto;
+                        transform: none;
+                    }
+                    .product-brand { font-size: 9px; letter-spacing: 1.1px; }
+                    .product-name { font-size: 12px; margin: 7px 0 6px 0; }
+                    .product-category { font-size: 10px; margin-bottom: 4px; }
+                    .rating-stars { font-size: 11px; }
+                    .rating-text { font-size: 10px; }
+                    .product-price { font-size: 17px; }
+                    .product-old-price { font-size: 11px; }
+                    .save-badge { font-size: 8px; padding: 3px 6px; }
+                    .feature-chip { font-size: 8px; padding: 2px 6px; }
+                    .product-feature-chips { gap: 4px; }
+                    .lux-tag { font-size: 9px; padding: 5px 10px; }
+                    .product-badges { top: 10px; left: 10px; gap: 6px; }
+                }
+
                 @media (max-width: 575px) {
                     .luxury-hero { min-height: 520px; padding: 60px 0 70px; }
-                    .hero-text-section { padding-left: 0; padding-right: 0; }
+                    .hero-slide-container { padding: 44px 0 74px; }
+                    .hero-text-section {
+                        padding-left: 16px;
+                        padding-right: 16px;
+                        margin-bottom: 34px;
+                    }
                     .hero-badge { padding: 8px 16px; gap: 8px; }
                     .badge-icon { font-size: 16px; }
-                    .hero-title { font-size: 2.6rem; line-height: 1.08; margin: 20px 0 25px 0; }
+                    .hero-title { font-size: 2.35rem; line-height: 1.12; margin: 16px 0 16px 0; }
                     .hero-subtitle { font-size: 10px; letter-spacing: 1.5px; font-weight: 800; }
-                    .hero-description { font-size: 14px; line-height: 1.7; margin-bottom: 25px; }
-                    .btn-luxury-primary { padding: 14px 32px; font-size: 13px; font-weight: 700; gap: 8px; }
-                    .btn-luxury-secondary { font-size: 13px; font-weight: 700; }
-                    .hero-main-img { max-height: 45vh; }
-                    .hero-actions { gap: 16px; margin-top: 28px; }
+                    .hero-description { font-size: 14px; line-height: 1.65; margin-bottom: 18px; max-width: 100%; }
+                    .hero-actions {
+                        width: 100%;
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+                    .btn-luxury-primary {
+                        width: 100%;
+                        justify-content: center;
+                        padding: 14px 20px;
+                        font-size: 13px;
+                        font-weight: 700;
+                        gap: 8px;
+                        text-align: center;
+                    }
+                    .btn-luxury-secondary {
+                        width: 100%;
+                        justify-content: center;
+                        text-align: center;
+                        font-size: 13px;
+                        font-weight: 700;
+                        padding: 10px 6px 12px;
+                    }
+                    .btn-luxury-secondary .btn-underline {
+                        left: 50%;
+                        transform: translateX(-50%);
+                    }
+                    .hero-main-img { max-height: 40vh; }
+                    .hero-actions { gap: 12px; margin-top: 16px; }
+                    .hero-image-section { margin-top: 10px; }
                     
-                    .carousel-navigation { bottom: 20px; gap: 12px; padding: 7px 10px; border-radius: 999px; }
+                    .carousel-navigation {
+                        bottom: 14px;
+                        gap: 10px;
+                        padding: 6px 10px;
+                        border-radius: 999px;
+                        width: calc(100% - 24px);
+                        max-width: 320px;
+                        justify-content: space-between;
+                    }
                     .carousel-dots { gap: 6px; }
                     .carousel-dots .dot { width: 8px; height: 8px; border-width: 1.5px; }
                     .carousel-dots .dot.active { width: 24px; }
@@ -1252,11 +1367,14 @@ export default function Home() {
                         padding: 8px 12px;
                     }
                     
-                    .action-layer { top: 6px; right: 6px; gap: 5px; }
+                    .home-product-col { margin-bottom: 10px !important; }
+                    .product-img-container { height: clamp(165px, 52vw, 205px); border-radius: 10px; }
+                    .product-badges { top: 9px; left: 9px; gap: 5px; }
+                    .action-layer { top: 7px; right: 7px; gap: 5px; }
                     .p-icon-btn { 
-                        width: 40px; 
-                        height: 40px; 
-                        font-size: 15px; 
+                        width: 40px;
+                        height: 40px;
+                        font-size: 14px;
                         border: 1.5px solid rgba(255, 255, 255, 0.9); 
                         box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.12);
                     }
@@ -1273,9 +1391,6 @@ export default function Home() {
                     .showcase-badge { font-size: 11px; padding: 8px 18px; }
                     .product-showcase-title { font-size: 2.2rem; margin: 20px 0 18px 0; }
                     .showcase-subtitle { font-size: 14px; margin-bottom: 35px; }
-                    .product-img-container { height: clamp(160px, 50vw, 220px); border-radius: 10px; }
-                    .action-layer { top: 8px; right: 8px; gap: 6px; }
-                    .p-icon-btn { width: 44px; height: 44px; font-size: 16px; border: 1.5px solid rgba(255, 255, 255, 0.9); }
                     .product-brand { font-size: 10px; }
                     .product-name { font-size: 13px; margin: 8px 0 6px 0; }
                     .product-category { font-size: 11px; margin-bottom: 5px; }
@@ -1291,14 +1406,38 @@ export default function Home() {
                 }
 
                 @media (max-width: 375px) {
-                    .hero-title { font-size: 2rem; }
+                    .hero-slide-container { padding: 38px 0 68px; }
+                    .hero-text-section { padding-left: 14px; padding-right: 14px; }
+                    .hero-title { font-size: 1.95rem; line-height: 1.15; }
+                    .hero-description { font-size: 13px; margin-bottom: 14px; }
+                    .hero-actions { gap: 8px; margin-top: 12px; }
+                    .btn-luxury-primary {
+                        width: 100%;
+                        padding: 12px 16px;
+                        font-size: 12px;
+                    }
+                    .btn-luxury-secondary {
+                        width: 100%;
+                        font-size: 12px;
+                        padding: 8px 4px 10px;
+                    }
+                    .hero-main-img { max-height: 36vh; }
                     .carousel-navigation { gap: 8px; padding: 6px 8px; }
                     .carousel-dots .dot { width: 7px; height: 7px; }
                     .carousel-dots .dot.active { width: 20px; }
                     .carousel-counter { padding: 3px 7px; }
                     .carousel-counter .current { font-size: 11px; }
                     .carousel-counter .total { font-size: 9px; }
-                    .product-img-container { aspect-ratio: 4/5; }
+                    .home-product-col { margin-bottom: 10px !important; }
+                    .product-img-container { height: clamp(155px, 54vw, 195px); }
+                    .product-badges { top: 8px; left: 8px; }
+                    .lux-tag { font-size: 8px; padding: 4px 8px; border-radius: 7px; }
+                    .action-layer { top: 6px; right: 6px; }
+                    .p-icon-btn { width: 34px; height: 34px; font-size: 13px; }
+                    .product-name { font-size: 12px; }
+                    .product-category { font-size: 10px; }
+                    .feature-chip { font-size: 7px; padding: 2px 5px; }
+                    .save-badge { font-size: 7px; padding: 2px 5px; }
                     .product-showcase-title { font-size: 1.75rem; }
                 }
             `}} />

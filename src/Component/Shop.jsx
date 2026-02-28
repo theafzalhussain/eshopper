@@ -835,6 +835,44 @@ export default function Shop() {
                     align-items: center;
                     gap: 8px;
                 }
+
+                @media (hover: none) and (pointer: coarse) {
+                    .product-card-premium:hover {
+                        transform: none;
+                        box-shadow: none !important;
+                        border-color: #f0f0f0;
+                        outline: none;
+                    }
+                    .product-card-premium:hover .img-wrap img {
+                        transform: none;
+                        filter: none;
+                    }
+                    .card-overlay {
+                        display: none;
+                    }
+                    .btn-add-bag:hover {
+                        transform: none;
+                        box-shadow: none;
+                    }
+                    .color-dot:hover,
+                    .size-btn-shop:hover {
+                        transform: none;
+                        box-shadow: none;
+                    }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .product-card-premium,
+                    .img-wrap img,
+                    .card-overlay,
+                    .btn-add-bag,
+                    .size-btn-shop,
+                    .color-dot,
+                    .premium-badge {
+                        animation: none !important;
+                        transition: none !important;
+                    }
+                }
                 
                 /* Responsive */
                 @media (max-width: 1200px) {
@@ -877,8 +915,9 @@ export default function Shop() {
                     .size-label-shop { font-size: 8px; margin-bottom: 2px; }
                     .btn-add-bag { padding: 8px 10px; font-size: 10px; min-height: 32px; }
                     .premium-badge { padding: 5px 10px; font-size: 9px; top: 10px; left: 10px; }
-                    .p-3 { padding: 10px !important; }
-                    .p-md-4 { padding: 10px !important; }
+                    .product-card-premium .p-3,
+                    .product-card-premium .p-md-3,
+                    .product-card-premium .p-md-4 { padding: 10px !important; }
                     .feature-chip { font-size: 7px; padding: 2px 5px; }
                     .product-name-shop { font-size: 12px; }
                     .product-category-shop { font-size: 9px; }
