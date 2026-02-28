@@ -157,8 +157,9 @@ export default function Login() {
                                 <label>LOGIN IDENTITY</label>
                                 <div className="input-box">
                                     <UserIcon size={18} className="icon" />
-                                    <input type="text" name="username" placeholder="Username" value={data.username} onChange={getData} required />
+                                    <input type="text" name="username" placeholder="Username or Email" value={data.username} onChange={getData} required />
                                 </div>
+                                <div className="input-hint">You can use your username or registered email</div>
                             </div>
 
                             <div className="input-field-wrap">
@@ -316,6 +317,14 @@ export default function Login() {
 
                 .icon { color: #bbb; transition: 0.3s; }
                 .input-box:focus-within .icon { color: #17a2b8; }
+
+                .input-hint {
+                    font-size: 11px;
+                    color: #666;
+                    margin-top: 6px;
+                    margin-left: 4px;
+                    font-weight: 500;
+                }
 
                 .eye-toggle { border: none; background: transparent; color: #bbb; cursor: pointer; }
 
