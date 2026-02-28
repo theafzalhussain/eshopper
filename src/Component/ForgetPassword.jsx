@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { sendOtpAPI, resetPasswordAPI } from '../Store/Services'
 import { motion, AnimatePresence } from 'framer-motion'
-import { KeyRound, ShieldCheck, Loader2, User, Lock, CheckCircle2, ArrowLeft, RotateCcw } from 'lucide-react'
+import { KeyRound, ShieldCheck, Loader2, User, Lock, CheckCircle2, ArrowLeft, RotateCcw, AlertCircle } from 'lucide-react'
 
 export default function ForgetPassword() {
     const [data, setdata] = useState({ username: "", password: "", cpassword: "" })
-    const [step, setStep] = useState(1) 
+    const [step, setStep] = useState(1)  // 1: Request OTP, 2: Reset Password, 3: Success
     const [loading, setLoading] = useState(false)
     const [userOtp, setUserOtp] = useState("")
     const [timer, setTimer] = useState(0)
+    const [resendAttempts, setResendAttempts] = useState(0)
+    const [maxAttempts] = useState(10)
     
     const navigate = useNavigate()
 
@@ -24,6 +26,13 @@ export default function ForgetPassword() {
     // --- STEP 1: REQUEST OTP ---
     async function handleRequestOTP(e) {
         if(e) e.preventDefault();
+        
+        // Check max resend attempts
+        if (resendAttempts >= maxAttempts) {
+            alert(`Maximum resend attempts (${maxAttempts}) reached. Please try again later or contact support.`);
+            return;
+        }
+
         setLoading(true);
         try {
             // Type 'forget' triggers server to check existing identity
@@ -31,7 +40,8 @@ export default function ForgetPassword() {
             if (res.result === "Done") {
                 setStep(2);
                 setTimer(60);
-                alert("Security vault opened! Check your email for the verification code.");
+                setResendAttempts(prev => prev + 1);
+                alert("Security code sent! Check your email for the verification code.");
             }
         } catch (err) {
             alert("No account found with this username/email. Please verify.");
@@ -52,8 +62,16 @@ export default function ForgetPassword() {
             // Payload includes new password and OTP for server-side verification
             const res = await resetPasswordAPI({ ...data, otp: userOtp })
             if (res.result === "Done") {
-                alert("Credentials Synchronized Successfully!");
-                navigate("/login");
+                // Clear all login data and show success screen
+                localStorage.removeItem("login");
+                localStorage.removeItem("userid");
+                localStorage.removeItem("name");
+                localStorage.removeItem("username");
+                localStorage.removeItem("role");
+                localStorage.removeItem("userToken");
+                localStorage.removeItem("savedCredentials");
+                
+                setStep(3);  // Show success screen
             }
         } catch (err) {
             alert("Verification Failed. Invalid or Expired Code.");
@@ -87,16 +105,75 @@ export default function ForgetPassword() {
                                         {loading ? <Loader2 className="animate-spin mx-auto" /> : "REQUEST SECURITY CODE"}
                                     </button>
                                 </motion.form>
-                            ) : (
+                            ) : step === 2 ? (
                                 <motion.form key="s2" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handleReset} className="text-left">
-                                    <div className="premium-field mb-4">
-                                        <div className="d-flex justify-content-between"><label className="field-label">OTP CODE</label>{timer > 0 ? <span className="timer-text">{timer}s</span> : <button type="button" onClick={handleRequestOTP} className="resend-btn">Resend</button>}</div>
-                                        <div className="input-wrap"><ShieldCheck size={18} className="field-icon" /><input type="text" maxLength="6" placeholder="000000" style={{letterSpacing:'8px', fontWeight:'800'}} onChange={e => setUserOtp(e.target.value)} required /></div>
+                                    {/* --- SECURE OTP DISPLAY --- */}
+                                    <div className="premium-field mb-5">
+                                        <div className="d-flex justify-content-between align-items-center mb-3">
+                                            <label className="field-label">SECURITY CODE</label>
+                                            {timer > 0 ? (
+                                                <span className="timer-badge">{timer}s</span>
+                                            ) : (
+                                                resendAttempts >= maxAttempts ? (
+                                                    <span className="max-attempts-msg">Max attempts reached</span>
+                                                ) : (
+                                                    <button type="button" onClick={handleRequestOTP} className="resend-btn">
+                                                        Resend ({resendAttempts}/{maxAttempts})
+                                                    </button>
+                                                )
+                                            )}
+                                        </div>
+                                        <div className="security-code-box">
+                                            <div className="code-label">Your verification code:</div>
+                                            <div className="input-wrap">
+                                                <ShieldCheck size={18} className="field-icon" />
+                                                <input 
+                                                    type="text" 
+                                                    maxLength="6" 
+                                                    placeholder="000000" 
+                                                    style={{letterSpacing:'8px', fontWeight:'800', fontSize:'18px'}} 
+                                                    onChange={e => setUserOtp(e.target.value)} 
+                                                    required 
+                                                />
+                                            </div>
+                                            <div className="code-expiry">✓ Valid for 10 minutes only</div>
+                                        </div>
                                     </div>
-                                    <div className="premium-field mb-4"><label className="field-label">NEW PASSWORD</label><div className="input-wrap"><Lock size={18} className="field-icon" /><input type="password" placeholder="••••••••" onChange={e => setdata({...data, password: e.target.value})} required /></div></div>
-                                    <div className="premium-field mb-5"><label className="field-label">CONFIRM</label><div className="input-wrap"><CheckCircle2 size={18} className="field-icon" /><input type="password" placeholder="••••••••" onChange={e => setdata({...data, cpassword: e.target.value})} required /></div></div>
+                                    
+                                    <div className="premium-field mb-4">
+                                        <label className="field-label">NEW PASSWORD</label>
+                                        <div className="input-wrap"><Lock size={18} className="field-icon" /><input type="password" placeholder="••••••••" onChange={e => setdata({...data, password: e.target.value})} required /></div>
+                                    </div>
+                                    
+                                    <div className="premium-field mb-5">
+                                        <label className="field-label">CONFIRM PASSWORD</label>
+                                        <div className="input-wrap"><CheckCircle2 size={18} className="field-icon" /><input type="password" placeholder="••••••••" onChange={e => setdata({...data, cpassword: e.target.value})} required /></div>
+                                    </div>
+                                    
                                     <button type="submit" className="submit-lux shadow-lg" disabled={loading}>{loading ? "SYNCING..." : "UPDATE CREDENTIALS"}</button>
                                 </motion.form>
+                            ) : (
+                                <motion.div key="s3" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="success-screen text-center">
+                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring' }} className="success-icon-box">
+                                        <CheckCircle2 size={64} className="success-icon" />
+                                    </motion.div>
+                                    <h3 className="success-title mt-4 mb-2">PASSWORD RESET SUCCESSFUL</h3>
+                                    <p className="success-subtitle mb-4">Your master credentials have been updated securely.</p>
+                                    
+                                    <div className="info-box mb-5">
+                                        <AlertCircle size={16} />
+                                        <span>You have been logged out for security. Please log in again.</span>
+                                    </div>
+
+                                    <motion.button 
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => navigate("/login")} 
+                                        className="submit-lux shadow-lg"
+                                    >
+                                        PROCEED TO LOGIN
+                                    </motion.button>
+                                </motion.div>
                             )}
                         </AnimatePresence>
                         <div className="text-center mt-5"><Link to="/login" className="back-link"><ArrowLeft size={16} className="mr-2" /> BACK TO LOGIN</Link></div>
@@ -117,9 +194,123 @@ export default function ForgetPassword() {
                 .input-wrap input { border: none; background: transparent; width: 100%; outline: none; font-size: 15px; font-weight: 600; padding: 10px; color: #111; }
                 .submit-lux { width: 100%; background: #000; color: white; border: none; padding: 18px; border-radius: 50px; font-weight: 800; font-size: 13px; letter-spacing: 2px; cursor: pointer; transition: 0.3s; }
                 .submit-lux:hover { background: #17a2b8; }
-                .timer-text { font-size: 11px; color: #777; font-weight: bold; }
-                .resend-btn { border: none; background: transparent; font-size: 11px; color: #17a2b8; font-weight: bold; cursor: pointer; }
-                .back-link { color: #111; font-weight: 800; letter-spacing: 1px; font-size: 12px; text-decoration: none !important; display: flex; align-items: center; justify-content: center; }
+                .submit-lux:disabled { opacity: 0.6; cursor: not-allowed; }
+                
+                /* --- TIMER & RESEND STYLING --- */
+                .timer-badge { 
+                    display: inline-block;
+                    background: #17a2b8;
+                    color: white;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                }
+                
+                .resend-btn { 
+                    border: none; 
+                    background: transparent; 
+                    font-size: 11px; 
+                    color: #17a2b8; 
+                    font-weight: bold; 
+                    cursor: pointer;
+                    transition: 0.3s;
+                }
+                
+                .resend-btn:hover { color: #0f6a7a; text-decoration: underline; }
+                
+                .max-attempts-msg {
+                    display: inline-block;
+                    background: #fff0f0;
+                    color: #e53e3e;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 11px;
+                    font-weight: 700;
+                }
+                
+                /* --- SECURITY CODE BOX --- */
+                .security-code-box {
+                    background: linear-gradient(135deg, rgba(23,162,184,0.08) 0%, rgba(23,162,184,0.04) 100%);
+                    border: 2px solid #17a2b8;
+                    border-radius: 20px;
+                    padding: 20px;
+                    margin-bottom: 15px;
+                }
+                
+                .code-label {
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: #666;
+                    margin-bottom: 12px;
+                    letter-spacing: 1px;
+                }
+                
+                .code-expiry {
+                    font-size: 10px;
+                    font-weight: 600;
+                    color: #17a2b8;
+                    margin-top: 12px;
+                    text-align: center;
+                }
+                
+                /* --- SUCCESS SCREEN --- */
+                .success-screen {
+                    padding: 30px 20px;
+                }
+                
+                .success-icon-box {
+                    width: 100px;
+                    height: 100px;
+                    background: linear-gradient(135deg, #17a2b8 0%, #0f6a7a 100%);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 20px;
+                }
+                
+                .success-icon {
+                    color: white;
+                    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+                }
+                
+                .success-title {
+                    font-size: 1.4rem;
+                    font-weight: 800;
+                    color: #111;
+                    letter-spacing: 2px;
+                }
+                
+                .success-subtitle {
+                    font-size: 13px;
+                    color: #666;
+                    font-weight: 500;
+                }
+                
+                .info-box {
+                    background: #f0f9ff;
+                    border-left: 4px solid #17a2b8;
+                    padding: 15px;
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    font-size: 12px;
+                    color: #0f6a7a;
+                    font-weight: 600;
+                }
+                
+                .back-link { color: #111; font-weight: 800; letter-spacing: 1px; font-size: 12px; text-decoration: none !important; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+                .back-link:hover { color: #17a2b8; }
+                
+                /* --- RESPONSIVE --- */
+                @media (max-width: 576px) {
+                    .glass-forget-card { border-radius: 25px; }
+                    .brand-logo { font-size: 1.4rem; letter-spacing: 3px; }
+                    .security-code-box { padding: 15px; }
+                }
             `}} />
         </div>
     )
