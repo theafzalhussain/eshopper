@@ -211,7 +211,7 @@ const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) 
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
 const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
-const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date }, opts));
+const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date, failedAttempts: { type: Number, default: 0 }, lockUntil: Date }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String, rating: { type: Number, default: 4.5, min: 0, max: 5 }, reviews: { type: Number, default: 0 } }, opts));
 const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
 const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
@@ -280,11 +280,47 @@ app.post('/login', authLimiter, async (req, res) => {
     try {
         const searchTerm = req.body.username.toLowerCase().trim();
         const user = await User.findOne({ $or: [{ username: searchTerm }, { email: searchTerm }] });
+        
+        // 🔒 CHECK IF ACCOUNT IS LOCKED
+        if (user && user.lockUntil && Date.now() < user.lockUntil) {
+            const minutesRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
+            return res.status(403).json({ 
+                message: `Account temporarily locked due to multiple failed login attempts. Try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.`,
+                remainingMinutes: minutesRemaining
+            });
+        }
+        
         if (user && await bcrypt.compare(req.body.password, user.password)) {
-            const { password: _pw, otp: _otp, otpExpires: _exp, ...safeUser } = user.toJSON();
+            // ✅ LOGIN SUCCESS - RESET FAILED ATTEMPTS
+            user.failedAttempts = 0;
+            user.lockUntil = undefined;
+            await user.save();
+            
+            const { password: _pw, otp: _otp, otpExpires: _exp, failedAttempts: _fa, lockUntil: _lu, ...safeUser } = user.toJSON();
             res.json(safeUser);
-        } else res.status(401).json({ message: "Invalid Credentials" });
-    } catch (e) { res.status(500).json({ message: "Something went wrong." }); }
+        } else {
+            // ❌ LOGIN FAILED - INCREMENT FAILED ATTEMPTS
+            if (user) {
+                user.failedAttempts = (user.failedAttempts || 0) + 1;
+                
+                // LOCK ACCOUNT AFTER 5 FAILED ATTEMPTS
+                if (user.failedAttempts >= 5) {
+                    user.lockUntil = new Date(Date.now() + 15 * 60000); // 15 minutes
+                    await user.save();
+                    return res.status(403).json({ 
+                        message: "Too many failed login attempts. Account locked for 15 minutes.",
+                        remainingMinutes: 15
+                    });
+                }
+                
+                await user.save();
+            }
+            res.status(401).json({ message: "Invalid Credentials" });
+        }
+    } catch (e) { 
+        console.error("❌ Login Error:", e.message);
+        res.status(500).json({ message: "Something went wrong." }); 
+    }
 });
 
 const handle = (path, Model, useUpload = false) => {
