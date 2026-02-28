@@ -853,57 +853,59 @@ export default function Home() {
                 /* Action Buttons */
                 .action-layer {
                     position: absolute; 
-                    bottom: 0; 
-                    left: 0; 
-                    width: 100%;
-                    background: rgba(255,255,255,0.98); 
-                    backdrop-filter: blur(20px);
-                    padding: 22px; 
+                    top: 12px;
+                    right: 12px;
+                    width: auto;
+                    background: transparent;
+                    backdrop-filter: none;
+                    padding: 0; 
                     display: flex; 
                     justify-content: center; 
-                    gap: 14px; 
-                    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                    box-shadow: 0 -8px 25px rgba(0,0,0,0.12);
+                    gap: 10px; 
+                    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+                    box-shadow: none;
                     opacity: 0;
                     pointer-events: none;
-                    transform: translateY(15px);
+                    transform: translateY(-8px) scale(0.85);
+                    z-index: 5;
                 }
                 .fashion-card:hover .action-layer {
                     opacity: 1;
                     pointer-events: auto;
-                    transform: translateY(0);
-                    animation: wishlistPop 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+                    transform: translateY(0) scale(1);
+                    animation: wishlistFadeIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
                 }
-                @keyframes wishlistPop {
-                    0% { opacity: 0; transform: translateY(15px) scale(0.95); }
+                @keyframes wishlistFadeIn {
+                    0% { opacity: 0; transform: translateY(-8px) scale(0.7); }
                     100% { opacity: 1; transform: translateY(0) scale(1); }
                 }
                 .p-icon-btn { 
-                    width: 48px; 
-                    height: 48px; 
+                    width: 54px; 
+                    height: 54px; 
                     border-radius: 50%; 
-                    border: 2.5px solid #e9ecef; 
-                    background: #fff; 
+                    border: 2px solid rgba(255, 255, 255, 0.9);
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(8px);
                     color: #333; 
                     display: flex; 
                     align-items: center; 
                     justify-content: center; 
-                    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1); 
+                    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
                     cursor: pointer;
-                    font-size: 18px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    font-size: 20px;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
                 }
                 .p-icon-btn:hover { 
-                    background: #17a2b8; 
-                    color: #fff; 
-                    transform: scale(1.2) rotate(12deg); 
-                    border-color: #17a2b8;
-                    box-shadow: 0 8px 20px rgba(23, 162, 184, 0.35);
+                    background: rgba(255, 255, 255, 1);
+                    color: #ff6b6b; 
+                    transform: scale(1.15) rotate(10deg); 
+                    border-color: rgba(255, 107, 107, 0.6);
+                    box-shadow: 0 6px 24px rgba(255, 107, 107, 0.4), 0 2px 12px rgba(255, 107, 107, 0.25);
                 }
                 .btn-wishlist:hover {
-                    background: #ff6b6b;
+                    background: rgba(255, 107, 107, 0.1);
                     border-color: #ff6b6b;
-                    box-shadow: 0 8px 20px rgba(255, 107, 107, 0.35);
+                    box-shadow: 0 6px 24px rgba(255, 107, 107, 0.45), 0 2px 12px rgba(255, 107, 107, 0.3);
                 }
                 
                 /* Product Details */
@@ -1151,8 +1153,8 @@ export default function Home() {
                     .product-showcase-title { font-size: 2.8rem; margin: 25px 0 20px 0; }
                     .showcase-subtitle { font-size: 15px; margin-bottom: 40px; }
                     .product-img-container { aspect-ratio: 4/5; height: clamp(180px, 28vw, 240px); border-radius: 10px; }
-                    .action-layer { padding: 16px; gap: 12px; }
-                    .p-icon-btn { width: 42px; height: 42px; font-size: 16px; }
+                    .action-layer { top: 10px; right: 10px; gap: 8px; }
+                    .p-icon-btn { width: 48px; height: 48px; font-size: 18px; }
                     .product-brand { font-size: 10px; margin-bottom: 6px; }
                     .product-rating-wrapper { gap: 5px; margin-bottom: 8px; }
                     .rating-stars { font-size: 12px; }
@@ -1190,6 +1192,18 @@ export default function Home() {
                     .carousel-counter .separator { font-size: 12px; }
                     .carousel-counter .total { font-size: 12px; }
                     
+                    .action-layer { top: 6px; right: 6px; gap: 5px; }
+                    .p-icon-btn { 
+                        width: 40px; 
+                        height: 40px; 
+                        font-size: 15px; 
+                        border: 1.5px solid rgba(255, 255, 255, 0.9); 
+                        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.12);
+                    }
+                    .p-icon-btn:hover { 
+                        transform: scale(1.1) rotate(8deg); 
+                    }
+                    
                     .editorial-heading { font-size: 1.8rem; }
                     .story-img { min-height: 280px; }
                     .story-title { font-size: 1.8rem; }
@@ -1200,8 +1214,8 @@ export default function Home() {
                     .product-showcase-title { font-size: 2.2rem; margin: 20px 0 18px 0; }
                     .showcase-subtitle { font-size: 14px; margin-bottom: 35px; }
                     .product-img-container { height: clamp(160px, 50vw, 220px); border-radius: 10px; }
-                    .action-layer { padding: 14px; gap: 10px; }
-                    .p-icon-btn { width: 40px; height: 40px; font-size: 15px; }
+                    .action-layer { top: 8px; right: 8px; gap: 6px; }
+                    .p-icon-btn { width: 44px; height: 44px; font-size: 16px; border: 1.5px solid rgba(255, 255, 255, 0.9); }
                     .product-brand { font-size: 10px; }
                     .product-name { font-size: 13px; margin: 8px 0 6px 0; }
                     .product-category { font-size: 11px; margin-bottom: 5px; }
