@@ -17,7 +17,7 @@ async function testEmail() {
         const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
             sender: { 
                 name: "Eshopper", 
-                email: "noreply@eshopper.notification.me"
+                email: "noreply@notification.brevo.com"
             },
             to: [{ email: "theafzalhussain786@gmail.com" }],
             subject: "Your Verification Code for Eshopper Account",
