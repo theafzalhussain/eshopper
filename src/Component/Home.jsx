@@ -264,17 +264,17 @@ export default function Home() {
                             <div className="row">
                                 {displayProducts.map((item, index) => (
                                     <motion.div 
-                                        key={item.id} className="col-12 col-sm-6 col-md-4 col-lg-4 mb-4 mb-md-4"
-                                        initial={{ opacity: 0, y: 30 }} 
+                                        key={item.id} className="col-6 col-sm-6 col-md-4 col-lg-3 mb-3"
+                                        initial={{ opacity: 0, y: 20 }} 
                                         whileInView={{ opacity: 1, y: 0 }} 
                                         viewport={{ once: true }}
-                                        transition={{ delay: index * 0.08, duration: 0.5 }}
+                                        transition={{ delay: index * 0.06, duration: 0.4 }}
                                     >
                                         <div className="fashion-card shadow-hover transition-slow h-100 d-flex flex-column bg-white rounded-3xl overflow-hidden">
-                                            <div className="position-relative img-holder product-img-container">
+                                            <div className="position-relative img-holder product-img-container" style={{ height: '220px' }}>
                                                 <Link to={`/single-product/${item.id}`} className="product-link">
                                                     <img 
-                                                        src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 700, crop: 'fill' })} 
+                                                        src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 500, crop: 'fill' })} 
                                                         loading="lazy" 
                                                         decoding="async"
                                                         className="w-100 h-100 object-cover luxury-image" 
@@ -298,12 +298,12 @@ export default function Home() {
                                             </div>
                                             
                                             {/* Product Details */}
-                                            <div className="p-3 p-md-4 flex-grow-1 d-flex flex-column">
+                                            <div className="p-2 p-md-3 flex-grow-1 d-flex flex-column">
                                                 {/* Brand and Rating */}
-                                                <div className="d-flex justify-content-between align-items-center mb-2">
-                                                    <span className="product-brand text-info font-weight-bold text-uppercase">{item.brand}</span>
+                                                <div className="d-flex justify-content-between align-items-center mb-1">
+                                                    <span className="product-brand text-info font-weight-bold text-uppercase" style={{ fontSize: '11px' }}>{item.brand}</span>
                                                     <div className="product-rating-wrapper d-flex align-items-center">
-                                                        <span className="rating-stars" style={{ color: '#FFB800', fontSize: '14px', marginRight: '4px' }}>
+                                                        <span className="rating-stars" style={{ color: '#FFB800', fontSize: '12px', marginRight: '3px' }}>
                                                             {[1, 2, 3, 4, 5].map((star) => (
                                                                 <span key={star}>
                                                                     {star <= Math.floor(item.rating || 4.5) ? '★' : 
@@ -311,41 +311,41 @@ export default function Home() {
                                                                 </span>
                                                             ))}
                                                         </span>
-                                                        <span className="rating-text text-muted" style={{ fontSize: '12px' }}>({(item.rating || 4.5).toFixed(1)})</span>
+                                                        <span className="rating-text text-muted" style={{ fontSize: '10px' }}>({(item.rating || 4.5).toFixed(1)})</span>
                                                     </div>
                                                 </div>
                                                 
                                                 {/* Product Name */}
-                                                <h3 className="product-name font-weight-bold mb-2">
+                                                <h3 className="product-name font-weight-bold mb-1" style={{ fontSize: '14px', lineHeight: '1.3' }}>
                                                     <Link to={`/single-product/${item.id}`} className="text-dark no-underline hover-info">
                                                         {item.name}
                                                     </Link>
                                                 </h3>
                                                 
                                                 {/* Product Category/Description */}
-                                                <p className="product-category text-muted mb-3">
+                                                <p className="product-category text-muted mb-2" style={{ fontSize: '11px' }}>
                                                     {item.maincategory} • {item.subcategory}
                                                 </p>
                                                 
                                                 {/* Premium Feature Highlights */}
-                                                <div className="product-feature-chips mb-3">
-                                                    {item.discount > 0 && <span className="feature-chip">Save {item.discount}%</span>}
-                                                    {item.finalprice >= 999 && <span className="feature-chip soft">Free Shipping</span>}
-                                                    <span className="feature-chip solid">Premium Fabric</span>
-                                                    {item.stock === "In Stock" && <span className="feature-chip success">In Stock</span>}
+                                                <div className="product-feature-chips mb-2">
+                                                    {item.discount > 0 && <span className="feature-chip" style={{ fontSize: '9px', padding: '3px 8px' }}>Save {item.discount}%</span>}
+                                                    {item.finalprice >= 999 && <span className="feature-chip soft" style={{ fontSize: '9px', padding: '3px 8px' }}>Free Shipping</span>}
+                                                    <span className="feature-chip solid" style={{ fontSize: '9px', padding: '3px 8px' }}>Premium Fabric</span>
+                                                    {item.stock === "In Stock" && <span className="feature-chip success" style={{ fontSize: '9px', padding: '3px 8px' }}>In Stock</span>}
                                                 </div>
                                                 
                                                 {/* Price Section */}
-                                                <div className="mt-auto pt-3 border-top">
-                                                    <div className="d-flex align-items-center justify-content-between mb-3">
+                                                <div className="mt-auto pt-2 border-top">
+                                                    <div className="d-flex align-items-center justify-content-between mb-2">
                                                         <div className="price-group">
-                                                            <span className="product-price font-weight-bold text-dark">₹{item.finalprice}</span>
+                                                            <span className="product-price font-weight-bold text-dark" style={{ fontSize: '16px' }}>₹{item.finalprice}</span>
                                                             {item.baseprice > item.finalprice && (
-                                                                <del className="product-old-price text-muted ml-2">₹{item.baseprice}</del>
+                                                                <del className="product-old-price text-muted ml-2" style={{ fontSize: '12px' }}>₹{item.baseprice}</del>
                                                             )}
                                                         </div>
                                                         {item.baseprice > item.finalprice && (
-                                                            <span className="save-badge">
+                                                            <span className="save-badge" style={{ fontSize: '10px', padding: '3px 6px' }}>
                                                                 Save ₹{item.baseprice - item.finalprice}
                                                             </span>
                                                         )}

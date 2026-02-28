@@ -366,9 +366,55 @@ export default function Shop() {
                                                 </p>
                                                 
                                                 {/* Premium Features Badges */}
-                                                <div className="premium-features-badges mb-2">
-                                                    {item.discount > 0 && <span className="feature-chip">Save {item.discount}%</span>}
-                                                    {item.stock === "In Stock" && <span className="feature-chip stock">In Stock</span>}
+                                                <div className="premium-features-badges mb-2 d-flex flex-wrap gap-1">
+                                                    {item.discount > 0 && (
+                                                        <span className="feature-chip save-badge" style={{
+                                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                            color: 'white',
+                                                            fontSize: '11px',
+                                                            fontWeight: '600',
+                                                            padding: '4px 8px',
+                                                            borderRadius: '4px'
+                                                        }}>
+                                                            Save {item.discount}%
+                                                        </span>
+                                                    )}
+                                                    {item.finalprice >= 999 && (
+                                                        <span className="feature-chip shipping-badge" style={{
+                                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                                            color: 'white',
+                                                            fontSize: '11px',
+                                                            fontWeight: '600',
+                                                            padding: '4px 8px',
+                                                            borderRadius: '4px'
+                                                        }}>
+                                                            Free Shipping
+                                                        </span>
+                                                    )}
+                                                    <span className="feature-chip fabric-badge" style={{
+                                                        background: '#f8f9fa',
+                                                        color: '#333',
+                                                        fontSize: '11px',
+                                                        fontWeight: '600',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid #e0e0e0'
+                                                    }}>
+                                                        Premium Fabric
+                                                    </span>
+                                                    {item.stock === "In Stock" && (
+                                                        <span className="feature-chip stock-badge" style={{
+                                                            background: '#d4edda',
+                                                            color: '#155724',
+                                                            fontSize: '11px',
+                                                            fontWeight: '600',
+                                                            padding: '4px 8px',
+                                                            borderRadius: '4px',
+                                                            border: '1px solid #c3e6cb'
+                                                        }}>
+                                                            In Stock
+                                                        </span>
+                                                    )}
                                                 </div>
 
                                                 {normalizeColors(item.color).length > 0 && (
@@ -410,11 +456,23 @@ export default function Shop() {
                                                 </div>
                                                 
                                                 {/* Price and Cart */}
-                                                <div className="d-flex align-items-end justify-content-between mb-2">
-                                                    <div>
+                                                <div className="d-flex align-items-center justify-content-between mb-2">
+                                                    <div className="d-flex align-items-center flex-wrap">
                                                         <span className="h5 font-weight-bold text-dark mb-0" style={{ fontSize: '18px' }}>₹{item.finalprice}</span>
                                                         {item.baseprice > item.finalprice && (
-                                                            <del className="text-muted small ml-2">₹{item.baseprice}</del>
+                                                            <>
+                                                                <del className="text-muted small ml-2">₹{item.baseprice}</del>
+                                                                <span className="ml-2 px-2 py-1" style={{
+                                                                    background: '#ffebee',
+                                                                    color: '#c62828',
+                                                                    fontSize: '11px',
+                                                                    fontWeight: '700',
+                                                                    borderRadius: '4px',
+                                                                    whiteSpace: 'nowrap'
+                                                                }}>
+                                                                    SAVE ₹{item.baseprice - item.finalprice}
+                                                                </span>
+                                                            </>
                                                         )}
                                                     </div>
                                                 </div>
