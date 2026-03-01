@@ -35,17 +35,8 @@ export default function SingUp() {
     const [phoneLoading, setPhoneLoading] = useState(false)
     const [recaptchaReady, setRecaptchaReady] = useState(false)
     const [recaptchaError, setRecaptchaError] = useState(null)
-    const [phoneAuthDisabled, setPhoneAuthDisabled] = useState(false) // Track if billing disabled
     
     const navigate = useNavigate()
-
-    // Check if phone auth was previously disabled
-    useEffect(() => {
-        const isDisabled = localStorage.getItem('phoneAuthDisabled');
-        if (isDisabled === 'true') {
-            setPhoneAuthDisabled(true);
-        }
-    }, []);
 
     // PASSWORD STRENGTH CHECKER
     const checkPasswordStrength = (pwd) => {
@@ -391,15 +382,6 @@ export default function SingUp() {
                 setGeneralError("Too many attempts. Try again later.");
             } else if (err.code === 'auth/captcha-check-failed') {
                 setGeneralError("CAPTCHA verification failed. Please refresh and try again.");
-            } else if (err.code === 'auth/billing-not-enabled' || err.message?.includes('billing')) {
-                console.error('🚫 Phone authentication requires Firebase Blaze Plan');
-                setPhoneAuthDisabled(true);
-                localStorage.setItem('phoneAuthDisabled', 'true');
-                
-                // Immediate redirect with user-friendly message
-                setMasterStep('initial');
-                setGeneralError("📱 Phone login unavailable at the moment. Please use Email or Google signup.");
-                alert('Phone authentication is temporarily unavailable. Please use Email or Google signup.');
             } else if (err.message?.includes('reCAPTCHA')) {
                 setGeneralError("Verification setup failed. Please refresh the page and try again.");
             } else {
@@ -725,46 +707,29 @@ export default function SingUp() {
                                         <Chrome size={16} className="mr-2" /> SIGN UP WITH GOOGLE
                                     </motion.button>
 
-                                    {/* PHONE SIGN UP BUTTON - Only show if not disabled */}
-                                    {!phoneAuthDisabled && (
-                                        <motion.button 
-                                            type="button" 
-                                            whileHover={{ scale: loading ? 1 : 1.02 }}
-                                            whileTap={{ scale: loading ? 1 : 0.98 }}
-                                            className="phone-signup-btn mt-2 shadow-lg" 
-                                            onClick={() => {
-                                                console.log('📱 [CLICK] PHONE button clicked - Setting masterStep to phone_input')
-                                                if (!auth) {
-                                                    alert('Firebase not initialized. Refresh.')
-                                                    return
-                                                }
-                                                setGeneralError("")
-                                                setRecaptchaError(null)
-                                                setPhoneNumber("")
-                                                setPhoneOtp("")
-                                                setMasterStep('phone_input') // 🔥 FORCE STATE CHANGE
-                                            }}
-                                            disabled={loading}
-                                            style={{ pointerEvents: loading ? 'none' : 'auto' }}
-                                        >
-                                            <Phone size={16} className="mr-2" /> SIGN UP WITH PHONE
-                                        </motion.button>
-                                    )}
-                                    
-                                    {/* INFO MESSAGE IF PHONE AUTH DISABLED */}
-                                    {phoneAuthDisabled && (
-                                        <div style={{
-                                            marginTop: '12px',
-                                            padding: '10px',
-                                            background: 'rgba(255, 153, 0, 0.1)',
-                                            border: '1px solid rgba(255, 153, 0, 0.3)',
-                                            borderRadius: '8px',
-                                            fontSize: '12px',
-                                            color: '#ff9900'
-                                        }}>
-                                            📞 Phone signup requires Firebase Blaze Plan upgrade
-                                        </div>
-                                    )}
+                                    {/* PHONE SIGN UP BUTTON - Enabled for Firebase Test Numbers */}
+                                    <motion.button 
+                                        type="button" 
+                                        whileHover={{ scale: loading ? 1 : 1.02 }}
+                                        whileTap={{ scale: loading ? 1 : 0.98 }}
+                                        className="phone-signup-btn mt-2 shadow-lg" 
+                                        onClick={() => {
+                                            console.log('📱 [CLICK] PHONE button clicked - Setting masterStep to phone_input')
+                                            if (!auth) {
+                                                alert('Firebase not initialized. Refresh.')
+                                                return
+                                            }
+                                            setGeneralError("")
+                                            setRecaptchaError(null)
+                                            setPhoneNumber("")
+                                            setPhoneOtp("")
+                                            setMasterStep('phone_input')
+                                        }}
+                                        disabled={loading}
+                                        style={{ pointerEvents: loading ? 'none' : 'auto' }}
+                                    >
+                                        <Phone size={16} className="mr-2" /> SIGN UP WITH PHONE
+                                    </motion.button>
                                 </motion.form>
                             )}
                             
