@@ -119,61 +119,54 @@ export default function SingUp() {
     // ============ RECAPTCHA INITIALIZATION - MASTER EFFECT ============
     useEffect(() => {
         // Only initialize when entering phone_input step
-        if (masterStep === 'phone_input' && !recaptchaReady && !recaptchaError) {
-            console.log('🔄 [EFFECT] Initializing reCAPTCHA for phone auth...')
-            
-            // Add flag to prevent double-initialization
-            let isInitializing = false;
+        if (masterStep === 'phone_input') {
+            console.log('🔄 [EFFECT] Phone input step detected, checking reCAPTCHA...')
             
             const initTimer = setTimeout(() => {
-                // Prevent concurrent initializations
-                if (isInitializing) {
-                    console.log('⏳ reCAPTCHA initialization already in progress, skipping...');
-                    return;
-                }
-                
-                isInitializing = true;
-                
                 try {
                     // Verify container exists in DOM
                     const container = document.getElementById('recaptcha-container')
                     if (!container) {
-                        console.error('❌ [RECAPTCHA] Container #recaptcha-container not found in DOM')
+                        console.error('❌ [RECAPTCHA] Container not found')
                         setRecaptchaError('Container not found')
-                        isInitializing = false;
                         return
                     }
 
-                    console.log('✓ [RECAPTCHA] Container found in DOM')
+                    console.log('✓ [RECAPTCHA] Container found')
 
-                    // Check if verifier already exists
-                    if (window.recaptchaVerifier) {
-                        console.log('✓ [RECAPTCHA] Verifier already exists, reusing...')
-                        setRecaptchaReady(true)
-                        setRecaptchaError(null)
-                        isInitializing = false;
+                    // If verifier already exists and ready, skip initialization
+                    if (window.recaptchaVerifier && recaptchaReady) {
+                        console.log('✓ [RECAPTCHA] Already initialized and ready')
                         return
                     }
                     
-                    // Setup new verifier
-                    console.log('⚙️ [RECAPTCHA] Calling setUpRecaptcha...')
-                    const verifier = setUpRecaptcha('recaptcha-container')
-                    
-                    if (verifier) {
+                    // If verifier exists but not marked ready, just mark it ready
+                    if (window.recaptchaVerifier && !recaptchaReady) {
+                        console.log('✓ [RECAPTCHA] Verifier exists, marking as ready')
                         setRecaptchaReady(true)
                         setRecaptchaError(null)
-                        console.log('✅ [RECAPTCHA] Ready for phone authentication')
-                    } else {
-                        throw new Error('setUpRecaptcha returned null')
+                        return
+                    }
+                    
+                    // Only create new verifier if none exists
+                    if (!window.recaptchaVerifier) {
+                        console.log('⚙️ [RECAPTCHA] Creating new verifier...')
+                        const verifier = setUpRecaptcha('recaptcha-container')
+                        
+                        if (verifier) {
+                            setRecaptchaReady(true)
+                            setRecaptchaError(null)
+                            console.log('✅ [RECAPTCHA] Ready for phone authentication')
+                        } else {
+                            throw new Error('setUpRecaptcha returned null')
+                        }
                     }
                 } catch (error) {
                     console.error('❌ [RECAPTCHA] Setup failed:', error.message)
                     setRecaptchaError(error.message || 'reCAPTCHA init failed')
                     setRecaptchaReady(false)
-                } finally {
-                    isInitializing = false;
                 }
-            }, 300)
+            }, 500) // Increased delay for DOM readiness
             
             return () => clearTimeout(initTimer)
         }
@@ -192,7 +185,7 @@ export default function SingUp() {
                 }
             }
         }
-    }, [masterStep, recaptchaReady, recaptchaError])
+    }, [masterStep])
 
     // RESEND OTP FUNCTION
     async function handleResendOTP() {
@@ -327,27 +320,33 @@ export default function SingUp() {
 
             console.log('📞 Sending OTP to:', formattedPhone);
 
-            // Ensure reCAPTCHA is ready
-            if (!window.recaptchaVerifier) {
-                console.warn('⚠️ reCAPTCHA not initialized, attempting setup...')
+            // Wait for reCAPTCHA to be ready (max 5 seconds)
+            console.log('⏳ [PHONE] Waiting for reCAPTCHA...')
+            let attempts = 0;
+            while (!window.recaptchaVerifier && attempts < 10) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                attempts++;
                 
-                // Clear container first
-                const container = document.getElementById('recaptcha-container');
-                if (container) {
-                    container.innerHTML = '';
+                // Try to initialize if still not available
+                if (!window.recaptchaVerifier && attempts === 5) {
+                    console.warn('⚠️ [PHONE] reCAPTCHA not ready, attempting manual setup...')
+                    const container = document.getElementById('recaptcha-container');
+                    if (container) {
+                        container.innerHTML = '';
+                    }
+                    const verifier = setUpRecaptcha('recaptcha-container')
+                    if (verifier) {
+                        setRecaptchaReady(true)
+                        console.log('✅ [PHONE] Manual reCAPTCHA setup successful')
+                    }
                 }
-                
-                const verifier = setUpRecaptcha('recaptcha-container')
-                if (!verifier) {
-                    throw new Error("reCAPTCHA failed to initialize. Please refresh and try again.")
-                }
-                // Wait for verifier to be ready
-                await new Promise(resolve => setTimeout(resolve, 1000))
             }
 
             if (!window.recaptchaVerifier) {
-                throw new Error("reCAPTCHA verifier not available")
+                throw new Error("reCAPTCHA initialization timeout. Please refresh the page and try again.")
             }
+            
+            console.log('✅ [PHONE] reCAPTCHA ready, proceeding with OTP send')
 
             // Send SMS
             console.log('🔐 Calling signInWithPhoneNumber...')
@@ -791,12 +790,28 @@ export default function SingUp() {
                                                 ✓ Enter 10-digit (auto-appends +91) or full format: +1234567890<br/>
                                                 Examples: 9876543210 (India), +14155552671 (USA)
                                             </p>
+                                            {/* reCAPTCHA Status Indicator */}
+                                            {recaptchaError && (
+                                                <p style={{fontSize: '11px', color: '#ff4444', marginTop: '5px'}}>
+                                                    ⚠️ Security check failed. Please refresh the page.
+                                                </p>
+                                            )}
+                                            {!recaptchaReady && !recaptchaError && (
+                                                <p style={{fontSize: '11px', color: '#888', marginTop: '5px'}}>
+                                                    🔄 Initializing security check...
+                                                </p>
+                                            )}
+                                            {recaptchaReady && (
+                                                <p style={{fontSize: '11px', color: '#00aa00', marginTop: '5px'}}>
+                                                    ✓ Security check ready
+                                                </p>
+                                            )}
                                         </div>
                                         
                                         <button 
                                             type="submit" 
                                             className="p-submit-btn mb-3" 
-                                            disabled={phoneLoading || !phoneNumber.trim() || phoneNumber.length < 10}
+                                            disabled={phoneLoading || !phoneNumber.trim() || phoneNumber.length < 10 || !recaptchaReady}
                                         >
                                             {phoneLoading ? <Loader2 className="animate-spin mx-auto"/> : "SEND VERIFICATION CODE"}
                                         </button>

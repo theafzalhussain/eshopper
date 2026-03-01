@@ -24,9 +24,7 @@ const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-// 🔐 FIREBASE ADMIN SDK INITIALIZATION
+const { GoogleGenerativeAI } = require("@google/generative-ai");// 🔐 FIREBASE ADMIN SDK INITIALIZATION
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
