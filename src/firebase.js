@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider, RecaptchaVerifier } from 'firebase/auth';
 
 // Firebase configuration using environment variables
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_KEY,
-  authDomain: process.env.REACT_APP_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_SENDER_ID,
-  appId: process.env.REACT_APP_APP_ID,
+  apiKey: process.env.REACT_APP_FIREBASE_KEY || process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyDlXoKQZn0BG5kosCM92cqCOZb3phXV310',
+  authDomain: process.env.REACT_APP_AUTH_DOMAIN || 'eshopper-auth.firebaseapp.com',
+  projectId: process.env.REACT_APP_PROJECT_ID || 'eshopper-auth',
+  storageBucket: process.env.REACT_APP_STORAGE_BUCKET || 'eshopper-auth.firebasestorage.app',
+  messagingSenderId: process.env.REACT_APP_SENDER_ID || process.env.REACT_APP_MESSAGING_SENDER_ID || '586466157633',
+  appId: process.env.REACT_APP_APP_ID || '1:586466157633:web:2bf5267dca5af4684952c0',
 };
 
 const hasFirebaseConfig = Boolean(
@@ -36,8 +36,8 @@ if (hasFirebaseConfig) {
   auth = getAuth(app);
   googleProvider = new GoogleAuthProvider();
 } else {
-  console.error('❌ Firebase configuration is incomplete. Auth features will be unavailable until env variables are set.');
-  console.error('Missing values check:', {
+  console.warn('⚠️ Firebase configuration is incomplete. Auth features will be unavailable until env variables are set.');
+  console.warn('Missing values check:', {
     hasApiKey: !!firebaseConfig.apiKey,
     hasAuthDomain: !!firebaseConfig.authDomain,
     hasProjectId: !!firebaseConfig.projectId,
