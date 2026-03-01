@@ -6,6 +6,7 @@ import { BASE_URL } from '../constants'
 import { ShieldCheck, User, Mail, Lock, Loader2, ArrowRight, UserPlus, Eye, EyeOff, CheckCircle, AlertCircle, Phone, Chrome } from 'lucide-react'
 import { signInWithPopup, signInWithPhoneNumber } from 'firebase/auth'
 import { auth, googleProvider, setUpRecaptcha } from '../firebase'
+import Terms from './Terms'
 
 export default function SingUp() {
     const [data, setdata] = useState({ name: "", email: "", username: "", password: "" })
@@ -32,6 +33,7 @@ export default function SingUp() {
     const [phoneOtp, setPhoneOtp] = useState("")
     const [phoneLoading, setPhoneLoading] = useState(false)
     const [recaptchaReady, setRecaptchaReady] = useState(false)
+    const [showTerms, setShowTerms] = useState(false) // Terms modal state
     
     const navigate = useNavigate()
 
@@ -603,7 +605,7 @@ export default function SingUp() {
                                             onChange={e => setTermsAccepted(e.target.checked)}
                                         />
                                         <label htmlFor="terms">
-                                            I agree to the <a href="#terms" className="terms-link">Terms & Conditions</a>
+                                            I agree to the <button type="button" onClick={() => setShowTerms(true)} className="terms-link" style={{background: 'none', border: 'none', cursor: 'pointer', padding: 0}}>Terms & Conditions</button>
                                         </label>
                                     </div>
                                     {!termsAccepted && <p className="error-text" style={{fontSize: '11px', marginBottom: '16px'}}><AlertCircle size={12} /> Please accept the terms to continue</p>}
@@ -795,6 +797,9 @@ export default function SingUp() {
                         {authMode === 'regular' && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
                     </div>
                 </motion.div>
+
+                {/* 🔥 TERMS & CONDITIONS MODAL */}
+                <Terms isOpen={showTerms} onClose={() => setShowTerms(false)} />
                 
                 {/* 🔥 Hidden reCAPTCHA Container - Invisible but functional */}
                 <div 
