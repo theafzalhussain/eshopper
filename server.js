@@ -776,11 +776,8 @@ async function startServer() {
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
         // 🔴 Trimming to ensure no space/newline error
-       // --- server.js AI REFACTOR START ---
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-// 1. Initialize with latest SDK method
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
+           // --- server.js AI REFACTOR START ---
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
 
 app.post('/api/chat', async (req, res) => {
     try {
@@ -798,21 +795,16 @@ app.post('/api/chat', async (req, res) => {
         const allProducts = await Product.find({}, 'name baseprice maincategory');
         const productDataSummary = allProducts.map(p => `- ${p.name} (Rs.${p.baseprice})`).slice(0, 15).join("\n");
 
-        // 🧠 MODEL CONFIG: Using 'gemini-1.5-flash' which is fastest & standard now
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash",
-            // Ye system instructions bot को आपकी दुकान का "Manager" बना देंगी
-            systemInstruction: `You are the Expert Fashion Stylist for 'eShopper Boutique Luxe'. 
+        const systemInstruction = `You are the Expert Fashion Stylist for 'eShopper Boutique Luxe'. 
             Your only goal is to suggest clothes from this inventory:\n${productDataSummary}\n
             Rules: 
             1. Suggest real items from the list above.
             2. Be extremely polite and stylish.
-            3. Keep answers under 3 lines.`
-        });
+            3. Keep answers under 3 lines.`;
 
         // 🛠️ ROLE FIX: Roles alternated properly to prevent 'model vs user' error
         let cleanHistory = (history || []).map(m => ({
-            role: m.role === 'ai' || m.role === 'model' ? 'model' : 'user',
+            role: (m.role === 'ai' || m.role === 'model' || m.role === 'bot' || m.sender === 'ai' || m.sender === 'model' || m.sender === 'bot') ? 'model' : 'user',
             parts: [{ text: m.text || m.parts?.[0]?.text || "" }]
         }));
 
@@ -821,12 +813,44 @@ app.post('/api/chat', async (req, res) => {
             cleanHistory.shift();
         }
 
-        const chat = model.startChat({ history: cleanHistory });
-        const result = await chat.sendMessage(prompt);
-        const response = await result.response;
+        const candidateModels = [
+            "gemini-pro",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro"
+        ];
+
+        let textResponse = "";
+        let lastModelError = null;
+
+        for (const modelName of candidateModels) {
+            try {
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    systemInstruction
+                });
+
+                const chat = model.startChat({ history: cleanHistory });
+                const result = await chat.sendMessage(prompt);
+                const response = await result.response;
+                textResponse = response.text();
+
+                if (textResponse && textResponse.trim()) {
+                    console.log(`✅ AI responded successfully using model: ${modelName}`);
+                    break;
+                }
+
+                throw new Error(`Empty response from model: ${modelName}`);
+            } catch (modelError) {
+                lastModelError = modelError;
+                console.warn(`⚠️ Gemini model failed (${modelName}):`, modelError.message);
+            }
+        }
+
+        if (!textResponse || !textResponse.trim()) {
+            throw lastModelError || new Error("No Gemini model returned a valid response");
+        }
         
-        console.log("✅ AI responded successfully");
-        res.json({ text: response.text() });
+        res.json({ text: textResponse });
 
     } catch (error) {
         console.error("❌ Gemini Crash Log:", error.message);
