@@ -165,15 +165,21 @@ export default function Terms({ isOpen, onClose }) {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(26, 26, 46, 0.8) 100%);
-                    backdrop-filter: blur(12px);
-                    z-index: 1000;
+                    width: 100vw;
+                    height: 100vh;
+                    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(26, 26, 46, 0.85) 100%);
+                    backdrop-filter: blur(15px);
+                    -webkit-backdrop-filter: blur(15px);
+                    z-index: 10000;
                     animation: backdropFade 0.4s ease-out;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
 
                 @keyframes backdropFade {
                     from { opacity: 0; backdrop-filter: blur(0px); }
-                    to { opacity: 1; backdrop-filter: blur(12px); }
+                    to { opacity: 1; backdrop-filter: blur(15px); }
                 }
 
                 /* ====== PREMIUM MODAL CONTAINER ====== */
@@ -182,21 +188,22 @@ export default function Terms({ isOpen, onClose }) {
                     top: 50%;
                     left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 90%;
-                    max-width: 800px;
-                    max-height: 88vh;
+                    width: min(90vw, 850px);
+                    height: min(90vh, 800px);
                     background: linear-gradient(to bottom, #FFFFFF 0%, #F5F7FF 100%);
                     border-radius: 40px;
                     box-shadow: 
-                        0 40px 120px rgba(0, 0, 0, 0.25),
-                        0 15px 50px rgba(255, 215, 0, 0.15),
-                        inset 0 1px 1px rgba(255, 255, 255, 0.8);
+                        0 50px 150px rgba(0, 0, 0, 0.3),
+                        0 20px 60px rgba(138, 43, 226, 0.2),
+                        0 0 80px rgba(255, 215, 0, 0.15),
+                        inset 0 1px 2px rgba(255, 255, 255, 0.9);
                     overflow: hidden;
-                    z-index: 1001;
+                    z-index: 10001;
                     display: flex;
                     flex-direction: column;
-                    border: 2px solid rgba(255, 215, 0, 0.25);
-                    backdrop-filter: blur(10px);
+                    border: 2px solid rgba(255, 215, 0, 0.3);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
                 }
 
                 /* ====== PREMIUM HEADER ====== */
@@ -434,15 +441,43 @@ export default function Terms({ isOpen, onClose }) {
                 }
 
                 /* ====== RESPONSIVE DESIGN ====== */
+                @media (max-width: 1024px) {
+                    .terms-modal {
+                        width: 92vw;
+                        height: 92vh;
+                        border-radius: 36px;
+                    }
+
+                    .terms-header {
+                        padding: 42px 35px;
+                    }
+
+                    .terms-main-title {
+                        font-size: 38px;
+                    }
+
+                    .terms-content {
+                        padding: 38px 35px;
+                    }
+                }
+
                 @media (max-width: 768px) {
                     .terms-modal {
-                        width: 95%;
-                        max-height: 90vh;
+                        width: 95vw;
+                        height: 94vh;
                         border-radius: 32px;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
                     }
 
                     .terms-header {
                         padding: 35px 25px;
+                    }
+
+                    .terms-header-badge {
+                        font-size: 10px;
+                        padding: 7px 14px;
                     }
 
                     .terms-main-title {
@@ -490,12 +525,20 @@ export default function Terms({ isOpen, onClose }) {
 
                 @media (max-width: 480px) {
                     .terms-modal {
-                        width: 98%;
-                        border-radius: 24px;
+                        width: 100vw;
+                        height: 100vh;
+                        max-width: 100vw;
+                        max-height: 100vh;
+                        border-radius: 0;
+                        top: 0;
+                        left: 0;
+                        transform: none;
+                        border: none;
                     }
 
                     .terms-header {
-                        padding: 25px 18px;
+                        padding: 30px 20px;
+                        border-radius: 0;
                     }
 
                     .terms-header-badge {
@@ -505,7 +548,7 @@ export default function Terms({ isOpen, onClose }) {
                     }
 
                     .terms-main-title {
-                        font-size: 24px;
+                        font-size: 26px;
                         letter-spacing: 1px;
                         margin-bottom: 8px;
                     }
@@ -516,20 +559,20 @@ export default function Terms({ isOpen, onClose }) {
                     }
 
                     .terms-close-btn {
-                        width: 40px;
-                        height: 40px;
-                        top: 15px;
-                        right: 15px;
+                        width: 42px;
+                        height: 42px;
+                        top: 18px;
+                        right: 18px;
                     }
 
                     .terms-content {
-                        padding: 20px 16px;
+                        padding: 24px 18px;
                     }
 
                     .terms-section {
-                        margin-bottom: 20px;
-                        padding: 16px 14px 20px 14px;
-                        border-radius: 16px;
+                        margin-bottom: 22px;
+                        padding: 18px 16px 22px 16px;
+                        border-radius: 18px;
                     }
 
                     .terms-section-header {
@@ -548,25 +591,88 @@ export default function Terms({ isOpen, onClose }) {
                     }
 
                     .terms-text {
-                        font-size: 12px;
+                        font-size: 13px;
                         line-height: 1.7;
                         letter-spacing: 0.2px;
                     }
 
                     .terms-footer {
-                        padding: 18px 16px;
+                        padding: 20px 18px;
                     }
 
                     .terms-accept-btn {
-                        padding: 12px 24px;
-                        font-size: 11px;
-                        letter-spacing: 0.8px;
-                        gap: 8px;
+                        width: 100%;
+                        padding: 14px 28px;
+                        font-size: 12px;
+                        letter-spacing: 1px;
+                        gap: 10px;
                     }
 
                     .terms-accept-btn svg {
                         width: 16px;
                         height: 16px;
+                    }
+                }
+
+                /* Extra small devices */
+                @media (max-width: 380px) {
+                    .terms-main-title {
+                        font-size: 22px;
+                    }
+
+                    .terms-subtitle {
+                        font-size: 10px;
+                    }
+
+                    .terms-heading {
+                        font-size: 13px;
+                    }
+
+                    .terms-text {
+                        font-size: 12px;
+                    }
+
+                    .terms-accept-btn {
+                        font-size: 11px;
+                        padding: 13px 24px;
+                    }
+                }
+
+                /* Landscape mobile optimization */
+                @media (max-height: 500px) and (orientation: landscape) {
+                    .terms-modal {
+                        height: 98vh;
+                        border-radius: 24px;
+                    }
+
+                    .terms-header {
+                        padding: 20px 25px;
+                    }
+
+                    .terms-header-badge {
+                        margin-bottom: 8px;
+                    }
+
+                    .terms-main-title {
+                        font-size: 24px;
+                        margin-bottom: 6px;
+                    }
+
+                    .terms-subtitle {
+                        font-size: 11px;
+                    }
+
+                    .terms-content {
+                        padding: 20px 25px;
+                    }
+
+                    .terms-section {
+                        margin-bottom: 18px;
+                        padding: 14px 16px 18px 16px;
+                    }
+
+                    .terms-footer {
+                        padding: 16px 25px;
                     }
                 }
             `}} />

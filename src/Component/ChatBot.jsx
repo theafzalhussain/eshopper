@@ -147,62 +147,198 @@ export default function ChatBot() {
             <motion.button
                 onClick={() => setIsOpen(!isOpen)}
                 className="chatbot-bubble"
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.9 }}
+                whileHover={{ scale: 1.15, rotate: [0, -5, 5, 0] }}
+                whileTap={{ scale: 0.92 }}
                 aria-label="Open chat"
+                animate={{
+                    y: [0, -10, 0],
+                    boxShadow: [
+                        '0 15px 50px rgba(138, 43, 226, 0.4)',
+                        '0 20px 60px rgba(255, 215, 0, 0.5)',
+                        '0 15px 50px rgba(138, 43, 226, 0.4)'
+                    ]
+                }}
+                transition={{ 
+                    duration: 4, 
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
             >
                 <motion.div 
-                    className="robot-icon"
+                    className="robot-icon-container"
                     animate={{ 
-                        y: [0, -8, 0],
-                        rotate: [0, -5, 5, 0]
+                        rotate: [0, -5, 5, -3, 3, 0]
                     }}
                     transition={{ 
-                        duration: 3, 
+                        duration: 5, 
                         repeat: Infinity,
                         ease: "easeInOut"
                     }}
                 >
                     {isOpen ? (
-                        <motion.div key="close" initial={{ rotate: -90, scale: 0 }} exit={{ rotate: 90, scale: 0 }}>
-                            <X size={24} />
+                        <motion.div 
+                            key="close" 
+                            initial={{ rotate: -180, scale: 0 }} 
+                            animate={{ rotate: 0, scale: 1 }}
+                            exit={{ rotate: 180, scale: 0 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                        >
+                            <X size={32} strokeWidth={3} />
                         </motion.div>
                     ) : (
-                        <motion.div key="open" initial={{ rotate: 90, scale: 0 }} exit={{ rotate: -90, scale: 0 }}>
-                            {/* 🤖 ANIMATED ROBOT SVG */}
-                            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                {/* Head */}
-                                <rect x="4" y="2" width="20" height="16" rx="2" fill="white" stroke="white" strokeWidth="1"/>
-                                {/* Eyes with animation */}
-                                <motion.circle 
-                                    cx="10" cy="8" r="1.5" 
-                                    fill="white"
-                                    animate={{ scale: [1, 1.3, 1] }}
+                        <motion.div 
+                            key="open" 
+                            initial={{ rotate: 180, scale: 0 }} 
+                            animate={{ rotate: 0, scale: 1 }}
+                            exit={{ rotate: -180, scale: 0 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                        >
+                            {/* 🤖 PREMIUM ANIMATED AI ROBOT SVG */}
+                            <svg width="42" height="42" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <linearGradient id="robotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#1a1a2e" />
+                                        <stop offset="100%" stopColor="#0f3460" />
+                                    </linearGradient>
+                                    <filter id="glow">
+                                        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                        <feMerge>
+                                            <feMergeNode in="coloredBlur"/>
+                                            <feMergeNode in="SourceGraphic"/>
+                                        </feMerge>
+                                    </filter>
+                                </defs>
+                                
+                                {/* Antenna */}
+                                <motion.line 
+                                    x1="21" y1="3" x2="21" y2="7" 
+                                    stroke="url(#robotGradient)" 
+                                    strokeWidth="2" 
+                                    strokeLinecap="round"
+                                    animate={{ y1: [3, 1, 3] }}
                                     transition={{ duration: 2, repeat: Infinity }}
                                 />
                                 <motion.circle 
-                                    cx="18" cy="8" r="1.5" 
-                                    fill="white"
-                                    animate={{ scale: [1, 1.3, 1] }}
-                                    transition={{ duration: 2, repeat: Infinity, delay: 0.1 }}
+                                    cx="21" cy="3" r="2.5" 
+                                    fill="#FFD700"
+                                    filter="url(#glow)"
+                                    animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
+                                    transition={{ duration: 1.5, repeat: Infinity }}
                                 />
-                                {/* Mouth */}
-                                <path d="M 10 12 Q 14 14 18 12" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+                                
+                                {/* Head */}
+                                <rect x="8" y="7" width="26" height="18" rx="3" fill="url(#robotGradient)" stroke="#FFD700" strokeWidth="1.5"/>
+                                
+                                {/* Eyes with blink animation */}
+                                <motion.g>
+                                    <motion.circle 
+                                        cx="15" cy="15" r="3" 
+                                        fill="#00D9FF"
+                                        animate={{ 
+                                            scale: [1, 0.1, 1],
+                                            opacity: [1, 0.3, 1]
+                                        }}
+                                        transition={{ 
+                                            duration: 3, 
+                                            repeat: Infinity,
+                                            times: [0, 0.1, 0.2]
+                                        }}
+                                    />
+                                    <motion.circle 
+                                        cx="15" cy="15" r="1.2" 
+                                        fill="white"
+                                        animate={{ 
+                                            scale: [1, 0, 1],
+                                            x: [0, 1, 0],
+                                            y: [0, -1, 0]
+                                        }}
+                                        transition={{ duration: 2, repeat: Infinity }}
+                                    />
+                                </motion.g>
+                                
+                                <motion.g>
+                                    <motion.circle 
+                                        cx="27" cy="15" r="3" 
+                                        fill="#00D9FF"
+                                        animate={{ 
+                                            scale: [1, 0.1, 1],
+                                            opacity: [1, 0.3, 1]
+                                        }}
+                                        transition={{ 
+                                            duration: 3, 
+                                            repeat: Infinity,
+                                            times: [0, 0.1, 0.2],
+                                            delay: 0.05
+                                        }}
+                                    />
+                                    <motion.circle 
+                                        cx="27" cy="15" r="1.2" 
+                                        fill="white"
+                                        animate={{ 
+                                            scale: [1, 0, 1],
+                                            x: [0, -1, 0],
+                                            y: [0, -1, 0]
+                                        }}
+                                        transition={{ duration: 2, repeat: Infinity }}
+                                    />
+                                </motion.g>
+                                
+                                {/* Smile */}
+                                <motion.path 
+                                    d="M 13 20 Q 21 24 29 20" 
+                                    stroke="#FFD700" 
+                                    strokeWidth="2" 
+                                    fill="none" 
+                                    strokeLinecap="round"
+                                    animate={{ d: ["M 13 20 Q 21 24 29 20", "M 13 20 Q 21 25 29 20", "M 13 20 Q 21 24 29 20"] }}
+                                    transition={{ duration: 2.5, repeat: Infinity }}
+                                />
+                                
                                 {/* Body */}
-                                <rect x="7" y="18" width="14" height="8" rx="1" fill="white" stroke="white" strokeWidth="1"/>
-                                {/* Arms */}
-                                <motion.rect 
-                                    x="2" y="19" width="4" height="3" rx="1" 
-                                    fill="white"
-                                    animate={{ x: [2, 0, 2], rotate: [0, -15, 0] }}
-                                    transition={{ duration: 2.5, repeat: Infinity }}
+                                <rect x="11" y="25" width="20" height="12" rx="2" fill="url(#robotGradient)" stroke="#FFD700" strokeWidth="1.5"/>
+                                
+                                {/* Chest Light */}
+                                <motion.circle 
+                                    cx="21" cy="31" r="2" 
+                                    fill="#00D9FF"
+                                    animate={{ 
+                                        opacity: [0.5, 1, 0.5],
+                                        scale: [0.9, 1.1, 0.9]
+                                    }}
+                                    transition={{ duration: 1.5, repeat: Infinity }}
                                 />
+                                
+                                {/* Left Arm */}
                                 <motion.rect 
-                                    x="22" y="19" width="4" height="3" rx="1" 
-                                    fill="white"
-                                    animate={{ x: [22, 24, 22], rotate: [0, 15, 0] }}
-                                    transition={{ duration: 2.5, repeat: Infinity }}
+                                    x="4" y="27" width="6" height="4" rx="2" 
+                                    fill="url(#robotGradient)"
+                                    stroke="#FFD700" 
+                                    strokeWidth="1.5"
+                                    animate={{ 
+                                        y: [27, 25, 27],
+                                        rotate: [0, -10, 0]
+                                    }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    style={{ originX: '1', originY: '0.5' }}
                                 />
+                                
+                                {/* Right Arm */}
+                                <motion.rect 
+                                    x="32" y="27" width="6" height="4" rx="2" 
+                                    fill="url(#robotGradient)"
+                                    stroke="#FFD700" 
+                                    strokeWidth="1.5"
+                                    animate={{ 
+                                        y: [27, 25, 27],
+                                        rotate: [0, 10, 0]
+                                    }}
+                                    transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
+                                    style={{ originX: '0', originY: '0.5' }}
+                                />
+                                
+                                {/* Legs */}
+                                <rect x="15" y="37" width="5" height="3" rx="1" fill="url(#robotGradient)" stroke="#FFD700" strokeWidth="1"/>
+                                <rect x="22" y="37" width="5" height="3" rx="1" fill="url(#robotGradient)" stroke="#FFD700" strokeWidth="1"/>
                             </svg>
                         </motion.div>
                     )}
@@ -365,18 +501,22 @@ export default function ChatBot() {
 
             {/* 🎨 PREMIUM LUXURY STYLES */}
             <style dangerouslySetInnerHTML={{ __html: `
-                /* Floating Chat Bubble - Premium Animated */
+                /* Floating Chat Bubble - Premium Animated AI Robot */
                 .chatbot-bubble {
                     position: fixed;
                     bottom: 30px;
                     right: 30px;
-                    width: 70px;
-                    height: 70px;
+                    width: 85px;
+                    height: 85px;
                     border-radius: 50%;
-                    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF6B9D 100%);
+                    background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 30%, #1a1a2e 70%, #0f3460 100%);
                     color: white;
-                    border: 3px solid rgba(255, 255, 255, 0.4);
-                    box-shadow: 0 15px 50px rgba(255, 107, 157, 0.4), inset 0 -2px 5px rgba(0, 0, 0, 0.1);
+                    border: 3px solid rgba(255, 215, 0, 0.5);
+                    box-shadow: 
+                        0 20px 60px rgba(138, 43, 226, 0.5),
+                        0 10px 30px rgba(255, 215, 0, 0.3),
+                        inset 0 -3px 8px rgba(0, 0, 0, 0.2),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
                     cursor: pointer;
                     display: flex;
                     align-items: center;
@@ -385,9 +525,10 @@ export default function ChatBot() {
                     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
                     font-size: 28px;
                     backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
                 }
 
-                .robot-icon {
+                .robot-icon-container {
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -396,9 +537,13 @@ export default function ChatBot() {
                 }
 
                 .chatbot-bubble:hover {
-                    transform: translateY(-8px) scale(1.1);
-                    box-shadow: 0 20px 60px rgba(255, 107, 157, 0.6), inset 0 -2px 5px rgba(0, 0, 0, 0.1);
-                    border-color: rgba(255, 255, 255, 0.8);
+                    transform: translateY(-8px) scale(1.08);
+                    box-shadow: 
+                        0 25px 80px rgba(138, 43, 226, 0.6),
+                        0 15px 40px rgba(255, 215, 0, 0.4),
+                        inset 0 -3px 8px rgba(0, 0, 0, 0.2),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.15);
+                    border-color: rgba(255, 215, 0, 0.8);
                 }
 
                 .chatbot-bubble:active {
@@ -785,9 +930,9 @@ export default function ChatBot() {
                 /* Responsive */
                 @media (max-width: 768px) {
                     .chatbot-window {
-                        width: calc(100% - 20px);
-                        height: 100vh;
-                        max-height: 100vh;
+                        width: calc(100vw - 20px);
+                        height: calc(100vh - 80px);
+                        max-height: calc(100vh - 80px);
                         bottom: 0;
                         right: 10px;
                         border-radius: 28px 28px 0 0;
@@ -796,8 +941,8 @@ export default function ChatBot() {
                     .chatbot-bubble {
                         bottom: 20px;
                         right: 20px;
-                        width: 65px;
-                        height: 65px;
+                        width: 75px;
+                        height: 75px;
                     }
 
                     .chatbot-message {
@@ -807,9 +952,19 @@ export default function ChatBot() {
 
                 @media (max-width: 480px) {
                     .chatbot-window {
-                        width: 100%;
+                        width: 100vw;
+                        height: 100vh;
                         max-height: 100vh;
+                        bottom: 0;
+                        right: 0;
                         border-radius: 0;
+                    }
+
+                    .chatbot-bubble {
+                        bottom: 20px;
+                        right: 20px;
+                        width: 70px;
+                        height: 70px;
                     }
 
                     .chatbot-title {
@@ -824,6 +979,15 @@ export default function ChatBot() {
                         width: 42px;
                         height: 42px;
                         font-size: 18px;
+                    }
+                }
+
+                @media (max-width: 380px) {
+                    .chatbot-bubble {
+                        width: 65px;
+                        height: 65px;
+                        bottom: 16px;
+                        right: 16px;
                     }
                 }
             `}} />
