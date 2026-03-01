@@ -784,6 +784,10 @@ async function startServer() {
      const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
     const modelCooldownUntil = new Map();
 
+     const isDev = process.env.NODE_ENV === 'development';
+     const devLog = (msg) => { if (isDev) console.log(`[DEV] ${msg}`); };
+     const devWarn = (msg) => { if (isDev) console.warn(`[DEV] ${msg}`); };
+
      const getAvailableGeminiModels = async () => {
         const now = Date.now();
         if (cachedGenerateModels.length > 0 && (now - cachedAt) < MODEL_CACHE_TTL_MS) {
@@ -809,7 +813,7 @@ async function startServer() {
 
             return models;
         } catch (modelListError) {
-            console.warn('⚠️ Could not fetch Gemini model list:', modelListError.message);
+            devWarn(`Could not fetch Gemini model list: ${modelListError.message}`);
             return [];
         }
      };
@@ -839,10 +843,7 @@ async function startServer() {
       const setModelCooldown = (modelName, error) => {
           const retryMs = extractRetryDelayMs(error);
           modelCooldownUntil.set(modelName, Date.now() + retryMs);
-          console.log(`⏳ Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
-      };
-
-      const isModelCoolingDown = (modelName) => {
+        devLog(`Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
           const until = modelCooldownUntil.get(modelName);
           if (!until) return false;
           if (Date.now() >= until) {
@@ -973,16 +974,17 @@ app.post('/api/chat', async (req, res) => {
                 if (isQuotaError(modelError)) {
                     setModelCooldown(modelName, modelError);
                     lastModelError = modelError;
+                    devWarn(`Quota hit for ${modelName}, cooling down`);
                     continue;
                 }
 
-                console.warn(`⚠️ Gemini SDK failed (${modelName}):`, modelError.message);
+                devWarn(`Gemini SDK failed (${modelName}): ${modelError.message}`);
 
                 try {
                     const restText = await generateWithRest(modelName, fullPrompt);
                     if (restText && restText.trim()) {
                         textResponse = restText;
-                        console.log(`✅ AI responded via REST fallback using model: ${modelName}`);
+                        devLog(`AI responded via REST fallback using model: ${modelName}`);
                         break;
                     }
                     throw new Error(`Empty REST response from model: ${modelName}`);
@@ -991,7 +993,7 @@ app.post('/api/chat', async (req, res) => {
                         setModelCooldown(modelName, restError);
                     }
                     lastModelError = restError;
-                    console.warn(`⚠️ Gemini REST failed (${modelName}):`, restError.message);
+                    devWarn(`Gemini REST failed (${modelName}): ${restError.message}`);
                 }
             }
         }
@@ -1003,7 +1005,7 @@ app.post('/api/chat', async (req, res) => {
         res.json({ text: textResponse });
 
     } catch (error) {
-        console.error("❌ Gemini Crash Log:", error.message);
+        console.error("❌ Chat API Error:", error.message);
         res.json({ 
             text: "I’m having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
             fallback: true
