@@ -775,9 +775,10 @@ async function startServer() {
         console.log(`📊 Database: ${mongoose.connection.name}`);
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
-        // 🔴 Trimming to ensure no space/newline error
-           // --- server.js AI REFACTOR START ---
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
+          // 🔴 Trimming to ensure no space/newline error
+              // --- server.js AI REFACTOR START ---
+     const geminiApiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
+     const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 app.post('/api/chat', async (req, res) => {
     try {
@@ -787,6 +788,14 @@ app.post('/api/chat', async (req, res) => {
         if (!prompt) {
             console.error("⚠️ No prompt received from frontend");
             return res.status(400).json({ error: "Prompt is required" });
+        }
+
+        if (!genAI) {
+            console.error("⚠️ GEMINI_API_KEY missing or invalid");
+            return res.json({
+                text: "I’m here to help with fashion recommendations. Our AI service is refreshing right now—please try again in a moment.",
+                fallback: true
+            });
         }
 
         console.log(`💬 AI Context check for: ${prompt.substring(0, 30)}...`);
@@ -854,10 +863,9 @@ app.post('/api/chat', async (req, res) => {
 
     } catch (error) {
         console.error("❌ Gemini Crash Log:", error.message);
-        // Fallback for 404: Try a simple generation if session fails
-        res.status(500).json({ 
-            error: "Gemini Sync Issue", 
-            message: "AI is re-stocking the products. Try in 30 seconds." 
+        res.json({ 
+            text: "I’m having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
+            fallback: true
         });
     }
 });
