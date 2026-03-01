@@ -11,6 +11,18 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_APP_ID || '1:586466157633:web:2bf5267dca5af4684952c0',
 };
 
+// Debug: Verify each config value
+if (typeof window !== 'undefined') {
+  console.log('🔍 Firebase Config Environment Check:', {
+    apiKey: firebaseConfig.apiKey ? 'Set (' + firebaseConfig.apiKey.substring(0, 10) + '...)' : 'UNDEFINED',
+    authDomain: firebaseConfig.authDomain || 'UNDEFINED',
+    projectId: firebaseConfig.projectId || 'UNDEFINED',
+    storageBucket: firebaseConfig.storageBucket || 'UNDEFINED',
+    messagingSenderId: firebaseConfig.messagingSenderId || 'UNDEFINED',
+    appId: firebaseConfig.appId ? firebaseConfig.appId.substring(0, 15) + '...' : 'UNDEFINED',
+  });
+}
+
 const hasFirebaseConfig = Boolean(
   firebaseConfig.apiKey &&
   firebaseConfig.authDomain &&
