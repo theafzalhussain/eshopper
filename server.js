@@ -778,10 +778,10 @@ async function startServer() {
         // 🔴 Sabse pehle Gemini Model initialization
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-pro",
+            model: "gemini-pro",
             systemInstruction: "You are the expert Fashion Stylist for eShopper Boutique Luxe. Give brief, trendy, and luxury-focused fashion advice." 
         });
-        console.log("🤖 Gemini AI initialized successfully (gemini-1.5-pro)");
+        console.log("🤖 Gemini AI initialized successfully (gemini-pro)");
 
         // 🤖 GEMINI AI CHAT ENDPOINT - SIMPLIFIED & OPTIMIZED
         app.post("/api/chat", async (req, res) => {
