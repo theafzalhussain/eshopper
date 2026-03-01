@@ -538,7 +538,7 @@ app.post('/login', authLimiter, async (req, res) => {
     try {
         const searchTerm = req.body.username.toLowerCase().trim();
         const user = await User.findOne({ $or: [{ username: searchTerm }, { email: searchTerm }] });
-        
+
         // 🔒 CHECK IF ACCOUNT IS LOCKED
         if (user && user.lockUntil && Date.now() < user.lockUntil) {
             const minutesRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
@@ -547,35 +547,61 @@ app.post('/login', authLimiter, async (req, res) => {
                 remainingMinutes: minutesRemaining
             });
         }
-        
-        if (user && await bcrypt.compare(req.body.password, user.password)) {
-            // ✅ LOGIN SUCCESS - RESET FAILED ATTEMPTS
-            user.failedAttempts = 0;
-            user.lockUntil = undefined;
-            user.lastLogin = new Date();
-            await user.save();
-            
-            const { password: _pw, otp: _otp, otpExpires: _exp, failedAttempts: _fa, lockUntil: _lu, ...safeUser } = user.toJSON();
-            res.json(safeUser);
-        } else {
-            // ❌ LOGIN FAILED - INCREMENT FAILED ATTEMPTS
-            if (user) {
-                user.failedAttempts = (user.failedAttempts || 0) + 1;
+
+        // 🔐 CHECK IF USER EXISTS AND HAS PASSWORD
+        if (user) {
+            // ❌ BLOCK LOGIN IF NO PASSWORD (Google/Phone auth user)
+            if (!user.password) {
+                const authMethod = user.provider === 'google' ? 'Google Login' : 
+                                  user.provider === 'phone' ? 'Phone Login' :
+                                  'your authentication provider';
                 
-                // LOCK ACCOUNT AFTER 5 FAILED ATTEMPTS
-                if (user.failedAttempts >= 5) {
-                    user.lockUntil = new Date(Date.now() + 15 * 60000); // 15 minutes
-                    await user.save();
-                    return res.status(403).json({ 
-                        message: "Too many failed login attempts. Account locked for 15 minutes.",
-                        remainingMinutes: 15
-                    });
-                }
+                console.warn(`⚠️ Login attempt by ${user.provider} user via manual login: ${user.email || user.username}`);
                 
-                await user.save();
+                return res.status(403).json({ 
+                    message: `This account uses ${authMethod}. Use ${authMethod} to sign in or set a password using Forgot Password.`,
+                    provider: user.provider,
+                    requiresFirebaseAuth: true
+                });
             }
-            res.status(401).json({ message: "Invalid Credentials" });
+
+            // ✅ PASSWORD EXISTS - COMPARE PASSWORDS
+            if (await bcrypt.compare(req.body.password, user.password)) {
+                // ✅ LOGIN SUCCESS - RESET FAILED ATTEMPTS
+                user.failedAttempts = 0;
+                user.lockUntil = undefined;
+                user.lastLogin = new Date();
+                await user.save();
+                
+                console.log(`✅ Login successful: ${user.email || user.username}`);
+                const { password: _pw, otp: _otp, otpExpires: _exp, failedAttempts: _fa, lockUntil: _lu, ...safeUser } = user.toJSON();
+                return res.json(safeUser);
+            }
         }
+
+        // ❌ LOGIN FAILED - INCREMENT FAILED ATTEMPTS
+        if (user) {
+            user.failedAttempts = (user.failedAttempts || 0) + 1;
+            
+            // LOCK ACCOUNT AFTER 5 FAILED ATTEMPTS
+            if (user.failedAttempts >= 5) {
+                user.lockUntil = new Date(Date.now() + 15 * 60000); // 15 minutes
+                await user.save();
+                console.warn(`🔒 Account locked: ${user.email || user.username} - Too many failed attempts`);
+                return res.status(403).json({ 
+                    message: "Too many failed login attempts. Account locked for 15 minutes.",
+                    remainingMinutes: 15
+                });
+            }
+            
+            await user.save();
+            console.warn(`⚠️ Failed login attempt #${user.failedAttempts}: ${user.email || user.username}`);
+        } else {
+            console.warn(`⚠️ Login attempt for non-existent user: ${searchTerm}`);
+        }
+
+        return res.status(401).json({ message: "Invalid Credentials" });
+        
     } catch (e) { 
         console.error("❌ Login Error:", e.message);
         res.status(500).json({ message: "Something went wrong." }); 

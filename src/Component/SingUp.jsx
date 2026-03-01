@@ -168,10 +168,17 @@ export default function SingUp() {
                 return
             }
 
+            console.log('🔵 Initiating Google Sign-Up...');
             const result = await signInWithPopup(auth, googleProvider)
             const user = result.user
             const idToken = await user.getIdToken()
             
+            console.log('✅ Google authentication successful:', {
+                uid: user.uid,
+                email: user.email,
+                name: user.displayName
+            });
+
             // Sync with backend
             const response = await fetch(`${BASE_URL}/api/auth-sync`, {
                 method: 'POST',
@@ -191,11 +198,21 @@ export default function SingUp() {
 
             if (response.ok) {
                 const backendUser = await response.json()
+                console.log('✅ Backend sync successful:', {
+                    id: backendUser.id || backendUser._id,
+                    email: backendUser.email,
+                    username: backendUser.username,
+                    provider: backendUser.provider
+                });
+
+                // Store user data
                 localStorage.setItem("userid", backendUser.id || backendUser._id)
                 localStorage.setItem("name", backendUser.name)
                 localStorage.setItem("login", "true")
                 localStorage.setItem("role", backendUser.role || "User")
+                localStorage.setItem("username", backendUser.username)
                 localStorage.setItem("userToken", idToken)
+                
                 alert("Welcome! Account created successfully!")
                 navigate("/profile")
             } else {
@@ -203,12 +220,21 @@ export default function SingUp() {
                 try {
                     const errorData = await response.json()
                     backendMessage = errorData.message || backendMessage
+                    console.error('❌ Backend error:', errorData);
                 } catch (_) {}
                 setGeneralError(backendMessage)
             }
         } catch (err) {
-            console.error("Google Sign Up Error:", err)
-            setGeneralError(err.message || "Failed to sign up with Google")
+            console.error("❌ Google Sign Up Error:", err)
+            
+            // Handle specific Google auth errors
+            if (err.code === 'auth/popup-closed-by-user') {
+                setGeneralError("Sign-up cancelled. Please try again.")
+            } else if (err.code === 'auth/popup-blocked') {
+                setGeneralError("Pop-up blocked. Please allow pop-ups and try again.")
+            } else {
+                setGeneralError(err.message || "Failed to sign up with Google")
+            }
         } finally {
             setLoading(false)
         }

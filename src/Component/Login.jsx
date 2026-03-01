@@ -66,9 +66,12 @@ export default function Login() {
     async function postData(e) {
         e.preventDefault();
         setLoading(true)
+        setErrorMsg("");
+        
         try {
             const user = await loginAPI(data)
             setLoading(false)
+            
             if (user.username) {
                 // --- STANDARD LOGIN SETUP ---
                 localStorage.setItem("login", true);
@@ -79,7 +82,6 @@ export default function Login() {
 
                 // --- REMEMBER ME: SAVE TOKEN & CREDENTIALS ---
                 if (rememberMe) {
-                    // Save full user object as token for auto-login
                     const userToken = {
                         id: user.id,
                         username: user.username,
@@ -88,25 +90,36 @@ export default function Login() {
                         email: user.email
                     }
                     localStorage.setItem("userToken", JSON.stringify(userToken))
-                    
-                    // Also save credentials for form pre-fill
                     localStorage.setItem("savedCredentials", JSON.stringify({
                         username: data.username,
                         password: data.password
                     }))
                 } else {
-                    // Clear saved credentials if "Remember Me" is unchecked
                     localStorage.removeItem("userToken")
                     localStorage.removeItem("savedCredentials")
                 }
 
                 navigate(user.role === "Admin" ? "/admin-home" : "/profile");
             } else {
-                setErrorMsg(user.message || "Invalid credentials. Please try again.");
+                // Check if it's a Firebase auth provider error
+                if (user.requiresFirebaseAuth && user.provider) {
+                    setErrorMsg(user.message || "Invalid credentials. Please try again.");
+                } else {
+                    setErrorMsg(user.message || "Invalid credentials. Please try again.");
+                }
             }
         } catch (err) {
             setLoading(false)
-            setErrorMsg(err.message || "Login failed. Please try again.");
+            
+            // Better error handling
+            if (err.response?.status === 403) {
+                // Account locked or Firebase auth required
+                setErrorMsg(err.response.data.message || "Access denied. Please try again later.");
+            } else {
+                setErrorMsg(err.message || "Login failed. Please try again.");
+            }
+            
+            console.error("Login Error:", err);
         }
     }
 
