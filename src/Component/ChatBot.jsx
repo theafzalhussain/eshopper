@@ -157,13 +157,13 @@ export default function ChatBot() {
             </AnimatePresence>
 
             <style dangerouslySetInnerHTML={{ __html: `
-                /* ===== PREMIUM CHATBOT MASTER ===== */
+                /* ===== ULTRA PREMIUM CHATBOT MASTER ===== */
                 .chatbot-master-wrapper { 
                     position: fixed; bottom: 32px; right: 32px; z-index: 9999; 
                     font-family: 'Inter', 'Segoe UI', sans-serif;
                 }
                 
-                /* ===== PREMIUM ANIMATED BUBBLE ===== */
+                /* ===== ULTRA PREMIUM ANIMATED BUBBLE ===== */
                 .chatbot-bubble {
                     width: 76px; height: 76px; border-radius: 50%; 
                     background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 50%, #000 100%);
@@ -171,19 +171,27 @@ export default function ChatBot() {
                     cursor: pointer; display: flex; align-items: center; justify-content: center; 
                     color: #FFD700; 
                     box-shadow: 
-                        0 0 40px rgba(255, 215, 0, 0.4),
+                        0 0 50px rgba(255, 215, 0, 0.5),
+                        0 0 80px rgba(255, 215, 0, 0.25),
                         0 15px 40px rgba(0, 0, 0, 0.5),
                         inset 0 1px 0 rgba(255, 255, 255, 0.1);
                     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
                     position: relative;
+                    animation: bubbleGlow 3s ease-in-out infinite;
+                }
+
+                @keyframes bubbleGlow {
+                    0%, 100% { box-shadow: 0 0 50px rgba(255, 215, 0, 0.5), 0 0 80px rgba(255, 215, 0, 0.25), 0 15px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+                    50% { box-shadow: 0 0 70px rgba(255, 215, 0, 0.7), 0 0 120px rgba(255, 215, 0, 0.4), 0 15px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15); }
                 }
 
                 .chatbot-bubble:hover {
-                    transform: translateY(-8px) scale(1.08);
+                    transform: translateY(-10px) scale(1.12);
                     box-shadow: 
-                        0 0 60px rgba(255, 215, 0, 0.6),
-                        0 20px 50px rgba(0, 0, 0, 0.6),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+                        0 0 80px rgba(255, 215, 0, 0.8),
+                        0 0 120px rgba(255, 215, 0, 0.5),
+                        0 25px 60px rgba(0, 0, 0, 0.7),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
                 }
 
                 .chatbot-bubble:active {
@@ -343,108 +351,149 @@ export default function ChatBot() {
                 }
 
                 .chat-footer button { 
-                    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-                    color: #111; border: none; width: 42px; height: 42px; border-radius: 50%; 
+                    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+                    color: #111; border: 1.5px solid #FFA500; width: 42px; height: 42px; border-radius: 50%; 
                     cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                    box-shadow: 0 8px 20px rgba(255, 215, 0, 0.3);
+                    box-shadow: 
+                        0 0 20px rgba(255, 215, 0, 0.4),
+                        0 8px 20px rgba(255, 215, 0, 0.3);
                     display: flex; align-items: center; justify-content: center;
                     font-weight: bold;
                 }
                 .chat-footer button:hover:not(:disabled) { 
-                    transform: translateY(-4px) scale(1.08);
-                    box-shadow: 0 12px 30px rgba(255, 215, 0, 0.5);
+                    transform: translateY(-5px) scale(1.12);
+                    box-shadow: 
+                        0 0 40px rgba(255, 215, 0, 0.6),
+                        0 15px 35px rgba(255, 215, 0, 0.5);
                 }
-                .chat-footer button:active:not(:disabled) { transform: scale(0.92); }
+                .chat-footer button:active:not(:disabled) { transform: scale(0.88); }
                 .chat-footer button:disabled { opacity: 0.4; cursor: not-allowed; }
 
                 /* ===== FULLY RESPONSIVE DESIGN ===== */
+                @media (max-width: 1400px) {
+                    .chatbot-master-wrapper { bottom: 30px; right: 30px; }
+                    .chatbot-bubble { width: 74px; height: 74px; }
+                    .chatbot-card { width: min(375px, calc(100vw - 40px)); height: min(530px, calc(100vh - 145px)); }
+                }
+
                 @media (max-width: 1200px) {
                     .chatbot-master-wrapper { bottom: 28px; right: 28px; }
-                    .chatbot-bubble { width: 72px; height: 72px; }
-                    .chatbot-card { width: min(370px, calc(100vw - 35px)); height: min(520px, calc(100vh - 140px)); }
+                    .chatbot-bubble { width: 70px; height: 70px; }
+                    .chatbot-card { width: min(365px, calc(100vw - 36px)); height: min(510px, calc(100vh - 135px)); }
+                }
+
+                @media (max-width: 1024px) {
+                    .chatbot-master-wrapper { bottom: 26px; right: 26px; }
+                    .chatbot-bubble { width: 68px; height: 68px; }
+                    .chatbot-card { width: min(360px, calc(100vw - 32px)); height: min(495px, calc(100vh - 130px)); }
                 }
 
                 @media (max-width: 768px) {
-                    .chatbot-master-wrapper { bottom: 24px; right: 24px; }
-                    .chatbot-bubble { width: 68px; height: 68px; }
+                    .chatbot-master-wrapper { bottom: 22px; right: 22px; }
+                    .chatbot-bubble { width: 64px; height: 64px; }
                     .chatbot-card { 
-                        width: min(360px, calc(100vw - 30px)); 
-                        height: min(500px, calc(100vh - 130px));
-                        bottom: 90px;
+                        width: min(355px, calc(100vw - 28px)); 
+                        height: min(480px, calc(100vh - 120px));
+                        bottom: 88px;
                         border-radius: 28px;
                     }
-                    .chat-header { padding: 18px 20px; }
-                    .header-info h4 { font-size: 14px; }
-                    .header-info span { font-size: 9px; }
-                    .chat-body { padding: 16px; gap: 12px; }
-                    .msg-bubble { padding: 11px 15px; font-size: 12px; }
-                    .chat-footer { padding: 14px; gap: 8px; }
-                    .chat-footer input { font-size: 12px; padding: 9px 14px; }
-                    .chat-footer button { width: 39px; height: 39px; }
+                    .chat-header { padding: 17px 19px; }
+                    .header-info h4 { font-size: 13.5px; }
+                    .header-info span { font-size: 8.5px; }
+                    .chat-body { padding: 15px; gap: 11px; }
+                    .msg-bubble { padding: 10px 14px; font-size: 11.5px; }
+                    .chat-footer { padding: 13px; gap: 9px; }
+                    .chat-footer input { font-size: 11.5px; padding: 8px 13px; }
+                    .chat-footer button { width: 38px; height: 38px; }
                 }
 
                 @media (max-width: 640px) {
-                    .chatbot-master-wrapper { bottom: 20px; right: 20px; }
-                    .chatbot-bubble { width: 64px; height: 64px; }
+                    .chatbot-master-wrapper { bottom: 18px; right: 18px; }
+                    .chatbot-bubble { width: 60px; height: 60px; }
                     .chatbot-card { 
-                        width: min(92vw, 340px); 
-                        height: min(480px, calc(100vh - 120px));
-                        bottom: 85px; border-radius: 26px;
+                        width: min(93vw, 330px); 
+                        height: min(470px, calc(100vh - 110px));
+                        bottom: 80px; border-radius: 25px;
                     }
-                    .chat-header { padding: 16px 18px; }
-                    .header-info { gap: 12px; }
-                    .header-info h4 { font-size: 13px; }
-                    .status-dot { width: 8px; height: 8px; }
+                    .chat-header { padding: 15px 16px; }
+                    .header-info { gap: 11px; }
+                    .header-info h4 { font-size: 12px; }
+                    .status-dot { width: 7px; height: 7px; }
                     .msg-row { max-width: 88%; }
-                    .msg-bubble { padding: 10px 14px; font-size: 12px; }
-                    .thinking span { width: 6px; height: 6px; }
+                    .msg-bubble { padding: 9px 13px; font-size: 11px; }
+                    .thinking span { width: 5.5px; height: 5.5px; }
                 }
 
                 @media (max-width: 480px) {
-                    .chatbot-master-wrapper { bottom: 16px; right: 16px; }
-                    .chatbot-bubble { width: 60px; height: 60px; bottom: 12px; right: 12px; }
+                    .chatbot-master-wrapper { bottom: 14px; right: 14px; }
+                    .chatbot-bubble { width: 56px; height: 56px; }
                     .chatbot-card { 
                         position: fixed; 
-                        width: 95vw; height: 85vh;
-                        bottom: 20px; right: 2.5%; left: 2.5%;
-                        border-radius: 24px;
+                        width: 96vw; height: 84vh;
+                        bottom: 18px; right: 2%; left: 2%;
+                        border-radius: 23px;
                     }
-                    .chat-header { padding: 14px 16px; }
-                    .header-info h4 { font-size: 12px; }
-                    .header-info span { font-size: 8px; letter-spacing: 1px; }
-                    .chat-body { padding: 12px; gap: 10px; }
-                    .msg-row { max-width: 90%; }
-                    .msg-bubble { padding: 9px 12px; font-size: 11px; }
-                    .chat-footer { padding: 12px; }
-                    .chat-footer input { font-size: 11px; padding: 8px 12px; }
-                    .chat-footer button { width: 36px; height: 36px; }
+                    .chat-header { padding: 13px 15px; }
+                    .header-info h4 { font-size: 11px; }
+                    .header-info span { font-size: 7px; letter-spacing: 0.8px; }
+                    .chat-body { padding: 11px; gap: 9px; }
+                    .msg-row { max-width: 91%; }
+                    .msg-bubble { padding: 8px 11px; font-size: 10.5px; }
+                    .chat-footer { padding: 11px; }
+                    .chat-footer input { font-size: 10px; padding: 7px 11px; }
+                    .chat-footer button { width: 34px; height: 34px; }
                     .chatbot-bubble.active { display: none; }
                 }
 
                 @media (max-width: 380px) {
-                    .chatbot-master-wrapper { bottom: 12px; right: 12px; }
-                    .chatbot-bubble { width: 56px; height: 56px; }
+                    .chatbot-master-wrapper { bottom: 10px; right: 10px; }
+                    .chatbot-bubble { width: 52px; height: 52px; }
                     .chatbot-card { 
-                        width: 98vw; height: 82vh;
+                        width: 97vw; height: 81vh;
                         border-radius: 20px;
                     }
-                    .chat-header { padding: 12px 14px; }
-                    .header-info { gap: 10px; }
-                    .header-info h4 { font-size: 11px; }
-                    .header-info span { font-size: 7px; }
-                    .chat-body { padding: 10px; }
-                    .msg-bubble { padding: 8px 11px; font-size: 10px; }
-                    .msg-time { font-size: 8px; }
-                    .chat-footer { padding: 10px; gap: 8px; }
-                    .chat-footer input { font-size: 10px; padding: 7px 10px; }
-                    .chat-footer button { width: 34px; height: 34px; font-size: 14px; }
+                    .chat-header { padding: 11px 13px; }
+                    .header-info { gap: 9px; }
+                    .header-info h4 { font-size: 10px; }
+                    .header-info span { font-size: 6.5px; }
+                    .chat-body { padding: 9px; }
+                    .msg-bubble { padding: 7px 10px; font-size: 9.5px; }
+                    .msg-time { font-size: 7px; }
+                    .chat-footer { padding: 9px; gap: 7px; }
+                    .chat-footer input { font-size: 9px; padding: 6px 10px; }
+                    .chat-footer button { width: 32px; height: 32px; font-size: 12px; }
+                }
+
+                @media (max-width: 320px) {
+                    .chatbot-master-wrapper { bottom: 8px; right: 8px; }
+                    .chatbot-bubble { width: 48px; height: 48px; }
+                    .chatbot-card { 
+                        width: 98vw; height: 80vh;
+                        border-radius: 18px;
+                    }
+                    .chat-header { padding: 10px 12px; }
+                    .header-info h4 { font-size: 9px; }
+                    .chat-body { padding: 8px; }
+                    .msg-bubble { padding: 6px 9px; font-size: 9px; }
+                    .chat-footer input { font-size: 8px; }
+                    .chat-footer button { width: 30px; height: 30px; }
                 }
 
                 /* LANDSCAPE OPTIMIZATION */
-                @media (max-height: 600px) and (orientation: landscape) {
-                    .chatbot-card { height: 90vh; }
-                    .chat-header { padding: 12px 16px; }
-                    .chat-body { padding: 12px; }
+                @media (max-height: 700px) and (orientation: landscape) {
+                    .chatbot-card { height: max(92vh, 450px); }
+                    .chat-header { padding: 11px 15px; }
+                    .chat-body { padding: 11px; gap: 10px; }
+                    .msg-bubble { padding: 8px 12px; font-size: 11px; }
+                    .chat-footer { padding: 11px; }
+                }
+
+                @media (max-height: 500px) and (orientation: landscape) {
+                    .chatbot-card { height: 88vh; }
+                    .chat-header { padding: 9px 12px; }
+                    .chat-body { padding: 9px; gap: 8px; }
+                    .msg-bubble { padding: 6px 10px; font-size: 10px; }
+                    .chat-footer { padding: 9px; }
                 }
             `}} />
         </div>
