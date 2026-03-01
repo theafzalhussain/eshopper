@@ -25,3 +25,5 @@ yarn-error.log*
 # Claude Code temp files
 tmpclaude-*
 nul
+
+firebase-admin.json
