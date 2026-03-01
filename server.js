@@ -783,103 +783,65 @@ async function startServer() {
         });
         console.log("🤖 Gemini AI initialized successfully (gemini-pro)");
 
-        // 🤖 GEMINI AI CHAT ENDPOINT - SIMPLIFIED & OPTIMIZED
-        app.post("/api/chat", async (req, res) => {
+        // 🤖 GEMINI AI CHAT ENDPOINT - SIMPLIFIED & CLEAN
+        app.post('/api/chat', async (req, res) => {
             try {
                 const { message, conversationHistory } = req.body;
+                console.log(`💬 Chat request received. User prompt: ${message.substring(0, 20)}...`);
 
                 // Validate input
                 if (!message || message.trim().length === 0) {
                     return res.status(400).json({ error: "Message cannot be empty" });
                 }
 
-                // 🛠️ MAGIC FIX: History ko normalize karna (Gemini 1.5 style)
-                // Agar history user se shuru nahi hai, toh use khali kar do (Avoid Role Error)
-                let safeHistory = (conversationHistory || [])
-                    .filter(msg => msg.role === 'user' || msg.role === 'model' || msg.sender === 'user' || msg.sender === 'bot')
-                    .map(msg => ({
-                        role: msg.role || (msg.sender === 'bot' ? 'model' : 'user'),
-                        parts: [{ text: String(msg.text || msg.parts?.[0]?.text || '').trim() }]
-                    }))
-                    .filter(msg => msg.parts[0].text.length > 0);
+                // System instruction for Gemini
+                const instructions = "System: You are an Intelligent Fashion Assistant for eShopper Boutique Luxe. Only suggest products available in a premium clothing store. Be stylish and professional.";
+                
+                // Combine instruction with user prompt
+                const fullPrompt = `${instructions}\n\nUser Question: ${message}`;
 
-                // Gemini zidd karta hai ki history ALWAYS start with USER
-                // Agar pehla message model hai, toh remove kar do
-                while (safeHistory.length > 0 && safeHistory[0].role === 'model') {
-                    console.warn("⚠️ Removing leading model message from history");
-                    safeHistory.shift();
-                }
+                // Step-by-Step history building to avoid role alternation errors
+                let cleanHistory = (conversationHistory || [])
+                    .filter(msg => msg.text || msg.parts?.[0]?.text) // Ensure message has content
+                    .map(item => ({
+                        role: item.role === 'model' ? 'model' : 'user',
+                        parts: [{ text: String(item.text || item.parts?.[0]?.text || "").trim() }]
+                    }));
 
-                // Gemini expect karta hai ki agar history hai, toh vo USER par khatam ho (odd length)
-                // Taaki new prompt user se start ho sake
-                // Isliye agar history even length hai (model par khatam), toh last message remove kar do
-                if (safeHistory.length % 2 === 0 && safeHistory.length > 0) {
-                    console.warn("⚠️ Removing trailing model message to prepare for new user message");
-                    safeHistory.pop();
-                }
+                console.log(`📝 Chat history: ${cleanHistory.length} messages`);
 
-                console.log(`📝 Chat history normalized: ${safeHistory.length} messages`);
-
-                // Start chat session with safe history
+                // Start chat with clean history
                 const chat = model.startChat({
-                    history: safeHistory,
-                    generationConfig: {
-                        maxOutputTokens: 500,
-                        temperature: 0.7,
-                        topP: 0.95,
-                        topK: 40
-                    }
+                    history: cleanHistory,
                 });
 
-                // Send user message
+                // Send message to Gemini
                 console.log(`💬 Sending to Gemini: "${message.substring(0, 50)}..."`);
-                const result = await chat.sendMessage(message);
-                const responseText = await result.response.text();
+                const result = await chat.sendMessage(fullPrompt);
+                const textResponse = await result.response.text();
 
                 // Validate response
-                if (!responseText || responseText.trim().length === 0) {
+                if (!textResponse || textResponse.trim().length === 0) {
                     throw new Error("Empty response from Gemini");
                 }
 
-                console.log(`✅ Gemini response: ${responseText.substring(0, 100)}...`);
+                console.log(`✅ Gemini response: ${textResponse.substring(0, 100)}...`);
 
                 // Send to frontend
                 res.json({ 
                     success: true, 
-                    message: responseText,
+                    message: textResponse,
                     timestamp: new Date().toISOString()
                 });
 
             } catch (error) {
-                console.error("❌ Gemini Error:", error.message);
-                console.error("   Details:", error);
-
-                // Specific error handling
-                if (error.message?.includes('API key')) {
-                    return res.status(500).json({ 
-                        error: "🔒 AI service authentication failed. Please contact support.",
-                        details: "Invalid or missing API key"
-                    });
-                }
-
-                if (error.message?.includes('First content should be with role user')) {
-                    return res.status(500).json({ 
-                        error: "🔄 Conversation error. Please start a fresh chat.",
-                        details: "History format issue - restarting..."
-                    });
-                }
-
-                if (error.message?.includes('SAFETY')) {
-                    return res.status(500).json({ 
-                        error: "⚠️ Content filtered by safety guidelines. Please rephrase.",
-                        details: "Safety filter triggered"
-                    });
-                }
-
-                // Generic error
+                console.error("❌ GEMINI LOGIC CRASHED:", error.message);
+                console.error("   Stack:", error.stack);
+                
+                // Agar fir bhi 404 aaye, toh frontend ko batayein ki model unreachable hai
                 res.status(500).json({ 
-                    error: "❌ Failed to process your message. Please try again.",
-                    details: error.message
+                    error: "Model error. Switching backend model settings might be needed.",
+                    details: error.message 
                 });
             }
         });
