@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageCircle, Send, X, Loader2 } from 'lucide-react'
+import axios from 'axios'
 import { BASE_URL } from '../constants'
 
 export default function ChatBot() {
@@ -70,36 +71,37 @@ export default function ChatBot() {
         }
 
         setMessages(prev => [...prev, userMessage])
+        const currentInput = inputValue.trim()
+        const currentHistory = getConversationHistory()
         setInputValue("")
         setLoading(true)
         setError(null)
 
         try {
-            console.log("📤 Sending to backend:", inputValue)
+            console.log("📤 Sending to backend:", currentInput)
+            console.log("📤 History being sent:", currentHistory)
 
-            const response = await fetch(`${BASE_URL}/api/chat`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
+            const response = await axios.post(
+                `${BASE_URL}/api/chat`,
+                {
+                    prompt: currentInput,
+                    history: currentHistory,
                 },
-                body: JSON.stringify({
-                    message: inputValue.trim(),
-                    conversationHistory: getConversationHistory(),
-                }),
-            })
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            )
 
-            const data = await response.json()
+            const data = response.data
 
-            if (!response.ok) {
-                throw new Error(data.error || data.details || "Failed to get response")
-            }
-
-            console.log("✅ Response from Gemini:", data.message)
+            console.log("✅ Response from Gemini:", data.text || data.message)
 
             // Add bot response to UI
             const botMessage = {
                 id: Date.now() + 1,
-                text: data.message,
+                text: data.text || data.message,
                 sender: "bot",
                 timestamp: new Date(),
             }
