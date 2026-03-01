@@ -775,73 +775,49 @@ async function startServer() {
         console.log(`📊 Database: ${mongoose.connection.name}`);
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
-        // 🔴 Sabse pehle Gemini Model initialization
+        // 🔴 Trimming to ensure no space/newline error
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-pro",
-            systemInstruction: "You are the expert Fashion Stylist for eShopper Boutique Luxe. Give brief, trendy, and luxury-focused fashion advice." 
-        });
-        console.log("🤖 Gemini AI initialized successfully (gemini-pro)");
 
-        // 🤖 GEMINI AI CHAT ENDPOINT - SIMPLIFIED & CLEAN
+        // 🤖 GEMINI AI CHAT ENDPOINT - PROFESSIONAL FLASH FIX
         app.post('/api/chat', async (req, res) => {
             try {
-                const { message, conversationHistory } = req.body;
-                console.log(`💬 Chat request received. User prompt: ${message.substring(0, 20)}...`);
+                const { prompt, history } = req.body;
 
-                // Validate input
-                if (!message || message.trim().length === 0) {
-                    return res.status(400).json({ error: "Message cannot be empty" });
-                }
+                // 📊 Step 1: MongoDB se data la rahe hain (Syncing with DB)
+                // 'Product' wahi model hai jo humne server.js me define kiya hai
+                const allProducts = await Product.find({}, 'name baseprice maincategory'); 
+                const productList = allProducts.map(p => `${p.name} (Rs.${p.baseprice})`).join(", ");
 
-                // System instruction for Gemini
-                const instructions = "System: You are an Intelligent Fashion Assistant for eShopper Boutique Luxe. Only suggest products available in a premium clothing store. Be stylish and professional.";
-                
-                // Combine instruction with user prompt
-                const fullPrompt = `${instructions}\n\nUser Question: ${message}`;
-
-                // Step-by-Step history building to avoid role alternation errors
-                let cleanHistory = (conversationHistory || [])
-                    .filter(msg => msg.text || msg.parts?.[0]?.text) // Ensure message has content
-                    .map(item => ({
-                        role: item.role === 'model' ? 'model' : 'user',
-                        parts: [{ text: String(item.text || item.parts?.[0]?.text || "").trim() }]
-                    }));
-
-                console.log(`📝 Chat history: ${cleanHistory.length} messages`);
-
-                // Start chat with clean history
-                const chat = model.startChat({
-                    history: cleanHistory,
+                // 🧠 Step 2: AI ko Context aur Training dena
+                // Ise 'Flash' model par set kar rahe hain jo current standard hai
+                const model = genAI.getGenerativeModel({ 
+                    model: "gemini-1.5-flash"
                 });
 
-                // Send message to Gemini
-                console.log(`💬 Sending to Gemini: "${message.substring(0, 50)}..."`);
-                const result = await chat.sendMessage(fullPrompt);
-                const textResponse = await result.response.text();
+                // Professional Prompt construction
+                const systemInstruction = `You are a helpful and trendy fashion stylist assistant for "eShopper Boutique Luxe". 
+        Our Current Inventory Includes: ${productList}.
+        Always suggest items ONLY from this list. If we don't have it, tell them we are launching it soon. 
+        Keep replies stylish and very short (max 2 sentences).`;
 
-                // Validate response
-                if (!textResponse || textResponse.trim().length === 0) {
-                    throw new Error("Empty response from Gemini");
-                }
+                const fullPrompt = `${systemInstruction}\n\nUser asked: ${prompt}`;
 
-                console.log(`✅ Gemini response: ${textResponse.substring(0, 100)}...`);
+                // Step 3: Message bhej rahe hain
+                // 'v1beta' errors se bachne ke liye hum startChat ki jagah generateContent use karenge jo zyada stable hai
+                const result = await model.generateContent(fullPrompt);
+                const response = await result.response;
+                const textResponse = response.text();
 
-                // Send to frontend
-                res.json({ 
-                    success: true, 
-                    message: textResponse,
-                    timestamp: new Date().toISOString()
-                });
+                console.log("✅ Gemini Success response sent");
+                res.json({ text: textResponse });
 
             } catch (error) {
-                console.error("❌ GEMINI LOGIC CRASHED:", error.message);
-                console.error("   Stack:", error.stack);
+                console.error("❌ GEMINI CRITICAL ERROR:", error.message);
                 
-                // Agar fir bhi 404 aaye, toh frontend ko batayein ki model unreachable hai
+                // Final fallback if Gemini still rejects (helpful for debugging)
                 res.status(500).json({ 
-                    error: "Model error. Switching backend model settings might be needed.",
-                    details: error.message 
+                    error: "Gemini Sync Error",
+                    message: "Our AI assistant is updating its catalog. Please try in 1 minute." 
                 });
             }
         });
