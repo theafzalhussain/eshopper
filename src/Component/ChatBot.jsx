@@ -193,12 +193,13 @@ export default function ChatBot() {
                             exit={{ rotate: -180, scale: 0 }}
                             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                         >
-                            {/* 🤖 PREMIUM ANIMATED AI ROBOT SVG */}
-                            <svg width="42" height="42" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            {/* 🤖 PREMIUM ANIMATED AI ROBOT SVG - LARGER VERSION */}
+                            <svg width="55" height="55" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <defs>
                                     <linearGradient id="robotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#1a1a2e" />
-                                        <stop offset="100%" stopColor="#0f3460" />
+                                        <stop offset="0%" stopColor="#FFD700" />
+                                        <stop offset="50%" stopColor="#FFA500" />
+                                        <stop offset="100%" stopColor="#FF6B9D" />
                                     </linearGradient>
                                     <filter id="glow">
                                         <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
@@ -501,22 +502,22 @@ export default function ChatBot() {
 
             {/* 🎨 PREMIUM LUXURY STYLES */}
             <style dangerouslySetInnerHTML={{ __html: `
-                /* Floating Chat Bubble - Premium Animated AI Robot */
+                /* Floating Chat Bubble - Premium Animated AI Robot with Light Background */
                 .chatbot-bubble {
                     position: fixed;
                     bottom: 30px;
                     right: 30px;
-                    width: 85px;
-                    height: 85px;
+                    width: 95px;
+                    height: 95px;
                     border-radius: 50%;
-                    background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 30%, #1a1a2e 70%, #0f3460 100%);
-                    color: white;
-                    border: 3px solid rgba(255, 215, 0, 0.5);
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 255, 0.98) 100%);
+                    color: #1a1a2e;
+                    border: 3px solid rgba(255, 215, 0, 0.6);
                     box-shadow: 
-                        0 20px 60px rgba(138, 43, 226, 0.5),
-                        0 10px 30px rgba(255, 215, 0, 0.3),
-                        inset 0 -3px 8px rgba(0, 0, 0, 0.2),
-                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+                        0 25px 70px rgba(138, 43, 226, 0.35),
+                        0 15px 40px rgba(255, 215, 0, 0.25),
+                        inset 0 2px 5px rgba(255, 255, 255, 0.8),
+                        inset 0 -2px 8px rgba(138, 43, 226, 0.1);
                     cursor: pointer;
                     display: flex;
                     align-items: center;
@@ -524,8 +525,8 @@ export default function ChatBot() {
                     z-index: 9998;
                     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
                     font-size: 28px;
-                    backdrop-filter: blur(10px);
-                    -webkit-backdrop-filter: blur(10px);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
                 }
 
                 .robot-icon-container {
@@ -537,17 +538,18 @@ export default function ChatBot() {
                 }
 
                 .chatbot-bubble:hover {
-                    transform: translateY(-8px) scale(1.08);
+                    transform: translateY(-10px) scale(1.12) rotate(2deg);
                     box-shadow: 
-                        0 25px 80px rgba(138, 43, 226, 0.6),
-                        0 15px 40px rgba(255, 215, 0, 0.4),
-                        inset 0 -3px 8px rgba(0, 0, 0, 0.2),
-                        inset 0 1px 1px rgba(255, 255, 255, 0.15);
-                    border-color: rgba(255, 215, 0, 0.8);
+                        0 30px 90px rgba(138, 43, 226, 0.5),
+                        0 20px 50px rgba(255, 215, 0, 0.35),
+                        inset 0 2px 5px rgba(255, 255, 255, 1),
+                        inset 0 -2px 8px rgba(255, 215, 0, 0.2);
+                    border-color: rgba(255, 107, 157, 0.8);
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 250, 240, 1) 100%);
                 }
 
                 .chatbot-bubble:active {
-                    transform: scale(0.92);
+                    transform: scale(0.94);
                 }
 
                 /* Chat Window - Premium */
@@ -731,6 +733,8 @@ export default function ChatBot() {
                     line-height: 1.6;
                     word-wrap: break-word;
                     font-weight: 500;
+                    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    cursor: default;
                 }
 
                 .chatbot-message.user {
@@ -741,12 +745,28 @@ export default function ChatBot() {
                     font-weight: 600;
                 }
 
+                .chatbot-message.user:hover {
+                    background: linear-gradient(135deg, #FFA500 0%, #FF6B9D 100%);
+                    color: white;
+                    transform: translateX(-5px) scale(1.02);
+                    box-shadow: 0 12px 30px rgba(255, 107, 157, 0.35);
+                }
+
                 .chatbot-message.bot {
                     background: white;
                     color: #1a1a2e;
                     border-radius: 6px 20px 20px 20px;
                     border: 1.5px solid rgba(255, 215, 0, 0.3);
                     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+                }
+
+                .chatbot-message.bot:hover {
+                    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(138, 43, 226, 0.08) 100%);
+                    border-color: #8A2BE2;
+                    transform: translateX(5px) scale(1.02);
+                    box-shadow: 0 8px 25px rgba(138, 43, 226, 0.2);
+                    color: #8A2BE2;
+                    font-weight: 600;
                 }
 
                 .chatbot-message.error {
@@ -916,15 +936,16 @@ export default function ChatBot() {
                 }
 
                 .quick-btn:hover {
-                    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 107, 157, 0.1) 100%);
-                    border-color: #FFD700;
-                    color: #FFD700;
-                    transform: translateX(4px);
-                    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+                    background: linear-gradient(135deg, rgba(138, 43, 226, 0.1) 0%, rgba(255, 215, 0, 0.15) 100%);
+                    border-color: #8A2BE2;
+                    color: #8A2BE2;
+                    transform: translateX(6px) scale(1.03);
+                    box-shadow: 0 6px 18px rgba(138, 43, 226, 0.25);
+                    font-weight: 800;
                 }
 
                 .quick-btn:active {
-                    transform: scale(0.96);
+                    transform: translateX(4px) scale(0.98);
                 }
 
                 /* Responsive */
@@ -941,8 +962,8 @@ export default function ChatBot() {
                     .chatbot-bubble {
                         bottom: 20px;
                         right: 20px;
-                        width: 75px;
-                        height: 75px;
+                        width: 85px;
+                        height: 85px;
                     }
 
                     .chatbot-message {
@@ -963,8 +984,8 @@ export default function ChatBot() {
                     .chatbot-bubble {
                         bottom: 20px;
                         right: 20px;
-                        width: 70px;
-                        height: 70px;
+                        width: 80px;
+                        height: 80px;
                     }
 
                     .chatbot-title {
@@ -984,8 +1005,8 @@ export default function ChatBot() {
 
                 @media (max-width: 380px) {
                     .chatbot-bubble {
-                        width: 65px;
-                        height: 65px;
+                        width: 75px;
+                        height: 75px;
                         bottom: 16px;
                         right: 16px;
                     }
