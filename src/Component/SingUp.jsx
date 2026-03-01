@@ -306,7 +306,7 @@ export default function SingUp() {
                         <div className="progress-indicator mb-4">
                             <div className="progress-bar-container">
                                 <div className={`progress-bar ${
-                                    masterStep === 'phone_otp' || masterStep === 'email_otp' ? 'completed' : 'active'
+                                    masterStep === 'email_otp' ? 'completed' : 'active'
                                 }`}></div>
                             </div>
                             <div className="progress-text">
@@ -485,23 +485,6 @@ export default function SingUp() {
 
                 {/* 🔥 TERMS & CONDITIONS MODAL */}
                 <Terms isOpen={showTerms} onClose={() => setShowTerms(false)} />
-                
-                {/* 🔥 RECAPTCHA CONTAINER - VISIBLE & PROPERLY POSITIONED */}
-                <div 
-                    id="recaptcha-container" 
-                    style={{ 
-                        position: 'fixed', 
-                        bottom: '20px', 
-                        right: '20px', 
-                        zIndex: 9999,
-                        visibility: (masterStep === 'phone_input' || masterStep === 'phone_otp') ? 'visible' : 'hidden',
-                        opacity: (masterStep === 'phone_input' || masterStep === 'phone_otp') ? 1 : 0,
-                        transition: 'all 0.3s ease',
-                        pointerEvents: (masterStep === 'phone_input' || masterStep === 'phone_otp') ? 'auto' : 'none',
-                        display: 'block !important'
-                    }}
-                    className="recaptcha-wrapper"
-                ></div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
                 .signup-master-root { position: relative; min-height: 100vh; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80') center/cover; overflow: hidden; z-index: 1; }
