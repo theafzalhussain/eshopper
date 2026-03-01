@@ -840,10 +840,10 @@ export default function SingUp() {
                 ></div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
-                .signup-master-root { position: relative; min-height: 100vh; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80') center/cover; overflow: hidden; }
-                .luxury-bg-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(15,23,42,0.9); backdrop-filter: blur(10px); }
-                .glass-signup-card { position: relative; width: 100%; max-width: 500px; background: rgba(255, 255, 255, 0.95); border-radius: 40px; box-shadow: 0 30px 90px rgba(0,0,0,0.4); }
-                .signup-inner-box { background: white; border-radius: 40px; }
+                .signup-master-root { position: relative; min-height: 100vh; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80') center/cover; overflow: hidden; z-index: 1; }
+                .luxury-bg-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(15,23,42,0.9); backdrop-filter: blur(10px); z-index: 0; }
+                .glass-signup-card { position: relative; width: 100%; max-width: 500px; background: rgba(255, 255, 255, 0.95); border-radius: 40px; box-shadow: 0 30px 90px rgba(0,0,0,0.4); z-index: 10; }
+                .signup-inner-box { background: white; border-radius: 40px; position: relative; z-index: 20; }
                 
                 /* 🔥 PREMIUM SPINNER OVERLAY */
                 .premium-spinner-overlay {
@@ -909,9 +909,12 @@ export default function SingUp() {
                 .phone-signup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
                 /* DIVIDER */
-                .luxury-divider { position: relative; text-align: center; margin: 25px 0; }
+                .luxury-divider { position: relative; text-align: center; margin: 25px 0; z-index: 1; }
                 .luxury-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #ddd; }
                 .luxury-divider span { background: white; padding: 0 12px; position: relative; font-size: 10px; color: #999; font-weight: 700; letter-spacing: 1.5px; }
+                
+                /* PHONE UI - ALWAYS ON TOP */
+                #phone-ui { position: relative; z-index: 100; }
                 
                 .p-otp-input { width: 100%; text-align: center; font-size: 3rem; font-weight: 800; letter-spacing: 15px; border: none; background: transparent; outline: none; border-bottom: 3px solid #17a2b8; padding: 10px 0; }
                 
