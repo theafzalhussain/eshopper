@@ -782,6 +782,7 @@ async function startServer() {
      let cachedGenerateModels = [];
      let cachedAt = 0;
      const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
+    const modelCooldownUntil = new Map();
 
      const getAvailableGeminiModels = async () => {
         const now = Date.now();
@@ -820,6 +821,36 @@ async function startServer() {
         const text = parts.map((part) => part?.text || '').join('').trim();
         return text;
      };
+
+      const isQuotaError = (error) => {
+          const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`.toLowerCase();
+          return error?.response?.status === 429 || combined.includes('quota exceeded') || combined.includes('too many requests');
+      };
+
+      const extractRetryDelayMs = (error) => {
+          const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`;
+          const match = combined.match(/retry in\s+([\d.]+)s/i);
+          if (!match) return 60000;
+          const sec = Number(match[1]);
+          if (!Number.isFinite(sec) || sec <= 0) return 60000;
+          return Math.ceil(sec * 1000);
+      };
+
+      const setModelCooldown = (modelName, error) => {
+          const retryMs = extractRetryDelayMs(error);
+          modelCooldownUntil.set(modelName, Date.now() + retryMs);
+          console.log(`⏳ Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
+      };
+
+      const isModelCoolingDown = (modelName) => {
+          const until = modelCooldownUntil.get(modelName);
+          if (!until) return false;
+          if (Date.now() >= until) {
+                modelCooldownUntil.delete(modelName);
+                return false;
+          }
+          return true;
+      };
 
      const generateWithRest = async (modelName, fullPrompt) => {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
@@ -885,6 +916,7 @@ app.post('/api/chat', async (req, res) => {
 
         const discoveredModels = await getAvailableGeminiModels();
         const preferredOrder = [
+            "gemini-2.5-flash",
             "gemini-2.0-flash",
             "gemini-2.0-flash-lite",
             "gemini-1.5-flash",
@@ -917,6 +949,10 @@ app.post('/api/chat', async (req, res) => {
         let lastModelError = null;
 
         for (const modelName of candidateModels) {
+            if (isModelCoolingDown(modelName)) {
+                continue;
+            }
+
             try {
                 const model = genAI.getGenerativeModel({
                     model: modelName,
@@ -934,6 +970,12 @@ app.post('/api/chat', async (req, res) => {
 
                 throw new Error(`Empty response from model: ${modelName}`);
             } catch (modelError) {
+                if (isQuotaError(modelError)) {
+                    setModelCooldown(modelName, modelError);
+                    lastModelError = modelError;
+                    continue;
+                }
+
                 console.warn(`⚠️ Gemini SDK failed (${modelName}):`, modelError.message);
 
                 try {
@@ -945,6 +987,9 @@ app.post('/api/chat', async (req, res) => {
                     }
                     throw new Error(`Empty REST response from model: ${modelName}`);
                 } catch (restError) {
+                    if (isQuotaError(restError)) {
+                        setModelCooldown(modelName, restError);
+                    }
                     lastModelError = restError;
                     console.warn(`⚠️ Gemini REST failed (${modelName}):`, restError.message);
                 }
