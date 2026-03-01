@@ -112,6 +112,35 @@ export default function SingUp() {
         return () => clearInterval(interval)
     }, [resendTimer])
 
+    // Initialize reCAPTCHA when phone auth is shown
+    useEffect(() => {
+        if (showPhoneAuth && phoneStep === 1) {
+            const timer = setTimeout(() => {
+                try {
+                    if (window.recaptchaVerifier) {
+                        window.recaptchaVerifier.clear();
+                    }
+                    setUpRecaptcha('recaptcha-container');
+                    console.log('✅ reCAPTCHA initialized for phone auth');
+                } catch (error) {
+                    console.error('❌ reCAPTCHA initialization error:', error);
+                    setGeneralError('Failed to initialize reCAPTCHA. Please refresh the page.');
+                }
+            }, 300);
+            
+            return () => {
+                clearTimeout(timer);
+                if (window.recaptchaVerifier) {
+                    try {
+                        window.recaptchaVerifier.clear();
+                    } catch (e) {
+                        console.warn('reCAPTCHA cleanup warning:', e);
+                    }
+                }
+            };
+        }
+    }, [showPhoneAuth, phoneStep]);
+
     // RESEND OTP FUNCTION
     async function handleResendOTP() {
         setGeneralError("")
@@ -198,28 +227,61 @@ export default function SingUp() {
                 return
             }
 
-            if (!phoneNumber || phoneNumber.length < 10) {
-                setGeneralError("Please enter a valid phone number with country code")
+            if (!phoneNumber || phoneNumber.trim().length < 10) {
+                setGeneralError("Please enter a valid phone number with country code (e.g., +1234567890)")
                 setPhoneLoading(false)
                 return
             }
 
-            // Setup reCAPTCHA before sending OTP
-            const recaptcha = setUpRecaptcha('phone-recaptcha-container')
-            if (!recaptcha) {
-                setGeneralError("reCAPTCHA setup failed. Please try again.")
-                setPhoneLoading(false)
-                return
+            // Verify reCAPTCHA is initialized
+            if (!window.recaptchaVerifier) {
+                console.warn('⚠️ reCAPTCHA not found, reinitializing...');
+                const recaptcha = setUpRecaptcha('recaptcha-container');
+                if (!recaptcha) {
+                    setGeneralError("reCAPTCHA setup failed. Please refresh the page and try again.");
+                    setPhoneLoading(false);
+                    return;
+                }
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
 
+            console.log('📞 Sending OTP to:', phoneNumber);
+            
             // Send SMS OTP via Firebase
-            const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptcha)
-            setConfirmationResult(confirmation)
-            setPhoneStep(2) // Move to OTP verification step
-            alert("OTP sent to your phone!")
+            const confirmation = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+            
+            // Only proceed if we got a valid confirmation
+            if (confirmation && confirmation.verificationId) {
+                console.log('✅ OTP sent successfully, verificationId:', confirmation.verificationId);
+                setConfirmationResult(confirmation);
+                setGeneralError(""); // Clear any previous errors
+                setPhoneStep(2); // Move to OTP input step
+                alert("OTP sent to your phone! Please check your messages.");
+            } else {
+                throw new Error('Invalid confirmation response from Firebase');
+            }
+            
         } catch (err) {
-            console.error("Phone Auth Error:", err)
-            setGeneralError(err.message || "Failed to send OTP. Check your phone number format.")
+            console.error("Phone Auth Error:", err);
+            
+            if (err.code === 'auth/invalid-phone-number') {
+                setGeneralError("Invalid phone number format. Use international format (e.g., +1234567890)");
+            } else if (err.code === 'auth/too-many-requests') {
+                setGeneralError("Too many attempts. Please try again later.");
+            } else if (err.code === 'auth/captcha-check-failed') {
+                setGeneralError("reCAPTCHA verification failed. Please refresh and try again.");
+            } else {
+                setGeneralError(err.message || "Failed to send OTP. Please check your phone number format.");
+            }
+            
+            if (window.recaptchaVerifier) {
+                try {
+                    window.recaptchaVerifier.clear();
+                    window.recaptchaVerifier = null;
+                } catch (e) {
+                    console.warn('reCAPTCHA cleanup warning:', e);
+                }
+            }
         } finally {
             setPhoneLoading(false)
         }
@@ -233,8 +295,9 @@ export default function SingUp() {
 
         try {
             if (!confirmationResult) {
-                setGeneralError("Please request OTP first")
+                setGeneralError("Session expired. Please request OTP again.")
                 setPhoneLoading(false)
+                setPhoneStep(1) // Go back to phone input
                 return
             }
 
@@ -243,11 +306,19 @@ export default function SingUp() {
                 setPhoneLoading(false)
                 return
             }
+            
+            console.log('🔐 Verifying OTP...');
 
             // Verify phone OTP
-            const result = await confirmationResult.confirm(phoneOtp)
-            const user = result.user
-            const idToken = await user.getIdToken()
+            const result = await confirmationResult.confirm(phoneOtp);
+            
+            if (!result || !result.user) {
+                throw new Error('Invalid OTP verification result');
+            }
+            
+            const user = result.user;
+            console.log('✅ Phone OTP verified successfully for:', user.phoneNumber);
+            const idToken = await user.getIdToken();
 
             // Sync with backend
             const response = await fetch(`${BASE_URL}/api/auth-sync`, {
@@ -501,16 +572,24 @@ export default function SingUp() {
                                     {/* PHONE SIGN UP BUTTON */}
                                     <motion.button 
                                         type="button" 
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
+                                        whileHover={{ scale: loading ? 1 : 1.02 }}
+                                        whileTap={{ scale: loading ? 1 : 0.98 }}
                                         className="phone-signup-btn mt-2 shadow-lg" 
-                                        onClick={() => { 
-                                            setShowPhoneAuth(true)
-                                            setPhoneStep(1)
-                                            setPhoneNumber("")
-                                            setPhoneOtp("")
-                                            setConfirmationResult(null)
+                                        onClick={() => {
+                                            console.log('📱 Phone signup button clicked');
+                                            if (!auth) {
+                                                alert('Firebase Auth is not initialized. Please refresh the page.');
+                                                return;
+                                            }
+                                            setGeneralError("");
+                                            setShowPhoneAuth(true);
+                                            setPhoneStep(1);
+                                            setPhoneNumber("");
+                                            setPhoneOtp("");
+                                            setConfirmationResult(null);
                                         }}
+                                        disabled={loading}
+                                        style={{ pointerEvents: loading ? 'none' : 'auto' }}
                                     >
                                         <Phone size={16} className="mr-2" /> SIGN UP WITH PHONE
                                     </motion.button>
@@ -572,20 +651,38 @@ export default function SingUp() {
                                                     placeholder="+1 (555) 123-4567" 
                                                     value={phoneNumber} 
                                                     onChange={e => setPhoneNumber(e.target.value)} 
-                                                    required 
+                                                    required
+                                                    disabled={phoneLoading}
                                                 />
                                             </div>
                                             <p className="verify-text" style={{fontSize: '11px', marginTop: '8px'}}>Example: +1 for USA, +91 for India, +44 for UK</p>
                                         </div>
                                         
-                                        {/* reCAPTCHA Container */}
-                                        <div id="phone-recaptcha-container" className="mb-4" style={{minHeight: '78px'}}></div>
-                                        
-                                        <button type="submit" className="p-submit-btn mb-3" disabled={phoneLoading || !phoneNumber}>
+                                        <button 
+                                            type="submit" 
+                                            className="p-submit-btn mb-3" 
+                                            disabled={phoneLoading || !phoneNumber.trim() || phoneNumber.trim().length < 10}
+                                        >
                                             {phoneLoading ? <Loader2 className="animate-spin mx-auto"/> : "SEND OTP"}
                                         </button>
                                         
-                                        <button type="button" className="back-to-form" onClick={() => { setShowPhoneAuth(false); setStep(1); }}>
+                                        <button 
+                                            type="button" 
+                                            className="back-to-form" 
+                                            onClick={() => { 
+                                                setShowPhoneAuth(false); 
+                                                setStep(1); 
+                                                setGeneralError("");
+                                                if (window.recaptchaVerifier) {
+                                                    try {
+                                                        window.recaptchaVerifier.clear();
+                                                    } catch (e) {
+                                                        console.warn('Cleanup warning:', e);
+                                                    }
+                                                }
+                                            }}
+                                            disabled={phoneLoading}
+                                        >
                                             ← Back to Email Signup
                                         </button>
                                     </motion.form>
@@ -631,6 +728,9 @@ export default function SingUp() {
                         {!showPhoneAuth && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
                     </div>
                 </motion.div>
+                
+                {/* Hidden reCAPTCHA container - Required for phone auth */}
+                <div id="recaptcha-container" style={{ position: 'absolute', bottom: '-9999px', left: '-9999px' }}></div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
                 .signup-master-root { position: relative; min-height: 100vh; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80') center/cover; overflow: hidden; }
