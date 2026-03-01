@@ -449,28 +449,32 @@ export default function Terms({ isOpen, onClose }) {
                 /* ====== RESPONSIVE DESIGN ====== */
                 @media (max-width: 1024px) {
                     .terms-modal {
-                        width: 92vw;
-                        height: 92vh;
+                        width: min(92vw, 880px);
+                        height: min(92vh, 800px);
                         border-radius: 36px;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
                     }
 
                     .terms-header {
-                        padding: 42px 35px;
+                        padding: 40px 32px;
                     }
 
                     .terms-main-title {
                         font-size: 38px;
+                        letter-spacing: 3px;
                     }
 
                     .terms-content {
-                        padding: 38px 35px;
+                        padding: 36px 32px;
                     }
                 }
 
                 @media (max-width: 768px) {
                     .terms-modal {
-                        width: 95vw;
-                        height: 94vh;
+                        width: min(94vw, 780px);
+                        height: min(92vh, 750px);
                         border-radius: 32px;
                         top: 50%;
                         left: 50%;
@@ -478,17 +482,19 @@ export default function Terms({ isOpen, onClose }) {
                     }
 
                     .terms-header {
-                        padding: 35px 25px;
+                        padding: 32px 24px;
                     }
 
                     .terms-header-badge {
                         font-size: 10px;
                         padding: 7px 14px;
+                        margin-bottom: 10px;
                     }
 
                     .terms-main-title {
                         font-size: 32px;
-                        letter-spacing: 2px;
+                        letter-spacing: 2.5px;
+                        margin-bottom: 10px;
                     }
 
                     .terms-subtitle {
@@ -497,21 +503,22 @@ export default function Terms({ isOpen, onClose }) {
                     }
 
                     .terms-close-btn {
-                        width: 45px;
-                        height: 45px;
+                        width: 46px;
+                        height: 46px;
                     }
 
                     .terms-content {
-                        padding: 30px 25px;
+                        padding: 28px 24px;
                     }
 
                     .terms-section {
-                        margin-bottom: 30px;
-                        padding: 20px 20px 25px 20px;
+                        margin-bottom: 28px;
+                        padding: 20px 18px 24px 18px;
                     }
 
                     .terms-heading {
                         font-size: 16px;
+                        letter-spacing: 0.5px;
                     }
 
                     .terms-text {
@@ -520,65 +527,63 @@ export default function Terms({ isOpen, onClose }) {
                     }
 
                     .terms-footer {
-                        padding: 24px 25px;
+                        padding: 22px 24px;
                     }
 
                     .terms-accept-btn {
-                        padding: 14px 30px;
+                        padding: 13px 28px;
                         font-size: 12px;
+                        letter-spacing: 1px;
                     }
                 }
 
-                @media (max-width: 480px) {
+                @media (max-width: 640px) {
                     .terms-modal {
-                        width: 100vw;
-                        height: 100vh;
-                        max-width: 100vw;
-                        max-height: 100vh;
-                        border-radius: 0;
-                        top: 0;
-                        left: 0;
-                        transform: none;
-                        border: none;
+                        width: min(96vw, 640px);
+                        height: min(90vh, 700px);
+                        border-radius: 28px;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
                     }
 
                     .terms-header {
-                        padding: 30px 20px;
-                        border-radius: 0;
+                        padding: 28px 20px;
                     }
 
                     .terms-header-badge {
-                        font-size: 10px;
+                        font-size: 9px;
                         padding: 6px 12px;
-                        margin-bottom: 12px;
+                        margin-bottom: 10px;
                     }
 
                     .terms-main-title {
-                        font-size: 26px;
-                        letter-spacing: 1px;
+                        font-size: 28px;
+                        letter-spacing: 2px;
                         margin-bottom: 8px;
                     }
 
                     .terms-subtitle {
                         font-size: 11px;
-                        letter-spacing: 1px;
+                        letter-spacing: 1.2px;
                     }
 
                     .terms-close-btn {
-                        width: 42px;
-                        height: 42px;
-                        top: 18px;
-                        right: 18px;
+                        width: 44px;
+                        height: 44px;
+                        position: absolute;
+                        top: 12px;
+                        right: 12px;
                     }
 
                     .terms-content {
-                        padding: 24px 18px;
+                        padding: 22px 18px;
                     }
 
                     .terms-section {
-                        margin-bottom: 22px;
-                        padding: 18px 16px 22px 16px;
-                        border-radius: 18px;
+                        margin-bottom: 20px;
+                        padding: 16px 14px 20px 14px;
+                        border-radius: 20px;
                     }
 
                     .terms-section-header {
@@ -603,12 +608,12 @@ export default function Terms({ isOpen, onClose }) {
                     }
 
                     .terms-footer {
-                        padding: 20px 18px;
+                        padding: 18px 18px;
                     }
 
                     .terms-accept-btn {
                         width: 100%;
-                        padding: 14px 28px;
+                        padding: 13px 26px;
                         font-size: 12px;
                         letter-spacing: 1px;
                         gap: 10px;
@@ -620,27 +625,134 @@ export default function Terms({ isOpen, onClose }) {
                     }
                 }
 
-                /* Extra small devices */
-                @media (max-width: 380px) {
+                @media (max-width: 480px) {
+                    .terms-modal {
+                        width: min(98vw, 530px);
+                        height: min(88vh, 600px);
+                        border-radius: 24px;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                    }
+
+                    .terms-header {
+                        padding: 24px 16px;
+                    }
+
+                    .terms-header-badge {
+                        font-size: 8px;
+                        padding: 5px 10px;
+                        margin-bottom: 8px;
+                    }
+
                     .terms-main-title {
-                        font-size: 22px;
+                        font-size: 24px;
+                        letter-spacing: 1.5px;
+                        margin-bottom: 6px;
                     }
 
                     .terms-subtitle {
                         font-size: 10px;
+                        letter-spacing: 1px;
+                    }
+
+                    .terms-close-btn {
+                        width: 40px;
+                        height: 40px;
+                        top: 10px;
+                        right: 10px;
+                    }
+
+                    .terms-content {
+                        padding: 18px 14px;
+                    }
+
+                    .terms-section {
+                        margin-bottom: 16px;
+                        padding: 14px 12px 18px 12px;
+                        border-radius: 18px;
+                    }
+
+                    .terms-section-header {
+                        gap: 8px;
+                        margin-bottom: 8px;
+                    }
+
+                    .terms-icon {
+                        width: 18px;
+                        height: 18px;
                     }
 
                     .terms-heading {
                         font-size: 13px;
+                        letter-spacing: 0.3px;
                     }
 
                     .terms-text {
                         font-size: 12px;
+                        line-height: 1.6;
+                        letter-spacing: 0.1px;
+                    }
+
+                    .terms-footer {
+                        padding: 16px 14px;
                     }
 
                     .terms-accept-btn {
+                        width: 100%;
+                        padding: 12px 22px;
                         font-size: 11px;
-                        padding: 13px 24px;
+                        letter-spacing: 0.8px;
+                        gap: 8px;
+                    }
+
+                    .terms-accept-btn svg {
+                        width: 15px;
+                        height: 15px;
+                    }
+                }
+
+                /* Extra small devices */
+                @media (max-width: 380px) {
+                    .terms-modal {
+                        width: 98vw;
+                        height: 86vh;
+                    }
+
+                    .terms-header {
+                        padding: 20px 12px;
+                    }
+
+                    .terms-main-title {
+                        font-size: 20px;
+                        letter-spacing: 1px;
+                    }
+
+                    .terms-subtitle {
+                        font-size: 9px;
+                    }
+
+                    .terms-content {
+                        padding: 16px 12px;
+                    }
+
+                    .terms-section {
+                        margin-bottom: 14px;
+                        padding: 12px 10px 16px 10px;
+                    }
+
+                    .terms-heading {
+                        font-size: 12px;
+                    }
+
+                    .terms-text {
+                        font-size: 11px;
+                        line-height: 1.5;
+                    }
+
+                    .terms-accept-btn {
+                        font-size: 10px;
+                        padding: 11px 20px;
                     }
                 }
 

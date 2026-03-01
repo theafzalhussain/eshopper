@@ -197,9 +197,13 @@ export default function ChatBot() {
                             <svg width="55" height="55" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <defs>
                                     <linearGradient id="robotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stopColor="#1a1a1a" />
+                                        <stop offset="50%" stopColor="#0a0a0a" />
+                                        <stop offset="100%" stopColor="#000000" />
+                                    </linearGradient>
+                                    <linearGradient id="robotAccent" x1="0%" y1="0%" x2="100%" y2="100%">
                                         <stop offset="0%" stopColor="#FFD700" />
-                                        <stop offset="50%" stopColor="#FFA500" />
-                                        <stop offset="100%" stopColor="#FF6B9D" />
+                                        <stop offset="100%" stopColor="#FFA500" />
                                     </linearGradient>
                                     <filter id="glow">
                                         <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
@@ -213,7 +217,7 @@ export default function ChatBot() {
                                 {/* Antenna */}
                                 <motion.line 
                                     x1="21" y1="3" x2="21" y2="7" 
-                                    stroke="url(#robotGradient)" 
+                                    stroke="url(#robotAccent)" 
                                     strokeWidth="2" 
                                     strokeLinecap="round"
                                     animate={{ y1: [3, 1, 3] }}
@@ -221,14 +225,14 @@ export default function ChatBot() {
                                 />
                                 <motion.circle 
                                     cx="21" cy="3" r="2.5" 
-                                    fill="#FFD700"
+                                    fill="#00D9FF"
                                     filter="url(#glow)"
                                     animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
                                     transition={{ duration: 1.5, repeat: Infinity }}
                                 />
                                 
                                 {/* Head */}
-                                <rect x="8" y="7" width="26" height="18" rx="3" fill="url(#robotGradient)" stroke="#FFD700" strokeWidth="1.5"/>
+                                <rect x="8" y="7" width="26" height="18" rx="3" fill="url(#robotGradient)" stroke="url(#robotAccent)" strokeWidth="1.5"/>
                                 
                                 {/* Eyes with blink animation */}
                                 <motion.g>
@@ -287,7 +291,7 @@ export default function ChatBot() {
                                 {/* Smile */}
                                 <motion.path 
                                     d="M 13 20 Q 21 24 29 20" 
-                                    stroke="#FFD700" 
+                                    stroke="url(#robotAccent)" 
                                     strokeWidth="2" 
                                     fill="none" 
                                     strokeLinecap="round"
@@ -296,7 +300,7 @@ export default function ChatBot() {
                                 />
                                 
                                 {/* Body */}
-                                <rect x="11" y="25" width="20" height="12" rx="2" fill="url(#robotGradient)" stroke="#FFD700" strokeWidth="1.5"/>
+                                <rect x="11" y="25" width="20" height="12" rx="2" fill="url(#robotGradient)" stroke="url(#robotAccent)" strokeWidth="1.5"/>
                                 
                                 {/* Chest Light */}
                                 <motion.circle 
@@ -313,7 +317,7 @@ export default function ChatBot() {
                                 <motion.rect 
                                     x="4" y="27" width="6" height="4" rx="2" 
                                     fill="url(#robotGradient)"
-                                    stroke="#FFD700" 
+                                    stroke="url(#robotAccent)" 
                                     strokeWidth="1.5"
                                     animate={{ 
                                         y: [27, 25, 27],
@@ -327,7 +331,7 @@ export default function ChatBot() {
                                 <motion.rect 
                                     x="32" y="27" width="6" height="4" rx="2" 
                                     fill="url(#robotGradient)"
-                                    stroke="#FFD700" 
+                                    stroke="url(#robotAccent)" 
                                     strokeWidth="1.5"
                                     animate={{ 
                                         y: [27, 25, 27],
@@ -561,7 +565,7 @@ export default function ChatBot() {
                     max-height: 680px;
                     background: linear-gradient(to bottom, #FFFFFF 0%, #F8F9FF 100%);
                     border-radius: 28px;
-                    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2), 0 0 40px rgba(255, 107, 157, 0.15);
+                    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15), 0 0 30px rgba(255, 215, 0, 0.1);
                     display: flex;
                     flex-direction: column;
                     z-index: 9997;
@@ -930,66 +934,212 @@ export default function ChatBot() {
                 }
 
                 /* Responsive */
-                @media (max-width: 768px) {
+                @media (max-width: 1024px) {
                     .chatbot-window {
-                        width: calc(100vw - 20px);
-                        height: calc(100vh - 80px);
-                        max-height: calc(100vh - 80px);
-                        bottom: 0;
-                        right: 10px;
-                        border-radius: 28px 28px 0 0;
+                        width: min(400px, calc(100vw - 40px));
+                        max-height: calc(100vh - 140px);
                     }
-
                     .chatbot-bubble {
-                        bottom: 20px;
-                        right: 20px;
-                        width: 75px;
-                        height: 75px;
-                    }
-
-                    .chatbot-message {
-                        max-width: 90%;
+                        width: 84px;
+                        height: 84px;
+                        font-size: 24px;
                     }
                 }
 
-                @media (max-width: 480px) {
+                @media (max-width: 768px) {
+                    .chatbot-window {
+                        width: calc(100vw - 16px);
+                        height: calc(100vh - 100px);
+                        max-height: calc(100vh - 100px);
+                        bottom: 12px;
+                        right: 8px;
+                        border-radius: 24px;
+                    }
+
+                    .chatbot-bubble {
+                        bottom: 25px;
+                        right: 25px;
+                        width: 80px;
+                        height: 80px;
+                        font-size: 22px;
+                    }
+
+                    .chatbot-message {
+                        max-width: 85%;
+                    }
+                }
+
+                @media (max-width: 640px) {
                     .chatbot-window {
                         width: 100vw;
                         height: 100vh;
                         max-height: 100vh;
                         bottom: 0;
                         right: 0;
+                        left: 0;
                         border-radius: 0;
+                        border: none;
                     }
 
                     .chatbot-bubble {
+                        bottom: 22px;
+                        right: 22px;
+                        width: 76px;
+                        height: 76px;
+                        font-size: 20px;
+                        z-index: 9999;
+                    }
+
+                    .chatbot-header {
+                        padding: 16px 14px;
+                        border-radius: 0;
+                    }
+
+                    .chatbot-messages {
+                        padding: 14px 12px;
+                        gap: 11px;
+                    }
+
+                    .chatbot-message {
+                        max-width: 88%;
+                        font-size: 12.5px;
+                        padding: 10px 13px;
+                    }
+
+                    .chatbot-form {
+                        padding: 12px;
+                    }
+
+                    .chatbot-input {
+                        padding: 10px 14px;
+                        font-size: 13px;
+                    }
+
+                    .quick-starters {
+                        padding: 12px 14px;
+                    }
+
+                    .quick-btn {
+                        padding: 8px 11px;
+                        font-size: 11.5px;
+                    }
+                }
+
+                @media (max-width: 480px) {
+                    .chatbot-bubble {
                         bottom: 20px;
                         right: 20px;
-                        width: 70px;
-                        height: 70px;
+                        width: 72px;
+                        height: 72px;
+                        font-size: 19px;
+                    }
+
+                    .chatbot-header {
+                        padding: 14px 12px;
                     }
 
                     .chatbot-title {
-                        font-size: 16px;
+                        font-size: 14px;
+                    }
+
+                    .chatbot-subtitle {
+                        font-size: 9px;
+                    }
+
+                    .chatbot-messages {
+                        padding: 12px 10px;
+                        gap: 10px;
+                    }
+
+                    .chatbot-message {
+                        font-size: 11.5px;
+                        padding: 9px 12px;
+                    }
+
+                    .chatbot-form {
+                        padding: 12px;
+                    }
+
+                    .chatbot-input {
+                        padding: 8px 12px;
+                        font-size: 11.5px;
                     }
 
                     .chatbot-input-box {
-                        gap: 8px;
+                        gap: 7px;
                     }
 
                     .chatbot-send-btn {
-                        width: 42px;
-                        height: 42px;
-                        font-size: 18px;
+                        width: 38px;
+                        height: 38px;
+                        font-size: 15px;
+                    }
+
+                    .quick-text {
+                        font-size: 9px;
+                    }
+
+                    .quick-btn {
+                        padding: 7px 9px;
+                        font-size: 10.5px;
                     }
                 }
 
                 @media (max-width: 380px) {
                     .chatbot-bubble {
-                        width: 65px;
-                        height: 65px;
-                        bottom: 16px;
-                        right: 16px;
+                        width: 68px;
+                        height: 68px;
+                        bottom: 18px;
+                        right: 18px;
+                        font-size: 18px;
+                    }
+
+                    .chatbot-header {
+                        padding: 12px 10px;
+                    }
+
+                    .chatbot-title {
+                        font-size: 13px;
+                    }
+
+                    .chatbot-subtitle {
+                        font-size: 8px;
+                    }
+
+                    .chatbot-message {
+                        font-size: 11px;
+                        padding: 8px 11px;
+                    }
+
+                    .chatbot-input {
+                        font-size: 11px;
+                        padding: 7px 11px;
+                    }
+
+                    .chatbot-send-btn {
+                        width: 36px;
+                        height: 36px;
+                        font-size: 14px;
+                    }
+                }
+
+                /* Landscape mobile optimization */
+                @media (max-height: 600px) and (orientation: landscape) {
+                    .chatbot-window {
+                        height: 100vh;
+                        max-height: 100vh;
+                    }
+
+                    .chatbot-header {
+                        padding: 12px 14px;
+                    }
+
+                    .chatbot-messages {
+                        padding: 10px;
+                    }
+
+                    .chatbot-form {
+                        padding: 10px;
                     }
                 }
             `}} />
