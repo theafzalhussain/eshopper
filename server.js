@@ -24,7 +24,8 @@ const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { GoogleGenerativeAI } = require("@google/generative-ai");// 🔐 FIREBASE ADMIN SDK INITIALIZATION
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+// 🔐 FIREBASE ADMIN SDK INITIALIZATION
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
@@ -776,61 +777,41 @@ async function startServer() {
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
         // 🔴 Trimming to ensure no space/newline error
-       // --- server.js AI REFACTOR START ---
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-// 1. Initialize with latest SDK method
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
 
 app.post('/api/chat', async (req, res) => {
     try {
-        const { prompt, history } = req.body;
-        console.log(`💬 AI Context check for: ${prompt}`);
+        // 💡 Safety check for prompt
+        const prompt = req.body.prompt || req.body.message;
 
-        // 📊 DATABASE SYNC: Products की लिस्ट निकाल रहे हैं
-        const allProducts = await Product.find({}, 'name baseprice maincategory');
-        const productDataSummary = allProducts.map(p => `- ${p.name} (Rs.${p.baseprice})`).slice(0, 15).join("\n");
-
-        // 🧠 MODEL CONFIG: Using 'gemini-1.5-flash' which is fastest & standard now
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash",
-            // Ye system instructions bot को आपकी दुकान का "Manager" बना देंगी
-            systemInstruction: `You are the Expert Fashion Stylist for 'eShopper Boutique Luxe'. 
-            Your only goal is to suggest clothes from this inventory:\n${productDataSummary}\n
-            Rules: 
-            1. Suggest real items from the list above.
-            2. Be extremely polite and stylish.
-            3. Keep answers under 3 lines.`
-        });
-
-        // 🛠️ ROLE FIX: Roles alternated properly to prevent 'model vs user' error
-        let cleanHistory = (history || []).map(m => ({
-            role: m.role === 'ai' || m.role === 'model' ? 'model' : 'user',
-            parts: [{ text: m.text || m.parts?.[0]?.text || "" }]
-        }));
-
-        // Ensuring history starts with USER if not empty
-        if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
-            cleanHistory.shift();
+        if (!prompt) {
+            console.error("⚠️ No prompt received from frontend");
+            return res.status(400).json({ error: "Prompt is required" });
         }
 
-        const chat = model.startChat({ history: cleanHistory });
-        const result = await chat.sendMessage(prompt);
+        console.log(`💬 Sending to Gemini: "${prompt.substring(0, 30)}..."`);
+
+        // Products fetch
+        const allProducts = await Product.find({}, 'name');
+        const productSummary = allProducts.map(p => p.name).join(", ");
+
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            systemInstruction: `You are the Fashion Stylist for eShopper. Products available: ${productSummary}. Be stylish and helpful.`
+        });
+
+        // 💡 Simple generation to avoid 404/iteration errors
+        const result = await model.generateContent(prompt);
         const response = await result.response;
         
-        console.log("✅ AI responded successfully");
+        console.log("✅ Success response from Gemini");
         res.json({ text: response.text() });
 
     } catch (error) {
         console.error("❌ Gemini Crash Log:", error.message);
-        // Fallback for 404: Try a simple generation if session fails
-        res.status(500).json({ 
-            error: "Gemini Sync Issue", 
-            message: "AI is re-stocking the products. Try in 30 seconds." 
-        });
+        res.status(500).json({ error: "Failed to process chat. Error: " + error.message });
     }
 });
-// --- server.js AI REFACTOR END ---
 
         const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`🚀 Master Server Live on ${PORT}`);
