@@ -133,10 +133,19 @@ const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHe
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
 app.use(globalLimiter);
 
-// � REQUEST LOGGING MIDDLEWARE
+// 📊 REQUEST LOGGING MIDDLEWARE
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
     next();
+});
+
+// 🛡️ GLOBAL ERROR HANDLER FOR MALFORMED REQUESTS
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.warn('⚠️ Malformed JSON request detected');
+        return res.status(400).json({ message: 'Invalid request format. Please check your input.' });
+    }
+    next(err);
 });
 
 // 🔧 DATABASE CONNECTION SETUP
@@ -305,8 +314,17 @@ app.post('/api/auth-sync', async (req, res) => {
         const normalizedEmail = email ? email.toLowerCase().trim() : null;
         const normalizedPhone = phone ? phone.trim() : null;
 
+        // Improved validation with better logging
         if (!idToken || !uid || !provider) {
-            return res.status(400).json({ message: "Missing required authentication data" });
+            console.warn('⚠️ Auth sync called with incomplete data:', { hasToken: !!idToken, hasUid: !!uid, hasProvider: !!provider });
+            return res.status(400).json({ 
+                message: "Authentication incomplete. Please try signing in again.",
+                missingFields: {
+                    idToken: !idToken,
+                    uid: !uid,
+                    provider: !provider
+                }
+            });
         }
 
         // 🔐 VERIFY FIREBASE ID TOKEN

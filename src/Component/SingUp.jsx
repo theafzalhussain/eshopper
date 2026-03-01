@@ -234,22 +234,28 @@ export default function SingUp() {
                 name: user.displayName
             });
 
-            // Sync with backend
-            const response = await fetch(`${BASE_URL}/api/auth-sync`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`
-                },
-                body: JSON.stringify({
-                    uid: user.uid,
-                    email: user.email,
-                    name: user.displayName || "User",
-                    pic: user.photoURL,
-                    provider: 'google',
-                    idToken: idToken
-                })
-            })
+            // Sync with backend (with error handling)
+            let response;
+            try {
+                response = await fetch(`${BASE_URL}/api/auth-sync`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        uid: user.uid,
+                        email: user.email,
+                        name: user.displayName || "User",
+                        pic: user.photoURL,
+                        provider: 'google',
+                        idToken: idToken
+                    })
+                });
+            } catch (networkErr) {
+                console.error('❌ Network error during auth sync:', networkErr);
+                throw new Error('Network error. Please check your connection and try again.');
+            }
 
             if (response.ok) {
                 const backendUser = await response.json()
@@ -386,15 +392,14 @@ export default function SingUp() {
             } else if (err.code === 'auth/captcha-check-failed') {
                 setGeneralError("CAPTCHA verification failed. Please refresh and try again.");
             } else if (err.code === 'auth/billing-not-enabled' || err.message?.includes('billing')) {
-                setGeneralError("⚠️ Firebase Phone Auth requires Blaze Plan. Redirecting to email signup...");
-                setPhoneAuthDisabled(true); // Disable phone auth permanently this session
-                localStorage.setItem('phoneAuthDisabled', 'true'); // Remember for session
+                console.error('🚫 Phone authentication requires Firebase Blaze Plan');
+                setPhoneAuthDisabled(true);
+                localStorage.setItem('phoneAuthDisabled', 'true');
                 
-                // Auto-redirect to email signup after 3 seconds
-                setTimeout(() => {
-                    setMasterStep('initial');
-                    setGeneralError("Phone authentication unavailable. Please use email or Google signup.");
-                }, 3000);
+                // Immediate redirect with user-friendly message
+                setMasterStep('initial');
+                setGeneralError("📱 Phone login unavailable at the moment. Please use Email or Google signup.");
+                alert('Phone authentication is temporarily unavailable. Please use Email or Google signup.');
             } else if (err.message?.includes('reCAPTCHA')) {
                 setGeneralError("Verification setup failed. Please refresh the page and try again.");
             } else {
@@ -449,20 +454,26 @@ export default function SingUp() {
 
             const idToken = await user.getIdToken();
 
-            // Sync with backend
-            const response = await fetch(`${BASE_URL}/api/auth-sync`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`
-                },
-                body: JSON.stringify({
-                    uid: user.uid,
-                    phone: user.phoneNumber,
-                    provider: 'phone',
-                    idToken: idToken
-                })
-            })
+            // Sync with backend (with error handling)
+            let response;
+            try {
+                response = await fetch(`${BASE_URL}/api/auth-sync`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        uid: user.uid,
+                        phone: user.phoneNumber,
+                        provider: 'phone',
+                        idToken: idToken
+                    })
+                });
+            } catch (networkErr) {
+                console.error('❌ Network error during auth sync:', networkErr);
+                throw new Error('Network error. Please check your connection and try again.');
+            }
 
             if (response.ok) {
                 const backendUser = await response.json()
