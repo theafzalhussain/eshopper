@@ -73,7 +73,7 @@ export const setUpRecaptcha = (containerId = 'recaptcha-container') => {
       window.recaptchaVerifier.clear();
     }
     
-    window.recaptchaVerifier = new RecaptchaVerifier(containerId, {
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
       size: 'invisible',
       callback: (response) => {
         console.log('✅ reCAPTCHA verified:', response);
@@ -82,7 +82,7 @@ export const setUpRecaptcha = (containerId = 'recaptcha-container') => {
         console.warn('⚠️ reCAPTCHA expired');
         window.recaptchaVerifier = null;
       },
-    }, auth);
+    });
     
     console.log('✅ reCAPTCHA setup successful');
     return window.recaptchaVerifier;
