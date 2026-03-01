@@ -784,8 +784,15 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
 
 app.post('/api/chat', async (req, res) => {
     try {
-        const { prompt, history } = req.body;
-        console.log(`💬 AI Context check for: ${prompt}`);
+        const prompt = (req.body?.prompt || req.body?.message || '').trim();
+        const history = req.body?.history || req.body?.conversationHistory || [];
+
+        if (!prompt) {
+            console.error("⚠️ No prompt received from frontend");
+            return res.status(400).json({ error: "Prompt is required" });
+        }
+
+        console.log(`💬 AI Context check for: ${prompt.substring(0, 30)}...`);
 
         // 📊 DATABASE SYNC: Products की लिस्ट निकाल रहे हैं
         const allProducts = await Product.find({}, 'name baseprice maincategory');
