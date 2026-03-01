@@ -303,6 +303,8 @@ const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { t
 app.post('/api/auth-sync', async (req, res) => {
     try {
         const { idToken, uid, email, phone, name, pic, provider } = req.body;
+        const normalizedEmail = email ? email.toLowerCase().trim() : null;
+        const normalizedPhone = phone ? phone.trim() : null;
 
         if (!idToken || !uid || !provider) {
             return res.status(400).json({ message: "Missing required authentication data" });
@@ -343,48 +345,70 @@ app.post('/api/auth-sync', async (req, res) => {
             await user.save();
             console.log(`✅ User updated successfully: ${user.email}`);
         } else {
-            // 🆕 NEW USER - CREATE ACCOUNT
-            console.log(`🆕 Creating new user with UID: ${uid}`);
-
-            // Generate unique username from email or name
-            let generatedUsername = null;
-            if (email) {
-                generatedUsername = email.split('@')[0].toLowerCase();
-            } else if (name) {
-                generatedUsername = name.split(' ')[0].toLowerCase();
+            // 🔗 LINK EXISTING ACCOUNT BY EMAIL/PHONE (prevents duplicate key errors)
+            if (normalizedEmail) {
+                user = await User.findOne({ email: normalizedEmail });
             }
 
-            // Ensure unique username
-            if (generatedUsername) {
-                let counter = 1;
-                let baseUsername = generatedUsername;
-                while (await User.findOne({ username: generatedUsername })) {
-                    generatedUsername = `${baseUsername}${counter}`;
-                    counter++;
+            if (!user && normalizedPhone) {
+                user = await User.findOne({ phone: normalizedPhone });
+            }
+
+            if (user) {
+                console.log(`🔗 Linking existing account to Firebase UID: ${user.email || user.phone}`);
+                user.uid = uid;
+                user.provider = provider;
+                user.lastLogin = new Date();
+                if (name && !user.name) user.name = name;
+                if (pic && !user.pic) user.pic = pic;
+                if (normalizedPhone && !user.phone) user.phone = normalizedPhone;
+                if (normalizedEmail && !user.email) user.email = normalizedEmail;
+                await user.save();
+                console.log(`✅ Existing account linked successfully: ${user.email || user.phone}`);
+            } else {
+                // 🆕 NEW USER - CREATE ACCOUNT
+                console.log(`🆕 Creating new user with UID: ${uid}`);
+
+                // Generate unique username from email or name
+                let generatedUsername = null;
+                if (normalizedEmail) {
+                    generatedUsername = normalizedEmail.split('@')[0].toLowerCase();
+                } else if (name) {
+                    generatedUsername = name.split(' ')[0].toLowerCase();
                 }
+
+                // Ensure unique username
+                if (generatedUsername) {
+                    let counter = 1;
+                    let baseUsername = generatedUsername;
+                    while (await User.findOne({ username: generatedUsername })) {
+                        generatedUsername = `${baseUsername}${counter}`;
+                        counter++;
+                    }
+                }
+
+                user = new User({
+                    uid: uid,
+                    name: name || "User",
+                    email: normalizedEmail || null,
+                    phone: normalizedPhone || null,
+                    pic: pic || null,
+                    provider: provider,
+                    username: generatedUsername,
+                    role: "User",
+                    lastLogin: new Date()
+                });
+
+                // For phone auth, generate a random password
+                if (provider === 'phone' && !user.password) {
+                    const randomPass = Math.random().toString(36).slice(-12);
+                    const salt = await bcrypt.genSalt(10);
+                    user.password = await bcrypt.hash(randomPass, salt);
+                }
+
+                await user.save();
+                console.log(`✅ New user created: ${user.email || user.phone}`);
             }
-
-            user = new User({
-                uid: uid,
-                name: name || "User",
-                email: email || null,
-                phone: phone || null,
-                pic: pic || null,
-                provider: provider,
-                username: generatedUsername,
-                role: "User",
-                lastLogin: new Date()
-            });
-
-            // For phone auth, generate a random password
-            if (provider === 'phone' && !user.password) {
-                const randomPass = Math.random().toString(36).slice(-12);
-                const salt = await bcrypt.genSalt(10);
-                user.password = await bcrypt.hash(randomPass, salt);
-            }
-
-            await user.save();
-            console.log(`✅ New user created: ${user.email || user.phone}`);
         }
 
         // Return user data (without sensitive info)
@@ -393,6 +417,9 @@ app.post('/api/auth-sync', async (req, res) => {
         res.json(safeUser);
     } catch (err) {
         console.error("❌ Auth Sync Error:", err.message);
+        if (err.code === 11000) {
+            return res.status(409).json({ message: "Account already exists. Please login with your existing account." });
+        }
         if (process.env.SENTRY_DSN) Sentry.captureException(err);
         res.status(500).json({ message: "Authentication sync failed. Please try again." });
     }

@@ -133,6 +133,12 @@ export default function SingUp() {
         setLoading(true)
         setGeneralError("")
         try {
+            if (!auth || !googleProvider) {
+                setGeneralError("Google sign-up is not configured. Please contact support or try again later.")
+                setLoading(false)
+                return
+            }
+
             const result = await signInWithPopup(auth, googleProvider)
             const user = result.user
             const idToken = await user.getIdToken()
@@ -164,7 +170,12 @@ export default function SingUp() {
                 alert("Welcome! Account created successfully!")
                 navigate("/profile")
             } else {
-                setGeneralError("Backend sync failed. Please try again.")
+                let backendMessage = "Backend sync failed. Please try again."
+                try {
+                    const errorData = await response.json()
+                    backendMessage = errorData.message || backendMessage
+                } catch (_) {}
+                setGeneralError(backendMessage)
             }
         } catch (err) {
             console.error("Google Sign Up Error:", err)
@@ -181,6 +192,12 @@ export default function SingUp() {
         setGeneralError("")
         
         try {
+            if (!auth) {
+                setGeneralError("Phone sign-up is not configured. Please contact support or try again later.")
+                setPhoneLoading(false)
+                return
+            }
+
             if (!phoneNumber || phoneNumber.length < 10) {
                 setGeneralError("Please enter a valid phone number with country code")
                 setPhoneLoading(false)
@@ -257,7 +274,12 @@ export default function SingUp() {
                 alert("Welcome! Phone verification successful!")
                 navigate("/profile")
             } else {
-                setGeneralError("Backend sync failed. Please try again.")
+                let backendMessage = "Backend sync failed. Please try again."
+                try {
+                    const errorData = await response.json()
+                    backendMessage = errorData.message || backendMessage
+                } catch (_) {}
+                setGeneralError(backendMessage)
             }
         } catch (err) {
             console.error("Phone OTP Verify Error:", err)

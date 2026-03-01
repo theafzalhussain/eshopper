@@ -179,7 +179,7 @@ export default function Home() {
                                             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
                                             src={sliderData[currentSlide]?.img} 
                                             loading="eager"
-                                            fetchPriority="high"
+                                            fetchpriority="high"
                                             decoding="async"
                                             className="img-fluid floating-hero hero-main-img" 
                                             alt={sliderData[currentSlide]?.title}

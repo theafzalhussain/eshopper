@@ -11,31 +11,52 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_APP_ID,
 };
 
-// Validate Firebase configuration
-if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'your-api-key-here') {
-  console.error('❌ Firebase API Key is missing! Check your .env file.');
-  console.error('Current config:', firebaseConfig);
-  throw new Error('Firebase configuration is incomplete. Please check your .env file.');
+const hasFirebaseConfig = Boolean(
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId &&
+  firebaseConfig.storageBucket &&
+  firebaseConfig.messagingSenderId &&
+  firebaseConfig.appId &&
+  firebaseConfig.apiKey !== 'your-api-key-here'
+);
+
+let app = null;
+let auth = null;
+let googleProvider = null;
+
+if (hasFirebaseConfig) {
+  console.log('🔥 Firebase Config Loaded:', {
+    projectId: firebaseConfig.projectId,
+    authDomain: firebaseConfig.authDomain,
+    hasApiKey: !!firebaseConfig.apiKey
+  });
+
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  googleProvider = new GoogleAuthProvider();
+} else {
+  console.error('❌ Firebase configuration is incomplete. Auth features will be unavailable until env variables are set.');
+  console.error('Missing values check:', {
+    hasApiKey: !!firebaseConfig.apiKey,
+    hasAuthDomain: !!firebaseConfig.authDomain,
+    hasProjectId: !!firebaseConfig.projectId,
+    hasStorageBucket: !!firebaseConfig.storageBucket,
+    hasSenderId: !!firebaseConfig.messagingSenderId,
+    hasAppId: !!firebaseConfig.appId,
+  });
 }
 
-console.log('🔥 Firebase Config Loaded:', {
-  projectId: firebaseConfig.projectId,
-  authDomain: firebaseConfig.authDomain,
-  hasApiKey: !!firebaseConfig.apiKey
-});
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-// Initialize Firebase Authentication and get a reference to the service
-export const auth = getAuth(app);
-
-// Initialize Google Provider for OAuth
-export const googleProvider = new GoogleAuthProvider();
+export { auth, googleProvider };
 
 // Set up reCAPTCHA verifier for phone authentication
 export const setUpRecaptcha = (containerId = 'recaptcha-container') => {
   try {
+    if (!auth) {
+      console.error('❌ Cannot setup reCAPTCHA because Firebase Auth is not initialized.');
+      return null;
+    }
+
     if (window.recaptchaVerifier) {
       window.recaptchaVerifier.clear();
     }
