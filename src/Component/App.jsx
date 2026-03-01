@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Navbaar from './Navbaar'
 import Footer from './Footer'
+import ChatBot from './ChatBot'
 import Home from './Home'
 import About from './About'
 import Contact from './Contact'
@@ -54,6 +55,7 @@ export default function App() {
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ScrollToTop />
       <Navbaar />
+      <ChatBot />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />

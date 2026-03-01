@@ -24,6 +24,7 @@ const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // 🔐 FIREBASE ADMIN SDK INITIALIZATION
 const admin = require('firebase-admin');
@@ -758,6 +759,90 @@ async function startServer() {
         console.log(`📊 Database: ${mongoose.connection.name}`);
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
+        // 🤖 INITIALIZE GEMINI AI
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        console.log("🤖 Gemini AI initialized successfully");
+
+        // 🤖 GEMINI AI CHAT ENDPOINT
+        app.post("/api/chat", async (req, res) => {
+            try {
+                const { message, conversationHistory } = req.body;
+
+                if (!message || message.trim().length === 0) {
+                    return res.status(400).json({ error: "Message cannot be empty" });
+                }
+
+                // Fetch product catalog for context
+                console.log("📚 Fetching product context from database...");
+                const products = await Product.find({}, "name maincategory subcategory finalprice color");
+                
+                const productContext = products
+                    .map(p => `${p.name} (${p.maincategory} - ${p.subcategory}, ₹${p.finalprice})`)
+                    .join("\n");
+
+                const catalogSummary = `
+ESHOPPER BOUTIQUE LUXE CATALOG:
+=================================
+${productContext || "No products available"}
+
+INSTRUCTIONS:
+- Always recommend real products from our catalog
+- Be a luxury fashion stylist
+- Suggest complete outfits
+- Use product names exactly as listed
+- Include price points when relevant
+                `;
+
+                // Build conversation history for multi-turn chat
+                const chatHistory = conversationHistory || [];
+                
+                // Initialize Gemini model
+                const model = genAI.getGenerativeModel({ 
+                    model: "gemini-pro",
+                    systemInstruction: `You are a premium luxury fashion stylist for eShopper Boutique Luxe. 
+Your goal is to:
+1. Provide personalized style recommendations
+2. Suggest outfits from our real collection
+3. Answer questions about fashion and style
+4. Be helpful, friendly, and professional
+5. Always reference real products when making recommendations
+
+${catalogSummary}`
+                });
+
+                // Start a chat session with history
+                const chat = model.startChat({
+                    history: chatHistory,
+                    generationConfig: {
+                        maxOutputTokens: 1024,
+                        temperature: 0.7,
+                    },
+                });
+
+                console.log("💬 Sending message to Gemini:", message);
+
+                // Send message and get response
+                const result = await chat.sendMessage(message);
+                const response = await result.response;
+                const assistantMessage = response.text();
+
+                console.log("✅ Gemini Response received");
+
+                res.json({
+                    success: true,
+                    message: assistantMessage,
+                    timestamp: new Date().toISOString(),
+                });
+
+            } catch (error) {
+                console.error("❌ Gemini Chat Error:", error);
+                res.status(500).json({ 
+                    error: "Failed to process chat",
+                    details: error.message 
+                });
+            }
+        });
+
         const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`🚀 Master Server Live on ${PORT}`);
         });
