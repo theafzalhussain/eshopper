@@ -69,9 +69,21 @@ export const setUpRecaptcha = (containerId = 'recaptcha-container') => {
       return null;
     }
 
+    // Check if verifier already exists and is valid
     if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
+      console.log('ℹ️ reCAPTCHA verifier already exists, reusing...');
+      return window.recaptchaVerifier;
     }
+
+    // Clear the container before creating new verifier
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.error('❌ reCAPTCHA container not found:', containerId);
+      return null;
+    }
+    
+    // Clear container innerHTML to prevent "already rendered" error
+    container.innerHTML = '';
     
     window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
       size: 'invisible',
@@ -79,8 +91,15 @@ export const setUpRecaptcha = (containerId = 'recaptcha-container') => {
         console.log('✅ reCAPTCHA verified:', response);
       },
       'expired-callback': () => {
-        console.warn('⚠️ reCAPTCHA expired');
-        window.recaptchaVerifier = null;
+        console.warn('⚠️ reCAPTCHA expired, clearing verifier...');
+        if (window.recaptchaVerifier) {
+          try {
+            window.recaptchaVerifier.clear();
+          } catch (e) {
+            console.warn('Cleanup error:', e);
+          }
+          window.recaptchaVerifier = null;
+        }
       },
     });
     
@@ -88,6 +107,13 @@ export const setUpRecaptcha = (containerId = 'recaptcha-container') => {
     return window.recaptchaVerifier;
   } catch (error) {
     console.error('❌ reCAPTCHA setup failed:', error.message);
+    // Clear on error
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {}
+      window.recaptchaVerifier = null;
+    }
     return null;
   }
 };

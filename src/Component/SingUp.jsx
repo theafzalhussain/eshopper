@@ -122,27 +122,37 @@ export default function SingUp() {
         if (masterStep === 'phone_input' && !recaptchaReady && !recaptchaError) {
             console.log('🔄 [EFFECT] Initializing reCAPTCHA for phone auth...')
             
+            // Add flag to prevent double-initialization
+            let isInitializing = false;
+            
             const initTimer = setTimeout(() => {
+                // Prevent concurrent initializations
+                if (isInitializing) {
+                    console.log('⏳ reCAPTCHA initialization already in progress, skipping...');
+                    return;
+                }
+                
+                isInitializing = true;
+                
                 try {
                     // Verify container exists in DOM
                     const container = document.getElementById('recaptcha-container')
                     if (!container) {
                         console.error('❌ [RECAPTCHA] Container #recaptcha-container not found in DOM')
                         setRecaptchaError('Container not found')
+                        isInitializing = false;
                         return
                     }
 
                     console.log('✓ [RECAPTCHA] Container found in DOM')
 
-                    // Clear any existing verifier
+                    // Check if verifier already exists
                     if (window.recaptchaVerifier) {
-                        try {
-                            window.recaptchaVerifier.clear()
-                            console.log('🧹 [RECAPTCHA] Cleared existing verifier')
-                        } catch (e) {
-                            console.warn('⚠️ Cleanup warning:', e.message)
-                        }
-                        window.recaptchaVerifier = null
+                        console.log('✓ [RECAPTCHA] Verifier already exists, reusing...')
+                        setRecaptchaReady(true)
+                        setRecaptchaError(null)
+                        isInitializing = false;
+                        return
                     }
                     
                     // Setup new verifier
@@ -160,6 +170,8 @@ export default function SingUp() {
                     console.error('❌ [RECAPTCHA] Setup failed:', error.message)
                     setRecaptchaError(error.message || 'reCAPTCHA init failed')
                     setRecaptchaReady(false)
+                } finally {
+                    isInitializing = false;
                 }
             }, 300)
             
@@ -318,12 +330,19 @@ export default function SingUp() {
             // Ensure reCAPTCHA is ready
             if (!window.recaptchaVerifier) {
                 console.warn('⚠️ reCAPTCHA not initialized, attempting setup...')
+                
+                // Clear container first
+                const container = document.getElementById('recaptcha-container');
+                if (container) {
+                    container.innerHTML = '';
+                }
+                
                 const verifier = setUpRecaptcha('recaptcha-container')
                 if (!verifier) {
                     throw new Error("reCAPTCHA failed to initialize. Please refresh and try again.")
                 }
                 // Wait for verifier to be ready
-                await new Promise(resolve => setTimeout(resolve, 500))
+                await new Promise(resolve => setTimeout(resolve, 1000))
             }
 
             if (!window.recaptchaVerifier) {
@@ -357,15 +376,23 @@ export default function SingUp() {
             } else if (err.code === 'auth/too-many-requests') {
                 setGeneralError("Too many attempts. Try again later.");
             } else if (err.code === 'auth/captcha-check-failed') {
-                setGeneralError("Verification failed. Please refresh and try again.");
+                setGeneralError("CAPTCHA verification failed. Please refresh and try again.");
+            } else if (err.code === 'auth/billing-not-enabled' || err.message?.includes('billing')) {
+                setGeneralError("Phone authentication is temporarily unavailable. Please use email signup.");
+            } else if (err.message?.includes('reCAPTCHA')) {
+                setGeneralError("Verification setup failed. Please refresh the page and try again.");
             } else {
                 setGeneralError(err.message || "Failed to send code. Please check your number.");
             }
             
-            // Reset reCAPTCHA
+            // Reset reCAPTCHA on error
             if (window.recaptchaVerifier) {
                 try {
                     window.recaptchaVerifier.clear();
+                    const container = document.getElementById('recaptcha-container');
+                    if (container) {
+                        container.innerHTML = '';
+                    }
                     window.recaptchaVerifier = null;
                     setRecaptchaReady(false);
                 } catch (e) {
