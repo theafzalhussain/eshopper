@@ -265,36 +265,57 @@ export default function SingUp() {
     // 🔥 REFACTORED: Step 1 - Send Phone OTP
     async function handlePhoneSendOTP(e) {
         e.preventDefault()
+        
+        if (phoneLoading) return
+        
         setPhoneLoading(true)
         setGeneralError("")
         
         try {
             if (!auth) {
-                throw new Error("Phone authentication not configured")
+                throw new Error("Firebase not initialized")
             }
 
-            // Validate phone number format
-            const phoneRegex = /^\+[1-9]\d{1,14}$/
-            if (!phoneRegex.test(phoneNumber)) {
-                throw new Error("Invalid phone format. Use international format: +1234567890")
-            }
-
-            console.log('📞 Sending OTP to:', phoneNumber);
-
-            // Verify reCAPTCHA is ready
-            if (!window.recaptchaVerifier || !recaptchaReady) {
-                console.warn('⚠️ reCAPTCHA not ready, reinitializing...');
-                const verifier = setUpRecaptcha('recaptcha-container');
-                if (!verifier) {
-                    throw new Error("Phone verification not ready. Please try again.");
+            // Validate and format phone input
+            let formattedPhone = phoneNumber.trim().replace(/\s/g, '')
+            
+            // Auto-append +91 for India if no country code
+            if (formattedPhone && !formattedPhone.startsWith('+')) {
+                if (/^\d{10}$/.test(formattedPhone)) {
+                    formattedPhone = '+91' + formattedPhone
+                } else if (/^\d+$/.test(formattedPhone)) {
+                    formattedPhone = '+91' + formattedPhone
                 }
-                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+
+            // Validate format
+            const phoneRegex = /^\+[1-9]\d{1,14}$/
+            if (!phoneRegex.test(formattedPhone)) {
+                throw new Error("Invalid format. Use +91XXXXXXXXXX (India) or +1234567890 (international)")
+            }
+
+            console.log('📞 Sending OTP to:', formattedPhone);
+
+            // Ensure reCAPTCHA is ready
+            if (!window.recaptchaVerifier) {
+                console.warn('⚠️ reCAPTCHA not initialized, attempting setup...')
+                const verifier = setUpRecaptcha('recaptcha-container')
+                if (!verifier) {
+                    throw new Error("reCAPTCHA failed to initialize. Please refresh and try again.")
+                }
+                // Wait for verifier to be ready
+                await new Promise(resolve => setTimeout(resolve, 500))
+            }
+
+            if (!window.recaptchaVerifier) {
+                throw new Error("reCAPTCHA verifier not available")
             }
 
             // Send SMS
+            console.log('🔐 Calling signInWithPhoneNumber...')
             const confirmationResult = await signInWithPhoneNumber(
-                auth, 
-                phoneNumber, 
+                auth,
+                formattedPhone,
                 window.recaptchaVerifier
             );
             
@@ -702,22 +723,22 @@ export default function SingUp() {
                                         <p className="verify-text mb-4">We'll send you a verification code</p>
                                         
                                         <div className="p-field mb-4">
-                                            <label>PHONE NUMBER (WITH COUNTRY CODE)</label>
+                                            <label>PHONE NUMBER</label>
                                             <div className="p-input-box">
                                                 <Phone size={18}/>
                                                 <input 
                                                     type="tel" 
-                                                    placeholder="+1234567890" 
+                                                    placeholder="9876543210 (India)" 
                                                     value={phoneNumber} 
-                                                    onChange={e => setPhoneNumber(e.target.value)} 
+                                                    onChange={e => setPhoneNumber(e.target.value.replace(/[^\d+]/g, ''))} 
                                                     required
                                                     disabled={phoneLoading}
                                                     autoFocus
                                                 />
                                             </div>
                                             <p className="verify-text" style={{fontSize: '11px', marginTop: '8px', color: '#666'}}>
-                                                ✓ Format: +[country code][number]<br/>
-                                                Examples: +14155552671 (USA), +919876543210 (India)
+                                                ✓ Enter 10-digit (auto-appends +91) or full format: +1234567890<br/>
+                                                Examples: 9876543210 (India), +14155552671 (USA)
                                             </p>
                                         </div>
                                         
@@ -801,16 +822,21 @@ export default function SingUp() {
                 {/* 🔥 TERMS & CONDITIONS MODAL */}
                 <Terms isOpen={showTerms} onClose={() => setShowTerms(false)} />
                 
-                {/* 🔥 Hidden reCAPTCHA Container - Invisible but functional */}
+                {/* 🔥 RECAPTCHA CONTAINER - VISIBLE & PROPERLY POSITIONED */}
                 <div 
                     id="recaptcha-container" 
                     style={{ 
                         position: 'fixed', 
-                        bottom: '10px', 
-                        right: '10px', 
+                        bottom: '20px', 
+                        right: '20px', 
                         zIndex: 9999,
-                        visibility: authMode === 'phone' ? 'visible' : 'hidden'
+                        visibility: authMode === 'phone' ? 'visible' : 'hidden',
+                        opacity: authMode === 'phone' ? 1 : 0,
+                        transition: 'all 0.3s ease',
+                        pointerEvents: authMode === 'phone' ? 'auto' : 'none',
+                        display: 'block !important'
                     }}
+                    className="recaptcha-wrapper"
                 ></div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
@@ -1015,6 +1041,18 @@ export default function SingUp() {
                 }
                 
                 /* === 📱 PREMIUM FULL RESPONSIVE DESIGN === */
+                
+                /* 🔥 RECAPTCHA CONTAINER - CRITICAL FIXES */
+                #recaptcha-container {
+                    display: block !important;
+                    visibility: visible !important;
+                }
+                
+                .recaptcha-wrapper {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
                 
                 /* Extra Large Devices (1200px and up) */
                 @media (min-width: 1200px) {
