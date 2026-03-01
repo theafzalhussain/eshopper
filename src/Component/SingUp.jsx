@@ -543,22 +543,15 @@ export default function SingUp() {
                 .p-submit-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
                 .p-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-                /* GOOGLE & PHONE BUTTONS */
+                /* GOOGLE BUTTON */
                 .google-signup-btn { width: 100%; background: linear-gradient(135deg, #db4437, #ea4335); color: white; border: none; padding: 14px; border-radius: 20px; font-weight: 700; font-size: 11px; letter-spacing: 1.5px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
                 .google-signup-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(234, 67, 53, 0.3); }
                 .google-signup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-                .phone-signup-btn { width: 100%; background: linear-gradient(135deg, #4caf50, #45a049); color: white; border: none; padding: 14px; border-radius: 20px; font-weight: 700; font-size: 11px; letter-spacing: 1.5px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
-                .phone-signup-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(76, 175, 80, 0.3); }
-                .phone-signup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
                 /* DIVIDER */
                 .luxury-divider { position: relative; text-align: center; margin: 25px 0; z-index: 1; }
                 .luxury-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #ddd; }
                 .luxury-divider span { background: white; padding: 0 12px; position: relative; font-size: 10px; color: #999; font-weight: 700; letter-spacing: 1.5px; }
-                
-                /* PHONE UI - ALWAYS ON TOP */
-                #phone-ui { position: relative; z-index: 100; }
                 
                 .p-otp-input { width: 100%; text-align: center; font-size: 3rem; font-weight: 800; letter-spacing: 15px; border: none; background: transparent; outline: none; border-bottom: 3px solid #17a2b8; padding: 10px 0; }
                 

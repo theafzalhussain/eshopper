@@ -776,12 +776,20 @@ async function startServer() {
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
         // 🤖 INITIALIZE GEMINI AI
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-        console.log("🤖 Gemini AI initialized successfully");
+        const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim()) : null;
+        if (genAI) {
+            console.log("🤖 Gemini AI initialized successfully");
+        } else {
+            console.warn("⚠️ GEMINI_API_KEY not set. Chat endpoint will be unavailable.");
+        }
 
         // 🤖 GEMINI AI CHAT ENDPOINT - FIXED FOR GEMINI 1.5
         app.post("/api/chat", async (req, res) => {
             try {
+                if (!genAI) {
+                    return res.status(503).json({ error: "AI service is not configured. Please set GEMINI_API_KEY." });
+                }
+
                 const { message, conversationHistory } = req.body;
 
                 // Validate input
