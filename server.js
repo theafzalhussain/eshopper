@@ -27,14 +27,34 @@ const rateLimit = require('express-rate-limit');
 
 // 🔐 FIREBASE ADMIN SDK INITIALIZATION
 const admin = require('firebase-admin');
-const serviceAccount = require('./firebase-admin.json');
 
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    projectId: serviceAccount.project_id,
-});
+// PRODUCTION: Use environment variable JSON string
+// LOCAL: Fallback to local file
+let serviceAccount;
+try {
+    if (process.env.FIREBASE_CONFIG_JSON) {
+        console.log('📱 Loading Firebase Admin from environment variable...');
+        serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
+        console.log(`✅ Firebase config loaded for project: ${serviceAccount.project_id}`);
+    } else {
+        console.log('📂 Loading Firebase Admin from local file...');
+        serviceAccount = require('./firebase-admin.json');
+        console.log(`✅ Firebase config loaded from file for project: ${serviceAccount.project_id}`);
+    }
 
-console.log('✅ Firebase Admin SDK initialized');
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        projectId: serviceAccount.project_id,
+    });
+
+    console.log('✅ Firebase Admin SDK initialized successfully');
+} catch (err) {
+    console.error('❌ CRITICAL: Firebase Admin SDK initialization failed');
+    console.error('   Error:', err.message);
+    console.error('   Make sure FIREBASE_CONFIG_JSON env variable is set on Railway');
+    console.error('   Or firebase-admin.json exists locally');
+    process.exit(1);
+}
 
 const app = express();
 
