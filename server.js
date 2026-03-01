@@ -775,8 +775,16 @@ async function startServer() {
         console.log(`📊 Database: ${mongoose.connection.name}`);
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
-        // 🤖 INITIALIZE GEMINI AI
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        // 🤖 INITIALIZE GEMINI AI - FIXED WITH TRIM AND VALIDATION
+        const GEMINI_KEY = process.env.GEMINI_API_KEY;
+        if (!GEMINI_KEY || GEMINI_KEY.trim().length === 0) {
+            console.error("❌ CRITICAL: GEMINI_API_KEY not found or empty in environment variables");
+            console.error("   Please set GEMINI_API_KEY in your Railway environment");
+        } else {
+            console.log("✅ Gemini API Key found (length:", GEMINI_KEY.trim().length, ")");
+        }
+        
+        const genAI = new GoogleGenerativeAI(GEMINI_KEY ? GEMINI_KEY.trim() : '');
         console.log("🤖 Gemini AI initialized successfully");
 
         // 🤖 GEMINI AI CHAT ENDPOINT - FIXED FOR GEMINI 1.5
@@ -787,6 +795,15 @@ async function startServer() {
                 // Validate input
                 if (!message || message.trim().length === 0) {
                     return res.status(400).json({ error: "Message cannot be empty" });
+                }
+
+                // Validate API key before proceeding
+                if (!GEMINI_KEY || GEMINI_KEY.trim().length === 0) {
+                    console.error("❌ [CHAT] GEMINI_API_KEY is missing or empty");
+                    return res.status(500).json({ 
+                        error: "AI service not configured. Please contact support.",
+                        details: "Missing API key" 
+                    });
                 }
 
                 console.log("📚 [CHAT] Fetching product catalog for AI context...");
@@ -840,18 +857,20 @@ RULES:
                             parts: [{ text: String(msg.text).trim() }]
                         }));
 
-                    // 🚨 CRITICAL: Ensure alternating roles (user → model → user → model)
+                    // 🚨 CRITICAL FIX: Ensure alternating roles (user → model → user → model)
                     let lastRole = null;
                     for (const msg of rawHistory) {
-                        // Only add if role is different from last
+                        // Skip consecutive same roles
                         if (msg.role !== lastRole) {
                             chatHistory.push(msg);
                             lastRole = msg.role;
+                        } else {
+                            console.warn(`⚠️ [CHAT] Skipping duplicate ${msg.role} message to maintain alternating pattern`);
                         }
                     }
 
                     // 🚨 GEMINI REQUIREMENT: History MUST start with 'user'
-                    while (chatHistory.length > 0 && chatHistory[0].role === 'model') {
+                    while (chatHistory.length > 0 && chatHistory[0].role !== 'user') {
                         console.warn("⚠️ [CHAT] Removing leading 'model' message from history");
                         chatHistory.shift();
                     }
@@ -870,6 +889,7 @@ RULES:
                     }
                 } else {
                     console.log("📝 [CHAT] Starting fresh conversation (no history)");
+                    chatHistory = []; // Clear history for first message
                 }
 
                 // 🔥 INITIALIZE GEMINI MODEL WITH SYSTEM INSTRUCTION
@@ -938,7 +958,15 @@ RULES:
                 console.error("❌ [CHAT] Error:", error.message);
                 console.error("   Stack:", error.stack);
                 
-                // Specific error handling
+                // Specific error handling for common errors
+                if (error.message?.includes('API key not valid') || error.message?.includes('API_KEY_INVALID')) {
+                    console.error("🔐 [CHAT] Invalid API key detected. Please check Railway environment variables.");
+                    return res.status(500).json({ 
+                        error: "AI service authentication failed. Please contact support.",
+                        details: "Invalid API key"
+                    });
+                }
+                
                 if (error.message?.includes('First content should be with role user')) {
                     return res.status(500).json({ 
                         error: "Conversation error. Please start a fresh chat.",
@@ -946,9 +974,9 @@ RULES:
                     });
                 }
                 
-                if (error.message?.includes('API key')) {
+                if (error.message?.includes('API key') || error.message?.includes('PERMISSION_DENIED')) {
                     return res.status(500).json({ 
-                        error: "AI service temporarily unavailable.",
+                        error: "AI service temporarily unavailable. Please try again later.",
                         details: "Configuration error"
                     });
                 }

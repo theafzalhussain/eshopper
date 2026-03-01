@@ -23,22 +23,26 @@ export default function ChatBot() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
     }, [messages])
 
-    // Prepare conversation history for Gemini
+    // Prepare conversation history for Gemini - FIXED FORMAT
     const getConversationHistory = () => {
         // Filter messages: skip initial bot greeting (id: 1) and errors
         const relevantMessages = messages.filter(m => {
             if (m.sender === "error") return false;
             if (m.id === 1) return false; // Skip initial greeting
+            if (!m.text || m.text.trim().length === 0) return false;
             return true;
         });
         
-        // If no messages, return empty array
-        if (relevantMessages.length === 0) return [];
+        // If no messages or only one message, return empty array (fresh conversation)
+        if (relevantMessages.length <= 1) {
+            console.log('📝 Fresh conversation - sending empty history');
+            return [];
+        }
         
-        // Map to Gemini format
+        // Map to backend-compatible format
         const history = relevantMessages.map(m => ({
-            sender: m.sender, // Keep original sender for backend processing
-            text: m.text,
+            sender: m.sender, // 'user' or 'bot'
+            text: m.text.trim(),
             id: m.id
         }));
         
@@ -60,7 +64,7 @@ export default function ChatBot() {
         // Add user message to UI
         const userMessage = {
             id: Date.now(),
-            text: inputValue,
+            text: inputValue.trim(),
             sender: "user",
             timestamp: new Date(),
         }
@@ -79,17 +83,17 @@ export default function ChatBot() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    message: inputValue,
+                    message: inputValue.trim(),
                     conversationHistory: getConversationHistory(),
                 }),
             })
 
+            const data = await response.json()
+
             if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.error || "Failed to get response")
+                throw new Error(data.error || data.details || "Failed to get response")
             }
 
-            const data = await response.json()
             console.log("✅ Response from Gemini:", data.message)
 
             // Add bot response to UI
@@ -108,12 +112,28 @@ export default function ChatBot() {
 
             const errorMessage = {
                 id: Date.now() + 1,
-                text: `Sorry, I encountered an error: ${err.message}. Please try again.`,
+                text: err.message.includes('API key') || err.message.includes('authentication') 
+                    ? "🔒 AI service is temporarily unavailable. Our team has been notified. Please try again later." 
+                    : err.message.includes('Conversation error')
+                    ? "🔄 Conversation history issue detected. Starting fresh conversation..."
+                    : `❌ Sorry, I encountered an error: ${err.message}. Please try again or refresh the chat.`,
                 sender: "error",
                 timestamp: new Date(),
             }
 
             setMessages(prev => [...prev, errorMessage])
+            
+            // Auto-clear error messages after timeout
+            if (err.message.includes('Conversation error')) {
+                setTimeout(() => {
+                    setMessages([{
+                        id: 1,
+                        text: "👋 Hello! I'm your AI Fashion Stylist. How can I help you today? Ask me about outfits, trends, or our collection!",
+                        sender: "bot",
+                        timestamp: new Date(),
+                    }]);
+                }, 2000);
+            }
         } finally {
             setLoading(false)
         }
