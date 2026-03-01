@@ -840,10 +840,7 @@ async function startServer() {
           return Math.ceil(sec * 1000);
       };
 
-      const setModelCooldown = (modelName, error) => {
-          const retryMs = extractRetryDelayMs(error);
-          modelCooldownUntil.set(modelName, Date.now() + retryMs);
-        devLog(`Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
+      const isModelCoolingDown = (modelName) => {
           const until = modelCooldownUntil.get(modelName);
           if (!until) return false;
           if (Date.now() >= until) {
@@ -851,6 +848,12 @@ async function startServer() {
                 return false;
           }
           return true;
+      };
+
+      const setModelCooldown = (modelName, error) => {
+          const retryMs = extractRetryDelayMs(error);
+          modelCooldownUntil.set(modelName, Date.now() + retryMs);
+          devLog(`Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
       };
 
      const generateWithRest = async (modelName, fullPrompt) => {
