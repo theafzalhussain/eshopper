@@ -775,19 +775,15 @@ async function startServer() {
         console.log(`📊 Database: ${mongoose.connection.name}`);
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
-        // 🤖 INITIALIZE GEMINI AI - FIXED WITH TRIM AND VALIDATION
-        const GEMINI_KEY = process.env.GEMINI_API_KEY;
-        if (!GEMINI_KEY || GEMINI_KEY.trim().length === 0) {
-            console.error("❌ CRITICAL: GEMINI_API_KEY not found or empty in environment variables");
-            console.error("   Please set GEMINI_API_KEY in your Railway environment");
-        } else {
-            console.log("✅ Gemini API Key found (length:", GEMINI_KEY.trim().length, ")");
-        }
-        
-        const genAI = new GoogleGenerativeAI(GEMINI_KEY ? GEMINI_KEY.trim() : '');
-        console.log("🤖 Gemini AI initialized successfully");
+        // 🔴 Sabse pehle Gemini Model initialization
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-pro",
+            systemInstruction: "You are the expert Fashion Stylist for eShopper Boutique Luxe. Give brief, trendy, and luxury-focused fashion advice." 
+        });
+        console.log("🤖 Gemini AI initialized successfully (gemini-1.5-pro)");
 
-        // 🤖 GEMINI AI CHAT ENDPOINT - FIXED FOR GEMINI 1.5
+        // 🤖 GEMINI AI CHAT ENDPOINT - SIMPLIFIED & OPTIMIZED
         app.post("/api/chat", async (req, res) => {
             try {
                 const { message, conversationHistory } = req.body;
@@ -797,112 +793,36 @@ async function startServer() {
                     return res.status(400).json({ error: "Message cannot be empty" });
                 }
 
-                // Validate API key before proceeding
-                if (!GEMINI_KEY || GEMINI_KEY.trim().length === 0) {
-                    console.error("❌ [CHAT] GEMINI_API_KEY is missing or empty");
-                    return res.status(500).json({ 
-                        error: "AI service not configured. Please contact support.",
-                        details: "Missing API key" 
-                    });
+                // 🛠️ MAGIC FIX: History ko normalize karna (Gemini 1.5 style)
+                // Agar history user se shuru nahi hai, toh use khali kar do (Avoid Role Error)
+                let safeHistory = (conversationHistory || [])
+                    .filter(msg => msg.role === 'user' || msg.role === 'model' || msg.sender === 'user' || msg.sender === 'bot')
+                    .map(msg => ({
+                        role: msg.role || (msg.sender === 'bot' ? 'model' : 'user'),
+                        parts: [{ text: String(msg.text || msg.parts?.[0]?.text || '').trim() }]
+                    }))
+                    .filter(msg => msg.parts[0].text.length > 0);
+
+                // Gemini zidd karta hai ki history ALWAYS start with USER
+                // Agar pehla message model hai, toh remove kar do
+                while (safeHistory.length > 0 && safeHistory[0].role === 'model') {
+                    console.warn("⚠️ Removing leading model message from history");
+                    safeHistory.shift();
                 }
 
-                console.log("📚 [CHAT] Fetching product catalog for AI context...");
-                
-                // Fetch product catalog for context
-                const products = await Product.find({}, "name maincategory subcategory finalprice color brand").limit(100);
-                
-                const productContext = products
-                    .map(p => `• ${p.name} (${p.brand || 'Premium'} | ${p.maincategory}/${p.subcategory} | ₹${p.finalprice})`)
-                    .join("\n");
-
-                // System instruction for AI personality
-                const systemInstructions = `You are the AI Fashion Assistant for eShopper Boutique Luxe.
-
-YOUR ROLE:
-- Premium luxury fashion stylist and shopping consultant
-- Help customers with outfit recommendations and style advice
-- Recommend REAL products from our catalog below
-- Be conversational, friendly, and professional
-- Keep responses concise (2-4 sentences)
-
-ESHOPPER PRODUCT CATALOG (Real Inventory):
-===========================================
-${productContext || "Catalog loading..."}
-
-RULES:
-✓ Always recommend actual product names from the catalog
-✓ Mention prices when suggesting items
-✓ Create complete outfit suggestions
-✓ Be specific with categories (Men/Women/Kids)
-✓ Use emojis sparingly for visual appeal
-`;
-
-                // 🔥 NORMALIZE CONVERSATION HISTORY
-                let chatHistory = [];
-
-                if (conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
-                    console.log("📝 [CHAT] Processing conversation history...");
-                    
-                    // Filter and map messages
-                    const rawHistory = conversationHistory
-                        .filter(msg => {
-                            // Skip errors and initial greeting
-                            if (msg.sender === 'error') return false;
-                            if (msg.id === 1) return false;
-                            if (!msg.text || msg.text.trim().length === 0) return false;
-                            return true;
-                        })
-                        .map(msg => ({
-                            role: msg.sender === "bot" ? "model" : "user",
-                            parts: [{ text: String(msg.text).trim() }]
-                        }));
-
-                    // 🚨 CRITICAL FIX: Ensure alternating roles (user → model → user → model)
-                    let lastRole = null;
-                    for (const msg of rawHistory) {
-                        // Skip consecutive same roles
-                        if (msg.role !== lastRole) {
-                            chatHistory.push(msg);
-                            lastRole = msg.role;
-                        } else {
-                            console.warn(`⚠️ [CHAT] Skipping duplicate ${msg.role} message to maintain alternating pattern`);
-                        }
-                    }
-
-                    // 🚨 GEMINI REQUIREMENT: History MUST start with 'user'
-                    while (chatHistory.length > 0 && chatHistory[0].role !== 'user') {
-                        console.warn("⚠️ [CHAT] Removing leading 'model' message from history");
-                        chatHistory.shift();
-                    }
-
-                    // 🚨 GEMINI REQUIREMENT: History MUST end with 'model' (if present)
-                    // Remove trailing 'user' messages to avoid conflict with current message
-                    while (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role === 'user') {
-                        console.warn("⚠️ [CHAT] Removing trailing 'user' message from history");
-                        chatHistory.pop();
-                    }
-
-                    console.log(`✅ [CHAT] Normalized history: ${chatHistory.length} messages`);
-                    if (chatHistory.length > 0) {
-                        console.log(`   First role: ${chatHistory[0].role}`);
-                        console.log(`   Last role: ${chatHistory[chatHistory.length - 1].role}`);
-                    }
-                } else {
-                    console.log("📝 [CHAT] Starting fresh conversation (no history)");
-                    chatHistory = []; // Clear history for first message
+                // Gemini expect karta hai ki agar history hai, toh vo USER par khatam ho (odd length)
+                // Taaki new prompt user se start ho sake
+                // Isliye agar history even length hai (model par khatam), toh last message remove kar do
+                if (safeHistory.length % 2 === 0 && safeHistory.length > 0) {
+                    console.warn("⚠️ Removing trailing model message to prepare for new user message");
+                    safeHistory.pop();
                 }
 
-                // 🔥 INITIALIZE GEMINI MODEL WITH SYSTEM INSTRUCTION
-                const model = genAI.getGenerativeModel({ 
-                    model: "gemini-1.5-flash",
-                    systemInstruction: systemInstructions
-                });
+                console.log(`📝 Chat history normalized: ${safeHistory.length} messages`);
 
-                console.log(`💬 [CHAT] Sending message to Gemini: "${message.substring(0, 50)}..."`);
-
-                // 🔥 START CHAT SESSION
+                // Start chat session with safe history
                 const chat = model.startChat({
-                    history: chatHistory,
+                    history: safeHistory,
                     generationConfig: {
                         maxOutputTokens: 500,
                         temperature: 0.7,
@@ -911,87 +831,55 @@ RULES:
                     }
                 });
 
-                // Send current user message
+                // Send user message
+                console.log(`💬 Sending to Gemini: "${message.substring(0, 50)}..."`);
                 const result = await chat.sendMessage(message);
-                
-                // 🔥 EXTRACT TEXT RESPONSE (Gemini 1.5 format)
-                let assistantMessage;
-                
-                try {
-                    // Method 1: Direct text() method (recommended)
-                    if (typeof result.response.text === 'function') {
-                        assistantMessage = await result.response.text();
-                    } 
-                    // Method 2: Parse candidates array
-                    else if (result.response.candidates && result.response.candidates[0]) {
-                        const candidate = result.response.candidates[0];
-                        if (candidate.content && candidate.content.parts && candidate.content.parts[0]) {
-                            assistantMessage = candidate.content.parts[0].text;
-                        }
-                    }
-                    // Method 3: Direct access (fallback)
-                    else if (result.response.text) {
-                        assistantMessage = result.response.text;
-                    }
-                    
-                    // Validate we got a response
-                    if (!assistantMessage || assistantMessage.trim().length === 0) {
-                        throw new Error("Empty response from Gemini");
-                    }
-                    
-                    console.log(`✅ [CHAT] Gemini response received: ${assistantMessage.substring(0, 100)}...`);
-                    
-                } catch (parseError) {
-                    console.error("❌ [CHAT] Failed to parse Gemini response:", parseError.message);
-                    console.error("   Raw response:", JSON.stringify(result.response, null, 2));
-                    throw new Error("Failed to parse AI response");
+                const responseText = await result.response.text();
+
+                // Validate response
+                if (!responseText || responseText.trim().length === 0) {
+                    throw new Error("Empty response from Gemini");
                 }
 
-                // Send response to frontend
-                res.json({
-                    success: true,
-                    message: assistantMessage,
+                console.log(`✅ Gemini response: ${responseText.substring(0, 100)}...`);
+
+                // Send to frontend
+                res.json({ 
+                    success: true, 
+                    message: responseText,
                     timestamp: new Date().toISOString()
                 });
 
             } catch (error) {
-                console.error("❌ [CHAT] Error:", error.message);
-                console.error("   Stack:", error.stack);
-                
-                // Specific error handling for common errors
-                if (error.message?.includes('API key not valid') || error.message?.includes('API_KEY_INVALID')) {
-                    console.error("🔐 [CHAT] Invalid API key detected. Please check Railway environment variables.");
+                console.error("❌ Gemini Error:", error.message);
+                console.error("   Details:", error);
+
+                // Specific error handling
+                if (error.message?.includes('API key')) {
                     return res.status(500).json({ 
-                        error: "AI service authentication failed. Please contact support.",
-                        details: "Invalid API key"
+                        error: "🔒 AI service authentication failed. Please contact support.",
+                        details: "Invalid or missing API key"
                     });
                 }
-                
+
                 if (error.message?.includes('First content should be with role user')) {
                     return res.status(500).json({ 
-                        error: "Conversation error. Please start a fresh chat.",
-                        details: "History format issue"
-                    });
-                }
-                
-                if (error.message?.includes('API key') || error.message?.includes('PERMISSION_DENIED')) {
-                    return res.status(500).json({ 
-                        error: "AI service temporarily unavailable. Please try again later.",
-                        details: "Configuration error"
+                        error: "🔄 Conversation error. Please start a fresh chat.",
+                        details: "History format issue - restarting..."
                     });
                 }
 
                 if (error.message?.includes('SAFETY')) {
                     return res.status(500).json({ 
-                        error: "Content filtered. Please rephrase your question.",
+                        error: "⚠️ Content filtered by safety guidelines. Please rephrase.",
                         details: "Safety filter triggered"
                     });
                 }
-                
+
                 // Generic error
                 res.status(500).json({ 
-                    error: "Failed to process your message. Please try again.",
-                    details: error.message 
+                    error: "❌ Failed to process your message. Please try again.",
+                    details: error.message
                 });
             }
         });
