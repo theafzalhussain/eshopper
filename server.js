@@ -776,51 +776,61 @@ async function startServer() {
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
         // 🔴 Trimming to ensure no space/newline error
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
+       // --- server.js AI REFACTOR START ---
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-        // 🤖 GEMINI AI CHAT ENDPOINT - PROFESSIONAL FLASH FIX
-        app.post('/api/chat', async (req, res) => {
-            try {
-                const { prompt, history } = req.body;
+// 1. Initialize with latest SDK method
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
 
-                // 📊 Step 1: MongoDB se data la rahe hain (Syncing with DB)
-                // 'Product' wahi model hai jo humne server.js me define kiya hai
-                const allProducts = await Product.find({}, 'name baseprice maincategory'); 
-                const productList = allProducts.map(p => `${p.name} (Rs.${p.baseprice})`).join(", ");
+app.post('/api/chat', async (req, res) => {
+    try {
+        const { prompt, history } = req.body;
+        console.log(`💬 AI Context check for: ${prompt}`);
 
-                // 🧠 Step 2: AI ko Context aur Training dena
-                // Ise 'Flash' model par set kar rahe hain jo current standard hai
-                const model = genAI.getGenerativeModel({ 
-                    model: "gemini-1.5-flash"
-                });
+        // 📊 DATABASE SYNC: Products की लिस्ट निकाल रहे हैं
+        const allProducts = await Product.find({}, 'name baseprice maincategory');
+        const productDataSummary = allProducts.map(p => `- ${p.name} (Rs.${p.baseprice})`).slice(0, 15).join("\n");
 
-                // Professional Prompt construction
-                const systemInstruction = `You are a helpful and trendy fashion stylist assistant for "eShopper Boutique Luxe". 
-        Our Current Inventory Includes: ${productList}.
-        Always suggest items ONLY from this list. If we don't have it, tell them we are launching it soon. 
-        Keep replies stylish and very short (max 2 sentences).`;
-
-                const fullPrompt = `${systemInstruction}\n\nUser asked: ${prompt}`;
-
-                // Step 3: Message bhej rahe hain
-                // 'v1beta' errors se bachne ke liye hum startChat ki jagah generateContent use karenge jo zyada stable hai
-                const result = await model.generateContent(fullPrompt);
-                const response = await result.response;
-                const textResponse = response.text();
-
-                console.log("✅ Gemini Success response sent");
-                res.json({ text: textResponse });
-
-            } catch (error) {
-                console.error("❌ GEMINI CRITICAL ERROR:", error.message);
-                
-                // Final fallback if Gemini still rejects (helpful for debugging)
-                res.status(500).json({ 
-                    error: "Gemini Sync Error",
-                    message: "Our AI assistant is updating its catalog. Please try in 1 minute." 
-                });
-            }
+        // 🧠 MODEL CONFIG: Using 'gemini-1.5-flash' which is fastest & standard now
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            // Ye system instructions bot को आपकी दुकान का "Manager" बना देंगी
+            systemInstruction: `You are the Expert Fashion Stylist for 'eShopper Boutique Luxe'. 
+            Your only goal is to suggest clothes from this inventory:\n${productDataSummary}\n
+            Rules: 
+            1. Suggest real items from the list above.
+            2. Be extremely polite and stylish.
+            3. Keep answers under 3 lines.`
         });
+
+        // 🛠️ ROLE FIX: Roles alternated properly to prevent 'model vs user' error
+        let cleanHistory = (history || []).map(m => ({
+            role: m.role === 'ai' || m.role === 'model' ? 'model' : 'user',
+            parts: [{ text: m.text || m.parts?.[0]?.text || "" }]
+        }));
+
+        // Ensuring history starts with USER if not empty
+        if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
+            cleanHistory.shift();
+        }
+
+        const chat = model.startChat({ history: cleanHistory });
+        const result = await chat.sendMessage(prompt);
+        const response = await result.response;
+        
+        console.log("✅ AI responded successfully");
+        res.json({ text: response.text() });
+
+    } catch (error) {
+        console.error("❌ Gemini Crash Log:", error.message);
+        // Fallback for 404: Try a simple generation if session fails
+        res.status(500).json({ 
+            error: "Gemini Sync Issue", 
+            message: "AI is re-stocking the products. Try in 30 seconds." 
+        });
+    }
+});
+// --- server.js AI REFACTOR END ---
 
         const server = app.listen(PORT, '0.0.0.0', () => {
             console.log(`🚀 Master Server Live on ${PORT}`);
