@@ -780,53 +780,97 @@ async function startServer() {
                     .map(p => `${p.name} (${p.maincategory} - ${p.subcategory}, ₹${p.finalprice})`)
                     .join("\n");
 
-                const catalogSummary = `
+                const systemInstructions = `You are a premium luxury fashion stylist for eShopper Boutique Luxe. 
+
+Your personality:
+- Sophisticated, friendly, and professional
+- Expert in fashion trends and styling
+- Always recommend real products from our catalog below
+- Provide complete outfit suggestions with pricing
+- Be conversational and helpful
+
 ESHOPPER BOUTIQUE LUXE CATALOG:
 =================================
 ${productContext || "No products available"}
 
-INSTRUCTIONS:
-- Always recommend real products from our catalog
-- Be a luxury fashion stylist
-- Suggest complete outfits
-- Use product names exactly as listed
-- Include price points when relevant
-                `;
+GUIDELINES:
+✓ Always suggest real product names from the catalog above
+✓ Mention categories (Men/Women/Kids) and prices when relevant
+✓ Create complete outfit recommendations
+✓ Be specific with product names
+✓ Keep responses concise but informative (2-4 sentences max)
+✓ Use emojis sparingly for visual appeal
+`;
 
-                // Build conversation history for multi-turn chat
-                const chatHistory = conversationHistory || [];
-                
-                // Initialize Gemini model
-                const model = genAI.getGenerativeModel({ 
-                    model: "gemini-pro",
-                    systemInstruction: `You are a premium luxury fashion stylist for eShopper Boutique Luxe. 
-Your goal is to:
-1. Provide personalized style recommendations
-2. Suggest outfits from our real collection
-3. Answer questions about fashion and style
-4. Be helpful, friendly, and professional
-5. Always reference real products when making recommendations
+                // 🔥 CRITICAL: Build proper conversation history
+                let chatHistory = [];
 
-${catalogSummary}`
+                if (conversationHistory && conversationHistory.length > 0) {
+                    // Map frontend roles to Gemini format
+                    chatHistory = conversationHistory
+                        .filter(msg => {
+                            // Exclude error messages and initial greeting
+                            if (msg.sender === 'error') return false;
+                            if (msg.id === 1) return false; // Skip initial bot greeting
+                            return true;
+                        })
+                        .map(msg => ({
+                            role: msg.sender === "bot" ? "model" : "user",
+                            parts: [{ text: msg.text }]
+                        }));
+
+                    // 🚨 GEMINI REQUIREMENT: First message MUST be from 'user'
+                    // If history starts with 'model', remove it
+                    while (chatHistory.length > 0 && chatHistory[0].role === 'model') {
+                        chatHistory.shift();
+                    }
+
+                    // Ensure alternating turns: user → model → user → model
+                    let cleanHistory = [];
+                    let lastRole = null;
+                    
+                    for (let msg of chatHistory) {
+                        // Skip consecutive messages from same role
+                        if (msg.role !== lastRole) {
+                            cleanHistory.push(msg);
+                            lastRole = msg.role;
+                        }
+                    }
+                    
+                    chatHistory = cleanHistory;
+                }
+
+                console.log('📝 Final chat history:', {
+                    length: chatHistory.length,
+                    firstRole: chatHistory[0]?.role,
+                    lastRole: chatHistory[chatHistory.length - 1]?.role
                 });
 
-                // Start a chat session with history
-                const chat = model.startChat({
-                    history: chatHistory,
-                    generationConfig: {
-                        maxOutputTokens: 1024,
-                        temperature: 0.7,
-                    },
+                // Initialize Gemini model with system instructions
+                const model = genAI.getGenerativeModel({ 
+                    model: "gemini-1.5-flash",
+                    systemInstruction: systemInstructions
                 });
 
                 console.log("💬 Sending message to Gemini:", message);
 
-                // Send message and get response
+                // Start chat session
+                const chat = model.startChat({
+                    history: chatHistory,
+                    generationConfig: {
+                        maxOutputTokens: 500, // Reduced for faster responses
+                        temperature: 0.7,
+                        topP: 0.95,
+                        topK: 40
+                    },
+                });
+
+                // Send current message
                 const result = await chat.sendMessage(message);
                 const response = await result.response;
                 const assistantMessage = response.text();
 
-                console.log("✅ Gemini Response received");
+                console.log("✅ Gemini Response received:", assistantMessage.substring(0, 100) + "...");
 
                 res.json({
                     success: true,
@@ -835,9 +879,27 @@ ${catalogSummary}`
                 });
 
             } catch (error) {
-                console.error("❌ Gemini Chat Error:", error);
+                console.error("❌ Gemini Chat Error:", error.message);
+                
+                // Better error handling
+                if (error.message?.includes('First content should be with role user')) {
+                    console.error("🔴 CONVERSATION HISTORY ERROR: First message must be from user");
+                    return res.status(500).json({ 
+                        error: "Conversation history error. Please refresh chat.",
+                        details: "Invalid message sequence"
+                    });
+                }
+                
+                if (error.message?.includes('API key')) {
+                    console.error("🔴 GEMINI API KEY ERROR");
+                    return res.status(500).json({ 
+                        error: "AI service unavailable. Please try again later.",
+                        details: "API configuration error"
+                    });
+                }
+                
                 res.status(500).json({ 
-                    error: "Failed to process chat",
+                    error: "Failed to process chat request",
                     details: error.message 
                 });
             }

@@ -25,12 +25,30 @@ export default function ChatBot() {
 
     // Prepare conversation history for Gemini
     const getConversationHistory = () => {
-        return messages
-            .filter(m => m.sender !== "error")
-            .map(m => ({
-                role: m.sender === "bot" ? "model" : "user",
-                parts: [{ text: m.text }]
-            }))
+        // Filter messages: skip initial bot greeting (id: 1) and errors
+        const relevantMessages = messages.filter(m => {
+            if (m.sender === "error") return false;
+            if (m.id === 1) return false; // Skip initial greeting
+            return true;
+        });
+        
+        // If no messages, return empty array
+        if (relevantMessages.length === 0) return [];
+        
+        // Map to Gemini format
+        const history = relevantMessages.map(m => ({
+            sender: m.sender, // Keep original sender for backend processing
+            text: m.text,
+            id: m.id
+        }));
+        
+        console.log('📤 Sending conversation history:', {
+            totalMessages: history.length,
+            firstSender: history[0]?.sender,
+            lastSender: history[history.length - 1]?.sender
+        });
+        
+        return history;
     }
 
     // Send message to backend

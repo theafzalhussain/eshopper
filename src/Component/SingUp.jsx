@@ -9,31 +9,32 @@ import { auth, googleProvider, setUpRecaptcha } from '../firebase'
 import Terms from './Terms'
 
 export default function SingUp() {
+    // ============ MASTER STEP STATE - CONTROLS ALL UI ============
+    // 'initial' = email form | 'phone_input' = phone number | 'phone_otp' = verify OTP | 'email_otp' = verify email
+    const [masterStep, setMasterStep] = useState('initial')
+    
+    // ============ EMAIL SIGNUP STATES ============
     const [data, setdata] = useState({ name: "", email: "", username: "", password: "" })
-    const [step, setStep] = useState(1) // For email signup: 1: form, 2: OTP
     const [loading, setLoading] = useState(false)
     const [showPass, setShowPass] = useState(false)
     const [userOtp, setUserOtp] = useState("")
     
-    // Validation states
     const [errors, setErrors] = useState({ name: "", email: "", username: "", password: "" })
-    const [usernameStatus, setUsernameStatus] = useState(null) // 'available', 'taken', null
+    const [usernameStatus, setUsernameStatus] = useState(null)
     const [checkingUsername, setCheckingUsername] = useState(false)
-    const [generalError, setGeneralError] = useState("") // For API/server errors
+    const [generalError, setGeneralError] = useState("")
     
-    // New features
     const [termsAccepted, setTermsAccepted] = useState(false)
     const [resendTimer, setResendTimer] = useState(0)
-    const [passwordStrength, setPasswordStrength] = useState(null) // 'weak', 'medium', 'strong'
+    const [passwordStrength, setPasswordStrength] = useState(null)
+    const [showTerms, setShowTerms] = useState(false)
     
-    // 🔥 CRITICAL: Auth Mode State
-    const [authMode, setAuthMode] = useState('regular') // 'regular' or 'phone'
-    const [phoneStep, setPhoneStep] = useState(1) // 1: enter phone, 2: verify OTP
+    // ============ PHONE SIGNUP STATES ============
     const [phoneNumber, setPhoneNumber] = useState("")
     const [phoneOtp, setPhoneOtp] = useState("")
     const [phoneLoading, setPhoneLoading] = useState(false)
     const [recaptchaReady, setRecaptchaReady] = useState(false)
-    const [showTerms, setShowTerms] = useState(false) // Terms modal state
+    const [recaptchaError, setRecaptchaError] = useState(null)
     
     const navigate = useNavigate()
 
@@ -115,53 +116,71 @@ export default function SingUp() {
     }, [resendTimer])
 
     // 🔥 INITIALIZE RECAPTCHA WHEN PHONE MODE ACTIVATES
+    // ============ RECAPTCHA INITIALIZATION - MASTER EFFECT ============
     useEffect(() => {
-        if (authMode === 'phone' && !recaptchaReady) {
+        // Only initialize when entering phone_input step
+        if (masterStep === 'phone_input' && !recaptchaReady && !recaptchaError) {
+            console.log('🔄 [EFFECT] Initializing reCAPTCHA for phone auth...')
+            
             const initTimer = setTimeout(() => {
                 try {
-                    console.log('🔄 Initializing reCAPTCHA for phone auth...');
-                    
+                    // Verify container exists in DOM
+                    const container = document.getElementById('recaptcha-container')
+                    if (!container) {
+                        console.error('❌ [RECAPTCHA] Container #recaptcha-container not found in DOM')
+                        setRecaptchaError('Container not found')
+                        return
+                    }
+
+                    console.log('✓ [RECAPTCHA] Container found in DOM')
+
                     // Clear any existing verifier
                     if (window.recaptchaVerifier) {
                         try {
-                            window.recaptchaVerifier.clear();
+                            window.recaptchaVerifier.clear()
+                            console.log('🧹 [RECAPTCHA] Cleared existing verifier')
                         } catch (e) {
-                            console.warn('Cleanup warning:', e);
+                            console.warn('⚠️ Cleanup warning:', e.message)
                         }
-                        window.recaptchaVerifier = null;
+                        window.recaptchaVerifier = null
                     }
                     
                     // Setup new verifier
-                    const verifier = setUpRecaptcha('recaptcha-container');
+                    console.log('⚙️ [RECAPTCHA] Calling setUpRecaptcha...')
+                    const verifier = setUpRecaptcha('recaptcha-container')
+                    
                     if (verifier) {
-                        setRecaptchaReady(true);
-                        console.log('✅ reCAPTCHA ready for phone authentication');
+                        setRecaptchaReady(true)
+                        setRecaptchaError(null)
+                        console.log('✅ [RECAPTCHA] Ready for phone authentication')
                     } else {
-                        setGeneralError('Failed to initialize phone verification. Please refresh.');
+                        throw new Error('setUpRecaptcha returned null')
                     }
                 } catch (error) {
-                    console.error('❌ reCAPTCHA setup error:', error);
-                    setGeneralError('Phone verification setup failed. Please refresh the page.');
+                    console.error('❌ [RECAPTCHA] Setup failed:', error.message)
+                    setRecaptchaError(error.message || 'reCAPTCHA init failed')
+                    setRecaptchaReady(false)
                 }
-            }, 500);
+            }, 300)
             
-            return () => clearTimeout(initTimer);
+            return () => clearTimeout(initTimer)
         }
-        
+
         // Cleanup when leaving phone mode
-        return () => {
-            if (authMode !== 'phone' && window.recaptchaVerifier) {
+        if (masterStep !== 'phone_input' && masterStep !== 'phone_otp') {
+            if (window.recaptchaVerifier) {
                 try {
-                    window.recaptchaVerifier.clear();
-                    window.recaptchaVerifier = null;
-                    setRecaptchaReady(false);
-                    console.log('🧹 Cleaned up reCAPTCHA');
+                    console.log('🧹 [CLEANUP] Cleaning up reCAPTCHA on mode switch')
+                    window.recaptchaVerifier.clear()
+                    window.recaptchaVerifier = null
+                    setRecaptchaReady(false)
+                    setRecaptchaError(null)
                 } catch (e) {
-                    console.warn('Cleanup warning:', e);
+                    console.warn('⚠️ Cleanup error:', e.message)
                 }
             }
-        };
-    }, [authMode, recaptchaReady]);
+        }
+    }, [masterStep, recaptchaReady, recaptchaError])
 
     // RESEND OTP FUNCTION
     async function handleResendOTP() {
@@ -327,7 +346,7 @@ export default function SingUp() {
             window.confirmationResult = confirmationResult;
             
             console.log('✅ OTP sent successfully, verificationId:', confirmationResult.verificationId);
-            setPhoneStep(2); // Move to OTP input
+            setMasterStep('phone_otp'); // Move to OTP input
             alert("Verification code sent! Check your messages.");
             
         } catch (err) {
@@ -452,7 +471,7 @@ export default function SingUp() {
         try {
             const res = await sendOtpAPI({ email: data.email, type: 'signup' })
             if (res.result === "Done") {
-                setStep(2);
+                setMasterStep('email_otp');
                 setResendTimer(60) // Start 60 second timer
                 setGeneralError("")
                 alert("Verification code sent! Check your email.");
@@ -515,23 +534,25 @@ export default function SingUp() {
                         <div className="progress-indicator mb-4">
                             <div className="progress-bar-container">
                                 <div className={`progress-bar ${
-                                    authMode === 'phone' && phoneStep === 2 ? 'completed' :
-                                    authMode === 'regular' && step === 2 ? 'completed' : 'active'
+                                    masterStep === 'phone_otp' || masterStep === 'email_otp' ? 'completed' : 'active'
                                 }`}></div>
                             </div>
                             <div className="progress-text">
-                                {authMode === 'phone' ? `Phone Verification - Step ${phoneStep} of 2` : `Step ${step} of 2`}
+                                {masterStep === 'phone_input' ? 'Phone Verification - Step 1 of 2' :
+                                 masterStep === 'phone_otp' ? 'Phone Verification - Step 2 of 2' :
+                                 masterStep === 'email_otp' ? 'Step 2 of 2' : 'Step 1 of 2'}
                             </div>
                         </div>
 
                         <div className="icon-badge-premium mb-4"><UserPlus size={30} className="text-info" /></div>
                         <h2 className="brand-title">ESHOPPER<span className="accent">.</span></h2>
                         <p className="step-indicator">
-                            {authMode === 'phone' ? "PHONE VERIFICATION" : step === 1 ? "CREATE ACCOUNT" : "VERIFY EMAIL"}
+                            {masterStep === 'phone_input' || masterStep === 'phone_otp' ? "PHONE VERIFICATION" :
+                             masterStep === 'email_otp' ? "VERIFY EMAIL" : "CREATE ACCOUNT"}
                         </p>
 
                         <AnimatePresence mode="wait">
-                            {step === 1 ? (
+                            {masterStep === 'initial' && (
                                 <motion.form key="f1" initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 30, opacity: 0 }} onSubmit={handleSendOTP} className="text-left mt-4">
                                     {/* GENERAL ERROR */}
                                     {generalError && (
@@ -657,16 +678,16 @@ export default function SingUp() {
                                         whileTap={{ scale: loading ? 1 : 0.98 }}
                                         className="phone-signup-btn mt-2 shadow-lg" 
                                         onClick={() => {
-                                            console.log('📱 Switching to PHONE mode');
+                                            console.log('📱 [CLICK] PHONE button clicked - Setting masterStep to phone_input')
                                             if (!auth) {
-                                                alert('Firebase not initialized. Refresh.');
-                                                return;
+                                                alert('Firebase not initialized. Refresh.')
+                                                return
                                             }
-                                            setGeneralError("");
-                                            setAuthMode('phone'); // 🔥 MODE SWITCH
-                                            setPhoneStep(1);
-                                            setPhoneNumber("");
-                                            setPhoneOtp("");
+                                            setGeneralError("")
+                                            setRecaptchaError(null)
+                                            setPhoneNumber("")
+                                            setPhoneOtp("")
+                                            setMasterStep('phone_input') // 🔥 FORCE STATE CHANGE
                                         }}
                                         disabled={loading}
                                         style={{ pointerEvents: loading ? 'none' : 'auto' }}
@@ -674,7 +695,9 @@ export default function SingUp() {
                                         <Phone size={16} className="mr-2" /> SIGN UP WITH PHONE
                                     </motion.button>
                                 </motion.form>
-                            ) : step === 2 ? (
+                            )}
+                            
+                            {masterStep === 'email_otp' && (
                                 <motion.form key="f2" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={verifyAndSignup} className="text-center mt-4">
                                     {/* ERROR IN VERIFICATION */}
                                     {generalError && (
@@ -708,9 +731,10 @@ export default function SingUp() {
                                     
                                     <p className="verify-help-text mt-4">Didn't receive the code? Check your spam folder or request a new code.</p>
                                 </motion.form>
-                            ) : authMode === 'phone' ? (
-                                phoneStep === 1 ? (
-                                    <motion.form key="f3" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneSendOTP} className="text-center mt-4">
+                            )}
+                            
+                            {masterStep === 'phone_input' && (
+                                <motion.form key="f3" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneSendOTP} className="text-center mt-4">
                                         {generalError && (
                                             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="general-error-box mb-4">
                                                 <AlertCircle size={18} />
@@ -754,8 +778,7 @@ export default function SingUp() {
                                             type="button" 
                                             className="back-to-form" 
                                             onClick={() => {
-                                                setAuthMode('regular');
-                                                setPhoneStep(1);
+                                                setMasterStep('initial');
                                                 setPhoneNumber("");
                                                 setPhoneOtp("");
                                                 setGeneralError("");
@@ -766,8 +789,10 @@ export default function SingUp() {
                                             ← Back to Email Signup
                                         </button>
                                     </motion.form>
-                                ) : (
-                                    <motion.form key="f4" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneOtpVerify} className="text-center mt-4">
+                            )}
+                            
+                            {masterStep === 'phone_otp' && (
+                                <motion.form key="f4" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneOtpVerify} className="text-center mt-4">
                                         {generalError && (
                                             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="general-error-box mb-4">
                                                 <AlertCircle size={18} />
@@ -802,7 +827,7 @@ export default function SingUp() {
                                             type="button" 
                                             className="resend-otp-btn" 
                                             onClick={() => {
-                                                setPhoneStep(1);
+                                                setMasterStep('phone_input');
                                                 setPhoneOtp("");
                                                 setGeneralError("");
                                                 window.confirmationResult = null;
@@ -811,11 +836,10 @@ export default function SingUp() {
                                             ← Change Phone Number
                                         </button>
                                     </motion.form>
-                                )
-                            ) : null}
+                            )}
                         </AnimatePresence>
                         
-                        {authMode === 'regular' && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
+                        {masterStep === 'initial' && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
                     </div>
                 </motion.div>
 
@@ -830,10 +854,10 @@ export default function SingUp() {
                         bottom: '20px', 
                         right: '20px', 
                         zIndex: 9999,
-                        visibility: authMode === 'phone' ? 'visible' : 'hidden',
-                        opacity: authMode === 'phone' ? 1 : 0,
+                        visibility: (masterStep === 'phone_input' || masterStep === 'phone_otp') ? 'visible' : 'hidden',
+                        opacity: (masterStep === 'phone_input' || masterStep === 'phone_otp') ? 1 : 0,
                         transition: 'all 0.3s ease',
-                        pointerEvents: authMode === 'phone' ? 'auto' : 'none',
+                        pointerEvents: (masterStep === 'phone_input' || masterStep === 'phone_otp') ? 'auto' : 'none',
                         display: 'block !important'
                     }}
                     className="recaptcha-wrapper"
