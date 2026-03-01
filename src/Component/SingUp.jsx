@@ -25,13 +25,13 @@ export default function SingUp() {
     const [resendTimer, setResendTimer] = useState(0)
     const [passwordStrength, setPasswordStrength] = useState(null) // 'weak', 'medium', 'strong'
     
-    // Firebase phone auth states
+    // 🔥 Firebase phone auth states (REFACTORED)
+    const [phoneMode, setPhoneMode] = useState(false) // Toggle phone signup mode
+    const [phoneStep, setPhoneStep] = useState(1) // 1: enter phone, 2: verify OTP
     const [phoneNumber, setPhoneNumber] = useState("")
-    const [showPhoneAuth, setShowPhoneAuth] = useState(false)
     const [phoneOtp, setPhoneOtp] = useState("")
-    const [confirmationResult, setConfirmationResult] = useState(null)
     const [phoneLoading, setPhoneLoading] = useState(false)
-    const [phoneStep, setPhoneStep] = useState(1) // 1: phone input, 2: OTP input
+    const [recaptchaReady, setRecaptchaReady] = useState(false)
     
     const navigate = useNavigate()
 
@@ -112,34 +112,54 @@ export default function SingUp() {
         return () => clearInterval(interval)
     }, [resendTimer])
 
-    // Initialize reCAPTCHA when phone auth is shown
+    // 🔥 REFACTORED: Initialize reCAPTCHA ONLY when phone mode is activated
     useEffect(() => {
-        if (showPhoneAuth && phoneStep === 1) {
-            const timer = setTimeout(() => {
+        if (phoneMode && !recaptchaReady) {
+            const initTimer = setTimeout(() => {
                 try {
+                    console.log('🔄 Initializing reCAPTCHA for phone auth...');
+                    
+                    // Clear any existing verifier
                     if (window.recaptchaVerifier) {
-                        window.recaptchaVerifier.clear();
+                        try {
+                            window.recaptchaVerifier.clear();
+                        } catch (e) {
+                            console.warn('Cleanup warning:', e);
+                        }
+                        window.recaptchaVerifier = null;
                     }
-                    setUpRecaptcha('recaptcha-container');
-                    console.log('✅ reCAPTCHA initialized for phone auth');
+                    
+                    // Setup new verifier
+                    const verifier = setUpRecaptcha('recaptcha-container');
+                    if (verifier) {
+                        setRecaptchaReady(true);
+                        console.log('✅ reCAPTCHA ready for phone authentication');
+                    } else {
+                        setGeneralError('Failed to initialize phone verification. Please refresh.');
+                    }
                 } catch (error) {
-                    console.error('❌ reCAPTCHA initialization error:', error);
-                    setGeneralError('Failed to initialize reCAPTCHA. Please refresh the page.');
+                    console.error('❌ reCAPTCHA setup error:', error);
+                    setGeneralError('Phone verification setup failed. Please refresh the page.');
                 }
-            }, 300);
+            }, 500);
             
-            return () => {
-                clearTimeout(timer);
-                if (window.recaptchaVerifier) {
-                    try {
-                        window.recaptchaVerifier.clear();
-                    } catch (e) {
-                        console.warn('reCAPTCHA cleanup warning:', e);
-                    }
-                }
-            };
+            return () => clearTimeout(initTimer);
         }
-    }, [showPhoneAuth, phoneStep]);
+        
+        // Cleanup when exiting phone mode
+        return () => {
+            if (!phoneMode && window.recaptchaVerifier) {
+                try {
+                    window.recaptchaVerifier.clear();
+                    window.recaptchaVerifier = null;
+                    setRecaptchaReady(false);
+                    console.log('🧹 Cleaned up reCAPTCHA');
+                } catch (e) {
+                    console.warn('Cleanup warning:', e);
+                }
+            }
+        };
+    }, [phoneMode, recaptchaReady]);
 
     // RESEND OTP FUNCTION
     async function handleResendOTP() {
@@ -240,7 +260,7 @@ export default function SingUp() {
         }
     }
 
-    // ========== FIREBASE PHONE SIGN UP - STEP 1: SEND OTP ==========
+    // 🔥 REFACTORED: Step 1 - Send Phone OTP
     async function handlePhoneSendOTP(e) {
         e.preventDefault()
         setPhoneLoading(true)
@@ -248,64 +268,66 @@ export default function SingUp() {
         
         try {
             if (!auth) {
-                setGeneralError("Phone sign-up is not configured. Please contact support or try again later.")
-                setPhoneLoading(false)
-                return
+                throw new Error("Phone authentication not configured")
             }
 
-            if (!phoneNumber || phoneNumber.trim().length < 10) {
-                setGeneralError("Please enter a valid phone number with country code (e.g., +1234567890)")
-                setPhoneLoading(false)
-                return
-            }
-
-            // Verify reCAPTCHA is initialized
-            if (!window.recaptchaVerifier) {
-                console.warn('⚠️ reCAPTCHA not found, reinitializing...');
-                const recaptcha = setUpRecaptcha('recaptcha-container');
-                if (!recaptcha) {
-                    setGeneralError("reCAPTCHA setup failed. Please refresh the page and try again.");
-                    setPhoneLoading(false);
-                    return;
-                }
-                await new Promise(resolve => setTimeout(resolve, 500));
+            // Validate phone number format
+            const phoneRegex = /^\+[1-9]\d{1,14}$/
+            if (!phoneRegex.test(phoneNumber)) {
+                throw new Error("Invalid phone format. Use international format: +1234567890")
             }
 
             console.log('📞 Sending OTP to:', phoneNumber);
-            
-            // Send SMS OTP via Firebase
-            const confirmation = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
-            
-            // Only proceed if we got a valid confirmation
-            if (confirmation && confirmation.verificationId) {
-                console.log('✅ OTP sent successfully, verificationId:', confirmation.verificationId);
-                setConfirmationResult(confirmation);
-                setGeneralError(""); // Clear any previous errors
-                setPhoneStep(2); // Move to OTP input step
-                alert("OTP sent to your phone! Please check your messages.");
-            } else {
-                throw new Error('Invalid confirmation response from Firebase');
+
+            // Verify reCAPTCHA is ready
+            if (!window.recaptchaVerifier || !recaptchaReady) {
+                console.warn('⚠️ reCAPTCHA not ready, reinitializing...');
+                const verifier = setUpRecaptcha('recaptcha-container');
+                if (!verifier) {
+                    throw new Error("Phone verification not ready. Please try again.");
+                }
+                await new Promise(resolve => setTimeout(resolve, 800));
             }
+
+            // Send SMS
+            const confirmationResult = await signInWithPhoneNumber(
+                auth, 
+                phoneNumber, 
+                window.recaptchaVerifier
+            );
+            
+            if (!confirmationResult || !confirmationResult.verificationId) {
+                throw new Error('Failed to send verification code');
+            }
+
+            // ✅ Store confirmation globally
+            window.confirmationResult = confirmationResult;
+            
+            console.log('✅ OTP sent successfully, verificationId:', confirmationResult.verificationId);
+            setPhoneStep(2); // Move to OTP input
+            alert("Verification code sent! Check your messages.");
             
         } catch (err) {
-            console.error("Phone Auth Error:", err);
+            console.error("❌ Phone OTP Error:", err);
             
             if (err.code === 'auth/invalid-phone-number') {
-                setGeneralError("Invalid phone number format. Use international format (e.g., +1234567890)");
+                setGeneralError("Invalid phone number. Use format: +1234567890");
             } else if (err.code === 'auth/too-many-requests') {
-                setGeneralError("Too many attempts. Please try again later.");
+                setGeneralError("Too many attempts. Try again later.");
             } else if (err.code === 'auth/captcha-check-failed') {
-                setGeneralError("reCAPTCHA verification failed. Please refresh and try again.");
+                setGeneralError("Verification failed. Please refresh and try again.");
             } else {
-                setGeneralError(err.message || "Failed to send OTP. Please check your phone number format.");
+                setGeneralError(err.message || "Failed to send code. Please check your number.");
             }
             
+            // Reset reCAPTCHA
             if (window.recaptchaVerifier) {
                 try {
                     window.recaptchaVerifier.clear();
                     window.recaptchaVerifier = null;
+                    setRecaptchaReady(false);
                 } catch (e) {
-                    console.warn('reCAPTCHA cleanup warning:', e);
+                    console.warn('Cleanup error:', e);
                 }
             }
         } finally {
@@ -313,37 +335,33 @@ export default function SingUp() {
         }
     }
 
-    // ========== FIREBASE PHONE SIGN UP - STEP 2: VERIFY OTP ==========
+    // 🔥 REFACTORED: Step 2 - Verify Phone OTP
     async function handlePhoneOtpVerify(e) {
         e.preventDefault()
         setPhoneLoading(true)
         setGeneralError("")
 
         try {
-            if (!confirmationResult) {
-                setGeneralError("Session expired. Please request OTP again.")
-                setPhoneLoading(false)
-                setPhoneStep(1) // Go back to phone input
-                return
+            if (!window.confirmationResult) {
+                throw new Error("Session expired. Please request a new code.");
             }
 
             if (!phoneOtp || phoneOtp.length !== 6) {
-                setGeneralError("Please enter a valid 6-digit OTP")
-                setPhoneLoading(false)
-                return
+                throw new Error("Please enter a valid 6-digit code");
             }
             
             console.log('🔐 Verifying OTP...');
 
-            // Verify phone OTP
-            const result = await confirmationResult.confirm(phoneOtp);
+            // Verify OTP
+            const result = await window.confirmationResult.confirm(phoneOtp);
             
             if (!result || !result.user) {
-                throw new Error('Invalid OTP verification result');
+                throw new Error('Verification failed');
             }
             
             const user = result.user;
-            console.log('✅ Phone OTP verified successfully for:', user.phoneNumber);
+            console.log('✅ Phone verified:', user.phoneNumber);
+
             const idToken = await user.getIdToken();
 
             // Sync with backend
@@ -367,20 +385,18 @@ export default function SingUp() {
                 localStorage.setItem("name", backendUser.name || "User")
                 localStorage.setItem("login", "true")
                 localStorage.setItem("role", backendUser.role || "User")
+                localStorage.setItem("username", backendUser.username)
                 localStorage.setItem("userToken", idToken)
+                
                 alert("Welcome! Phone verification successful!")
                 navigate("/profile")
             } else {
-                let backendMessage = "Backend sync failed. Please try again."
-                try {
-                    const errorData = await response.json()
-                    backendMessage = errorData.message || backendMessage
-                } catch (_) {}
-                setGeneralError(backendMessage)
+                const errorData = await response.json()
+                throw new Error(errorData.message || "Backend sync failed")
             }
         } catch (err) {
-            console.error("Phone OTP Verify Error:", err)
-            setGeneralError(err.message || "Invalid OTP. Please try again.")
+            console.error("❌ Phone Verify Error:", err)
+            setGeneralError(err.message || "Invalid code. Please try again.")
         } finally {
             setPhoneLoading(false)
         }
@@ -465,14 +481,14 @@ export default function SingUp() {
                                 <div className={`progress-bar ${step === 2 ? 'completed' : step === 3 ? 'completed' : 'active'}`}></div>
                             </div>
                             <div className="progress-text">
-                                {showPhoneAuth ? `Phone Verification - Step ${phoneStep}` : `Step ${step} of 2`}
+                                {phoneMode ? `Phone Verification - Step ${phoneStep} of 2` : `Step ${step} of 2`}
                             </div>
                         </div>
 
                         <div className="icon-badge-premium mb-4"><UserPlus size={30} className="text-info" /></div>
                         <h2 className="brand-title">ESHOPPER<span className="accent">.</span></h2>
                         <p className="step-indicator">
-                            {showPhoneAuth ? "VERIFY WITH PHONE" : step === 1 ? "CREATE ACCOUNT" : "VERIFY EMAIL"}
+                            {phoneMode ? "PHONE VERIFICATION" : step === 1 ? "CREATE ACCOUNT" : "VERIFY EMAIL"}
                         </p>
 
                         <AnimatePresence mode="wait">
@@ -602,17 +618,16 @@ export default function SingUp() {
                                         whileTap={{ scale: loading ? 1 : 0.98 }}
                                         className="phone-signup-btn mt-2 shadow-lg" 
                                         onClick={() => {
-                                            console.log('📱 Phone signup button clicked');
+                                            console.log('📱 Phone signup activated');
                                             if (!auth) {
-                                                alert('Firebase Auth is not initialized. Please refresh the page.');
+                                                alert('Firebase Auth not initialized. Please refresh.');
                                                 return;
                                             }
                                             setGeneralError("");
-                                            setShowPhoneAuth(true);
+                                            setPhoneMode(true);
                                             setPhoneStep(1);
                                             setPhoneNumber("");
                                             setPhoneOtp("");
-                                            setConfirmationResult(null);
                                         }}
                                         disabled={loading}
                                         style={{ pointerEvents: loading ? 'none' : 'auto' }}
@@ -654,7 +669,7 @@ export default function SingUp() {
                                     
                                     <p className="verify-help-text mt-4">Didn't receive the code? Check your spam folder or request a new code.</p>
                                 </motion.form>
-                            ) : showPhoneAuth ? (
+                            ) : phoneMode ? (
                                 phoneStep === 1 ? (
                                     <motion.form key="f3" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneSendOTP} className="text-center mt-4">
                                         {generalError && (
@@ -665,47 +680,47 @@ export default function SingUp() {
                                         )}
                                         
                                         <Phone size={60} className="text-info mx-auto mb-3 pulse-anim" />
-                                        <h3 className="verify-title">Phone Verification</h3>
-                                        <p className="verify-text mb-4">Enter your phone number with country code</p>
+                                        <h3 className="verify-title">Enter Your Phone Number</h3>
+                                        <p className="verify-text mb-4">We'll send you a verification code</p>
                                         
                                         <div className="p-field mb-4">
-                                            <label>PHONE NUMBER</label>
+                                            <label>PHONE NUMBER (WITH COUNTRY CODE)</label>
                                             <div className="p-input-box">
                                                 <Phone size={18}/>
                                                 <input 
                                                     type="tel" 
-                                                    placeholder="+1 (555) 123-4567" 
+                                                    placeholder="+1234567890" 
                                                     value={phoneNumber} 
                                                     onChange={e => setPhoneNumber(e.target.value)} 
                                                     required
                                                     disabled={phoneLoading}
+                                                    autoFocus
                                                 />
                                             </div>
-                                            <p className="verify-text" style={{fontSize: '11px', marginTop: '8px'}}>Example: +1 for USA, +91 for India, +44 for UK</p>
+                                            <p className="verify-text" style={{fontSize: '11px', marginTop: '8px', color: '#666'}}>
+                                                ✓ Format: +[country code][number]<br/>
+                                                Examples: +14155552671 (USA), +919876543210 (India)
+                                            </p>
                                         </div>
                                         
                                         <button 
                                             type="submit" 
                                             className="p-submit-btn mb-3" 
-                                            disabled={phoneLoading || !phoneNumber.trim() || phoneNumber.trim().length < 10}
+                                            disabled={phoneLoading || !phoneNumber.trim() || phoneNumber.length < 10}
                                         >
-                                            {phoneLoading ? <Loader2 className="animate-spin mx-auto"/> : "SEND OTP"}
+                                            {phoneLoading ? <Loader2 className="animate-spin mx-auto"/> : "SEND VERIFICATION CODE"}
                                         </button>
                                         
                                         <button 
                                             type="button" 
                                             className="back-to-form" 
-                                            onClick={() => { 
-                                                setShowPhoneAuth(false); 
-                                                setStep(1); 
+                                            onClick={() => {
+                                                setPhoneMode(false);
+                                                setPhoneStep(1);
+                                                setPhoneNumber("");
+                                                setPhoneOtp("");
                                                 setGeneralError("");
-                                                if (window.recaptchaVerifier) {
-                                                    try {
-                                                        window.recaptchaVerifier.clear();
-                                                    } catch (e) {
-                                                        console.warn('Cleanup warning:', e);
-                                                    }
-                                                }
+                                                window.confirmationResult = null;
                                             }}
                                             disabled={phoneLoading}
                                         >
@@ -722,12 +737,12 @@ export default function SingUp() {
                                         )}
                                         
                                         <ShieldCheck size={60} className="text-info mx-auto mb-3 pulse-anim" />
-                                        <h3 className="verify-title">Verify OTP</h3>
+                                        <h3 className="verify-title">Enter Verification Code</h3>
                                         <p className="verify-text mb-2">Code sent to:</p>
                                         <p className="verify-email mb-5"><b>{phoneNumber}</b></p>
                                         
                                         <div className="p-field mb-4">
-                                            <label>6-DIGIT OTP</label>
+                                            <label>6-DIGIT CODE</label>
                                             <input 
                                                 type="text" 
                                                 maxLength="6" 
@@ -735,7 +750,8 @@ export default function SingUp() {
                                                 className="p-otp-input" 
                                                 value={phoneOtp} 
                                                 onChange={e => setPhoneOtp(e.target.value.replace(/\D/g, ''))} 
-                                                required 
+                                                required
+                                                autoFocus
                                             />
                                         </div>
                                         
@@ -743,7 +759,16 @@ export default function SingUp() {
                                             {phoneLoading ? <Loader2 className="animate-spin mx-auto"/> : "VERIFY & SIGN UP"}
                                         </button>
                                         
-                                        <button type="button" className="resend-otp-btn" onClick={() => setPhoneStep(1)}>
+                                        <button 
+                                            type="button" 
+                                            className="resend-otp-btn" 
+                                            onClick={() => {
+                                                setPhoneStep(1);
+                                                setPhoneOtp("");
+                                                setGeneralError("");
+                                                window.confirmationResult = null;
+                                            }}
+                                        >
                                             ← Change Phone Number
                                         </button>
                                     </motion.form>
@@ -751,12 +776,21 @@ export default function SingUp() {
                             ) : null}
                         </AnimatePresence>
                         
-                        {!showPhoneAuth && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
+                        {!phoneMode && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
                     </div>
                 </motion.div>
                 
-                {/* Hidden reCAPTCHA container - Required for phone auth */}
-                <div id="recaptcha-container" style={{ position: 'absolute', bottom: '-9999px', left: '-9999px' }}></div>
+                {/* 🔥 Hidden reCAPTCHA Container - Invisible but functional */}
+                <div 
+                    id="recaptcha-container" 
+                    style={{ 
+                        position: 'fixed', 
+                        bottom: '10px', 
+                        right: '10px', 
+                        zIndex: 9999,
+                        visibility: phoneMode ? 'visible' : 'hidden'
+                    }}
+                ></div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
                 .signup-master-root { position: relative; min-height: 100vh; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80') center/cover; overflow: hidden; }
