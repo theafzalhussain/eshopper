@@ -25,6 +25,17 @@ const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
+// 🔐 FIREBASE ADMIN SDK INITIALIZATION
+const admin = require('firebase-admin');
+const serviceAccount = require('./firebase-admin.json');
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    projectId: serviceAccount.project_id,
+});
+
+console.log('✅ Firebase Admin SDK initialized');
+
 const app = express();
 
 // 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
@@ -211,7 +222,26 @@ const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) 
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
 const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
-const User = mongoose.model('User', new mongoose.Schema({ name: String, username: { type: String, unique: true }, email: { type: String, unique: true }, phone: String, password: { type: String, required: true }, role: { type: String, default: "User" }, pic: String, addressline1: String, city: String, state: String, pin: String, otp: String, otpExpires: Date, failedAttempts: { type: Number, default: 0 }, lockUntil: Date }, opts));
+const User = mongoose.model('User', new mongoose.Schema({ 
+    name: String, 
+    username: { type: String, unique: true, sparse: true }, 
+    email: { type: String, unique: true, sparse: true }, 
+    phone: String, 
+    password: { type: String },
+    uid: { type: String, unique: true, sparse: true, index: true }, // Firebase UID
+    provider: { type: String, enum: ['email', 'google', 'phone'], default: 'email' }, // Auth provider
+    role: { type: String, default: "User" }, 
+    pic: String, 
+    addressline1: String, 
+    city: String, 
+    state: String, 
+    pin: String, 
+    otp: String, 
+    otpExpires: Date, 
+    lastLogin: { type: Date, default: Date.now }, // Track last login
+    failedAttempts: { type: Number, default: 0 }, 
+    lockUntil: Date 
+}, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String, rating: { type: Number, default: 4.5, min: 0, max: 5 }, reviews: { type: Number, default: 0 } }, opts));
 const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
 const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
@@ -221,6 +251,105 @@ const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String
 const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+
+// ============ FIREBASE AUTH SYNC ROUTE ============
+app.post('/api/auth-sync', async (req, res) => {
+    try {
+        const { idToken, uid, email, phone, name, pic, provider } = req.body;
+
+        if (!idToken || !uid || !provider) {
+            return res.status(400).json({ message: "Missing required authentication data" });
+        }
+
+        // 🔐 VERIFY FIREBASE ID TOKEN
+        let decodedToken;
+        try {
+            decodedToken = await admin.auth().verifyIdToken(idToken);
+            console.log(`✅ Firebase token verified for UID: ${decodedToken.uid}`);
+        } catch (err) {
+            console.error("❌ Firebase token verification failed:", err.message);
+            return res.status(401).json({ message: "Invalid or expired token" });
+        }
+
+        // Ensure UID matches
+        if (decodedToken.uid !== uid) {
+            console.warn(`⚠️  UID mismatch: ${decodedToken.uid} !== ${uid}`);
+            return res.status(401).json({ message: "UID mismatch" });
+        }
+
+        let user = null;
+
+        // 🔍 CHECK IF USER EXISTS BY UID
+        user = await User.findOne({ uid: uid });
+
+        if (user) {
+            // ✅ USER EXISTS - UPDATE LOGIN TIMESTAMP & PROVIDER INFO
+            console.log(`📝 Updating existing user: ${user.email}`);
+            user.lastLogin = new Date();
+            
+            // Update additional info if provided
+            if (name && !user.name) user.name = name;
+            if (pic && !user.pic) user.pic = pic;
+            if (phone && !user.phone) user.phone = phone;
+            if (email && !user.email) user.email = email;
+            
+            await user.save();
+            console.log(`✅ User updated successfully: ${user.email}`);
+        } else {
+            // 🆕 NEW USER - CREATE ACCOUNT
+            console.log(`🆕 Creating new user with UID: ${uid}`);
+
+            // Generate unique username from email or name
+            let generatedUsername = null;
+            if (email) {
+                generatedUsername = email.split('@')[0].toLowerCase();
+            } else if (name) {
+                generatedUsername = name.split(' ')[0].toLowerCase();
+            }
+
+            // Ensure unique username
+            if (generatedUsername) {
+                let counter = 1;
+                let baseUsername = generatedUsername;
+                while (await User.findOne({ username: generatedUsername })) {
+                    generatedUsername = `${baseUsername}${counter}`;
+                    counter++;
+                }
+            }
+
+            user = new User({
+                uid: uid,
+                name: name || "User",
+                email: email || null,
+                phone: phone || null,
+                pic: pic || null,
+                provider: provider,
+                username: generatedUsername,
+                role: "User",
+                lastLogin: new Date()
+            });
+
+            // For phone auth, generate a random password
+            if (provider === 'phone' && !user.password) {
+                const randomPass = Math.random().toString(36).slice(-12);
+                const salt = await bcrypt.genSalt(10);
+                user.password = await bcrypt.hash(randomPass, salt);
+            }
+
+            await user.save();
+            console.log(`✅ New user created: ${user.email || user.phone}`);
+        }
+
+        // Return user data (without sensitive info)
+        const { password, otp, otpExpires, failedAttempts, lockUntil, ...safeUser } = user.toJSON();
+        
+        res.json(safeUser);
+    } catch (err) {
+        console.error("❌ Auth Sync Error:", err.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(err);
+        res.status(500).json({ message: "Authentication sync failed. Please try again." });
+    }
+});
 
 app.post('/api/send-otp', authLimiter, async (req, res) => {
     try {
@@ -349,6 +478,7 @@ app.post('/login', authLimiter, async (req, res) => {
             // ✅ LOGIN SUCCESS - RESET FAILED ATTEMPTS
             user.failedAttempts = 0;
             user.lockUntil = undefined;
+            user.lastLogin = new Date();
             await user.save();
             
             const { password: _pw, otp: _otp, otpExpires: _exp, failedAttempts: _fa, lockUntil: _lu, ...safeUser } = user.toJSON();

@@ -3,11 +3,13 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { sendOtpAPI, createUserAPI } from '../Store/Services'
 import { BASE_URL } from '../constants'
-import { ShieldCheck, User, Mail, Lock, Loader2, ArrowRight, UserPlus, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
+import { ShieldCheck, User, Mail, Lock, Loader2, ArrowRight, UserPlus, Eye, EyeOff, CheckCircle, AlertCircle, Phone, Chrome } from 'lucide-react'
+import { signInWithPopup, signInWithPhoneNumber } from 'firebase/auth'
+import { auth, googleProvider, setUpRecaptcha } from '../firebase'
 
 export default function SingUp() {
     const [data, setdata] = useState({ name: "", email: "", username: "", password: "" })
-    const [step, setStep] = useState(1) 
+    const [step, setStep] = useState(1) // 1: Email/Pass form, 2: Email OTP, 3: Phone auth
     const [loading, setLoading] = useState(false)
     const [showPass, setShowPass] = useState(false)
     const [userOtp, setUserOtp] = useState("")
@@ -22,6 +24,14 @@ export default function SingUp() {
     const [termsAccepted, setTermsAccepted] = useState(false)
     const [resendTimer, setResendTimer] = useState(0)
     const [passwordStrength, setPasswordStrength] = useState(null) // 'weak', 'medium', 'strong'
+    
+    // Firebase phone auth states
+    const [phoneNumber, setPhoneNumber] = useState("")
+    const [showPhoneAuth, setShowPhoneAuth] = useState(false)
+    const [phoneOtp, setPhoneOtp] = useState("")
+    const [confirmationResult, setConfirmationResult] = useState(null)
+    const [phoneLoading, setPhoneLoading] = useState(false)
+    const [phoneStep, setPhoneStep] = useState(1) // 1: phone input, 2: OTP input
     
     const navigate = useNavigate()
 
@@ -117,6 +127,145 @@ export default function SingUp() {
             setResendTimer(0)
         }
     }
+
+    // ========== FIREBASE GOOGLE SIGN UP ==========
+    async function handleGoogleSignUp() {
+        setLoading(true)
+        setGeneralError("")
+        try {
+            const result = await signInWithPopup(auth, googleProvider)
+            const user = result.user
+            const idToken = await user.getIdToken()
+            
+            // Sync with backend
+            const response = await fetch(`${BASE_URL}/api/auth-sync`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                },
+                body: JSON.stringify({
+                    uid: user.uid,
+                    email: user.email,
+                    name: user.displayName || "User",
+                    pic: user.photoURL,
+                    provider: 'google',
+                    idToken: idToken
+                })
+            })
+
+            if (response.ok) {
+                const backendUser = await response.json()
+                localStorage.setItem("userid", backendUser.id || backendUser._id)
+                localStorage.setItem("name", backendUser.name)
+                localStorage.setItem("login", "true")
+                localStorage.setItem("role", backendUser.role || "User")
+                localStorage.setItem("userToken", idToken)
+                alert("Welcome! Account created successfully!")
+                navigate("/profile")
+            } else {
+                setGeneralError("Backend sync failed. Please try again.")
+            }
+        } catch (err) {
+            console.error("Google Sign Up Error:", err)
+            setGeneralError(err.message || "Failed to sign up with Google")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // ========== FIREBASE PHONE SIGN UP - STEP 1: SEND OTP ==========
+    async function handlePhoneSendOTP(e) {
+        e.preventDefault()
+        setPhoneLoading(true)
+        setGeneralError("")
+        
+        try {
+            if (!phoneNumber || phoneNumber.length < 10) {
+                setGeneralError("Please enter a valid phone number with country code")
+                setPhoneLoading(false)
+                return
+            }
+
+            // Setup reCAPTCHA before sending OTP
+            const recaptcha = setUpRecaptcha('phone-recaptcha-container')
+            if (!recaptcha) {
+                setGeneralError("reCAPTCHA setup failed. Please try again.")
+                setPhoneLoading(false)
+                return
+            }
+
+            // Send SMS OTP via Firebase
+            const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptcha)
+            setConfirmationResult(confirmation)
+            setPhoneStep(2) // Move to OTP verification step
+            alert("OTP sent to your phone!")
+        } catch (err) {
+            console.error("Phone Auth Error:", err)
+            setGeneralError(err.message || "Failed to send OTP. Check your phone number format.")
+        } finally {
+            setPhoneLoading(false)
+        }
+    }
+
+    // ========== FIREBASE PHONE SIGN UP - STEP 2: VERIFY OTP ==========
+    async function handlePhoneOtpVerify(e) {
+        e.preventDefault()
+        setPhoneLoading(true)
+        setGeneralError("")
+
+        try {
+            if (!confirmationResult) {
+                setGeneralError("Please request OTP first")
+                setPhoneLoading(false)
+                return
+            }
+
+            if (!phoneOtp || phoneOtp.length !== 6) {
+                setGeneralError("Please enter a valid 6-digit OTP")
+                setPhoneLoading(false)
+                return
+            }
+
+            // Verify phone OTP
+            const result = await confirmationResult.confirm(phoneOtp)
+            const user = result.user
+            const idToken = await user.getIdToken()
+
+            // Sync with backend
+            const response = await fetch(`${BASE_URL}/api/auth-sync`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                },
+                body: JSON.stringify({
+                    uid: user.uid,
+                    phone: user.phoneNumber,
+                    provider: 'phone',
+                    idToken: idToken
+                })
+            })
+
+            if (response.ok) {
+                const backendUser = await response.json()
+                localStorage.setItem("userid", backendUser.id || backendUser._id)
+                localStorage.setItem("name", backendUser.name || "User")
+                localStorage.setItem("login", "true")
+                localStorage.setItem("role", backendUser.role || "User")
+                localStorage.setItem("userToken", idToken)
+                alert("Welcome! Phone verification successful!")
+                navigate("/profile")
+            } else {
+                setGeneralError("Backend sync failed. Please try again.")
+            }
+        } catch (err) {
+            console.error("Phone OTP Verify Error:", err)
+            setGeneralError(err.message || "Invalid OTP. Please try again.")
+        } finally {
+            setPhoneLoading(false)
+        }
+    }
     
     // --- STEP 1: SEND OTP ---
     async function handleSendOTP(e) {
@@ -194,14 +343,18 @@ export default function SingUp() {
                         {/* PROGRESS INDICATOR */}
                         <div className="progress-indicator mb-4">
                             <div className="progress-bar-container">
-                                <div className={`progress-bar ${step === 2 ? 'completed' : 'active'}`}></div>
+                                <div className={`progress-bar ${step === 2 ? 'completed' : step === 3 ? 'completed' : 'active'}`}></div>
                             </div>
-                            <div className="progress-text">Step {step} of 2</div>
+                            <div className="progress-text">
+                                {showPhoneAuth ? `Phone Verification - Step ${phoneStep}` : `Step ${step} of 2`}
+                            </div>
                         </div>
 
                         <div className="icon-badge-premium mb-4"><UserPlus size={30} className="text-info" /></div>
                         <h2 className="brand-title">ESHOPPER<span className="accent">.</span></h2>
-                        <p className="step-indicator">{step === 1 ? "CREATE ACCOUNT" : "VERIFY EMAIL"}</p>
+                        <p className="step-indicator">
+                            {showPhoneAuth ? "VERIFY WITH PHONE" : step === 1 ? "CREATE ACCOUNT" : "VERIFY EMAIL"}
+                        </p>
 
                         <AnimatePresence mode="wait">
                             {step === 1 ? (
@@ -305,8 +458,42 @@ export default function SingUp() {
                                     {!termsAccepted && <p className="error-text" style={{fontSize: '11px', marginBottom: '16px'}}><AlertCircle size={12} /> Please accept the terms to continue</p>}
                                     
                                     <button type="submit" className="p-submit-btn shadow-lg" disabled={loading || usernameStatus !== 'available' || !termsAccepted}>{loading ? <Loader2 className="animate-spin mx-auto"/> : <>CREATE ACCOUNT <ArrowRight className="ml-2" size={18}/></>}</button>
+
+                                    {/* DIVIDER */}
+                                    <div className="luxury-divider my-4">
+                                        <span>OR SIGN UP WITH</span>
+                                    </div>
+
+                                    {/* GOOGLE SIGN UP BUTTON */}
+                                    <motion.button 
+                                        type="button" 
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="google-signup-btn mt-3 shadow-lg" 
+                                        onClick={handleGoogleSignUp}
+                                        disabled={loading}
+                                    >
+                                        <Chrome size={16} className="mr-2" /> SIGN UP WITH GOOGLE
+                                    </motion.button>
+
+                                    {/* PHONE SIGN UP BUTTON */}
+                                    <motion.button 
+                                        type="button" 
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        className="phone-signup-btn mt-2 shadow-lg" 
+                                        onClick={() => { 
+                                            setShowPhoneAuth(true)
+                                            setPhoneStep(1)
+                                            setPhoneNumber("")
+                                            setPhoneOtp("")
+                                            setConfirmationResult(null)
+                                        }}
+                                    >
+                                        <Phone size={16} className="mr-2" /> SIGN UP WITH PHONE
+                                    </motion.button>
                                 </motion.form>
-                            ) : (
+                            ) : step === 2 ? (
                                 <motion.form key="f2" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={verifyAndSignup} className="text-center mt-4">
                                     {/* ERROR IN VERIFICATION */}
                                     {generalError && (
@@ -340,9 +527,86 @@ export default function SingUp() {
                                     
                                     <p className="verify-help-text mt-4">Didn't receive the code? Check your spam folder or request a new code.</p>
                                 </motion.form>
-                            )}
+                            ) : showPhoneAuth ? (
+                                phoneStep === 1 ? (
+                                    <motion.form key="f3" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneSendOTP} className="text-center mt-4">
+                                        {generalError && (
+                                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="general-error-box mb-4">
+                                                <AlertCircle size={18} />
+                                                {generalError}
+                                            </motion.div>
+                                        )}
+                                        
+                                        <Phone size={60} className="text-info mx-auto mb-3 pulse-anim" />
+                                        <h3 className="verify-title">Phone Verification</h3>
+                                        <p className="verify-text mb-4">Enter your phone number with country code</p>
+                                        
+                                        <div className="p-field mb-4">
+                                            <label>PHONE NUMBER</label>
+                                            <div className="p-input-box">
+                                                <Phone size={18}/>
+                                                <input 
+                                                    type="tel" 
+                                                    placeholder="+1 (555) 123-4567" 
+                                                    value={phoneNumber} 
+                                                    onChange={e => setPhoneNumber(e.target.value)} 
+                                                    required 
+                                                />
+                                            </div>
+                                            <p className="verify-text" style={{fontSize: '11px', marginTop: '8px'}}>Example: +1 for USA, +91 for India, +44 for UK</p>
+                                        </div>
+                                        
+                                        {/* reCAPTCHA Container */}
+                                        <div id="phone-recaptcha-container" className="mb-4" style={{minHeight: '78px'}}></div>
+                                        
+                                        <button type="submit" className="p-submit-btn mb-3" disabled={phoneLoading || !phoneNumber}>
+                                            {phoneLoading ? <Loader2 className="animate-spin mx-auto"/> : "SEND OTP"}
+                                        </button>
+                                        
+                                        <button type="button" className="back-to-form" onClick={() => { setShowPhoneAuth(false); setStep(1); }}>
+                                            ← Back to Email Signup
+                                        </button>
+                                    </motion.form>
+                                ) : (
+                                    <motion.form key="f4" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneOtpVerify} className="text-center mt-4">
+                                        {generalError && (
+                                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="general-error-box mb-4">
+                                                <AlertCircle size={18} />
+                                                {generalError}
+                                            </motion.div>
+                                        )}
+                                        
+                                        <ShieldCheck size={60} className="text-info mx-auto mb-3 pulse-anim" />
+                                        <h3 className="verify-title">Verify OTP</h3>
+                                        <p className="verify-text mb-2">Code sent to:</p>
+                                        <p className="verify-email mb-5"><b>{phoneNumber}</b></p>
+                                        
+                                        <div className="p-field mb-4">
+                                            <label>6-DIGIT OTP</label>
+                                            <input 
+                                                type="text" 
+                                                maxLength="6" 
+                                                placeholder="000000" 
+                                                className="p-otp-input" 
+                                                value={phoneOtp} 
+                                                onChange={e => setPhoneOtp(e.target.value.replace(/\D/g, ''))} 
+                                                required 
+                                            />
+                                        </div>
+                                        
+                                        <button type="submit" className="p-submit-btn mb-3" disabled={phoneLoading || phoneOtp.length !== 6}>
+                                            {phoneLoading ? <Loader2 className="animate-spin mx-auto"/> : "VERIFY & SIGN UP"}
+                                        </button>
+                                        
+                                        <button type="button" className="resend-otp-btn" onClick={() => setPhoneStep(1)}>
+                                            ← Change Phone Number
+                                        </button>
+                                    </motion.form>
+                                )
+                            ) : null}
                         </AnimatePresence>
-                        <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>
+                        
+                        {!showPhoneAuth && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
                     </div>
                 </motion.div>
             </div>
@@ -370,10 +634,26 @@ export default function SingUp() {
                 .p-submit-btn { width: 100%; background: linear-gradient(135deg, #111, #333); color: white; border: none; padding: 16px; border-radius: 20px; font-weight: 800; font-size: 12px; letter-spacing: 2px; cursor: pointer; transition: 0.4s; display: flex; align-items: center; justify-content: center; gap: 8px; }
                 .p-submit-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
                 .p-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+                /* GOOGLE & PHONE BUTTONS */
+                .google-signup-btn { width: 100%; background: linear-gradient(135deg, #db4437, #ea4335); color: white; border: none; padding: 14px; border-radius: 20px; font-weight: 700; font-size: 11px; letter-spacing: 1.5px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+                .google-signup-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(234, 67, 53, 0.3); }
+                .google-signup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+                .phone-signup-btn { width: 100%; background: linear-gradient(135deg, #4caf50, #45a049); color: white; border: none; padding: 14px; border-radius: 20px; font-weight: 700; font-size: 11px; letter-spacing: 1.5px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+                .phone-signup-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(76, 175, 80, 0.3); }
+                .phone-signup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+                /* DIVIDER */
+                .luxury-divider { position: relative; text-align: center; margin: 25px 0; }
+                .luxury-divider::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: #ddd; }
+                .luxury-divider span { background: white; padding: 0 12px; position: relative; font-size: 10px; color: #999; font-weight: 700; letter-spacing: 1.5px; }
                 
                 .p-otp-input { width: 100%; text-align: center; font-size: 3rem; font-weight: 800; letter-spacing: 15px; border: none; background: transparent; outline: none; border-bottom: 3px solid #17a2b8; padding: 10px 0; }
                 
                 .login-call-link { color: #111; font-weight: 800; text-decoration: none; border-bottom: 2px solid #17a2b8; }
+                .back-to-form { background: transparent; border: 2px solid #17a2b8; color: #17a2b8; padding: 10px 16px; border-radius: 15px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.3s; }
+                .back-to-form:hover { background: #17a2b8; color: white; }
                 .eye-btn { border: none; background: transparent; color: #cbd5e1; cursor: pointer; padding: 0; display: flex; align-items: center; }
                 
                 /* VALIDATION STYLES */
