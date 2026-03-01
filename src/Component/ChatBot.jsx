@@ -181,7 +181,7 @@ export default function ChatBot() {
                                     <h3 className="chatbot-title">Fashion Stylist AI</h3>
                                     <span className="chatbot-status">🟢 Online</span>
                                 </div>
-                                <p className="chatbot-subtitle">Powered by Gemini</p>
+                                <p className="chatbot-subtitle">Powered by Eshopperr</p>
                             </div>
                             <button
                                 onClick={() => setIsOpen(false)}
