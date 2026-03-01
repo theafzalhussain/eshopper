@@ -790,7 +790,11 @@ async function startServer() {
         }
 
         try {
-            const response = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey}`);
+            const response = await axios.get('https://generativelanguage.googleapis.com/v1beta/models', {
+                headers: {
+                    'x-goog-api-key': geminiApiKey
+                }
+            });
             const models = (response.data?.models || [])
                 .filter((model) => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
                 .map((model) => String(model.name || '').replace(/^models\//, '').trim())
@@ -807,6 +811,39 @@ async function startServer() {
             console.warn('⚠️ Could not fetch Gemini model list:', modelListError.message);
             return [];
         }
+     };
+
+     const extractGeminiText = (data) => {
+        const candidates = data?.candidates || [];
+        const first = candidates[0];
+        const parts = first?.content?.parts || [];
+        const text = parts.map((part) => part?.text || '').join('').trim();
+        return text;
+     };
+
+     const generateWithRest = async (modelName, fullPrompt) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+        const payload = {
+            contents: [
+                {
+                    role: 'user',
+                    parts: [{ text: fullPrompt }]
+                }
+            ],
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 300
+            }
+        };
+
+        const response = await axios.post(url, payload, {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': geminiApiKey
+            }
+        });
+
+        return extractGeminiText(response.data);
      };
 
 app.post('/api/chat', async (req, res) => {
@@ -897,8 +934,20 @@ app.post('/api/chat', async (req, res) => {
 
                 throw new Error(`Empty response from model: ${modelName}`);
             } catch (modelError) {
-                lastModelError = modelError;
-                console.warn(`⚠️ Gemini model failed (${modelName}):`, modelError.message);
+                console.warn(`⚠️ Gemini SDK failed (${modelName}):`, modelError.message);
+
+                try {
+                    const restText = await generateWithRest(modelName, fullPrompt);
+                    if (restText && restText.trim()) {
+                        textResponse = restText;
+                        console.log(`✅ AI responded via REST fallback using model: ${modelName}`);
+                        break;
+                    }
+                    throw new Error(`Empty REST response from model: ${modelName}`);
+                } catch (restError) {
+                    lastModelError = restError;
+                    console.warn(`⚠️ Gemini REST failed (${modelName}):`, restError.message);
+                }
             }
         }
 
