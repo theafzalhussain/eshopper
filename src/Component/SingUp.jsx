@@ -564,13 +564,186 @@ export default function SingUp() {
                 .p-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
                 /* GOOGLE & PHONE BUTTONS */
-                .google-signup-btn { width: 100%; background: linear-gradient(135deg, #db4437, #ea4335); color: white; border: none; padding: 14px; border-radius: 20px; font-weight: 700; font-size: 11px; letter-spacing: 1.5px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
-                .google-signup-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(234, 67, 53, 0.3); }
-                .google-signup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+                .google-signup-btn { 
+                    width: 100%; 
+                    background: linear-gradient(135deg, #1f2937 0%, #374151 50%, #1f2937 100%); 
+                    color: white; 
+                    border: 2px solid transparent;
+                    background-clip: padding-box;
+                    padding: 16px 20px; 
+                    border-radius: 25px; 
+                    font-weight: 800; 
+                    font-size: 13px; 
+                    letter-spacing: 1.8px; 
+                    cursor: pointer; 
+                    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center; 
+                    gap: 12px;
+                    position: relative;
+                    overflow: hidden;
+                    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                }
+                
+                .google-signup-btn::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+                    transition: left 0.6s ease;
+                    z-index: 0;
+                }
+                
+                .google-signup-btn:hover:before {
+                    left: 100%;
+                }
+                
+                .google-signup-btn:hover:not(:disabled) { 
+                    transform: translateY(-4px) scale(1.02);
+                    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+                    background: linear-gradient(135deg, #2d3748 0%, #4a5568 50%, #2d3748 100%);
+                }
+                
+                .google-signup-btn:active:not(:disabled) {
+                    transform: translateY(-2px) scale(0.98);
+                }
+                
+                .google-signup-btn:disabled { 
+                    opacity: 0.6; 
+                    cursor: not-allowed;
+                    transform: none;
+                }
+                
+                .google-signup-btn svg {
+                    position: relative;
+                    z-index: 1;
+                    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+                }
+                
+                .google-signup-btn span {
+                    position: relative;
+                    z-index: 1;
+                }
 
-                .phone-signup-btn { width: 100%; background: linear-gradient(135deg, #4caf50, #45a049); color: white; border: none; padding: 14px; border-radius: 20px; font-weight: 700; font-size: 11px; letter-spacing: 1.5px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
-                .phone-signup-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(76, 175, 80, 0.3); }
-                .phone-signup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+                .phone-signup-btn { 
+                    width: 100%; 
+                    background: linear-gradient(135deg, #1f2937 0%, #374151 50%, #1f2937 100%); 
+                    color: white; 
+                    border: 2px solid transparent;
+                    background-clip: padding-box;
+                    padding: 16px 20px; 
+                    border-radius: 25px; 
+                    font-weight: 800; 
+                    font-size: 13px; 
+                    letter-spacing: 1.8px; 
+                    cursor: pointer; 
+                    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); 
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center;
+                    gap: 12px;
+                    position: relative;
+                    overflow: hidden;
+                    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                }
+                
+                .phone-signup-btn::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+                    transition: left 0.6s ease;
+                    z-index: 0;
+                }
+                
+                .phone-signup-btn:hover:before {
+                    left: 100%;
+                }
+                
+                .phone-signup-btn:hover:not(:disabled) { 
+                    transform: translateY(-4px) scale(1.02);
+                    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+                    background: linear-gradient(135deg, #2d3748 0%, #4a5568 50%, #2d3748 100%);
+                }
+                
+                .phone-signup-btn:active:not(:disabled) {
+                    transform: translateY(-2px) scale(0.98);
+                }
+                
+                .phone-signup-btn:disabled { 
+                    opacity: 0.6; 
+                    cursor: not-allowed;
+                    transform: none;
+                }
+                
+                .phone-signup-btn svg {
+                    position: relative;
+                    z-index: 1;
+                    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+                }
+                
+                .phone-signup-btn span {
+                    position: relative;
+                    z-index: 1;
+                }
+
+                /* RESPONSIVE BUTTON SIZING */
+                @media (max-width: 575px) {
+                    .google-signup-btn,
+                    .phone-signup-btn {
+                        padding: 14px 18px;
+                        font-size: 12px;
+                        letter-spacing: 1.6px;
+                        gap: 10px;
+                        border-radius: 22px;
+                    }
+                    .google-signup-btn svg,
+                    .phone-signup-btn svg {
+                        width: 15px;
+                        height: 15px;
+                    }
+                }
+                
+                @media (max-width: 479px) {
+                    .google-signup-btn,
+                    .phone-signup-btn {
+                        padding: 13px 16px;
+                        font-size: 11px;
+                        letter-spacing: 1.4px;
+                        gap: 9px;
+                        min-height: 48px;
+                        border-radius: 20px;
+                    }
+                    .google-signup-btn svg,
+                    .phone-signup-btn svg {
+                        width: 14px;
+                        height: 14px;
+                    }
+                }
+                
+                @media (max-width: 374px) {
+                    .google-signup-btn,
+                    .phone-signup-btn {
+                        padding: 12px 14px;
+                        font-size: 10px;
+                        letter-spacing: 1.2px;
+                        gap: 8px;
+                        min-height: 44px;
+                        border-radius: 18px;
+                    }
+                    .google-signup-btn svg,
+                    .phone-signup-btn svg {
+                        width: 13px;
+                        height: 13px;
+                    }
+                }
 
                 /* DIVIDER */
                 .luxury-divider { position: relative; text-align: center; margin: 25px 0; z-index: 1; }
