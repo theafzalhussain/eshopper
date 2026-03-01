@@ -779,6 +779,35 @@ async function startServer() {
               // --- server.js AI REFACTOR START ---
      const geminiApiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
      const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
+     let cachedGenerateModels = [];
+     let cachedAt = 0;
+     const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
+
+     const getAvailableGeminiModels = async () => {
+        const now = Date.now();
+        if (cachedGenerateModels.length > 0 && (now - cachedAt) < MODEL_CACHE_TTL_MS) {
+            return cachedGenerateModels;
+        }
+
+        try {
+            const response = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey}`);
+            const models = (response.data?.models || [])
+                .filter((model) => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
+                .map((model) => String(model.name || '').replace(/^models\//, '').trim())
+                .filter(Boolean);
+
+            if (models.length > 0) {
+                cachedGenerateModels = models;
+                cachedAt = now;
+                console.log(`✅ Gemini models discovered: ${models.slice(0, 5).join(', ')}${models.length > 5 ? '...' : ''}`);
+            }
+
+            return models;
+        } catch (modelListError) {
+            console.warn('⚠️ Could not fetch Gemini model list:', modelListError.message);
+            return [];
+        }
+     };
 
 app.post('/api/chat', async (req, res) => {
     try {
@@ -811,22 +840,41 @@ app.post('/api/chat', async (req, res) => {
             2. Be extremely polite and stylish.
             3. Keep answers under 3 lines.`;
 
-        // 🛠️ ROLE FIX: Roles alternated properly to prevent 'model vs user' error
+        // 🛠️ ROLE FIX: Roles normalized for stable prompt composition
         let cleanHistory = (history || []).map(m => ({
             role: (m.role === 'ai' || m.role === 'model' || m.role === 'bot' || m.sender === 'ai' || m.sender === 'model' || m.sender === 'bot') ? 'model' : 'user',
             parts: [{ text: m.text || m.parts?.[0]?.text || "" }]
         }));
 
-        // Ensuring history starts with USER if not empty
-        if (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
-            cleanHistory.shift();
+        const discoveredModels = await getAvailableGeminiModels();
+        const preferredOrder = [
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro",
+            "gemini-pro"
+        ];
+
+        let candidateModels = [];
+        if (discoveredModels.length > 0) {
+            const preferredAvailable = preferredOrder.filter((name) => discoveredModels.includes(name));
+            const remaining = discoveredModels.filter((name) => !preferredAvailable.includes(name));
+            candidateModels = [...preferredAvailable, ...remaining];
+        } else {
+            candidateModels = preferredOrder;
         }
 
-        const candidateModels = [
-            "gemini-pro",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro"
-        ];
+        const historyText = cleanHistory
+            .map((item) => {
+                const roleLabel = item.role === 'model' ? 'Assistant' : 'User';
+                const text = String(item.parts?.[0]?.text || '').trim();
+                return text ? `${roleLabel}: ${text}` : '';
+            })
+            .filter(Boolean)
+            .slice(-12)
+            .join('\n');
+
+        const fullPrompt = `${systemInstruction}\n\nConversation So Far:\n${historyText || 'No previous conversation.'}\n\nCurrent User Query: ${prompt}`;
 
         let textResponse = "";
         let lastModelError = null;
@@ -838,8 +886,7 @@ app.post('/api/chat', async (req, res) => {
                     systemInstruction
                 });
 
-                const chat = model.startChat({ history: cleanHistory });
-                const result = await chat.sendMessage(prompt);
+                const result = await model.generateContent(fullPrompt);
                 const response = await result.response;
                 textResponse = response.text();
 
