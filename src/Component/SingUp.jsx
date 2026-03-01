@@ -9,7 +9,7 @@ import { auth, googleProvider, setUpRecaptcha } from '../firebase'
 
 export default function SingUp() {
     const [data, setdata] = useState({ name: "", email: "", username: "", password: "" })
-    const [step, setStep] = useState(1) // 1: Email/Pass form, 2: Email OTP, 3: Phone auth
+    const [step, setStep] = useState(1) // For email signup: 1: form, 2: OTP
     const [loading, setLoading] = useState(false)
     const [showPass, setShowPass] = useState(false)
     const [userOtp, setUserOtp] = useState("")
@@ -25,8 +25,8 @@ export default function SingUp() {
     const [resendTimer, setResendTimer] = useState(0)
     const [passwordStrength, setPasswordStrength] = useState(null) // 'weak', 'medium', 'strong'
     
-    // 🔥 Firebase phone auth states (REFACTORED)
-    const [phoneMode, setPhoneMode] = useState(false) // Toggle phone signup mode
+    // 🔥 CRITICAL: Auth Mode State
+    const [authMode, setAuthMode] = useState('regular') // 'regular' or 'phone'
     const [phoneStep, setPhoneStep] = useState(1) // 1: enter phone, 2: verify OTP
     const [phoneNumber, setPhoneNumber] = useState("")
     const [phoneOtp, setPhoneOtp] = useState("")
@@ -112,9 +112,9 @@ export default function SingUp() {
         return () => clearInterval(interval)
     }, [resendTimer])
 
-    // 🔥 REFACTORED: Initialize reCAPTCHA ONLY when phone mode is activated
+    // 🔥 INITIALIZE RECAPTCHA WHEN PHONE MODE ACTIVATES
     useEffect(() => {
-        if (phoneMode && !recaptchaReady) {
+        if (authMode === 'phone' && !recaptchaReady) {
             const initTimer = setTimeout(() => {
                 try {
                     console.log('🔄 Initializing reCAPTCHA for phone auth...');
@@ -146,9 +146,9 @@ export default function SingUp() {
             return () => clearTimeout(initTimer);
         }
         
-        // Cleanup when exiting phone mode
+        // Cleanup when leaving phone mode
         return () => {
-            if (!phoneMode && window.recaptchaVerifier) {
+            if (authMode !== 'phone' && window.recaptchaVerifier) {
                 try {
                     window.recaptchaVerifier.clear();
                     window.recaptchaVerifier = null;
@@ -159,7 +159,7 @@ export default function SingUp() {
                 }
             }
         };
-    }, [phoneMode, recaptchaReady]);
+    }, [authMode, recaptchaReady]);
 
     // RESEND OTP FUNCTION
     async function handleResendOTP() {
@@ -475,20 +475,36 @@ export default function SingUp() {
             <div className="container d-flex align-items-center justify-content-center min-vh-100">
                 <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="glass-signup-card shadow-2xl">
                     <div className="signup-inner-box p-4 p-md-5 text-center">
+                        
+                        {/* 🔥 LOADING SPINNER OVERLAY */}
+                        {(loading || phoneLoading) && (
+                            <motion.div 
+                                initial={{ opacity: 0 }} 
+                                animate={{ opacity: 1 }}
+                                className="premium-spinner-overlay"
+                            >
+                                <Loader2 className="premium-spinner" size={48} />
+                                <p className="spinner-text">Processing...</p>
+                            </motion.div>
+                        )}
+
                         {/* PROGRESS INDICATOR */}
                         <div className="progress-indicator mb-4">
                             <div className="progress-bar-container">
-                                <div className={`progress-bar ${step === 2 ? 'completed' : step === 3 ? 'completed' : 'active'}`}></div>
+                                <div className={`progress-bar ${
+                                    authMode === 'phone' && phoneStep === 2 ? 'completed' :
+                                    authMode === 'regular' && step === 2 ? 'completed' : 'active'
+                                }`}></div>
                             </div>
                             <div className="progress-text">
-                                {phoneMode ? `Phone Verification - Step ${phoneStep} of 2` : `Step ${step} of 2`}
+                                {authMode === 'phone' ? `Phone Verification - Step ${phoneStep} of 2` : `Step ${step} of 2`}
                             </div>
                         </div>
 
                         <div className="icon-badge-premium mb-4"><UserPlus size={30} className="text-info" /></div>
                         <h2 className="brand-title">ESHOPPER<span className="accent">.</span></h2>
                         <p className="step-indicator">
-                            {phoneMode ? "PHONE VERIFICATION" : step === 1 ? "CREATE ACCOUNT" : "VERIFY EMAIL"}
+                            {authMode === 'phone' ? "PHONE VERIFICATION" : step === 1 ? "CREATE ACCOUNT" : "VERIFY EMAIL"}
                         </p>
 
                         <AnimatePresence mode="wait">
@@ -618,13 +634,13 @@ export default function SingUp() {
                                         whileTap={{ scale: loading ? 1 : 0.98 }}
                                         className="phone-signup-btn mt-2 shadow-lg" 
                                         onClick={() => {
-                                            console.log('📱 Phone signup activated');
+                                            console.log('📱 Switching to PHONE mode');
                                             if (!auth) {
-                                                alert('Firebase Auth not initialized. Please refresh.');
+                                                alert('Firebase not initialized. Refresh.');
                                                 return;
                                             }
                                             setGeneralError("");
-                                            setPhoneMode(true);
+                                            setAuthMode('phone'); // 🔥 MODE SWITCH
                                             setPhoneStep(1);
                                             setPhoneNumber("");
                                             setPhoneOtp("");
@@ -669,7 +685,7 @@ export default function SingUp() {
                                     
                                     <p className="verify-help-text mt-4">Didn't receive the code? Check your spam folder or request a new code.</p>
                                 </motion.form>
-                            ) : phoneMode ? (
+                            ) : authMode === 'phone' ? (
                                 phoneStep === 1 ? (
                                     <motion.form key="f3" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneSendOTP} className="text-center mt-4">
                                         {generalError && (
@@ -715,7 +731,7 @@ export default function SingUp() {
                                             type="button" 
                                             className="back-to-form" 
                                             onClick={() => {
-                                                setPhoneMode(false);
+                                                setAuthMode('regular');
                                                 setPhoneStep(1);
                                                 setPhoneNumber("");
                                                 setPhoneOtp("");
@@ -776,7 +792,7 @@ export default function SingUp() {
                             ) : null}
                         </AnimatePresence>
                         
-                        {!phoneMode && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
+                        {authMode === 'regular' && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
                     </div>
                 </motion.div>
                 
@@ -788,14 +804,49 @@ export default function SingUp() {
                         bottom: '10px', 
                         right: '10px', 
                         zIndex: 9999,
-                        visibility: phoneMode ? 'visible' : 'hidden'
+                        visibility: authMode === 'phone' ? 'visible' : 'hidden'
                     }}
                 ></div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
                 .signup-master-root { position: relative; min-height: 100vh; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80') center/cover; overflow: hidden; }
                 .luxury-bg-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(15,23,42,0.9); backdrop-filter: blur(10px); }
-                .glass-signup-card { position: relative; width: 100%; max-width: 500px; background: rgba(255, 255, 255, 0.95); border-radius: 40px; }
+                .glass-signup-card { position: relative; width: 100%; max-width: 500px; background: rgba(255, 255, 255, 0.95); border-radius: 40px; box-shadow: 0 30px 90px rgba(0,0,0,0.4); }
+                .signup-inner-box { background: white; border-radius: 40px; }
+                
+                /* 🔥 PREMIUM SPINNER OVERLAY */
+                .premium-spinner-overlay {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(255, 255, 255, 0.98);
+                    border-radius: 40px;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                    backdrop-filter: blur(5px);
+                }
+                .premium-spinner {
+                    animation: spin 1s linear infinite;
+                    color: #17a2b8;
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .spinner-text {
+                    margin-top: 20px;
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: #17a2b8;
+                    letter-spacing: 2px;
+                    text-transform: uppercase;
+                }
+                
                 .icon-badge-premium { width: 60px; height: 60px; background: rgba(23, 162, 184, 0.1); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
                 .brand-title { font-weight: 800; letter-spacing: 6px; font-size: 2rem; color: #111; }
                 .accent { color: #17a2b8; }
