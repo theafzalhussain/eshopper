@@ -3,14 +3,14 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { sendOtpAPI, createUserAPI } from '../Store/Services'
 import { BASE_URL } from '../constants'
-import { ShieldCheck, User, Mail, Lock, Loader2, ArrowRight, UserPlus, Eye, EyeOff, CheckCircle, AlertCircle, Phone, Chrome } from 'lucide-react'
-import { signInWithPopup, signInWithPhoneNumber } from 'firebase/auth'
-import { auth, googleProvider, setUpRecaptcha } from '../firebase'
+import { ShieldCheck, User, Mail, Lock, Loader2, ArrowRight, UserPlus, Eye, EyeOff, CheckCircle, AlertCircle, Chrome } from 'lucide-react'
+import { signInWithPopup } from 'firebase/auth'
+import { auth, googleProvider } from '../firebase'
 import Terms from './Terms'
 
 export default function SingUp() {
     // ============ MASTER STEP STATE - CONTROLS ALL UI ============
-    // 'initial' = email form | 'phone_input' = phone number | 'phone_otp' = verify OTP | 'email_otp' = verify email
+    // 'initial' = email form | 'email_otp' = verify email
     const [masterStep, setMasterStep] = useState('initial')
     
     // ============ EMAIL SIGNUP STATES ============
@@ -28,13 +28,6 @@ export default function SingUp() {
     const [resendTimer, setResendTimer] = useState(0)
     const [passwordStrength, setPasswordStrength] = useState(null)
     const [showTerms, setShowTerms] = useState(false)
-    
-    // ============ PHONE SIGNUP STATES ============
-    const [phoneNumber, setPhoneNumber] = useState("")
-    const [phoneOtp, setPhoneOtp] = useState("")
-    const [phoneLoading, setPhoneLoading] = useState(false)
-    const [recaptchaReady, setRecaptchaReady] = useState(false)
-    const [recaptchaError, setRecaptchaError] = useState(null)
     
     const navigate = useNavigate()
 
@@ -114,78 +107,6 @@ export default function SingUp() {
         const interval = setInterval(() => setResendTimer(prev => prev - 1), 1000)
         return () => clearInterval(interval)
     }, [resendTimer])
-
-    // 🔥 INITIALIZE RECAPTCHA WHEN PHONE MODE ACTIVATES
-    // ============ RECAPTCHA INITIALIZATION - MASTER EFFECT ============
-    useEffect(() => {
-        // Only initialize when entering phone_input step
-        if (masterStep === 'phone_input') {
-            console.log('🔄 [EFFECT] Phone input step detected, checking reCAPTCHA...')
-            
-            const initTimer = setTimeout(() => {
-                try {
-                    // Verify container exists in DOM
-                    const container = document.getElementById('recaptcha-container')
-                    if (!container) {
-                        console.error('❌ [RECAPTCHA] Container not found')
-                        setRecaptchaError('Container not found')
-                        return
-                    }
-
-                    console.log('✓ [RECAPTCHA] Container found')
-
-                    // If verifier already exists and ready, skip initialization
-                    if (window.recaptchaVerifier && recaptchaReady) {
-                        console.log('✓ [RECAPTCHA] Already initialized and ready')
-                        return
-                    }
-                    
-                    // If verifier exists but not marked ready, just mark it ready
-                    if (window.recaptchaVerifier && !recaptchaReady) {
-                        console.log('✓ [RECAPTCHA] Verifier exists, marking as ready')
-                        setRecaptchaReady(true)
-                        setRecaptchaError(null)
-                        return
-                    }
-                    
-                    // Only create new verifier if none exists
-                    if (!window.recaptchaVerifier) {
-                        console.log('⚙️ [RECAPTCHA] Creating new verifier...')
-                        const verifier = setUpRecaptcha('recaptcha-container')
-                        
-                        if (verifier) {
-                            setRecaptchaReady(true)
-                            setRecaptchaError(null)
-                            console.log('✅ [RECAPTCHA] Ready for phone authentication')
-                        } else {
-                            throw new Error('setUpRecaptcha returned null')
-                        }
-                    }
-                } catch (error) {
-                    console.error('❌ [RECAPTCHA] Setup failed:', error.message)
-                    setRecaptchaError(error.message || 'reCAPTCHA init failed')
-                    setRecaptchaReady(false)
-                }
-            }, 500) // Increased delay for DOM readiness
-            
-            return () => clearTimeout(initTimer)
-        }
-
-        // Cleanup when leaving phone mode
-        if (masterStep !== 'phone_input' && masterStep !== 'phone_otp') {
-            if (window.recaptchaVerifier) {
-                try {
-                    console.log('🧹 [CLEANUP] Cleaning up reCAPTCHA on mode switch')
-                    window.recaptchaVerifier.clear()
-                    window.recaptchaVerifier = null
-                    setRecaptchaReady(false)
-                    setRecaptchaError(null)
-                } catch (e) {
-                    console.warn('⚠️ Cleanup error:', e.message)
-                }
-            }
-        }
-    }, [masterStep])
 
     // RESEND OTP FUNCTION
     async function handleResendOTP() {
@@ -291,194 +212,6 @@ export default function SingUp() {
             setLoading(false)
         }
     }
-
-    // 🔥 REFACTORED: Step 1 - Send Phone OTP
-    async function handlePhoneSendOTP(e) {
-        e.preventDefault()
-        
-        if (phoneLoading) return
-        
-        setPhoneLoading(true)
-        setGeneralError("")
-        
-        try {
-            if (!auth) {
-                throw new Error("Firebase not initialized")
-            }
-
-            // Validate and format phone input
-            let formattedPhone = phoneNumber.trim().replace(/\s/g, '')
-            
-            // Auto-append +91 for India if no country code
-            if (formattedPhone && !formattedPhone.startsWith('+')) {
-                if (/^\d{10}$/.test(formattedPhone)) {
-                    formattedPhone = '+91' + formattedPhone
-                } else if (/^\d+$/.test(formattedPhone)) {
-                    formattedPhone = '+91' + formattedPhone
-                }
-            }
-
-            // Validate format
-            const phoneRegex = /^\+[1-9]\d{1,14}$/
-            if (!phoneRegex.test(formattedPhone)) {
-                throw new Error("Invalid format. Use +91XXXXXXXXXX (India) or +1234567890 (international)")
-            }
-
-            console.log('📞 Sending OTP to:', formattedPhone);
-
-            // Wait for reCAPTCHA to be ready (max 5 seconds)
-            console.log('⏳ [PHONE] Waiting for reCAPTCHA...')
-            let attempts = 0;
-            while (!window.recaptchaVerifier && attempts < 10) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                attempts++;
-                
-                // Try to initialize if still not available
-                if (!window.recaptchaVerifier && attempts === 5) {
-                    console.warn('⚠️ [PHONE] reCAPTCHA not ready, attempting manual setup...')
-                    const container = document.getElementById('recaptcha-container');
-                    if (container) {
-                        container.innerHTML = '';
-                    }
-                    const verifier = setUpRecaptcha('recaptcha-container')
-                    if (verifier) {
-                        setRecaptchaReady(true)
-                        console.log('✅ [PHONE] Manual reCAPTCHA setup successful')
-                    }
-                }
-            }
-
-            if (!window.recaptchaVerifier) {
-                throw new Error("reCAPTCHA initialization timeout. Please refresh the page and try again.")
-            }
-            
-            console.log('✅ [PHONE] reCAPTCHA ready, proceeding with OTP send')
-
-            // Send SMS
-            console.log('🔐 Calling signInWithPhoneNumber...')
-            const confirmationResult = await signInWithPhoneNumber(
-                auth,
-                formattedPhone,
-                window.recaptchaVerifier
-            );
-            
-            if (!confirmationResult || !confirmationResult.verificationId) {
-                throw new Error('Failed to send verification code');
-            }
-
-            // ✅ Store confirmation globally
-            window.confirmationResult = confirmationResult;
-            
-            console.log('✅ OTP sent successfully, verificationId:', confirmationResult.verificationId);
-            setMasterStep('phone_otp'); // Move to OTP input
-            alert("Verification code sent! Check your messages.");
-            
-        } catch (err) {
-            console.error("❌ Phone OTP Error:", err);
-            
-            if (err.code === 'auth/invalid-phone-number') {
-                setGeneralError("Invalid phone number. Use format: +1234567890");
-            } else if (err.code === 'auth/too-many-requests') {
-                setGeneralError("Too many attempts. Try again later.");
-            } else if (err.code === 'auth/captcha-check-failed') {
-                setGeneralError("CAPTCHA verification failed. Please refresh and try again.");
-            } else if (err.message?.includes('reCAPTCHA')) {
-                setGeneralError("Verification setup failed. Please refresh the page and try again.");
-            } else {
-                setGeneralError(err.message || "Failed to send code. Please check your number.");
-            }
-            
-            // Reset reCAPTCHA on error
-            if (window.recaptchaVerifier) {
-                try {
-                    window.recaptchaVerifier.clear();
-                    const container = document.getElementById('recaptcha-container');
-                    if (container) {
-                        container.innerHTML = '';
-                    }
-                    window.recaptchaVerifier = null;
-                    setRecaptchaReady(false);
-                } catch (e) {
-                    console.warn('Cleanup error:', e);
-                }
-            }
-        } finally {
-            setPhoneLoading(false)
-        }
-    }
-
-    // 🔥 REFACTORED: Step 2 - Verify Phone OTP
-    async function handlePhoneOtpVerify(e) {
-        e.preventDefault()
-        setPhoneLoading(true)
-        setGeneralError("")
-
-        try {
-            if (!window.confirmationResult) {
-                throw new Error("Session expired. Please request a new code.");
-            }
-
-            if (!phoneOtp || phoneOtp.length !== 6) {
-                throw new Error("Please enter a valid 6-digit code");
-            }
-            
-            console.log('🔐 Verifying OTP...');
-
-            // Verify OTP
-            const result = await window.confirmationResult.confirm(phoneOtp);
-            
-            if (!result || !result.user) {
-                throw new Error('Verification failed');
-            }
-            
-            const user = result.user;
-            console.log('✅ Phone verified:', user.phoneNumber);
-
-            const idToken = await user.getIdToken();
-
-            // Sync with backend (with error handling)
-            let response;
-            try {
-                response = await fetch(`${BASE_URL}/api/auth-sync`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${idToken}`
-                    },
-                    body: JSON.stringify({
-                        uid: user.uid,
-                        phone: user.phoneNumber,
-                        provider: 'phone',
-                        idToken: idToken
-                    })
-                });
-            } catch (networkErr) {
-                console.error('❌ Network error during auth sync:', networkErr);
-                throw new Error('Network error. Please check your connection and try again.');
-            }
-
-            if (response.ok) {
-                const backendUser = await response.json()
-                localStorage.setItem("userid", backendUser.id || backendUser._id)
-                localStorage.setItem("name", backendUser.name || "User")
-                localStorage.setItem("login", "true")
-                localStorage.setItem("role", backendUser.role || "User")
-                localStorage.setItem("username", backendUser.username)
-                localStorage.setItem("userToken", idToken)
-                
-                alert("Welcome! Phone verification successful!")
-                navigate("/profile")
-            } else {
-                const errorData = await response.json()
-                throw new Error(errorData.message || "Backend sync failed")
-            }
-        } catch (err) {
-            console.error("❌ Phone Verify Error:", err)
-            setGeneralError(err.message || "Invalid code. Please try again.")
-        } finally {
-            setPhoneLoading(false)
-        }
-    }
     
     // --- STEP 1: SEND OTP ---
     async function handleSendOTP(e) {
@@ -554,8 +287,8 @@ export default function SingUp() {
                 <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="glass-signup-card shadow-2xl">
                     <div className="signup-inner-box p-4 p-md-5 text-center">
                         
-                        {/* 🔥 LOADING SPINNER OVERLAY */}
-                        {(loading || phoneLoading) && (
+                        {/* LOADING SPINNER OVERLAY */}
+                        {loading && (
                             <motion.div 
                                 initial={{ opacity: 0 }} 
                                 animate={{ opacity: 1 }}
@@ -570,21 +303,18 @@ export default function SingUp() {
                         <div className="progress-indicator mb-4">
                             <div className="progress-bar-container">
                                 <div className={`progress-bar ${
-                                    masterStep === 'phone_otp' || masterStep === 'email_otp' ? 'completed' : 'active'
+                                    masterStep === 'email_otp' ? 'completed' : 'active'
                                 }`}></div>
                             </div>
                             <div className="progress-text">
-                                {masterStep === 'phone_input' ? 'Phone Verification - Step 1 of 2' :
-                                 masterStep === 'phone_otp' ? 'Phone Verification - Step 2 of 2' :
-                                 masterStep === 'email_otp' ? 'Step 2 of 2' : 'Step 1 of 2'}
+                                {masterStep === 'email_otp' ? 'Step 2 of 2' : 'Step 1 of 2'}
                             </div>
                         </div>
 
                         <div className="icon-badge-premium mb-4"><UserPlus size={30} className="text-info" /></div>
                         <h2 className="brand-title">ESHOPPER<span className="accent">.</span></h2>
                         <p className="step-indicator">
-                            {masterStep === 'phone_input' || masterStep === 'phone_otp' ? "PHONE VERIFICATION" :
-                             masterStep === 'email_otp' ? "VERIFY EMAIL" : "CREATE ACCOUNT"}
+                            {masterStep === 'email_otp' ? "VERIFY EMAIL" : "CREATE ACCOUNT"}
                         </p>
 
                         <AnimatePresence mode="wait">
@@ -706,30 +436,6 @@ export default function SingUp() {
                                     >
                                         <Chrome size={16} className="mr-2" /> SIGN UP WITH GOOGLE
                                     </motion.button>
-
-                                    {/* PHONE SIGN UP BUTTON - Enabled for Firebase Test Numbers */}
-                                    <motion.button 
-                                        type="button" 
-                                        whileHover={{ scale: loading ? 1 : 1.02 }}
-                                        whileTap={{ scale: loading ? 1 : 0.98 }}
-                                        className="phone-signup-btn mt-2 shadow-lg" 
-                                        onClick={() => {
-                                            console.log('📱 [CLICK] PHONE button clicked - Setting masterStep to phone_input')
-                                            if (!auth) {
-                                                alert('Firebase not initialized. Refresh.')
-                                                return
-                                            }
-                                            setGeneralError("")
-                                            setRecaptchaError(null)
-                                            setPhoneNumber("")
-                                            setPhoneOtp("")
-                                            setMasterStep('phone_input')
-                                        }}
-                                        disabled={loading}
-                                        style={{ pointerEvents: loading ? 'none' : 'auto' }}
-                                    >
-                                        <Phone size={16} className="mr-2" /> SIGN UP WITH PHONE
-                                    </motion.button>
                                 </motion.form>
                             )}
                             
@@ -768,152 +474,14 @@ export default function SingUp() {
                                     <p className="verify-help-text mt-4">Didn't receive the code? Check your spam folder or request a new code.</p>
                                 </motion.form>
                             )}
-                            
-                            {masterStep === 'phone_input' && (
-                                <motion.form key="f3" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneSendOTP} className="text-center mt-4">
-                                        {generalError && (
-                                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="general-error-box mb-4">
-                                                <AlertCircle size={18} />
-                                                {generalError}
-                                            </motion.div>
-                                        )}
-                                        
-                                        <Phone size={60} className="text-info mx-auto mb-3 pulse-anim" />
-                                        <h3 className="verify-title">Enter Your Phone Number</h3>
-                                        <p className="verify-text mb-4">We'll send you a verification code</p>
-                                        
-                                        <div className="p-field mb-4">
-                                            <label>PHONE NUMBER</label>
-                                            <div className="p-input-box">
-                                                <Phone size={18}/>
-                                                <input 
-                                                    type="tel" 
-                                                    placeholder="9876543210 (India)" 
-                                                    value={phoneNumber} 
-                                                    onChange={e => setPhoneNumber(e.target.value.replace(/[^\d+]/g, ''))} 
-                                                    required
-                                                    disabled={phoneLoading}
-                                                    autoFocus
-                                                />
-                                            </div>
-                                            <p className="verify-text" style={{fontSize: '11px', marginTop: '8px', color: '#666'}}>
-                                                ✓ Enter 10-digit (auto-appends +91) or full format: +1234567890<br/>
-                                                Examples: 9876543210 (India), +14155552671 (USA)
-                                            </p>
-                                            {/* reCAPTCHA Status Indicator */}
-                                            {recaptchaError && (
-                                                <p style={{fontSize: '11px', color: '#ff4444', marginTop: '5px'}}>
-                                                    ⚠️ Security check failed. Please refresh the page.
-                                                </p>
-                                            )}
-                                            {!recaptchaReady && !recaptchaError && (
-                                                <p style={{fontSize: '11px', color: '#888', marginTop: '5px'}}>
-                                                    🔄 Initializing security check...
-                                                </p>
-                                            )}
-                                            {recaptchaReady && (
-                                                <p style={{fontSize: '11px', color: '#00aa00', marginTop: '5px'}}>
-                                                    ✓ Security check ready
-                                                </p>
-                                            )}
-                                        </div>
-                                        
-                                        <button 
-                                            type="submit" 
-                                            className="p-submit-btn mb-3" 
-                                            disabled={phoneLoading || !phoneNumber.trim() || phoneNumber.length < 10 || !recaptchaReady}
-                                        >
-                                            {phoneLoading ? <Loader2 className="animate-spin mx-auto"/> : "SEND VERIFICATION CODE"}
-                                        </button>
-                                        
-                                        <button 
-                                            type="button" 
-                                            className="back-to-form" 
-                                            onClick={() => {
-                                                setMasterStep('initial');
-                                                setPhoneNumber("");
-                                                setPhoneOtp("");
-                                                setGeneralError("");
-                                                window.confirmationResult = null;
-                                            }}
-                                            disabled={phoneLoading}
-                                        >
-                                            ← Back to Email Signup
-                                        </button>
-                                    </motion.form>
-                            )}
-                            
-                            {masterStep === 'phone_otp' && (
-                                <motion.form key="f4" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} onSubmit={handlePhoneOtpVerify} className="text-center mt-4">
-                                        {generalError && (
-                                            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="general-error-box mb-4">
-                                                <AlertCircle size={18} />
-                                                {generalError}
-                                            </motion.div>
-                                        )}
-                                        
-                                        <ShieldCheck size={60} className="text-info mx-auto mb-3 pulse-anim" />
-                                        <h3 className="verify-title">Enter Verification Code</h3>
-                                        <p className="verify-text mb-2">Code sent to:</p>
-                                        <p className="verify-email mb-5"><b>{phoneNumber}</b></p>
-                                        
-                                        <div className="p-field mb-4">
-                                            <label>6-DIGIT CODE</label>
-                                            <input 
-                                                type="text" 
-                                                maxLength="6" 
-                                                placeholder="000000" 
-                                                className="p-otp-input" 
-                                                value={phoneOtp} 
-                                                onChange={e => setPhoneOtp(e.target.value.replace(/\D/g, ''))} 
-                                                required
-                                                autoFocus
-                                            />
-                                        </div>
-                                        
-                                        <button type="submit" className="p-submit-btn mb-3" disabled={phoneLoading || phoneOtp.length !== 6}>
-                                            {phoneLoading ? <Loader2 className="animate-spin mx-auto"/> : "VERIFY & SIGN UP"}
-                                        </button>
-                                        
-                                        <button 
-                                            type="button" 
-                                            className="resend-otp-btn" 
-                                            onClick={() => {
-                                                setMasterStep('phone_input');
-                                                setPhoneOtp("");
-                                                setGeneralError("");
-                                                window.confirmationResult = null;
-                                            }}
-                                        >
-                                            ← Change Phone Number
-                                        </button>
-                                    </motion.form>
-                            )}
                         </AnimatePresence>
                         
                         {masterStep === 'initial' && <div className="mt-5"><Link to="/login" className="login-call-link">ALREADY A MEMBER? LOGIN</Link></div>}
                     </div>
                 </motion.div>
 
-                {/* 🔥 TERMS & CONDITIONS MODAL */}
+                {/* TERMS & CONDITIONS MODAL */}
                 <Terms isOpen={showTerms} onClose={() => setShowTerms(false)} />
-                
-                {/* 🔥 RECAPTCHA CONTAINER - VISIBLE & PROPERLY POSITIONED */}
-                <div 
-                    id="recaptcha-container" 
-                    style={{ 
-                        position: 'fixed', 
-                        bottom: '20px', 
-                        right: '20px', 
-                        zIndex: 9999,
-                        visibility: (masterStep === 'phone_input' || masterStep === 'phone_otp') ? 'visible' : 'hidden',
-                        opacity: (masterStep === 'phone_input' || masterStep === 'phone_otp') ? 1 : 0,
-                        transition: 'all 0.3s ease',
-                        pointerEvents: (masterStep === 'phone_input' || masterStep === 'phone_otp') ? 'auto' : 'none',
-                        display: 'block !important'
-                    }}
-                    className="recaptcha-wrapper"
-                ></div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
                 .signup-master-root { position: relative; min-height: 100vh; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80') center/cover; overflow: hidden; z-index: 1; }
@@ -1120,18 +688,6 @@ export default function SingUp() {
                 }
                 
                 /* === 📱 PREMIUM FULL RESPONSIVE DESIGN === */
-                
-                /* 🔥 RECAPTCHA CONTAINER - CRITICAL FIXES */
-                #recaptcha-container {
-                    display: block !important;
-                    visibility: visible !important;
-                }
-                
-                .recaptcha-wrapper {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
                 
                 /* Extra Large Devices (1200px and up) */
                 @media (min-width: 1200px) {

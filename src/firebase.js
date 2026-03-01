@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, RecaptchaVerifier } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 // Firebase configuration using environment variables
 const firebaseConfig = {
@@ -60,62 +60,5 @@ if (hasFirebaseConfig) {
 }
 
 export { auth, googleProvider };
-
-// Set up reCAPTCHA verifier for phone authentication
-export const setUpRecaptcha = (containerId = 'recaptcha-container') => {
-  try {
-    if (!auth) {
-      console.error('❌ Cannot setup reCAPTCHA because Firebase Auth is not initialized.');
-      return null;
-    }
-
-    // Check if verifier already exists and is valid
-    if (window.recaptchaVerifier) {
-      console.log('ℹ️ reCAPTCHA verifier already exists, reusing...');
-      return window.recaptchaVerifier;
-    }
-
-    // Clear the container before creating new verifier
-    const container = document.getElementById(containerId);
-    if (!container) {
-      console.error('❌ reCAPTCHA container not found:', containerId);
-      return null;
-    }
-    
-    // Clear container innerHTML to prevent "already rendered" error
-    container.innerHTML = '';
-    
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-      size: 'invisible',
-      callback: (response) => {
-        console.log('✅ reCAPTCHA verified:', response);
-      },
-      'expired-callback': () => {
-        console.warn('⚠️ reCAPTCHA expired, clearing verifier...');
-        if (window.recaptchaVerifier) {
-          try {
-            window.recaptchaVerifier.clear();
-          } catch (e) {
-            console.warn('Cleanup error:', e);
-          }
-          window.recaptchaVerifier = null;
-        }
-      },
-    });
-    
-    console.log('✅ reCAPTCHA setup successful');
-    return window.recaptchaVerifier;
-  } catch (error) {
-    console.error('❌ reCAPTCHA setup failed:', error.message);
-    // Clear on error
-    if (window.recaptchaVerifier) {
-      try {
-        window.recaptchaVerifier.clear();
-      } catch (e) {}
-      window.recaptchaVerifier = null;
-    }
-    return null;
-  }
-};
 
 export default app;

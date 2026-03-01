@@ -776,7 +776,7 @@ async function startServer() {
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
         
         // 🤖 INITIALIZE GEMINI AI
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
         console.log("🤖 Gemini AI initialized successfully");
 
         // 🤖 GEMINI AI CHAT ENDPOINT - FIXED FOR GEMINI 1.5
