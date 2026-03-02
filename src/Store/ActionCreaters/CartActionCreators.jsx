@@ -1,4 +1,4 @@
-import {ADD_CART, DELETE_CART, GET_CART, UPDATE_CART } from "../Constant";
+import {ADD_CART, CLEAR_CART, DELETE_CART, GET_CART, UPDATE_CART } from "../Constant";
 
 export function addCart(data){
     return{
@@ -21,6 +21,13 @@ export function updateCart(data){
 export function deleteCart(data){
     return{
         type:DELETE_CART,
+        payload:data
+    }
+}
+
+export function clearCart(data){
+    return{
+        type:CLEAR_CART,
         payload:data
     }
 }

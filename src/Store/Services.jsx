@@ -89,6 +89,7 @@ export const getCartAPI = () => fastAPI(API_ENDPOINTS.CART);
 export const createCartAPI = (d) => fastAPI(API_ENDPOINTS.CART, "POST", d);
 export const updateCartAPI = (d) => fastAPI(`${API_ENDPOINTS.CART}/${getID(d)}`, "PUT", d);
 export const deleteCartAPI = (d) => fastAPI(`${API_ENDPOINTS.CART}/${getID(d)}`, "DELETE");
+export const clearUserCartAPI = (userid) => fastAPI(`${API_ENDPOINTS.CLEAR_CART}/${userid}`, "POST");
 
 export const getWishlistAPI = () => fastAPI(API_ENDPOINTS.WISHLIST);
 export const createWishlistAPI = (d) => fastAPI(API_ENDPOINTS.WISHLIST, "POST", d);

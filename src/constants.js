@@ -31,8 +31,10 @@ export const API_ENDPOINTS = {
   
   // Shopping
   CART: "/cart",
+  CLEAR_CART: "/api/cart/clear",
   WISHLIST: "/wishlist",
   CHECKOUT: "/checkout",
+  PLACE_ORDER: "/api/place-order",
   
   // Other
   CONTACT: "/contact",

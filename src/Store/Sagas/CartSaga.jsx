@@ -1,6 +1,6 @@
 import { takeEvery, put } from "redux-saga/effects"
-import { createCartAPI, deleteCartAPI, getCartAPI, updateCartAPI } from "../Services"
-import { ADD_CART, ADD_CART_RED, DELETE_CART, DELETE_CART_RED, GET_CART, GET_CART_RED, UPDATE_CART, UPDATE_CART_RED } from "../Constant"
+import { clearUserCartAPI, createCartAPI, deleteCartAPI, getCartAPI, updateCartAPI } from "../Services"
+import { ADD_CART, ADD_CART_RED, CLEAR_CART, CLEAR_CART_RED, DELETE_CART, DELETE_CART_RED, GET_CART, GET_CART_RED, UPDATE_CART, UPDATE_CART_RED } from "../Constant"
 
 function* createCartSaga(action) {
     try {
@@ -30,9 +30,19 @@ function* updateCartSaga(action) {
     } catch (e) { console.error("❌ Cart Update Error:", e) }
 }
 
+function* clearCartSaga(action) {
+    try {
+        const userid = action.payload?.userid
+        if (!userid) return
+        yield clearUserCartAPI(userid)
+        yield put({ type: CLEAR_CART_RED, data: { userid } })
+    } catch (e) { console.error("❌ Cart Clear Error:", e) }
+}
+
 export function* cartSaga() {
     yield takeEvery(ADD_CART, createCartSaga)
     yield takeEvery(GET_CART, getCartSaga)
     yield takeEvery(DELETE_CART, deleteCartSaga)
     yield takeEvery(UPDATE_CART, updateCartSaga)
+    yield takeEvery(CLEAR_CART, clearCartSaga)
 }

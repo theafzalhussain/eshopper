@@ -383,6 +383,17 @@ export default function ChatBot() {
   }, [])
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('openChat') === '1') {
+      setIsOpen(true)
+      params.delete('openChat')
+      const nextQuery = params.toString()
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`
+      window.history.replaceState({}, '', nextUrl)
+    }
+  }, [])
+
+  useEffect(() => {
     const onResize = () => {
       const mobile = window.innerWidth < 768
       setIsMobile(mobile)

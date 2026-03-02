@@ -304,8 +304,130 @@ const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts
 const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
 const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
 const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
+const Order = mongoose.model('Order', new mongoose.Schema({
+    orderId: { type: String, unique: true, required: true, index: true },
+    userid: { type: String, required: true, index: true },
+    userName: String,
+    userEmail: String,
+    paymentMethod: String,
+    paymentStatus: { type: String, default: 'Pending' },
+    orderStatus: { type: String, default: 'Order Placed' },
+    totalAmount: Number,
+    shippingAmount: Number,
+    finalAmount: Number,
+    shippingAddress: {
+        fullName: String,
+        phone: String,
+        addressline1: String,
+        city: String,
+        state: String,
+        pin: String,
+        country: { type: String, default: 'India' }
+    },
+    products: Array,
+    estimatedArrival: Date,
+    orderDate: { type: Date, default: Date.now }
+}, opts));
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+
+const generateOrderId = async () => {
+    const year = new Date().getFullYear();
+    const prefix = `ESHP-${year}-`;
+    const latestOrder = await Order.findOne({ orderId: new RegExp(`^${prefix}`) }).sort({ createdAt: -1 });
+    const latestNumber = latestOrder?.orderId ? Number(String(latestOrder.orderId).split('-').pop()) || 0 : 0;
+    const nextNumber = latestNumber + 1;
+    return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+};
+
+const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival }) => {
+    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
+    if (!BREVO_KEY || !toEmail) return false;
+
+    const displayName = userName || 'Valued Customer';
+    const arrivalDate = new Date(estimatedArrival).toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric', weekday: 'short'
+    });
+    const subtotal = products.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0);
+    const shipping = Number(finalAmount) - Number(subtotal);
+    const productRows = products.map((item) => `
+        <tr>
+            <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;color:#111827;">${item.name || 'Product'}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:center;color:#374151;">${item.qty || 1}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;color:#111827;">₹${Number(item.price || 0).toFixed(0)}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#111827;">₹${Number(item.total || (item.price * item.qty) || 0).toFixed(0)}</td>
+        </tr>
+    `).join('');
+
+    const htmlContent = `
+        <div style="margin:0;padding:24px;background:#f5f6f8;font-family:Inter,Arial,sans-serif;color:#111827;">
+            <div style="max-width:700px;margin:0 auto;background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;">
+                <div style="padding:22px 28px;background:linear-gradient(135deg,#0f172a,#1f2937,#b48b2a);color:#fff;">
+                    <div style="font-size:24px;font-weight:800;letter-spacing:1px;">ESHOPPER</div>
+                    <div style="font-size:11px;letter-spacing:2px;opacity:0.9;">BOUTIQUE LUXE • DIGITAL RECEIPT</div>
+                </div>
+
+                <div style="padding:28px;">
+                    <p style="margin:0 0 12px;font-size:16px;">Hi <strong>${displayName}</strong>,</p>
+                    <p style="margin:0 0 20px;color:#4b5563;">Thank you for choosing eShopper. Your order is confirmed and now being prepared with premium care.</p>
+
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+                        <div style="flex:1;min-width:220px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
+                            <div style="font-size:11px;letter-spacing:1px;color:#6b7280;text-transform:uppercase;">Order ID</div>
+                            <div style="font-size:20px;font-weight:800;color:#111827;margin-top:4px;">${orderId}</div>
+                        </div>
+                        <div style="flex:1;min-width:220px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
+                            <div style="font-size:11px;letter-spacing:1px;color:#6b7280;text-transform:uppercase;">Estimated Arrival</div>
+                            <div style="font-size:16px;font-weight:700;color:#111827;margin-top:6px;">${arrivalDate}</div>
+                        </div>
+                    </div>
+
+                    <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+                        <thead>
+                            <tr style="background:#f8fafc;">
+                                <th style="padding:11px 8px;text-align:left;font-size:12px;color:#6b7280;">Product</th>
+                                <th style="padding:11px 8px;text-align:center;font-size:12px;color:#6b7280;">Qty</th>
+                                <th style="padding:11px 8px;text-align:right;font-size:12px;color:#6b7280;">Price</th>
+                                <th style="padding:11px 8px;text-align:right;font-size:12px;color:#6b7280;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>${productRows}</tbody>
+                    </table>
+
+                    <div style="margin-top:16px;padding:14px;border:1px solid #e5e7eb;border-radius:10px;background:#fffef8;">
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#374151;margin-bottom:6px;"><span>Payment Method</span><strong>${paymentMethod}</strong></div>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#374151;margin-bottom:6px;"><span>Subtotal</span><span>₹${subtotal.toFixed(0)}</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#374151;margin-bottom:6px;"><span>Shipping</span><span>${shipping <= 0 ? 'FREE' : `₹${shipping.toFixed(0)}`}</span></div>
+                        <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:800;color:#111827;border-top:1px solid #eadfc2;padding-top:10px;"><span>Final Amount</span><span>₹${Number(finalAmount).toFixed(0)}</span></div>
+                    </div>
+
+                    <div style="margin-top:16px;padding:14px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb;color:#374151;font-size:13px;line-height:1.6;">
+                        <div style="font-weight:700;color:#111827;margin-bottom:6px;">Shipping Address</div>
+                        ${shippingAddress?.fullName || ''}<br/>
+                        ${shippingAddress?.addressline1 || ''}, ${shippingAddress?.city || ''}, ${shippingAddress?.state || ''} - ${shippingAddress?.pin || ''}<br/>
+                        ${shippingAddress?.phone || ''}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    await axios.post('https://api.brevo.com/v3/smtp/email', {
+        sender: { name: 'Eshopper Orders', email: 'support@eshopperr.me' },
+        to: [{ email: toEmail, name: displayName }],
+        subject: `Order Confirmation • ${orderId}`,
+        htmlContent,
+        replyTo: { email: 'support@eshopperr.me' }
+    }, {
+        headers: {
+            'api-key': BREVO_KEY,
+            'content-type': 'application/json',
+            accept: 'application/json'
+        }
+    });
+
+    return true;
+};
 
 // ============ FIREBASE AUTH SYNC ROUTE ============
 app.post('/api/auth-sync', async (req, res) => {
@@ -747,6 +869,116 @@ handle('/wishlist', Wishlist);
 handle('/checkout', Checkout); 
 handle('/contact', Contact);
 handle('/newslatter', Newslatter);
+
+app.post('/api/cart/clear/:userid', async (req, res) => {
+    try {
+        const userid = String(req.params.userid || '').trim();
+        if (!userid) return res.status(400).json({ message: 'userid is required' });
+        await Cart.deleteMany({ userid });
+        return res.json({ result: 'Done' });
+    } catch (e) {
+        return res.status(500).json({ message: 'Failed to clear cart' });
+    }
+});
+
+app.post('/api/place-order', async (req, res) => {
+    try {
+        const { userId, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products } = req.body;
+
+        if (!userId || !Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({ message: 'userId and products are required' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const cleanProducts = products.map((item) => ({
+            productid: item.productid || item.id || item._id || '',
+            name: item.name || 'Product',
+            qty: Number(item.qty || 1),
+            price: Number(item.price || 0),
+            total: Number(item.total || (Number(item.price || 0) * Number(item.qty || 1))),
+            size: item.size || '',
+            color: item.color || '',
+            pic: item.pic || item.pic1 || ''
+        }));
+
+        const orderId = await generateOrderId();
+        const orderDate = new Date();
+        const estimatedArrival = new Date(orderDate);
+        estimatedArrival.setDate(orderDate.getDate() + 7);
+
+        const total = Number(totalAmount ?? cleanProducts.reduce((sum, item) => sum + item.total, 0));
+        const shipping = Number(shippingAmount ?? ((total > 0 && total < 1000) ? 150 : 0));
+        const payable = Number(finalAmount ?? (total + shipping));
+
+        const addressPayload = shippingAddress || {
+            fullName: user.name || '',
+            phone: user.phone || '',
+            addressline1: user.addressline1 || '',
+            city: user.city || '',
+            state: user.state || '',
+            pin: user.pin || '',
+            country: 'India'
+        };
+
+        const orderDoc = await Order.create({
+            orderId,
+            userid: userId,
+            userName: user.name || '',
+            userEmail: user.email || '',
+            paymentMethod: paymentMethod || 'COD',
+            paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+            orderStatus: 'Order Placed',
+            totalAmount: total,
+            shippingAmount: shipping,
+            finalAmount: payable,
+            shippingAddress: addressPayload,
+            products: cleanProducts,
+            estimatedArrival,
+            orderDate
+        });
+
+        await Checkout.create({
+            userid: userId,
+            paymentmode: paymentMethod || 'COD',
+            orderstatus: 'Order Placed',
+            paymentstatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+            totalAmount: total,
+            shippingAmount: shipping,
+            finalAmount: payable,
+            products: cleanProducts
+        });
+
+        await Cart.deleteMany({ userid: userId });
+
+        try {
+            await sendOrderConfirmationEmail({
+                toEmail: user.email,
+                userName: user.name,
+                orderId,
+                paymentMethod: paymentMethod || 'COD',
+                finalAmount: payable,
+                shippingAddress: addressPayload,
+                products: cleanProducts,
+                estimatedArrival
+            });
+        } catch (emailError) {
+            console.error('Order confirmation email failed:', emailError.message);
+            if (process.env.SENTRY_DSN) Sentry.captureException(emailError);
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: 'Order placed successfully',
+            order: orderDoc
+        });
+    } catch (e) {
+        console.error('❌ Place Order Error:', e.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(e);
+        return res.status(500).json({ message: 'Failed to place order' });
+    }
+});
 
 // ==================== COMPATIBILITY API ALIASES ====================
 // These aliases keep legacy frontend calls working without 404 errors.

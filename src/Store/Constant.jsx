@@ -59,6 +59,8 @@ export const UPDATE_CART = "UPDATE_CART"
 export const UPDATE_CART_RED = "UPDATE_CART_RED"
 export const DELETE_CART = "DELETE_CART"
 export const DELETE_CART_RED = "DELETE_CART_RED"
+export const CLEAR_CART = "CLEAR_CART"
+export const CLEAR_CART_RED = "CLEAR_CART_RED"
 
 // WISHLIST
 export const ADD_WISHLIST = "ADD_WISHLIST"

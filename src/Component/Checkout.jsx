@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
+import axios from 'axios'
 import { getUser } from "../Store/ActionCreaters/UserActionCreators"
-import { getCart, deleteCart } from "../Store/ActionCreaters/CartActionCreators"
-import { addCheckout } from "../Store/ActionCreaters/CheckoutActionCreators"
+import { clearCart, getCart } from "../Store/ActionCreaters/CartActionCreators"
 import BuyerProfile from './BuyerProfile'
 import { motion } from 'framer-motion'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
+import { BASE_URL } from '../constants'
 
 export default function Checkout() {
     var [mode, setMode] = useState("COD")
@@ -15,6 +16,7 @@ export default function Checkout() {
     var [total, settotal] = useState(0)
     var [shipping, setshipping] = useState(0)
     var [final, setfinal] = useState(0)
+    var [placingOrder, setplacingOrder] = useState(false)
 
     var users = useSelector((state) => state.UserStateData)
     var carts = useSelector((state) => state.CartStateData)
@@ -40,22 +42,48 @@ export default function Checkout() {
         }
     }
 
-    function placeOrder() {
-        var item = {
-            userid: localStorage.getItem("userid"),
-            paymentmode: mode,
-            orderstatus: "Order Placed",
-            paymentstatus: "Pending",
-            time: new Date(),
-            totalAmount: total,
-            shippingAmount: shipping,
-            finalAmount: final,
-            products: cart
+    async function placeOrder() {
+        try {
+            const userid = localStorage.getItem("userid")
+            if (!userid || cart.length === 0 || placingOrder) return
+
+            setplacingOrder(true)
+
+            const payload = {
+                userId: userid,
+                paymentMethod: mode,
+                totalAmount: total,
+                shippingAmount: shipping,
+                finalAmount: final,
+                shippingAddress: {
+                    fullName: user?.name || '',
+                    phone: user?.phone || '',
+                    addressline1: user?.addressline1 || '',
+                    city: user?.city || '',
+                    state: user?.state || '',
+                    pin: user?.pin || '',
+                    country: 'India'
+                },
+                products: cart
+            }
+
+            const response = await axios.post(`${BASE_URL}/api/place-order`, payload, { timeout: 20000 })
+            const placedOrder = response?.data?.order
+
+            if (placedOrder) {
+                localStorage.setItem('lastPlacedOrder', JSON.stringify(placedOrder))
+                dispatch(clearCart({ userid }))
+                navigate("/confirmation", { state: { order: placedOrder } })
+                return
+            }
+
+            alert('Order place nahi ho paya. Please try again.')
+        } catch (error) {
+            const message = error?.response?.data?.message || 'Order place karte waqt issue aaya. Please try again.'
+            alert(message)
+        } finally {
+            setplacingOrder(false)
         }
-        dispatch(addCheckout(item))
-        // Clear Cart from DB
-        cart.forEach(i => dispatch(deleteCart({ id: i.id })))
-        navigate("/confirmation")
     }
 
     useEffect(() => { getAPIData() }, [users.length, carts.length])
@@ -130,8 +158,8 @@ export default function Checkout() {
                                 </div>
                             </div>
 
-                            <button onClick={placeOrder} className="btn btn-info btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold">
-                                PLACE ORDER NOW
+                            <button onClick={placeOrder} disabled={placingOrder || cart.length === 0} className="btn btn-info btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold">
+                                {placingOrder ? 'PLACING ORDER...' : 'PLACE ORDER NOW'}
                             </button>
                         </div>
                     </motion.div>
