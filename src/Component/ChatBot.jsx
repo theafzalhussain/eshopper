@@ -87,34 +87,53 @@ const PremiumRobotIcon = ({ mood = 'idle' }) => {
           <stop stopColor="#FFEAA0" />
           <stop offset="1" stopColor="#E8BC3A" />
         </linearGradient>
+        <radialGradient id="eyeglow" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="#FFF" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#13BFD9" stopOpacity="1" />
+        </radialGradient>
       </defs>
 
       <rect x="14" y="10" width="36" height="26" rx="8" fill="url(#rb)" stroke="#B88B12" strokeWidth="1.5" />
-      <rect x="18" y="14" width="11" height="9" rx="3" fill="#13BFD9" />
-      <rect x="35" y="14" width="11" height="9" rx="3" fill="#13BFD9" />
+      
+      <rect x="18" y="14" width="11" height="9" rx="3" fill="url(#eyeglow)" />
+      <rect x="35" y="14" width="11" height="9" rx="3" fill="url(#eyeglow)" />
 
-      <motion.circle
-        cx="23"
-        cy="18"
-        r="2"
-        fill="#111"
-        animate={{ opacity: [1, 1, 0.25, 1] }}
-        transition={{ repeat: Infinity, duration: isThinking ? 1.4 : 2.6, times: [0, 0.75, 0.86, 1] }}
+      <motion.ellipse
+        cx="23.5"
+        cy="18.5"
+        rx="2.5"
+        ry="3"
+        fill="#0A0A0A"
+        animate={{ 
+          scaleY: isThinking ? [1, 0.3, 1] : [1, 0.15, 1],
+          y: isHappy ? [0, -0.5, 0] : 0
+        }}
+        transition={{ repeat: Infinity, duration: isThinking ? 1.2 : 3, times: [0, 0.5, 1] }}
       />
-      <motion.circle
-        cx="40"
-        cy="18"
-        r="2"
-        fill="#111"
-        animate={{ opacity: [1, 1, 0.25, 1] }}
-        transition={{ repeat: Infinity, duration: isThinking ? 1.4 : 2.6, delay: 0.08, times: [0, 0.75, 0.86, 1] }}
+      <motion.circle cx="24" cy="17.5" r="0.8" fill="#FFF" opacity="0.85" />
+      
+      <motion.ellipse
+        cx="40.5"
+        cy="18.5"
+        rx="2.5"
+        ry="3"
+        fill="#0A0A0A"
+        animate={{ 
+          scaleY: isThinking ? [1, 0.3, 1] : [1, 0.15, 1],
+          y: isHappy ? [0, -0.5, 0] : 0
+        }}
+        transition={{ repeat: Infinity, duration: isThinking ? 1.2 : 3, delay: 0.1, times: [0, 0.5, 1] }}
       />
+      <motion.circle cx="41" cy="17.5" r="0.8" fill="#FFF" opacity="0.85" />
 
-      <path
-        d={isHappy ? 'M22 28 Q32 34 42 28' : 'M23 28 Q32 30 41 28'}
-        stroke="#513C0A"
-        strokeWidth="2"
+      <motion.path
+        d={isHappy ? 'M22 27 Q32 33 42 27' : 'M24 28 Q32 30.5 40 28'}
+        stroke="#3D2D0A"
+        strokeWidth="2.2"
         strokeLinecap="round"
+        fill="none"
+        animate={isHappy ? { d: ['M22 27 Q32 33 42 27', 'M22 27 Q32 34 42 27', 'M22 27 Q32 33 42 27'] } : {}}
+        transition={{ repeat: Infinity, duration: 1.5 }}
       />
 
       <rect x="18" y="38" width="28" height="16" rx="5" fill="url(#rb)" stroke="#B88B12" strokeWidth="1.5" />
@@ -204,7 +223,7 @@ export default function ChatBot() {
     {
       id: 1,
       sender: 'bot',
-      text: "Hey there! ✨ Main tumhari fashion bestie hoon 👗💫 Mujhe bolo kya pasand hai - casual look, party outfit ya trending styles? Jo bhi chahiye, perfect products suggest karungi! 🛍️ Hindi, English ya Hinglish... jo comfortable ho tumhare liye, wahi use karo! 😊",
+      text: "Hello! Welcome to Eshopper! 👋✨ I'm your personal AI Fashion Assistant, here to help you discover amazing styles! 🛍️💫 Looking for casual wear, party outfits, trending styles, or something special? Just tell me what you need, and I'll show you the perfect products from our collection! Feel free to chat in English, Hindi, or Hinglish - whatever's comfortable for you! 😊",
       timestamp: new Date(),
       products: []
     }
@@ -214,6 +233,7 @@ export default function ChatBot() {
   const [mood, setMood] = useState('idle')
   const [currentUser, setCurrentUser] = useState({ name: 'Guest', pic: '', email: '' })
   const [lastSuggestedProducts, setLastSuggestedProducts] = useState([])
+  const [allProductsCache, setAllProductsCache] = useState([])
 
   const messagesEndRef = useRef(null)
 
@@ -292,7 +312,18 @@ export default function ChatBot() {
       }
     }
 
+    const loadAllProducts = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/product`, { timeout: 12000 })
+        const products = Array.isArray(response.data) ? response.data : []
+        setAllProductsCache(products.map(p => normalizeProduct(p)).filter(Boolean))
+      } catch (error) {
+        console.log('Products will be loaded on demand')
+      }
+    }
+
     loadUserProfile()
+    loadAllProducts()
   }, [])
 
   const shouldShowProducts = (text) => {
@@ -364,50 +395,67 @@ export default function ChatBot() {
   }
 
   const getPersonalizedContext = (userQuery, language) => {
-    const userName = currentUser?.name || 'dost'
+    const userName = currentUser?.name || 'friend'
+    const isGreeting = /^(hi|hello|hey|hii|helo|namaste|namaskar)$/i.test(userQuery.trim())
+    
+    const productSummary = allProductsCache.length > 0 
+      ? `Available products: ${allProductsCache.length} items including mens wear, womens wear, casual, formal, party wear, traditional, western, shoes, accessories, and more.`
+      : 'Full product catalog available.'
+    
+    if (isGreeting) {
+      if (language === 'hinglish') {
+        return `User ne sirf greeting ki hai. Unhe warm welcome karo aur batao ki tum unki kaise help kar sakti ho. Product suggestions dene ke liye tayyar raho.
+
+Response example: "Hello ${userName}! 😊✨ Namaste! Main aapki fashion assistant hoon. Aaj kya dekhna chahoge - casual outfits, party wear, traditional styles, ya kuch trending? Bolo aur main perfect products suggest karungi! 🛍️💫"`
+      } else {
+        return `User has just greeted you. Give them a warm, enthusiastic welcome and let them know how you can help. Be ready to suggest products.
+
+Response example: "Hello ${userName}! 😊✨ Welcome! I'm so happy to help you today! Are you looking for casual outfits, party wear, traditional styles, or something trending? Just tell me what you need, and I'll find the perfect products for you! 🛍️💫"`
+      }
+    }
     
     if (language === 'hinglish') {
-      return `Tum ek smart aur cute fashion assistant ho jo bilkul human ki tarah baat karti ho.
+      return `Tum ek smart fashion assistant ho with complete knowledge of Eshopper's product database.
+
+${productSummary}
 
 Personality:
-- Bohot friendly, helpful aur relatable
-- Natural Hinglish mein baat karo (mix of Hindi + English)
-- User ko feel ho ki wo ek real dost se baat kar rahe hain
-- Emoji use karo jaha zarurat ho (👗👕✨🛍️💫)
-- Sweet aur encouraging tone rakho
+- Friendly, helpful aur accurate
+- Natural Hinglish mein baat karo
+- SIRF wahi products suggest karo jo user ne manga hai
+- Extra suggestions mat do unless user specifically mange
 
 Guidelines:
-- User ka naam hai "${userName}", unhe personally address karo
-- Concise responses do (2-3 lines max)
-- Agar product dikhaane hain to utsaah se batao
-- Fashion tips natural tareeke se do, lecture mat do
-- User ke preference ko yaad rakho aur uske according suggest karo
-- Casual aur friendly language use karo
-
-User ka query: "${userQuery}"
-
-Ab ek sweet, helpful aur natural response do jaise ek fashion-savvy dost deti hai.`
-    } else {
-      return `You are a smart and friendly fashion assistant who talks exactly like a helpful human friend.
-
-Personality:
-- Very friendly, approachable, and relatable
-- Speak naturally in English with warmth
-- Make user feel they're chatting with a real fashion-savvy friend
-- Use relevant emojis naturally (👗👕✨🛍️💫)
-- Keep a sweet and encouraging tone
-
-Guidelines:
-- User's name is "${userName}", address them personally
-- Keep responses concise (2-3 lines max)
-- Show enthusiasm when suggesting products
-- Give fashion tips naturally, not like a textbook
-- Remember user preferences and suggest accordingly
-- Be casual and conversational
+- User: "${userName}"
+- 2-3 lines concise response
+- User ki exact demand ke according products dikhao
+- Database knowledge use karke accurate suggestions do
+- Agar products dikhaane hain to confirm karo ki wo user ki demand match karte hain
 
 User query: "${userQuery}"
 
-Now give a sweet, helpful, and natural response like a fashion-savvy friend would.`
+User ki exact demand samjho aur ONLY relevant response do.`
+    } else {
+      return `You are a smart fashion assistant with complete knowledge of Eshopper's product database.
+
+${productSummary}
+
+Personality:
+- Friendly, helpful, and accurate
+- Speak naturally in English
+- ONLY suggest products that user specifically asks for
+- Don't give extra suggestions unless user explicitly asks
+
+Guidelines:
+- User: "${userName}"
+- Keep responses concise (2-3 lines)
+- Show products according to user's exact demand
+- Use database knowledge for accurate suggestions
+- If showing products, confirm they match user's request
+
+User query: "${userQuery}"
+
+Understand user's exact demand and give ONLY relevant response.`
     }
   }
 
@@ -479,6 +527,16 @@ Now give a sweet, helpful, and natural response like a fashion-savvy friend woul
         setLastSuggestedProducts(finalProducts)
       }
 
+      const isGreeting = /^(hi|hello|hey|hii|helo|namaste|namaskar)$/i.test(prompt)
+      
+      if (isGreeting && !responseText.includes('Welcome') && !responseText.includes('Namaste')) {
+        if (detectedLanguage === 'hinglish') {
+          responseText = `Hello ${currentUser?.name || 'dost'}! 😊✨ Namaste! Main aapki fashion assistant hoon. Aaj kya dekhna chahoge - casual outfits, party wear, traditional styles, ya kuch trending? Bolo aur main perfect products suggest karungi! 🛍️💫`
+        } else {
+          responseText = `Hello ${currentUser?.name || 'friend'}! 😊✨ Welcome! I'm so happy to help you today! Are you looking for casual outfits, party wear, traditional styles, or something trending? Just tell me what you need, and I'll find the perfect products for you! 🛍️💫`
+        }
+      }
+
       setMessages((prev) => [
         ...prev,
         {
@@ -502,13 +560,19 @@ Now give a sweet, helpful, and natural response like a fashion-savvy friend woul
         setLastSuggestedProducts(quickProducts)
       }
 
-      const fallbackText = detectedLanguage === 'hinglish'
-        ? wantsProducts
-          ? `Perfect ${currentUser?.name || 'dost'}! 🛍️ Maine tumhare liye kuch zabardast products nikale hain, niche dekho 👇✨`
-          : `Haan haan, samajh gayi! 😊 Batao thoda detail mein - kaun sa color pasand hai, occasion kya hai, aur budget kya hai? Main best suggestions dungi! 💫`
-        : wantsProducts
-          ? `Perfect ${currentUser?.name || 'friend'}! 🛍️ I've picked out some amazing products for you, check them out below 👇✨`
-          : `Got it! 😊 Tell me more details - what color do you prefer, what's the occasion, and your budget? I'll give you the best suggestions! 💫`
+      const isGreeting = /^(hi|hello|hey|hii|helo|namaste|namaskar)$/i.test(prompt)
+      
+      const fallbackText = isGreeting
+        ? (detectedLanguage === 'hinglish'
+          ? `Hello ${currentUser?.name || 'dost'}! 😊✨ Namaste! Kaisi ho? Main aapki fashion assistant hoon. Aaj kya explore karna chahoge? Casual wear, party outfits, traditional collection, ya trending styles? Bolo aur main perfect products dikhaungi! 🛍️💫`
+          : `Hello ${currentUser?.name || 'friend'}! 😊✨ Welcome! How are you today? I'm your fashion assistant. What would you like to explore? Casual wear, party outfits, traditional collection, or trending styles? Tell me and I'll show you perfect products! 🛍️💫`)
+        : (detectedLanguage === 'hinglish'
+          ? (wantsProducts
+            ? `Bilkul ${currentUser?.name || 'dost'}! 🛍️ Maine tumhari demand ke according products nikale hain. Niche dekho 👇✨`
+            : `Haan ${currentUser?.name || 'dost'}, main samajh gayi! 😊 Thoda aur detail batao - color preference, occasion, budget? Main accurate suggestions dungi! 💫`)
+          : (wantsProducts
+            ? `Absolutely ${currentUser?.name || 'friend'}! 🛍️ I've found products matching your request. Check them out below 👇✨`
+            : `Sure ${currentUser?.name || 'friend'}, I understand! 😊 Tell me more - color preference, occasion, budget? I'll give you accurate suggestions! 💫`))
 
       setMessages((prev) => [
         ...prev,

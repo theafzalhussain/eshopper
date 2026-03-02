@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
 import { getUser } from '../Store/ActionCreaters/UserActionCreators';
-import { getWishlist, addWishlist } from '../Store/ActionCreaters/WishlistActionCreators'; // Wishlist actions added
+import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators'; // Wishlist actions added
 import Newslatter from './Newslatter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { optimizeCloudinaryUrl, optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
@@ -86,15 +86,18 @@ export default function Home() {
         return wishlist.some((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId))
     }
 
-    // --- LOGIC: ADD TO WISHLIST FROM HOME ---
+    // --- LOGIC: TOGGLE WISHLIST FROM HOME ---
     function addToWishlist(p) {
         if (!localStorage.getItem("login")) {
             navigate("/login")
         } else {
             let d = wishlist.find((item) => item.productid === p.id && item.userid === localStorage.getItem("userid"))
             if (d) {
-                setWishlistToast({ show: true, text: "Already in Wishlist" })
+                // Product already in wishlist, so remove it
+                dispatch(deleteWishlist({ id: d.id }))
+                setWishlistToast({ show: true, text: "Removed from Wishlist" })
             } else {
+                // Product not in wishlist, so add it
                 let item = {
                     productid: p.id,
                     userid: localStorage.getItem("userid"),
