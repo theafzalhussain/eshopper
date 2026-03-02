@@ -6,8 +6,7 @@ export default function Terms({ isOpen, onClose }) {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="terms-master-container">
-                    {/* BACKDROP - 100% DARK & BLURRY */}
+                <div className="terms-overlay-container">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -16,401 +15,384 @@ export default function Terms({ isOpen, onClose }) {
                         className="terms-backdrop"
                     />
 
-                    {/* MODAL CARD - PERFECTLY CENTERED */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 50 }}
+                        initial={{ opacity: 0, scale: 0.85, y: 60 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 50 }}
-                        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                        exit={{ opacity: 0, scale: 0.85, y: 60 }}
+                        transition={{ type: 'spring', stiffness: 280, damping: 22, duration: 0.5 }}
                         className="terms-modal-card"
                     >
-                        {/* CLOSE BUTTON */}
-                        <button onClick={onClose} className="terms-absolute-close">
-                            <X size={22} />
+                        <button onClick={onClose} className="terms-close-btn" aria-label="Close Terms">
+                            <X size={24} strokeWidth={2.5} />
                         </button>
 
-                        {/* HEADER SECTION */}
                         <div className="terms-header">
-                            <div className="legal-badge">EST. 2024 • LEGAL</div>
+                            <div className="terms-badge">EST. 2024 • LEGAL</div>
                             <h2 className="terms-title">Terms & Conditions</h2>
-                            <div className="title-underline"></div>
-                            <p className="brand-label">eShopperr Luxury Boutique</p>
+                            <div className="terms-divider"></div>
+                            <p className="terms-subtitle">ESHOPPERR LUXURY BOUTIQUE</p>
                         </div>
 
-                        {/* SCROLLABLE BODY */}
                         <div className="terms-body">
-                            <Section icon={<Zap />} title="Our Commitment" text="At Eshopperr, every piece is curated by AI and certified by humans for unparalleled luxury standards." />
-                            <Section icon={<Truck />} title="Premium Shipping" text="Insured, white-glove logistics for all worldwide deliveries. Real-time updates every step of the way." />
-                            <Section icon={<Users />} title="24/7 Concierge" text="Private access to our stylists for orders, resizing, and lifestyle advice. Reach us via our verified channels." />
-                            <Section icon={<RefreshCw />} title="Bespoke Returns" text="Seven-day hassle-free return window for all unbranded tags. We offer instant store credit for members." />
-                            <Section icon={<Lock />} title="Privacy Protocols" text="Your data is your legacy. We utilize AES-256 encryption to protect every transaction and personal profile." />
-                            <Section icon={<Shield />} title="Authenticity Pact" text="A legal guarantee of 100% originality for every item, or we return triple your purchase value." isLast />
+                            <TermsSection
+                                icon={<Zap />}
+                                title="Excellence Commitment"
+                                text="At Eshopperr, we ensure that every product listed meets the highest standards of quality, authenticity, and craftsmanship. Our AI-powered curation system guarantees exclusivity and superior design in every collection."
+                            />
+                            <TermsSection
+                                icon={<Truck />}
+                                title="Premium Logistics"
+                                text="We provide white-glove shipping services with real-time tracking. Each luxury item is automatically insured and handled by our premium courier network ensuring pristine, on-time delivery to your doorstep."
+                            />
+                            <TermsSection
+                                icon={<Users />}
+                                title="24/7 Concierge"
+                                text="Your satisfaction is our priority. Our dedicated luxury concierge team is available round-the-clock via chat, email, or phone to assist with orders, styling advice, and after-purchase care."
+                            />
+                            <TermsSection
+                                icon={<RefreshCw />}
+                                title="Returns"
+                                text="We honor a seven-day hassle-free return policy on all items in original, unused condition with tags intact. Premium members receive complimentary return shipping and instant refunds within 5 business days."
+                            />
+                            <TermsSection
+                                icon={<Lock />}
+                                title="Security"
+                                text="We employ enterprise-grade encryption and comply with international data protection standards. Your personal information is treated with absolute confidentiality and is never shared with unauthorized third parties."
+                            />
+                            <TermsSection
+                                icon={<Shield />}
+                                title="Authenticity Guarantee"
+                                text="Every product on Eshopperr is certified authentic. We source exclusively from authorized luxury designers and provide authentic certificates for high-value items. Money-back guarantee if authenticity is questioned."
+                                isLast
+                            />
                         </div>
 
-                        {/* FOOTER */}
                         <div className="terms-footer">
                             <button onClick={onClose} className="terms-agree-btn">
-                                <CheckCircle size={16} style={{marginRight: '8px'}} />
-                                AGREE & PROCEED
+                                <CheckCircle size={18} strokeWidth={2.5} />
+                                <span>AGREE & PROCEED</span>
                             </button>
                         </div>
                     </motion.div>
 
                     <style dangerouslySetInnerHTML={{ __html: `
-                        /* ===== ULTRA PREMIUM TERMS ===== */
-                        .terms-master-container {
-                            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                            display: flex; align-items: center; justify-content: center;
-                            z-index: 99999; padding: 20px; overflow: hidden;
-                        }
-
-                        /* ULTRA LUXURY BACKDROP */
-                        .terms-backdrop {
-                            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                            background: linear-gradient(135deg, rgba(0,0,0,0.88) 0%, rgba(15,15,35,0.92) 50%, rgba(0,0,0,0.88) 100%);
-                            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-                            animation: backdropPulse 4s ease-in-out infinite;
-                        }
-
-                        @keyframes backdropPulse {
-                            0%, 100% { opacity: 1; }
-                            50% { opacity: 0.95; }
-                        }
-
-                        /* ULTRA PREMIUM MODAL CARD */
-                        .terms-modal-card {
-                            position: relative; width: 100%; max-width: 750px;
-                            max-height: 88vh; background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 50%, #F0F0F0 100%);
-                            border-radius: 50px; display: flex; flex-direction: column; overflow: hidden;
-                            border: 2.5px solid rgba(212, 175, 55, 0.5);
-                            box-shadow: 
-                                0 0 100px rgba(212, 175, 55, 0.25),
-                                0 0 150px rgba(212, 175, 55, 0.1),
-                                0 45px 150px rgba(0,0,0,0.6),
-                                inset 0 1px 0 rgba(255,255,255,0.9);
-                            backdrop-filter: blur(5px);
-                        }
-
-                        /* ULTRA PREMIUM CLOSE BUTTON */
-                        .terms-absolute-close {
-                            position: absolute; top: 28px; right: 28px;
-                            background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
-                            border: 1.5px solid #FFA500; width: 46px; height: 46px;
-                            border-radius: 50%; display: flex; align-items: center;
-                            justify-content: center; cursor: pointer; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-                            z-index: 10; color: #0a0a0a; 
-                            box-shadow: 
-                                0 0 30px rgba(212, 175, 55, 0.4),
-                                0 12px 30px rgba(212, 175, 55, 0.4);
-                        }
-
-                        .terms-absolute-close:hover { 
-                            transform: rotate(90deg) scale(1.15); 
-                            box-shadow: 
-                                0 0 50px rgba(212, 175, 55, 0.6),
-                                0 15px 40px rgba(212, 175, 55, 0.5);
-                            background: linear-gradient(135deg, #FFA500 0%, #FFD700 50%, #FFA500 100%);
-                        }
-
-                        .terms-absolute-close:active { transform: scale(0.92) rotate(90deg); }
-
-                        /* ULTRA HEADER */
-                        .terms-header { 
-                            padding: 50px 50px 34px 50px; 
-                            text-align: center; 
-                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(212, 175, 55, 0.03) 100%);
-                            border-bottom: 2px solid rgba(212, 175, 55, 0.3);
-                            position: relative;
+                        .terms-overlay-container {
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            z-index: 99999;
+                            padding: 20px;
                             overflow: hidden;
                         }
 
-                        .terms-header::before {
-                            content: '';
+                        .terms-backdrop {
                             position: absolute;
                             top: 0;
-                            left: 50%;
-                            transform: translateX(-50%);
-                            width: 200%;
-                            height: 2px;
-                            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.6), transparent);
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background: linear-gradient(135deg, rgba(3, 8, 20, 0.92) 0%, rgba(9, 12, 26, 0.95) 50%, rgba(0, 0, 0, 0.92) 100%);
+                            backdrop-filter: blur(18px);
+                            -webkit-backdrop-filter: blur(18px);
                         }
 
-                        .legal-badge { 
-                            font-size: 10px; letter-spacing: 4px; 
-                            color: #FFD700; font-weight: 900; margin-bottom: 16px;
-                            text-transform: uppercase; text-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                            animation: badgeGlow 2s ease-in-out infinite;
+                        .terms-modal-card {
+                            position: relative;
+                            width: 100%;
+                            max-width: 780px;
+                            max-height: 90vh;
+                            background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 55%, #F0F0F0 100%);
+                            border-radius: 44px;
+                            display: flex;
+                            flex-direction: column;
+                            overflow: hidden;
+                            border: 2.5px solid rgba(212, 175, 55, 0.55);
+                            box-shadow:
+                                0 0 90px rgba(212, 175, 55, 0.22),
+                                0 36px 110px rgba(0, 0, 0, 0.6),
+                                inset 0 1px 0 rgba(255, 255, 255, 0.9);
                         }
 
-                        @keyframes badgeGlow {
-                            0%, 100% { text-shadow: 0 0 8px rgba(212, 175, 55, 0.4); }
-                            50% { text-shadow: 0 0 16px rgba(212, 175, 55, 0.8); }
+                        .terms-close-btn {
+                            position: absolute;
+                            top: 26px;
+                            right: 26px;
+                            width: 46px;
+                            height: 46px;
+                            border-radius: 50%;
+                            border: 1.5px solid #d4af37;
+                            background: linear-gradient(135deg, #f8dc7c 0%, #d4af37 50%, #f8dc7c 100%);
+                            color: #111;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            cursor: pointer;
+                            z-index: 3;
+                            transition: transform 0.35s ease, box-shadow 0.35s ease;
+                            box-shadow: 0 10px 28px rgba(212, 175, 55, 0.35);
                         }
 
-                        .terms-title { 
-                            font-size: 44px; font-weight: 900; color: #0a0a0a; margin: 0;
-                            background: linear-gradient(135deg, #1a1a1a 0%, #333 40%, #D4AF37 100%);
-                            -webkit-background-clip: text;
-                            -webkit-text-fill-color: transparent;
-                            background-clip: text;
-                            letter-spacing: -1px;
-                            animation: titleGlow 3s ease-in-out infinite;
+                        .terms-close-btn:hover {
+                            transform: rotate(90deg) scale(1.08);
+                            box-shadow: 0 14px 32px rgba(212, 175, 55, 0.45);
                         }
 
-                        @keyframes titleGlow {
-                            0%, 100% { text-shadow: 0 0 0 transparent; filter: drop-shadow(0 0 0 transparent); }
-                            50% { filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.2)); }
+                        .terms-header {
+                            padding: 48px 52px 30px;
+                            text-align: center;
+                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.14) 0%, rgba(212, 175, 55, 0.04) 100%);
+                            border-bottom: 2px solid rgba(212, 175, 55, 0.28);
                         }
 
-                        .title-underline { 
-                            width: 90px; height: 5px; 
-                            background: linear-gradient(90deg, transparent, #FFD700, transparent); 
-                            margin: 20px auto; border-radius: 10px;
-                            box-shadow: 0 4px 16px rgba(212, 175, 55, 0.4);
-                        }
-
-                        .brand-label { 
-                            font-size: 12px; letter-spacing: 3px; color: #888; 
-                            text-transform: uppercase; font-weight: 800;
-                        }
-
-                        /* ULTRA PREMIUM BODY */
-                        .terms-body { 
-                            flex: 1; padding: 34px 50px; overflow-y: auto; scroll-behavior: smooth;
-                            background: linear-gradient(to bottom, #FAFAFA 0%, #F8F8F8 100%);
-                        }
-                        
-                        .terms-body::-webkit-scrollbar { width: 8px; }
-                        .terms-body::-webkit-scrollbar-track { background: rgba(212, 175, 55, 0.05); border-radius: 10px; }
-                        .terms-body::-webkit-scrollbar-thumb { 
-                            background: linear-gradient(180deg, #FFD700 0%, #FFA500 100%);
-                            border-radius: 10px; 
-                            box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
-                            border: 1px solid rgba(212, 175, 55, 0.2);
-                        }
-
-                        /* ULTRA PREMIUM SECTION ITEMS */
-                        .section-item { 
-                            display: flex; gap: 26px; margin-bottom: 35px; 
-                            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-                            padding: 24px; border-radius: 26px;
-                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.06), rgba(212, 175, 55, 0.01));
-                            border: 1.5px solid rgba(212, 175, 55, 0.15);
-                            cursor: default;
-                        }
-
-                        .section-item:hover {
-                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0.04));
-                            border-color: rgba(212, 175, 55, 0.35);
-                            box-shadow: 
-                                0 0 30px rgba(212, 175, 55, 0.2),
-                                0 12px 32px rgba(212, 175, 55, 0.15);
-                            transform: translateY(-6px);
-                        }
-
-                        .section-icon { 
-                            color: #FFD700; min-width: 44px; width: 44px; height: 44px;
-                            display: flex; align-items: center; justify-content: center;
-                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.08));
-                            border-radius: 16px; 
-                            box-shadow: 
-                                0 0 16px rgba(212, 175, 55, 0.25),
-                                0 6px 16px rgba(212, 175, 55, 0.15);
-                            border: 1px solid rgba(212, 175, 55, 0.2);
-                        }
-
-                        .section-item h3 { 
-                            font-size: 17px; font-weight: 800; color: #0a0a0a; margin: 0 0 9px 0;
-                            letter-spacing: -0.5px;
-                        }
-
-                        .section-item p { 
-                            font-size: 13px; color: #555; line-height: 1.85; margin: 0;
-                            font-weight: 500;
-                        }
-
-                        /* ULTRA PREMIUM FOOTER */
-                        .terms-footer { 
-                            padding: 34px 50px; text-align: center; 
-                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(212, 175, 55, 0.03) 100%);
-                            border-top: 2px solid rgba(212, 175, 55, 0.3);
-                        }
-
-                        /* ULTRA AGREE BUTTON */
-                        .terms-agree-btn { 
-                            background: linear-gradient(135deg, #1a1a1a 0%, #333 40%, #FFD700 100%);
-                            color: white; border: 2.5px solid #FFD700;
-                            padding: 18px 56px; border-radius: 50px; font-weight: 900; 
-                            letter-spacing: 3px; font-size: 11px; cursor: pointer; 
-                            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-                            display: inline-flex; align-items: center;
-                            box-shadow: 
-                                0 0 30px rgba(212, 175, 55, 0.3),
-                                0 15px 40px rgba(212, 175, 55, 0.2);
+                        .terms-badge {
+                            font-size: 10px;
+                            letter-spacing: 4px;
+                            color: #d4af37;
+                            font-weight: 900;
+                            margin-bottom: 14px;
                             text-transform: uppercase;
                         }
 
-                        .terms-agree-btn:hover { 
-                            background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
-                            color: #0a0a0a;
-                            box-shadow: 
-                                0 0 50px rgba(212, 175, 55, 0.5),
-                                0 20px 50px rgba(212, 175, 55, 0.3);
-                            transform: translateY(-4px) scale(1.05);
+                        .terms-title {
+                            margin: 0;
+                            font-size: 44px;
+                            font-weight: 900;
+                            letter-spacing: -1px;
+                            background: linear-gradient(135deg, #101010 0%, #2e2e2e 45%, #d4af37 100%);
+                            -webkit-background-clip: text;
+                            -webkit-text-fill-color: transparent;
+                            background-clip: text;
                         }
 
-                        .terms-agree-btn:active { 
-                            transform: translateY(-1px) scale(0.96);
+                        .terms-divider {
+                            width: 86px;
+                            height: 4px;
+                            margin: 18px auto;
+                            border-radius: 10px;
+                            background: linear-gradient(90deg, transparent, #d4af37, transparent);
                         }
 
-                        /* ====== ULTRA RESPONSIVE DESIGN ====== */
-                        
-                        @media (max-width: 1400px) {
-                            .terms-modal-card { max-width: 700px; }
-                            .terms-header { padding: 46px 46px 32px 46px; }
-                            .terms-title { font-size: 40px; }
-                            .terms-body { padding: 30px 46px; }
-                            .terms-footer { padding: 30px 46px; }
-                            .section-item { gap: 20px; margin-bottom: 32px; padding: 22px; }
+                        .terms-subtitle {
+                            margin: 0;
+                            font-size: 12px;
+                            letter-spacing: 3px;
+                            color: #6f6f6f;
+                            text-transform: uppercase;
+                            font-weight: 800;
                         }
 
-                        @media (max-width: 1024px) {
-                            .terms-modal-card { max-width: 680px; }
-                            .terms-header { padding: 42px 42px 30px 42px; }
-                            .terms-title { font-size: 38px; }
-                            .terms-body { padding: 28px 42px; }
-                            .terms-footer { padding: 28px 42px; }
-                            .section-item { gap: 18px; margin-bottom: 28px; padding: 20px; }
-                            .section-icon { width: 40px; height: 40px; min-width: 40px; }
-                            .section-item h3 { font-size: 16px; }
+                        .terms-body {
+                            flex: 1;
+                            padding: 30px 52px;
+                            overflow-y: auto;
+                            background: linear-gradient(to bottom, #fcfcfc 0%, #f8f8f8 100%);
+                        }
+
+                        .terms-body::-webkit-scrollbar {
+                            width: 8px;
+                        }
+
+                        .terms-body::-webkit-scrollbar-thumb {
+                            border-radius: 10px;
+                            background: linear-gradient(180deg, #f1cf65 0%, #d4af37 100%);
+                        }
+
+                        .terms-section {
+                            display: flex;
+                            gap: 20px;
+                            margin-bottom: 22px;
+                            padding: 18px;
+                            border-radius: 20px;
+                            border: 1.5px solid rgba(212, 175, 55, 0.2);
+                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.07), rgba(212, 175, 55, 0.01));
+                            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+                        }
+
+                        .terms-section:hover {
+                            transform: translateY(-3px);
+                            border-color: rgba(212, 175, 55, 0.34);
+                            box-shadow: 0 12px 30px rgba(212, 175, 55, 0.18);
+                        }
+
+                        .terms-section-icon {
+                            width: 42px;
+                            min-width: 42px;
+                            height: 42px;
+                            border-radius: 14px;
+                            color: #d4af37;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.08));
+                            border: 1px solid rgba(212, 175, 55, 0.24);
+                        }
+
+                        .terms-section-content h3 {
+                            margin: 0 0 8px;
+                            font-size: 17px;
+                            color: #121212;
+                            font-weight: 800;
+                            letter-spacing: -0.3px;
+                        }
+
+                        .terms-section-content p {
+                            margin: 0;
+                            font-size: 13px;
+                            line-height: 1.75;
+                            color: #565656;
+                            font-weight: 500;
+                        }
+
+                        .terms-footer {
+                            padding: 28px 52px;
+                            text-align: center;
+                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.14) 0%, rgba(212, 175, 55, 0.04) 100%);
+                            border-top: 2px solid rgba(212, 175, 55, 0.28);
+                        }
+
+                        .terms-agree-btn {
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 10px;
+                            padding: 16px 48px;
+                            border-radius: 999px;
+                            border: 2px solid #d4af37;
+                            background: linear-gradient(135deg, #151515 0%, #303030 45%, #d4af37 100%);
+                            color: #fff;
+                            font-size: 11px;
+                            font-weight: 900;
+                            letter-spacing: 2.6px;
+                            text-transform: uppercase;
+                            cursor: pointer;
+                            transition: transform 0.3s ease, box-shadow 0.3s ease;
+                            box-shadow: 0 14px 36px rgba(212, 175, 55, 0.28);
+                        }
+
+                        .terms-agree-btn:hover {
+                            transform: translateY(-2px) scale(1.02);
+                            box-shadow: 0 18px 40px rgba(212, 175, 55, 0.35);
                         }
 
                         @media (max-width: 768px) {
-                            .terms-modal-card { max-width: 92vw; max-height: 90vh; border-radius: 38px; border-width: 2px; }
-                            .terms-header { padding: 38px 34px 24px 34px; }
-                            .legal-badge { font-size: 9px; letter-spacing: 3px; margin-bottom: 12px; }
-                            .terms-title { font-size: 34px; }
-                            .title-underline { width: 70px; height: 4px; margin: 16px auto; }
-                            .terms-body { padding: 26px 34px; }
-                            .terms-footer { padding: 26px 34px; }
-                            .section-item { gap: 16px; margin-bottom: 26px; padding: 18px; }
-                            .section-item h3 { font-size: 15px; margin-bottom: 7px; }
-                            .section-item p { font-size: 12px; }
-                            .section-icon { width: 38px; height: 38px; min-width: 38px; }
-                            .terms-absolute-close { top: 22px; right: 22px; width: 42px; height: 42px; }
-                            .terms-agree-btn { padding: 15px 44px; font-size: 10px; letter-spacing: 2px; }
-                        }
-
-                        @media (max-width: 640px) {
-                            .terms-modal-card { max-width: 96vw; max-height: 88vh; border-radius: 34px; }
-                            .terms-header { padding: 34px 30px 22px 30px; }
-                            .legal-badge { font-size: 8px; letter-spacing: 2.5px; margin-bottom: 10px; }
-                            .terms-title { font-size: 30px; letter-spacing: -0.8px; }
-                            .title-underline { width: 55px; height: 3px; }
-                            .brand-label { font-size: 11px; }
-                            .terms-body { padding: 22px 30px; }
-                            .terms-footer { padding: 22px 30px; }
-                            .section-item { 
-                                gap: 14px; margin-bottom: 22px; padding: 16px; 
-                                border-radius: 22px;
+                            .terms-modal-card {
+                                max-width: 94vw;
+                                max-height: 92vh;
+                                border-radius: 34px;
                             }
-                            .section-item h3 { font-size: 14px; margin-bottom: 6px; }
-                            .section-item p { font-size: 11.5px; line-height: 1.7; }
-                            .section-icon { width: 36px; height: 36px; min-width: 36px; border-radius: 12px; }
-                            .terms-absolute-close { top: 20px; right: 20px; width: 40px; height: 40px; font-size: 18px; }
-                            .terms-agree-btn { padding: 13px 38px; font-size: 9.5px; letter-spacing: 2px; }
+
+                            .terms-header {
+                                padding: 36px 30px 24px;
+                            }
+
+                            .terms-title {
+                                font-size: 34px;
+                            }
+
+                            .terms-body {
+                                padding: 22px 30px;
+                            }
+
+                            .terms-footer {
+                                padding: 22px 30px;
+                            }
                         }
 
                         @media (max-width: 480px) {
-                            .terms-modal-card { max-width: 98vw; max-height: 87vh; border-radius: 30px; border-width: 1.5px; }
-                            .terms-header { padding: 30px 22px 20px 22px; }
-                            .legal-badge { font-size: 7px; letter-spacing: 2px; margin-bottom: 8px; }
-                            .terms-title { font-size: 26px; }
-                            .title-underline { width: 45px; margin: 12px auto; }
-                            .brand-label { font-size: 10px; }
-                            .terms-body { padding: 18px 22px; }
-                            .terms-footer { padding: 18px 22px; }
-                            .section-item { 
-                                gap: 12px; margin-bottom: 18px; padding: 14px; 
-                                border-radius: 18px;
+                            .terms-overlay-container {
+                                padding: 10px;
                             }
-                            .section-item h3 { font-size: 13px; margin-bottom: 5px; }
-                            .section-item p { font-size: 11px; line-height: 1.6; }
-                            .section-icon { width: 34px; height: 34px; min-width: 34px; }
-                            .terms-absolute-close { top: 16px; right: 16px; width: 38px; height: 38px; font-size: 16px; }
-                            .terms-agree-btn { 
-                                width: 88%; justify-content: center; 
-                                padding: 12px 28px; font-size: 9px; letter-spacing: 1.5px;
+
+                            .terms-modal-card {
+                                width: 95vw;
+                                height: 95vh;
+                                max-width: 95vw;
+                                max-height: 95vh;
+                                border-radius: 24px;
+                            }
+
+                            .terms-header {
+                                padding: 28px 18px 18px;
+                            }
+
+                            .terms-badge {
+                                font-size: 7px;
+                                letter-spacing: 2px;
+                            }
+
+                            .terms-title {
+                                font-size: 26px;
+                            }
+
+                            .terms-subtitle {
+                                font-size: 9px;
+                                letter-spacing: 2px;
+                            }
+
+                            .terms-body {
+                                padding: 16px 18px;
+                            }
+
+                            .terms-section {
+                                gap: 12px;
+                                padding: 13px;
+                                border-radius: 14px;
+                            }
+
+                            .terms-section-icon {
+                                width: 34px;
+                                min-width: 34px;
+                                height: 34px;
+                                border-radius: 10px;
+                            }
+
+                            .terms-section-content h3 {
+                                font-size: 13px;
+                            }
+
+                            .terms-section-content p {
+                                font-size: 11px;
+                                line-height: 1.6;
+                            }
+
+                            .terms-footer {
+                                padding: 16px 18px;
+                            }
+
+                            .terms-agree-btn {
+                                width: 100%;
+                                justify-content: center;
+                                padding: 13px 18px;
+                                font-size: 9px;
+                                letter-spacing: 1.5px;
+                            }
+
+                            .terms-close-btn {
+                                top: 14px;
+                                right: 14px;
+                                width: 38px;
+                                height: 38px;
                             }
                         }
-
-                        @media (max-width: 380px) {
-                            .terms-modal-card { max-width: 99vw; border-radius: 26px; }
-                            .terms-header { padding: 26px 18px 18px 18px; }
-                            .legal-badge { font-size: 6.5px; letter-spacing: 1.5px; margin-bottom: 6px; }
-                            .terms-title { font-size: 23px; letter-spacing: -0.3px; }
-                            .title-underline { width: 38px; height: 2.5px; }
-                            .brand-label { font-size: 9px; }
-                            .terms-body { padding: 14px 18px; }
-                            .terms-footer { padding: 14px 18px; }
-                            .section-item { 
-                                gap: 10px; margin-bottom: 14px; padding: 12px;
-                                border-radius: 16px;
-                            }
-                            .section-item h3 { font-size: 12px; margin-bottom: 4px; }
-                            .section-item p { font-size: 10px; line-height: 1.5; }
-                            .section-icon { width: 32px; height: 32px; min-width: 32px; }
-                            .terms-absolute-close { top: 12px; right: 12px; width: 36px; height: 36px; font-size: 14px; }
-                            .terms-agree-btn { 
-                                width: 100%; padding: 11px 22px; font-size: 8.5px; 
-                                letter-spacing: 1px;
-                            }
-                        }
-
-                        @media (max-width: 320px) {
-                            .terms-modal-card { border-radius: 22px; }
-                            .terms-header { padding: 22px 14px 16px 14px; }
-                            .legal-badge { font-size: 6px; }
-                            .terms-title { font-size: 20px; }
-                            .terms-body { padding: 12px 14px; }
-                            .section-item { gap: 8px; padding: 10px; }
-                            .section-item h3 { font-size: 11px; }
-                            .section-item p { font-size: 9px; }
-                            .section-icon { width: 28px; height: 28px; }
-                        }
-
-                        /* LANDSCAPE OPTIMIZATION */
-                        @media (max-height: 700px) and (orientation: landscape) {
-                            .terms-modal-card { max-height: 94vh; }
-                            .terms-header { padding: 24px 40px 20px 40px; }
-                            .terms-body { padding: 20px 40px; }
-                            .terms-footer { padding: 20px 40px; }
-                            .section-item { margin-bottom: 18px; padding: 16px; }
-                        }
-
-                        @media (max-height: 500px) and (orientation: landscape) {
-                            .terms-modal-card { max-height: 92vh; }
-                            .terms-header { padding: 18px 30px 14px 30px; }
-                            .terms-title { font-size: 28px; }
-                            .terms-body { padding: 14px 30px; }
-                            .section-item { margin-bottom: 12px; padding: 12px; }
-                            .section-item h3 { font-size: 13px; }
-                        }
-                    `}} />
+                    ` }} />
                 </div>
             )}
         </AnimatePresence>
     )
 }
 
-function Section({ icon, title, text, isLast }) {
+function TermsSection({ icon, title, text, isLast }) {
     return (
-        <div className="section-item" style={{ marginBottom: isLast ? '30px' : '25px' }}>
-            <div className="section-icon">{icon}</div>
-            <div className="section-content">
+        <div className="terms-section" style={{ marginBottom: isLast ? 0 : undefined }}>
+            <div className="terms-section-icon">{React.cloneElement(icon, { size: 20, strokeWidth: 2.3 })}</div>
+            <div className="terms-section-content">
                 <h3>{title}</h3>
                 <p>{text}</p>
             </div>
         </div>
-    );
+    )
 }

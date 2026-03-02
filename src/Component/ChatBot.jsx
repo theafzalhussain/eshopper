@@ -1098,13 +1098,14 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
         }
 
         .chat-header {
-          background: linear-gradient(135deg, #101010, #1e1e1e);
+          background: linear-gradient(135deg, #0b0b0b 0%, #151515 45%, #232323 100%);
           color: #fff;
           padding: 14px 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          border-bottom: 1px solid rgba(210, 170, 47, 0.35);
+          border-bottom: 1px solid rgba(210, 170, 47, 0.45);
+          box-shadow: inset 0 -1px 0 rgba(212, 175, 55, 0.22);
         }
 
         .header-left {
@@ -1117,34 +1118,49 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
           width: 9px;
           height: 9px;
           border-radius: 999px;
-          background: #0dd4f2;
-          box-shadow: 0 0 10px rgba(13, 212, 242, 0.8);
+          background: #10e5ff;
+          box-shadow: 0 0 12px rgba(16, 229, 255, 0.95);
         }
 
         .chat-header h4 {
           margin: 0;
-          font-size: 14px;
-          font-weight: 800;
+          font-size: 15px;
+          font-weight: 900;
+          color: #f5d77a !important;
+          letter-spacing: 0.2px;
+          line-height: 1.2;
+          text-shadow: 0 1px 8px rgba(212, 175, 55, 0.28);
         }
 
         .chat-header span {
-          font-size: 10px;
-          color: #85deea;
-          font-weight: 600;
+          font-size: 11px;
+          color: #8cf3ff !important;
+          font-weight: 700;
           letter-spacing: 0.3px;
+          line-height: 1.2;
+          text-shadow: 0 1px 8px rgba(19, 191, 217, 0.35);
         }
 
         .close-btn {
-          border: 1px solid rgba(210, 170, 47, 0.35);
-          background: rgba(210, 170, 47, 0.12);
-          color: #e6c35f;
-          width: 30px;
-          height: 30px;
+          border: 1px solid rgba(212, 175, 55, 0.45);
+          background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.08));
+          color: #f6d778;
+          width: 32px;
+          height: 32px;
           border-radius: 999px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
+          transition: all 0.25s ease;
+          box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+        }
+
+        .close-btn:hover {
+          transform: scale(1.06);
+          color: #ffe59d;
+          box-shadow: 0 6px 15px rgba(212, 175, 55, 0.32);
+          border-color: rgba(212, 175, 55, 0.65);
         }
 
         .chat-body {
