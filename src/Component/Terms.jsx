@@ -90,35 +90,40 @@ export default function Terms({ isOpen, onClose }) {
                     <style dangerouslySetInnerHTML={{ __html: `
                         .terms-overlay-container {
                             position: fixed !important;
-                            inset: 0;
-                            width: 100vw;
-                            height: 100dvh;
+                            top: 0 !important;
+                            left: 0 !important;
+                            right: 0 !important;
+                            bottom: 0 !important;
+                            width: 100vw !important;
+                            height: 100vh !important;
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            z-index: 2147483646;
+                            z-index: 9999999 !important;
                             padding: 20px;
+                            pointer-events: auto !important;
                             overflow: hidden;
                             isolation: isolate;
                         }
 
                         .terms-backdrop {
-                            position: absolute;
-                            top: 0;
-                            left: 0;
-                            width: 100%;
-                            height: 100%;
-                            background: linear-gradient(135deg, rgba(3, 8, 20, 0.92) 0%, rgba(9, 12, 26, 0.95) 50%, rgba(0, 0, 0, 0.92) 100%);
-                            backdrop-filter: blur(18px);
-                            -webkit-backdrop-filter: blur(18px);
-                            z-index: 0;
+                            position: fixed !important;
+                            top: 0 !important;
+                            left: 0 !important;
+                            width: 100vw !important;
+                            height: 100vh !important;
+                            background: rgba(0, 0, 0, 0.72);
+                            backdrop-filter: blur(14px);
+                            -webkit-backdrop-filter: blur(14px);
+                            z-index: -1 !important;
+                            pointer-events: auto !important;
                         }
 
                         .terms-modal-card {
-                            position: relative;
-                            width: 100%;
-                            max-width: 780px;
-                            max-height: min(90vh, 920px);
+                            position: relative !important;
+                            width: min(780px, 88vw);
+                            max-width: 88vw;
+                            max-height: 88vh;
                             background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 55%, #F0F0F0 100%);
                             border-radius: 44px;
                             display: flex;
@@ -129,7 +134,7 @@ export default function Terms({ isOpen, onClose }) {
                                 0 0 90px rgba(212, 175, 55, 0.22),
                                 0 36px 110px rgba(0, 0, 0, 0.6),
                                 inset 0 1px 0 rgba(255, 255, 255, 0.9);
-                            z-index: 1;
+                            z-index: 1 !important;
                         }
 
                         .terms-close-btn {

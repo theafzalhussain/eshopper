@@ -281,14 +281,35 @@ const normalizeProduct = (p) => {
   if (!p) return null
   const image = p.image || p.pic1 || p.pic || p.pic2 || p.pic3 || p.pic4 || ''
   const id = p._id || p.id
+  
+  // Calculate discount percentage
+  const basePrice = p.baseprice || p.mrp || 0
+  const finalPrice = p.finalprice || p.price || 0
+  const discountPercent = basePrice && finalPrice ? Math.round(((basePrice - finalPrice) / basePrice) * 100) : 0
+  
+  // Extract fabric info
+  const fabric = p.fabric || p.material || p.composition || ''
+  const details = p.details || p.description || p.desc || ''
+  const rating = p.rating || p.stars || p.reviews?.rating || 0
+  const reviews = p.reviews?.count || p.reviewCount || 0
+  
   return {
     id,
     name: p.name || 'Product',
-    price: p.finalprice || p.baseprice || p.price || '',
+    price: finalPrice,
+    basePrice: basePrice,
+    discount: discountPercent,
     image,
     link: id ? `/single-product/${id}` : '#',
     maincategory: p.maincategory || '',
-    subcategory: p.subcategory || ''
+    subcategory: p.subcategory || '',
+    fabric: fabric,
+    details: details,
+    rating: rating,
+    reviews: reviews,
+    size: p.size || p.sizes || '',
+    color: p.color || p.colors || '',
+    stock: p.stock || p.inStock !== undefined ? p.inStock : true
   }
 }
 
@@ -499,16 +520,30 @@ export default function ChatBot() {
     const isProductDetail = isProductDetailsQuery(userQuery, lastSuggestedProducts)
     
     const productSummary = allProductsCache.length > 0 
-      ? `ESHOPPER PRODUCT DATABASE:
-- Total Products: ${allProductsCache.length} premium items
-- Categories: Men's wear, Women's wear, Casual, Formal, Party wear, Traditional, Western, Ethnic
-- Product Types: Dresses, Shirts, T-shirts, Jeans, Pants, Shoes, Accessories, Jackets, Hoodies, Sarees, Kurtis
-- Price Range: Budget-friendly to Premium
-- All products are quality-checked and fashion-forward`
+      ? `ESHOPPER PREMIUM PRODUCT DATABASE:
+- Total Products: ${allProductsCache.length} expertly curated items
+- Quality: 100% authentic, hand-verified, premium brands
+- Price Range: ₹${Math.min(...allProductsCache.map(p => p.price || 0)) || 0} - ₹${Math.max(...allProductsCache.map(p => p.price || 0)) || 0}
+- Categories: Men's wear, Women's wear, Casual, Formal, Party wear, Traditional, Western, Ethnic, Accessories
+- Product Types: Dresses, Shirts, T-shirts, Jeans, Pants, Shoes, Bags, Jackets, Hoodies, Sarees, Kurtis, Suits, Blazers
+- Special Features: 
+  ✓ Real-time pricing with active discounts (up to 70% off)
+  ✓ Premium fabric information (Cotton, Silk, Polyester, Blended, Wool, etc.)
+  ✓ Customer star ratings (1-5 stars with verified reviews)
+  ✓ Complete size guides and fit recommendations
+  ✓ Same-day delivery in select areas
+  ✓ 30-day easy returns policy
+  ✓ Free styling consultation with purchases`
       : 'Full premium product catalog available.'
     
     const lastProductsInfo = lastSuggestedProducts.length > 0
-      ? `\n\nRECENTLY SUGGESTED PRODUCTS (User can ask details about these):\n${lastSuggestedProducts.slice(0, 3).map((p, i) => `${i + 1}. ${p.name} - ₹${p.price} (${p.maincategory}/${p.subcategory})`).join('\n')}`
+      ? `\n\nRECENTLY SUGGESTED PRODUCTS (User can ask details about these):
+${lastSuggestedProducts.slice(0, 3).map((p, i) => {
+  const ratingStr = p.rating > 0 ? ` ⭐ ${p.rating}/5` : ''
+  const discountStr = p.discount > 0 ? ` | ${p.discount}% OFF` : ''
+  const fabricStr = p.fabric ? ` | ${p.fabric}` : ''
+  return `${i + 1}. ${p.name} - ₹${p.price}${discountStr}${ratingStr}${fabricStr} (${p.maincategory}/${p.subcategory})`
+}).join('\n')}`
       : ''
 
     const styleGuide = `CONVERSATION INTELLIGENCE:
@@ -787,9 +822,14 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
           : `I'm doing great ${currentUser?.name || 'friend'}! 😊✨ Thanks for asking! I'm so excited to help you discover amazing fashion today! What would you like to see - casual wear, party outfits, or trending styles? 🛍️💫`
       } else if (isProductDetail && lastSuggestedProducts.length > 0) {
         const product = lastSuggestedProducts[0]
+        const ratingInfo = product.rating > 0 ? `${product.rating}⭐ rating with ${product.reviews || 0} reviews` : 'trending item'
+        const discountInfo = product.discount > 0 ? `Get ${product.discount}% off!\nOriginal: ₹${product.basePrice} → Now: ₹${product.price}` : `Price: ₹${product.price}`
+        const fabricInfo = product.fabric ? `\n🧵 Fabric: ${product.fabric}` : ''
+        const detailsInfo = product.details ? `\n📝 Details: ${product.details.substring(0, 100)}...` : ''
+        
         fallbackText = detectedLanguage === 'hinglish'
-          ? `Haan bilkul! ${product.name} ke baare me batati hoon 😊 Ye ${product.maincategory} category ka ${product.subcategory} hai, price \u20b9${product.price} hai. Ye bahut trending aur stylish hai! Iska quality premium hai aur ye perfect hai agar tum ${product.maincategory.toLowerCase()} look chahte ho. Aur kuch details chahiye? 💫✨`
-          : `Sure! Let me tell you about ${product.name} 😊 It's a ${product.subcategory} from our ${product.maincategory} collection, priced at \u20b9${product.price}. This piece is absolutely trending and stylish! The quality is premium and it's perfect if you're going for a ${product.maincategory.toLowerCase()} look. Want to know more details? 💫✨`
+          ? `Haan bilkul! ${product.name} ke baare me batati hoon 😊\n\n${discountInfo}\n⭐ Rating: ${ratingInfo}\n📦 Category: ${product.maincategory} - ${product.subcategory}${fabricInfo}${detailsInfo}\n\nYeh bahut trending aur stylish hai! Premium quality guaranteed! Kya aur kuch details chahiye? 💫✨`
+          : `Sure! Let me tell you about ${product.name} 😊\n\n${discountInfo}\n⭐ Rating: ${ratingInfo}\n📦 Category: ${product.maincategory} - ${product.subcategory}${fabricInfo}${detailsInfo}\n\nThis piece is absolutely trending and stylish! Premium quality guaranteed! Want to know more details? 💫✨`
       } else if (isGreeting) {
         fallbackText = detectedLanguage === 'hinglish'
           ? `Hello ${currentUser?.name || 'dost'}! 😊✨ Namaste! Kaisi ho? Main aapki fashion assistant hoon. Aaj kya explore karna chahoge? Casual wear, party outfits, traditional collection, ya trending styles? Bolo aur main perfect products dikhaungi! 🛍️💫`
@@ -880,7 +920,7 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
                 <div className="online-dot" />
                 <div>
                   <h4>AI Fashion Consultant ✨</h4>
-                  <span>Online • Your Fashion Bestie 💫</span>
+                  <span>Online • OUR ESHOPPER 💫</span>
                 </div>
               </div>
               <motion.button
@@ -945,9 +985,25 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
                             </div>
                             <div className="product-meta">
                               <p className="product-name">{product.name}</p>
-                              {product.price ? (
-                                <p className="product-price"><Sparkles size={11} /> ₹{product.price}</p>
-                              ) : null}
+                              <div className="product-price-section">
+                                {product.discount > 0 && (
+                                  <span className="discount-badge">{product.discount}% OFF</span>
+                                )}
+                                {product.basePrice && product.discount > 0 ? (
+                                  <>
+                                    <p className="product-base-price">₹{product.basePrice}</p>
+                                    <p className="product-price"><Sparkles size={11} /> ₹{product.price}</p>
+                                  </>
+                                ) : product.price ? (
+                                  <p className="product-price"><Sparkles size={11} /> ₹{product.price}</p>
+                                ) : null}
+                              </div>
+                              {product.rating > 0 && (
+                                <p className="product-rating">⭐ {product.rating} ({product.reviews} reviews)</p>
+                              )}
+                              {product.fabric && (
+                                <p className="product-fabric">🧵 {product.fabric}</p>
+                              )}
                               <span className="product-link"><ShoppingBag size={12} /> View Product</span>
                             </div>
                           </motion.a>
@@ -1370,6 +1426,36 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
           overflow: hidden;
         }
 
+        .product-price-section {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          position: relative;
+        }
+
+        .discount-badge {
+          position: absolute;
+          top: -18px;
+          right: 0;
+          background: linear-gradient(135deg, #d4a739, #f5c842);
+          color: #1a1a1a;
+          padding: 2px 6px;
+          border-radius: 6px;
+          font-size: 8px;
+          font-weight: 900;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 6px rgba(212, 175, 55, 0.3);
+        }
+
+        .product-base-price {
+          margin: 0;
+          font-size: 9px;
+          color: #888;
+          font-weight: 600;
+          text-decoration: line-through;
+          text-decoration-color: rgba(136, 136, 136, 0.5);
+        }
+
         .product-price {
           margin: 0;
           font-size: 11px;
@@ -1378,6 +1464,24 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
           display: flex;
           align-items: center;
           gap: 3px;
+        }
+
+        .product-rating {
+          margin: 0;
+          font-size: 9px;
+          color: #d4a739;
+          font-weight: 700;
+        }
+
+        .product-fabric {
+          margin: 0;
+          font-size: 8px;
+          color: #666;
+          font-weight: 600;
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         .product-link {
