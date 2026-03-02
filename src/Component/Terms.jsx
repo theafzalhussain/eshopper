@@ -1,8 +1,20 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, CheckCircle, Shield, Truck, Users, RefreshCw, Lock, Zap } from 'lucide-react'
 
 export default function Terms({ isOpen, onClose }) {
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = 'auto'
+        }
+
+        return () => {
+            document.body.style.overflow = 'auto'
+        }
+    }, [isOpen])
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -77,17 +89,17 @@ export default function Terms({ isOpen, onClose }) {
 
                     <style dangerouslySetInnerHTML={{ __html: `
                         .terms-overlay-container {
-                            position: fixed;
-                            top: 0;
-                            left: 0;
-                            right: 0;
-                            bottom: 0;
+                            position: fixed !important;
+                            inset: 0;
+                            width: 100vw;
+                            height: 100dvh;
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            z-index: 99999;
+                            z-index: 2147483646;
                             padding: 20px;
                             overflow: hidden;
+                            isolation: isolate;
                         }
 
                         .terms-backdrop {
@@ -99,13 +111,14 @@ export default function Terms({ isOpen, onClose }) {
                             background: linear-gradient(135deg, rgba(3, 8, 20, 0.92) 0%, rgba(9, 12, 26, 0.95) 50%, rgba(0, 0, 0, 0.92) 100%);
                             backdrop-filter: blur(18px);
                             -webkit-backdrop-filter: blur(18px);
+                            z-index: 0;
                         }
 
                         .terms-modal-card {
                             position: relative;
                             width: 100%;
                             max-width: 780px;
-                            max-height: 90vh;
+                            max-height: min(90vh, 920px);
                             background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 55%, #F0F0F0 100%);
                             border-radius: 44px;
                             display: flex;
@@ -116,6 +129,7 @@ export default function Terms({ isOpen, onClose }) {
                                 0 0 90px rgba(212, 175, 55, 0.22),
                                 0 36px 110px rgba(0, 0, 0, 0.6),
                                 inset 0 1px 0 rgba(255, 255, 255, 0.9);
+                            z-index: 1;
                         }
 
                         .terms-close-btn {
@@ -208,15 +222,16 @@ export default function Terms({ isOpen, onClose }) {
                             margin-bottom: 22px;
                             padding: 18px;
                             border-radius: 20px;
-                            border: 1.5px solid rgba(212, 175, 55, 0.2);
-                            background: linear-gradient(135deg, rgba(212, 175, 55, 0.07), rgba(212, 175, 55, 0.01));
+                            border: 1.5px solid rgba(212, 175, 55, 0.24);
+                            border-left: 5px solid rgba(212, 175, 55, 0.7);
+                            background: linear-gradient(135deg, rgba(255, 250, 236, 0.95), rgba(255, 255, 255, 0.9));
                             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
                         }
 
                         .terms-section:hover {
                             transform: translateY(-3px);
-                            border-color: rgba(212, 175, 55, 0.34);
-                            box-shadow: 0 12px 30px rgba(212, 175, 55, 0.18);
+                            border-color: rgba(212, 175, 55, 0.45);
+                            box-shadow: 0 14px 34px rgba(212, 175, 55, 0.22);
                         }
 
                         .terms-section-icon {
@@ -230,22 +245,49 @@ export default function Terms({ isOpen, onClose }) {
                             justify-content: center;
                             background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.08));
                             border: 1px solid rgba(212, 175, 55, 0.24);
+                            box-shadow: 0 5px 14px rgba(212, 175, 55, 0.18);
                         }
 
                         .terms-section-content h3 {
                             margin: 0 0 8px;
                             font-size: 17px;
-                            color: #121212;
+                            color: #161616;
                             font-weight: 800;
                             letter-spacing: -0.3px;
+                            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
                         }
 
                         .terms-section-content p {
                             margin: 0;
                             font-size: 13px;
                             line-height: 1.75;
-                            color: #565656;
+                            color: #4f4f4f;
                             font-weight: 500;
+                        }
+
+                        @media (max-width: 1024px) {
+                            .terms-overlay-container {
+                                padding: 12px;
+                            }
+
+                            .terms-modal-card {
+                                width: 96vw;
+                                max-width: 96vw;
+                                max-height: 94dvh;
+                                border-radius: 28px;
+                            }
+
+                            .terms-header {
+                                padding: 34px 26px 22px;
+                            }
+
+                            .terms-body {
+                                padding: 20px 24px;
+                            }
+
+                            .terms-footer {
+                                padding: 18px 24px;
+                            }
                         }
 
                         .terms-footer {
@@ -280,9 +322,10 @@ export default function Terms({ isOpen, onClose }) {
 
                         @media (max-width: 768px) {
                             .terms-modal-card {
-                                max-width: 94vw;
-                                max-height: 92vh;
-                                border-radius: 34px;
+                                width: 97vw;
+                                max-width: 97vw;
+                                max-height: 96dvh;
+                                border-radius: 18px;
                             }
 
                             .terms-header {
@@ -304,19 +347,21 @@ export default function Terms({ isOpen, onClose }) {
 
                         @media (max-width: 480px) {
                             .terms-overlay-container {
-                                padding: 10px;
+                                padding: 0;
                             }
 
                             .terms-modal-card {
-                                width: 95vw;
-                                height: 95vh;
-                                max-width: 95vw;
-                                max-height: 95vh;
-                                border-radius: 24px;
+                                width: 100vw;
+                                height: 100dvh;
+                                max-width: 100vw;
+                                max-height: 100dvh;
+                                border-radius: 0;
+                                border-left: none;
+                                border-right: none;
                             }
 
                             .terms-header {
-                                padding: 28px 18px 18px;
+                                padding: 26px 16px 16px;
                             }
 
                             .terms-badge {
@@ -334,13 +379,14 @@ export default function Terms({ isOpen, onClose }) {
                             }
 
                             .terms-body {
-                                padding: 16px 18px;
+                                padding: 14px 14px;
                             }
 
                             .terms-section {
                                 gap: 12px;
                                 padding: 13px;
-                                border-radius: 14px;
+                                border-radius: 12px;
+                                border-left-width: 4px;
                             }
 
                             .terms-section-icon {
@@ -360,7 +406,7 @@ export default function Terms({ isOpen, onClose }) {
                             }
 
                             .terms-footer {
-                                padding: 16px 18px;
+                                padding: 14px 12px;
                             }
 
                             .terms-agree-btn {
