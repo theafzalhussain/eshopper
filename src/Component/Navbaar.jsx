@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ShoppingCart, User } from 'lucide-react'
+import { BASE_URL } from '../constants'
 
 export default function Navbaar() {
     const navigate = useNavigate()
     const location = useLocation()
     const [isScrolled, setIsScrolled] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [profilePic, setProfilePic] = useState(localStorage.getItem('pic') || '')
     const role = localStorage.getItem("role")
     const name = localStorage.getItem("name")
 
@@ -30,6 +32,42 @@ export default function Navbaar() {
         }
         return () => { document.body.style.overflow = 'unset' }
     }, [isMobileMenuOpen])
+
+    useEffect(() => {
+        const loadUserProfilePic = async () => {
+            try {
+                const userId = localStorage.getItem('userid')
+                const isLoggedIn = localStorage.getItem('login')
+
+                if (!userId || !isLoggedIn) return
+
+                const res = await fetch(`${BASE_URL}/user/${userId}`)
+                if (!res.ok) return
+
+                const user = await res.json()
+                const pic = user?.pic || ''
+                if (pic) {
+                    setProfilePic(pic)
+                    localStorage.setItem('pic', pic)
+                } else {
+                    setProfilePic(localStorage.getItem('pic') || '')
+                }
+            } catch (_) {
+                // fallback: keep localStorage image if present
+                setProfilePic(localStorage.getItem('pic') || '')
+            }
+        }
+
+        loadUserProfilePic()
+
+        const onProfileUpdated = () => {
+            setProfilePic(localStorage.getItem('pic') || '')
+            loadUserProfilePic()
+        }
+
+        window.addEventListener('profile-updated', onProfileUpdated)
+        return () => window.removeEventListener('profile-updated', onProfileUpdated)
+    }, [location.pathname])
 
     const logout = () => { localStorage.clear(); navigate("/login") }
     const isActive = (path) => location.pathname === path
@@ -93,7 +131,11 @@ export default function Navbaar() {
                                     <div className="dropdown d-inline premium-dropdown-wrapper">
                                         <button className="btn-user premium-user-btn" data-toggle="dropdown">
                                             <div className="user-avatar">
-                                                <User size={18} className="text-info" />
+                                                {profilePic ? (
+                                                    <img src={profilePic} alt={name || 'User'} className="nav-user-img" />
+                                                ) : (
+                                                    <User size={18} className="text-info" />
+                                                )}
                                             </div>
                                             <span className="user-name">{name?.split(' ')[0]}</span>
                                             <svg className="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -104,7 +146,11 @@ export default function Navbaar() {
                                             <div className="dropdown-header-custom">
                                                 <div className="user-info-header">
                                                     <div className="user-avatar-large">
-                                                        <User size={24} className="text-info" />
+                                                        {profilePic ? (
+                                                            <img src={profilePic} alt={name || 'User'} className="nav-user-img" />
+                                                        ) : (
+                                                            <User size={24} className="text-info" />
+                                                        )}
                                                     </div>
                                                     <div className="user-details">
                                                         <h6 className="mb-0">{name}</h6>
@@ -183,7 +229,12 @@ export default function Navbaar() {
                                         {localStorage.getItem("login") ? (
                                             <>
                                                 <Link to="/profile" className="btn btn-outline-dark btn-block mb-3 py-3 font-weight-bold">
-                                                    <User size={18} className="mr-2" style={{display:'inline'}} /> {name}
+                                                    {profilePic ? (
+                                                        <img src={profilePic} alt={name || 'User'} className="mobile-user-img mr-2" />
+                                                    ) : (
+                                                        <User size={18} className="mr-2" style={{display:'inline'}} />
+                                                    )}
+                                                    {name}
                                                 </Link>
                                                 <button onClick={logout} className="btn btn-danger btn-block py-3 font-weight-bold">
                                                     LOGOUT
@@ -293,6 +344,13 @@ export default function Navbaar() {
                     align-items: center;
                     justify-content: center;
                     color: white !important;
+                    overflow: hidden;
+                }
+                .nav-user-img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    display: block;
                 }
                 .user-name { font-weight: 700; color: #111; }
                 .dropdown-arrow {
@@ -347,6 +405,16 @@ export default function Navbaar() {
                     justify-content: center;
                     color: white !important;
                     box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+                    overflow: hidden;
+                }
+                .mobile-user-img {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    object-fit: cover;
+                    display: inline-block;
+                    vertical-align: middle;
+                    border: 1px solid rgba(23, 162, 184, 0.35);
                 }
                 .user-details h6 {
                     font-weight: 800;

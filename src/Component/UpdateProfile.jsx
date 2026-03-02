@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Save, Camera, User, Mail, Phone, MapPin, Loader2, ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Spinner from './Spinner'
+import { BASE_URL } from '../constants'
 
 export default function Updateprofile() {
     const [data, setdata] = useState({
@@ -63,9 +64,24 @@ export default function Updateprofile() {
 
         // 🔥 Give time for API + Cloudinary + Redux to sync fresh data
         // Then navigate back to profile with updated info
-        setTimeout(() => {
-            setLoading(false);
-            navigate("/profile");
+        setTimeout(async () => {
+            try {
+                const userId = localStorage.getItem("userid")
+                if (userId) {
+                    const res = await fetch(`${BASE_URL}/user/${userId}`)
+                    if (res.ok) {
+                        const latestUser = await res.json()
+                        if (latestUser?.name) localStorage.setItem("name", latestUser.name)
+                        if (latestUser?.pic) localStorage.setItem("pic", latestUser.pic)
+                    }
+                }
+            } catch (_) {
+                if (data?.name) localStorage.setItem("name", data.name)
+            } finally {
+                window.dispatchEvent(new Event('profile-updated'))
+                setLoading(false);
+                navigate("/profile");
+            }
         }, 2500);
     }
 

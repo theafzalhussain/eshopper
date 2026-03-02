@@ -748,6 +748,67 @@ handle('/checkout', Checkout);
 handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
+// ==================== COMPATIBILITY API ALIASES ====================
+// These aliases keep legacy frontend calls working without 404 errors.
+app.get('/api/user/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const { password, otp, otpExpires, failedAttempts, lockUntil, ...safeUser } = user.toJSON();
+        res.json(safeUser);
+    } catch (e) {
+        res.status(500).json({ message: 'Failed to fetch user' });
+    }
+});
+
+app.get('/api/user', async (req, res) => {
+    try {
+        const userId = req.query.id || req.query.userid;
+        if (!userId) return res.status(400).json({ message: 'User id is required in query (?id=...)' });
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const { password, otp, otpExpires, failedAttempts, lockUntil, ...safeUser } = user.toJSON();
+        res.json(safeUser);
+    } catch (e) {
+        res.status(500).json({ message: 'Failed to fetch user' });
+    }
+});
+
+app.get('/api/products', async (req, res) => {
+    try {
+        const query = String(req.query.query || '').toLowerCase().trim();
+        const limit = Math.max(1, Math.min(24, Number(req.query.limit) || 6));
+
+        const products = await Product.find().sort({ _id: -1 });
+
+        const normalized = products.map((p) => {
+            const data = p.toObject();
+            return {
+                ...data,
+                pic1: sanitizeCloudinaryUrl(data.pic1),
+                pic2: sanitizeCloudinaryUrl(data.pic2),
+                pic3: sanitizeCloudinaryUrl(data.pic3),
+                pic4: sanitizeCloudinaryUrl(data.pic4),
+                image: sanitizeCloudinaryUrl(data.pic1 || data.pic2 || data.pic3 || data.pic4)
+            };
+        });
+
+        const filtered = query
+            ? normalized.filter((item) => {
+                const bag = `${item.name || ''} ${item.maincategory || ''} ${item.subcategory || ''} ${item.brand || ''}`.toLowerCase();
+                return bag.includes(query);
+            })
+            : normalized;
+
+        res.json({ products: filtered.slice(0, limit) });
+    } catch (e) {
+        res.status(500).json({ message: 'Failed to fetch products', products: [] });
+    }
+});
+
 // 🧪 SENTRY TEST ROUTE - Remove after testing
 app.get('/debug-sentry', (req, res) => {
     throw new Error('Sentry Test Error - Working!');

@@ -34,6 +34,9 @@ export default function Login() {
                     localStorage.setItem("userid", user.id)
                     localStorage.setItem("role", user.role)
                     localStorage.setItem("username", user.username)
+                    if (user.pic) {
+                        localStorage.setItem("pic", user.pic)
+                    }
                     navigate(user.role === "Admin" ? "/admin-home" : "/profile")
                 }
             } catch (err) {
@@ -79,6 +82,11 @@ export default function Login() {
                 localStorage.setItem("userid", user.id);
                 localStorage.setItem("role", user.role);
                 localStorage.setItem("username", user.username);
+                if (user.pic) {
+                    localStorage.setItem("pic", user.pic);
+                } else {
+                    localStorage.removeItem("pic");
+                }
 
                 // --- REMEMBER ME: SAVE TOKEN & CREDENTIALS ---
                 if (rememberMe) {
@@ -87,7 +95,8 @@ export default function Login() {
                         username: user.username,
                         name: user.name,
                         role: user.role,
-                        email: user.email
+                        email: user.email,
+                        pic: user.pic || ''
                     }
                     localStorage.setItem("userToken", JSON.stringify(userToken))
                     localStorage.setItem("savedCredentials", JSON.stringify({

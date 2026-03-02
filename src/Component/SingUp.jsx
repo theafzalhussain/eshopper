@@ -185,6 +185,11 @@ export default function SingUp() {
                 localStorage.setItem("role", backendUser.role || "User")
                 localStorage.setItem("username", backendUser.username)
                 localStorage.setItem("userToken", idToken)
+                if (backendUser.pic) {
+                    localStorage.setItem("pic", backendUser.pic)
+                } else if (user.photoURL) {
+                    localStorage.setItem("pic", user.photoURL)
+                }
                 
                 alert("Welcome! Account created successfully!")
                 navigate("/profile")
