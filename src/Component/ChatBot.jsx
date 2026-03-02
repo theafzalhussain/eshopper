@@ -335,7 +335,7 @@ export default function ChatBot() {
   const [isDragging, setIsDragging] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
-  const [isMobileFullScreen, setIsMobileFullScreen] = useState(window.innerWidth < 480)
+  const [isMobileFullScreen, setIsMobileFullScreen] = useState(false)
 
   const [messages, setMessages] = useState([
     {
@@ -386,7 +386,7 @@ export default function ChatBot() {
     const onResize = () => {
       const mobile = window.innerWidth < 768
       setIsMobile(mobile)
-      setIsMobileFullScreen(window.innerWidth < 480 && isOpen)
+      setIsMobileFullScreen(window.innerWidth < 480)
       setPosition((prev) => clampPosition(prev))
     }
 
@@ -862,14 +862,13 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
   }
 
   const toggleChat = () => {
-    if (isMobileFullScreen) return
     setIsOpen((prev) => !prev)
   }
 
   return (
     <motion.div
       className="chatbot-wrapper"
-      drag={!isMobileFullScreen}
+      drag={!isMobileFullScreen && !isOpen}
       dragElastic={0.08}
       dragMomentum={false}
       initial={{ x: position.x, y: position.y }}
@@ -883,9 +882,9 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
           return next
         })
       }}
-      style={{ cursor: !isMobileFullScreen ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+      style={{ cursor: !isMobileFullScreen && !isOpen ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
     >
-      {!isOpen && !isMobileFullScreen && (
+      {!isOpen && (
         <motion.div className="grip-handle" whileHover={{ scale: 1.08, opacity: 1 }} initial={{ opacity: 0.7 }}>
           <GripVertical size={11} color="#D2AA2F" />
         </motion.div>
@@ -893,12 +892,11 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
 
       <motion.button
         onClick={toggleChat}
-        className={`chatbot-bubble ${isOpen ? 'active' : ''} ${isMobileFullScreen ? 'hidden' : ''}`}
+        className={`chatbot-bubble ${isOpen ? 'active' : ''}`}
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         initial={{ opacity: 0, scale: 0.7 }}
         animate={{ opacity: 1, scale: 1 }}
-        disabled={isMobileFullScreen}
         aria-label="Open assistant"
       >
         <div className="robot-shell">
@@ -1112,10 +1110,6 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
         .chatbot-bubble.active {
           box-shadow: 0 8px 22px rgba(212, 175, 55, 0.45), 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 30px rgba(212, 175, 55, 0.25);
           transform: scale(0.95);
-        }
-
-        .chatbot-bubble.hidden {
-          display: none;
         }
 
         .robot-shell {
@@ -1564,40 +1558,200 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
           to { transform: rotate(360deg); }
         }
 
+        /* === TABLET RESPONSIVE === */
         @media (max-width: 768px) {
           .chatbot-wrapper {
             right: 16px;
-            bottom: 14px;
+            bottom: 16px;
+          }
+
+          .chatbot-bubble {
+            width: 64px;
+            height: 64px;
+          }
+
+          .robot-shell {
+            width: 50px;
+            height: 50px;
           }
 
           .chat-card {
             right: 14px;
-            bottom: 96px;
+            bottom: 92px;
             width: min(360px, 94vw);
             height: min(520px, calc(100vh - 130px));
             max-height: calc(100vh - 120px);
+            border-radius: 22px;
           }
 
           .product-grid {
             grid-template-columns: 1fr;
           }
+
+          .chat-header h4 {
+            font-size: 13px;
+          }
+
+          .chat-header span {
+            font-size: 10px;
+          }
         }
 
-        @media (max-width: 480px) {
+        /* === MOBILE RESPONSIVE (480px - 640px) === */
+        @media (max-width: 640px) {
+          .chatbot-wrapper {
+            right: 14px;
+            bottom: 14px;
+          }
+
           .chatbot-bubble {
-            display: none;
+            width: 60px;
+            height: 60px;
+            border-width: 2px;
+          }
+
+          .robot-shell {
+            width: 46px;
+            height: 46px;
           }
 
           .chat-card {
-            left: 2vw;
-            right: 2vw;
-            width: 96vw;
-            height: 84vh;
-            bottom: 10px;
+            right: 10px;
+            bottom: 86px;
+            width: min(340px, 95vw);
+            height: min(500px, calc(100vh - 120px));
+            max-height: calc(100vh - 110px);
+            border-radius: 20px;
+          }
+
+          .grip-handle {
+            bottom: 72px;
+          }
+        }
+
+        /* === SMALL MOBILE (360px - 480px) === */
+        @media (max-width: 480px) {
+          .chatbot-wrapper {
+            right: 12px;
+            bottom: 12px;
+          }
+
+          .chatbot-bubble {
+            width: 56px;
+            height: 56px;
+            box-shadow: 0 8px 20px rgba(212, 175, 55, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2);
+          }
+
+          .robot-shell {
+            width: 42px;
+            height: 42px;
+          }
+
+          .grip-handle {
+            bottom: 68px;
+            padding: 5px;
+          }
+
+          .chat-card {
+            position: fixed !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            top: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+            border: none !important;
+            z-index: 3300 !important;
+          }
+
+          .chat-card.fullscreen {
+            left: 0 !important;
+            right: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            bottom: 0 !important;
+            border-radius: 0 !important;
+          }
+
+          .chat-header {
+            padding: 14px 16px;
+          }
+
+          .chat-body {
+            padding: 12px;
           }
 
           .msg-content {
-            max-width: calc(100vw - 120px);
+            max-width: calc(100vw - 100px);
+          }
+
+          .msg-bubble {
+            font-size: 12px;
+            padding: 10px 13px;
+          }
+
+          .product-image-box {
+            height: 140px;
+          }
+
+          .chat-footer {
+            padding: 12px;
+          }
+
+          .chat-footer input {
+            font-size: 12px;
+            padding: 9px 14px;
+          }
+
+          .chat-footer button {
+            width: 38px;
+            height: 38px;
+          }
+        }
+
+        /* === EXTRA SMALL MOBILE (320px - 360px) === */
+        @media (max-width: 360px) {
+          .chatbot-wrapper {
+            right: 10px;
+            bottom: 10px;
+          }
+
+          .chatbot-bubble {
+            width: 52px;
+            height: 52px;
+          }
+
+          .robot-shell {
+            width: 38px;
+            height: 38px;
+          }
+
+          .chat-header h4 {
+            font-size: 12px;
+          }
+
+          .chat-header span {
+            font-size: 9px;
+          }
+
+          .msg-bubble {
+            font-size: 11px;
+            padding: 9px 11px;
+          }
+
+          .product-meta {
+            padding: 6px;
+          }
+
+          .product-name {
+            font-size: 10px;
+          }
+
+          .chat-footer input {
+            font-size: 11px;
+            padding: 8px 12px;
           }
         }
       ` }} />

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, CheckCircle, Shield, Truck, Users, RefreshCw, Lock, Zap } from 'lucide-react'
 
@@ -15,7 +16,9 @@ export default function Terms({ isOpen, onClose }) {
         }
     }, [isOpen])
 
-    return (
+    if (typeof document === 'undefined') return null
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <div className="terms-overlay-container">
@@ -95,15 +98,16 @@ export default function Terms({ isOpen, onClose }) {
                             right: 0 !important;
                             bottom: 0 !important;
                             width: 100vw !important;
-                            height: 100vh !important;
+                            height: 100dvh !important;
                             display: flex;
                             align-items: center;
                             justify-content: center;
-                            z-index: 9999999 !important;
-                            padding: 20px;
+                            z-index: 2147483647 !important;
+                            padding: clamp(12px, 2vw, 24px);
                             pointer-events: auto !important;
                             overflow: hidden;
                             isolation: isolate;
+                            overscroll-behavior: contain;
                         }
 
                         .terms-backdrop {
@@ -115,15 +119,15 @@ export default function Terms({ isOpen, onClose }) {
                             background: rgba(0, 0, 0, 0.72);
                             backdrop-filter: blur(14px);
                             -webkit-backdrop-filter: blur(14px);
-                            z-index: -1 !important;
+                            z-index: 0 !important;
                             pointer-events: auto !important;
                         }
 
                         .terms-modal-card {
                             position: relative !important;
-                            width: min(780px, 88vw);
-                            max-width: 88vw;
-                            max-height: 88vh;
+                            width: min(780px, calc(100vw - 32px));
+                            max-width: calc(100vw - 32px);
+                            max-height: calc(100dvh - 32px);
                             background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 55%, #F0F0F0 100%);
                             border-radius: 44px;
                             display: flex;
@@ -135,6 +139,7 @@ export default function Terms({ isOpen, onClose }) {
                                 0 36px 110px rgba(0, 0, 0, 0.6),
                                 inset 0 1px 0 rgba(255, 255, 255, 0.9);
                             z-index: 1 !important;
+                            margin: 0 auto;
                         }
 
                         .terms-close-btn {
@@ -433,6 +438,7 @@ export default function Terms({ isOpen, onClose }) {
                 </div>
             )}
         </AnimatePresence>
+    , document.body
     )
 }
 
