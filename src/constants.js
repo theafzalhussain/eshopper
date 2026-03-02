@@ -1,13 +1,16 @@
 // ===== API BASE URL =====
-// Production API endpoint on Railway
+// Production API endpoint - HARDCODED for Vercel auto-deployment
 const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-export const BASE_URL = process.env.REACT_APP_API_URL || (isDev ? "http://localhost:5000" : "https://api.eshopperr.me");
+export const BASE_URL = isDev 
+  ? (process.env.REACT_APP_API_URL || "http://localhost:5000")
+  : "https://api.eshopperr.me";
 
 // ===== FRONTEND URLs =====
-export const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL || "https://eshopperr.me";
+// Always use production domain
+export const FRONTEND_URL = "https://eshopperr.me";
 
-// ===== ADMIN DASHBOARD URL (Optional) =====
-export const ADMIN_URL = process.env.REACT_APP_ADMIN_URL || window.location.origin;
+// ===== ADMIN DASHBOARD URL =====
+export const ADMIN_URL = "https://eshopperr.me/admin";
 
 // ===== API ENDPOINTS =====
 export const API_ENDPOINTS = {
