@@ -17,6 +17,7 @@ import SingUp from './SingUp'
 import ForgetPassword from './ForgetPassword'
 import Profile from './Profile'
 import UpdateProfile from './UpdateProfile'
+import OrderTracking from './OrderTracking'
 import AdminHome from './Admin/AdminHome'
 import AdminUser from './Admin/AdminUser'
 import AdminContact from './Admin/AdminContact'
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="/forget-password" element={<ForgetPassword />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/update-profile" element={<UpdateProfile />} />
+        <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/checkout" element={<Checkout />} />

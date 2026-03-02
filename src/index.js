@@ -37,7 +37,7 @@ datadogRum.init({
   env: 'production',
   version: '1.0.0',
   sessionSampleRate: 100,
-  sessionReplaySampleRate: 20,
+  sessionReplaySampleRate: 100,
   trackUserInteractions: true,
   trackResources: true,
   trackLongTasks: true,

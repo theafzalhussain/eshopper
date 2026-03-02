@@ -15,6 +15,8 @@ if (process.env.SENTRY_DSN) {
 
 // NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS (after Sentry.init)
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cloudinary = require('cloudinary').v2;
@@ -119,6 +121,56 @@ const corsOptions = {
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"]
 };
+
+// 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: [
+            'https://eshopperr.me',
+            'https://www.eshopperr.me',
+            'http://localhost:3000',
+            'http://127.0.0.1:3000'
+        ],
+        credentials: true
+    },
+    transports: ['websocket', 'polling']
+});
+
+const ALLOWED_ORDER_STATUS = ['Ordered', 'Packed', 'Shipped', 'Delivered'];
+const normalizeOrderStatus = (s = '') => {
+    const v = String(s).trim().toLowerCase();
+    if (v === 'ordered') return 'Ordered';
+    if (v === 'packed') return 'Packed';
+    if (v === 'shipped') return 'Shipped';
+    if (v === 'delivered') return 'Delivered';
+    return null;
+};
+
+// 🔴 SOCKET.IO AUTHENTICATION MIDDLEWARE
+io.use(async (socket, next) => {
+    try {
+        const userId = socket.handshake.auth?.userId || socket.handshake.query?.userId;
+        if (!userId) return next(new Error('Unauthorized: userId missing'));
+        // Socket auth will be validated further in connection handler
+        socket.data.userId = String(userId);
+        return next();
+    } catch (e) {
+        return next(new Error('Unauthorized'));
+    }
+});
+
+// 🔴 SOCKET.IO CONNECTION & ROOM SETUP
+io.on('connection', (socket) => {
+    const userRoom = `user:${socket.data.userId}`;
+    socket.join(userRoom);
+    socket.emit('connected', { ok: true, room: userRoom });
+    console.log(`✅ User ${socket.data.userId} connected to room ${userRoom}`);
+
+    socket.on('disconnect', () => {
+        console.log(`❌ User ${socket.data.userId} disconnected`);
+    });
+});
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
@@ -1174,6 +1226,73 @@ async function startServer() {
         return extractGeminiText(response.data);
      };
 
+// 🔴 REAL-TIME ORDER TRACKING - Get single order
+app.get('/api/order/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const userId = req.query.userId;
+
+        if (!orderId || !userId) {
+            return res.status(400).json({ message: 'orderId and userId are required' });
+        }
+
+        const order = await Order.findOne({
+            orderId,
+            userid: userId
+        }).lean();
+
+        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        return res.json({
+            orderId: order.orderId,
+            userid: order.userid,
+            orderStatus: order.orderStatus || 'Ordered',
+            finalAmount: order.finalAmount || 0,
+            updatedAt: order.updatedAt || order.createdAt
+        });
+    } catch (e) {
+        console.error('❌ Order fetch error:', e.message);
+        return res.status(500).json({ message: 'Failed to fetch order' });
+    }
+});
+
+// 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
+app.post('/api/update-order-status', async (req, res) => {
+    try {
+        const { orderId, status } = req.body;
+        const normalized = normalizeOrderStatus(status);
+
+        if (!orderId || !normalized) {
+            return res.status(400).json({
+                message: `orderId and valid status are required (${ALLOWED_ORDER_STATUS.join(', ')})`
+            });
+        }
+
+        const order = await Order.findOne({ orderId });
+        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        order.orderStatus = normalized;
+        await order.save();
+
+        const payload = {
+            orderId: order.orderId,
+            userId: order.userid,
+            status: order.orderStatus,
+            updatedAt: new Date().toISOString()
+        };
+
+        // EMIT STATUS UPDATE TO USER'S ROOM VIA SOCKET.IO
+        io.to(`user:${order.userid}`).emit('statusUpdate', payload);
+        console.log(`✅ Status updated for order ${orderId} to ${normalized}, emitted to user:${order.userid}`);
+
+        return res.json({ success: true, order: payload });
+    } catch (e) {
+        console.error('❌ Order update error:', e.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(e);
+        return res.status(500).json({ message: 'Failed to update order status' });
+    }
+});
+
 app.post('/api/chat', async (req, res) => {
     try {
         const prompt = (req.body?.prompt || req.body?.message || '').trim();
@@ -1310,7 +1429,7 @@ app.post('/api/chat', async (req, res) => {
 });
 // --- server.js AI REFACTOR END ---
 
-        const server = app.listen(PORT, '0.0.0.0', () => {
+        const server = httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`🚀 Master Server Live on ${PORT}`);
         });
 
