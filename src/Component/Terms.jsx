@@ -16,18 +16,56 @@ export default function Terms({ isOpen, onClose }) {
         }
     }, [isOpen])
 
+    // Create or get portal container
+    const getPortalContainer = () => {
+        let container = document.getElementById('terms-modal-root')
+        if (!container) {
+            container = document.createElement('div')
+            container.id = 'terms-modal-root'
+            container.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 2147483647; pointer-events: none;'
+            document.body.appendChild(container)
+        }
+        return container
+    }
+
     if (typeof document === 'undefined') return null
 
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="terms-overlay-container">
+                <div 
+                    className="terms-overlay-container"
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        zIndex: 2147483647,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        pointerEvents: 'auto',
+                        overflow: 'hidden'
+                    }}
+                >
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
                         className="terms-backdrop"
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            width: '100vw',
+                            height: '100vh',
+                            zIndex: 0,
+                            pointerEvents: 'auto'
+                        }}
                     />
 
                     <motion.div
@@ -36,6 +74,11 @@ export default function Terms({ isOpen, onClose }) {
                         exit={{ opacity: 0, scale: 0.85, y: 60 }}
                         transition={{ type: 'spring', stiffness: 280, damping: 22, duration: 0.5 }}
                         className="terms-modal-card"
+                        style={{
+                            position: 'relative',
+                            zIndex: 1,
+                            margin: '0 auto'
+                        }}
                     >
                         <button onClick={onClose} className="terms-close-btn" aria-label="Close Terms">
                             <X size={24} strokeWidth={2.5} />
@@ -98,16 +141,19 @@ export default function Terms({ isOpen, onClose }) {
                             right: 0 !important;
                             bottom: 0 !important;
                             width: 100vw !important;
-                            height: 100dvh !important;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
+                            height: 100vh !important;
+                            display: flex !important;
+                            align-items: center !important;
+                            justify-content: center !important;
                             z-index: 2147483647 !important;
-                            padding: clamp(12px, 2vw, 24px);
+                            padding: clamp(12px, 2vw, 24px) !important;
                             pointer-events: auto !important;
-                            overflow: hidden;
-                            isolation: isolate;
-                            overscroll-behavior: contain;
+                            overflow: hidden !important;
+                            isolation: isolate !important;
+                            overscroll-behavior: contain !important;
+                            -webkit-transform: translateZ(0) !important;
+                            transform: translateZ(0) !important;
+                            will-change: opacity !important;
                         }
 
                         .terms-backdrop {
@@ -116,30 +162,35 @@ export default function Terms({ isOpen, onClose }) {
                             left: 0 !important;
                             width: 100vw !important;
                             height: 100vh !important;
-                            background: rgba(0, 0, 0, 0.72);
-                            backdrop-filter: blur(14px);
-                            -webkit-backdrop-filter: blur(14px);
+                            background: rgba(0, 0, 0, 0.72) !important;
+                            backdrop-filter: blur(14px) !important;
+                            -webkit-backdrop-filter: blur(14px) !important;
                             z-index: 0 !important;
                             pointer-events: auto !important;
+                            -webkit-transform: translateZ(0) !important;
+                            transform: translateZ(0) !important;
                         }
 
                         .terms-modal-card {
                             position: relative !important;
-                            width: min(780px, calc(100vw - 32px));
-                            max-width: calc(100vw - 32px);
-                            max-height: calc(100dvh - 32px);
-                            background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 55%, #F0F0F0 100%);
-                            border-radius: 44px;
-                            display: flex;
-                            flex-direction: column;
-                            overflow: hidden;
-                            border: 2.5px solid rgba(212, 175, 55, 0.55);
+                            width: min(780px, calc(100vw - 32px)) !important;
+                            max-width: calc(100vw - 32px) !important;
+                            max-height: calc(100dvh - 32px) !important;
+                            background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 55%, #F0F0F0 100%) !important;
+                            border-radius: 44px !important;
+                            display: flex !important;
+                            flex-direction: column !important;
+                            overflow: hidden !important;
+                            border: 2.5px solid rgba(212, 175, 55, 0.55) !important;
                             box-shadow:
                                 0 0 90px rgba(212, 175, 55, 0.22),
                                 0 36px 110px rgba(0, 0, 0, 0.6),
-                                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+                                inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
                             z-index: 1 !important;
-                            margin: 0 auto;
+                            margin: 0 auto !important;
+                            -webkit-transform: translateZ(0) !important;
+                            transform: translateZ(0) !important;
+                            will-change: transform, opacity !important;
                         }
 
                         .terms-close-btn {
@@ -438,7 +489,7 @@ export default function Terms({ isOpen, onClose }) {
                 </div>
             )}
         </AnimatePresence>
-    , document.body
+    , getPortalContainer()
     )
 }
 
