@@ -14,9 +14,17 @@ const BASE_URL = process.env.REACT_APP_API_URL || 'https://eshopper-boutique-bac
 const Confirmation = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const userId = useSelector((state) => state.UserReducer.user?.userid);
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const users = useSelector((state) => state.UserStateData || []);
+
+  const localUserId = localStorage.getItem('userid');
+  const userId =
+    order?.userid ||
+    localUserId ||
+    users.find((item) => String(item.id || item.userid || item._id) === String(localUserId))?.userid ||
+    users[0]?.userid ||
+    '';
 
   // Retrieve order from state or localStorage
   useEffect(() => {
