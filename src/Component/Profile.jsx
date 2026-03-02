@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import { getUser } from "../Store/ActionCreaters/UserActionCreators"
 import { getWishlist } from "../Store/ActionCreaters/WishlistActionCreators"
 import { getCheckout } from "../Store/ActionCreaters/CheckoutActionCreators"
 import BuyerProfile from './BuyerProfile'
 import { motion } from 'framer-motion'
+import { BASE_URL } from '../constants'
+import { ArrowRight, ExternalLink, ShoppingBag, Clock3 } from 'lucide-react'
 
 export default function Profile() {
     var users = useSelector((state) => state.UserStateData)
@@ -13,6 +16,8 @@ export default function Profile() {
     var orders = useSelector((state) => state.CheckoutStateData)
     
     var [user, setuser] = useState({})
+    const [recentOrders, setRecentOrders] = useState([])
+    const [loadingRecent, setLoadingRecent] = useState(false)
     var dispatch = useDispatch()
     var navigate = useNavigate()
 
@@ -29,6 +34,41 @@ export default function Profile() {
     useEffect(() => {
         getAPIData()
     }, [users.length, wishlist.length, orders.length])
+
+    useEffect(() => {
+        const fetchRecentOrders = async () => {
+            const userId = localStorage.getItem("userid")
+            if (!userId) return
+            try {
+                setLoadingRecent(true)
+                const { data } = await axios.get(`${BASE_URL}/api/orders/recent/${userId}?limit=4`, { timeout: 10000 })
+                setRecentOrders(Array.isArray(data?.orders) ? data.orders : [])
+            } catch (e) {
+                setRecentOrders([])
+            } finally {
+                setLoadingRecent(false)
+            }
+        }
+
+        fetchRecentOrders()
+    }, [orders.length])
+
+    const normalizeStatus = (value = '') => {
+        const raw = String(value).trim().toLowerCase()
+        if (raw === 'order placed' || raw === 'ordered') return 'Ordered'
+        if (raw === 'packed') return 'Packed'
+        if (raw === 'shipped') return 'Shipped'
+        if (raw === 'delivered') return 'Delivered'
+        return 'Ordered'
+    }
+
+    const getStatusStyles = (status) => {
+        const s = normalizeStatus(status)
+        if (s === 'Ordered') return { bg: '#e0f2fe', color: '#0ea5e9' }
+        if (s === 'Packed') return { bg: '#fef3c7', color: '#f59e0b' }
+        if (s === 'Shipped') return { bg: '#fef9c3', color: '#ca8a04' }
+        return { bg: '#dcfce7', color: '#16a34a' }
+    }
 
     // Animation Variants
     const containerVariants = {
@@ -120,12 +160,84 @@ export default function Profile() {
 
                         {/* 3. Recent Activity / Orders Preview */}
                         <div className="card border-0 shadow-sm rounded-2xl p-4 bg-white">
-                            <h5 className="font-weight-bold text-dark mb-4">Recent Status</h5>
-                            <div className="p-5 text-center bg-light rounded-xl">
-                                <span className="icon-shopping_bag h1 text-muted opacity-25"></span>
-                                <p className="mt-3 text-muted">Aapka dashboard live connect ho chuka hai.</p>
-                                <Link to="/shop/All" className="btn btn-info btn-sm px-4 rounded-pill">Continue Shopping</Link>
+                            <div className="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                                <h5 className="font-weight-bold text-dark mb-0">Recent Status</h5>
+                                <Link to="/my-orders" className="btn btn-outline-dark btn-sm rounded-pill px-3 mt-2 mt-md-0">
+                                    View All Orders <ArrowRight size={13} className="ml-1" />
+                                </Link>
                             </div>
+                            {loadingRecent ? (
+                                <div className="p-4 text-center bg-light rounded-xl text-muted">Loading recent orders...</div>
+                            ) : recentOrders.length ? (
+                                <div>
+                                    {recentOrders.map((item) => {
+                                        const statusStyle = getStatusStyles(item.orderStatus)
+                                        const label = normalizeStatus(item.orderStatus)
+                                        return (
+                                            <motion.div
+                                                key={item.orderId}
+                                                whileHover={{ y: -2 }}
+                                                className="p-3 mb-3 rounded-xl"
+                                                style={{ border: '1px solid #ececec', background: '#fff' }}
+                                            >
+                                                <div className="d-flex flex-wrap align-items-center justify-content-between">
+                                                    <div>
+                                                        <div className="font-weight-bold" style={{ color: '#111' }}>{item.orderId}</div>
+                                                        <div className="small text-muted mt-1 d-flex align-items-center">
+                                                            <Clock3 size={13} className="mr-1" />
+                                                            {new Date(item.updatedAt).toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                    <div className="d-flex align-items-center mt-2 mt-md-0">
+                                                        <span
+                                                            className="px-3 py-2 rounded-pill font-weight-bold small"
+                                                            style={{ background: statusStyle.bg, color: statusStyle.color }}
+                                                        >
+                                                            {label}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-3" style={{ borderTop: '1px dashed #eee' }}>
+                                                    <div className="small text-muted">
+                                                        Amount: <span className="font-weight-bold text-dark">₹{Number(item.finalAmount || 0).toLocaleString('en-IN')}</span>
+                                                    </div>
+                                                    <div className="d-flex mt-2 mt-md-0">
+                                                        <button
+                                                            onClick={() => navigate(`/order-tracking/${item.orderId}`)}
+                                                            className="btn btn-dark btn-sm rounded-pill px-3 mr-2"
+                                                        >
+                                                            Track Now <ArrowRight size={14} className="ml-1" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => window.open(`/order-tracking/${item.orderId}`, '_blank')}
+                                                            className="btn btn-outline-dark btn-sm rounded-pill px-3"
+                                                        >
+                                                            Full Screen <ExternalLink size={13} className="ml-1" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )
+                                    })}
+
+                                    <div className="text-center mt-2">
+                                        <Link to="/my-orders" className="btn btn-dark btn-sm px-4 rounded-pill mr-2 mb-2">
+                                            My Orders
+                                        </Link>
+                                        <Link to="/shop/All" className="btn btn-info btn-sm px-4 rounded-pill">
+                                            Continue Shopping
+                                        </Link>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-4 text-center bg-light rounded-xl">
+                                    <ShoppingBag size={34} className="text-muted opacity-50" />
+                                    <p className="mt-3 text-muted mb-2">No recent orders found yet.</p>
+                                    <Link to="/my-orders" className="btn btn-dark btn-sm px-4 rounded-pill mr-2 mb-2">My Orders</Link>
+                                    <Link to="/shop/All" className="btn btn-info btn-sm px-4 rounded-pill">Continue Shopping</Link>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 </div>
@@ -143,6 +255,9 @@ export default function Profile() {
                 .xx-small { font-size: 10px; }
                 .transition { transition: 0.3s all ease; }
                 .card { border: none !important; }
+                @media (max-width: 768px) {
+                    .profile-header { padding-top: 3rem !important; padding-bottom: 3rem !important; }
+                }
             `}} />
         </div>
     )

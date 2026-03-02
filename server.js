@@ -152,7 +152,8 @@ io.use(async (socket, next) => {
     try {
         const userId = socket.handshake.auth?.userId || socket.handshake.query?.userId;
         if (!userId) return next(new Error('Unauthorized: userId missing'));
-        // Socket auth will be validated further in connection handler
+        const userExists = await User.exists({ _id: String(userId) });
+        if (!userExists) return next(new Error('Unauthorized: invalid user'));
         socket.data.userId = String(userId);
         return next();
     } catch (e) {
@@ -1227,6 +1228,66 @@ async function startServer() {
      };
 
 // 🔴 REAL-TIME ORDER TRACKING - Get single order
+app.get('/api/orders/:userId', async (req, res) => {
+    try {
+        const userId = String(req.params.userId || '').trim();
+
+        if (!userId) {
+            return res.status(400).json({ message: 'userId is required' });
+        }
+
+        const orders = await Order.find({ userid: userId })
+            .sort({ updatedAt: -1, createdAt: -1 })
+            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
+            .lean();
+
+        return res.json({
+            success: true,
+            orders: orders.map((item) => ({
+                orderId: item.orderId,
+                orderStatus: item.orderStatus || 'Order Placed',
+                finalAmount: Number(item.finalAmount || 0),
+                paymentStatus: item.paymentStatus || 'Pending',
+                paymentMethod: item.paymentMethod || 'COD',
+                updatedAt: item.updatedAt || item.createdAt || new Date()
+            }))
+        });
+    } catch (e) {
+        console.error('❌ Orders list fetch error:', e.message);
+        return res.status(500).json({ message: 'Failed to fetch orders' });
+    }
+});
+
+app.get('/api/orders/recent/:userId', async (req, res) => {
+    try {
+        const userId = String(req.params.userId || '').trim();
+        const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
+
+        if (!userId) {
+            return res.status(400).json({ message: 'userId is required' });
+        }
+
+        const orders = await Order.find({ userid: userId })
+            .sort({ updatedAt: -1, createdAt: -1 })
+            .limit(limit)
+            .select('orderId orderStatus finalAmount updatedAt createdAt')
+            .lean();
+
+        return res.json({
+            success: true,
+            orders: orders.map((item) => ({
+                orderId: item.orderId,
+                orderStatus: item.orderStatus || 'Order Placed',
+                finalAmount: Number(item.finalAmount || 0),
+                updatedAt: item.updatedAt || item.createdAt || new Date()
+            }))
+        });
+    } catch (e) {
+        console.error('❌ Recent orders fetch error:', e.message);
+        return res.status(500).json({ message: 'Failed to fetch recent orders' });
+    }
+});
+
 app.get('/api/order/:orderId', async (req, res) => {
     try {
         const { orderId } = req.params;
@@ -1247,7 +1308,17 @@ app.get('/api/order/:orderId', async (req, res) => {
             orderId: order.orderId,
             userid: order.userid,
             orderStatus: order.orderStatus || 'Ordered',
+            userName: order.userName || '',
+            userEmail: order.userEmail || '',
+            paymentMethod: order.paymentMethod || 'COD',
+            paymentStatus: order.paymentStatus || 'Pending',
+            totalAmount: Number(order.totalAmount || 0),
+            shippingAmount: Number(order.shippingAmount || 0),
             finalAmount: order.finalAmount || 0,
+            shippingAddress: order.shippingAddress || {},
+            products: Array.isArray(order.products) ? order.products : [],
+            estimatedArrival: order.estimatedArrival || null,
+            orderDate: order.orderDate || order.createdAt,
             updatedAt: order.updatedAt || order.createdAt
         });
     } catch (e) {

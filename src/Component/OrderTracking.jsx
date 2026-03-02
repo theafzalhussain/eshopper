@@ -5,7 +5,7 @@ import { io } from 'socket.io-client'
 import { motion } from 'framer-motion'
 import { datadogRum } from '@datadog/browser-rum'
 import { BASE_URL } from '../constants'
-import { ChevronRight } from 'lucide-react'
+import { Package, Archive, Truck, BadgeCheck } from 'lucide-react'
 
 const STEPS = ['Ordered', 'Packed', 'Shipped', 'Delivered']
 const STATUS_COLOR = {
@@ -16,10 +16,19 @@ const STATUS_COLOR = {
 }
 
 const STATUS_ICON = {
-  Ordered: '📦',
-  Packed: '📋',
-  Shipped: '🚚',
-  Delivered: '✅'
+  Ordered: Package,
+  Packed: Archive,
+  Shipped: Truck,
+  Delivered: BadgeCheck
+}
+
+const normalizeStatus = (value = '') => {
+  const raw = String(value).trim().toLowerCase()
+  if (raw === 'order placed' || raw === 'ordered') return 'Ordered'
+  if (raw === 'packed') return 'Packed'
+  if (raw === 'shipped') return 'Shipped'
+  if (raw === 'delivered') return 'Delivered'
+  return 'Ordered'
 }
 
 export default function OrderTracking() {
@@ -71,7 +80,7 @@ export default function OrderTracking() {
         if (!mounted) return
 
         setOrder(data)
-        setStatus(data?.orderStatus || 'Ordered')
+        setStatus(normalizeStatus(data?.orderStatus))
         console.log('✅ Order fetched:', data)
       } catch (e) {
         if (!mounted) return
@@ -112,15 +121,16 @@ export default function OrderTracking() {
 
       // 🔴 LISTEN FOR STATUS UPDATES
       socketRef.on('statusUpdate', (payload) => {
-        if (payload?.orderId === orderId && STEPS.includes(payload?.status)) {
+        if (payload?.orderId === orderId && payload?.status) {
           if (mounted) {
-            setStatus(payload.status)
+            const nextStatus = normalizeStatus(payload.status)
+            setStatus(nextStatus)
             datadogRum.addAction('orderStatusUpdated', {
               orderId,
-              newStatus: payload.status,
+              newStatus: nextStatus,
               timestamp: payload.updatedAt
             })
-            console.log('🔄 Status updated to:', payload.status)
+            console.log('🔄 Status updated to:', nextStatus)
           }
         }
       })
@@ -230,10 +240,12 @@ export default function OrderTracking() {
           </div>
 
           {/* STEPPER STEPS */}
-          <div className="d-flex justify-content-between mt-4">
+          <div className="stepper-scroll mt-4">
+          <div className="d-flex justify-content-between min-stepper-width">
             {STEPS.map((s, i) => {
               const isActive = i === activeIndex
               const isDone = i <= activeIndex
+              const StepIcon = STATUS_ICON[s]
               return (
                 <div key={s} className="text-center flex-grow-1" style={{ position: 'relative' }}>
                   {/* Connecting line */}
@@ -251,32 +263,15 @@ export default function OrderTracking() {
                     />
                   )}
 
-                  {/* Step circle with pulse effect */}
+                  {/* Step circle (non-blinking premium style) */}
                   <motion.div
-                    animate={isActive ? { scale: [1, 1.15, 1] } : { scale: 1 }}
-                    transition={isActive ? { repeat: Infinity, duration: 1.8, type: 'spring' } : {}}
+                    animate={{ scale: isActive ? 1.06 : 1 }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
                     style={{
                       margin: '0 auto',
                       position: 'relative',
                       zIndex: 2 }}
                   >
-                    {/* Outer pulse ring (only for active) */}
-                    {isActive && (
-                      <motion.div
-                        animate={{ scale: [1, 1.3], opacity: [1, 0] }}
-                        transition={{ repeat: Infinity, duration: 1.5 }}
-                        style={{
-                          position: 'absolute',
-                          inset: -8,
-                          borderRadius: '50%',
-                          border: `2px solid ${STATUS_COLOR[s]}`,
-                          left: '50%',
-                          top: '50%',
-                          transform: 'translate(-50%, -50%)'
-                        }}
-                      />
-                    )}
-
                     {/* Main circle */}
                     <div
                       style={{
@@ -288,12 +283,12 @@ export default function OrderTracking() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '20px',
+                        color: isDone ? '#fff' : '#9ca3af',
                         boxShadow: isActive ? `0 8px 25px ${STATUS_COLOR[s]}33` : 'none',
                         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                       }}
                     >
-                      {isDone ? STATUS_ICON[s] : '○'}
+                      <StepIcon size={20} />
                     </div>
                   </motion.div>
 
@@ -311,11 +306,12 @@ export default function OrderTracking() {
                     {s}
                   </motion.div>
                   {isActive && (
-                    <div style={{ fontSize: '10px', color: '#999', marginTop: '4px' }}>Active</div>
+                    <div style={{ fontSize: '10px', color: '#999', marginTop: '4px' }}>Current</div>
                   )}
                 </div>
               )
             })}
+          </div>
           </div>
 
           {/* STATUS DISPLAY */}
@@ -335,7 +331,7 @@ export default function OrderTracking() {
               className="font-weight-bold mb-1"
               style={{ color: status === 'Shipped' ? '#ca8a04' : STATUS_COLOR[status], fontSize: '24px' }}
             >
-              {STATUS_ICON[status]} {status}
+              {status}
             </h3>
             <p className="small text-muted mb-0">
               {status === 'Ordered' && '✅ Your order has been placed successfully'}
@@ -386,6 +382,14 @@ export default function OrderTracking() {
           .container {
             padding-left: 0 !important;
             padding-right: 0 !important;
+          }
+          .stepper-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 8px;
+          }
+          .min-stepper-width {
+            min-width: 520px;
           }
           .p-md-5 {
             padding: 1.5rem !important;

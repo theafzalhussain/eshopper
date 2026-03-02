@@ -163,7 +163,7 @@ export default function Navbaar() {
                                                 <i className="icon-vcard mr-2"></i> 
                                                 <span>My Profile</span>
                                             </Link>
-                                            <Link className="dropdown-item premium-dropdown-item" to="/cart">
+                                            <Link className="dropdown-item premium-dropdown-item" to="/my-orders">
                                                 <ShoppingCart size={14} className="mr-2" style={{display:'inline'}} /> 
                                                 <span>My Orders</span>
                                             </Link>
@@ -235,6 +235,10 @@ export default function Navbaar() {
                                                         <User size={18} className="mr-2" style={{display:'inline'}} />
                                                     )}
                                                     {name}
+                                                </Link>
+                                                <Link to="/my-orders" className="btn btn-outline-info btn-block mb-3 py-3 font-weight-bold">
+                                                    <ShoppingCart size={18} className="mr-2" style={{display:'inline'}} />
+                                                    My Orders
                                                 </Link>
                                                 <button onClick={logout} className="btn btn-danger btn-block py-3 font-weight-bold">
                                                     LOGOUT

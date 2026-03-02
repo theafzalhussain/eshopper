@@ -3,13 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import QRCode from 'qrcode';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { CheckCircle2, ShoppingBag, Download, User, MessageCircle, Truck, MapPin, Calendar } from 'lucide-react';
 import { clearCart } from '../Store/ActionCreaters/CartActionCreators';
-import { API_ENDPOINTS } from '../constants';
-
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://eshopper-boutique-backend.up.railway.app';
+import { API_ENDPOINTS, BASE_URL, FRONTEND_URL } from '../constants';
 
 const Confirmation = () => {
   const navigate = useNavigate();
@@ -28,21 +27,46 @@ const Confirmation = () => {
 
   // Retrieve order from state or localStorage
   useEffect(() => {
-    const locationState = window.history.state?.usr;
-    
-    if (locationState?.order) {
-      setOrder(locationState.order);
-    } else {
-      const storedOrder = localStorage.getItem('lastPlacedOrder');
-      if (storedOrder) {
-        try {
-          setOrder(JSON.parse(storedOrder));
-        } catch (e) {
-          console.error('Failed to parse stored order:', e);
+    const syncOrder = async () => {
+      const locationState = window.history.state?.usr;
+      let fallbackOrder = null;
+
+      if (locationState?.order) {
+        fallbackOrder = locationState.order;
+      } else {
+        const storedOrder = localStorage.getItem('lastPlacedOrder');
+        if (storedOrder) {
+          try {
+            fallbackOrder = JSON.parse(storedOrder);
+          } catch (e) {
+            console.error('Failed to parse stored order:', e);
+          }
         }
       }
-    }
-    setLoading(false);
+
+      if (fallbackOrder) {
+        setOrder(fallbackOrder);
+      }
+
+      const orderId = fallbackOrder?.orderId;
+      const currentUserId = localStorage.getItem('userid');
+
+      try {
+        if (orderId && currentUserId) {
+          const { data } = await axios.get(`${BASE_URL}/api/order/${encodeURIComponent(orderId)}?userId=${encodeURIComponent(currentUserId)}`, { timeout: 15000 });
+          if (data?.orderId) {
+            setOrder(data);
+            localStorage.setItem('lastPlacedOrder', JSON.stringify(data));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to sync order from backend:', err?.message || err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    syncOrder();
   }, []);
 
   // Fire confetti animation on mount
@@ -82,90 +106,272 @@ const Confirmation = () => {
   }, [order, userId, dispatch]);
 
   // Generate PDF invoice
-  const downloadInvoice = () => {
+  const downloadInvoice = async () => {
     if (!order) return;
 
-    const doc = new jsPDF();
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageHeight = doc.internal.pageSize.getHeight();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Header with golden theme
-    doc.setFontSize(24);
-    doc.setTextColor(212, 175, 55); // Golden
-    doc.text('eShopper Boutique', 20, 25);
+    const safeNum = (value) => Number(value || 0);
+    const money = (value) => `₹${safeNum(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    doc.setFontSize(10);
-    doc.setTextColor(80, 80, 80);
-    doc.text('Invoice', 20, 35);
-    doc.text(`Order ID: ${order.orderId}`, 20, 42);
-    doc.text(`Date: ${new Date(order.orderDate).toLocaleDateString()}`, 20, 49);
+    const shipping = order.shippingAddress || {};
+    const customerName = shipping.fullName || order.userName || 'Customer';
+    const addressLine1 = shipping.addressline1 || shipping.address || '-';
+    const city = shipping.city || '-';
+    const state = shipping.state || '-';
+    const pin = shipping.pin || shipping.zipCode || '-';
+    const phone = shipping.phone || '-';
+    const country = shipping.country || 'India';
 
-    // Shipping Address
-    doc.setFontSize(12);
+    const orderDate = order.orderDate ? new Date(order.orderDate) : new Date();
+    const invoiceDateText = orderDate.toLocaleDateString('en-IN');
+    const invoiceTimeText = orderDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    const invoiceNo = `INV-${order.orderId || `ESHP-${Date.now()}`}`;
+    const trackingUrl = `${FRONTEND_URL}/order-tracking/${encodeURIComponent(order.orderId || '')}`;
+
+    let qrDataUrl = '';
+    try {
+      qrDataUrl = await QRCode.toDataURL(trackingUrl, {
+        width: 220,
+        margin: 1,
+        color: {
+          dark: '#111111',
+          light: '#ffffff'
+        }
+      });
+    } catch (e) {
+      console.error('Failed to generate QR code:', e?.message || e);
+    }
+
+    const subtotal = safeNum(order.totalAmount);
+    const shippingFee = safeNum(order.shippingAmount);
+    const grandTotal = safeNum(order.finalAmount || subtotal + shippingFee);
+    const computedTax = Math.max(0, grandTotal - subtotal - shippingFee);
+    const cgst = computedTax / 2;
+    const sgst = computedTax / 2;
+
+    // Subtle brand watermark (diagonal)
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(42);
+    doc.setTextColor(245, 245, 245);
+    doc.text('ESHOPPER BOUTIQUE', pageWidth / 2, pageHeight / 2 + 10, {
+      align: 'center',
+      angle: 32
+    });
+
+    // Premium Top Bar
+    doc.setFillColor(20, 20, 20);
+    doc.rect(0, 0, pageWidth, 22, 'F');
+
+    // Vector logo emblem
+    doc.setFillColor(12, 12, 12);
+    doc.roundedRect(14, 5, 9, 9, 1.4, 1.4, 'F');
+    doc.setFont('times', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text('E', 18.5, 11.4, { align: 'center' });
+
+    doc.setDrawColor(212, 175, 55);
+    doc.setLineWidth(0.8);
+    doc.line(24.8, 6, 24.8, 13);
+
     doc.setTextColor(212, 175, 55);
-    doc.text('Shipping Address:', 20, 62);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('eShopper Boutique Luxe', 27, 14);
+
+    // Invoice Meta Right
+    doc.setTextColor(35, 35, 35);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text('TAX INVOICE', pageWidth - 14, 33, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.setTextColor(80, 80, 80);
-    const address = order.shippingAddress;
-    doc.text(`${address.fullName}`, 20, 70);
-    doc.text(`${address.address}, ${address.city}, ${address.state} ${address.zipCode}`, 20, 77);
-    doc.text(`Phone: ${address.phone}`, 20, 84);
+    doc.text(`Invoice No: ${invoiceNo}`, pageWidth - 14, 39, { align: 'right' });
+    doc.text(`Order ID: ${order.orderId || '-'}`, pageWidth - 14, 44, { align: 'right' });
+    doc.text(`Date: ${invoiceDateText} ${invoiceTimeText}`, pageWidth - 14, 49, { align: 'right' });
+
+    // Seller + Buyer Blocks
+    doc.setDrawColor(230, 230, 230);
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(14, 55, pageWidth - 28, 45, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(212, 175, 55);
+    doc.text('Sold By', 18, 63);
+    doc.text('Bill To / Ship To', 110, 63);
+
+    doc.setTextColor(70, 70, 70);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    const soldByLines = [
+      'eShopper Boutique Pvt. Ltd.',
+      'New Delhi, India',
+      'GSTIN: 07ABCDE1234F1Z5',
+      'Support: support@eshopperr.me'
+    ];
+    soldByLines.forEach((line, idx) => doc.text(line, 18, 69 + idx * 5));
+
+    const buyerLines = [
+      customerName,
+      addressLine1,
+      `${city}, ${state} ${pin}`,
+      `Phone: ${phone} | ${country}`
+    ];
+    buyerLines.forEach((line, idx) => doc.text(line, 110, 69 + idx * 5));
+
+    // Payment Summary strip
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(14, 104, pageWidth - 28, 14, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Payment Method: ${order.paymentMethod || 'COD'}`, 18, 113);
+    doc.text(`Payment Status: ${order.paymentStatus || 'Pending'}`, 92, 113);
+    doc.text(`Order Status: ${order.orderStatus || 'Order Placed'}`, pageWidth - 18, 113, { align: 'right' });
 
     // Products Table
-    const tableData = order.products.map((product) => [
-      product.name || 'Product',
-      product.qty || 1,
-      `₹${(product.price || 0).toFixed(2)}`,
-      `₹${(product.qty * product.price || 0).toFixed(2)}`,
-    ]);
+    const tableData = (order.products || []).map((product, index) => {
+      const qty = safeNum(product.qty || 1);
+      const price = safeNum(product.price);
+      const lineTotal = qty * price;
+      const sku = product.productid || product.id || product._id || 'NA';
+      const variant = [product.size ? `Size: ${product.size}` : '', product.color ? `Color: ${product.color}` : '']
+        .filter(Boolean)
+        .join(' | ');
+      const description = variant ? `${product.name || 'Product'}\nSKU: ${sku} | ${variant}` : `${product.name || 'Product'}\nSKU: ${sku}`;
+      return [
+        `${index + 1}`,
+        description,
+        `${qty}`,
+        money(price),
+        money(lineTotal)
+      ];
+    });
 
     autoTable(doc, {
-      startY: 95,
-      head: [['Product', 'Quantity', 'Price', 'Total']],
+      startY: 124,
+      head: [['#', 'Item Description', 'Qty', 'Unit Price', 'Total']],
       body: tableData,
       theme: 'grid',
+      margin: { left: 14, right: 14 },
       headStyles: {
         fillColor: [212, 175, 55],
         textColor: [255, 255, 255],
-        fontSize: 11,
+        fontSize: 10,
         fontStyle: 'bold',
+        halign: 'center'
       },
       bodyStyles: {
-        fontSize: 10,
-        textColor: [80, 80, 80],
+        fontSize: 9.5,
+        textColor: [70, 70, 70],
+        cellPadding: 3
       },
-      margin: 20,
+      alternateRowStyles: {
+        fillColor: [252, 252, 252]
+      },
       columnStyles: {
-        1: { halign: 'center' },
-        2: { halign: 'right' },
-        3: { halign: 'right' },
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 90 },
+        2: { cellWidth: 18, halign: 'center' },
+        3: { cellWidth: 34, halign: 'right' },
+        4: { cellWidth: 34, halign: 'right' }
       },
+      didDrawPage: () => {
+        const currentPage = doc.getCurrentPageInfo().pageNumber;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(145, 145, 145);
+        doc.text(`Page ${currentPage}`, pageWidth - 14, pageHeight - 7, { align: 'right' });
+      }
     });
 
-    // Totals Section
-    const finalY = doc.lastAutoTable.finalY + 15;
-    doc.setFontSize(11);
-    doc.setTextColor(80, 80, 80);
-    doc.text(`Subtotal: ₹${(order.totalAmount || 0).toFixed(2)}`, pageWidth - 70, finalY);
-    doc.text(`Shipping: ₹${(order.shippingAmount || 0).toFixed(2)}`, pageWidth - 70, finalY + 7);
-    
-    doc.setFontSize(13);
-    doc.setTextColor(212, 175, 55);
-    doc.setFont(undefined, 'bold');
-    doc.text(`Total: ₹${(order.finalAmount || 0).toFixed(2)}`, pageWidth - 70, finalY + 16);
+    // Totals Block
+    let finalY = (doc.lastAutoTable?.finalY || 130) + 8;
+    if (finalY + 52 > pageHeight - 20) {
+      doc.addPage();
+      finalY = 20;
+    }
+    const totalsX = pageWidth - 84;
+    doc.setDrawColor(235, 235, 235);
+    doc.roundedRect(totalsX, finalY, 70, 42, 2, 2, 'S');
 
-    // Footer
-    doc.setFontSize(9);
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      'Thank you for shopping with eShopper Boutique. For any queries, contact support@eshopperboutique.com',
-      pageWidth / 2,
-      pageHeight - 10,
-      { align: 'center' }
-    );
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(70, 70, 70);
+    doc.text('Subtotal', totalsX + 4, finalY + 7);
+    doc.text(money(subtotal), totalsX + 66, finalY + 7, { align: 'right' });
+
+    doc.text('Shipping', totalsX + 4, finalY + 13);
+    doc.text(money(shippingFee), totalsX + 66, finalY + 13, { align: 'right' });
+
+    doc.text('CGST', totalsX + 4, finalY + 19);
+    doc.text(money(cgst), totalsX + 66, finalY + 19, { align: 'right' });
+
+    doc.text('SGST', totalsX + 4, finalY + 25);
+    doc.text(money(sgst), totalsX + 66, finalY + 25, { align: 'right' });
+
+    doc.setDrawColor(220, 220, 220);
+    doc.line(totalsX + 4, finalY + 29, totalsX + 66, finalY + 29);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(212, 175, 55);
+    doc.text('Grand Total', totalsX + 4, finalY + 37);
+    doc.text(money(grandTotal), totalsX + 66, finalY + 37, { align: 'right' });
+
+    // Terms + Signature blocks
+    let notesY = finalY + 8;
+    if (notesY + 54 > pageHeight - 20) {
+      doc.addPage();
+      notesY = 20;
+    }
+    doc.setDrawColor(235, 235, 235);
+    doc.roundedRect(14, notesY, 100, 34, 2, 2, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(80, 80, 80);
+    doc.text('Important Notes', 18, notesY + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(115, 115, 115);
+    doc.text('• Goods once sold will only be replaced as per policy.', 18, notesY + 13);
+    doc.text('• Keep this invoice for warranty and returns support.', 18, notesY + 18);
+    doc.text('• This invoice is valid for all official payment records.', 18, notesY + 23);
+
+    doc.roundedRect(120, notesY, pageWidth - 134, 34, 2, 2, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(80, 80, 80);
+    doc.text('For eShopper Boutique', pageWidth - 18, notesY + 7, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(130, 130, 130);
+    doc.text('Authorized Signatory', pageWidth - 18, notesY + 28, { align: 'right' });
+    doc.line(pageWidth - 58, notesY + 24, pageWidth - 18, notesY + 24);
+
+    if (qrDataUrl) {
+      doc.addImage(qrDataUrl, 'PNG', 123, notesY + 10, 18, 18);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.8);
+      doc.setTextColor(120, 120, 120);
+      doc.text('Scan to track', 144, notesY + 17);
+      doc.text('your order', 144, notesY + 21);
+    }
+
+    // Footer Note
+    const footerY = Math.min(pageHeight - 14, notesY + 44);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(135, 135, 135);
+    doc.text('This is a computer-generated invoice and does not require a physical signature.', 14, footerY);
+    doc.text('Need help? Contact support@eshopperr.me', 14, footerY + 5);
 
     // Save PDF
-    doc.save(`invoice-${order.orderId}.pdf`);
+    doc.save(`Eshopper_Invoice_${order.orderId || Date.now()}.pdf`);
   };
 
   if (loading || !order) {
@@ -284,10 +490,10 @@ const Confirmation = () => {
                   {order.shippingAddress?.fullName}
                 </p>
                 <p style={{ fontSize: '13px', color: '#666', margin: '5px 0 0 0' }}>
-                  {order.shippingAddress?.address}
+                  {order.shippingAddress?.addressline1 || order.shippingAddress?.address || '-'}
                 </p>
                 <p style={{ fontSize: '13px', color: '#666', margin: '0' }}>
-                  {order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.zipCode}
+                  {order.shippingAddress?.city || '-'}, {order.shippingAddress?.state || '-'} {order.shippingAddress?.pin || order.shippingAddress?.zipCode || '-'}
                 </p>
               </div>
             </div>
