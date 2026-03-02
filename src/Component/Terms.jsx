@@ -85,7 +85,6 @@ export default function Terms({ isOpen, onClose }) {
                         </button>
 
                         <div className="terms-header">
-                            <div className="terms-badge">EST. 2024 • LEGAL</div>
                             <h2 className="terms-title">Terms & Conditions</h2>
                             <div className="terms-divider"></div>
                             <p className="terms-subtitle">ESHOPPERR LUXURY BOUTIQUE</p>
@@ -173,11 +172,11 @@ export default function Terms({ isOpen, onClose }) {
 
                         .terms-modal-card {
                             position: relative !important;
-                            width: min(780px, calc(100vw - 32px)) !important;
-                            max-width: calc(100vw - 32px) !important;
-                            max-height: calc(100dvh - 32px) !important;
+                            width: min(740px, calc(100vw - 28px)) !important;
+                            max-width: calc(100vw - 28px) !important;
+                            max-height: calc(100dvh - 24px) !important;
                             background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 55%, #F0F0F0 100%) !important;
-                            border-radius: 44px !important;
+                            border-radius: 34px !important;
                             display: flex !important;
                             flex-direction: column !important;
                             overflow: hidden !important;
@@ -195,10 +194,10 @@ export default function Terms({ isOpen, onClose }) {
 
                         .terms-close-btn {
                             position: absolute;
-                            top: 26px;
-                            right: 26px;
-                            width: 46px;
-                            height: 46px;
+                            top: 20px;
+                            right: 20px;
+                            width: 42px;
+                            height: 42px;
                             border-radius: 50%;
                             border: 1.5px solid #d4af37;
                             background: linear-gradient(135deg, #f8dc7c 0%, #d4af37 50%, #f8dc7c 100%);
@@ -218,24 +217,15 @@ export default function Terms({ isOpen, onClose }) {
                         }
 
                         .terms-header {
-                            padding: 48px 52px 30px;
+                            padding: 22px 36px 14px;
                             text-align: center;
                             background: linear-gradient(135deg, rgba(212, 175, 55, 0.14) 0%, rgba(212, 175, 55, 0.04) 100%);
                             border-bottom: 2px solid rgba(212, 175, 55, 0.28);
                         }
 
-                        .terms-badge {
-                            font-size: 10px;
-                            letter-spacing: 4px;
-                            color: #d4af37;
-                            font-weight: 900;
-                            margin-bottom: 14px;
-                            text-transform: uppercase;
-                        }
-
                         .terms-title {
                             margin: 0;
-                            font-size: 44px;
+                            font-size: 35px;
                             font-weight: 900;
                             letter-spacing: -1px;
                             background: linear-gradient(135deg, #101010 0%, #2e2e2e 45%, #d4af37 100%);
@@ -245,17 +235,17 @@ export default function Terms({ isOpen, onClose }) {
                         }
 
                         .terms-divider {
-                            width: 86px;
-                            height: 4px;
-                            margin: 18px auto;
+                            width: 70px;
+                            height: 3px;
+                            margin: 10px auto 8px;
                             border-radius: 10px;
                             background: linear-gradient(90deg, transparent, #d4af37, transparent);
                         }
 
                         .terms-subtitle {
                             margin: 0;
-                            font-size: 12px;
-                            letter-spacing: 3px;
+                            font-size: 10px;
+                            letter-spacing: 2px;
                             color: #6f6f6f;
                             text-transform: uppercase;
                             font-weight: 800;
@@ -263,7 +253,7 @@ export default function Terms({ isOpen, onClose }) {
 
                         .terms-body {
                             flex: 1;
-                            padding: 30px 52px;
+                            padding: 16px 30px;
                             overflow-y: auto;
                             background: linear-gradient(to bottom, #fcfcfc 0%, #f8f8f8 100%);
                         }
@@ -279,12 +269,12 @@ export default function Terms({ isOpen, onClose }) {
 
                         .terms-section {
                             display: flex;
-                            gap: 20px;
-                            margin-bottom: 22px;
-                            padding: 18px;
-                            border-radius: 20px;
+                            gap: 14px;
+                            margin-bottom: 14px;
+                            padding: 13px;
+                            border-radius: 14px;
                             border: 1.5px solid rgba(212, 175, 55, 0.24);
-                            border-left: 5px solid rgba(212, 175, 55, 0.7);
+                            border-left: 4px solid rgba(212, 175, 55, 0.7);
                             background: linear-gradient(135deg, rgba(255, 250, 236, 0.95), rgba(255, 255, 255, 0.9));
                             transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
                         }
@@ -296,10 +286,10 @@ export default function Terms({ isOpen, onClose }) {
                         }
 
                         .terms-section-icon {
-                            width: 42px;
-                            min-width: 42px;
-                            height: 42px;
-                            border-radius: 14px;
+                            width: 38px;
+                            min-width: 38px;
+                            height: 38px;
+                            border-radius: 12px;
                             color: #d4af37;
                             display: flex;
                             align-items: center;
@@ -310,8 +300,8 @@ export default function Terms({ isOpen, onClose }) {
                         }
 
                         .terms-section-content h3 {
-                            margin: 0 0 8px;
-                            font-size: 17px;
+                            margin: 0 0 5px;
+                            font-size: 15px;
                             color: #161616;
                             font-weight: 800;
                             letter-spacing: -0.3px;
@@ -320,8 +310,8 @@ export default function Terms({ isOpen, onClose }) {
 
                         .terms-section-content p {
                             margin: 0;
-                            font-size: 13px;
-                            line-height: 1.75;
+                            font-size: 12px;
+                            line-height: 1.58;
                             color: #4f4f4f;
                             font-weight: 500;
                         }
@@ -334,25 +324,29 @@ export default function Terms({ isOpen, onClose }) {
                             .terms-modal-card {
                                 width: 96vw;
                                 max-width: 96vw;
-                                max-height: 94dvh;
-                                border-radius: 28px;
+                                max-height: 92dvh;
+                                border-radius: 24px;
                             }
 
                             .terms-header {
-                                padding: 34px 26px 22px;
+                                padding: 20px 20px 12px;
+                            }
+
+                            .terms-title {
+                                font-size: 31px;
                             }
 
                             .terms-body {
-                                padding: 20px 24px;
+                                padding: 14px 18px;
                             }
 
                             .terms-footer {
-                                padding: 18px 24px;
+                                padding: 10px 16px;
                             }
                         }
 
                         .terms-footer {
-                            padding: 28px 52px;
+                            padding: 10px 24px;
                             text-align: center;
                             background: linear-gradient(135deg, rgba(212, 175, 55, 0.14) 0%, rgba(212, 175, 55, 0.04) 100%);
                             border-top: 2px solid rgba(212, 175, 55, 0.28);
@@ -361,15 +355,15 @@ export default function Terms({ isOpen, onClose }) {
                         .terms-agree-btn {
                             display: inline-flex;
                             align-items: center;
-                            gap: 10px;
-                            padding: 16px 48px;
+                            gap: 8px;
+                            padding: 11px 28px;
                             border-radius: 999px;
                             border: 2px solid #d4af37;
                             background: linear-gradient(135deg, #151515 0%, #303030 45%, #d4af37 100%);
                             color: #fff;
-                            font-size: 11px;
+                            font-size: 9px;
                             font-weight: 900;
-                            letter-spacing: 2.6px;
+                            letter-spacing: 1.6px;
                             text-transform: uppercase;
                             cursor: pointer;
                             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -385,24 +379,24 @@ export default function Terms({ isOpen, onClose }) {
                             .terms-modal-card {
                                 width: 97vw;
                                 max-width: 97vw;
-                                max-height: 96dvh;
+                                max-height: 94dvh;
                                 border-radius: 18px;
                             }
 
                             .terms-header {
-                                padding: 36px 30px 24px;
+                                padding: 18px 16px 10px;
                             }
 
                             .terms-title {
-                                font-size: 34px;
+                                font-size: 26px;
                             }
 
                             .terms-body {
-                                padding: 22px 30px;
+                                padding: 12px 14px;
                             }
 
                             .terms-footer {
-                                padding: 22px 30px;
+                                padding: 10px 12px;
                             }
                         }
 
@@ -422,30 +416,25 @@ export default function Terms({ isOpen, onClose }) {
                             }
 
                             .terms-header {
-                                padding: 26px 16px 16px;
-                            }
-
-                            .terms-badge {
-                                font-size: 7px;
-                                letter-spacing: 2px;
+                                padding: 14px 12px 8px;
                             }
 
                             .terms-title {
-                                font-size: 26px;
+                                font-size: 22px;
                             }
 
                             .terms-subtitle {
-                                font-size: 9px;
-                                letter-spacing: 2px;
+                                font-size: 8px;
+                                letter-spacing: 1.5px;
                             }
 
                             .terms-body {
-                                padding: 14px 14px;
+                                padding: 10px 10px;
                             }
 
                             .terms-section {
-                                gap: 12px;
-                                padding: 13px;
+                                gap: 10px;
+                                padding: 11px;
                                 border-radius: 12px;
                                 border-left-width: 4px;
                             }
@@ -467,15 +456,15 @@ export default function Terms({ isOpen, onClose }) {
                             }
 
                             .terms-footer {
-                                padding: 14px 12px;
+                                padding: 8px 8px;
                             }
 
                             .terms-agree-btn {
                                 width: 100%;
                                 justify-content: center;
-                                padding: 13px 18px;
-                                font-size: 9px;
-                                letter-spacing: 1.5px;
+                                padding: 10px 12px;
+                                font-size: 8px;
+                                letter-spacing: 1px;
                             }
 
                             .terms-close-btn {
@@ -496,7 +485,7 @@ export default function Terms({ isOpen, onClose }) {
 function TermsSection({ icon, title, text, isLast }) {
     return (
         <div className="terms-section" style={{ marginBottom: isLast ? 0 : undefined }}>
-            <div className="terms-section-icon">{React.cloneElement(icon, { size: 20, strokeWidth: 2.3 })}</div>
+            <div className="terms-section-icon">{React.cloneElement(icon, { size: 18, strokeWidth: 2.2 })}</div>
             <div className="terms-section-content">
                 <h3>{title}</h3>
                 <p>{text}</p>
