@@ -7,10 +7,66 @@ import { BASE_URL } from '../constants'
 const IMAGE_KEYWORDS = [
   'image', 'images', 'img', 'photo', 'photos', 'picture', 'pictures',
   'show', 'dikh', 'dikhao', 'product', 'products', 'catalog', 'collection',
-  'dress', 'shirt', 'jeans', 'jacket', 'shoes', 'bag', 'kurti', 'saree'
+  'dress', 'shirt', 'jeans', 'jacket', 'shoes', 'bag', 'kurti', 'saree', 'coat',
+  'mens', 'men', 'womens', 'women', 'male', 'female'
 ]
 
+const HINDI_WORDS = ['hai', 'hain', 'kya', 'chahiye', 'chahie', 'dikhao', 'batao', 'de', 'do', 'ke', 'ki', 'ka', 'mujhe', 'mere', 'aur', 'ya', 'nahi', 'par', 'kaise', 'kya', 'kyun', 'accha', 'thik']
+const HINGLISH_INDICATORS = ['hai', 'hain', 'chahiye', 'dikhao', 'batao', 'kya', 'mujhe']
+
+const detectLanguage = (text) => {
+  if (!text) return 'en'
+  const lower = text.toLowerCase()
+  const words = lower.split(/\s+/)
+  const hindiCount = words.filter(w => HINDI_WORDS.includes(w)).length
+  const hasHinglish = HINGLISH_INDICATORS.some(word => lower.includes(word))
+  
+  if (hindiCount >= 2 || hasHinglish) return 'hinglish'
+  if (hindiCount === 1 && words.length <= 4) return 'hinglish'
+  return 'en'
+}
+
 const BOT_AVATAR = '/assets/images/chatbot-avatar.png'
+const POSITION_STORAGE_KEY = 'chatbot_position_v2'
+
+const PRODUCT_TYPE_KEYWORDS = [
+  'coat', 'blazer', 'jacket', 'shirt', 'tshirt', 't-shirt', 'jeans', 'pant', 'trouser',
+  'shoe', 'shoes', 'sneaker', 'heel', 'kurti', 'saree', 'hoodie', 'sweater', 'top', 'dress'
+]
+const MEN_WORDS = ['men', 'mens', "men's", 'male', 'gents', 'boys', 'boy']
+const WOMEN_WORDS = ['women', 'womens', "women's", 'female', 'ladies', 'girls', 'girl']
+const REFERENCE_WORDS = ['uski', 'ussi', 'wo', 'woh', 'that', 'this', 'same', 'it', 'suggested', 'jo suggest']
+
+const includesAny = (text, words) => words.some((word) => text.includes(word))
+
+const getQueryFilters = (query = '') => {
+  const lower = query.toLowerCase()
+  return {
+    lower,
+    wantsMens: includesAny(lower, MEN_WORDS),
+    wantsWomens: includesAny(lower, WOMEN_WORDS),
+    referenceAsked: includesAny(lower, REFERENCE_WORDS),
+    productTypes: PRODUCT_TYPE_KEYWORDS.filter((word) => lower.includes(word))
+  }
+}
+
+const getRandomGreeting = (language, userName) => {
+  const name = userName || 'dost'
+  const hinglish = [
+    `Haan ${name}! 😊 Batao kya dekhna hai?`,
+    `Bilkul ${name}! ✨ Main help karungi`,
+    `Sure ${name}! 🌟 Kya pasand hai?`,
+    `Perfect ${name}! 💫 Kya chahiye?`
+  ]
+  const english = [
+    `Hey ${name}! 😊 What can I show you?`,
+    `Sure ${name}! ✨ I'm here to help`,
+    `Of course ${name}! 🌟 What do you like?`,
+    `Perfect ${name}! 💫 What are you looking for?`
+  ]
+  const options = language === 'hinglish' ? hinglish : english
+  return options[Math.floor(Math.random() * options.length)]
+}
 
 const PremiumRobotIcon = ({ mood = 'idle' }) => {
   const isThinking = mood === 'thinking'
@@ -148,7 +204,7 @@ export default function ChatBot() {
     {
       id: 1,
       sender: 'bot',
-      text: "Hi! 👋 Main aapka AI Fashion Assistant hoon. Aap style advice, outfit ideas, ya products ki images bolenge to main direct shop ke products yahin dikha dunga.",
+      text: "Hey there! ✨ Main tumhari fashion bestie hoon 👗💫 Mujhe bolo kya pasand hai - casual look, party outfit ya trending styles? Jo bhi chahiye, perfect products suggest karungi! 🛍️ Hindi, English ya Hinglish... jo comfortable ho tumhare liye, wahi use karo! 😊",
       timestamp: new Date(),
       products: []
     }
@@ -157,14 +213,42 @@ export default function ChatBot() {
   const [loading, setLoading] = useState(false)
   const [mood, setMood] = useState('idle')
   const [currentUser, setCurrentUser] = useState({ name: 'Guest', pic: '', email: '' })
+  const [lastSuggestedProducts, setLastSuggestedProducts] = useState([])
 
   const messagesEndRef = useRef(null)
+
+  const clampPosition = (nextPosition) => {
+    const maxRight = 16
+    const minLeft = -(window.innerWidth - 118)
+    const maxDown = 8
+    const minUp = -(window.innerHeight - 118)
+
+    return {
+      x: Math.min(maxRight, Math.max(minLeft, nextPosition.x)),
+      y: Math.min(maxDown, Math.max(minUp, nextPosition.y))
+    }
+  }
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(POSITION_STORAGE_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') {
+          setPosition(clampPosition(parsed))
+        }
+      }
+    } catch {
+      // ignore invalid cached position
+    }
+  }, [])
 
   useEffect(() => {
     const onResize = () => {
       const mobile = window.innerWidth < 768
       setIsMobile(mobile)
       setIsMobileFullScreen(window.innerWidth < 480 && isOpen)
+      setPosition((prev) => clampPosition(prev))
     }
 
     onResize()
@@ -216,41 +300,116 @@ export default function ChatBot() {
     return IMAGE_KEYWORDS.some((word) => lower.includes(word))
   }
 
-  const fetchProductsFromShop = async (query) => {
+  const fetchProductsFromShop = async (query, options = {}) => {
     try {
       const response = await axios.get(`${BASE_URL}/product`, { timeout: 12000 })
       const allProducts = Array.isArray(response.data) ? response.data : []
-      const q = (query || '').toLowerCase()
+      const allNormalized = allProducts.map((raw) => normalizeProduct(raw)).filter(Boolean)
 
-      const scored = allProducts
-        .map((raw) => normalizeProduct(raw))
-        .filter(Boolean)
+      const filters = getQueryFilters(query)
+      const stopWords = new Set(['show', 'me', 'images', 'image', 'product', 'products', 'please', 'all', 'for', 'the', 'a', 'an', 'ki', 'ke', 'ka', 'dikhao'])
+      const queryTokens = filters.lower.split(/[^a-z0-9]+/).filter((token) => token && !stopWords.has(token))
+
+      const applyFilters = (list) => {
+        return list.filter((item) => {
+          const bag = `${item.name} ${item.maincategory} ${item.subcategory}`.toLowerCase()
+
+          if (filters.wantsMens) {
+            const mensMatch = ['men', 'mens', "men's", 'male', 'gents', 'boy', 'boys'].some((word) => bag.includes(word))
+            if (!mensMatch) return false
+          }
+
+          if (filters.wantsWomens) {
+            const womensMatch = ['women', 'womens', "women's", 'female', 'ladies', 'girl', 'girls'].some((word) => bag.includes(word))
+            if (!womensMatch) return false
+          }
+
+          if (filters.productTypes.length > 0) {
+            const typeMatch = filters.productTypes.some((type) => bag.includes(type))
+            if (!typeMatch) return false
+          }
+
+          return true
+        })
+      }
+
+      const preferred = Array.isArray(options.preferredProducts) ? options.preferredProducts.map((p) => normalizeProduct(p)).filter(Boolean) : []
+      const usePreferred = filters.referenceAsked && preferred.length > 0
+
+      let baseList = usePreferred ? preferred : allNormalized
+      let filteredList = applyFilters(baseList)
+
+      if (filteredList.length === 0 && usePreferred) {
+        filteredList = applyFilters(allNormalized)
+      }
+
+      const scored = filteredList
         .map((item) => {
           const bag = `${item.name} ${item.maincategory} ${item.subcategory}`.toLowerCase()
           let score = 0
-          if (q && bag.includes(q)) score += 3
-          q.split(' ').forEach((token) => {
-            if (token && bag.includes(token)) score += 1
+          queryTokens.forEach((token) => {
+            if (bag.includes(token)) score += 2
           })
+          if (filters.lower && bag.includes(filters.lower)) score += 4
           return { item, score }
         })
         .sort((a, b) => b.score - a.score)
         .map((x) => x.item)
 
-      return scored.slice(0, 6)
+      const finalList = scored.length > 0 ? scored : filteredList
+      return finalList.slice(0, 6)
     } catch {
       return []
     }
   }
 
-  const chatContext = useMemo(() => {
-    return `You are a premium but friendly fashion assistant for Eshopper.
-- Speak naturally like a smart human assistant (clear, warm, not robotic).
-- Use concise and helpful responses with practical outfit advice.
-- If user asks for product images/items, acknowledge and guide briefly.
-- Prefer simple Hinglish tone when user speaks Hinglish.
-- Keep response under 5 lines.`
-  }, [])
+  const getPersonalizedContext = (userQuery, language) => {
+    const userName = currentUser?.name || 'dost'
+    
+    if (language === 'hinglish') {
+      return `Tum ek smart aur cute fashion assistant ho jo bilkul human ki tarah baat karti ho.
+
+Personality:
+- Bohot friendly, helpful aur relatable
+- Natural Hinglish mein baat karo (mix of Hindi + English)
+- User ko feel ho ki wo ek real dost se baat kar rahe hain
+- Emoji use karo jaha zarurat ho (👗👕✨🛍️💫)
+- Sweet aur encouraging tone rakho
+
+Guidelines:
+- User ka naam hai "${userName}", unhe personally address karo
+- Concise responses do (2-3 lines max)
+- Agar product dikhaane hain to utsaah se batao
+- Fashion tips natural tareeke se do, lecture mat do
+- User ke preference ko yaad rakho aur uske according suggest karo
+- Casual aur friendly language use karo
+
+User ka query: "${userQuery}"
+
+Ab ek sweet, helpful aur natural response do jaise ek fashion-savvy dost deti hai.`
+    } else {
+      return `You are a smart and friendly fashion assistant who talks exactly like a helpful human friend.
+
+Personality:
+- Very friendly, approachable, and relatable
+- Speak naturally in English with warmth
+- Make user feel they're chatting with a real fashion-savvy friend
+- Use relevant emojis naturally (👗👕✨🛍️💫)
+- Keep a sweet and encouraging tone
+
+Guidelines:
+- User's name is "${userName}", address them personally
+- Keep responses concise (2-3 lines max)
+- Show enthusiasm when suggesting products
+- Give fashion tips naturally, not like a textbook
+- Remember user preferences and suggest accordingly
+- Be casual and conversational
+
+User query: "${userQuery}"
+
+Now give a sweet, helpful, and natural response like a fashion-savvy friend would.`
+    }
+  }
 
   const handleSendMessage = async (e) => {
     e.preventDefault()
@@ -271,15 +430,21 @@ export default function ChatBot() {
     setMood('thinking')
 
     try {
+      const detectedLanguage = detectLanguage(prompt)
       const wantsProducts = shouldShowProducts(prompt)
-      const productPromise = wantsProducts ? fetchProductsFromShop(prompt) : Promise.resolve([])
+      const queryFilters = getQueryFilters(prompt)
+      const preferredFromSuggestion = queryFilters.referenceAsked ? lastSuggestedProducts : []
+      const productPromise = wantsProducts
+        ? fetchProductsFromShop(prompt, { preferredProducts: preferredFromSuggestion })
+        : Promise.resolve([])
 
-      const history = messages.map((msg) => ({
+      const history = messages.slice(-6).map((msg) => ({
         role: msg.sender === 'bot' ? 'model' : 'user',
         text: msg.text
       }))
 
-      const enhancedPrompt = `${chatContext}\nUser name: ${currentUser?.name || 'User'}\nUser query: ${prompt}`
+      const personalizedContext = getPersonalizedContext(prompt, detectedLanguage)
+      const enhancedPrompt = personalizedContext
 
       const aiResponse = await axios.post(
         `${BASE_URL}/api/chat`,
@@ -290,16 +455,29 @@ export default function ChatBot() {
         { timeout: 20000 }
       )
 
-      const responseText =
+      let responseText =
         aiResponse?.data?.text ||
         aiResponse?.data?.response ||
         aiResponse?.data?.message ||
-        "Sure, main help karta hoon. Aap thoda specific batao kis type ka look chahiye."
+        (detectedLanguage === 'hinglish' 
+          ? `Haan ${currentUser?.name || 'dost'}, zaroor help karungi! ✨ Batao kya dekh rahe ho - casual look, party wear, ya kuch aur special?` 
+          : `Hey ${currentUser?.name || 'friend'}! ✨ I'd love to help you find the perfect style. What are you looking for - casual, party wear, or something special?`)
+      
+      if (wantsProducts && finalProducts.length > 0) {
+        if (detectedLanguage === 'hinglish') {
+          responseText = responseText || `Dekho ${currentUser?.name || 'dost'}, maine tumhare liye kuch amazing products choose kiye hain! 😊 Niche dekho 👇`
+        } else {
+          responseText = responseText || `Check these out ${currentUser?.name || 'friend'}! I've picked some amazing products for you 😊👇`
+        }
+      }
 
       const inlineProducts = extractInlineProducts(responseText)
       const dbProducts = await productPromise
 
       const finalProducts = inlineProducts.length > 0 ? inlineProducts : dbProducts
+      if (finalProducts.length > 0) {
+        setLastSuggestedProducts(finalProducts)
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -313,17 +491,31 @@ export default function ChatBot() {
       ])
       setMood('happy')
     } catch {
+      const detectedLanguage = detectLanguage(prompt)
       const wantsProducts = shouldShowProducts(prompt)
-      const quickProducts = wantsProducts ? await fetchProductsFromShop(prompt) : []
+      const queryFilters = getQueryFilters(prompt)
+      const preferredFromSuggestion = queryFilters.referenceAsked ? lastSuggestedProducts : []
+      const quickProducts = wantsProducts
+        ? await fetchProductsFromShop(prompt, { preferredProducts: preferredFromSuggestion })
+        : []
+      if (quickProducts.length > 0) {
+        setLastSuggestedProducts(quickProducts)
+      }
+
+      const fallbackText = detectedLanguage === 'hinglish'
+        ? wantsProducts
+          ? `Perfect ${currentUser?.name || 'dost'}! 🛍️ Maine tumhare liye kuch zabardast products nikale hain, niche dekho 👇✨`
+          : `Haan haan, samajh gayi! 😊 Batao thoda detail mein - kaun sa color pasand hai, occasion kya hai, aur budget kya hai? Main best suggestions dungi! 💫`
+        : wantsProducts
+          ? `Perfect ${currentUser?.name || 'friend'}! 🛍️ I've picked out some amazing products for you, check them out below 👇✨`
+          : `Got it! 😊 Tell me more details - what color do you prefer, what's the occasion, and your budget? I'll give you the best suggestions! 💫`
 
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: 'bot',
-          text: wantsProducts
-            ? 'Bilkul! Mainne shop se relevant products nikaal diye hain, aap niche cards dekh lo 👇'
-            : 'Samajh gaya 👍 Main aapko better suggest karne ke liye ready hoon — color, occasion aur budget batao.',
+          text: fallbackText,
           timestamp: new Date(),
           products: quickProducts
         }
@@ -337,16 +529,13 @@ export default function ChatBot() {
 
   const toggleChat = () => {
     if (isMobileFullScreen) return
-    if (!isOpen) {
-      setPosition({ x: 0, y: 0 })
-    }
     setIsOpen((prev) => !prev)
   }
 
   return (
     <motion.div
       className="chatbot-wrapper"
-      drag={!isOpen && !isMobileFullScreen}
+      drag={!isMobileFullScreen}
       dragElastic={0.08}
       dragMomentum={false}
       initial={{ x: position.x, y: position.y }}
@@ -354,9 +543,13 @@ export default function ChatBot() {
       onDragStart={() => setIsDragging(true)}
       onDragEnd={(e, info) => {
         setIsDragging(false)
-        setPosition({ x: info.offset.x, y: info.offset.y })
+        setPosition((prev) => {
+          const next = clampPosition({ x: prev.x + info.offset.x, y: prev.y + info.offset.y })
+          localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(next))
+          return next
+        })
       }}
-      style={{ cursor: !isOpen && !isMobileFullScreen ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+      style={{ cursor: !isMobileFullScreen ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
     >
       {!isOpen && !isMobileFullScreen && (
         <motion.div className="grip-handle" whileHover={{ scale: 1.08, opacity: 1 }} initial={{ opacity: 0.7 }}>
@@ -392,8 +585,8 @@ export default function ChatBot() {
               <div className="header-left">
                 <div className="online-dot" />
                 <div>
-                  <h4>AI Fashion Consultant</h4>
-                  <span>Online • Human-like Assistant</span>
+                  <h4>AI Fashion Consultant ✨</h4>
+                  <span>Online • Your Fashion Bestie 💫</span>
                 </div>
               </div>
               <motion.button
@@ -496,7 +689,7 @@ export default function ChatBot() {
               <input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask styles, product images, outfit ideas..."
+                placeholder="Apne dil ki baat bolo... kya chahiye? 💬✨"
                 maxLength={500}
                 disabled={loading}
               />
@@ -513,7 +706,7 @@ export default function ChatBot() {
           position: fixed;
           right: 24px;
           bottom: 22px;
-          z-index: 980;
+          z-index: 3200;
           font-family: Inter, -apple-system, Segoe UI, sans-serif;
           display: flex;
           align-items: flex-end;
@@ -564,11 +757,12 @@ export default function ChatBot() {
         }
 
         .chat-card {
-          position: absolute;
-          right: 0;
-          bottom: 88px;
+          position: fixed;
+          right: 20px;
+          bottom: 108px;
           width: min(390px, 92vw);
-          height: min(560px, calc(100vh - 130px));
+          height: min(560px, calc(100vh - 150px));
+          max-height: calc(100vh - 140px);
           background: linear-gradient(180deg, #f9f9f9 0%, #f4f4f4 100%);
           border-radius: 26px;
           border: 1.5px solid rgba(210, 170, 47, 0.45);
@@ -900,8 +1094,11 @@ export default function ChatBot() {
           }
 
           .chat-card {
+            right: 14px;
+            bottom: 96px;
             width: min(360px, 94vw);
-            height: min(520px, calc(100vh - 120px));
+            height: min(520px, calc(100vh - 130px));
+            max-height: calc(100vh - 120px);
           }
 
           .product-grid {
