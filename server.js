@@ -1327,6 +1327,101 @@ app.get('/api/order/:orderId', async (req, res) => {
     }
 });
 
+// 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
+app.get('/api/admin/orders', async (req, res) => {
+    try {
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
+        const search = String(req.query.search || '').trim();
+        const statusFilter = String(req.query.status || '').trim();
+
+        let query = {};
+
+        // Search by orderId, userName, or userEmail
+        if (search) {
+            query.$or = [
+                { orderId: { $regex: search, $options: 'i' } },
+                { userName: { $regex: search, $options: 'i' } },
+                { userEmail: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Filter by status
+        if (statusFilter && ALLOWED_ORDER_STATUS.includes(statusFilter)) {
+            query.orderStatus = statusFilter;
+        }
+
+        const skip = (page - 1) * limit;
+        const totalOrders = await Order.countDocuments(query);
+        const orders = await Order.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products')
+            .lean();
+
+        return res.json({
+            success: true,
+            total: totalOrders,
+            page,
+            limit,
+            pages: Math.ceil(totalOrders / limit),
+            orders: orders.map((item) => ({
+                orderId: item.orderId,
+                userId: item.userid,
+                userName: item.userName || 'N/A',
+                userEmail: item.userEmail || 'N/A',
+                orderStatus: item.orderStatus || 'Order Placed',
+                paymentStatus: item.paymentStatus || 'Pending',
+                finalAmount: Number(item.finalAmount || 0),
+                productCount: Array.isArray(item.products) ? item.products.length : 0,
+                updatedAt: item.updatedAt || item.createdAt || new Date()
+            }))
+        });
+    } catch (e) {
+        console.error('❌ Admin orders fetch error:', e.message);
+        return res.status(500).json({ message: 'Failed to fetch orders' });
+    }
+});
+
+// 🔴 ADMIN - GET DETAILED ORDER
+app.get('/api/admin/order/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        if (!orderId) {
+            return res.status(400).json({ message: 'orderId is required' });
+        }
+
+        const order = await Order.findOne({ orderId }).lean();
+
+        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        return res.json({
+            success: true,
+            orderId: order.orderId,
+            userid: order.userid,
+            userName: order.userName || 'N/A',
+            userEmail: order.userEmail || 'N/A',
+            orderStatus: order.orderStatus || 'Ordered',
+            paymentMethod: order.paymentMethod || 'COD',
+            paymentStatus: order.paymentStatus || 'Pending',
+            totalAmount: Number(order.totalAmount || 0),
+            shippingAmount: Number(order.shippingAmount || 0),
+            finalAmount: Number(order.finalAmount || 0),
+            shippingAddress: order.shippingAddress || {},
+            products: Array.isArray(order.products) ? order.products : [],
+            estimatedArrival: order.estimatedArrival || null,
+            orderDate: order.orderDate || order.createdAt,
+            createdAt: order.createdAt,
+            updatedAt: order.updatedAt
+        });
+    } catch (e) {
+        console.error('❌ Admin order fetch error:', e.message);
+        return res.status(500).json({ message: 'Failed to fetch order' });
+    }
+});
+
 // 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
 app.post('/api/update-order-status', async (req, res) => {
     try {

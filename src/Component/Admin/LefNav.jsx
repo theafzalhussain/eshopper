@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { 
     Home, Users, Layers, Grid, Tag, 
-    ShoppingBag, MessageSquare, Send, CheckSquare 
+    ShoppingBag, MessageSquare, Send, CheckSquare, Package
 } from 'lucide-react'
 
 export default function LefNav() {
@@ -13,6 +13,7 @@ export default function LefNav() {
     const menuItems = [
         { name: "Dashboard", path: "/admin-home", icon: <Home size={18}/> },
         { name: "Users", path: "/admin-user", icon: <Users size={18}/> },
+        { name: "Orders", path: "/admin-orders", icon: <Package size={18}/> },
         { name: "Maincategories", path: "/admin-maincategory", icon: <Layers size={18}/> },
         { name: "Subcategories", path: "/admin-subcategory", icon: <Grid size={18}/> },
         { name: "Brands", path: "/admin-brand", icon: <Tag size={18}/> },
