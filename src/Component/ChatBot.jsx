@@ -66,6 +66,20 @@ const isGreetingMessage = (text = '') => {
   return directGreeting || (containsGreeting && lower.split(/\s+/).length <= 6)
 }
 
+const isHowAreYouQuery = (text = '') => {
+  const lower = text.trim().toLowerCase()
+  const englishPatterns = /\b(how are you|how're you|how r u|how r you|how do you do|how's it going|what's up|wassup|sup)\b/i
+  const hindiPatterns = /\b(kaise ho|kaisi ho|kese ho|kesi ho|kya haal|kya hal hai|sab theek|sab thik|aap kaise|tum kaise)\b/i
+  return englishPatterns.test(lower) || hindiPatterns.test(lower)
+}
+
+const isProductDetailsQuery = (text = '', lastProducts = []) => {
+  if (lastProducts.length === 0) return false
+  const lower = text.trim().toLowerCase()
+  const detailWords = ['detail', 'details', 'about', 'tell me', 'batao', 'info', 'information', 'describe', 'more about', 'iske baare', 'uske baare', 'this', 'that', 'ye', 'yeh', 'wo', 'woh', 'suggested', 'recommended', 'last', 'previous', 'pehle']
+  return detailWords.some(word => lower.includes(word)) && lower.split(/\s+/).length <= 8
+}
+
 const normalizeResponseLanguage = ({ responseText, language, isGreeting, wantsProducts, userName }) => {
   if (language !== 'hinglish') return responseText
 
@@ -481,15 +495,63 @@ export default function ChatBot() {
   const getPersonalizedContext = (userQuery, language, conversationStyle, priorNeeds) => {
     const userName = currentUser?.name || 'friend'
     const isGreeting = isGreetingMessage(userQuery)
+    const isHowAreYou = isHowAreYouQuery(userQuery)
+    const isProductDetail = isProductDetailsQuery(userQuery, lastSuggestedProducts)
     
     const productSummary = allProductsCache.length > 0 
-      ? `Available products: ${allProductsCache.length} items including mens wear, womens wear, casual, formal, party wear, traditional, western, shoes, accessories, and more.`
-      : 'Full product catalog available.'
+      ? `ESHOPPER PRODUCT DATABASE:
+- Total Products: ${allProductsCache.length} premium items
+- Categories: Men's wear, Women's wear, Casual, Formal, Party wear, Traditional, Western, Ethnic
+- Product Types: Dresses, Shirts, T-shirts, Jeans, Pants, Shoes, Accessories, Jackets, Hoodies, Sarees, Kurtis
+- Price Range: Budget-friendly to Premium
+- All products are quality-checked and fashion-forward`
+      : 'Full premium product catalog available.'
+    
+    const lastProductsInfo = lastSuggestedProducts.length > 0
+      ? `\n\nRECENTLY SUGGESTED PRODUCTS (User can ask details about these):\n${lastSuggestedProducts.slice(0, 3).map((p, i) => `${i + 1}. ${p.name} - ₹${p.price} (${p.maincategory}/${p.subcategory})`).join('\n')}`
+      : ''
 
-    const styleGuide = `Conversation style detected from user:
-- Tone: ${conversationStyle.tone}
-- Preferred response length: ${conversationStyle.responseLength}
-- Recent user needs memory: ${priorNeeds}`
+    const styleGuide = `CONVERSATION INTELLIGENCE:
+- User Tone: ${conversationStyle.tone}
+- Response Length Preference: ${conversationStyle.responseLength}
+- User Preferences Memory: ${priorNeeds}${lastProductsInfo}`
+    
+    if (isHowAreYou) {
+      return `User is asking "how are you?" - respond like a friendly human with personality.
+
+You are Eshopper's AI Fashion Assistant with deep knowledge of fashion trends and products.
+
+CRITICAL INSTRUCTIONS:
+- Reply in the SAME language as user (English/Hindi/Hinglish)
+- Be warm, friendly, human-like with personality
+- Say something like: "I'm doing great! Thanks for asking! I'm excited to help you find amazing fashion today! How can I assist you?"
+- If Hindi/Hinglish: "Main bilkul mast hoon! Puchne ke liye thanks! Aaj main tumhe best fashion dhoondhne me help karungi! Batao kya chahiye?"
+- Keep it natural, cheerful, and conversational
+
+User: "${userName}"
+User query: "${userQuery}"
+
+${styleGuide}`
+    }
+    
+    if (isProductDetail && lastSuggestedProducts.length > 0) {
+      return `User is asking for MORE DETAILS about a PREVIOUSLY SUGGESTED product.
+
+${productSummary}
+${styleGuide}
+
+CRITICAL:
+- User is referring to products YOU ALREADY SUGGESTED
+- Reply in SAME language as user
+- Provide intelligent details: fabric, style tips, occasion, why it's great, how to style it
+- Be enthusiastic like a fashion consultant friend
+- Reference specific product(s) from the recently suggested list
+
+User: "${userName}"
+User query: "${userQuery}"
+
+Give detailed, smart fashion advice about the suggested product(s).`
+    }
     
     if (isGreeting) {
       return `User has sent a greeting. Reply like a warm, cute, smart friend in the SAME language/script as user message.
@@ -507,22 +569,32 @@ User message: ${userQuery}`
     }
     
     if (language === 'hinglish') {
-      return `Tum ek smart fashion assistant ho with complete knowledge of Eshopper's product database.
+      return `Tum ek BAHUT SMART FASHION EXPERT ho with DEEP KNOWLEDGE of Eshopper's complete product database aur fashion trends.
 
 ${productSummary}
 ${styleGuide}
 
-CRITICAL:
-- Reply language MUST match user language style (Hindi/Hinglish).
-- Agar user Hindi/Hinglish me bole, English me switch mat karo.
-- Friend jaisi natural tone rakho, robotic mat lagna.
-- SIRF user ki demand ke hisaab se product suggest karo.
-- Agar user unclear ho, ek short clarification question pucho.
+TUMHARI CAPABILITIES (Google Assistant jaisi):
+✓ Fashion industry knowledge (trends, styling tips, occasions)
+✓ Complete product database ka detailed knowledge
+✓ Color theory, body types, style combinations
+✓ Budget-friendly suggestions
+✓ Seasonal fashion trends
+✓ Celebrity & influencer styles
+✓ Care instructions aur maintenance tips
+
+CRITICAL RULES:
+- Reply language MUST be Hindi/Hinglish (English me switch BILKUL mat karo)
+- Natural human jaisa baat karo - warm, friendly, experienced fashion friend
+- User ki EXACT need samjho aur precise suggestions do
+- Agar koi product suggest kiya hai, uske baare me expert jaisi details de sakte ho
+- Fashion advice, styling tips, occasion guidance - sab kuch kar sakte ho
+- Unclear request pe ek smart clarification question pucho
 
 User: "${userName}"
 User query: "${userQuery}"
 
-User ki exact need fulfill karo with warm, human-friendly response.`
+Ab user ko helpful, smart, human-like response do with fashion expertise.`
     }
 
     if (language === 'user') {
@@ -544,21 +616,34 @@ User query: "${userQuery}"
 Respond naturally, accurately, and helpfully.`
     }
 
-    return `You are a smart fashion assistant with complete knowledge of Eshopper's product database.
+    return `You are a HIGHLY INTELLIGENT FASHION EXPERT with DEEP KNOWLEDGE of Eshopper's complete product database and fashion industry.
 
 ${productSummary}
 ${styleGuide}
 
-CRITICAL:
-- Reply in fluent natural English.
-- Be human-like, warm, and smart.
-- Only suggest what user asks for; avoid extra irrelevant products.
-- If request is unclear, ask one short clarifying question.
+YOUR CAPABILITIES (Like Google Assistant/ChatGPT level intelligence):
+✓ Comprehensive fashion industry knowledge (trends, designers, styles)
+✓ Complete product database expertise with detailed information
+✓ Color theory, body types, style combinations, fashion psychology
+✓ Budget-conscious suggestions and value recommendations
+✓ Seasonal trends, occasion-specific styling
+✓ Celebrity fashion insights and influencer trends
+✓ Fabric care, maintenance, and longevity tips
+✓ Mix & match suggestions, wardrobe building advice
+
+CRITICAL INSTRUCTIONS:
+- Reply in fluent, natural English with personality
+- Be warm, friendly, experienced like a trusted fashion consultant friend
+- Understand user's exact needs and provide precise, smart suggestions
+- If discussing previously suggested products, give detailed expert insights
+- Provide fashion advice, styling tips, occasion guidance intelligently
+- Ask smart clarifying questions when needed
+- Never be robotic - be conversational and human-like
 
 User: "${userName}"
 User query: "${userQuery}"
 
-Give a concise, helpful, friend-like response that fulfills user need.`
+Provide helpful, intelligent, human-like response with fashion expertise.`
   }
 
   const handleSendMessage = async (e) => {
@@ -602,7 +687,9 @@ Give a concise, helpful, friend-like response that fulfills user need.`
         text: msg.text
       }))
 
-      const personalizedContext = getPersonalizedContext(prompt, detectedLanguage)
+      const conversationStyle = detectConversationStyle(prompt)
+      const priorNeeds = summarizeUserNeeds(messages)
+      const personalizedContext = getPersonalizedContext(prompt, detectedLanguage, conversationStyle, priorNeeds)
       const enhancedPrompt = personalizedContext
 
       const aiResponse = await axios.post(
@@ -689,18 +776,33 @@ Give a concise, helpful, friend-like response that fulfills user need.`
       }
 
       const isGreeting = isGreetingMessage(prompt)
+      const isHowAreYou = isHowAreYouQuery(prompt)
+      const isProductDetail = isProductDetailsQuery(prompt, lastSuggestedProducts)
       
-      const fallbackText = isGreeting
-        ? (detectedLanguage === 'hinglish'
+      let fallbackText = ''
+      
+      if (isHowAreYou) {
+        fallbackText = detectedLanguage === 'hinglish'
+          ? `Main bilkul mast hoon ${currentUser?.name || 'dost'}! 😊✨ Puchne ke liye shukriya! Aaj main tumhe best fashion trends dikhane ke liye bahut excited hoon! Batao kya dekhna hai - casual, party wear, ya trending styles? 🛍️💫`
+          : `I'm doing great ${currentUser?.name || 'friend'}! 😊✨ Thanks for asking! I'm so excited to help you discover amazing fashion today! What would you like to see - casual wear, party outfits, or trending styles? 🛍️💫`
+      } else if (isProductDetail && lastSuggestedProducts.length > 0) {
+        const product = lastSuggestedProducts[0]
+        fallbackText = detectedLanguage === 'hinglish'
+          ? `Haan bilkul! ${product.name} ke baare me batati hoon 😊 Ye ${product.maincategory} category ka ${product.subcategory} hai, price \u20b9${product.price} hai. Ye bahut trending aur stylish hai! Iska quality premium hai aur ye perfect hai agar tum ${product.maincategory.toLowerCase()} look chahte ho. Aur kuch details chahiye? 💫✨`
+          : `Sure! Let me tell you about ${product.name} 😊 It's a ${product.subcategory} from our ${product.maincategory} collection, priced at \u20b9${product.price}. This piece is absolutely trending and stylish! The quality is premium and it's perfect if you're going for a ${product.maincategory.toLowerCase()} look. Want to know more details? 💫✨`
+      } else if (isGreeting) {
+        fallbackText = detectedLanguage === 'hinglish'
           ? `Hello ${currentUser?.name || 'dost'}! 😊✨ Namaste! Kaisi ho? Main aapki fashion assistant hoon. Aaj kya explore karna chahoge? Casual wear, party outfits, traditional collection, ya trending styles? Bolo aur main perfect products dikhaungi! 🛍️💫`
-          : `Hello ${currentUser?.name || 'friend'}! 😊✨ Welcome! How are you today? I'm your fashion assistant. What would you like to explore? Casual wear, party outfits, traditional collection, or trending styles? Tell me and I'll show you perfect products! 🛍️💫`)
-        : (detectedLanguage === 'hinglish'
+          : `Hello ${currentUser?.name || 'friend'}! 😊✨ Welcome! How are you today? I'm your fashion assistant. What would you like to explore? Casual wear, party outfits, traditional collection, or trending styles? Tell me and I'll show you perfect products! 🛍️💫`
+      } else {
+        fallbackText = detectedLanguage === 'hinglish'
           ? (wantsProducts
             ? `Bilkul ${currentUser?.name || 'dost'}! 🛍️ Maine tumhari demand ke according products nikale hain. Niche dekho 👇✨`
             : `Haan ${currentUser?.name || 'dost'}, main samajh gayi! 😊 Thoda aur detail batao - color preference, occasion, budget? Main accurate suggestions dungi! 💫`)
           : (wantsProducts
             ? `Absolutely ${currentUser?.name || 'friend'}! 🛍️ I've found products matching your request. Check them out below 👇✨`
-            : `Sure ${currentUser?.name || 'friend'}, I understand! 😊 Tell me more - color preference, occasion, budget? I'll give you accurate suggestions! 💫`))
+            : `Sure ${currentUser?.name || 'friend'}, I understand! 😊 Tell me more - color preference, occasion, budget? I'll give you accurate suggestions! 💫`)
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -920,19 +1022,40 @@ Give a concise, helpful, friend-like response that fulfills user need.`
           width: 74px;
           height: 74px;
           border-radius: 999px;
-          border: 2px solid #d2aa2f;
-          background: linear-gradient(135deg, #111 0%, #1e1e1e 100%);
-          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35), 0 0 24px rgba(210, 170, 47, 0.25);
+          border: 2.5px solid #d4a739;
+          background: linear-gradient(135deg, #f5c940 0%, #d9a930 50%, #e0b137 100%);
+          box-shadow: 0 12px 28px rgba(212, 175, 55, 0.4), 0 8px 16px rgba(0, 0, 0, 0.25), 0 0 40px rgba(212, 175, 55, 0.3);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           padding: 0;
-          color: #d2aa2f;
+          color: #1a1a1a;
+          transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .chatbot-bubble::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+          transform: rotate(45deg);
+          animation: shimmer 3.5s infinite;
+        }
+        
+        @keyframes shimmer {
+          0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); opacity: 0; }
+          50% { transform: translateX(100%) translateY(100%) rotate(45deg); opacity: 1; }
         }
 
         .chatbot-bubble.active {
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 18px rgba(210, 170, 47, 0.2);
+          box-shadow: 0 8px 22px rgba(212, 175, 55, 0.45), 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 30px rgba(212, 175, 55, 0.25);
+          transform: scale(0.95);
         }
 
         .chatbot-bubble.hidden {
@@ -1108,25 +1231,46 @@ Give a concise, helpful, friend-like response that fulfills user need.`
 
         .msg-bubble {
           border-radius: 14px;
-          padding: 10px 12px;
-          line-height: 1.45;
+          padding: 11px 15px;
+          line-height: 1.6;
           font-size: 12.5px;
-          border: 1px solid transparent;
+          border: 1.5px solid transparent;
           word-break: break-word;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          transition: all 0.3s ease;
+          font-weight: 500;
+        }
+        
+        .msg-bubble:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
         }
 
         .msg-bubble-bot {
-          background: #ffffff;
-          color: #1e1e1e;
-          border-color: rgba(210, 170, 47, 0.22);
+          background: linear-gradient(135deg, #ffffff 0%, #fffbf0 100%);
+          color: #1a1a1a;
+          border-color: rgba(212, 175, 55, 0.3);
           border-bottom-left-radius: 4px;
+          box-shadow: 0 3px 12px rgba(212, 175, 55, 0.15), 0 1px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .msg-bubble-bot:hover {
+          border-color: rgba(212, 175, 55, 0.45);
+          box-shadow: 0 4px 16px rgba(212, 175, 55, 0.2), 0 2px 8px rgba(0, 0, 0, 0.12);
         }
 
         .msg-bubble-user {
-          background: linear-gradient(135deg, #101010, #252525);
-          color: #f0d577;
-          border-color: rgba(210, 170, 47, 0.35);
+          background: linear-gradient(135deg, #f5c842 0%, #d4a029 100%);
+          color: #ffffff;
+          border-color: #c7941f;
           border-bottom-right-radius: 4px;
+          box-shadow: 0 3px 12px rgba(212, 175, 55, 0.3), 0 1px 4px rgba(0, 0, 0, 0.15);
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        .msg-bubble-user:hover {
+          background: linear-gradient(135deg, #f9d153 0%, #d9a930 100%);
+          box-shadow: 0 4px 16px rgba(212, 175, 55, 0.35), 0 2px 8px rgba(0, 0, 0, 0.18);
         }
 
         .msg-time {
@@ -1239,30 +1383,51 @@ Give a concise, helpful, friend-like response that fulfills user need.`
 
         .chat-footer input {
           flex: 1;
-          border: 1px solid rgba(210, 170, 47, 0.35);
+          border: 1.5px solid rgba(212, 175, 55, 0.4);
           border-radius: 999px;
-          padding: 9px 12px;
-          font-size: 12px;
-          background: #fff;
+          padding: 10px 16px;
+          font-size: 12.5px;
+          background: #ffffff;
           outline: none;
+          transition: all 0.3s ease;
+          font-weight: 500;
         }
 
         .chat-footer input:focus {
-          border-color: #cfa12a;
-          box-shadow: 0 0 0 3px rgba(210, 170, 47, 0.14);
+          border-color: #d4a739;
+          box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.18), 0 2px 8px rgba(212, 175, 55, 0.15);
+          background: #fffef9;
+        }
+        
+        .chat-footer input::placeholder {
+          color: #999;
+          font-weight: 400;
         }
 
         .chat-footer button {
-          width: 38px;
-          height: 38px;
+          width: 40px;
+          height: 40px;
           border-radius: 999px;
-          border: 1px solid #c7961d;
-          background: linear-gradient(135deg, #f3ce64, #d49f1a);
-          color: #111;
+          border: 1.5px solid #d4a739;
+          background: linear-gradient(135deg, #f9d153 0%, #d9a930 100%);
+          color: #1a1a1a;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(212, 175, 55, 0.25);
+        }
+        
+        .chat-footer button:hover:not(:disabled) {
+          background: linear-gradient(135deg, #ffd85a 0%, #e0b037 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(212, 175, 55, 0.35);
+        }
+        
+        .chat-footer button:active:not(:disabled) {
+          transform: translateY(0);
+          box-shadow: 0 1px 4px rgba(212, 175, 55, 0.2);
         }
 
         .chat-footer button:disabled {
