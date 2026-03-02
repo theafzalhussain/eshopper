@@ -11,19 +11,79 @@ const IMAGE_KEYWORDS = [
   'mens', 'men', 'womens', 'women', 'male', 'female'
 ]
 
-const HINDI_WORDS = ['hai', 'hain', 'kya', 'chahiye', 'chahie', 'dikhao', 'batao', 'de', 'do', 'ke', 'ki', 'ka', 'mujhe', 'mere', 'aur', 'ya', 'nahi', 'par', 'kaise', 'kya', 'kyun', 'accha', 'thik']
-const HINGLISH_INDICATORS = ['hai', 'hain', 'chahiye', 'dikhao', 'batao', 'kya', 'mujhe']
+const HINDI_WORDS = [
+  'hai', 'hain', 'kya', 'chahiye', 'chahie', 'dikhao', 'dikhana', 'batao', 'de', 'do', 'ke', 'ki', 'ka',
+  'mujhe', 'mere', 'meri', 'aap', 'aapka', 'aapki', 'hum', 'tum', 'aur', 'ya', 'nahi', 'par', 'kaise',
+  'kyun', 'acha', 'accha', 'thik', 'theek', 'bhai', 'behen', 'kr', 'kar', 'karo', 'sakta', 'sakte',
+  'chaho', 'chahte', 'bolo', 'sunno', 'suno', 'hindi', 'english', 'hinglish'
+]
+const HINGLISH_INDICATORS = [
+  'hai', 'hain', 'chahiye', 'dikhao', 'batao', 'kya', 'mujhe', 'aap', 'bhai', 'hindi', 'hinglish',
+  'kar sakte', 'baat kar', 'samjho', 'dost'
+]
 
 const detectLanguage = (text) => {
   if (!text) return 'en'
   const lower = text.toLowerCase()
+  const hasDevanagari = /[\u0900-\u097F]/.test(text)
+  if (hasDevanagari) return 'hinglish'
+
+  const hasOtherScript = /[\u0600-\u06FF\u0750-\u077F\u0980-\u09FF\u0A00-\u0A7F\u0A80-\u0AFF\u0B00-\u0B7F\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F\u0E00-\u0E7F\u0400-\u04FF\u4E00-\u9FFF]/.test(text)
+  if (hasOtherScript) return 'user'
+
+  if (lower.includes('speak hindi') || lower.includes('talk in hindi') || lower.includes('hindi me') || lower.includes('hindi mein')) {
+    return 'hinglish'
+  }
+  if (lower.includes('speak english') || lower.includes('talk in english') || lower.includes('english please')) {
+    return 'en'
+  }
+
   const words = lower.split(/\s+/)
-  const hindiCount = words.filter(w => HINDI_WORDS.includes(w)).length
-  const hasHinglish = HINGLISH_INDICATORS.some(word => lower.includes(word))
+  const hindiCount = words.filter((w) => HINDI_WORDS.includes(w)).length
+  const hasHinglish = HINGLISH_INDICATORS.some((word) => lower.includes(word))
   
   if (hindiCount >= 2 || hasHinglish) return 'hinglish'
   if (hindiCount === 1 && words.length <= 4) return 'hinglish'
   return 'en'
+}
+
+const detectLanguagePreferenceRequest = (text = '') => {
+  const lower = text.toLowerCase()
+  if (lower.includes('hindi me') || lower.includes('hindi mein') || lower.includes('hindi') || lower.includes('hinglish')) {
+    return 'hinglish'
+  }
+  if (lower.includes('english me') || lower.includes('english mein') || lower.includes('speak english') || lower.includes('talk in english')) {
+    return 'en'
+  }
+  return null
+}
+
+const isGreetingMessage = (text = '') => {
+  const lower = text.trim().toLowerCase()
+  if (!lower) return false
+  const directGreeting = /^(hi|hello|hey|hii|helo|namaste|namaskar|salam|assalamualaikum)$/i.test(lower)
+  const containsGreeting = /\b(hi|hello|hey|namaste|namaskar|salam|assalamualaikum)\b/i.test(lower)
+  return directGreeting || (containsGreeting && lower.split(/\s+/).length <= 6)
+}
+
+const normalizeResponseLanguage = ({ responseText, language, isGreeting, wantsProducts, userName }) => {
+  if (language !== 'hinglish') return responseText
+
+  const lower = (responseText || '').toLowerCase()
+  const hasHindiHint = HINDI_WORDS.some((w) => lower.includes(` ${w} `) || lower.startsWith(`${w} `) || lower.endsWith(` ${w}`))
+  const looksStrictEnglish = /\b(absolutely|welcome|i can|i have|let me|you're|you are|how are you|please|would you like)\b/.test(lower)
+
+  if (!looksStrictEnglish || hasHindiHint) return responseText
+
+  if (isGreeting) {
+    return `Hello ${userName || 'dost'}! 😊✨ Namaste! Main aapki fashion assistant hoon. Aap jis style me chaho, main usi tarah help karungi. Batao kya dekhna hai? 🛍️💫`
+  }
+
+  if (wantsProducts) {
+    return `Bilkul ${userName || 'dost'}! 🛍️ Mainne aapki demand ke according products select kiye hain. Niche cards dekh lo 👇✨`
+  }
+
+  return `Samajh gaya ${userName || 'dost'} 😊 Main aapki language me hi baat karunga. Aap need batao, main best help dunga. 💫`
 }
 
 const BOT_AVATAR = '/assets/images/chatbot-avatar.png'
@@ -50,22 +110,45 @@ const getQueryFilters = (query = '') => {
   }
 }
 
-const getRandomGreeting = (language, userName) => {
-  const name = userName || 'dost'
-  const hinglish = [
-    `Haan ${name}! 😊 Batao kya dekhna hai?`,
-    `Bilkul ${name}! ✨ Main help karungi`,
-    `Sure ${name}! 🌟 Kya pasand hai?`,
-    `Perfect ${name}! 💫 Kya chahiye?`
-  ]
-  const english = [
-    `Hey ${name}! 😊 What can I show you?`,
-    `Sure ${name}! ✨ I'm here to help`,
-    `Of course ${name}! 🌟 What do you like?`,
-    `Perfect ${name}! 💫 What are you looking for?`
-  ]
-  const options = language === 'hinglish' ? hinglish : english
-  return options[Math.floor(Math.random() * options.length)]
+const detectConversationStyle = (text = '') => {
+  const lower = text.toLowerCase()
+  const politeWords = ['please', 'plz', 'kindly', 'kripya', 'pleasey']
+  const friendlyWords = ['bhai', 'bro', 'dost', 'yaar', 'buddy', 'friend']
+  const conciseWords = ['quick', 'jaldi', 'fast', 'short', 'brief']
+
+  const isPolite = politeWords.some((w) => lower.includes(w))
+  const isFriendly = friendlyWords.some((w) => lower.includes(w))
+  const wantsConcise = conciseWords.some((w) => lower.includes(w))
+
+  return {
+    tone: isFriendly ? 'friendly' : (isPolite ? 'polite' : 'neutral'),
+    responseLength: wantsConcise ? 'short' : 'normal'
+  }
+}
+
+const summarizeUserNeeds = (messages = []) => {
+  const userTexts = messages
+    .filter((m) => m?.sender === 'user' && typeof m?.text === 'string')
+    .slice(-8)
+    .map((m) => m.text.toLowerCase())
+
+  if (userTexts.length === 0) {
+    return 'No prior preference captured yet.'
+  }
+
+  const corpus = userTexts.join(' ')
+  const colors = ['black', 'white', 'blue', 'red', 'green', 'pink', 'brown', 'gold', 'silver']
+  const occasions = ['party', 'wedding', 'casual', 'office', 'formal', 'college', 'festive']
+  const budgetMatch = corpus.match(/(?:under|below|upto|within|around|near)\s*\d{2,6}|\d{2,6}\s*(?:rs|inr)/g) || []
+
+  const pickedColors = colors.filter((c) => corpus.includes(c)).slice(0, 2)
+  const pickedOccasions = occasions.filter((o) => corpus.includes(o)).slice(0, 2)
+
+  return [
+    pickedColors.length ? `Preferred colors: ${pickedColors.join(', ')}` : null,
+    pickedOccasions.length ? `Occasion hints: ${pickedOccasions.join(', ')}` : null,
+    budgetMatch.length ? `Budget hints: ${budgetMatch.slice(0, 2).join(', ')}` : null
+  ].filter(Boolean).join(' | ') || 'No clear color/occasion/budget preference from recent chat.'
 }
 
 const PremiumRobotIcon = ({ mood = 'idle' }) => {
@@ -234,6 +317,7 @@ export default function ChatBot() {
   const [currentUser, setCurrentUser] = useState({ name: 'Guest', pic: '', email: '' })
   const [lastSuggestedProducts, setLastSuggestedProducts] = useState([])
   const [allProductsCache, setAllProductsCache] = useState([])
+  const [preferredLanguage, setPreferredLanguage] = useState(() => localStorage.getItem('chatbot_preferred_language') || 'en')
 
   const messagesEndRef = useRef(null)
 
@@ -394,69 +478,87 @@ export default function ChatBot() {
     }
   }
 
-  const getPersonalizedContext = (userQuery, language) => {
+  const getPersonalizedContext = (userQuery, language, conversationStyle, priorNeeds) => {
     const userName = currentUser?.name || 'friend'
-    const isGreeting = /^(hi|hello|hey|hii|helo|namaste|namaskar)$/i.test(userQuery.trim())
+    const isGreeting = isGreetingMessage(userQuery)
     
     const productSummary = allProductsCache.length > 0 
       ? `Available products: ${allProductsCache.length} items including mens wear, womens wear, casual, formal, party wear, traditional, western, shoes, accessories, and more.`
       : 'Full product catalog available.'
+
+    const styleGuide = `Conversation style detected from user:
+- Tone: ${conversationStyle.tone}
+- Preferred response length: ${conversationStyle.responseLength}
+- Recent user needs memory: ${priorNeeds}`
     
     if (isGreeting) {
-      if (language === 'hinglish') {
-        return `User ne sirf greeting ki hai. Unhe warm welcome karo aur batao ki tum unki kaise help kar sakti ho. Product suggestions dene ke liye tayyar raho.
+      return `User has sent a greeting. Reply like a warm, cute, smart friend in the SAME language/script as user message.
 
-Response example: "Hello ${userName}! 😊✨ Namaste! Main aapki fashion assistant hoon. Aaj kya dekhna chahoge - casual outfits, party wear, traditional styles, ya kuch trending? Bolo aur main perfect products suggest karungi! 🛍️💫"`
-      } else {
-        return `User has just greeted you. Give them a warm, enthusiastic welcome and let them know how you can help. Be ready to suggest products.
+CRITICAL:
+- Match user language exactly (Hindi/Hinglish/English/other).
+- Keep friendly human tone.
+- Add short greeting + ask what they need.
+- Do not force product list unless user asks.
 
-Response example: "Hello ${userName}! 😊✨ Welcome! I'm so happy to help you today! Are you looking for casual outfits, party wear, traditional styles, or something trending? Just tell me what you need, and I'll find the perfect products for you! 🛍️💫"`
-      }
+${styleGuide}
+
+User name: ${userName}
+User message: ${userQuery}`
     }
     
     if (language === 'hinglish') {
       return `Tum ek smart fashion assistant ho with complete knowledge of Eshopper's product database.
 
 ${productSummary}
+${styleGuide}
 
-Personality:
-- Friendly, helpful aur accurate
-- Natural Hinglish mein baat karo
-- SIRF wahi products suggest karo jo user ne manga hai
-- Extra suggestions mat do unless user specifically mange
+CRITICAL:
+- Reply language MUST match user language style (Hindi/Hinglish).
+- Agar user Hindi/Hinglish me bole, English me switch mat karo.
+- Friend jaisi natural tone rakho, robotic mat lagna.
+- SIRF user ki demand ke hisaab se product suggest karo.
+- Agar user unclear ho, ek short clarification question pucho.
 
-Guidelines:
-- User: "${userName}"
-- 2-3 lines concise response
-- User ki exact demand ke according products dikhao
-- Database knowledge use karke accurate suggestions do
-- Agar products dikhaane hain to confirm karo ki wo user ki demand match karte hain
-
+User: "${userName}"
 User query: "${userQuery}"
 
-User ki exact demand samjho aur ONLY relevant response do.`
-    } else {
+User ki exact need fulfill karo with warm, human-friendly response.`
+    }
+
+    if (language === 'user') {
       return `You are a smart fashion assistant with complete knowledge of Eshopper's product database.
 
 ${productSummary}
+${styleGuide}
 
-Personality:
-- Friendly, helpful, and accurate
-- Speak naturally in English
-- ONLY suggest products that user specifically asks for
-- Don't give extra suggestions unless user explicitly asks
+CRITICAL:
+- Reply in the exact same language/script and communication style as user.
+- Do not switch language unless user asks explicitly.
+- Be warm, friendly, and human-like like a trusted friend.
+- Provide only relevant suggestions based on user need.
+- If unclear request, ask one concise clarification question.
 
-Guidelines:
-- User: "${userName}"
-- Keep responses concise (2-3 lines)
-- Show products according to user's exact demand
-- Use database knowledge for accurate suggestions
-- If showing products, confirm they match user's request
-
+User: "${userName}"
 User query: "${userQuery}"
 
-Understand user's exact demand and give ONLY relevant response.`
+Respond naturally, accurately, and helpfully.`
     }
+
+    return `You are a smart fashion assistant with complete knowledge of Eshopper's product database.
+
+${productSummary}
+${styleGuide}
+
+CRITICAL:
+- Reply in fluent natural English.
+- Be human-like, warm, and smart.
+- Only suggest what user asks for; avoid extra irrelevant products.
+- If request is unclear, ask one short clarifying question.
+
+User: "${userName}"
+User query: "${userQuery}"
+
+Give a concise, helpful, friend-like response that fulfills user need.`
   }
 
   const handleSendMessage = async (e) => {
@@ -478,7 +580,16 @@ Understand user's exact demand and give ONLY relevant response.`
     setMood('thinking')
 
     try {
-      const detectedLanguage = detectLanguage(prompt)
+      const askedPreference = detectLanguagePreferenceRequest(prompt)
+      
+      // If user explicitly requests a language change, use that
+      if (askedPreference) {
+        setPreferredLanguage(askedPreference)
+        localStorage.setItem('chatbot_preferred_language', askedPreference)
+      }
+      
+      // Use stored preference (defaults to 'en'), only detect from input if user explicitly requests or if no preference exists
+      const detectedLanguage = askedPreference || preferredLanguage || detectLanguage(prompt) || 'en'
       const wantsProducts = shouldShowProducts(prompt)
       const queryFilters = getQueryFilters(prompt)
       const preferredFromSuggestion = queryFilters.referenceAsked ? lastSuggestedProducts : []
@@ -511,14 +622,6 @@ Understand user's exact demand and give ONLY relevant response.`
           ? `Haan ${currentUser?.name || 'dost'}, zaroor help karungi! ✨ Batao kya dekh rahe ho - casual look, party wear, ya kuch aur special?` 
           : `Hey ${currentUser?.name || 'friend'}! ✨ I'd love to help you find the perfect style. What are you looking for - casual, party wear, or something special?`)
       
-      if (wantsProducts && finalProducts.length > 0) {
-        if (detectedLanguage === 'hinglish') {
-          responseText = responseText || `Dekho ${currentUser?.name || 'dost'}, maine tumhare liye kuch amazing products choose kiye hain! 😊 Niche dekho 👇`
-        } else {
-          responseText = responseText || `Check these out ${currentUser?.name || 'friend'}! I've picked some amazing products for you 😊👇`
-        }
-      }
-
       const inlineProducts = extractInlineProducts(responseText)
       const dbProducts = await productPromise
 
@@ -527,7 +630,23 @@ Understand user's exact demand and give ONLY relevant response.`
         setLastSuggestedProducts(finalProducts)
       }
 
-      const isGreeting = /^(hi|hello|hey|hii|helo|namaste|namaskar)$/i.test(prompt)
+      if (wantsProducts && !responseText?.trim()) {
+        if (detectedLanguage === 'hinglish') {
+          responseText = `Dekho ${currentUser?.name || 'dost'}, maine tumhari demand ke according products ready kiye hain 😊 Niche dekho 👇`
+        } else {
+          responseText = `Here you go ${currentUser?.name || 'friend'}! I found products based on your request 😊👇`
+        }
+      }
+
+      const isGreeting = isGreetingMessage(prompt)
+
+      responseText = normalizeResponseLanguage({
+        responseText,
+        language: detectedLanguage,
+        isGreeting,
+        wantsProducts,
+        userName: currentUser?.name
+      })
       
       if (isGreeting && !responseText.includes('Welcome') && !responseText.includes('Namaste')) {
         if (detectedLanguage === 'hinglish') {
@@ -549,7 +668,16 @@ Understand user's exact demand and give ONLY relevant response.`
       ])
       setMood('happy')
     } catch {
-      const detectedLanguage = detectLanguage(prompt)
+      const askedPreference = detectLanguagePreferenceRequest(prompt)
+      
+      // If user explicitly requests a language change, use that
+      if (askedPreference) {
+        setPreferredLanguage(askedPreference)
+        localStorage.setItem('chatbot_preferred_language', askedPreference)
+      }
+      
+      // Use stored preference (defaults to 'en'), only detect from input if user explicitly requests or if no preference exists
+      const detectedLanguage = askedPreference || preferredLanguage || detectLanguage(prompt) || 'en'
       const wantsProducts = shouldShowProducts(prompt)
       const queryFilters = getQueryFilters(prompt)
       const preferredFromSuggestion = queryFilters.referenceAsked ? lastSuggestedProducts : []
@@ -560,7 +688,7 @@ Understand user's exact demand and give ONLY relevant response.`
         setLastSuggestedProducts(quickProducts)
       }
 
-      const isGreeting = /^(hi|hello|hey|hii|helo|namaste|namaskar)$/i.test(prompt)
+      const isGreeting = isGreetingMessage(prompt)
       
       const fallbackText = isGreeting
         ? (detectedLanguage === 'hinglish'
