@@ -1417,14 +1417,16 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         .journey-step:not(:last-child)::after { content:'→'; position:absolute; right:-18px; top:20px; font-size:24px; color:#d1d5db; font-weight:bold; }
         .journey-icon { font-size:40px; margin:0 0 8px 0; animation:slideIn 0.6s ease-out; }
         .journey-label { font-size:12px; color:#6b7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin:0; }
-        .cards-row { display:flex; gap:20px; margin:0 0 40px 0; flex-wrap:wrap; }
-        .card-lg { flex:1; min-width:240px; padding:28px; background:linear-gradient(135deg,#111827,#1f2937); border-radius:16px; border:2px solid #374151; position:relative; overflow:hidden; }
-        .card-lg::before { content:''; position:absolute; top:-50%; right:-50%; width:200px; height:200px; background:radial-gradient(circle, rgba(212,175,55,0.1), transparent); border-radius:50%; }
-        .card-label-lg { font-size:12px; color:#fbbf24; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin:0 0 12px 0; }
-        .card-value-lg { font-size:28px; font-weight:900; color:#fff; margin:0 0 8px 0; position:relative; z-index:1; }
-        .card-sub-lg { font-size:13px; color:#d1d5db; margin:0; position:relative; z-index:1; }
-        .track-button { display:block; background:linear-gradient(135deg,#0284c7,#0369a1); color:#fff; padding:12px 24px; border:none; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; text-align:center; margin-top:16px; cursor:pointer; position:relative; z-index:1; box-shadow:0 4px 12px rgba(2,132,199,0.3); transition:all 0.3s ease; }
-        .track-button:hover { background:linear-gradient(135deg,#0369a1,#0284c7); transform:translateY(-2px); box-shadow:0 6px 16px rgba(2,132,199,0.4); }
+        .cards-row { display:flex; gap:32px; margin:0 0 40px 0; flex-wrap:wrap; }
+        .card-order { flex:1; min-width:240px; padding:32px; background:linear-gradient(135deg,#1e1b4b,#312e81,#4c1d95); border-radius:20px; border:3px solid #6366f1; position:relative; overflow:hidden; box-shadow:0 8px 32px rgba(99,102,241,0.3); transition:all 0.3s ease; }
+        .card-order:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(99,102,241,0.4); }
+        .card-order::before { content:''; position:absolute; top:-60%; right:-40%; width:250px; height:250px; background:radial-gradient(circle, rgba(168,85,247,0.2), transparent); border-radius:50%; animation:pulse 3s ease-in-out infinite; }
+        .card-delivery { flex:1; min-width:240px; padding:32px; background:linear-gradient(135deg,#064e3b,#065f46,#047857); border-radius:20px; border:3px solid #10b981; position:relative; overflow:hidden; box-shadow:0 8px 32px rgba(16,185,129,0.3); transition:all 0.3s ease; }
+        .card-delivery:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(16,185,129,0.4); }
+        .card-delivery::before { content:''; position:absolute; top:-60%; right:-40%; width:250px; height:250px; background:radial-gradient(circle, rgba(52,211,153,0.2), transparent); border-radius:50%; animation:pulse 3s ease-in-out infinite; }
+        .card-label-lg { font-size:13px; color:#fbbf24; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; margin:0 0 16px 0; position:relative; z-index:1; text-shadow:0 2px 8px rgba(251,191,36,0.3); }
+        .card-value-lg { font-size:32px; font-weight:900; color:#fff; margin:0 0 12px 0; position:relative; z-index:1; letter-spacing:-0.5px; text-shadow:0 4px 12px rgba(0,0,0,0.3); }
+        .card-sub-lg { font-size:14px; color:#e5e7eb; margin:0; position:relative; z-index:1; font-weight:500; opacity:0.9; }
         .product-section { margin:0 0 40px 0; }
         .product-table { width:100%; border-collapse:collapse; background:#fff; overflow:hidden; }
         .product-table tr:last-child td { border-bottom:none; }
@@ -1477,9 +1479,9 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             .order-journey { padding:16px; margin-bottom:24px; }
             .journey-step:not(:last-child)::after { right:-12px; top:12px; font-size:18px; }
             .journey-icon { font-size:32px; }
-            .cards-row { gap:12px; }
-            .card-lg { min-width:100%; padding:20px; }
-            .card-value-lg { font-size:24px; }
+            .cards-row { gap:20px; flex-direction:column; }
+            .card-order, .card-delivery { min-width:100%; padding:24px; }
+            .card-value-lg { font-size:26px; }
             .support-section { padding:32px 20px; margin-bottom:24px; }
             .support-emoji { font-size:48px; margin:0 0 16px 0; }
             .support-title { font-size:18px; }
@@ -1537,17 +1539,15 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             <!-- Order Details Cards -->
             <div class="section-title">📋 Order Details</div>
             <div class="cards-row">
-                <div class="card-lg">
-                    <p class="card-label-lg">🆔 Order ID</p>
+                <div class="card-order">
+                    <p class="card-label-lg">🆔 ORDER ID</p>
                     <p class="card-value-lg">${orderId}</p>
-                    <p class="card-sub-lg">Order Date: ${new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                    <a href="https://eshopperr.me/order-tracking/${orderId}" class="track-button">🔍 Track Order</a>
+                    <p class="card-sub-lg">Order Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                 </div>
-                <div class="card-lg">
-                    <p class="card-label-lg">🚚 Est. Delivery</p>
-                    <p class="card-value-lg" style="color:#ffd700;">${deliveryDate}</p>
+                <div class="card-delivery">
+                    <p class="card-label-lg">🚚 EST. DELIVERY</p>
+                    <p class="card-value-lg" style="color:#ffd700; text-shadow:0 4px 12px rgba(255,215,0,0.4);">${deliveryDate}</p>
                     <p class="card-sub-lg">Premium white-glove delivery</p>
-                    <a href="https://eshopperr.me/order-tracking/${orderId}" class="track-button">📍 View Tracking</a>
                 </div>
             </div>
 
