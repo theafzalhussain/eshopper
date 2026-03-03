@@ -1347,7 +1347,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     }
 };
 
-const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival, invoiceBase64 }) => {
+const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival, invoiceBase64, orderStatus = 'Ordered' }) => {
     const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
     if (!BREVO_KEY) {
         console.error('❌ BREVO_API_KEY not configured');
@@ -1364,6 +1364,41 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         const safeProducts = Array.isArray(products) ? products : [];
         const deliveryDate = estimatedArrival ? new Date(estimatedArrival).toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
         const totalItems = safeProducts.reduce((sum, p) => sum + (p.qty || 1), 0);
+
+        // Dynamic Order Journey Based on Status
+        const normalizeStatus = (status) => {
+            const s = String(status || 'Ordered').trim().toLowerCase();
+            if (s === 'order placed' || s === 'ordered') return 'Ordered';
+            if (s === 'packed') return 'Packed';
+            if (s === 'shipped') return 'Shipped';
+            if (s === 'delivered') return 'Delivered';
+            return 'Ordered';
+        };
+
+        const currentStatus = normalizeStatus(orderStatus);
+        const statusSteps = ['Ordered', 'Packed', 'Shipped', 'Delivered'];
+        const currentIndex = statusSteps.indexOf(currentStatus);
+        
+        const stepIcons = {
+            'Ordered': '✅',
+            'Packed': '📦',
+            'Shipped': '🚚',
+            'Delivered': '🎉'
+        };
+
+        const journeyStepsHtml = statusSteps.map((step, idx) => {
+            let className = 'journey-step';
+            if (idx < currentIndex) className += ' completed';
+            else if (idx === currentIndex) className += ' active';
+            else className += ' inactive';
+
+            return `
+                <div class="${className}">
+                    <div class="journey-icon">${stepIcons[step]}</div>
+                    <p class="journey-label">${step}</p>
+                </div>
+            `;
+        }).join('');
 
         const productRows = safeProducts.slice(0, 5).map(p => `
             <tr>
@@ -1395,11 +1430,16 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
         @keyframes pulse { 0%, 100% { opacity:1; } 50% { opacity:0.5; } }
         @keyframes gradientShift { 0%, 100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
+        @keyframes colorShift { 0% { filter:hue-rotate(0deg) brightness(1); } 25% { filter:hue-rotate(15deg) brightness(1.2); } 50% { filter:hue-rotate(30deg) brightness(1.1); } 75% { filter:hue-rotate(15deg) brightness(1.2); } 100% { filter:hue-rotate(0deg) brightness(1); } }
+        @keyframes glow { 0%, 100% { text-shadow:0 0 20px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.4), 0 0 60px rgba(212,175,55,0.3); } 50% { text-shadow:0 0 30px rgba(255,215,0,0.8), 0 0 60px rgba(255,215,0,0.6), 0 0 90px rgba(212,175,55,0.5); } }
+        @keyframes sparkle { 0%, 100% { opacity:1; transform:scale(1) rotate(0deg); } 25% { opacity:0.8; transform:scale(1.1) rotate(5deg); } 50% { opacity:1; transform:scale(1.15) rotate(-5deg); } 75% { opacity:0.9; transform:scale(1.05) rotate(3deg); } }
         body { margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto Mono', Roboto, sans-serif; background:#f3f4f6; }
         .container { max-width:650px; margin:0 auto; background:#fff; box-shadow:0 10px 30px rgba(0,0,0,0.15); }
         .header { background:linear-gradient(135deg,#0f0f10,#1a1a2e,#16213e); padding:48px 24px; text-align:center; position:relative; overflow:hidden; }
-        .header::before { content:''; position:absolute; top:-50%; right:-10%; width:300px; height:300px; background:radial-gradient(circle, rgba(255,215,0,0.2), transparent); border-radius:50%; }
-        .logo { font-size:48px; font-weight:900; background:linear-gradient(135deg,#ffd700,#ffed4e,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:3px; margin:0; position:relative; z-index:1; }
+        .header::before { content:''; position:absolute; top:-50%; right:-10%; width:300px; height:300px; background:radial-gradient(circle, rgba(255,215,0,0.2), transparent); border-radius:50%; animation:pulse 4s ease-in-out infinite; }
+        .logo { font-size:52px; font-weight:900; background:linear-gradient(135deg,#ffd700 0%, #ffed4e 25%, #ff6b6b 50%, #4ecdc4 75%, #d4af37 100%); background-size:200% 200%; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:4px; margin:0; position:relative; z-index:1; animation:colorShift 4s ease-in-out infinite, glow 2s ease-in-out infinite, pulse 3s ease-in-out infinite; text-shadow:0 0 40px rgba(255,215,0,0.8); display:inline-block; }
+        .logo::before { content:'✨'; position:absolute; left:-40px; top:50%; transform:translateY(-50%); font-size:32px; animation:sparkle 2s ease-in-out infinite; }
+        .logo::after { content:'✨'; position:absolute; right:-40px; top:50%; transform:translateY(-50%); font-size:32px; animation:sparkle 2s ease-in-out infinite 1s; }
         .tagline { font-size:12px; color:#d4af37; font-weight:700; letter-spacing:4px; text-transform:uppercase; margin:12px 0 0 0; position:relative; z-index:1; }
         .success-banner { background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%); padding:48px 24px; text-align:center; border-bottom:5px solid #28a745; position:relative; overflow:hidden; }
         .success-banner::after { content:''; position:absolute; top:-50%; right:-10%; width:400px; height:400px; background:rgba(40,167,69,0.1); border-radius:50%; }
@@ -1412,11 +1452,19 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         .greeting-text { font-size:16px; color:#333; margin:0; line-height:1.6; }
         .greeting-bold { font-weight:800; color:#0f0f10; }
         .section-title { font-size:18px; font-weight:900; color:#0f0f10; margin:0 0 20px 0; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:1px; }
-        .order-journey { display:flex; justify-content:space-between; align-items:center; margin:0 0 40px 0; padding:24px; background:linear-gradient(135deg,#f9fafb,#f3f4f6); border-radius:12px; border:2px solid #e5e7eb; }
-        .journey-step { flex:1; text-align:center; position:relative; }
-        .journey-step:not(:last-child)::after { content:'→'; position:absolute; right:-18px; top:20px; font-size:24px; color:#d1d5db; font-weight:bold; }
-        .journey-icon { font-size:40px; margin:0 0 8px 0; animation:slideIn 0.6s ease-out; }
-        .journey-label { font-size:12px; color:#6b7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin:0; }
+        .order-journey { display:flex; justify-content:space-between; align-items:center; margin:0 0 40px 0; padding:32px 24px; background:linear-gradient(135deg,#0f0f10,#1a1a2e); border-radius:16px; border:2px solid #374151; position:relative; overflow:hidden; }
+        .order-journey::before { content:''; position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(90deg, transparent, rgba(212,175,55,0.05), transparent); pointer-events:none; }
+        .journey-step { flex:1; text-align:center; position:relative; z-index:1; }
+        .journey-step:not(:last-child)::after { content:'→'; position:absolute; right:-18px; top:24px; font-size:28px; color:#4b5563; font-weight:bold; z-index:0; }
+        .journey-step.active .journey-icon { transform:scale(1.15); box-shadow:0 8px 25px rgba(212,175,55,0.5); }
+        .journey-step.completed .journey-icon { background:linear-gradient(135deg,#10b981,#059669); border-color:#10b981; }
+        .journey-step.completed .journey-label { color:#10b981; font-weight:900; }
+        .journey-step.active .journey-icon { background:linear-gradient(135deg,#ffd700,#d4af37); border-color:#ffd700; animation:pulse 2s infinite; }
+        .journey-step.active .journey-label { color:#ffd700; font-weight:900; }
+        .journey-step.inactive .journey-icon { background:#374151; border-color:#4b5563; opacity:0.4; }
+        .journey-step.inactive .journey-label { color:#6b7280; opacity:0.5; }
+        .journey-icon { font-size:42px; margin:0 0 12px 0; width:72px; height:72px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; border:3px solid transparent; transition:all 0.3s ease; background:#1f2937; }
+        .journey-label { font-size:13px; color:#9ca3af; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin:0; transition:all 0.3s ease; }
         .cards-row { display:flex; gap:32px; margin:0 0 40px 0; flex-wrap:wrap; }
         .card-order { flex:1; min-width:240px; padding:32px; background:linear-gradient(135deg,#1e1b4b,#312e81,#4c1d95); border-radius:20px; border:3px solid #6366f1; position:relative; overflow:hidden; box-shadow:0 8px 32px rgba(99,102,241,0.3); transition:all 0.3s ease; }
         .card-order:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(99,102,241,0.4); }
@@ -1463,8 +1511,11 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         .btn-email:hover { transform:translateY(-4px) scale(1.05); box-shadow:0 10px 28px rgba(251,191,36,0.4); background:#fffbf0; }
         .btn-whatsapp { background:linear-gradient(135deg,#25D366,#1db854); color:#fff; border:3px solid #1db854; box-shadow:0 6px 20px rgba(37,211,102,0.35); }
         .btn-whatsapp:hover { transform:translateY(-4px) scale(1.05); box-shadow:0 10px 28px rgba(37,211,102,0.5); }
-        .footer { background:linear-gradient(135deg,#0f0f10,#1a1a2e); padding:40px 24px; text-align:center; border-top:2px solid #d4af37; }
-        .footer-eshop { font-size:20px; font-weight:900; background:linear-gradient(135deg,#ffd700,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:0 0 12px 0; letter-spacing:2px; }
+        .footer { background:linear-gradient(135deg,#0f0f10,#1a1a2e); padding:48px 24px; text-align:center; border-top:3px solid #d4af37; position:relative; overflow:hidden; }
+        .footer::before { content:''; position:absolute; top:-50%; left:50%; transform:translateX(-50%); width:400px; height:400px; background:radial-gradient(circle, rgba(255,215,0,0.15), transparent); border-radius:50%; animation:pulse 5s ease-in-out infinite; }
+        .footer-eshop { font-size:32px; font-weight:900; background:linear-gradient(135deg,#ffd700 0%, #ffed4e 25%, #ff6b6b 50%, #4ecdc4 75%, #d4af37 100%); background-size:200% 200%; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:0 0 16px 0; letter-spacing:3px; position:relative; z-index:1; animation:colorShift 4s ease-in-out infinite, glow 2s ease-in-out infinite; display:inline-block; text-shadow:0 0 40px rgba(255,215,0,0.8); }
+        .footer-eshop::before { content:'✨'; margin-right:12px; font-size:28px; animation:sparkle 2s ease-in-out infinite; }
+        .footer-eshop::after { content:'✨'; margin-left:12px; font-size:28px; animation:sparkle 2s ease-in-out infinite 1s; }
         .footer-text { font-size:12px; color:#9ca3af; margin:0; line-height:1.8; }
         .footer-link { color:#d4af37; text-decoration:none; font-weight:700; }
         @media (max-width:640px) {
@@ -1496,7 +1547,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <p class="logo">✨ EShopper</p>
+            <p class="logo">EShopper</p>
             <p class="tagline">Boutique Luxe</p>
         </div>
 
@@ -1518,22 +1569,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             <!-- Order Journey -->
             <div class="section-title">📦 Order Journey</div>
             <div class="order-journey">
-                <div class="journey-step">
-                    <div class="journey-icon">✅</div>
-                    <p class="journey-label">Confirmed</p>
-                </div>
-                <div class="journey-step">
-                    <div class="journey-icon">📦</div>
-                    <p class="journey-label">Packed</p>
-                </div>
-                <div class="journey-step">
-                    <div class="journey-icon">🚚</div>
-                    <p class="journey-label">Shipped</p>
-                </div>
-                <div class="journey-step">
-                    <div class="journey-icon">🎉</div>
-                    <p class="journey-label">Delivered</p>
-                </div>
+                ${journeyStepsHtml}
             </div>
 
             <!-- Order Details Cards -->
@@ -1627,7 +1663,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
 
         <!-- Footer -->
         <div class="footer">
-            <p class="footer-eshop">✨ EShopper</p>
+            <p class="footer-eshop">EShopper</p>
             <p class="footer-text">
                 © ${new Date().getFullYear()} Eshopper Boutique Luxe. All rights reserved.<br>
                 <a href="https://eshopperr.me" class="footer-link">eshopperr.me</a>
@@ -2222,7 +2258,8 @@ app.post('/api/place-order', async (req, res) => {
                 shippingAddress: addressPayload,
                 products: cleanProducts,
                 estimatedArrival,
-                invoiceBase64: invoiceBuffer ? invoiceBuffer.toString('base64') : null
+                invoiceBase64: invoiceBuffer ? invoiceBuffer.toString('base64') : null,
+                orderStatus: 'Ordered'
             });
         } catch (emailError) {
             console.error('Order confirmation email failed:', emailError.message);
