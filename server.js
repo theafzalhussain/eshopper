@@ -632,16 +632,33 @@ const sendWhatsApp = async (number, message) => {
     const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
     const apiKey = process.env.EVOLUTION_API_KEY ? process.env.EVOLUTION_API_KEY.trim() : '';
     const instance = process.env.WHATSAPP_INSTANCE || 'eshopper_bot';
-    const contactNumber = normalizePhoneForWhatsApp(number);
+    const senderNumber = process.env.WHATSAPP_SENDER_NUMBER ? process.env.WHATSAPP_SENDER_NUMBER.trim() : '';
+    const adminEmail = process.env.ADMIN_EMAIL || 'theafzalhussain786@gmail.com';
+
+    // 🔴 STRICT PHONE FORMAT CONVERSION (91 + 10 digits)
+    const normalizePhoneStrict = (phone = '') => {
+        const digits = String(phone || '').replace(/\D/g, '');
+        if (!digits) return '';
+        if (digits.length === 10) return `91${digits}`;
+        if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`;
+        if (digits.length === 12 && digits.startsWith('91')) return digits;
+        return digits;
+    };
+
+    const contactNumber = normalizePhoneStrict(number);
+    const normalizedSender = normalizePhoneStrict(senderNumber);
 
     console.log('🔔 WhatsApp Send Debug:');
     console.log(`   API URL: ${apiUrl ? '✅ Set (' + apiUrl + ')' : '❌ Missing'}`);
     console.log(`   Token: ${token ? '✅ Set' : '❌ Missing'}`);
     console.log(`   API Key: ${apiKey ? '✅ Set' : '⏭️  Not set'}`);
     console.log(`   Instance: ${instance}`);
-    console.log(`   Contact: ${contactNumber || '❌ Invalid'}`);
+    console.log(`   Sender Phone: ${normalizedSender || '❌ Not configured'}`);
+    console.log(`   Contact (raw): ${number}`);
+    console.log(`   Contact (normalized): ${contactNumber || '❌ Invalid'}`);
     console.log(`   Message: ${message.substring(0, 50)}...`);
 
+    // 🔴 VALIDATION CHECKS
     if (!apiUrl) {
         console.error('❌ EVOLUTION_API_URL not set');
         throw new Error('EVOLUTION_API_URL not configured');
@@ -650,50 +667,97 @@ const sendWhatsApp = async (number, message) => {
         console.error('❌ WHATSAPP_TOKEN or EVOLUTION_API_KEY not set');
         throw new Error('WhatsApp credentials not configured');
     }
-    if (!contactNumber) {
-        console.error('❌ Contact number is invalid:', number);
-        throw new Error(`Invalid phone number: ${number}`);
+    if (!contactNumber || contactNumber.length < 12) {
+        console.error('❌ Contact number is invalid or too short:', contactNumber);
+        throw new Error(`Invalid phone number format. Expected 91XXXXXXXXXX, got: ${contactNumber}`);
     }
-    if (!message) {
+    if (!message || String(message).trim().length === 0) {
         console.error('❌ Message is empty');
         throw new Error('Message cannot be empty');
     }
 
+    // 🔴 SELF-LOOP PREVENTION
+    if (normalizedSender && contactNumber === normalizedSender) {
+        console.warn(`⚠️  SELF-LOOP DETECTED! Message would be sent to bot's own number: ${contactNumber}`);
+        console.warn(`    Skipping WhatsApp to prevent infinite loop`);
+
+        // Send admin notification instead
+        try {
+            const warningSubject = `⚠️ WhatsApp Self-Loop Prevented - ${new Date().toLocaleString()}`;
+            const warningHtml = `
+                <div style="font-family:Arial,sans-serif;background:#fff3cd;padding:20px;border:2px solid #ff9800;border-radius:8px;">
+                    <h2 style="color:#ff6b00;margin:0 0 10px 0;">⚠️ WhatsApp Self-Loop Detected</h2>
+                    <p style="margin:0 0 10px 0;color:#333;"><strong>Time:</strong> ${new Date().toLocaleString('en-IN')}</p>
+                    <p style="margin:0 0 10px 0;color:#333;"><strong>Sender Number:</strong> ${normalizedSender}</p>
+                    <p style="margin:0 0 10px 0;color:#333;"><strong>Contact Number:</strong> ${contactNumber}</p>
+                    <p style="margin:0 0 10px 0;color:#333;"><strong>Message:</strong> ${String(message).substring(0, 100)}...</p>
+                    <p style="margin:0;color:#d32f2f;"><strong>Action Taken:</strong> Message BLOCKED to prevent infinite loop</p>
+                    <hr style="margin:15px 0;border:none;border-top:1px solid #ff9800;" />
+                    <p style="margin:0;font-size:12px;color:#666;">This is an automated security alert. Check your order processing logic.</p>
+                </div>
+            `;
+
+            await axios.post('https://api.brevo.com/v3/smtp/email', {
+                sender: { name: 'Eshopper System', email: 'support@eshopperr.me' },
+                to: [{ email: adminEmail }],
+                subject: warningSubject,
+                htmlContent: warningHtml,
+                replyTo: { email: 'support@eshopperr.me' }
+            }, {
+                headers: {
+                    'api-key': process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '',
+                    'content-type': 'application/json',
+                    'accept': 'application/json'
+                },
+                timeout: 10000
+            });
+
+            console.log(`✅ Admin alert sent to ${adminEmail}`);
+        } catch (alertError) {
+            console.error('⚠️  Failed to send admin alert:', alertError.message);
+        }
+
+        throw new Error('Cannot send message to bot\'s own number (self-loop prevention)');
+    }
+
     try {
         const endpoint = `${apiUrl}/message/sendText/${instance}`;
-        const contactDigits = String(contactNumber || '').replace(/\D/g, '');
         
-        // Try multiple payload formats that Evolution API might accept
+        // Use only the strict normalized format
         const payloadFormats = [
             // Format 1: Standard (number with 91 prefix)
             {
                 number: contactNumber,
                 text: String(message)
             },
-            // Format 2: Without country code
-            {
-                number: contactDigits,
-                text: String(message)
-            },
-            // Format 3: Alternative field names
+            // Format 2: Alternative field names
             {
                 to: contactNumber,
                 message: String(message)
+            },
+            // Format 3: With chatId format
+            {
+                chatId: `${contactNumber}@s.whatsapp.net`,
+                text: String(message)
             }
         ];
-        
+
         console.log(`📤 Sending WhatsApp to: ${contactNumber}`);
         console.log(`   Endpoint: ${endpoint}`);
-        console.log(`   Contact (digits only): ${contactDigits}`);
-        
+        console.log(`   Strict Format: 91 + 10 digits = ${contactNumber.length} digits total`);
+
         let response;
         let lastError;
-        
+
         for (let i = 0; i < payloadFormats.length; i++) {
             try {
                 const payload = payloadFormats[i];
-                console.log(`   Attempt ${i + 1} with payload:`, payload);
-                
+                const displayPayload = { 
+                    ...payload, 
+                    text: payload.text?.substring(0, 30) + '...' || payload.message?.substring(0, 30) + '...' 
+                };
+                console.log(`   Attempt ${i + 1} with payload:`, displayPayload);
+
                 response = await axios.post(endpoint, payload, {
                     headers: {
                         'Content-Type': 'application/json',
@@ -701,18 +765,18 @@ const sendWhatsApp = async (number, message) => {
                     },
                     timeout: 30000
                 });
-                
+
                 console.log(`✅ WhatsApp sent successfully on attempt ${i + 1} (Status: ${response.status})`);
                 console.log(`   Response: ${JSON.stringify(response.data)}`);
                 return true;
-                
+
             } catch (err) {
                 lastError = err;
                 console.log(`   ❌ Attempt ${i + 1} failed:`, {
                     status: err.response?.status,
                     error: err.response?.data?.message || err.message
                 });
-                
+
                 // If it's a 401, try with Bearer token instead
                 if (err.response?.status === 401 && apiKey && i < payloadFormats.length - 1) {
                     try {
@@ -725,7 +789,7 @@ const sendWhatsApp = async (number, message) => {
                             },
                             timeout: 30000
                         });
-                        
+
                         console.log(`✅ WhatsApp sent with Bearer auth (Status: ${response.status})`);
                         console.log(`   Response: ${JSON.stringify(response.data)}`);
                         return true;
@@ -739,10 +803,10 @@ const sendWhatsApp = async (number, message) => {
                 }
             }
         }
-        
+
         // If all formats failed, throw the last error
         throw lastError || new Error('All WhatsApp payload formats failed');
-        
+
     } catch (error) {
         console.error('❌ WhatsApp send failed after all attempts:', {
             status: error.response?.status,
