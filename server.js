@@ -285,16 +285,16 @@ const sendMail = async (to, otp) => {
             .join(' ') || 'Customer';
 
         const data = {
-            sender: { name: "Eshopper Security Team", email: "support@eshopperr.me" },
+            sender: { name: "EShoppper Security", email: "support@eshopperr.me" },
             to: [{ email: to }],
-            subject: `Your Eshopper verification code: ${otp}`,
-            textContent: `Hi ${recipientName},\n\nYour Eshopper verification code is: ${otp}\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email and secure your account.\n\nEshopper Security Team\nsupport@eshopperr.me`,
+            subject: `Your EShoppper Verification Code: ${otp}`,
+            textContent: `Hi ${recipientName},\n\nYour EShoppper verification code is: ${otp}\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email and secure your account.\n\nEShoppper Premium Security\nsupport@eshopperr.me`,
             htmlContent: `
                 <div style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;padding:24px;color:#1f2937;">
                     <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
-                        <div style="padding:22px 28px;background:#111827;color:#ffffff;">
-                            <div style="font-size:20px;font-weight:700;letter-spacing:0.3px;">Eshopper</div>
-                            <div style="font-size:13px;opacity:0.9;margin-top:4px;">Secure Account Verification</div>
+                        <div style="padding:22px 28px;background:linear-gradient(135deg,#111827,#1a2332,#8b7521);color:#ffffff;">
+                            <div style="font-size:20px;font-weight:700;letter-spacing:0.3px;background:linear-gradient(135deg,#f5deb3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">EShoppper</div>
+                            <div style="font-size:13px;opacity:0.9;margin-top:4px;color:#d4af37;font-weight:600;">Secure Account Verification</div>
                         </div>
                         <div style="padding:28px;">
                             <p style="margin:0 0 14px 0;font-size:15px;">Hi ${recipientName},</p>
@@ -306,7 +306,7 @@ const sendMail = async (to, otp) => {
                             <p style="margin:0;font-size:14px;color:#4b5563;">If you did not request this, please ignore this email and secure your account.</p>
                         </div>
                         <div style="padding:16px 28px;border-top:1px solid #e5e7eb;background:#fafafa;font-size:12px;color:#6b7280;">
-                            Sent by Eshopper Security Team • support@eshopperr.me
+                            Sent by EShoppper Premium Security • support@eshopperr.me
                         </div>
                     </div>
                 </div>`,
@@ -438,13 +438,14 @@ const buildInvoiceHtml = ({
         const qty = Number(item.qty || 1);
         const price = Number(item.price || 0);
         const line = Number(item.total || (qty * price));
+        const itemDesc = item.name ? `${item.name}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}` : 'Product';
         return `
             <tr>
-                <td>${idx + 1}</td>
-                <td>${item.name || 'Product'}</td>
+                <td>${String(idx + 1).padStart(2, '0')}</td>
+                <td><strong>${itemDesc}</strong>${item.sku ? `<br/><span style="font-size:11px;color:#999;">SKU: ${item.sku}</span>` : ''}</td>
                 <td>${qty}</td>
-                <td>₹${price.toFixed(0)}</td>
-                <td>₹${line.toFixed(0)}</td>
+                <td>₹${price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                <td>₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
             </tr>
         `;
     }).join('');
@@ -454,77 +455,149 @@ const buildInvoiceHtml = ({
         <html>
         <head>
             <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
-                * { box-sizing: border-box; }
-                body { margin: 0; background: #f5f5f3; color: #121212; font-family: Inter, Arial, sans-serif; }
-                .wrap { max-width: 860px; margin: 0 auto; padding: 28px; }
-                .card { background: #fff; border: 1px solid #eee6cf; border-radius: 18px; overflow: hidden; }
-                .head { padding: 26px 30px; background: linear-gradient(135deg, #121212, #232323, #b48a2b); color: #fff; }
-                .brand { font-family: 'Playfair Display', serif; font-size: 34px; letter-spacing: .5px; margin: 0; }
-                .tag { font-size: 12px; letter-spacing: 2.4px; opacity: .92; margin-top: 6px; text-transform: uppercase; }
-                .body { padding: 26px 30px 30px; }
-                .title { font-family: 'Playfair Display', serif; font-size: 24px; margin: 0 0 18px; color: #1d1a12; }
-                .meta { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
-                .box { border: 1px solid #eadfbe; border-radius: 12px; padding: 12px 14px; background: #fffdfa; }
-                .k { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #7c6a40; }
-                .v { font-size: 15px; font-weight: 700; margin-top: 5px; color: #191919; word-break: break-word; }
-                table { width: 100%; border-collapse: collapse; margin-top: 16px; border: 1px solid #eadfbe; border-radius: 12px; overflow: hidden; }
-                th { background: #1b1b1b; color: #f3e7c4; font-size: 12px; letter-spacing: .8px; padding: 10px; text-transform: uppercase; text-align: left; }
-                td { border-top: 1px solid #f0ead6; padding: 10px; font-size: 13px; color: #212121; }
-                .totals { margin-top: 16px; border: 1px solid #eadfbe; border-radius: 12px; padding: 14px; background: #fffdfa; }
-                .line { display: flex; justify-content: space-between; margin-bottom: 7px; color: #2f2f2f; font-size: 14px; }
-                .line strong { color: #111; }
-                .final { border-top: 1px dashed #d9c99c; margin-top: 8px; padding-top: 10px; font-size: 20px; font-weight: 800; color: #111; }
-                .ship { margin-top: 16px; border: 1px solid #eadfbe; border-radius: 12px; padding: 14px; background: #fcfaf3; font-size: 13px; line-height: 1.65; color: #2f2f2f; }
-                .foot { margin-top: 16px; font-size: 12px; color: #666; }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { background: #f5f5f3; color: #121212; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; }
+                .wrap { max-width: 900px; margin: 0 auto; padding: 20px; }
+                .card { background: #fff; border: 2px solid #d4af37; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+                .head { padding: 32px; background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #d4af37 100%); color: #fff; box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.2); }
+                .brand { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 700; letter-spacing: 3px; margin: 0; display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+                .brand-icon { font-size: 42px; color: #d4af37; text-shadow: 0 0 12px rgba(212, 175, 55, 0.8), 0 0 24px rgba(212, 175, 55, 0.4); animation: glow 2s ease-in-out infinite; }
+                .brand-text { background: linear-gradient(135deg, #fff9e6, #d4af37, #fff9e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+                @keyframes glow { 0%, 100% { text-shadow: 0 0 12px rgba(212, 175, 55, 0.8); } 50% { text-shadow: 0 0 20px rgba(212, 175, 55, 1); } }
+                .tag { font-size: 11px; letter-spacing: 2.5px; margin-top: 10px; text-transform: uppercase; color: #fff9e6; font-weight: 700; }
+                .body { padding: 32px; }
+                .title { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; margin: 0 0 24px; color: #0f0f0f; letter-spacing: 1px; }
+                .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
+                .box { border: 2px solid #d4af37; border-radius: 10px; padding: 14px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); transition: all 0.3s ease; }
+                .box:hover { border-color: #ff9d00; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15); }
+                .k { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; }
+                .v { font-size: 15px; font-weight: 700; margin-top: 6px; color: #0f0f0f; word-break: break-word; }
+                .items-section { margin-top: 24px; margin-bottom: 24px; }
+                table { width: 100%; border-collapse: collapse; background: #fff; }
+                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #d4af37; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 1px solid #d4af37; }
+                td { border: 1px solid #e8dcc8; padding: 12px; font-size: 13px; color: #2c2c2c; }
+                tr:nth-child(even) { background: #fafaf8; }
+                td:nth-child(1) { text-align: center; font-weight: 700; color: #d4af37; }
+                td:nth-child(3), td:nth-child(4), td:nth-child(5) { text-align: right; font-weight: 600; }
+                .totals { margin-top: 24px; border: 2px solid #d4af37; border-radius: 10px; padding: 18px 20px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); }
+                .totals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+                .line { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; color: #2c2c2c; font-size: 14px; border-bottom: 1px solid #e8dcc8; }
+                .line:last-child { border-bottom: none; }
+                .line-label { font-weight: 600; color: #0f0f0f; }
+                .line-value { font-weight: 700; color: #0f0f0f; font-size: 15px; }
+                .final { background: linear-gradient(135deg, #d4af37 0%, #8b7521 100%); color: #fff; padding: 16px 18px; border-radius: 8px; font-size: 18px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-top: 12px; letter-spacing: 0.5px; }
+                .final-label { font-size: 16px; }
+                .final-value { font-size: 22px; }
+                .address-section { margin-top: 24px; }
+                .ship { border: 2px solid #d4af37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); font-size: 13px; line-height: 1.8; color: #2c2c2c; }
+                .ship-title { font-weight: 700; color: #0f0f0f; margin-bottom: 10px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+                .ship-addr { font-size: 13px; color: #0f0f0f; line-height: 1.7; }
+                .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #e8dcc8; }
+                .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.6; }
+                .foot-premium { color: #d4af37; font-weight: 700; margin-top: 12px; font-size: 13px; letter-spacing: 1px; }
+                @media (max-width: 768px) {
+                    .wrap { padding: 12px; }
+                    .head { padding: 20px; }
+                    .body { padding: 20px; }
+                    .brand { font-size: 32px; gap: 8px; }
+                    .brand-icon { font-size: 28px; }
+                    .title { font-size: 22px; }
+                    .meta { grid-template-columns: 1fr; gap: 10px; }
+                    .box { padding: 10px 12px; }
+                    .totals-grid { grid-template-columns: 1fr; }
+                    th, td { padding: 10px 8px; font-size: 12px; }
+                    .final { flex-direction: column; gap: 8px; text-align: center; }
+                }
+                @media (max-width: 480px) {
+                    .wrap { padding: 8px; }
+                    .head { padding: 16px; }
+                    .body { padding: 16px; }
+                    .brand { font-size: 24px; }
+                    .brand-icon { font-size: 22px; }
+                    .title { font-size: 18px; margin-bottom: 16px; }
+                    table { font-size: 11px; }
+                    th, td { padding: 8px 6px; }
+                }
             </style>
         </head>
         <body>
             <div class="wrap">
                 <div class="card">
                     <div class="head">
-                        <h1 class="brand">Eshopper</h1>
-                        <div class="tag">Boutique Empire • Invoice</div>
+                        <h1 class="brand"><span class="brand-icon">✨</span><span class="brand-text">EShoppper</span></h1>
+                        <div class="tag">🏆 Boutique Luxe • Premium Invoice</div>
                     </div>
                     <div class="body">
                         <h2 class="title">Premium Order Invoice</h2>
+                        
                         <div class="meta">
                             <div class="box"><div class="k">Order ID</div><div class="v">${orderId}</div></div>
                             <div class="box"><div class="k">Order Date</div><div class="v">${orderDateText}</div></div>
-                            <div class="box"><div class="k">Customer</div><div class="v">${displayName}</div></div>
-                            <div class="box"><div class="k">Email</div><div class="v">${userEmail || 'N/A'}</div></div>
-                            <div class="box"><div class="k">Payment</div><div class="v">${paymentMethod || 'COD'} • ${paymentStatus || 'Pending'}</div></div>
-                            <div class="box"><div class="k">Invoice Ref</div><div class="v">INV-${orderId}</div></div>
+                            <div class="box"><div class="k">Customer Name</div><div class="v">${displayName}</div></div>
+                            <div class="box"><div class="k">Customer Email</div><div class="v">${userEmail || 'N/A'}</div></div>
+                            <div class="box"><div class="k">Payment Method</div><div class="v">${paymentMethod || 'COD'}</div></div>
+                            <div class="box"><div class="k">Status</div><div class="v">${paymentStatus || 'Pending'}</div></div>
                         </div>
 
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width:70px">#</th>
-                                    <th>Item</th>
-                                    <th style="width:90px">Qty</th>
-                                    <th style="width:120px">Price</th>
-                                    <th style="width:130px">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rows || '<tr><td colspan="5">No items</td></tr>'}</tbody>
-                        </table>
+                        <div class="items-section">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width:5%">#</th>
+                                        <th style="width:45%">Item Description</th>
+                                        <th style="width:10%;">Qty</th>
+                                        <th style="width:20%;">Unit Price</th>
+                                        <th style="width:20%;">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
+                            </table>
+                        </div>
 
                         <div class="totals">
-                            <div class="line"><span>Subtotal</span><strong>₹${subtotal.toFixed(0)}</strong></div>
-                            <div class="line"><span>Shipping</span><strong>${shipping <= 0 ? 'FREE' : `₹${shipping.toFixed(0)}`}</strong></div>
-                            <div class="line final"><span>Final Amount</span><span>₹${payable.toFixed(0)}</span></div>
+                            <div class="totals-grid">
+                                <div>
+                                    <div class="line">
+                                        <span class="line-label">Subtotal:</span>
+                                        <span class="line-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                    </div>
+                                    <div class="line">
+                                        <span class="line-label">Shipping Charges:</span>
+                                        <span class="line-value">${shipping <= 0 ? 'FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</span>
+                                    </div>
+                                </div>
+                                <div></div>
+                            </div>
+                            <div class="final">
+                                <span class="final-label">Total Amount Payable</span>
+                                <span class="final-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                            </div>
                         </div>
 
-                        <div class="ship">
-                            <div style="font-weight:700;color:#121212;margin-bottom:4px;">Shipping Address</div>
-                            ${shippingAddress?.fullName || ''}<br/>
-                            ${shippingAddress?.addressline1 || ''}, ${shippingAddress?.city || ''}, ${shippingAddress?.state || ''} - ${shippingAddress?.pin || ''}<br/>
-                            ${shippingAddress?.country || 'India'} • ${shippingAddress?.phone || ''}
+                        <div class="address-section">
+                            <div class="ship">
+                                <div class="ship-title">📍 Delivery Address</div>
+                                <div class="ship-addr">
+                                    <strong>${shippingAddress?.fullName || 'Customer'}</strong><br/>
+                                    ${shippingAddress?.addressline1 || 'Address Line'}<br/>
+                                    ${shippingAddress?.city || 'City'}, ${shippingAddress?.state || 'State'} - ${shippingAddress?.pin || 'PIN'}<br/>
+                                    ${shippingAddress?.country || 'India'}<br/>
+                                    <strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="foot">This is a system-generated premium invoice by Eshopper Boutique Luxe.</div>
+                        <div class="footer">
+                            <div class="foot">
+                                This is a computer-generated invoice and does not require a physical signature.<br/>
+                                For inquiries, contact: <strong>support@eshopperr.me</strong>
+                            </div>
+                            <div class="foot-premium">💎 EShoppper Premium Edition • Authenticity Guaranteed 💎</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -557,22 +630,59 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
 const sendWhatsApp = async (number, message) => {
     const apiUrl = process.env.EVOLUTION_API_URL ? process.env.EVOLUTION_API_URL.trim().replace(/\/$/, '') : '';
     const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
+    const instance = process.env.WHATSAPP_INSTANCE || 'eshopper_bot';
     const contactNumber = normalizePhoneForWhatsApp(number);
 
-    if (!apiUrl || !token || !contactNumber || !message) return false;
+    console.log('🔔 WhatsApp Send Debug:');
+    console.log(`   API URL: ${apiUrl ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   Token: ${token ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   Instance: ${instance}`);
+    console.log(`   Contact: ${contactNumber || '❌ Invalid'}`);
+    console.log(`   Message: ${message.substring(0, 40)}...`);
 
-    await axios.post(`${apiUrl}/message/sendText/eshopper_bot`, {
-        number: contactNumber,
-        text: String(message)
-    }, {
-        headers: {
-            'Content-Type': 'application/json',
-            apikey: token
-        },
-        timeout: 30000
-    });
+    if (!apiUrl) {
+        console.error('❌ EVOLUTION_API_URL not set');
+        return false;
+    }
+    if (!token) {
+        console.error('❌ WHATSAPP_TOKEN not set');
+        return false;
+    }
+    if (!contactNumber) {
+        console.error('❌ Contact number is invalid:', number);
+        return false;
+    }
+    if (!message) {
+        console.error('❌ Message is empty');
+        return false;
+    }
 
-    return true;
+    try {
+        const endpoint = `${apiUrl}/message/sendText/${instance}`;
+        const payload = {
+            number: contactNumber,
+            text: String(message)
+        };
+        
+        console.log(`📤 Sending WhatsApp to: ${contactNumber}`);
+        const response = await axios.post(endpoint, payload, {
+            headers: {
+                'Content-Type': 'application/json',
+                apikey: token
+            },
+            timeout: 30000
+        });
+        
+        console.log(`✅ WhatsApp sent successfully: ${response.status}`);
+        return true;
+    } catch (error) {
+        console.error('❌ WhatsApp send failed:', {
+            status: error.response?.status,
+            message: error.response?.data?.message || error.message,
+            url: error.config?.url
+        });
+        throw error;
+    }
 };
 
 const sendOrderWhatsAppNotification = async ({ phone, orderId, status, customerName, trackingLink }) => {
@@ -590,9 +700,9 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     const htmlContent = `
         <div style="margin:0;padding:20px;background:#f7f7f5;font-family:Inter,Arial,sans-serif;color:#111;">
             <div style="max-width:620px;margin:0 auto;background:#fff;border:1px solid #eadfbe;border-radius:12px;overflow:hidden;">
-                <div style="padding:18px 22px;background:linear-gradient(135deg,#111,#242424,#b48a2b);color:#fff;">
-                    <div style="font-size:22px;font-weight:800;letter-spacing:.5px;">Eshopper</div>
-                    <div style="font-size:11px;letter-spacing:2px;margin-top:4px;opacity:.92;">Order Status Update</div>
+                <div style="padding:18px 22px;background:linear-gradient(135deg,#111,#242424,#d4af37);color:#fff;box-shadow:inset 0 0 10px rgba(212,175,55,0.2);">
+                    <div style="font-size:22px;font-weight:800;letter-spacing:.5px;background:linear-gradient(135deg,#f5deb3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">EShoppper</div>
+                    <div style="font-size:11px;letter-spacing:2px;margin-top:4px;opacity:.92;color:#d4af37;font-weight:600;">Premium Order Status</div>
                 </div>
                 <div style="padding:22px;">
                     <p style="margin:0 0 10px;font-size:15px;">Hi <strong>${displayName}</strong>,</p>
@@ -607,7 +717,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     `;
 
     await axios.post('https://api.brevo.com/v3/smtp/email', {
-        sender: { name: 'Eshopper Orders', email: 'support@eshopperr.me' },
+        sender: { name: 'EShoppper Boutique Luxe', email: 'support@eshopperr.me' },
         to: [{ email: toEmail, name: displayName }],
         subject: `Order Update • ${orderId} • ${status}`,
         htmlContent,
@@ -625,7 +735,20 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
 
 const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival, invoiceBase64 }) => {
     const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-    if (!BREVO_KEY || !toEmail) return false;
+    
+    console.log('📧 Order Confirmation Email Debug:');
+    console.log(`   API Key: ${BREVO_KEY ? '✅ Set' : '❌ Missing - Check BREVO_API_KEY env var'}`);
+    console.log(`   Email: ${toEmail || '❌ Missing'}`);
+    console.log(`   Invoice: ${invoiceBase64 ? `✅ Attached (${(invoiceBase64.length / 1024).toFixed(1)}KB)` : '⏭️  None'}`);
+    
+    if (!BREVO_KEY) {
+        console.error('❌ BREVO_API_KEY not configured - Email will not send');
+        return false;
+    }
+    if (!toEmail) {
+        console.error('❌ Email address not provided');
+        return false;
+    }
 
     const displayName = userName || 'Valued Customer';
     const arrivalDate = new Date(estimatedArrival).toLocaleDateString('en-IN', {
@@ -645,14 +768,14 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     const htmlContent = `
         <div style="margin:0;padding:24px;background:#f5f6f8;font-family:Inter,Arial,sans-serif;color:#111827;">
             <div style="max-width:700px;margin:0 auto;background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;">
-                <div style="padding:22px 28px;background:linear-gradient(135deg,#0f172a,#1f2937,#b48b2a);color:#fff;">
-                    <div style="font-size:24px;font-weight:800;letter-spacing:1px;">ESHOPPER</div>
-                    <div style="font-size:11px;letter-spacing:2px;opacity:0.9;">BOUTIQUE LUXE • DIGITAL RECEIPT</div>
+                <div style="padding:22px 28px;background:linear-gradient(135deg,#0f172a,#1f2937,#d4af37);color:#fff;box-shadow:inset 0 0 15px rgba(212,175,55,0.2);">
+                    <div style="font-size:24px;font-weight:800;letter-spacing:1px;background:linear-gradient(135deg,#f5deb3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">EShoppper</div>
+                    <div style="font-size:11px;letter-spacing:2px;opacity:0.95;color:#d4af37;font-weight:600;">BOUTIQUE LUXE • DIGITAL RECEIPT</div>
                 </div>
 
                 <div style="padding:28px;">
                     <p style="margin:0 0 12px;font-size:16px;">Hi <strong>${displayName}</strong>,</p>
-                    <p style="margin:0 0 20px;color:#4b5563;">Thank you for choosing eShopper. Your order is confirmed and now being prepared with premium care.</p>
+                    <p style="margin:0 0 20px;color:#4b5563;">Thank you for choosing EShoppper. Your order is confirmed and now being prepared with premium care.</p>
 
                     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
                         <div style="flex:1;min-width:220px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
@@ -696,7 +819,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     `;
 
     const mailPayload = {
-        sender: { name: 'Eshopper Orders', email: 'support@eshopperr.me' },
+        sender: { name: 'EShoppper Boutique Luxe', email: 'support@eshopperr.me' },
         to: [{ email: toEmail, name: displayName }],
         subject: `Order Confirmation • ${orderId}`,
         htmlContent,
@@ -710,15 +833,26 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         }];
     }
 
-    await axios.post('https://api.brevo.com/v3/smtp/email', mailPayload, {
-        headers: {
-            'api-key': BREVO_KEY,
-            'content-type': 'application/json',
-            accept: 'application/json'
-        }
-    });
-
-    return true;
+    try {
+        console.log(`📤 Sending confirmation email to ${toEmail}...`);
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', mailPayload, {
+            headers: {
+                'api-key': BREVO_KEY,
+                'content-type': 'application/json',
+                accept: 'application/json'
+            },
+            timeout: 30000
+        });
+        console.log(`✅ Confirmation email sent successfully (${response.status})`);
+        return true;
+    } catch (error) {
+        console.error('❌ Confirmation email failed:', {
+            status: error.response?.status,
+            message: error.response?.data || error.message,
+            endpoint: 'brevo.com/v3/smtp/email'
+        });
+        throw error;
+    }
 };
 
 // ============ FIREBASE AUTH SYNC ROUTE ============
@@ -1284,8 +1418,9 @@ app.post('/api/place-order', async (req, res) => {
         try {
             const whatsappMessage = `Luxe Experience Starts Now! 💎 Hi ${user.name || 'Customer'}, your Eshopper Boutique order for Rs.${Number(total || 0).toFixed(0)} is confirmed! Check progress: https://eshopperr.me/orders`;
             await sendWhatsApp(user.phone || addressPayload?.phone, whatsappMessage);
+            console.log(`✅ Order placement WhatsApp sent for order ${orderId}`);
         } catch (waError) {
-            console.error('Order WhatsApp notification failed:', waError.message);
+            console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
             if (process.env.SENTRY_DSN) Sentry.captureException(waError);
         }
 
