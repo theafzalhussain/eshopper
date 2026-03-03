@@ -897,15 +897,23 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
 
         const productRows = safeProducts.map(p => `
             <tr style="border-bottom:1px solid #e5e7eb;">
-                <td style="padding:12px 8px;">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <div>
-                            <div style="font-weight:600;color:#111827;">${p.name || 'Product'}</div>
-                            <div style="font-size:12px;color:#6b7280;">Qty: ${p.qty || 1} × ₹${Number(p.price || 0).toFixed(0)}</div>
+                <td style="padding:16px 12px;">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        ${p.pic ? `
+                        <img src="${p.pic}" alt="${p.name || 'Product'}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;" />
+                        ` : `
+                        <div style="width:80px;height:80px;background:linear-gradient(135deg,#f3f4f6,#e5e7eb);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;">📦</div>
+                        `}
+                        <div style="flex:1;">
+                            <div style="font-weight:700;color:#111827;font-size:15px;margin-bottom:4px;">${p.name || 'Product'}</div>
+                            <div style="font-size:13px;color:#6b7280;margin-bottom:2px;">Quantity: ${p.qty || 1}</div>
+                            <div style="font-size:13px;color:#10b981;font-weight:600;">₹${Number(p.price || 0).toLocaleString('en-IN')} each</div>
                         </div>
                     </div>
                 </td>
-                <td style="padding:12px 8px;text-align:right;font-weight:600;">₹${Number(p.total || (p.price * p.qty) || 0).toFixed(0)}</td>
+                <td style="padding:16px 12px;text-align:right;">
+                    <div style="font-weight:800;color:#111827;font-size:17px;">₹${Number(p.total || (p.price * p.qty) || 0).toLocaleString('en-IN')}</div>
+                </td>
             </tr>
         `).join('');
 
@@ -915,97 +923,243 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    @media only screen and (max-width: 600px) {
+                        .mobile-padding { padding: 16px !important; }
+                        .mobile-text { font-size: 14px !important; }
+                        .mobile-hide { display: none !important; }
+                        .button-mobile { min-width: 100% !important; margin-bottom: 8px !important; }
+                    }
+                </style>
             </head>
-            <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;">
-                <div style="max-width:600px;margin:0 auto;background:#ffffff;">
-                    <!-- Header -->
-                    <div style="background:linear-gradient(135deg,#111827 0%,#1f2937 100%);padding:32px 24px;text-align:center;">
-                        <div style="font-size:24px;font-weight:700;background:linear-gradient(135deg,#f5deb3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">EShoppper</div>
-                        <div style="font-size:14px;color:#d4af37;margin-top:8px;font-weight:600;">Order Confirmed</div>
+            <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#f3f4f6;line-height:1.6;">
+                <div style="max-width:650px;margin:0 auto;background:#ffffff;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                    
+                    <!-- Premium Header with Brand -->
+                    <div style="background:linear-gradient(135deg,#0f0f0f 0%,#1a1a1a 50%,#111827 100%);padding:40px 24px;text-align:center;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDIxMiwxNzUsNTUsMC4xKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+');opacity:0.3;"></div>
+                        <div style="position:relative;z-index:1;">
+                            <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#ffd700,#d4af37,#b8860b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;text-shadow:0 2px 10px rgba(212,175,55,0.3);">✨ EShoppper</div>
+                            <div style="font-size:13px;color:#d4af37;margin-top:12px;font-weight:600;letter-spacing:3px;text-transform:uppercase;">Boutique Luxe</div>
+                        </div>
                     </div>
 
-                    <!-- Success Message -->
-                    <div style="background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%);padding:24px;text-align:center;border-bottom:3px solid #28a745;">
-                        <div style="font-size:48px;margin-bottom:8px;">✅</div>
-                        <div style="font-size:20px;font-weight:700;color:#155724;">ORDER CONFIRMED!</div>
-                        <div style="font-size:14px;color:#155724;margin-top:8px;">Thank you for choosing Eshopper</div>
+                    <!-- Success Banner with Animation -->
+                    <div style="background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 50%,#b8dac5 100%);padding:32px 24px;text-align:center;border-bottom:4px solid #28a745;position:relative;">
+                        <div style="font-size:56px;margin-bottom:12px;animation:bounce 1s ease-in-out;">✅</div>
+                        <div style="font-size:28px;font-weight:800;color:#155724;margin-bottom:8px;letter-spacing:1px;">ORDER CONFIRMED!</div>
+                        <div style="font-size:15px;color:#155724;font-weight:500;">Thank you for choosing Eshopper Boutique</div>
+                        <div style="margin-top:16px;display:inline-block;background:#28a745;color:#fff;padding:6px 20px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:1px;">PREMIUM CARE ACTIVATED 💎</div>
                     </div>
 
-                    <!-- Content -->
-                    <div style="padding:32px 24px;">
-                        <p style="margin:0 0 8px 0;font-size:16px;color:#111827;">Dear <strong>${firstName}</strong>,</p>
-                        <p style="margin:0 0 20px 0;color:#4b5563;font-size:15px;">Your order is confirmed and now being prepared with premium care.</p>
-
-                        <!-- Order Details -->
-                        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
-                            <div style="flex:1;min-width:220px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
-                                <div style="font-size:11px;letter-spacing:1px;color:#6b7280;text-transform:uppercase;">Order ID</div>
-                                <div style="font-size:20px;font-weight:800;color:#111827;margin-top:4px;">${orderId}</div>
+                    <!-- Order Progress Timeline -->
+                    <div style="background:linear-gradient(135deg,#fff9e6,#fffbf0);padding:24px;border-bottom:1px solid #e5e7eb;">
+                        <div style="text-align:center;margin-bottom:16px;">
+                            <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:12px;">📦 ORDER JOURNEY</div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;max-width:400px;margin:0 auto;position:relative;">
+                                <!-- Progress Line -->
+                                <div style="position:absolute;top:15px;left:10%;right:10%;height:3px;background:#e5e7eb;z-index:0;"></div>
+                                <div style="position:absolute;top:15px;left:10%;width:0%;height:3px;background:#d4af37;z-index:1;animation:progress 2s ease-out forwards;"></div>
+                                
+                                <!-- Steps -->
+                                <div style="text-align:center;z-index:2;position:relative;">
+                                    <div style="width:32px;height:32px;border-radius:50%;background:#28a745;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;box-shadow:0 2px 8px rgba(40,167,69,0.4);">
+                                        <span style="color:#fff;font-size:16px;">✓</span>
+                                    </div>
+                                    <div style="font-size:10px;color:#6b7280;font-weight:600;">Confirmed</div>
+                                </div>
+                                <div style="text-align:center;z-index:2;position:relative;">
+                                    <div style="width:32px;height:32px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;">
+                                        <span style="color:#6b7280;font-size:14px;">📦</span>
+                                    </div>
+                                    <div style="font-size:10px;color:#6b7280;font-weight:600;">Packed</div>
+                                </div>
+                                <div style="text-align:center;z-index:2;position:relative;">
+                                    <div style="width:32px;height:32px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;">
+                                        <span style="color:#6b7280;font-size:14px;">🚚</span>
+                                    </div>
+                                    <div style="font-size:10px;color:#6b7280;font-weight:600;">Shipped</div>
+                                </div>
+                                <div style="text-align:center;z-index:2;position:relative;">
+                                    <div style="width:32px;height:32px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;">
+                                        <span style="color:#6b7280;font-size:14px;">🎉</span>
+                                    </div>
+                                    <div style="font-size:10px;color:#6b7280;font-weight:600;">Delivered</div>
+                                </div>
                             </div>
-                            <div style="flex:1;min-width:220px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
-                                <div style="font-size:11px;letter-spacing:1px;color:#6b7280;text-transform:uppercase;">Estimated Arrival</div>
-                                <div style="font-size:16px;font-weight:700;color:#111827;margin-top:4px;">${deliveryDate}</div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content -->
+                    <div class="mobile-padding" style="padding:32px 28px;">
+                        
+                        <!-- Greeting -->
+                        <div style="margin-bottom:24px;">
+                            <h2 style="margin:0 0 12px 0;font-size:22px;color:#111827;font-weight:700;">Dear ${firstName},</h2>
+                            <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.7;">
+                                🎊 Your order has been confirmed and is now being prepared with <strong style="color:#d4af37;">premium care</strong>. 
+                                We're excited to deliver an exceptional shopping experience!
+                            </p>
+                        </div>
+
+                        <!-- Order Details Cards -->
+                        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:28px;">
+                            <div style="flex:1;min-width:260px;background:linear-gradient(135deg,#111827,#1f2937);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                                <div style="font-size:11px;letter-spacing:1.5px;color:#d4af37;text-transform:uppercase;font-weight:700;margin-bottom:8px;">🆔 Order ID</div>
+                                <div style="font-size:24px;font-weight:900;color:#fff;margin-bottom:4px;">${orderId}</div>
+                                <div style="font-size:12px;color:#9ca3af;margin-top:8px;">
+                                    <a href="https://eshopperr.me/orders/${orderId}" style="color:#fbbf24;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+                                        Track Order <span style="font-size:10px;">→</span>
+                                    </a>
+                                </div>
+                            </div>
+                            <div style="flex:1;min-width:260px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(251,191,36,0.2);border:2px solid #fbbf24;">
+                                <div style="font-size:11px;letter-spacing:1.5px;color:#92400e;text-transform:uppercase;font-weight:700;margin-bottom:8px;">🚚 Estimated Delivery</div>
+                                <div style="font-size:17px;font-weight:800;color:#78350f;line-height:1.3;">${deliveryDate}</div>
+                                <div style="font-size:12px;color:#92400e;margin-top:8px;font-weight:600;">📍 Delivering to ${shippingAddress?.city || 'your location'}</div>
                             </div>
                         </div>
 
-                        <!-- Payment Details -->
-                        <div style="background:#f9fafb;padding:14px;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:20px;">
-                            <div style="font-size:12px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Payment Method</div>
-                            <div style="font-size:15px;color:#374151;font-weight:600;">${paymentMethod || 'Cash on Delivery'}</div>
+                        <!-- Payment Method -->
+                        <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);padding:18px;border-radius:12px;border-left:4px solid #22c55e;margin-bottom:28px;box-shadow:0 2px 8px rgba(34,197,94,0.1);">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="font-size:28px;">💳</div>
+                                <div>
+                                    <div style="font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.5px;">Payment Method</div>
+                                    <div style="font-size:16px;color:#166534;font-weight:700;margin-top:2px;">${paymentMethod || 'Cash on Delivery'}</div>
+                                    ${paymentMethod === 'Cash on Delivery' ? '<div style="font-size:11px;color:#15803d;margin-top:4px;">✓ Pay when you receive your order</div>' : ''}
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Products Table -->
-                        <div style="margin-bottom:20px;">
-                            <div style="font-size:12px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Order Items</div>
-                            <table style="width:100%;border-collapse:collapse;">
-                                <thead>
-                                    <tr style="border-bottom:2px solid #e5e7eb;">
-                                        <th style="padding:12px 8px;text-align:left;font-weight:700;color:#111827;">Product</th>
-                                        <th style="padding:12px 8px;text-align:right;font-weight:700;color:#111827;">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${productRows}
-                                </tbody>
-                            </table>
+                        <!-- Products Section -->
+                        <div style="margin-bottom:28px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                                <h3 style="margin:0;font-size:18px;font-weight:800;color:#111827;letter-spacing:0.5px;">📦 ORDER ITEMS</h3>
+                                <div style="font-size:12px;color:#6b7280;font-weight:600;">${safeProducts.length} item${safeProducts.length > 1 ? 's' : ''}</div>
+                            </div>
+                            <div style="background:#fff;border:2px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                                <table style="width:100%;border-collapse:collapse;">
+                                    <tbody>
+                                        ${productRows}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
-                        <!-- Amount Summary -->
-                        <div style="background:#f9fafb;padding:14px;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:20px;">
-                            <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:800;color:#111827;">
-                                <span>Final Amount:</span>
-                                <span>₹${Number(finalAmount || 0).toFixed(0)}</span>
+                        <!-- Price Breakdown -->
+                        <div style="background:linear-gradient(135deg,#f9fafb,#f3f4f6);padding:20px;border-radius:12px;border:2px solid #e5e7eb;margin-bottom:28px;">
+                            <div style="margin-bottom:12px;">
+                                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #d1d5db;">
+                                    <span style="color:#6b7280;font-size:14px;">Subtotal:</span>
+                                    <span style="color:#374151;font-weight:600;font-size:14px;">₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #d1d5db;">
+                                    <span style="color:#6b7280;font-size:14px;">Delivery Charges:</span>
+                                    <span style="color:#10b981;font-weight:600;font-size:14px;">FREE 🎁</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;padding:8px 0;">
+                                    <span style="color:#6b7280;font-size:14px;">Taxes & Fees:</span>
+                                    <span style="color:#374151;font-weight:600;font-size:14px;">Included</span>
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:2px solid #111827;">
+                                <span style="font-size:18px;font-weight:800;color:#111827;">TOTAL AMOUNT:</span>
+                                <span style="font-size:26px;font-weight:900;background:linear-gradient(135deg,#d4af37,#b8860b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
                             </div>
                         </div>
 
                         <!-- Shipping Address -->
-                        <div style="background:#f9fafb;padding:14px;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:20px;">
-                            <div style="font-size:12px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📍 Shipping Address</div>
-                            <div style="font-size:14px;color:#374151;line-height:1.6;">
-                                ${shippingAddress?.fullName || 'N/A'}<br/>
-                                ${shippingAddress?.addressline1 || 'N/A'}, ${shippingAddress?.city || 'N/A'}, ${shippingAddress?.state || 'N/A'} - ${shippingAddress?.pin || 'N/A'}<br/>
-                                ${shippingAddress?.country || 'India'}<br/>
-                                <strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}
+                        <div style="background:#fff;padding:20px;border-radius:12px;border:2px solid #e5e7eb;margin-bottom:28px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                                <div style="font-size:24px;">📍</div>
+                                <h3 style="margin:0;font-size:16px;font-weight:800;color:#111827;text-transform:uppercase;letter-spacing:0.5px;">Delivery Address</h3>
+                            </div>
+                            <div style="background:#f9fafb;padding:16px;border-radius:8px;border-left:4px solid #d4af37;">
+                                <div style="font-weight:700;color:#111827;font-size:15px;margin-bottom:6px;">${shippingAddress?.fullName || 'N/A'}</div>
+                                <div style="color:#4b5563;font-size:14px;line-height:1.7;">
+                                    ${shippingAddress?.addressline1 || 'N/A'}<br/>
+                                    ${shippingAddress?.city || 'N/A'}, ${shippingAddress?.state || 'N/A'} - ${shippingAddress?.pin || 'N/A'}<br/>
+                                    ${shippingAddress?.country || 'India'}
+                                </div>
+                                <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #d1d5db;">
+                                    <span style="font-weight:700;color:#111827;font-size:13px;">📱 Phone:</span>
+                                    <span style="color:#4b5563;font-size:13px;margin-left:6px;">${shippingAddress?.phone || 'N/A'}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- CTA Buttons -->
-                        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-                            <a href="https://eshopperr.me/orders" style="flex:1;min-width:200px;display:inline-block;background:#111827;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;text-align:center;">View Order Details</a>
-                            <a href="https://eshopperr.me/shop/All" style="flex:1;min-width:200px;display:inline-block;background:#fff;color:#111827;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;border:2px solid #111827;text-align:center;">Continue Shopping</a>
+                        <!-- CTA Buttons - Premium Design -->
+                        <div style="margin-bottom:28px;">
+                            <a href="https://eshopperr.me/orders/${orderId}" class="button-mobile" style="display:block;background:linear-gradient(135deg,#111827,#1f2937);color:#fff;padding:18px 32px;border-radius:12px;text-decoration:none;font-weight:700;text-align:center;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:16px;letter-spacing:0.5px;">
+                                🔍 TRACK YOUR ORDER
+                            </a>
+                            <a href="https://eshopperr.me/shop/All" class="button-mobile" style="display:block;background:#fff;color:#111827;padding:18px 32px;border-radius:12px;text-decoration:none;font-weight:700;border:2px solid #111827;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-size:16px;letter-spacing:0.5px;">
+                                🛍️ CONTINUE SHOPPING
+                            </a>
                         </div>
 
-                        <!-- Support -->
-                        <div style="background:#efefef;padding:16px;border-radius:8px;text-align:center;margin-bottom:20px;">
-                            <p style="margin:0 0 8px 0;font-size:14px;color:#6b7280;">Need help? Contact support</p>
-                            <p style="margin:0;"><a href="mailto:support@eshopperr.me" style="color:#0066cc;text-decoration:none;font-weight:600;">support@eshopperr.me</a></p>
+                        <!-- Trust & Benefits -->
+                        <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);padding:20px;border-radius:12px;border:2px solid #3b82f6;margin-bottom:28px;">
+                            <div style="text-align:center;margin-bottom:16px;">
+                                <div style="font-size:16px;font-weight:800;color:#1e40af;margin-bottom:12px;">💎 PREMIUM BENEFITS</div>
+                            </div>
+                            <div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:space-around;">
+                                <div style="text-align:center;flex:1;min-width:120px;">
+                                    <div style="font-size:28px;margin-bottom:6px;">🔒</div>
+                                    <div style="font-size:12px;font-weight:700;color:#1e40af;">Secure<br/>Payment</div>
+                                </div>
+                                <div style="text-align:center;flex:1;min-width:120px;">
+                                    <div style="font-size:28px;margin-bottom:6px;">✓</div>
+                                    <div style="font-size:12px;font-weight:700;color:#1e40af;">Quality<br/>Guaranteed</div>
+                                </div>
+                                <div style="text-align:center;flex:1;min-width:120px;">
+                                    <div style="font-size:28px;margin-bottom:6px;">↩️</div>
+                                    <div style="font-size:12px;font-weight:700;color:#1e40af;">Easy<br/>Returns</div>
+                                </div>
+                                <div style="text-align:center;flex:1;min-width:120px;">
+                                    <div style="font-size:28px;margin-bottom:6px;">💬</div>
+                                    <div style="font-size:12px;font-weight:700;color:#1e40af;">24/7<br/>Support</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Care -->
+                        <div style="background:linear-gradient(135deg,#fefce8,#fef3c7);padding:24px;border-radius:12px;border:2px solid #fbbf24;margin-bottom:20px;text-align:center;">
+                            <div style="font-size:28px;margin-bottom:12px;">🎧</div>
+                            <div style="font-size:16px;font-weight:800;color:#78350f;margin-bottom:8px;">Need Assistance?</div>
+                            <div style="font-size:13px;color:#92400e;margin-bottom:16px;">Our premium support team is here to help</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
+                                <a href="mailto:support@eshopperr.me" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#78350f;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;border:2px solid #fbbf24;box-shadow:0 2px 6px rgba(251,191,36,0.2);">
+                                    📧 Email Us
+                                </a>
+                                <a href="https://wa.me/918447859784" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;box-shadow:0 2px 6px rgba(37,211,102,0.3);">
+                                    💬 WhatsApp
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Social Footer -->
+                    <div style="background:linear-gradient(135deg,#111827,#0f0f0f);padding:32px 24px;text-align:center;">
+                        <div style="margin-bottom:20px;">
+                            <div style="font-size:14px;color:#d4af37;font-weight:700;margin-bottom:16px;letter-spacing:1px;">FOLLOW US</div>
+                            <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+                                <a href="https://facebook.com" style="display:inline-block;width:40px;height:40px;background:#1877f2;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;color:#fff;font-size:18px;box-shadow:0 2px 8px rgba(24,119,242,0.4);">f</a>
+                                <a href="https://instagram.com" style="display:inline-block;width:40px;height:40px;background:linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;color:#fff;font-size:18px;box-shadow:0 2px 8px rgba(188,24,136,0.4);">📷</a>
+                                <a href="https://twitter.com" style="display:inline-block;width:40px;height:40px;background:#1da1f2;border-radius:50%;display:flex;align-items:center;justify-content:center;text-decoration:none;color:#fff;font-size:18px;box-shadow:0 2px 8px rgba(29,161,242,0.4);">🐦</a>
+                            </div>
+                        </div>
+                        <div style="border-top:1px solid rgba(212,175,55,0.3);padding-top:20px;">
+                            <div style="font-size:20px;font-weight:800;background:linear-gradient(135deg,#ffd700,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;">✨ EShoppper</div>
+                            <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">
+                                © ${new Date().getFullYear()} Eshopper Boutique Luxe. All rights reserved.<br/>
+                                <a href="https://eshopperr.me" style="color:#d4af37;text-decoration:none;font-weight:600;">eshopperr.me</a>
+                            </p>
                         </div>
                     </div>
 
-                    <!-- Footer -->
-                    <div style="background:#f9fafb;padding:24px;text-align:center;border-top:1px solid #e5e7eb;">
-                        <p style="margin:0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} Eshopper • <a href="https://eshopperr.me" style="color:#0066cc;text-decoration:none;">eshopperr.me</a></p>
-                    </div>
                 </div>
             </body>
             </html>
