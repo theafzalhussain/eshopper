@@ -138,7 +138,7 @@ const io = new Server(httpServer, {
     transports: ['websocket', 'polling']
 });
 
-const ALLOWED_ORDER_STATUS = ['Ordered', 'Packed', 'Shipped', 'Delivered'];
+const ALLOWED_ORDER_STATUS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed'];
 const normalizeOrderStatus = (s = '') => {
     const v = String(s).trim().toLowerCase();
     if (v === 'ordered') return 'Ordered';
@@ -825,45 +825,401 @@ const sendOrderWhatsAppNotification = async ({ phone, orderId, status, customerN
     return sendWhatsApp(phone, message);
 };
 
-const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink }) => {
+// 🔴 WHATSAPP MEDIA FUNCTION - FOR SHIPPED STATUS WITH IMAGE
+const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
+    const apiUrl = process.env.EVOLUTION_API_URL ? process.env.EVOLUTION_API_URL.trim().replace(/\/$/, '') : '';
+    const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
+    const instance = process.env.WHATSAPP_INSTANCE || 'eshopper_bot';
+
+    const normalizePhoneStrict = (phone = '') => {
+        const digits = String(phone || '').replace(/\D/g, '');
+        if (!digits) return '';
+        if (digits.length === 10) return `91${digits}`;
+        if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`;
+        if (digits.length === 12 && digits.startsWith('91')) return digits;
+        return digits;
+    };
+
+    const contactNumber = normalizePhoneStrict(number);
+
+    if (!apiUrl) {
+        console.error('❌ EVOLUTION_API_URL not configured');
+        throw new Error('EVOLUTION_API_URL not configured');
+    }
+
+    if (!token) {
+        console.error('❌ WHATSAPP_TOKEN not configured');
+        throw new Error('WHATSAPP_TOKEN not configured');
+    }
+
+    if (!contactNumber || contactNumber.length < 12) {
+        console.error('❌ Invalid phone:', contactNumber);
+        throw new Error('Invalid phone number format');
+    }
+
+    if (!mediaUrl || !caption) {
+        console.error('❌ Media URL or caption missing');
+        throw new Error('Media URL and caption required');
+    }
+
+    try {
+        const endpoint = `${apiUrl}/message/sendMedia/${instance}`;
+        
+        const payload = {
+            number: contactNumber,
+            mediatype: 'image',
+            media: mediaUrl,
+            caption: String(caption).trim()
+        };
+
+        console.log(`📸 Sending WhatsApp Media to: ${contactNumber}`);
+        console.log(`   Endpoint: ${endpoint}`);
+        console.log(`   Media: ${mediaUrl}`);
+        console.log(`   Caption: ${caption.substring(0, 50)}...`);
+
+        const response = await axios.post(endpoint, payload, {
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': token
+            },
+            timeout: 30000
+        });
+
+        console.log(`✅ WhatsApp media sent (Status: ${response.status})`);
+        console.log(`   Response: ${JSON.stringify(response.data)}`);
+        return true;
+
+    } catch (error) {
+        console.error('❌ WhatsApp media send failed:', {
+            status: error.response?.status,
+            message: error.response?.data?.message || error.message,
+            endpoint: error.config?.url
+        });
+        throw error;
+    }
+};
+
+// 🔴 LUXURY STATUS NOTIFICATION ORCHESTRATOR
+const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName, email, estimatedDelivery, finalAmount }) => {
+    const displayName = customerName || 'Valued Customer';
+    const firstName = displayName.split(' ')[0];
+    const trackingLink = `https://eshopperr.me/orders/${orderId}`;
+
+    console.log(`🎯 Sending Luxe Notifications for ${orderId} -> ${status}`);
+
+    try {
+        if (status === 'Packed') {
+            // 📦 PACKED: Text + Email
+            const whatsappMsg = `Luxury Craftsmanship Underway! ✨\n\nHello ${firstName}, your Eshopper Boutique order #${orderId} is now beautifully packed with premium care!\n\n📍 Track Your Journey: ${trackingLink}`;
+            
+            try {
+                await sendWhatsApp(phone, whatsappMsg);
+                console.log(`✅ Packed WhatsApp sent for ${orderId}`);
+            } catch (waErr) {
+                console.error(`⚠️  Packed WhatsApp failed (non-critical):`, waErr.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+            }
+
+            // Send packed email
+            try {
+                await sendOrderStatusEmail({
+                    toEmail: email,
+                    userName: displayName,
+                    orderId,
+                    status: 'Packed',
+                    trackingLink,
+                    estimatedDelivery,
+                    totalAmount: finalAmount
+                });
+                console.log(`✅ Packed email sent for ${orderId}`);
+            } catch (emailErr) {
+                console.error(`⚠️  Packed email failed (non-critical):`, emailErr.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+            }
+        }
+
+        else if (status === 'Shipped') {
+            // 🚚 SHIPPED: Media + Email (White-Glove experience)
+            const mediaUrl = 'https://res.cloudinary.com/dtfvoxw1p/image/upload/v1724068341/order_success_lux.png';
+            const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN') : 'Soon';
+            const caption = `White-Glove Delivery Initiated! 🚚✨\n\nYour selection is on a curated journey to your doorstep via premium White-Glove Shipping.\n\nOrder: #${orderId}\nEstimated: ${deliveryDate}\n\n📍 Real-Time Tracking: ${trackingLink}\n\n💎 Eshopper Boutique Luxe`;
+
+            try {
+                await sendWhatsAppMedia(phone, mediaUrl, caption);
+                console.log(`✅ Shipped WhatsApp media sent for ${orderId}`);
+            } catch (waErr) {
+                console.error(`⚠️  Shipped WhatsApp media failed (non-critical):`, waErr.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+            }
+
+            // Send shipped email
+            try {
+                await sendOrderStatusEmail({
+                    toEmail: email,
+                    userName: displayName,
+                    orderId,
+                    status: 'Shipped',
+                    trackingLink,
+                    estimatedDelivery,
+                    totalAmount: finalAmount
+                });
+                console.log(`✅ Shipped email sent for ${orderId}`);
+            } catch (emailErr) {
+                console.error(`⚠️  Shipped email failed (non-critical):`, emailErr.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+            }
+        }
+
+        else if (status === 'Delivered') {
+            // 🎉 DELIVERED: Celebration message
+            const whatsappMsg = `Order Delivered! 🎉💎\n\nCongratulations ${firstName}! Your Eshopper Boutique order #${orderId} has arrived at your doorstep.\n\nThank you for choosing luxury. We hope you cherish your selection!\n\n⭐ Share Your Experience: Rate Your Purchase`;
+
+            try {
+                await sendWhatsApp(phone, whatsappMsg);
+                console.log(`✅ Delivered WhatsApp sent for ${orderId}`);
+            } catch (waErr) {
+                console.error(`⚠️  Delivered WhatsApp failed (non-critical):`, waErr.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+            }
+
+            // Send delivery celebration email
+            try {
+                await sendOrderStatusEmail({
+                    toEmail: email,
+                    userName: displayName,
+                    orderId,
+                    status: 'Delivered',
+                    trackingLink,
+                    estimatedDelivery,
+                    totalAmount: finalAmount
+                });
+                console.log(`✅ Delivered email sent for ${orderId}`);
+            } catch (emailErr) {
+                console.error(`⚠️  Delivered email failed (non-critical):`, emailErr.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+            }
+        }
+
+    } catch (error) {
+        console.error(`❌ Luxe notification pipeline failed for ${orderId}:`, error.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(error);
+    }
+};
+
+const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount }) => {
     const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
     if (!BREVO_KEY || !toEmail) return false;
 
     const displayName = userName || 'Valued Customer';
-    const htmlContent = `
-        <div style="margin:0;padding:20px;background:#f7f7f5;font-family:Inter,Arial,sans-serif;color:#111;">
-            <div style="max-width:620px;margin:0 auto;background:#fff;border:1px solid #eadfbe;border-radius:12px;overflow:hidden;">
-                <div style="padding:18px 22px;background:linear-gradient(135deg,#111,#242424,#d4af37);color:#fff;box-shadow:inset 0 0 10px rgba(212,175,55,0.2);">
-                    <div style="font-size:22px;font-weight:800;letter-spacing:.5px;background:linear-gradient(135deg,#f5deb3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">EShoppper</div>
-                    <div style="font-size:11px;letter-spacing:2px;margin-top:4px;opacity:.92;color:#d4af37;font-weight:600;">Premium Order Status</div>
-                </div>
-                <div style="padding:22px;">
-                    <p style="margin:0 0 10px;font-size:15px;">Hi <strong>${displayName}</strong>,</p>
-                    <p style="margin:0 0 14px;color:#4b5563;">Your order <strong>${orderId}</strong> has moved to:</p>
-                    <div style="display:inline-block;padding:10px 18px;border-radius:999px;border:1px solid #d9c99c;background:#fff9e8;color:#8a6a17;font-weight:800;letter-spacing:.4px;">${status}</div>
-                    <div style="margin-top:20px;">
-                        <a href="${trackingLink}" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#111;color:#f5deb3;text-decoration:none;font-weight:700;">Track Order</a>
-                    </div>
-                </div>
+    const firstName = displayName.split(' ')[0];
+    
+    // Status-specific configurations
+    const statusConfig = {
+        'Ordered': { emoji: '✅', color: '#28a745', bgColor: '#d4edda', message: 'Your order has been confirmed and payment received. We\'re now preparing it with premium care.' },
+        'Packed': { emoji: '📦', color: '#0066cc', bgColor: '#d1ecf1', message: 'Your order is now packed and ready for shipment. Tracking details coming soon!' },
+        'Shipped': { emoji: '🚚', color: '#ff6600', bgColor: '#fff3cd', message: 'Your order is on its way! Track your delivery in real-time.' },
+        'Out for Delivery': { emoji: '📍', color: '#e74c3c', bgColor: '#f8d7da', message: 'Great news! Your package is out for delivery today. Please be available to receive it.' },
+        'Delivered': { emoji: '🎉', color: '#27ae60', bgColor: '#d4edda', message: 'Congratulations! Your order has been delivered successfully. Thank you for shopping with us!' },
+        'Return Initiated': { emoji: '↩️', color: '#9b59b6', bgColor: '#f0e6ff', message: 'Your return has been initiated. We\'ll pick up your package soon.' },
+        'Return Completed': { emoji: '✓', color: '#8e44ad', bgColor: '#f0e6ff', message: 'Your return has been completed. Refund processing has started.' },
+        'Refund Initiated': { emoji: '💰', color: '#27ae60', bgColor: '#d4edda', message: 'Refund initiated! Your money will be back in 3-5 business days.' },
+        'Refund Completed': { emoji: '✓', color: '#27ae60', bgColor: '#d4edda', message: 'Refund successfully completed. Thank you for your patience!' }
+    };
+    
+    const config = statusConfig[status] || { emoji: '📦', color: '#111827', bgColor: '#f9fafb', message: status };
+    const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+    
+    // Timeline calculation
+    const statusSequence = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
+    const returnSequence = ['Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed'];
+    const currentSequence = returnSequence.includes(status) ? returnSequence : statusSequence;
+    const currentIndex = currentSequence.indexOf(status);
+
+    const timelineHtml = currentSequence.map((step, idx) => `
+        <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
+            <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:8px;${idx <= currentIndex ? `background:${config.color};color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.2);` : 'background:#e5e7eb;color:#9ca3af;'}">
+                ${idx === 0 ? '✓' : idx === 1 ? '📦' : idx === 2 ? '🚚' : idx === 3 ? '📍' : idx === 4 ? '🎉' : idx === 5 ? '↩️' : idx === 6 ? '✓' : '💰'}
             </div>
+            <div style="font-size:11px;font-weight:700;text-align:center;${idx <= currentIndex ? `color:${config.color};` : 'color:#9ca3af;'}">${step.replace(' ', '<br/>')}</div>
+            ${idx < currentSequence.length - 1 ? `<div style="width:2px;height:24px;background:${idx < currentIndex ? config.color : '#e5e7eb'};margin-top:8px;"></div>` : ''}
         </div>
+    `).join('');
+
+    const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                @media only screen and (max-width: 600px) {
+                    .mobile-padding { padding: 16px !important; }
+                    .mobile-text { font-size: 14px !important; }
+                    .button-mobile { min-width: 100% !important; margin-bottom: 8px !important; }
+                    .timeline-mobile { flex-direction: column !important; }
+                }
+            </style>
+        </head>
+        <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;">
+            <div style="max-width:650px;margin:0 auto;background:#ffffff;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                
+                <!-- Premium Header -->
+                <div style="background:linear-gradient(135deg,#0f0f0f 0%,#1a1a1a 50%,#111827 100%);padding:40px 24px;text-align:center;">
+                    <div style="font-size:32px;font-weight:900;background:linear-gradient(135deg,#ffd700,#d4af37,#b8860b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;margin-bottom:12px;">✨ EShoppper</div>
+                    <div style="font-size:12px;color:#d4af37;font-weight:700;letter-spacing:3px;text-transform:uppercase;">Order Status Update</div>
+                </div>
+
+                <!-- Status Banner with Emoji -->
+                <div style="background:linear-gradient(135deg,${config.bgColor.replace('#', '#').slice(0, 7)} 0%, ${config.bgColor}80 100%);padding:32px 24px;text-align:center;border-bottom:4px solid ${config.color};">
+                    <div style="font-size:64px;margin-bottom:12px;animation:bounce 1s ease-in-out;">${config.emoji}</div>
+                    <div style="font-size:28px;font-weight:800;color:${config.color};margin-bottom:8px;letter-spacing:1px;">${status}</div>
+                    <div style="font-size:15px;color:${config.color};font-weight:500;opacity:0.9;">${config.message}</div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="mobile-padding" style="padding:32px 28px;">
+                    
+                    <!-- Greeting -->
+                    <div style="margin-bottom:24px;">
+                        <h2 style="margin:0 0 12px 0;font-size:22px;color:#111827;font-weight:700;">Hi ${firstName},</h2>
+                        <p style="margin:0;color:#4b5563;font-size:15px;line-height:1.7;">
+                            Your order <strong style="color:#111827;">${orderId}</strong> has been updated! Here's the latest status:
+                        </p>
+                    </div>
+
+                    <!-- Order Details Cards -->
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:28px;">
+                        <div style="flex:1;min-width:260px;background:linear-gradient(135deg,#111827,#1f2937);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                            <div style="font-size:11px;letter-spacing:1.5px;color:#d4af37;text-transform:uppercase;font-weight:700;margin-bottom:8px;">🆔 Order ID</div>
+                            <div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:4px;">${orderId}</div>
+                            <div style="font-size:12px;color:#9ca3af;">Updated: ${new Date().toLocaleDateString('en-IN')}</div>
+                        </div>
+                        <div style="flex:1;min-width:260px;background:linear-gradient(135deg,${config.color},${config.bgColor});border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.1);border:2px solid ${config.color};">
+                            <div style="font-size:11px;letter-spacing:1.5px;color:#111827;text-transform:uppercase;font-weight:700;margin-bottom:8px;">🚚 Est. Delivery</div>
+                            <div style="font-size:17px;font-weight:800;color:#111827;line-height:1.3;">${deliveryDate}</div>
+                        </div>
+                    </div>
+
+                    <!-- Order Progress Timeline -->
+                    <div style="background:linear-gradient(135deg,#fff9e6,#fffbf0);padding:24px;border-radius:12px;border:2px solid #e5e7eb;margin-bottom:28px;">
+                        <div style="text-align:center;margin-bottom:20px;">
+                            <div style="font-size:14px;font-weight:700;color:#111827;">📊 Order Journey</div>
+                        </div>
+                        <div class="timeline-mobile" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                            ${timelineHtml}
+                        </div>
+                    </div>
+
+                    <!-- Status Details Box -->
+                    <div style="background:linear-gradient(135deg,${config.bgColor},${config.bgColor}99);padding:20px;border-radius:12px;border-left:4px solid ${config.color};margin-bottom:28px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                            <div style="font-size:28px;">${config.emoji}</div>
+                            <div>
+                                <div style="font-size:13px;font-weight:700;color:${config.color};text-transform:uppercase;">Current Status</div>
+                                <div style="font-size:18px;color:${config.color};font-weight:800;margin-top:2px;">${status}</div>
+                            </div>
+                        </div>
+                        <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">${config.message}</p>
+                    </div>
+
+                    <!-- Amount Section (if total provided) -->
+                    ${totalAmount ? `
+                    <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);padding:18px;border-radius:12px;border-left:4px solid #22c55e;margin-bottom:28px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <div style="font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;">Order Amount</div>
+                                <div style="font-size:16px;color:#166534;font-weight:700;margin-top:4px;">₹${Number(totalAmount).toLocaleString('en-IN')}</div>
+                            </div>
+                            <div style="font-size:32px;">💳</div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <!-- Action Buttons -->
+                    <div style="margin-bottom:28px;">
+                        <a href="${trackingLink}" class="button-mobile" style="display:block;background:linear-gradient(135deg,#111827,#1f2937);color:#fff;padding:18px 32px;border-radius:12px;text-decoration:none;font-weight:700;text-align:center;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:16px;letter-spacing:0.5px;">
+                            🔍 TRACK IN REAL-TIME
+                        </a>
+                        ${['Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed'].includes(status) ? `
+                        <a href="https://eshopperr.me/returns" class="button-mobile" style="display:block;background:#fff;color:#111827;padding:18px 32px;border-radius:12px;text-decoration:none;font-weight:700;border:2px solid #111827;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-size:16px;letter-spacing:0.5px;">
+                            📋 VIEW RETURN STATUS
+                        </a>
+                        ` : ''}
+                    </div>
+
+                    <!-- Refund Policy Section (for return/refund statuses) -->
+                    ${['Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed'].includes(status) ? `
+                    <div style="background:linear-gradient(135deg,#ffe6e6,#ffd9d9);padding:24px;border-radius:12px;border:2px solid #e74c3c;margin-bottom:28px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                            <div style="font-size:28px;">📋</div>
+                            <div style="font-size:16px;font-weight:800;color:#c0392b;">Return & Refund Policy</div>
+                        </div>
+                        <div style="background:#fff;padding:16px;border-radius:8px;font-size:13px;color:#374151;line-height:1.7;">
+                            <p style="margin:0 0 8px 0;"><strong style="color:#c0392b;">✓ Return Window:</strong> 7 days from delivery</p>
+                            <p style="margin:0 0 8px 0;"><strong style="color:#c0392b;">✓ Refund Timeline:</strong> 3-5 business days after return pickup</p>
+                            <p style="margin:0 0 8px 0;"><strong style="color:#c0392b;">✓ Condition:</strong> Unused & original packaging intact</p>
+                            <p style="margin:0;"><strong style="color:#c0392b;">✓ Methods:</strong> Same payment method used</p>
+                        </div>
+                    </div>
+                    ` : `
+                    <!-- Return Policy Info (for other statuses) -->
+                    <div style="background:linear-gradient(135deg,#f0f4ff,#e5eeff);padding:18px;border-radius:12px;border-left:4px solid #3b82f6;margin-bottom:28px;">
+                        <div style="font-size:12px;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:8px;">💡 Need to Return?</div>
+                        <p style="margin:0;color:#1e40af;font-size:13px;">You have <strong>7 days from delivery</strong> to initiate a return. <a href="https://eshopperr.me/returns" style="color:#3b82f6;text-decoration:none;font-weight:700;">Learn more →</a></p>
+                    </div>
+                    `}
+
+                    <!-- Customer Support Section -->
+                    <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);padding:24px;border-radius:12px;border:2px solid #fbbf24;margin-bottom:20px;text-align:center;">
+                        <div style="font-size:28px;margin-bottom:12px;">🎧</div>
+                        <div style="font-size:16px;font-weight:800;color:#78350f;margin-bottom:8px;">Need Help?</div>
+                        <div style="font-size:13px;color:#92400e;margin-bottom:16px;">Our premium support team is available 24/7</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
+                            <a href="mailto:support@eshopperr.me" style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#78350f;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;border:2px solid #fbbf24;">
+                                📧 Email Us
+                            </a>
+                            <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" style="display:inline-flex;align-items:center;gap:6px;background:#25D366;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;">
+                                💬 WhatsApp
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div style="background:linear-gradient(135deg,#111827,#0f0f0f);padding:32px 24px;text-align:center;">
+                    <div style="font-size:18px;font-weight:800;background:linear-gradient(135deg,#ffd700,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:12px;">✨ EShoppper</div>
+                    <p style="margin:0;font-size:12px;color:#9ca3af;">
+                        © ${new Date().getFullYear()} Eshopper Boutique Luxe<br/>
+                        <a href="https://eshopperr.me" style="color:#d4af37;text-decoration:none;font-weight:600;">eshopperr.me</a>
+                    </p>
+                </div>
+
+            </div>
+        </body>
+        </html>
     `;
 
-    await axios.post('https://api.brevo.com/v3/smtp/email', {
-        sender: { name: 'EShoppper Boutique Luxe', email: 'support@eshopperr.me' },
-        to: [{ email: toEmail, name: displayName }],
-        subject: `Order Update • ${orderId} • ${status}`,
-        htmlContent,
-        replyTo: { email: 'support@eshopperr.me' }
-    }, {
-        headers: {
-            'api-key': BREVO_KEY,
-            'content-type': 'application/json',
-            accept: 'application/json'
-        }
-    });
-
-    return true;
+    try {
+        await axios.post('https://api.brevo.com/v3/smtp/email', {
+            sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
+            to: [{ email: toEmail, name: displayName }],
+            subject: `📦 Order Update - ${orderId} • ${status} | Eshopper Boutique`,
+            htmlContent,
+            replyTo: { email: 'support@eshopperr.me' }
+        }, {
+            headers: {
+                'api-key': BREVO_KEY,
+                'content-type': 'application/json',
+                accept: 'application/json'
+            }
+        });
+        console.log(`✅ Status email sent: ${orderId} -> ${status}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Status email failed:', error.message);
+        return false;
+    }
 };
 
 const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival, invoiceBase64 }) => {
@@ -2269,39 +2625,30 @@ app.post('/api/update-order-status', async (req, res) => {
             updatedAt: new Date().toISOString()
         };
 
-        // EMIT STATUS UPDATE TO USER'S ROOM VIA SOCKET.IO
+        // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
         io.to(`user:${order.userid}`).emit('statusUpdate', payload);
         console.log(`✅ Status updated for order ${orderId} to ${normalized}, emitted to user:${order.userid}`);
 
-        const user = await User.findById(order.userid).lean();
-        const trackingLink = getTrackingLink(order.orderId);
-
-        const notifyJobs = [
-            sendOrderStatusEmail({
-                toEmail: order.userEmail || user?.email,
-                userName: order.userName || user?.name,
+        // 🔴 TRIGGER LUXURY NOTIFICATIONS (non-blocking via setImmediate)
+        setImmediate(() => {
+            sendLuxeStatusNotification({
                 orderId: order.orderId,
-                status: order.orderStatus,
-                trackingLink
-            }),
-            sendOrderWhatsAppNotification({
-                phone: user?.phone || order.shippingAddress?.phone,
-                orderId: order.orderId,
-                status: order.orderStatus,
-                customerName: order.userName || user?.name,
-                trackingLink
-            })
-        ];
-
-        const notifyResults = await Promise.allSettled(notifyJobs);
-        notifyResults.forEach((result, idx) => {
-            if (result.status === 'rejected') {
-                const channel = idx === 0 ? 'email' : 'whatsapp';
-                console.error(`❌ Order ${channel} status notification failed:`, result.reason?.message || result.reason);
-            }
+                status: normalized,
+                phone: order.shippingAddress?.phone || order.userPhone,
+                customerName: order.userName,
+                email: order.userEmail,
+                estimatedDelivery: order.estimatedArrival,
+                finalAmount: order.finalAmount
+            }).catch(err => {
+                console.error(`⚠️  Background notification error: ${err.message}`);
+            });
         });
 
-        return res.json({ success: true, order: payload });
+        return res.json({
+            success: true,
+            message: `Order status updated to ${normalized}`,
+            order: payload
+        });
     } catch (e) {
         console.error('❌ Order update error:', e.message);
         if (process.env.SENTRY_DSN) Sentry.captureException(e);
