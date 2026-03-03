@@ -1324,23 +1324,26 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         const displayName = userName || 'Valued Customer';
         const firstName = displayName.split(' ')[0];
         const safeProducts = Array.isArray(products) ? products : [];
-        const deliveryDate = estimatedArrival ? new Date(estimatedArrival).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' }) : 'N/A';
+        const deliveryDate = estimatedArrival ? new Date(estimatedArrival).toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
         const totalItems = safeProducts.reduce((sum, p) => sum + (p.qty || 1), 0);
 
-        const productRows = safeProducts.slice(0, 4).map(p => `
-            <tr style="border-bottom:1px solid #e5e7eb;">
-                <td style="padding:12px 8px;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;" />` : `<div style="width:60px;height:60px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>`}
+        const productRows = safeProducts.slice(0, 5).map(p => `
+            <tr>
+                <td style="padding:16px; border-bottom:1px solid #e5e7eb; background:#f9fafb;">
+                    <div style="display:flex; align-items:flex-start; gap:16px;">
+                        <div style="flex-shrink:0;">
+                            ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:1px solid #d1d5db; box-shadow:0 2px 4px rgba(0,0,0,0.1);" />` : `<div style="width:80px; height:80px; background:linear-gradient(135deg,#e5e7eb,#d1d5db); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:32px; border:1px solid #d1d5db;">📦</div>`}
+                        </div>
                         <div style="flex:1;">
-                            <div style="font-weight:700;color:#111827;font-size:14px;margin:0;">${p.name}</div>
-                            <div style="font-size:12px;color:#6b7280;margin:2px 0;">Qty: ${p.qty || 1}</div>
-                            <div style="font-size:13px;color:#10b981;font-weight:600;margin:0;">₹${Number(p.price || 0).toLocaleString()}</div>
+                            <div style="font-weight:800; color:#111827; font-size:15px; margin:0 0 4px 0; line-height:1.4;">${p.name}</div>
+                            <div style="font-size:13px; color:#6b7280; margin:4px 0; display:flex; gap:12px;">
+                                <span>Qty: <strong>${p.qty || 1}</strong></span>
+                                <span>•</span>
+                                <span>₹${Number(p.price || 0).toLocaleString()} each</span>
+                            </div>
+                            <div style="font-size:15px; color:#fff; font-weight:700; margin-top:8px; display:inline-block; background:linear-gradient(135deg,#ffd700,#d4af37); padding:4px 12px; border-radius:6px;">₹${Number(p.total || 0).toLocaleString()}</div>
                         </div>
                     </div>
-                </td>
-                <td style="padding:12px 8px;text-align:right;vertical-align:middle;">
-                    <div style="font-weight:800;color:#111827;font-size:15px;">₹${Number(p.total || 0).toLocaleString()}</div>
                 </td>
             </tr>
         `).join('');
@@ -1351,58 +1354,106 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#f5f5f5; }
-        .container { max-width:600px; margin:0 auto; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-        .header { background:linear-gradient(135deg,#0f0f0f,#1a1a1a); padding:40px 24px; text-align:center; }
-        .logo { font-size:32px; font-weight:900; background:linear-gradient(135deg,#ffd700,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:2px; margin:0; }
-        .tagline { font-size:12px; color:#d4af37; font-weight:700; letter-spacing:3px; text-transform:uppercase; margin:8px 0 0 0; }
-        .success-banner { background:linear-gradient(135deg,#d4edda,#c3e6cb); padding:40px 24px; text-align:center; border-bottom:4px solid #28a745; }
-        .emoji-xl { font-size:72px; line-height:1; margin:0 0 16px 0; }
-        .title { font-size:32px; font-weight:900; color:#155724; margin:0 0 8px 0; }
-        .subtitle { font-size:15px; color:#155724; margin:0; }
-        .badge { display:inline-block; background:#28a745; color:#fff; padding:8px 20px; border-radius:20px; font-size:12px; font-weight:700; margin-top:12px; letter-spacing:1px; }
-        .content { padding:32px 24px; }
-        .section-title { font-size:24px; font-weight:900; color:#111827; margin:0 0 20px 0; }
-        .cards { display:flex; gap:16px; flex-wrap:wrap; margin:0 0 32px 0; }
-        .card { flex:1; min-width:180px; padding:20px 16px; background:linear-gradient(135deg,#111827,#1f2937); border-radius:12px; text-align:center; }
-        .card-label { font-size:11px; letter-spacing:1.2px; color:#d4af37; text-transform:uppercase; font-weight:700; margin:0 0 8px 0; }
-        .card-value { font-size:18px; font-weight:900; color:#fff; margin:0 0 4px 0; }
-        .card-sub { font-size:12px; color:#9ca3af; margin:0; }
-        .product-table { width:100%; border-collapse:collapse; background:#fff; border:2px solid #e5e7eb; border-radius:12px; overflow:hidden; }
-        .product-table td { vertical-align:middle; }
-        .amount-box { background:linear-gradient(135deg,#f9fafb,#f3f4f6); padding:20px; border-radius:12px; border:1px solid #e5e7eb; margin:0 0 32px 0; }
-        .amount-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #d1d5db; }
-        .amount-row:last-child { border-bottom:2px solid #111827; padding-top:12px; }
-        .amount-label { color:#6b7280; font-size:14px; }
-        .amount-value { color:#374151; font-weight:700; font-size:14px; }
-        .total-value { font-size:22px; font-weight:900; background:linear-gradient(135deg,#ffd700,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        .address-box { background:#f9fafb; padding:20px; border-radius:12px; border:2px solid #e5e7eb; margin:0 0 32px 0; }
-        .address-title { font-size:14px; font-weight:800; color:#111827; text-transform:uppercase; margin:0 0 12px 0; display:flex; align-items:center; gap:8px; }
-        .address-text { font-size:14px; color:#374151; line-height:1.6; margin:0; }
-        .address-phone { margin-top:8px; padding-top:8px; border-top:1px dashed #d1d5db; font-size:13px; }
-        .button { display:block; background:linear-gradient(135deg,#111827,#1f2937); color:#fff; padding:16px 32px; border-radius:12px; text-decoration:none; font-weight:700; text-align:center; font-size:15px; letter-spacing:0.5px; margin:0 0 12px 0; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
-        .button:hover { opacity:0.9; }
-        .support { background:linear-gradient(135deg,#fef3c7,#fde68a); padding:24px; border-radius:12px; border:2px solid #fbbf24; text-align:center; margin:0 0 32px 0; }
-        .support-title { font-size:16px; font-weight:800; color:#78350f; margin:0 0 8px 0; }
-        .support-text { font-size:13px; color:#92400e; margin:0 0 16px 0; }
-        .support-links { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-        .support-link { padding:10px 18px; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; display:inline-block; }
-        .link-email { background:#fff; color:#78350f; border:2px solid #fbbf24; }
-        .link-whatsapp { background:#25D366; color:#fff; }
-        .footer { background:linear-gradient(135deg,#111827,#0f0f0f); padding:32px 24px; text-align:center; }
-        .footer-logo { font-size:18px; font-weight:800; background:linear-gradient(135deg,#ffd700,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:0 0 12px 0; }
-        .footer-text { font-size:12px; color:#9ca3af; margin:0; }
-        .footer-link { color:#d4af37; text-decoration:none; font-weight:600; }
-        @media (max-width:600px) {
-            .cards { flex-direction:column; }
-            .card { min-width:100%; }
-            .content { padding:20px 16px; }
+        @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity:1; } 50% { opacity:0.5; } }
+        @keyframes gradientShift { 0%, 100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
+        body { margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto Mono', Roboto, sans-serif; background:#f3f4f6; }
+        .container { max-width:650px; margin:0 auto; background:#fff; box-shadow:0 10px 30px rgba(0,0,0,0.15); }
+        .header { background:linear-gradient(135deg,#0f0f10,#1a1a2e,#16213e); padding:48px 24px; text-align:center; position:relative; overflow:hidden; }
+        .header::before { content:''; position:absolute; top:-50%; right:-10%; width:300px; height:300px; background:radial-gradient(circle, rgba(255,215,0,0.2), transparent); border-radius:50%; }
+        .logo { font-size:48px; font-weight:900; background:linear-gradient(135deg,#ffd700,#ffed4e,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:3px; margin:0; position:relative; z-index:1; }
+        .tagline { font-size:12px; color:#d4af37; font-weight:700; letter-spacing:4px; text-transform:uppercase; margin:12px 0 0 0; position:relative; z-index:1; }
+        .success-banner { background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%); padding:48px 24px; text-align:center; border-bottom:5px solid #28a745; position:relative; overflow:hidden; }
+        .success-banner::after { content:''; position:absolute; top:-50%; right:-10%; width:400px; height:400px; background:rgba(40,167,69,0.1); border-radius:50%; }
+        .emoji-xl { font-size:80px; line-height:1; margin:0 0 16px 0; animation:pulse 2s infinite; }
+        .title { font-size:36px; font-weight:900; color:#155724; margin:0 0 8px 0; letter-spacing:1px; position:relative; z-index:1; }
+        .subtitle { font-size:16px; color:#155724; margin:0 0 16px 0; line-height:1.5; }
+        .badge { display:inline-block; background:linear-gradient(135deg,#28a745,#20c997); color:#fff; padding:10px 28px; border-radius:25px; font-size:12px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; box-shadow:0 4px 15px rgba(40,167,69,0.3); }
+        .content { padding:40px 24px; }
+        .greeting { margin:0 0 32px 0; padding:20px; background:linear-gradient(135deg,#f0f9ff,#e0f2fe); border-radius:12px; border-left:5px solid #0284c7; }
+        .greeting-text { font-size:16px; color:#333; margin:0; line-height:1.6; }
+        .greeting-bold { font-weight:800; color:#0f0f10; }
+        .section-title { font-size:18px; font-weight:900; color:#0f0f10; margin:0 0 20px 0; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:1px; }
+        .order-journey { display:flex; justify-content:space-between; align-items:center; margin:0 0 40px 0; padding:24px; background:linear-gradient(135deg,#f9fafb,#f3f4f6); border-radius:12px; border:2px solid #e5e7eb; }
+        .journey-step { flex:1; text-align:center; position:relative; }
+        .journey-step:not(:last-child)::after { content:'→'; position:absolute; right:-18px; top:20px; font-size:24px; color:#d1d5db; font-weight:bold; }
+        .journey-icon { font-size:40px; margin:0 0 8px 0; animation:slideIn 0.6s ease-out; }
+        .journey-label { font-size:12px; color:#6b7280; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin:0; }
+        .cards-row { display:flex; gap:20px; margin:0 0 40px 0; flex-wrap:wrap; }
+        .card-lg { flex:1; min-width:240px; padding:28px; background:linear-gradient(135deg,#111827,#1f2937); border-radius:16px; border:2px solid #374151; position:relative; overflow:hidden; }
+        .card-lg::before { content:''; position:absolute; top:-50%; right:-50%; width:200px; height:200px; background:radial-gradient(circle, rgba(212,175,55,0.1), transparent); border-radius:50%; }
+        .card-label-lg { font-size:12px; color:#fbbf24; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin:0 0 12px 0; }
+        .card-value-lg { font-size:28px; font-weight:900; color:#fff; margin:0 0 8px 0; position:relative; z-index:1; }
+        .card-sub-lg { font-size:13px; color:#d1d5db; margin:0; position:relative; z-index:1; }
+        .track-button { display:block; background:linear-gradient(135deg,#0284c7,#0369a1); color:#fff; padding:12px 24px; border:none; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; text-align:center; margin-top:16px; cursor:pointer; position:relative; z-index:1; box-shadow:0 4px 12px rgba(2,132,199,0.3); transition:all 0.3s ease; }
+        .track-button:hover { background:linear-gradient(135deg,#0369a1,#0284c7); transform:translateY(-2px); box-shadow:0 6px 16px rgba(2,132,199,0.4); }
+        .product-section { margin:0 0 40px 0; }
+        .product-table { width:100%; border-collapse:collapse; background:#fff; overflow:hidden; }
+        .product-table tr:last-child td { border-bottom:none; }
+        .amount-section { margin:0 0 40px 0; }
+        .amount-box { background:linear-gradient(135deg,#f9fafb,#f3f4f6); padding:28px; border-radius:16px; border:2px dashed #d1d5db; }
+        .amount-row { display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px dashed #e5e7eb; }
+        .amount-row:last-child { border-bottom:3px solid #0f0f10; padding-top:16px; }
+        .amount-label { color:#6b7280; font-size:14px; font-weight:600; }
+        .amount-value { font-weight:700; font-size:16px; color:#374151; }
+        .total-row { padding:20px 0 0 0 !important; }
+        .total-label { font-weight:800; font-size:16px; color:#0f0f10; text-transform:uppercase; }
+        .total-value { font-size:28px; font-weight:900; background:linear-gradient(135deg,#ffd700,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .payment-section { margin:0 0 40px 0; }
+        .payment-box { padding:24px; background:linear-gradient(135deg,#f0fdf4,#dcfce7); border-radius:16px; border:3px solid #22c55e; position:relative; overflow:hidden; }
+        .payment-box::before { content:''; position:absolute; top:-50%; right:-10%; width:300px; height:300px; background:rgba(34,197,94,0.1); border-radius:50%; }
+        .payment-label { font-size:12px; color:#166534; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin:0 0 12px 0; }
+        .payment-method { font-size:18px; font-weight:900; color:#15803d; margin:0; display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
+        .payment-detail { font-size:13px; color:#166534; margin:12px 0 0 0; display:flex; align-items:center; gap:6px; }
+        .address-section { margin:0 0 40px 0; }
+        .address-box { padding:24px; background:#f9fafb; border-radius:16px; border:2px solid #e5e7eb; position:relative; }
+        .address-line { font-size:14px; color:#374151; line-height:1.8; margin:0; }
+        .address-name { font-weight:800; font-size:15px; color:#0f0f10; margin:0 0 12px 0; }
+        .address-phone { margin-top:12px; padding-top:12px; border-top:1px dashed #d1d5db; font-size:13px; color:#6b7280; }
+        .button-primary { display:block; background:linear-gradient(135deg,#111827,#0f0f10); color:#fff; padding:18px 32px; border-radius:12px; text-decoration:none; font-weight:800; text-align:center; font-size:15px; letter-spacing:1px; margin:0 0 16px 0; box-shadow:0 6px 20px rgba(0,0,0,0.3); transition:all 0.3s ease; }
+        .button-primary:hover { transform:translateY(-3px); box-shadow:0 8px 25px rgba(0,0,0,0.4); }
+        .support-section { margin:0 0 40px 0; padding:32px; background:linear-gradient(135deg,#fef3c7,#fde68a); border-radius:16px; border:3px solid #fbbf24; text-align:center; position:relative; overflow:hidden; }
+        .support-section::before { content:''; position:absolute; top:-50%; right:-10%; width:300px; height:300px; background:rgba(251,191,36,0.1); border-radius:50%; }
+        .support-emoji { font-size:48px; margin:0 0 16px 0; animation:slideIn 0.6s ease-out; position:relative; z-index:1; }
+        .support-title { font-size:18px; font-weight:900; color:#78350f; margin:0 0 8px 0; position:relative; z-index:1; }
+        .support-text { font-size:14px; color:#92400e; margin:0 0 24px 0; line-height:1.6; position:relative; z-index:1; }
+        .support-links { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; position:relative; z-index:1; }
+        .support-btn { padding:14px 28px; border-radius:10px; text-decoration:none; font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:8px; transition:all 0.3s ease; letter-spacing:0.5px; }
+        .btn-email { background:#fff; color:#78350f; border:2px solid #fbbf24; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+        .btn-email:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(251,191,36,0.3); }
+        .btn-whatsapp { background:#25D366; color:#fff; border:none; box-shadow:0 4px 12px rgba(37,211,102,0.3); }
+        .btn-whatsapp:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(37,211,102,0.4); }
+        .social-section { margin:0 0 40px 0; padding:32px 24px; background:linear-gradient(135deg,#0f0f10,#1a1a2e); border-radius:16px; text-align:center; position:relative; overflow:hidden; }
+        .social-section::before { content:''; position:absolute; top:-50%; left:-10%; width:300px; height:300px; background:radial-gradient(circle, rgba(212,175,55,0.1), transparent); border-radius:50%; }
+        .social-title { font-size:14px; color:#d4af37; font-weight:800; letter-spacing:2px; text-transform:uppercase; margin:0 0 24px 0; position:relative; z-index:1; }
+        .social-icons { display:flex; justify-content:center; gap:24px; margin:0; position:relative; z-index:1; }
+        .social-icon { width:64px; height:64px; background:linear-gradient(135deg,#ffd700,#d4af37); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; box-shadow:0 4px 15px rgba(212,175,55,0.3); transition:all 0.3s ease; }
+        .social-icon:hover { transform:translateY(-5px) scale(1.1); box-shadow:0 8px 25px rgba(212,175,55,0.5); }
+        .footer { background:linear-gradient(135deg,#0f0f10,#1a1a2e); padding:40px 24px; text-align:center; border-top:2px solid #d4af37; }
+        .footer-eshop { font-size:20px; font-weight:900; background:linear-gradient(135deg,#ffd700,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:0 0 12px 0; letter-spacing:2px; }
+        .footer-text { font-size:12px; color:#9ca3af; margin:0; line-height:1.8; }
+        .footer-link { color:#d4af37; text-decoration:none; font-weight:700; }
+        @media (max-width:640px) {
+            .container { border-radius:0; }
             .header { padding:32px 16px; }
+            .logo { font-size:36px; }
+            .tagline { font-size:11px; }
             .success-banner { padding:32px 16px; }
             .emoji-xl { font-size:64px; }
             .title { font-size:28px; }
-            .section-title { font-size:20px; }
-            .amount-box { margin:0 0 24px 0; }
+            .content { padding:24px 16px; }
+            .order-journey { padding:16px; margin-bottom:24px; }
+            .journey-step:not(:last-child)::after { right:-12px; top:12px; font-size:18px; }
+            .journey-icon { font-size:32px; }
+            .cards-row { gap:12px; }
+            .card-lg { min-width:100%; padding:20px; }
+            .card-value-lg { font-size:24px; }
+            .support-section { padding:24px 16px; margin-bottom:24px; }
+            .support-links { gap:12px; }
+            .support-btn { padding:12px 20px; font-size:12px; }
+            .social-icons { gap:16px; }
+            .social-icon { width:56px; height:56px; font-size:28px; }
+            .amount-box { padding:20px; }
         }
     </style>
 </head>
@@ -1410,7 +1461,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <p class="logo">✨ EShoppper</p>
+            <p class="logo">✨ EShopper</p>
             <p class="tagline">Boutique Luxe</p>
         </div>
 
@@ -1418,87 +1469,152 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         <div class="success-banner">
             <div class="emoji-xl">✅</div>
             <div class="title">ORDER CONFIRMED!</div>
-            <div class="subtitle">Thank you for your purchase - Premium care activated 💎</div>
-            <div class="badge">PROCESSING NOW</div>
+            <div class="subtitle">Thank you for choosing Eshopper Boutique Luxe</div>
+            <div class="badge">✨ Premium Care Activated</div>
         </div>
 
         <!-- Main Content -->
         <div class="content">
-            <p style="margin:0 0 24px 0; font-size:15px; color:#333; line-height:1.6;">Hi ${firstName},</p>
+            <!-- Greeting -->
+            <div class="greeting">
+                <p class="greeting-text">Hi <span class="greeting-bold">${firstName}</span>,<br>Your order has been confirmed and is now being prepared with our signature white-glove service. Here's everything you need to know:</p>
+            </div>
+
+            <!-- Order Journey -->
+            <div class="section-title">📦 Order Journey</div>
+            <div class="order-journey">
+                <div class="journey-step">
+                    <div class="journey-icon">✅</div>
+                    <p class="journey-label">Confirmed</p>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-icon">📦</div>
+                    <p class="journey-label">Packed</p>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-icon">🚚</div>
+                    <p class="journey-label">Shipped</p>
+                </div>
+                <div class="journey-step">
+                    <div class="journey-icon">🎉</div>
+                    <p class="journey-label">Delivered</p>
+                </div>
+            </div>
 
             <!-- Order Details Cards -->
-            <div class="cards">
-                <div class="card">
-                    <p class="card-label">🆔 Order ID</p>
-                    <p class="card-value">${orderId}</p>
-                    <p class="card-sub">${new Date().toLocaleDateString('en-IN')}</p>
+            <div class="section-title">📋 Order Details</div>
+            <div class="cards-row">
+                <div class="card-lg">
+                    <p class="card-label-lg">🆔 Order ID</p>
+                    <p class="card-value-lg">${orderId}</p>
+                    <p class="card-sub-lg">Order Date: ${new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    <a href="https://eshopperr.me/order-tracking/${orderId}" class="track-button">🔍 Track Order</a>
                 </div>
-                <div class="card">
-                    <p class="card-label">🚚 Est. Delivery</p>
-                    <p class="card-value" style="color:#ffd700;">${deliveryDate}</p>
-                    <p class="card-sub">Premium Shipping</p>
+                <div class="card-lg">
+                    <p class="card-label-lg">🚚 Est. Delivery</p>
+                    <p class="card-value-lg" style="color:#ffd700;">${deliveryDate}</p>
+                    <p class="card-sub-lg">Premium white-glove delivery</p>
+                    <a href="https://eshopperr.me/order-tracking/${orderId}" class="track-button">📍 View Tracking</a>
                 </div>
             </div>
 
             <!-- Products Section -->
-            <h3 style="font-size:16px; font-weight:800; color:#111827; margin:0 0 16px 0;">📦 Order Items (${totalItems} ${totalItems === 1 ? 'item' : 'items'})</h3>
-            <table class="product-table">
-                <tbody>
-                    ${productRows}
-                </tbody>
-            </table>
-            ${safeProducts.length > 4 ? `<p style="font-size:13px; color:#6b7280; margin:12px 0 0 0;">${safeProducts.length - 4} more item(s)</p>` : ''}
+            <div class="section-title">📦 Order Items</div>
+            <div class="product-section">
+                <table class="product-table">
+                    <tbody>
+                        ${productRows}
+                    </tbody>
+                </table>
+                ${safeProducts.length > 5 ? `<p style="font-size:13px; color:#6b7280; margin:16px 0 0 0; padding:0 16px; background:#f9fafb; padding:12px 16px; border-radius:8px;">+ ${safeProducts.length - 5} more item(s) in your order</p>` : ''}
+            </div>
 
             <!-- Amount Breakdown -->
-            <div class="amount-box">
-                <div class="amount-row">
-                    <span class="amount-label">Subtotal</span>
-                    <span class="amount-value">₹${Number(finalAmount || 0).toLocaleString()}</span>
-                </div>
-                <div class="amount-row">
-                    <span class="amount-label">Delivery</span>
-                    <span class="amount-value" style="color:#10b981;">FREE 🎁</span>
-                </div>
-                <div class="amount-row">
-                    <span class="amount-label">TOTAL</span>
-                    <span class="total-value">₹${Number(finalAmount || 0).toLocaleString()}</span>
+            <div class="section-title">💳 Order Summary</div>
+            <div class="amount-section">
+                <div class="amount-box">
+                    <div class="amount-row">
+                        <span class="amount-label">Subtotal</span>
+                        <span class="amount-value">₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div class="amount-row">
+                        <span class="amount-label">Delivery Charges</span>
+                        <span class="amount-value" style="color:#10b981; font-weight:800;">FREE 🎁</span>
+                    </div>
+                    <div class="amount-row">
+                        <span class="amount-label">Taxes & Fees</span>
+                        <span class="amount-value">Included</span>
+                    </div>
+                    <div class="amount-row total-row">
+                        <span class="total-label">💰 Total Amount</span>
+                        <span class="total-value">₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Payment & Delivery Info -->
-            <h3 style="font-size:16px; font-weight:800; color:#111827; margin:0 0 16px 0;">📋 Payment & Delivery</h3>
-            <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7); padding:16px; border-radius:12px; border-left:4px solid #22c55e; margin:0 0 32px 0;">
-                <p style="margin:0 0 8px 0; font-size:13px; color:#166534;"><strong>💳 Method:</strong> ${paymentMethod || 'Cash on Delivery'}</p>
-                ${paymentMethod === 'Cash on Delivery' ? '<p style="margin:0; font-size:13px; color:#166534;">✓ Pay securely when you receive your order</p>' : ''}
+            <!-- Payment Method -->
+            <div class="section-title">💳 Payment Method</div>
+            <div class="payment-section">
+                <div class="payment-box">
+                    <p class="payment-label">💳 Payment Method</p>
+                    <p class="payment-method">
+                        ${paymentMethod === 'Cash on Delivery' ? '🏧' : paymentMethod === 'NetBanking' ? '🏦' : paymentMethod === 'Debit Card' ? '💳' : paymentMethod === 'Credit Card' ? '💳' : '💰'}
+                        ${paymentMethod || 'Cash on Delivery'}
+                    </p>
+                    ${paymentMethod === 'Cash on Delivery' ? '<p class="payment-detail">✓ Pay securely when you receive your order</p>' : '<p class="payment-detail">✓ Payment received & confirmed</p>'}
+                </div>
             </div>
 
             <!-- Shipping Address -->
-            <h3 style="font-size:16px; font-weight:800; color:#111827; margin:0 0 16px 0;">📍 Shipping Address</h3>
-            <div class="address-box">
-                <p style="margin:0 0 8px 0; font-size:14px; font-weight:700; color:#111827;">${shippingAddress?.fullName || 'N/A'}</p>
-                <p class="address-text">${shippingAddress?.addressline1 || 'N/A'}<br/>${shippingAddress?.city || 'N/A'}, ${shippingAddress?.state || 'N/A'} - ${shippingAddress?.pin || 'N/A'}<br/>${shippingAddress?.country || 'India'}</p>
-                <p class="address-phone"><strong>📱 Phone:</strong> ${shippingAddress?.phone || 'N/A'}</p>
+            <div class="section-title">📍 Shipping Address</div>
+            <div class="address-section">
+                <div class="address-box">
+                    <p class="address-name">${shippingAddress?.fullName || 'N/A'}</p>
+                    <p class="address-line">${shippingAddress?.addressline1 || 'N/A'}</p>
+                    <p class="address-line">${shippingAddress?.city || 'N/A'}, ${shippingAddress?.state || 'N/A'} - ${shippingAddress?.pin || 'N/A'}</p>
+                    <p class="address-line">${shippingAddress?.country || 'India'}</p>
+                    <p class="address-phone">📱 <strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}</p>
+                </div>
             </div>
 
-            <!-- Action Button -->
-            <a href="https://eshopperr.me/my-orders" class="button">🔍 VIEW YOUR ORDER</a>
+            <!-- Primary Action Button -->
+            <a href="https://eshopperr.me/my-orders" class="button-primary">🔍 VIEW & TRACK YOUR ORDER</a>
 
             <!-- Support Section -->
-            <div class="support">
-                <div style="font-size:32px; margin:0 0 12px 0;">🎧</div>
-                <div class="support-title">Need Help?</div>
-                <div class="support-text">24/7 Premium Support Team Available</div>
+            <div class="support-section">
+                <div class="support-emoji">🎧</div>
+                <div class="support-title">Need Assistance?</div>
+                <div class="support-text">Our premium support team is available 24/7 to help you with any questions or concerns</div>
                 <div class="support-links">
-                    <a href="mailto:support@eshopperr.me" class="support-link link-email">📧 Email Us</a>
-                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-link link-whatsapp">💬 WhatsApp</a>
+                    <a href="mailto:support@eshopperr.me" class="support-btn btn-email">📧 Email Us</a>
+                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-btn btn-whatsapp">💬 WhatsApp</a>
+                </div>
+            </div>
+
+            <!-- Follow Us Section -->
+            <div class="social-section">
+                <div class="social-title">Follow Us</div>
+                <div class="social-icons">
+                    <a href="https://facebook.com/eshopperboutique" style="text-decoration:none;" title="Facebook">
+                        <div class="social-icon">👍</div>
+                    </a>
+                    <a href="https://instagram.com/eshopperboutique" style="text-decoration:none;" title="Instagram">
+                        <div class="social-icon">📸</div>
+                    </a>
+                    <a href="https://twitter.com/eshopperboutique" style="text-decoration:none;" title="Twitter">
+                        <div class="social-icon">𝕏</div>
+                    </a>
                 </div>
             </div>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <p class="footer-logo">✨ EShoppper</p>
-            <p class="footer-text">© ${new Date().getFullYear()} Eshopper Boutique Luxe | <a href="https://eshopperr.me" class="footer-link">eshopperr.me</a></p>
+            <p class="footer-eshop">✨ EShopper</p>
+            <p class="footer-text">
+                © ${new Date().getFullYear()} Eshopper Boutique Luxe. All rights reserved.<br>
+                <a href="https://eshopperr.me" class="footer-link">eshopperr.me</a>
+            </p>
         </div>
     </div>
 </body>
