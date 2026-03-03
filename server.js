@@ -1087,7 +1087,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
     try {
         if (status === 'Packed') {
             // 📦 PACKED: Text + Email
-            const whatsappMsg = `Luxury Craftsmanship Underway! ✨\n\nHello ${firstName}, your Eshopper Boutique order #${orderId} is now beautifully packed with premium care!\n\n📍 Track Your Journey: ${trackingLink}`;
+            const whatsappMsg = `📦 YOUR ORDER IS BEAUTIFULLY PACKED! ✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is now expertly packed!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Packed & Ready to Ship\n💎 Quality Check: Completed\n🎁 Premium Packaging: Applied\n\n📅 NEXT STEPS:\n→ Your order will ship out within 24 hours\n→ You'll receive a tracking update shortly\n→ Expected delivery by: ${estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Soon'}\n\n🔗 TRACK NOW: ${trackingLink}\n\n💬 Questions? Reply to this message\n📞 Call: 8447859784\n\n🙏 Thank you for choosing Eshopper Boutique! 💎`;
             
             try {
                 await sendWhatsApp(phone, whatsappMsg);
@@ -1122,8 +1122,8 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
         else if (status === 'Shipped') {
             // 🚚 SHIPPED: Media + Email (White-Glove experience)
             const mediaUrl = 'https://res.cloudinary.com/dtfvoxw1p/image/upload/v1724068341/order_success_lux.png';
-            const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN') : 'Soon';
-            const caption = `White-Glove Delivery Initiated! 🚚✨\n\nYour selection is on a curated journey to your doorstep via premium White-Glove Shipping.\n\nOrder: #${orderId}\nEstimated: ${deliveryDate}\n\n📍 Real-Time Tracking: ${trackingLink}\n\n💎 Eshopper Boutique Luxe`;
+            const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Soon';
+            const caption = `🚚 YOUR ORDER IS ON THE WAY! 📍✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is shipping!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Premium Delivery\n🚚 Shipping: Fast & Secure\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n📅 DELIVERY WINDOW:\n📍 Expected Arrival: ${deliveryDate}\n⏰ Delivery Time: 9 AM - 6 PM\n\n🎯 WHAT TO EXPECT:\n✓ Professional White-Glove delivery\n✓ Careful handling of your selection\n✓ Real-time location tracking\n✓ Safe placement at your doorstep\n\n🔗 LIVE TRACKING: ${trackingLink}\n\n💡 PRO TIP:\n→ Ensure someone is available for delivery\n→ Keep door accessible\n→ Contact us if you need delivery rescheduling\n\n📞 DELIVERY SUPPORT:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n\n💎 Thank you for your business!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
             try {
                 await sendWhatsAppMedia(phone, mediaUrl, caption);
@@ -1157,7 +1157,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
 
         else if (status === 'Delivered') {
             // 🎉 DELIVERED: Celebration message
-            const whatsappMsg = `Order Delivered! 🎉💎\n\nCongratulations ${firstName}! Your Eshopper Boutique order #${orderId} has arrived at your doorstep.\n\nThank you for choosing luxury. We hope you cherish your selection!\n\n⭐ Share Your Experience: Rate Your Purchase`;
+            const whatsappMsg = `🎉 ORDER DELIVERED! 💎✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nCongratulations, ${firstName}!\nYour premium selection has arrived!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n✅ Status: Successfully Delivered\n✅ Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n✅ Delivery Quality: Premium Packaging ✓\n\n🎁 WHAT YOU RECEIVED:\nYour beautifully packaged selection!\n(Check all items are in perfect condition)\n\n⭐ YOUR EXPERIENCE MATTERS!\nPlease share your feedback:\n→ Rate this product\n→ Write a review\n→ Tag us on social media\n\n🔗 PURCHASE LINK: ${trackingLink}\n\n📝 NEXT STEPS:\n✓ Inspect items for quality\n✓ Check packaging condition\n✓ Contact us for any issues\n✓ Share your experience\n\n💰 LOYALTY BONUS:\nGet 5% off on your next purchase!\nUse code at checkout: ESTHANKYOU5\n\n🌟 EXPLORE MORE:\nVisit our collection: https://eshopperr.me\nShop seasonal curations\nDiscover new premium items\n\n❓ SUPPORT:\n📞 WhatsApp: wa.me/918447859784\n📧 Email: support@eshopperr.me\n💬 Chat: Available 9 AM - 9 PM\n\n🙏 THANK YOU!\nFor choosing Eshopper Boutique Luxe\nYour satisfaction is our pride! 💎\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
             try {
                 await sendWhatsApp(phone, whatsappMsg);
@@ -2280,11 +2280,18 @@ app.post('/api/place-order', async (req, res) => {
             } else {
                 const mediaUrl = 'https://res.cloudinary.com/dtfvoxw1p/image/upload/v1724068341/order_success_lux.png';
                 const itemSummary = cleanProducts
-                    .slice(0, 4)
-                    .map((item, idx) => `${idx + 1}. ${item.name} × ${item.qty} = Rs.${Number(item.total || 0).toLocaleString('en-IN')}`)
+                    .slice(0, 5)
+                    .map((item, idx) => `   ${idx + 1}. ${item.name}\n      Qty: ${item.qty} | Rate: ₹${Number(item.price || 0).toLocaleString('en-IN')} | Subtotal: ₹${Number(item.total || 0).toLocaleString('en-IN')}`)
                     .join('\n');
 
-                const caption = `Luxury Experience Starts Now! 💎\n\nHello ${user.name || 'Customer'}, we are thrilled to process your boutique order #${orderId}.\n\n🧾 Order Value: Rs.${Number(payable || 0).toLocaleString('en-IN')}\n💳 Payment: ${paymentMethod || 'COD'}\n📦 Items:\n${itemSummary}${cleanProducts.length > 4 ? `\n+ ${cleanProducts.length - 4} more item(s)` : ''}\n\nWhat happens next?\nOur artisans are now hand-preparing your selection for premium delivery.\n\n📍 Track Your Journey: https://eshopperr.me/order-tracking/${orderId}\n🎧 Support: support@eshopperr.me`;
+                const savedAmount = total - payable;
+                const discountInfo = savedAmount > 0 ? `\n💰 Total Savings: ₹${Number(savedAmount).toLocaleString('en-IN')}` : '';
+                const estimatedDays = 5; // Default 5 days delivery
+                const deliveryDate = new Date();
+                deliveryDate.setDate(deliveryDate.getDate() + estimatedDays);
+                const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                const caption = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')} (FREE on orders above ₹999)\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT METHOD: ${paymentMethod === 'COD' ? 'Cash on Delivery (Pay at gate)' : paymentMethod || 'Card Payment'}\n\n📅 ESTIMATED DELIVERY:\n   Expected by: ${formattedDeliveryDate}\n   Status: Your order is being prepared\n\n🎯 WHAT'S NEXT?\n✓ We're hand-preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery to your doorstep\n✓ Real-time tracking available\n\n🔗 ACTION LINKS:\n📍 Track Order Live: https://eshopperr.me/order-tracking/${orderId}\n💬 WhatsApp Support: https://wa.me/918447859784\n✉️ Email Support: support@eshopperr.me\n\n❓ NEED HELP?\n• Track your order anytime\n• Check delivery status\n• Modify or cancel order\n• Return or exchange items\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🙏 We appreciate your business!\nHappy shopping with Eshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
                 try {
                     await sendWhatsAppMedia(phoneNumber, mediaUrl, caption);
