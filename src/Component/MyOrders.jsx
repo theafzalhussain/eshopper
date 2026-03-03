@@ -244,40 +244,88 @@ export default function MyOrders() {
           </button>
         </div>
 
-        <div className="d-flex flex-wrap mb-4">
+        {/* 🌟 PREMIUM FILTER BUTTONS */}
+        <div className="d-flex flex-wrap mb-4" style={{ gap: '8px' }}>
           {FILTERS.map((item) => (
-            <button
+            <motion.button
               key={item}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setActiveFilter(item)}
-              className="btn rounded-pill mr-2 mb-2"
+              className="btn rounded-pill"
               style={{
-                background: activeFilter === item ? '#111' : '#fff',
-                color: activeFilter === item ? '#fff' : '#444',
-                border: '1px solid #ddd',
-                minWidth: 110
+                background: activeFilter === item 
+                  ? 'linear-gradient(135deg, #1a1a1a, #3a3a3a)' 
+                  : 'linear-gradient(135deg, #fff, #f9f9f9)',
+                color: activeFilter === item ? '#fff' : '#333',
+                border: activeFilter === item ? '1.5px solid #555' : '1.5px solid #ddd',
+                minWidth: 120,
+                fontWeight: 700,
+                letterSpacing: '0.3px',
+                padding: '8px 18px',
+                boxShadow: activeFilter === item 
+                  ? '0 6px 16px rgba(0,0,0,0.2)' 
+                  : '0 2px 8px rgba(0,0,0,0.05)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer'
               }}
             >
               {item}
-            </button>
+            </motion.button>
           ))}
         </div>
 
-        {/* SEARCH BOX - Simple Clean Design */}
-        <div className="p-3 p-md-4 bg-white rounded-xl shadow-sm mb-4" style={{ border: '1px solid #ededed' }}>
+        {/* 💎 PREMIUM SEARCH BOX */}
+        <motion.div 
+          className="mb-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          style={{ 
+            background: 'linear-gradient(135deg, #ffffff, #fbfbfb)',
+            border: '1.5px solid #e0e0e0',
+            borderRadius: '16px',
+            padding: '20px 24px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
           <div className="row align-items-center">
-            <div className="col-12 col-md-8 mb-2 mb-md-0">
-              <input
-                type="text"
-                value={searchOrderId}
-                onChange={(e) => setSearchOrderId(e.target.value)}
-                className="form-control"
-                placeholder="🔍 Search by Order ID"
-                style={{ borderRadius: '8px', padding: '10px 14px' }}
-              />
+            <div className="col-12 col-md-8 mb-3 mb-md-0">
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }}>🔍</span>
+                <input
+                  type="text"
+                  value={searchOrderId}
+                  onChange={(e) => setSearchOrderId(e.target.value)}
+                  className="form-control"
+                  placeholder="Search by Order ID..."
+                  style={{ 
+                    borderRadius: '12px', 
+                    padding: '12px 12px 12px 40px',
+                    border: '1px solid #ddd',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    background: '#fff',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#8b6c2f'
+                    e.target.style.boxShadow = '0 4px 16px rgba(139,108,47,0.15)'
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#ddd'
+                    e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'
+                  }}
+                />
+              </div>
             </div>
             <div className="col-12 col-md-4 d-flex gap-2">
               {(searchOrderId || fromDate || toDate) && (
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={() => {
                     setSearchOrderId('')
@@ -285,60 +333,84 @@ export default function MyOrders() {
                     setToDate('')
                   }}
                   className="btn btn-outline-secondary flex-grow-1"
-                  style={{ fontSize: '13px' }}
+                  style={{ fontSize: '13px', fontWeight: 600 }}
                 >
-                  Clear
-                </button>
+                  ✕ Clear
+                </motion.button>
               )}
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="button"
                 onClick={() => setShowAdvancedFilters((prev) => !prev)}
-                className="btn btn-outline-dark flex-grow-1"
-                style={{ fontSize: '13px' }}
+                className="btn rounded-pill flex-grow-1"
+                style={{ 
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #8b6c2f, #a88344)',
+                  color: '#fff',
+                  border: '1.5px solid #9d7d3f',
+                  boxShadow: '0 4px 12px rgba(139,108,47,0.2)',
+                  letterSpacing: '0.2px'
+                }}
                 title="Show/Hide Advanced Filters"
               >
-                {showAdvancedFilters ? '⬆ Hide Filters' : '⚙️ Filters'}
-              </button>
+                {showAdvancedFilters ? '⬆ Hide' : '⚙️ Filters'}
+              </motion.button>
             </div>
           </div>
           
           {/* Advanced Date Filters - Show only if needed */}
           {showAdvancedFilters && (
-            <div className="row mt-3">
-              <div className="col-md-6 mb-2 mb-md-0">
-                <label className="small text-muted mb-1" style={{ display: 'block' }}>From Date</label>
+            <motion.div 
+              className="row mt-4"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="col-md-6 mb-3 mb-md-0">
+                <label className="small font-weight-bold mb-2" style={{ display: 'block', color: '#333' }}>📅 From Date</label>
                 <input
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
                   className="form-control"
-                  style={{ borderRadius: '8px' }}
+                  style={{ borderRadius: '12px', border: '1.5px solid #ddd', fontWeight: 500 }}
                 />
               </div>
               <div className="col-md-6">
-                <label className="small text-muted mb-1" style={{ display: 'block' }}>To Date</label>
+                <label className="small font-weight-bold mb-2" style={{ display: 'block', color: '#333' }}>📅 To Date</label>
                 <input
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                   className="form-control"
-                  style={{ borderRadius: '8px' }}
+                  style={{ borderRadius: '12px', border: '1.5px solid #ddd', fontWeight: 500 }}
                 />
               </div>
-              <div className="col-12 mt-3 d-flex justify-content-end">
-                <button
+              <div className="col-12 mt-4 d-flex justify-content-end">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={() => {
                     setFromDate('')
                     setToDate('')
                   }}
-                  className="btn btn-sm btn-outline-secondary"
+                  className="btn btn-sm rounded-pill"
+                  style={{
+                    background: 'linear-gradient(135deg, #e0e0e0, #d0d0d0)',
+                    color: '#333',
+                    fontWeight: 600,
+                    border: '1.5px solid #ccc',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                  }}
                 >
-                  Clear Date Filters
-                </button>
+                  ✕ Clear Dates
+                </motion.button>
               </div>
-            </div>
+            </motion.div>
           )}
+        </motion.div>
         </div>
 
         {loading ? (
@@ -346,29 +418,36 @@ export default function MyOrders() {
         ) : error ? (
           <div className="p-4 text-center bg-white rounded-xl shadow-sm text-danger">{error}</div>
         ) : filteredOrders.length ? (
-          filteredOrders.map((item) => {
+          filteredOrders.map((item, idx) => {
             const badge = getStatusStyles(item.orderStatus)
             const label = normalizeStatus(item.orderStatus)
             return (
               <motion.div
                 key={item.orderId}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 mb-3 bg-white rounded-lg shadow-sm"
+                transition={{ delay: idx * 0.05, duration: 0.4 }}
+                whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(0,0,0,0.12)' }}
+                className="mb-3"
                 style={{ 
-                  border: '1px solid #ededed',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                  background: 'linear-gradient(135deg, #ffffff, #fbfbfb)',
+                  border: '1.5px solid #e8e8e8',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.08)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  backdropFilter: 'blur(10px)'
                 }}
               >
-                {/* Header Row */}
-                <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 pb-3" style={{ borderBottom: '1px dashed #eee' }}>
+                {/* Header Row - Premium Layout */}
+                <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 pb-3" style={{ borderBottom: '1.5px solid #f0f0f0' }}>
                   <div className="flex-grow-1">
-                    <div className="font-weight-bold" style={{ fontSize: '16px', color: '#111' }}>
+                    <div className="font-weight-bold" style={{ fontSize: '18px', color: '#0f0f10', letterSpacing: '0.2px' }}>
                       {item.orderId}
                     </div>
-                    <div className="small text-muted mt-1 d-flex align-items-center">
-                      <Clock3 size={13} className="mr-1" /> 
+                    <div className="small mt-2 d-flex align-items-center" style={{ color: '#888' }}>
+                      <Clock3 size={14} className="mr-2" /> 
                       {new Date(item.updatedAt).toLocaleDateString('en-IN', { 
                         day: 'numeric', 
                         month: 'short', 
@@ -376,71 +455,101 @@ export default function MyOrders() {
                       })}
                     </div>
                   </div>
-                  <span 
-                    className="px-3 py-2 rounded-pill font-weight-bold small" 
+                  <motion.span 
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    className="px-4 py-2 rounded-pill font-weight-bold" 
                     style={{ 
                       background: badge.bg, 
                       color: badge.color,
                       whiteSpace: 'nowrap',
-                      marginLeft: '12px'
+                      marginLeft: '12px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      letterSpacing: '0.3px',
+                      boxShadow: `0 4px 12px ${badge.color}25`
                     }}
                   >
                     {label}
-                  </span>
+                  </motion.span>
                 </div>
 
-                {/* Details Row - Amount & Payment */}
-                <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4" style={{ gap: '16px' }}>
-                  <div>
-                    <div className="small text-muted mb-1">Amount</div>
-                    <div className="font-weight-bold" style={{ fontSize: '18px', color: '#111' }}>
+                {/* Details Grid - Enhanced Layout */}
+                <div className="row mb-4" style={{ gap: 0 }}>
+                  <div className="col-md-6 mb-3 mb-md-0">
+                    <div className="small" style={{ color: '#999', fontSize: '11px', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Amount</div>
+                    <div className="font-weight-bold mt-2" style={{ fontSize: '22px', color: '#8b6c2f', letterSpacing: '-0.5px' }}>
                       ₹{Number(item.finalAmount || 0).toLocaleString('en-IN')}
                     </div>
                   </div>
-                  <div style={{ borderLeft: '1px solid #eee', paddingLeft: '16px' }}>
-                    <div className="small text-muted mb-1">Payment Method</div>
-                    <div className="font-weight-bold" style={{ fontSize: '14px', color: '#666' }}>
-                      {item.paymentMethod || 'COD'}
+                  <div className="col-md-6" style={{ borderLeft: '1.5px solid #f0f0f0', paddingLeft: '20px' }}>
+                    <div className="small" style={{ color: '#999', fontSize: '11px', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>Payment Method</div>
+                    <div className="font-weight-bold mt-2" style={{ fontSize: '16px', color: '#333', letterSpacing: '0.2px' }}>
+                      {item.paymentMethod || 'Cash on Delivery'}
                     </div>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="d-flex gap-2 flex-wrap">
-                  <button
+                {/* Premium Action Buttons */}
+                <div className="d-flex gap-3 flex-wrap align-items-center">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => navigate(`/order-tracking/${item.orderId}`)}
-                    className="btn btn-sm rounded-pill px-3 flex-grow-1"
+                    className="btn btn-sm rounded-pill px-4 flex-grow-1"
                     style={{
-                      minWidth: '140px',
+                      minWidth: '160px',
                       background: 'linear-gradient(135deg, #0f0f10, #2b3138)',
                       color: '#fff',
-                      border: '1px solid #353b44',
+                      border: '1.5px solid #353b44',
                       fontWeight: 700,
-                      boxShadow: '0 6px 16px rgba(15,15,16,0.22)',
-                      letterSpacing: '0.2px'
+                      fontSize: '14px',
+                      letterSpacing: '0.3px',
+                      boxShadow: '0 8px 20px rgba(15,15,16,0.25)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                     }}
                   >
                     🔎 Track Order Live
-                  </button>
-                  <button
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => downloadInvoice(item.orderId)}
                     disabled={downloadingInvoice === item.orderId}
-                    className="btn btn-outline-warning btn-sm rounded-pill px-3"
+                    className="btn btn-sm rounded-pill px-4"
                     style={{ 
-                      borderColor: '#d1a84a', 
+                      minWidth: '130px',
+                      background: 'linear-gradient(135deg, #fff9e6, #f5eccc)',
                       color: '#7d6122',
-                      minWidth: '110px'
+                      border: '1.5px solid #d1a84a',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      opacity: downloadingInvoice === item.orderId ? 0.7 : 1,
+                      boxShadow: '0 4px 12px rgba(209,168,74,0.2)',
+                      cursor: downloadingInvoice === item.orderId ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    {downloadingInvoice === item.orderId ? '⏳' : '📄'} Invoice
-                  </button>
-                  <button
+                    {downloadingInvoice === item.orderId ? '⏳ Downloading...' : '📥 Download'}
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => viewInvoiceInline(item.orderId)}
-                    className="btn btn-outline-dark btn-sm rounded-pill px-3"
-                    style={{ minWidth: '130px' }}
+                    className="btn btn-sm rounded-pill px-4"
+                    style={{ 
+                      minWidth: '120px',
+                      background: 'linear-gradient(135deg, #f0f0f0, #e8e8e8)',
+                      color: '#333',
+                      border: '1.5px solid #ddd',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                    }}
                   >
-                    👁 View Invoice
-                  </button>
+                    👁 View
+                  </motion.button>
                 </div>
               </motion.div>
             )
