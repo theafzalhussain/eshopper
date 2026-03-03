@@ -1367,19 +1367,19 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
 
         const productRows = safeProducts.slice(0, 5).map(p => `
             <tr>
-                <td style="padding:16px; border-bottom:1px solid #e5e7eb; background:#f9fafb;">
-                    <div style="display:flex; align-items:flex-start; gap:16px;">
-                        <div style="flex-shrink:0;">
-                            ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:1px solid #d1d5db; box-shadow:0 2px 4px rgba(0,0,0,0.1);" />` : `<div style="width:80px; height:80px; background:linear-gradient(135deg,#e5e7eb,#d1d5db); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:32px; border:1px solid #d1d5db;">📦</div>`}
+                <td style="padding:20px 24px; border-bottom:1px solid #e5e7eb; background:#f9fafb;">
+                    <div style="display:flex; align-items:flex-start; gap:24px;">
+                        <div style="flex-shrink:0; padding:8px; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
+                            ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:90px; height:90px; object-fit:cover; border-radius:8px; border:2px solid #e5e7eb; box-shadow:0 2px 6px rgba(0,0,0,0.05); display:block;" />` : `<div style="width:90px; height:90px; background:linear-gradient(135deg,#e5e7eb,#d1d5db); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:36px; border:2px solid #d1d5db;">📦</div>`}
                         </div>
-                        <div style="flex:1;">
-                            <div style="font-weight:800; color:#111827; font-size:15px; margin:0 0 4px 0; line-height:1.4;">${p.name}</div>
-                            <div style="font-size:13px; color:#6b7280; margin:4px 0; display:flex; gap:12px;">
-                                <span>Qty: <strong>${p.qty || 1}</strong></span>
-                                <span>•</span>
-                                <span>₹${Number(p.price || 0).toLocaleString()} each</span>
+                        <div style="flex:1; padding:4px 0;">
+                            <div style="font-weight:800; color:#111827; font-size:16px; margin:0 0 8px 0; line-height:1.4;">${p.name}</div>
+                            <div style="font-size:13px; color:#6b7280; margin:8px 0; display:flex; gap:12px; align-items:center; background:#fff; padding:8px 12px; border-radius:6px; display:inline-flex;">
+                                <span style="display:flex; align-items:center; gap:4px;"><span style="color:#9ca3af;">Qty:</span> <strong style="color:#111827;">${p.qty || 1}</strong></span>
+                                <span style="color:#e5e7eb;">•</span>
+                                <span style="color:#6b7280;">₹${Number(p.price || 0).toLocaleString()} each</span>
                             </div>
-                            <div style="font-size:15px; color:#fff; font-weight:700; margin-top:8px; display:inline-block; background:linear-gradient(135deg,#ffd700,#d4af37); padding:4px 12px; border-radius:6px;">₹${Number(p.total || 0).toLocaleString()}</div>
+                            <div style="font-size:16px; color:#fff; font-weight:800; margin-top:12px; display:inline-block; background:linear-gradient(135deg,#ffd700,#d4af37); padding:8px 16px; border-radius:8px; box-shadow:0 4px 12px rgba(212,175,55,0.3);">₹${Number(p.total || 0).toLocaleString()}</div>
                         </div>
                     </div>
                 </td>
@@ -1450,23 +1450,17 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         .address-phone { margin-top:12px; padding-top:12px; border-top:1px dashed #d1d5db; font-size:13px; color:#6b7280; }
         .button-primary { display:block; background:linear-gradient(135deg,#111827,#0f0f10); color:#fff; padding:18px 32px; border-radius:12px; text-decoration:none; font-weight:800; text-align:center; font-size:15px; letter-spacing:1px; margin:0 0 16px 0; box-shadow:0 6px 20px rgba(0,0,0,0.3); transition:all 0.3s ease; }
         .button-primary:hover { transform:translateY(-3px); box-shadow:0 8px 25px rgba(0,0,0,0.4); }
-        .support-section { margin:0 0 40px 0; padding:32px; background:linear-gradient(135deg,#fef3c7,#fde68a); border-radius:16px; border:3px solid #fbbf24; text-align:center; position:relative; overflow:hidden; }
-        .support-section::before { content:''; position:absolute; top:-50%; right:-10%; width:300px; height:300px; background:rgba(251,191,36,0.1); border-radius:50%; }
-        .support-emoji { font-size:48px; margin:0 0 16px 0; animation:slideIn 0.6s ease-out; position:relative; z-index:1; }
-        .support-title { font-size:18px; font-weight:900; color:#78350f; margin:0 0 8px 0; position:relative; z-index:1; }
-        .support-text { font-size:14px; color:#92400e; margin:0 0 24px 0; line-height:1.6; position:relative; z-index:1; }
-        .support-links { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; position:relative; z-index:1; }
-        .support-btn { padding:14px 28px; border-radius:10px; text-decoration:none; font-weight:800; font-size:14px; display:inline-flex; align-items:center; gap:8px; transition:all 0.3s ease; letter-spacing:0.5px; }
-        .btn-email { background:#fff; color:#78350f; border:2px solid #fbbf24; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-        .btn-email:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(251,191,36,0.3); }
-        .btn-whatsapp { background:#25D366; color:#fff; border:none; box-shadow:0 4px 12px rgba(37,211,102,0.3); }
-        .btn-whatsapp:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(37,211,102,0.4); }
-        .social-section { margin:0 0 40px 0; padding:32px 24px; background:linear-gradient(135deg,#0f0f10,#1a1a2e); border-radius:16px; text-align:center; position:relative; overflow:hidden; }
-        .social-section::before { content:''; position:absolute; top:-50%; left:-10%; width:300px; height:300px; background:radial-gradient(circle, rgba(212,175,55,0.1), transparent); border-radius:50%; }
-        .social-title { font-size:14px; color:#d4af37; font-weight:800; letter-spacing:2px; text-transform:uppercase; margin:0 0 24px 0; position:relative; z-index:1; }
-        .social-icons { display:flex; justify-content:center; gap:24px; margin:0; position:relative; z-index:1; }
-        .social-icon { width:64px; height:64px; background:linear-gradient(135deg,#ffd700,#d4af37); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; box-shadow:0 4px 15px rgba(212,175,55,0.3); transition:all 0.3s ease; }
-        .social-icon:hover { transform:translateY(-5px) scale(1.1); box-shadow:0 8px 25px rgba(212,175,55,0.5); }
+        .support-section { margin:0 0 40px 0; padding:48px 40px; background:linear-gradient(135deg,#fef3c7,#fde68a); border-radius:20px; border:4px solid #fbbf24; text-align:center; position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+        .support-section::before { content:''; position:absolute; top:-50%; right:-10%; width:400px; height:400px; background:rgba(251,191,36,0.15); border-radius:50%; }
+        .support-emoji { font-size:56px; margin:0 0 20px 0; animation:slideIn 0.6s ease-out, pulse-glow 2s ease-in-out infinite; position:relative; z-index:1; line-height:1; }
+        .support-title { font-size:22px; font-weight:900; color:#78350f; margin:0 0 12px 0; position:relative; z-index:1; letter-spacing:0.5px; }
+        .support-text { font-size:15px; color:#92400e; margin:0 0 32px 0; line-height:1.7; position:relative; z-index:1; max-width:400px; }
+        .support-links { display:flex; gap:28px; justify-content:center; flex-wrap:wrap; position:relative; z-index:1; align-items:center; width:100%; }
+        .support-btn { padding:16px 36px; border-radius:12px; text-decoration:none; font-weight:900; font-size:15px; display:inline-flex; align-items:center; justify-content:center; gap:10px; transition:all 0.3s ease; letter-spacing:1px; box-shadow:0 6px 20px rgba(0,0,0,0.15); text-transform:uppercase; }
+        .btn-email { background:#fff; color:#78350f; border:3px solid #fbbf24; box-shadow:0 6px 20px rgba(251,191,36,0.25); }
+        .btn-email:hover { transform:translateY(-4px) scale(1.05); box-shadow:0 10px 28px rgba(251,191,36,0.4); background:#fffbf0; }
+        .btn-whatsapp { background:linear-gradient(135deg,#25D366,#1db854); color:#fff; border:3px solid #1db854; box-shadow:0 6px 20px rgba(37,211,102,0.35); }
+        .btn-whatsapp:hover { transform:translateY(-4px) scale(1.05); box-shadow:0 10px 28px rgba(37,211,102,0.5); }
         .footer { background:linear-gradient(135deg,#0f0f10,#1a1a2e); padding:40px 24px; text-align:center; border-top:2px solid #d4af37; }
         .footer-eshop { font-size:20px; font-weight:900; background:linear-gradient(135deg,#ffd700,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:0 0 12px 0; letter-spacing:2px; }
         .footer-text { font-size:12px; color:#9ca3af; margin:0; line-height:1.8; }
@@ -1486,11 +1480,12 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             .cards-row { gap:12px; }
             .card-lg { min-width:100%; padding:20px; }
             .card-value-lg { font-size:24px; }
-            .support-section { padding:24px 16px; margin-bottom:24px; }
-            .support-links { gap:12px; }
-            .support-btn { padding:12px 20px; font-size:12px; }
-            .social-icons { gap:16px; }
-            .social-icon { width:56px; height:56px; font-size:28px; }
+            .support-section { padding:32px 20px; margin-bottom:24px; }
+            .support-emoji { font-size:48px; margin:0 0 16px 0; }
+            .support-title { font-size:18px; }
+            .support-text { font-size:13px; margin:0 0 24px 0; }
+            .support-links { gap:16px; flex-direction:column; }
+            .support-btn { padding:14px 28px; font-size:13px; width:100%; max-width:280px; }
             .amount-box { padding:20px; }
         }
     </style>
@@ -1626,22 +1621,6 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
                 <div class="support-links">
                     <a href="mailto:support@eshopperr.me" class="support-btn btn-email">📧 Email Us</a>
                     <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-btn btn-whatsapp">💬 WhatsApp</a>
-                </div>
-            </div>
-
-            <!-- Follow Us Section -->
-            <div class="social-section">
-                <div class="social-title">Follow Us</div>
-                <div class="social-icons">
-                    <a href="https://facebook.com/eshopperboutique" style="text-decoration:none;" title="Facebook">
-                        <div class="social-icon">👍</div>
-                    </a>
-                    <a href="https://instagram.com/eshopperboutique" style="text-decoration:none;" title="Instagram">
-                        <div class="social-icon">📸</div>
-                    </a>
-                    <a href="https://twitter.com/eshopperboutique" style="text-decoration:none;" title="Twitter">
-                        <div class="social-icon">𝕏</div>
-                    </a>
                 </div>
             </div>
         </div>
