@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { datadogRum } from '@datadog/browser-rum'
+import { io } from 'socket.io-client'
 import { BASE_URL } from '../constants'
 import { Clock3, PackageSearch } from 'lucide-react'
 
@@ -28,6 +29,7 @@ const getStatusStyles = (status) => {
 export default function MyOrders() {
   const navigate = useNavigate()
   const userId = localStorage.getItem('userid')
+  const socketRef = useRef(null)
 
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -38,6 +40,7 @@ export default function MyOrders() {
   const [toDate, setToDate] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [downloadingInvoice, setDownloadingInvoice] = useState('')
+  const [socketConnected, setSocketConnected] = useState(false)
 
   const viewInvoiceInline = (orderId) => {
     if (!orderId || !userId) return
@@ -126,6 +129,75 @@ export default function MyOrders() {
 
     fetchOrders()
   }, [userId])
+
+  // 🔴 INITIALIZE SOCKET.IO FOR REAL-TIME STATUS UPDATES
+  useEffect(() => {
+    if (!userId) return
+
+    let mounted = true
+    const socketRef_local = io(BASE_URL, {
+      auth: { userId },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5
+    })
+
+    socketRef.current = socketRef_local
+
+    socketRef_local.on('connect', () => {
+      if (mounted) {
+        setSocketConnected(true)
+        console.log('✅ MyOrders Socket connected, room:', `user:${userId}`)
+        datadogRum.addAction('myOrdersSocketConnected', { userId })
+      }
+    })
+
+    socketRef_local.on('disconnect', () => {
+      if (mounted) {
+        setSocketConnected(false)
+        console.log('❌ MyOrders Socket disconnected')
+      }
+    })
+
+    // 🔴 LISTEN FOR STATUS UPDATES AND UPDATE ORDERS IN REAL-TIME
+    socketRef_local.on('statusUpdate', (payload) => {
+      if (payload?.orderId && payload?.status && mounted) {
+        console.log('🔄 Real-time status update received:', payload)
+        setOrders((prevOrders) => {
+          return prevOrders.map((order) => {
+            if (order.orderId === payload.orderId) {
+              return {
+                ...order,
+                orderStatus: payload.status,
+                updatedAt: payload.updatedAt || new Date().toISOString()
+              }
+            }
+            return order
+          })
+        })
+
+        datadogRum.addAction('myOrdersStatusUpdated', {
+          orderId: payload.orderId,
+          newStatus: payload.status
+        })
+      }
+    })
+
+    socketRef_local.on('error', (error) => {
+      console.error('❌ Socket error in MyOrders:', error)
+      datadogRum.addError(new Error(error), { context: 'MyOrders' })
+    })
+
+    return () => {
+      mounted = false
+      if (socketRef_local) {
+        socketRef_local.disconnect()
+      }
+    }
+  }, [userId])
+
 
   const filteredOrders = useMemo(() => {
     let result = [...orders]

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { io } from 'socket.io-client'
 import { getUser } from "../Store/ActionCreaters/UserActionCreators"
 import { getWishlist } from "../Store/ActionCreaters/WishlistActionCreators"
 import { getCheckout } from "../Store/ActionCreaters/CheckoutActionCreators"
@@ -18,6 +19,8 @@ export default function Profile() {
     var [user, setuser] = useState({})
     const [recentOrders, setRecentOrders] = useState([])
     const [loadingRecent, setLoadingRecent] = useState(false)
+    const socketRef = useRef(null)
+    const [socketConnected, setSocketConnected] = useState(false)
     var dispatch = useDispatch()
     var navigate = useNavigate()
 
@@ -52,6 +55,65 @@ export default function Profile() {
 
         fetchRecentOrders()
     }, [orders.length])
+
+    // 🔴 INITIALIZE SOCKET.IO FOR REAL-TIME STATUS UPDATES IN RECENT STATUS
+    useEffect(() => {
+        const userId = localStorage.getItem("userid")
+        if (!userId) return
+
+        let mounted = true
+        const socket = io(BASE_URL, {
+            auth: { userId },
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: 5
+        })
+
+        socketRef.current = socket
+
+        socket.on('connect', () => {
+            if (mounted) {
+                setSocketConnected(true)
+                console.log('✅ Profile Socket connected for real-time updates')
+            }
+        })
+
+        socket.on('disconnect', () => {
+            if (mounted) {
+                setSocketConnected(false)
+                console.log('❌ Profile Socket disconnected')
+            }
+        })
+
+        // 🔴 LISTEN FOR STATUS UPDATES AND UPDATE RECENT ORDERS IN REAL-TIME
+        socket.on('statusUpdate', (payload) => {
+            if (payload?.orderId && payload?.status && mounted) {
+                console.log('🔄 Real-time status update in Recent Status:', payload)
+                setRecentOrders((prevOrders) => {
+                    return prevOrders.map((order) => {
+                        if (order.orderId === payload.orderId) {
+                            return {
+                                ...order,
+                                orderStatus: payload.status,
+                                updatedAt: payload.updatedAt || new Date().toISOString()
+                            }
+                        }
+                        return order
+                    })
+                })
+            }
+        })
+
+        return () => {
+            mounted = false
+            if (socket) {
+                socket.disconnect()
+            }
+        }
+    }, [])
+
 
     const normalizeStatus = (value = '') => {
         const raw = String(value).trim().toLowerCase()
@@ -176,52 +238,82 @@ export default function Profile() {
                                         return (
                                             <motion.div
                                                 key={item.orderId}
-                                                whileHover={{ y: -2 }}
-                                                className="p-3 mb-3 rounded-xl"
-                                                style={{ border: '1px solid #ececec', background: '#fff' }}
+                                                whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.12)' }}
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => navigate(`/order-tracking/${item.orderId}`)}
+                                                className="p-4 mb-3 rounded-xl cursor-pointer transition-all"
+                                                style={{ 
+                                                    border: '1.5px solid #e8e8e8',
+                                                    background: 'linear-gradient(135deg, #ffffff 0%, #fbfbfb 100%)',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                                                    cursor: 'pointer',
+                                                    backdropFilter: 'blur(10px)',
+                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                }}
                                             >
                                                 <div className="d-flex flex-wrap align-items-center justify-content-between">
                                                     <div>
-                                                        <div className="font-weight-bold" style={{ color: '#111' }}>{item.orderId}</div>
-                                                        <div className="small text-muted mt-1 d-flex align-items-center">
-                                                            <Clock3 size={13} className="mr-1" />
-                                                            {new Date(item.updatedAt).toLocaleString()}
+                                                        <div className="font-weight-bold" style={{ color: '#0f0f10', fontSize: '16px', letterSpacing: '0.3px' }}>
+                                                            {item.orderId}
+                                                        </div>
+                                                        <div className="small text-muted mt-2 d-flex align-items-center" style={{ fontSize: '12px' }}>
+                                                            <Clock3 size={13} className="mr-2" style={{ color: '#8b7355' }} />
+                                                            {new Date(item.updatedAt).toLocaleString('en-IN', { 
+                                                                day: 'numeric', 
+                                                                month: 'short', 
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
                                                         </div>
                                                     </div>
-                                                    <div className="d-flex align-items-center mt-2 mt-md-0">
+                                                    <div className="d-flex align-items-center mt-2 mt-md-0" style={{ gap: '12px' }}>
                                                         <span
-                                                            className="px-3 py-2 rounded-pill font-weight-bold small"
-                                                            style={{ background: statusStyle.bg, color: statusStyle.color }}
+                                                            className="px-4 py-2 rounded-pill font-weight-bold"
+                                                            style={{ 
+                                                                background: statusStyle.bg, 
+                                                                color: statusStyle.color,
+                                                                fontSize: '13px',
+                                                                fontWeight: 700,
+                                                                letterSpacing: '0.5px',
+                                                                boxShadow: `0 4px 12px ${statusStyle.color}20`
+                                                            }}
                                                         >
                                                             {label}
                                                         </span>
                                                     </div>
                                                 </div>
 
-                                                <div className="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-3" style={{ borderTop: '1px dashed #eee' }}>
-                                                    <div className="small text-muted">
-                                                        Amount: <span className="font-weight-bold text-dark">₹{Number(item.finalAmount || 0).toLocaleString('en-IN')}</span>
+                                                <div className="d-flex flex-wrap align-items-center justify-content-between mt-4 pt-4" style={{ borderTop: '1px solid #f0f0f0' }}>
+                                                    <div className="small" style={{ color: '#666' }}>
+                                                        <span style={{ fontSize: '12px', color: '#999' }}>Amount</span>
+                                                        <div className="font-weight-bold mt-1" style={{ fontSize: '18px', color: '#8b6c2f' }}>
+                                                            ₹{Number(item.finalAmount || 0).toLocaleString('en-IN')}
+                                                        </div>
                                                     </div>
-                                                    <div className="d-flex mt-2 mt-md-0">
-                                                        <button
-                                                            onClick={() => navigate(`/order-tracking/${item.orderId}`)}
-                                                            className="btn btn-dark btn-sm rounded-pill px-3 mr-2"
-                                                        >
-                                                            Track Now <ArrowRight size={14} className="ml-1" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => window.open(`/order-tracking/${item.orderId}`, '_blank')}
-                                                            className="btn btn-outline-dark btn-sm rounded-pill px-3"
-                                                        >
-                                                            Full Screen <ExternalLink size={13} className="ml-1" />
-                                                        </button>
-                                                    </div>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            navigate(`/order-tracking/${item.orderId}`)
+                                                        }}
+                                                        className="btn btn-dark btn-sm rounded-pill px-4"
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #1a1a1a, #2d2d2d)',
+                                                            border: 'none',
+                                                            fontWeight: 700,
+                                                            letterSpacing: '0.3px',
+                                                            boxShadow: '0 6px 16px rgba(15,15,16,0.22)',
+                                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                        }}
+                                                    >
+                                                        Track Now <ArrowRight size={14} className="ml-2" />
+                                                    </button>
                                                 </div>
                                             </motion.div>
                                         )
                                     })}
 
-                                    <div className="text-center mt-2">
+                                    <div className="text-center mt-4">
                                         <Link to="/my-orders" className="btn btn-dark btn-sm px-4 rounded-pill mr-2 mb-2">
                                             My Orders
                                         </Link>
