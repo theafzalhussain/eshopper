@@ -735,7 +735,10 @@ const sendWhatsApp = async (number, message) => {
             console.error('⚠️  Failed to send admin alert:', alertError.message);
         }
 
-        throw new Error('Cannot send message to bot\'s own number (self-loop prevention)');
+        const selfLoopError = new Error('Cannot send message to bot\'s own number (self-loop prevention)');
+        selfLoopError.code = 'WHATSAPP_SELF_LOOP';
+        selfLoopError.isExpected = true;
+        throw selfLoopError;
     }
 
     try {
@@ -834,6 +837,13 @@ const sendWhatsApp = async (number, message) => {
         });
         throw error;
     }
+};
+
+const isExpectedWhatsAppError = (error) => {
+    if (!error) return false;
+    if (error.code === 'WHATSAPP_SELF_LOOP' || error.isExpected === true) return true;
+    const msg = String(error.message || '').toLowerCase();
+    return msg.includes('self-loop prevention') || msg.includes('bot\'s own number');
 };
 
 const sendOrderWhatsAppNotification = async ({ phone, orderId, status, customerName, trackingLink }) => {
@@ -952,8 +962,12 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                 await sendWhatsApp(phone, whatsappMsg);
                 console.log(`✅ Packed WhatsApp sent for ${orderId}`);
             } catch (waErr) {
-                console.error(`⚠️  Packed WhatsApp failed (non-critical):`, waErr.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                if (isExpectedWhatsAppError(waErr)) {
+                    console.warn(`⚠️  Packed WhatsApp skipped (expected):`, waErr.message);
+                } else {
+                    console.error(`⚠️  Packed WhatsApp failed (non-critical):`, waErr.message);
+                    if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                }
             }
 
             // Send packed email
@@ -984,8 +998,12 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                 await sendWhatsAppMedia(phone, mediaUrl, caption);
                 console.log(`✅ Shipped WhatsApp media sent for ${orderId}`);
             } catch (waErr) {
-                console.error(`⚠️  Shipped WhatsApp media failed (non-critical):`, waErr.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                if (isExpectedWhatsAppError(waErr)) {
+                    console.warn(`⚠️  Shipped WhatsApp skipped (expected):`, waErr.message);
+                } else {
+                    console.error(`⚠️  Shipped WhatsApp media failed (non-critical):`, waErr.message);
+                    if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                }
             }
 
             // Send shipped email
@@ -1014,8 +1032,12 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                 await sendWhatsApp(phone, whatsappMsg);
                 console.log(`✅ Delivered WhatsApp sent for ${orderId}`);
             } catch (waErr) {
-                console.error(`⚠️  Delivered WhatsApp failed (non-critical):`, waErr.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                if (isExpectedWhatsAppError(waErr)) {
+                    console.warn(`⚠️  Delivered WhatsApp skipped (expected):`, waErr.message);
+                } else {
+                    console.error(`⚠️  Delivered WhatsApp failed (non-critical):`, waErr.message);
+                    if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                }
             }
 
             // Send delivery celebration email
@@ -2203,8 +2225,12 @@ app.post('/api/place-order', async (req, res) => {
                 }
             }
         } catch (waError) {
-            console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
-            if (process.env.SENTRY_DSN) Sentry.captureException(waError);
+            if (isExpectedWhatsAppError(waError)) {
+                console.warn(`⚠️  Order WhatsApp skipped (expected) for ${orderId}:`, waError.message);
+            } else {
+                console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(waError);
+            }
         }
 
         return res.status(201).json({
