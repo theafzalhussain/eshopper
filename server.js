@@ -491,19 +491,24 @@ const buildInvoiceHtml = ({
                 .items-section { margin: 32px 0; }
                 .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
                 table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; }
-                td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; }
+                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; white-space: nowrap; }
+                td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; word-wrap: break-word; }
+                td:nth-child(4), td:nth-child(5) { font-weight: 800; color: #0f0f0f; text-align: right; padding-right: 16px; }
                 tr:nth-child(odd) { background: #fafaf8; }
                 tr:hover { background: #f5f0e6; }
                 .totals-section { margin: 32px 0; }
-                .totals { border: 3px solid #d4af37; border-radius: 14px; padding: 24px 28px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 4px 16px rgba(212,175,55,0.1); }
-                .totals-row { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; padding: 12px 0; border-bottom: 1px solid #e8dcc8; }
-                .totals-row:last-child { border-bottom: none; }
-                .totals-label { font-weight: 600; color: #0f0f0f; font-size: 14px; }
-                .totals-value { text-align: right; font-weight: 700; color: #0f0f0f; font-size: 15px; }
-                .final-row { background: linear-gradient(135deg, #d4af37 0%, #8b7521 100%); color: #fff; padding: 18px 24px !important; border-radius: 10px; margin-top: 12px; display: grid; grid-template-columns: auto 1fr auto; gap: 20px; border: none !important; }
-                .final-label { font-weight: 700; font-size: 16px; }
-                .final-value { text-align: right; font-size: 28px; font-weight: 800; letter-spacing: 0.5px; }
+                .summary-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+                .summary-box { border: 2px solid #d4af37; border-radius: 12px; padding: 18px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
+                .summary-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 10px; }
+                .summary-value { font-size: 18px; font-weight: 900; color: #0f0f0f; word-break: break-word; }
+                .qr-section { border: 2px solid #d4af37; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
+                .qr-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 14px; }
+                .qr-code { display: inline-block; width: 160px; height: 160px; }
+                .qr-info { font-size: 12px; color: #666; margin-top: 12px; }
+                .totals { border: 3px solid #d4af37; border-radius: 14px; padding: 24px 28px; background: linear-gradient(135deg, #a37f1f 0%, #d4af37 50%, #8b7521 100%); box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
+                .final-row { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; padding: 20px 0; border: none !important; }
+                .final-label { font-weight: 800; font-size: 18px; color: #fff; letter-spacing: 0.5px; }
+                .final-value { text-align: right; font-size: 32px; font-weight: 900; letter-spacing: 1px; color: #fff; }
                 .address-section { margin: 32px 0; }
                 .ship { border: 2px solid #d4af37; border-radius: 12px; padding: 20px 24px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); font-size: 13px; line-height: 1.8; color: #2c2c2c; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
                 .ship-title { font-weight: 700; color: #0f0f0f; margin-bottom: 14px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; }
@@ -527,8 +532,12 @@ const buildInvoiceHtml = ({
                     .k { font-size: 9px; }
                     .v { font-size: 13px; }
                     th, td { padding: 10px 8px; font-size: 12px; }
-                    .final-row { grid-template-columns: auto 1fr auto; }
-                    .final-value { font-size: 22px; }
+                    .summary-boxes { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+                    .summary-box { padding: 14px 12px; }
+                    .summary-label { font-size: 10px; }
+                    .summary-value { font-size: 16px; }
+                    .qr-code { width: 140px; height: 140px; }
+                    .final-value { font-size: 26px; }
                 }
                 @media (max-width: 480px) {
                     .wrap { padding: 8px; }
@@ -541,7 +550,18 @@ const buildInvoiceHtml = ({
                     .meta { grid-template-columns: 1fr; gap: 10px; }
                     table { font-size: 11px; }
                     th, td { padding: 8px 6px; }
-                    .final-value { font-size: 18px; }
+                    .summary-boxes { grid-template-columns: 1fr; gap: 10px; margin-bottom: 16px; }
+                    .summary-box { padding: 12px 10px; }
+                    .summary-label { font-size: 9px; margin-bottom: 8px; }
+                    .summary-value { font-size: 14px; }
+                    .qr-section { padding: 16px; margin-bottom: 16px; }
+                    .qr-label { font-size: 11px; margin-bottom: 10px; }
+                    .qr-code { width: 120px; height: 120px; }
+                    .qr-info { font-size: 11px; }
+                    .totals { padding: 16px 14px; }
+                    .final-label { font-size: 14px; }
+                    .final-value { font-size: 20px; }
+                    .final-row { gap: 10px; padding: 14px 0; }
                 }
             </style>
         </head>
@@ -594,29 +614,48 @@ const buildInvoiceHtml = ({
                             </table>
                         </div>
 
-                        <!-- TOTALS SECTION -->
+                        <!-- SUMMARY BOXES -->
                         <div class="totals-section">
-                            <div class="totals">
-                                <div class="totals-row">
-                                    <span class="totals-label">Subtotal</span>
-                                    <span></span>
-                                    <span class="totals-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                            <div class="summary-boxes">
+                                <div class="summary-box">
+                                    <div class="summary-label">📦 Subtotal</div>
+                                    <div class="summary-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
                                 </div>
-                                <div class="totals-row">
-                                    <span class="totals-label">Shipping</span>
-                                    <span></span>
-                                    <span class="totals-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</span>
+                                <div class="summary-box">
+                                    <div class="summary-label">🚚 Shipping</div>
+                                    <div class="summary-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</div>
                                 </div>
-                                <div class="totals-row">
-                                    <span class="totals-label">Taxes & Fees</span>
-                                    <span></span>
-                                    <span class="totals-value">Included</span>
+                                <div class="summary-box">
+                                    <div class="summary-label">📊 Taxes</div>
+                                    <div class="summary-value">Included</div>
                                 </div>
-                                <div class="final-row">
-                                    <span class="final-label">💰 Total Payable</span>
-                                    <span></span>
-                                    <span class="final-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                                </div>
+                            </div>
+                        </div>
+
+                        <!-- QR CODE SECTION -->
+                        <div class="qr-section">
+                            <div class="qr-label">📱 Track Your Order</div>
+                            <svg class="qr-code" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="200" height="200" fill="white"/>
+                                <rect x="20" y="20" width="50" height="50" fill="black"/>
+                                <rect x="30" y="30" width="30" height="30" fill="white"/>
+                                <rect x="130" y="20" width="50" height="50" fill="black"/>
+                                <rect x="140" y="30" width="30" height="30" fill="white"/>
+                                <rect x="20" y="130" width="50" height="50" fill="black"/>
+                                <rect x="30" y="140" width="30" height="30" fill="white"/>
+                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.3"/>
+                                <circle cx="80" cy="60" r="8" fill="black" opacity="0.3"/>
+                                <circle cx="140" cy="140" r="8" fill="black" opacity="0.3"/>
+                            </svg>
+                            <div class="qr-info">Scan to track your package in real-time</div>
+                        </div>
+
+                        <!-- FINAL TOTAL -->
+                        <div class="totals">
+                            <div class="final-row">
+                                <span class="final-label">💰 TOTAL PAYABLE</span>
+                                <span></span>
+                                <span class="final-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                             </div>
                         </div>
 
