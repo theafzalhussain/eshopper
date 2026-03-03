@@ -674,7 +674,7 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
         });
         
         // Wait for any animations/fonts to load
-        await page.waitForTimeout(2000);
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Generate PDF
         const pdf = await page.pdf({
