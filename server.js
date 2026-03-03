@@ -446,11 +446,11 @@ const buildInvoiceHtml = ({
         const itemDesc = item.name ? `${item.name}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}` : 'Product';
         return `
             <tr>
-                <td>${String(idx + 1).padStart(2, '0')}</td>
-                <td><strong>${itemDesc}</strong>${item.sku ? `<br/><span style="font-size:11px;color:#999;">SKU: ${item.sku}</span>` : ''}</td>
-                <td>${qty}</td>
-                <td>₹${price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                <td>₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                <td style="width:8%; text-align:center;">${String(idx + 1).padStart(2, '0')}</td>
+                <td style="width:40%;"><strong>${itemDesc}</strong>${item.sku ? `<br/><span style="font-size:10px;color:#999;">SKU: ${item.sku}</span>` : ''}</td>
+                <td style="width:12%; text-align:center; font-weight:600;">${qty}</td>
+                <td style="width:20%; text-align:right; font-weight:600;">₹${price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                <td style="width:20%; text-align:right; font-weight:700; color:#d4af37;">₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
             </tr>
         `;
     }).join('');
@@ -466,142 +466,180 @@ const buildInvoiceHtml = ({
                 * { box-sizing: border-box; margin: 0; padding: 0; }
                 html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                 body { background: #f5f5f3; color: #121212; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; }
-                .wrap { max-width: 900px; margin: 0 auto; padding: 20px; }
-                .card { background: #fff; border: 2px solid #d4af37; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-                .head { padding: 32px; background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #d4af37 100%); color: #fff; box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.2); }
-                .brand { font-family: 'Playfair Display', serif; font-size: 48px; font-weight: 700; letter-spacing: 3px; margin: 0; display: flex; align-items: center; gap: 14px; white-space: nowrap; }
-                .brand-icon { font-size: 42px; color: #d4af37; text-shadow: 0 0 12px rgba(212, 175, 55, 0.8), 0 0 24px rgba(212, 175, 55, 0.4); animation: glow 2s ease-in-out infinite; }
-                .brand-text { background: linear-gradient(135deg, #fff9e6, #d4af37, #fff9e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-                @keyframes glow { 0%, 100% { text-shadow: 0 0 12px rgba(212, 175, 55, 0.8); } 50% { text-shadow: 0 0 20px rgba(212, 175, 55, 1); } }
-                .tag { font-size: 11px; letter-spacing: 2.5px; margin-top: 10px; text-transform: uppercase; color: #fff9e6; font-weight: 700; }
-                .body { padding: 32px; }
-                .title { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; margin: 0 0 24px; color: #0f0f0f; letter-spacing: 1px; }
-                .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
-                .box { border: 2px solid #d4af37; border-radius: 10px; padding: 14px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); transition: all 0.3s ease; }
-                .box:hover { border-color: #ff9d00; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15); }
+                .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
+                .card { background: #fff; border: 3px solid #d4af37; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
+                .head { padding: 40px 32px; background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #d4af37 100%); color: #fff; text-align: center; box-shadow: inset 0 0 30px rgba(212, 175, 55, 0.2); position: relative; overflow: hidden; }
+                .head::before { content: ''; position: absolute; top: -50%; right: -50%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(212,175,55,0.15), transparent); border-radius: 50%; }
+                .head-content { position: relative; z-index: 1; }
+                .logo-section { margin-bottom: 16px; }
+                .logo-icon { font-size: 64px; line-height: 1; margin: 0 0 12px 0; display: inline-block; animation: pulse-glow 1.5s ease-in-out infinite; }
+                @keyframes pulse-glow { 0%, 100% { text-shadow: 0 0 16px rgba(212,175,55,0.8), 0 0 32px rgba(212,175,55,0.4); transform: scale(1); } 50% { text-shadow: 0 0 24px rgba(212,175,55,1), 0 0 48px rgba(212,175,55,0.6); transform: scale(1.05); } }
+                .brand-name { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 700; letter-spacing: 4px; margin: 0 0 4px 0; background: linear-gradient(90deg, #fff9e6, #d4af37, #fff9e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+                .brand-tagline { font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: #ffd700; font-weight: 700; margin-top: 8px; }
+                .tag-badge { font-size: 11px; letter-spacing: 2px; margin-top: 14px; text-transform: uppercase; color: #fff9e6; font-weight: 700; display: inline-block; border: 1px solid #ffd700; padding: 6px 16px; border-radius: 20px; }
+                .body { padding: 36px; }
+                .title { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; margin: 0 0 28px; color: #0f0f0f; letter-spacing: 1px; text-align: center; }
+                .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+                .box { border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
+                .box:hover { border-color: #ff9d00; box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
                 .k { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; }
-                .v { font-size: 15px; font-weight: 700; margin-top: 6px; color: #0f0f0f; word-break: break-word; }
-                .items-section { margin-top: 24px; margin-bottom: 24px; }
+                .v { font-size: 15px; font-weight: 700; margin-top: 8px; color: #0f0f0f; word-break: break-word; }
+                .items-section { margin: 32px 0; }
+                .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
                 table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #d4af37; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 1px solid #d4af37; }
-                td { border: 1px solid #e8dcc8; padding: 12px; font-size: 13px; color: #2c2c2c; }
-                tr:nth-child(even) { background: #fafaf8; }
-                td:nth-child(1) { text-align: center; font-weight: 700; color: #d4af37; }
-                td:nth-child(3), td:nth-child(4), td:nth-child(5) { text-align: right; font-weight: 600; }
-                .totals { margin-top: 24px; border: 2px solid #d4af37; border-radius: 10px; padding: 18px 20px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); }
-                .totals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-                .line { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; color: #2c2c2c; font-size: 14px; border-bottom: 1px solid #e8dcc8; }
-                .line:last-child { border-bottom: none; }
-                .line-label { font-weight: 600; color: #0f0f0f; }
-                .line-value { font-weight: 700; color: #0f0f0f; font-size: 15px; }
-                .final { background: linear-gradient(135deg, #d4af37 0%, #8b7521 100%); color: #fff; padding: 16px 18px; border-radius: 8px; font-size: 18px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-top: 12px; letter-spacing: 0.5px; }
-                .final-label { font-size: 16px; }
-                .final-value { font-size: 22px; }
-                .address-section { margin-top: 24px; }
-                .ship { border: 2px solid #d4af37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); font-size: 13px; line-height: 1.8; color: #2c2c2c; }
-                .ship-title { font-weight: 700; color: #0f0f0f; margin-bottom: 10px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
-                .ship-addr { font-size: 13px; color: #0f0f0f; line-height: 1.7; }
-                .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #e8dcc8; }
-                .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.6; }
-                .foot-premium { color: #d4af37; font-weight: 700; margin-top: 12px; font-size: 13px; letter-spacing: 1px; }
+                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; }
+                td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; }
+                tr:nth-child(odd) { background: #fafaf8; }
+                tr:hover { background: #f5f0e6; }
+                .totals-section { margin: 32px 0; }
+                .totals { border: 3px solid #d4af37; border-radius: 14px; padding: 24px 28px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 4px 16px rgba(212,175,55,0.1); }
+                .totals-row { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; padding: 12px 0; border-bottom: 1px solid #e8dcc8; }
+                .totals-row:last-child { border-bottom: none; }
+                .totals-label { font-weight: 600; color: #0f0f0f; font-size: 14px; }
+                .totals-value { text-align: right; font-weight: 700; color: #0f0f0f; font-size: 15px; }
+                .final-row { background: linear-gradient(135deg, #d4af37 0%, #8b7521 100%); color: #fff; padding: 18px 24px !important; border-radius: 10px; margin-top: 12px; display: grid; grid-template-columns: auto 1fr auto; gap: 20px; border: none !important; }
+                .final-label { font-weight: 700; font-size: 16px; }
+                .final-value { text-align: right; font-size: 28px; font-weight: 800; letter-spacing: 0.5px; }
+                .address-section { margin: 32px 0; }
+                .ship { border: 2px solid #d4af37; border-radius: 12px; padding: 20px 24px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); font-size: 13px; line-height: 1.8; color: #2c2c2c; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
+                .ship-title { font-weight: 700; color: #0f0f0f; margin-bottom: 14px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; }
+                .ship-addr { font-size: 13px; color: #0f0f0f; line-height: 1.8; }
+                .footer { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e8dcc8; }
+                .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.8; }
+                .foot-premium { color: #d4af37; font-weight: 700; margin-top: 14px; font-size: 13px; letter-spacing: 1px; }
                 @media (max-width: 768px) {
                     .wrap { padding: 12px; }
-                    .head { padding: 20px; }
-                    .body { padding: 20px; }
-                    .brand { font-size: 32px; gap: 8px; }
-                    .brand-icon { font-size: 28px; }
-                    .title { font-size: 22px; }
-                    .meta { grid-template-columns: 1fr; gap: 10px; }
-                    .box { padding: 10px 12px; }
-                    .totals-grid { grid-template-columns: 1fr; }
+                    .head { padding: 28px 20px; }
+                    .body { padding: 24px; }
+                    .brand-name { font-size: 40px; letter-spacing: 2px; }
+                    .logo-icon { font-size: 48px; }
+                    .title { font-size: 24px; }
+                    .meta { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+                    .box { padding: 12px 14px; }
+                    .k { font-size: 9px; }
+                    .v { font-size: 13px; }
                     th, td { padding: 10px 8px; font-size: 12px; }
-                    .final { flex-direction: column; gap: 8px; text-align: center; }
+                    .final-row { grid-template-columns: auto 1fr auto; }
+                    .final-value { font-size: 22px; }
                 }
                 @media (max-width: 480px) {
                     .wrap { padding: 8px; }
-                    .head { padding: 16px; }
+                    .head { padding: 20px 16px; }
                     .body { padding: 16px; }
-                    .brand { font-size: 24px; }
-                    .brand-icon { font-size: 22px; }
+                    .brand-name { font-size: 28px; letter-spacing: 1px; }
+                    .brand-tagline { font-size: 11px; letter-spacing: 1px; }
+                    .logo-icon { font-size: 40px; }
                     .title { font-size: 18px; margin-bottom: 16px; }
+                    .meta { grid-template-columns: 1fr; gap: 10px; }
                     table { font-size: 11px; }
                     th, td { padding: 8px 6px; }
+                    .final-value { font-size: 18px; }
                 }
             </style>
         </head>
         <body>
             <div class="wrap">
                 <div class="card">
+                    <!-- PREMIUM HEADER -->
                     <div class="head">
-                        <h1 class="brand"><span class="brand-icon">✨</span><span class="brand-text">EShoppper</span></h1>
-                        <div class="tag">🏆 Boutique Luxe • Premium Invoice</div>
+                        <div class="head-content">
+                            <div class="logo-section">
+                                <div class="logo-icon">✨</div>
+                            </div>
+                            <h1 class="brand-name">eShopper</h1>
+                            <div class="brand-tagline">Boutique Luxe</div>
+                            <div class="tag-badge">🏆 Premium Invoice</div>
+                        </div>
                     </div>
+
+                    <!-- MAIN CONTENT -->
                     <div class="body">
-                        <h2 class="title">Premium Order Invoice</h2>
+                        <h2 class="title">TAX INVOICE</h2>
                         
+                        <!-- ORDER DETAILS -->
                         <div class="meta">
-                            <div class="box"><div class="k">Order ID</div><div class="v">${orderId}</div></div>
-                            <div class="box"><div class="k">Order Date</div><div class="v">${orderDateText}</div></div>
-                            <div class="box"><div class="k">Customer Name</div><div class="v">${displayName}</div></div>
-                            <div class="box"><div class="k">Customer Email</div><div class="v">${userEmail || 'N/A'}</div></div>
-                            <div class="box"><div class="k">Payment Method</div><div class="v">${paymentMethod || 'COD'}</div></div>
-                            <div class="box"><div class="k">Status</div><div class="v">${paymentStatus || 'Pending'}</div></div>
+                            <div class="box"><div class="k">🆔 Order ID</div><div class="v">${orderId}</div></div>
+                            <div class="box"><div class="k">📅 Date</div><div class="v">${orderDateText}</div></div>
+                            <div class="box"><div class="k">👤 Customer</div><div class="v">${displayName.split(' ')[0]}</div></div>
                         </div>
 
+                        <!-- ITEMS TABLE -->
                         <div class="items-section">
+                            <div class="section-title">📦 Order Items</div>
                             <table>
                                 <thead>
                                     <tr>
-                                        <th style="width:5%">#</th>
-                                        <th style="width:45%">Item Description</th>
-                                        <th style="width:10%;">Qty</th>
-                                        <th style="width:20%;">Unit Price</th>
-                                        <th style="width:20%;">Subtotal</th>
+                                        <th style="width:8%">#</th>
+                                        <th style="width:40%">Description</th>
+                                        <th style="width:12%">Qty</th>
+                                        <th style="width:20%">Unit Price</th>
+                                        <th style="width:20%">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
                             </table>
                         </div>
 
-                        <div class="totals">
-                            <div class="totals-grid">
-                                <div>
-                                    <div class="line">
-                                        <span class="line-label">Subtotal:</span>
-                                        <span class="line-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                                    </div>
-                                    <div class="line">
-                                        <span class="line-label">Shipping Charges:</span>
-                                        <span class="line-value">${shipping <= 0 ? 'FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</span>
-                                    </div>
+                        <!-- TOTALS SECTION -->
+                        <div class="totals-section">
+                            <div class="totals">
+                                <div class="totals-row">
+                                    <span class="totals-label">Subtotal</span>
+                                    <span></span>
+                                    <span class="totals-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
                                 </div>
-                                <div></div>
-                            </div>
-                            <div class="final">
-                                <span class="final-label">Total Amount Payable</span>
-                                <span class="final-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                <div class="totals-row">
+                                    <span class="totals-label">Shipping</span>
+                                    <span></span>
+                                    <span class="totals-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</span>
+                                </div>
+                                <div class="totals-row">
+                                    <span class="totals-label">Taxes & Fees</span>
+                                    <span></span>
+                                    <span class="totals-value">Included</span>
+                                </div>
+                                <div class="final-row">
+                                    <span class="final-label">💰 Total Payable</span>
+                                    <span></span>
+                                    <span class="final-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                </div>
                             </div>
                         </div>
 
+                        <!-- PAYMENT & ORDER INFO -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 28px 0;">
+                            <div class="box">
+                                <div class="k">💳 Payment Method</div>
+                                <div class="v">${paymentMethod || 'Cash on Delivery'}</div>
+                            </div>
+                            <div class="box">
+                                <div class="k">📊 Payment Status</div>
+                                <div class="v">${paymentStatus || 'Pending'}</div>
+                            </div>
+                        </div>
+
+                        <!-- DELIVERY ADDRESS -->
                         <div class="address-section">
+                            <div class="section-title">📍 Delivery Address</div>
                             <div class="ship">
-                                <div class="ship-title">📍 Delivery Address</div>
+                                <div class="ship-title">Recipient</div>
                                 <div class="ship-addr">
                                     <strong>${shippingAddress?.fullName || 'Customer'}</strong><br/>
                                     ${shippingAddress?.addressline1 || 'Address Line'}<br/>
                                     ${shippingAddress?.city || 'City'}, ${shippingAddress?.state || 'State'} - ${shippingAddress?.pin || 'PIN'}<br/>
                                     ${shippingAddress?.country || 'India'}<br/>
-                                    <strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}
+                                    <strong style="color:#d4af37;">📱 Phone:</strong> ${shippingAddress?.phone || 'N/A'}
                                 </div>
                             </div>
                         </div>
 
+                        <!-- FOOTER -->
                         <div class="footer">
                             <div class="foot">
                                 This is a computer-generated invoice and does not require a physical signature.<br/>
-                                For inquiries, contact: <strong>support@eshopperr.me</strong>
+                                <strong>For support:</strong> support@eshopperr.me | <strong>Website:</strong> eshopperr.me
                             </div>
-                            <div class="foot-premium">💎 EShoppper Premium Edition • Authenticity Guaranteed 💎</div>
+                            <div class="foot-premium">💎 eShopper Boutique Luxe • Premium Edition • Authenticity Guaranteed 💎</div>
                         </div>
                     </div>
                 </div>
