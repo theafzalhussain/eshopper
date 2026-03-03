@@ -637,12 +637,30 @@ const sendWhatsApp = async (number, message) => {
 
     // 🔴 STRICT PHONE FORMAT CONVERSION (91 + 10 digits)
     const normalizePhoneStrict = (phone = '') => {
-        const digits = String(phone || '').replace(/\D/g, '');
+        let digits = String(phone || '').replace(/\D/g, '');
         if (!digits) return '';
-        if (digits.length === 10) return `91${digits}`;
-        if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`;
-        if (digits.length === 12 && digits.startsWith('91')) return digits;
-        return digits;
+
+        if (digits.length === 11 && digits.startsWith('0')) {
+            digits = digits.slice(1);
+        }
+
+        if (digits.length === 12 && digits.startsWith('91')) {
+            return digits;
+        }
+
+        if (digits.length > 10 && digits.startsWith('91')) {
+            digits = digits.slice(-10);
+        }
+
+        if (digits.length === 10) {
+            return `91${digits}`;
+        }
+
+        if (digits.length > 10) {
+            return `91${digits.slice(-10)}`;
+        }
+
+        return '';
     };
 
     const contactNumber = normalizePhoneStrict(number);
@@ -832,12 +850,30 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
     const instance = process.env.WHATSAPP_INSTANCE || 'eshopper_bot';
 
     const normalizePhoneStrict = (phone = '') => {
-        const digits = String(phone || '').replace(/\D/g, '');
+        let digits = String(phone || '').replace(/\D/g, '');
         if (!digits) return '';
-        if (digits.length === 10) return `91${digits}`;
-        if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`;
-        if (digits.length === 12 && digits.startsWith('91')) return digits;
-        return digits;
+
+        if (digits.length === 11 && digits.startsWith('0')) {
+            digits = digits.slice(1);
+        }
+
+        if (digits.length === 12 && digits.startsWith('91')) {
+            return digits;
+        }
+
+        if (digits.length > 10 && digits.startsWith('91')) {
+            digits = digits.slice(-10);
+        }
+
+        if (digits.length === 10) {
+            return `91${digits}`;
+        }
+
+        if (digits.length > 10) {
+            return `91${digits.slice(-10)}`;
+        }
+
+        return '';
     };
 
     const contactNumber = normalizePhoneStrict(number);
@@ -2144,7 +2180,7 @@ app.post('/api/place-order', async (req, res) => {
         }
 
         try {
-            const phoneNumber = user.phone || addressPayload?.phone;
+            const phoneNumber = addressPayload?.phone || user.phone;
             console.log(`📱 WhatsApp Debug Info:
    User Phone: ${user.phone || '❌ Not in user object'}
    Address Phone: ${addressPayload?.phone || '❌ Not in address'}
@@ -2154,9 +2190,17 @@ app.post('/api/place-order', async (req, res) => {
             if (!phoneNumber) {
                 console.warn(`⚠️  No phone number found for order ${orderId}, skipping WhatsApp`);
             } else {
-                const whatsappMessage = `Luxe Experience Starts Now! 💎 Hi ${user.name || 'Customer'}, your Eshopper Boutique order for Rs.${Number(total || 0).toFixed(0)} is confirmed! Check progress: https://eshopperr.me/orders`;
-                await sendWhatsApp(phoneNumber, whatsappMessage);
-                console.log(`✅ Order placement WhatsApp sent for order ${orderId}`);
+                const mediaUrl = 'https://res.cloudinary.com/dtfvoxw1p/image/upload/v1724068341/order_success_lux.png';
+                const caption = `Luxury Experience Starts Now! 💎\n\nHello ${user.name || 'Customer'}, we are thrilled to process your boutique order #${orderId} totaling Rs.${Number(payable || 0).toFixed(0)}.\n\nWhat happens next?\nOur artisans are now hand-preparing your selection for premium delivery.\n\n📍 Track Your Journey: https://eshopperr.me/orders`;
+
+                try {
+                    await sendWhatsAppMedia(phoneNumber, mediaUrl, caption);
+                    console.log(`✅ Order placement WhatsApp media sent for order ${orderId}`);
+                } catch (mediaError) {
+                    console.warn(`⚠️ WhatsApp media failed for ${orderId}, falling back to text:`, mediaError.message);
+                    await sendWhatsApp(phoneNumber, caption);
+                    console.log(`✅ Order placement WhatsApp text fallback sent for order ${orderId}`);
+                }
             }
         } catch (waError) {
             console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
