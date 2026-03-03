@@ -44,9 +44,40 @@ export default function OrderTracking() {
   const [socketConnected, setSocketConnected] = useState(false)
   const [toast, setToast] = useState(null)
   const [didCelebrate, setDidCelebrate] = useState(false)
+  const [statusTimeline, setStatusTimeline] = useState([])
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false)
 
   const activeIndex = useMemo(() => Math.max(0, STEPS.indexOf(status)), [status])
   const progressPercent = useMemo(() => (activeIndex / (STEPS.length - 1)) * 100, [activeIndex])
+
+  const downloadInvoice = async () => {
+    if (!orderId || !userId) return
+    try {
+      setDownloadingInvoice(true)
+      const response = await axios.get(`${BASE_URL}/api/order/${orderId}/invoice?userId=${userId}`, {
+        responseType: 'blob',
+        timeout: 30000
+      })
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Invoice-${orderId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      showStatusToast('Downloaded')
+    } catch (e) {
+      setToast({
+        id: Date.now(),
+        title: '❌ Download Failed',
+        message: 'Unable to download invoice right now'
+      })
+    } finally {
+      setDownloadingInvoice(false)
+    }
+  }
 
   const showStatusToast = (nextStatus) => {
     const statusText = normalizeStatus(nextStatus)
@@ -113,6 +144,16 @@ export default function OrderTracking() {
         setOrder(data)
         const initialStatus = normalizeStatus(data?.orderStatus)
         setStatus(initialStatus)
+        
+        // Initialize status timeline from order
+        if (data?.statusHistory && Array.isArray(data.statusHistory)) {
+          setStatusTimeline(data.statusHistory)
+        } else {
+          // Create default timeline if not available
+          setStatusTimeline([
+            { status: 'Ordered', timestamp: data?.createdAt || new Date().toISOString() }
+          ])
+        }
         console.log('✅ Order fetched:', data)
       } catch (e) {
         if (!mounted) return
@@ -163,6 +204,16 @@ export default function OrderTracking() {
               return nextStatus
             })
             setOrder((prev) => ({ ...(prev || {}), updatedAt: payload.updatedAt || new Date().toISOString() }))
+            
+            // Add to timeline
+            setStatusTimeline((prev) => [
+              ...prev,
+              {
+                status: nextStatus,
+                timestamp: payload.updatedAt || new Date().toISOString()
+              }
+            ])
+            
             datadogRum.addAction('orderStatusUpdated', {
               orderId,
               newStatus: nextStatus,
@@ -286,19 +337,85 @@ export default function OrderTracking() {
           className="p-4 p-md-5 shadow-lg rounded-3xl bg-white"
           style={{ border: '1px solid #f1e8d1', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}
         >
-          {/* ORDER INFO */}
-          <div className="d-flex justify-content-between align-items-center mb-4 pb-3" style={{ borderBottom: '2px solid #f0f0f0' }}>
-            <div>
-              <p className="text-muted small mb-1">Order ID</p>
-              <p className="font-weight-bold" style={{ fontSize: '16px', color: '#111' }}>{orderId}</p>
+          {/* ORDER INFO - PREMIUM LAYOUT */}
+          <div className="p-4 rounded-xl mb-4" style={{ background: '#f9f9f7', border: '1px solid #f0e8d8' }}>
+            <div className="row">
+              <div className="col-md-6 mb-3 mb-md-0">
+                <p className="text-muted small mb-1">Order ID</p>
+                <p className="font-weight-bold" style={{ fontSize: '18px', color: '#111' }}>
+                  {orderId}
+                </p>
+              </div>
+              <div className="col-md-6 text-md-right">
+                {order?.finalAmount && (
+                  <div>
+                    <p className="text-muted small mb-1">Total Amount</p>
+                    <p className="font-weight-bold" style={{ fontSize: '18px', background: 'linear-gradient(135deg, #d4af37, #b8860b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                      ₹{Number(order.finalAmount).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="text-right">
+          </div>
+
+          {/* ESTIMATED DELIVERY */}
+          {order?.estimatedDelivery && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="p-4 rounded-xl mb-4"
+              style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', border: '2px solid #fbbf24' }}
+            >
+              <div className="d-flex align-items-center">
+                <div style={{ fontSize: '32px', marginRight: '16px' }}>📅</div>
+                <div>
+                  <p className="text-muted small mb-1" style={{ color: '#92400e' }}>Expected Delivery</p>
+                  <p className="font-weight-bold mb-0" style={{ fontSize: '18px', color: '#78350f' }}>
+                    {new Date(order.estimatedDelivery).toLocaleDateString('en-IN', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
+                  {order?.shippingAddress?.city && (
+                    <p style={{ fontSize: '12px', color: '#92400e', marginTop: '4px' }}>
+                      📍 Delivering to {order.shippingAddress.city}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* LIVE CONNECTED BADGE - WITH PULSE ANIMATION */}
+          <div className="d-flex justify-content-center mb-4">
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              {socketConnected && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0.7, 0.3, 0.7] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  style={{
+                    position: 'absolute',
+                    inset: '-8px',
+                    background: '#10b981',
+                    borderRadius: '9999px',
+                    zIndex: 0
+                  }}
+                />
+              )}
               <div
-                className="px-3 py-2 rounded-pill text-white font-weight-bold"
+                className="px-4 py-2 rounded-full text-white font-weight-bold d-inline-block"
                 style={{
                   background: socketConnected ? '#10b981' : '#ef4444',
-                  fontSize: '12px',
-                  boxShadow: socketConnected ? '0 0 10px rgba(16,185,129,0.3)' : 'none'
+                  fontSize: '13px',
+                  position: 'relative',
+                  zIndex: 1,
+                  boxShadow: socketConnected ? '0 4px 12px rgba(16,185,129,0.3)' : 'none',
+                  letterSpacing: '0.5px'
                 }}
               >
                 {socketConnected ? '🟢 Live Connected' : '🔴 Connecting...'}
@@ -306,7 +423,60 @@ export default function OrderTracking() {
             </div>
           </div>
 
-          {/* PROGRESS BAR WITH ANIMATION */}
+          {/* PRODUCT THUMBNAIL */}
+          {order?.products && order.products.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mb-4 p-3 rounded-lg"
+              style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
+            >
+              <p className="small text-muted mb-2">Ordered Item</p>
+              <div className="d-flex align-items-center">
+                {order.products[0]?.image ? (
+                  <div style={{ 
+                    width: '60px', 
+                    height: '60px', 
+                    marginRight: '12px',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    background: '#fff',
+                    border: '1px solid #ddd'
+                  }}>
+                    <img 
+                      src={order.products[0].image} 
+                      alt={order.products[0].title}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ 
+                    width: '60px', 
+                    height: '60px',
+                    marginRight: '12px',
+                    borderRadius: '8px',
+                    background: '#e5e7eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px'
+                  }}>
+                    📦
+                  </div>
+                )}
+                <div className="flex-grow-1">
+                  <p className="font-weight-bold small mb-1" style={{ color: '#111', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {order.products[0]?.title || 'Order Item'}
+                  </p>
+                  <p className="small text-muted mb-0">
+                    ₹{Number(order.products[0]?.price || 0).toLocaleString('en-IN')} 
+                    {order.products[0]?.quantity && ` × ${order.products[0].quantity}`}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
           <div style={{ position: 'relative', margin: '50px 0 30px' }}>
             {/* Background bar */}
             <div style={{ height: 10, borderRadius: 99, background: '#e5e7eb', overflow: 'hidden' }} />
@@ -430,32 +600,131 @@ export default function OrderTracking() {
             </p>
           </motion.div>
 
-          {/* ORDER AMOUNT */}
-          {order?.finalAmount && (
-            <div className="mt-4 p-3 rounded-lg" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
-              <p className="text-muted small mb-1">Order Amount</p>
-              <p className="font-weight-bold" style={{ fontSize: '18px', color: '#111' }}>
-                ₹ {order.finalAmount.toLocaleString('en-IN')}
-              </p>
+          {/* STATUS TIMELINE */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="mt-5 p-4 rounded-xl"
+            style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
+          >
+            <h5 className="font-weight-bold mb-4" style={{ color: '#111', fontSize: '16px', letterSpacing: '0.5px' }}>
+              📍 Status Timeline
+            </h5>
+            <div style={{ position: 'relative', paddingLeft: '20px' }}>
+              {statusTimeline.map((event, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.4 + idx * 0.05 }}
+                  style={{ marginBottom: idx < statusTimeline.length - 1 ? '20px' : 0, position: 'relative' }}
+                >
+                  {/* Timeline dot */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '-28px',
+                      top: '2px',
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      background: STATUS_COLOR[event.status] || '#d1a84a',
+                      border: '3px solid white',
+                      boxShadow: `0 0 0 2px ${STATUS_COLOR[event.status] || '#d1a84a'}33`
+                    }}
+                  />
+                  {/* Timeline line */}
+                  {idx < statusTimeline.length - 1 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '-23px',
+                        top: '12px',
+                        width: '2px',
+                        height: '20px',
+                        background: '#e5e7eb'
+                      }}
+                    />
+                  )}
+                  <div>
+                    <p className="font-weight-bold small mb-1" style={{ color: '#111', fontSize: '13px' }}>
+                      {event.status}
+                    </p>
+                    <p className="text-muted small mb-0" style={{ fontSize: '12px' }}>
+                      {new Date(event.timestamp).toLocaleString('en-IN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
-          )}
+          </motion.div>
 
           {/* ACTION BUTTONS */}
-          <div className="mt-5 d-flex gap-2">
-            <button
-              className="btn btn-dark rounded-pill px-4 flex-grow-1"
-              onClick={() => navigate('/profile')}
-              style={{ fontWeight: '600', fontSize: '14px' }}
-            >
-              ← Back to Profile
-            </button>
-            <button
-              className="btn btn-outline-dark rounded-pill px-4"
-              onClick={() => window.location.reload()}
-              style={{ fontWeight: '600', fontSize: '14px' }}
-            >
-              🔄 Refresh
-            </button>
+          <div className="mt-5">
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <button
+                  className="btn btn-dark rounded-pill px-4 btn-block"
+                  onClick={() => navigate('/profile')}
+                  style={{ fontWeight: '600', fontSize: '14px', padding: '12px 20px' }}
+                >
+                  ← Back to My Orders
+                </button>
+              </div>
+              <div className="col-md-6 mb-3">
+                <button
+                  className="btn btn-outline-dark rounded-pill px-4 btn-block"
+                  onClick={() => window.location.reload()}
+                  style={{ fontWeight: '600', fontSize: '14px', padding: '12px 20px' }}
+                >
+                  🔄 Refresh Status
+                </button>
+              </div>
+            </div>
+
+            {/* Secondary Actions */}
+            <div className="row mt-2">
+              <div className="col-md-6 mb-3">
+                <button
+                  className="btn btn-outline-warning rounded-pill px-4 btn-block"
+                  onClick={downloadInvoice}
+                  disabled={downloadingInvoice}
+                  style={{ 
+                    fontWeight: '600', 
+                    fontSize: '14px', 
+                    padding: '12px 20px',
+                    borderColor: '#d1a84a',
+                    color: '#7d6122'
+                  }}
+                >
+                  {downloadingInvoice ? '⏳ Preparing...' : '📄 Download Invoice'}
+                </button>
+              </div>
+              <div className="col-md-6">
+                <button
+                  className="btn rounded-pill px-4 btn-block"
+                  onClick={() => window.open('https://wa.me/918447859784', '_blank')}
+                  style={{ 
+                    fontWeight: '600', 
+                    fontSize: '14px', 
+                    padding: '12px 20px',
+                    background: '#25D366',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                  title="Chat with our Luxe Concierge"
+                >
+                  💬 Chat Support
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* FOOTER NOTE */}
@@ -465,8 +734,19 @@ export default function OrderTracking() {
         </motion.div>
       </div>
 
-      {/* Mobile-friendly CSS */}
+      {/* Mobile-friendly CSS & Animations */}
       <style>{`
+        @keyframes pulse-dot {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.7;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 0.3;
+          }
+        }
+
         @media (max-width: 576px) {
           .container {
             padding-left: 0 !important;
@@ -485,6 +765,22 @@ export default function OrderTracking() {
           }
           h1 {
             font-size: 24px !important;
+          }
+          .btn-block {
+            display: block;
+            width: 100%;
+          }
+          .text-md-right {
+            text-align: left;
+          }
+        }
+
+        @media (min-width: 768px) {
+          .text-md-right {
+            text-align: right;
+          }
+          .flex-md-grow {
+            flex-grow: 1;
           }
         }
       `}</style>

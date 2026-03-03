@@ -152,48 +152,77 @@ export default function MyOrders() {
           ))}
         </div>
 
+        {/* SEARCH BOX - Simple Clean Design */}
         <div className="p-3 p-md-4 bg-white rounded-xl shadow-sm mb-4" style={{ border: '1px solid #ededed' }}>
-          <div className="row">
-            <div className="col-md-5 mb-2 mb-md-0">
+          <div className="row align-items-center">
+            <div className="col-12 col-md-8 mb-2 mb-md-0">
               <input
                 type="text"
                 value={searchOrderId}
                 onChange={(e) => setSearchOrderId(e.target.value)}
                 className="form-control"
-                placeholder="Search by Order ID"
+                placeholder="🔍 Search by Order ID"
+                style={{ borderRadius: '8px', padding: '10px 14px' }}
               />
             </div>
-            <div className="col-md-3 mb-2 mb-md-0">
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="form-control"
-              />
-            </div>
-            <div className="col-md-3 mb-2 mb-md-0">
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="form-control"
-              />
-            </div>
-            <div className="col-md-1 d-flex align-items-center">
+            <div className="col-12 col-md-4 d-flex gap-2">
+              {(searchOrderId || fromDate || toDate) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchOrderId('')
+                    setFromDate('')
+                    setToDate('')
+                  }}
+                  className="btn btn-outline-secondary flex-grow-1"
+                  style={{ fontSize: '13px' }}
+                >
+                  Clear
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
-                  setSearchOrderId('')
-                  setFromDate('')
-                  setToDate('')
+                  const allFilled = searchOrderId || fromDate || toDate
+                  if (allFilled) {
+                    setFromDate('')
+                    setToDate('')
+                  }
                 }}
-                className="btn btn-outline-secondary btn-block"
-                title="Clear filters"
+                className="btn btn-outline-dark flex-grow-1"
+                style={{ fontSize: '13px' }}
+                title="Show/Hide Advanced Filters"
               >
-                ✕
+                {fromDate || toDate ? '📅 Clear Dates' : '⚙️ Filters'}
               </button>
             </div>
           </div>
+          
+          {/* Advanced Date Filters - Show only if needed */}
+          {(fromDate || toDate) && (
+            <div className="row mt-3">
+              <div className="col-md-6 mb-2 mb-md-0">
+                <label className="small text-muted mb-1" style={{ display: 'block' }}>From Date</label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="form-control"
+                  style={{ borderRadius: '8px' }}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="small text-muted mb-1" style={{ display: 'block' }}>To Date</label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="form-control"
+                  style={{ borderRadius: '8px' }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -209,49 +238,78 @@ export default function MyOrders() {
                 key={item.orderId}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 mb-3 bg-white rounded-xl shadow-sm"
-                style={{ border: '1px solid #ededed' }}
+                className="p-4 mb-3 bg-white rounded-lg shadow-sm"
+                style={{ 
+                  border: '1px solid #ededed',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                }}
               >
-                <div className="d-flex flex-wrap align-items-center justify-content-between">
-                  <div>
-                    <div className="font-weight-bold" style={{ fontSize: 16 }}>{item.orderId}</div>
+                {/* Header Row */}
+                <div className="d-flex flex-wrap align-items-center justify-content-between mb-3 pb-3" style={{ borderBottom: '1px dashed #eee' }}>
+                  <div className="flex-grow-1">
+                    <div className="font-weight-bold" style={{ fontSize: '16px', color: '#111' }}>
+                      {item.orderId}
+                    </div>
                     <div className="small text-muted mt-1 d-flex align-items-center">
-                      <Clock3 size={13} className="mr-1" /> {new Date(item.updatedAt).toLocaleString()}
+                      <Clock3 size={13} className="mr-1" /> 
+                      {new Date(item.updatedAt).toLocaleDateString('en-IN', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        year: 'numeric'
+                      })}
                     </div>
                   </div>
-                  <span className="px-3 py-2 rounded-pill font-weight-bold small mt-2 mt-md-0" style={{ background: badge.bg, color: badge.color }}>
+                  <span 
+                    className="px-3 py-2 rounded-pill font-weight-bold small" 
+                    style={{ 
+                      background: badge.bg, 
+                      color: badge.color,
+                      whiteSpace: 'nowrap',
+                      marginLeft: '12px'
+                    }}
+                  >
                     {label}
                   </span>
                 </div>
 
-                <div className="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-3" style={{ borderTop: '1px dashed #eee' }}>
-                  <div className="small text-muted">
-                    Amount: <span className="font-weight-bold text-dark">₹{Number(item.finalAmount || 0).toLocaleString('en-IN')}</span>
-                    <span className="mx-2">•</span>
-                    Payment: <span className="font-weight-bold text-dark">{item.paymentMethod || 'COD'}</span>
+                {/* Details Row - Amount & Payment */}
+                <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4" style={{ gap: '16px' }}>
+                  <div>
+                    <div className="small text-muted mb-1">Amount</div>
+                    <div className="font-weight-bold" style={{ fontSize: '18px', color: '#111' }}>
+                      ₹{Number(item.finalAmount || 0).toLocaleString('en-IN')}
+                    </div>
                   </div>
-                  <div className="d-flex mt-2 mt-md-0">
-                    <button
-                      onClick={() => downloadInvoice(item.orderId)}
-                      disabled={downloadingInvoice === item.orderId}
-                      className="btn btn-outline-warning btn-sm rounded-pill px-3 mr-2"
-                      style={{ borderColor: '#d1a84a', color: '#7d6122' }}
-                    >
-                      {downloadingInvoice === item.orderId ? 'Preparing...' : 'Invoice'} <FileDown size={13} className="ml-1" />
-                    </button>
-                    <button
-                      onClick={() => navigate(`/order-tracking/${item.orderId}`)}
-                      className="btn btn-dark btn-sm rounded-pill px-3 mr-2"
-                    >
-                      Track Now <ArrowRight size={14} className="ml-1" />
-                    </button>
-                    <button
-                      onClick={() => window.open(`/order-tracking/${item.orderId}`, '_blank')}
-                      className="btn btn-outline-dark btn-sm rounded-pill px-3"
-                    >
-                      Full Screen <ExternalLink size={13} className="ml-1" />
-                    </button>
+                  <div style={{ borderLeft: '1px solid #eee', paddingLeft: '16px' }}>
+                    <div className="small text-muted mb-1">Payment Method</div>
+                    <div className="font-weight-bold" style={{ fontSize: '14px', color: '#666' }}>
+                      {item.paymentMethod || 'COD'}
+                    </div>
                   </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="d-flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => navigate(`/order-tracking/${item.orderId}`)}
+                    className="btn btn-dark btn-sm rounded-pill px-3 flex-grow-1"
+                    style={{ minWidth: '140px' }}
+                  >
+                    🔍 Track Order
+                  </button>
+                  <button
+                    onClick={() => downloadInvoice(item.orderId)}
+                    disabled={downloadingInvoice === item.orderId}
+                    className="btn btn-outline-warning btn-sm rounded-pill px-3"
+                    style={{ 
+                      borderColor: '#d1a84a', 
+                      color: '#7d6122',
+                      minWidth: '110px'
+                    }}
+                  >
+                    {downloadingInvoice === item.orderId ? '⏳' : '📄'} Invoice
+                  </button>
                 </div>
               </motion.div>
             )
