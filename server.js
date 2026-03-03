@@ -737,119 +737,203 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
     
     console.log('📧 Order Confirmation Email Debug:');
-    console.log(`   API Key: ${BREVO_KEY ? '✅ Set' : '❌ Missing - Check BREVO_API_KEY env var'}`);
+    console.log(`   API Key: ${BREVO_KEY ? '✅ Set' : '❌ Missing'}`);
     console.log(`   Email: ${toEmail || '❌ Missing'}`);
-    console.log(`   Invoice: ${invoiceBase64 ? `✅ Attached (${(invoiceBase64.length / 1024).toFixed(1)}KB)` : '⏭️  None'}`);
+    console.log(`   Invoice: ${invoiceBase64 ? `✅ Valid (${(invoiceBase64.length / 1024).toFixed(1)}KB)` : '⏭️  Skipped'}`);
     
     if (!BREVO_KEY) {
-        console.error('❌ BREVO_API_KEY not configured - Email will not send');
-        return false;
-    }
-    if (!toEmail) {
-        console.error('❌ Email address not provided');
-        return false;
+        console.error('❌ BREVO_API_KEY not configured');
+        throw new Error('BREVO_API_KEY not configured');
     }
 
-    const displayName = userName || 'Valued Customer';
-    const arrivalDate = new Date(estimatedArrival).toLocaleDateString('en-IN', {
-        day: '2-digit', month: 'short', year: 'numeric', weekday: 'short'
-    });
-    const subtotal = products.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0);
-    const shipping = Number(finalAmount) - Number(subtotal);
-    const productRows = products.map((item) => `
-        <tr>
-            <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;color:#111827;">${item.name || 'Product'}</td>
-            <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:center;color:#374151;">${item.qty || 1}</td>
-            <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;color:#111827;">₹${Number(item.price || 0).toFixed(0)}</td>
-            <td style="padding:10px 8px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:#111827;">₹${Number(item.total || (item.price * item.qty) || 0).toFixed(0)}</td>
-        </tr>
-    `).join('');
-
-    const htmlContent = `
-        <div style="margin:0;padding:24px;background:#f5f6f8;font-family:Inter,Arial,sans-serif;color:#111827;">
-            <div style="max-width:700px;margin:0 auto;background:#ffffff;border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;">
-                <div style="padding:22px 28px;background:linear-gradient(135deg,#0f172a,#1f2937,#d4af37);color:#fff;box-shadow:inset 0 0 15px rgba(212,175,55,0.2);">
-                    <div style="font-size:24px;font-weight:800;letter-spacing:1px;background:linear-gradient(135deg,#f5deb3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">EShoppper</div>
-                    <div style="font-size:11px;letter-spacing:2px;opacity:0.95;color:#d4af37;font-weight:600;">BOUTIQUE LUXE • DIGITAL RECEIPT</div>
-                </div>
-
-                <div style="padding:28px;">
-                    <p style="margin:0 0 12px;font-size:16px;">Hi <strong>${displayName}</strong>,</p>
-                    <p style="margin:0 0 20px;color:#4b5563;">Thank you for choosing EShoppper. Your order is confirmed and now being prepared with premium care.</p>
-
-                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
-                        <div style="flex:1;min-width:220px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
-                            <div style="font-size:11px;letter-spacing:1px;color:#6b7280;text-transform:uppercase;">Order ID</div>
-                            <div style="font-size:20px;font-weight:800;color:#111827;margin-top:4px;">${orderId}</div>
-                        </div>
-                        <div style="flex:1;min-width:220px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
-                            <div style="font-size:11px;letter-spacing:1px;color:#6b7280;text-transform:uppercase;">Estimated Arrival</div>
-                            <div style="font-size:16px;font-weight:700;color:#111827;margin-top:6px;">${arrivalDate}</div>
-                        </div>
-                    </div>
-
-                    <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
-                        <thead>
-                            <tr style="background:#f8fafc;">
-                                <th style="padding:11px 8px;text-align:left;font-size:12px;color:#6b7280;">Product</th>
-                                <th style="padding:11px 8px;text-align:center;font-size:12px;color:#6b7280;">Qty</th>
-                                <th style="padding:11px 8px;text-align:right;font-size:12px;color:#6b7280;">Price</th>
-                                <th style="padding:11px 8px;text-align:right;font-size:12px;color:#6b7280;">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>${productRows}</tbody>
-                    </table>
-
-                    <div style="margin-top:16px;padding:14px;border:1px solid #e5e7eb;border-radius:10px;background:#fffef8;">
-                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#374151;margin-bottom:6px;"><span>Payment Method</span><strong>${paymentMethod}</strong></div>
-                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#374151;margin-bottom:6px;"><span>Subtotal</span><span>₹${subtotal.toFixed(0)}</span></div>
-                        <div style="display:flex;justify-content:space-between;font-size:14px;color:#374151;margin-bottom:6px;"><span>Shipping</span><span>${shipping <= 0 ? 'FREE' : `₹${shipping.toFixed(0)}`}</span></div>
-                        <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:800;color:#111827;border-top:1px solid #eadfc2;padding-top:10px;"><span>Final Amount</span><span>₹${Number(finalAmount).toFixed(0)}</span></div>
-                    </div>
-
-                    <div style="margin-top:16px;padding:14px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb;color:#374151;font-size:13px;line-height:1.6;">
-                        <div style="font-weight:700;color:#111827;margin-bottom:6px;">Shipping Address</div>
-                        ${shippingAddress?.fullName || ''}<br/>
-                        ${shippingAddress?.addressline1 || ''}, ${shippingAddress?.city || ''}, ${shippingAddress?.state || ''} - ${shippingAddress?.pin || ''}<br/>
-                        ${shippingAddress?.phone || ''}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-
-    const mailPayload = {
-        sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
-        to: [{ email: toEmail, name: displayName }],
-        subject: `Order Confirmation • ${orderId}`,
-        htmlContent,
-        replyTo: { email: 'support@eshopperr.me' }
-    };
-
-    // TEMPORARILY DISABLED: Testing basic email without attachment first
-    // if (invoiceBase64) {
-    //     mailPayload.attachment = [{
-    //         content: invoiceBase64,
-    //         name: `Invoice-${orderId}.pdf`
-    //     }];
-    // }
+    if (!toEmail || !toEmail.includes('@')) {
+        console.error('❌ Invalid email:', toEmail);
+        throw new Error('Invalid toEmail address');
+    }
 
     try {
+        const displayName = userName || 'Valued Customer';
+        const firstName = displayName.split(' ')[0];
+        const safeProducts = Array.isArray(products) ? products : [];
+        const deliveryDate = estimatedArrival ? new Date(estimatedArrival).toLocaleDateString('en-IN', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        }) : 'N/A';
+
+        const productRows = safeProducts.map(p => `
+            <tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:12px 8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div>
+                            <div style="font-weight:600;color:#111827;">${p.name || 'Product'}</div>
+                            <div style="font-size:12px;color:#6b7280;">Qty: ${p.qty || 1} × ₹${Number(p.price || 0).toFixed(0)}</div>
+                        </div>
+                    </div>
+                </td>
+                <td style="padding:12px 8px;text-align:right;font-weight:600;">₹${Number(p.total || (p.price * p.qty) || 0).toFixed(0)}</td>
+            </tr>
+        `).join('');
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f9fafb;">
+                <div style="max-width:600px;margin:0 auto;background:#ffffff;">
+                    <!-- Header -->
+                    <div style="background:linear-gradient(135deg,#111827 0%,#1f2937 100%);padding:32px 24px;text-align:center;">
+                        <div style="font-size:24px;font-weight:700;background:linear-gradient(135deg,#f5deb3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">EShoppper</div>
+                        <div style="font-size:14px;color:#d4af37;margin-top:8px;font-weight:600;">Order Confirmed</div>
+                    </div>
+
+                    <!-- Success Message -->
+                    <div style="background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%);padding:24px;text-align:center;border-bottom:3px solid #28a745;">
+                        <div style="font-size:48px;margin-bottom:8px;">✅</div>
+                        <div style="font-size:20px;font-weight:700;color:#155724;">ORDER CONFIRMED!</div>
+                        <div style="font-size:14px;color:#155724;margin-top:8px;">Thank you for choosing Eshopper</div>
+                    </div>
+
+                    <!-- Content -->
+                    <div style="padding:32px 24px;">
+                        <p style="margin:0 0 8px 0;font-size:16px;color:#111827;">Dear <strong>${firstName}</strong>,</p>
+                        <p style="margin:0 0 20px 0;color:#4b5563;font-size:15px;">Your order is confirmed and now being prepared with premium care.</p>
+
+                        <!-- Order Details -->
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+                            <div style="flex:1;min-width:220px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
+                                <div style="font-size:11px;letter-spacing:1px;color:#6b7280;text-transform:uppercase;">Order ID</div>
+                                <div style="font-size:20px;font-weight:800;color:#111827;margin-top:4px;">${orderId}</div>
+                            </div>
+                            <div style="flex:1;min-width:220px;border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fafafa;">
+                                <div style="font-size:11px;letter-spacing:1px;color:#6b7280;text-transform:uppercase;">Estimated Arrival</div>
+                                <div style="font-size:16px;font-weight:700;color:#111827;margin-top:4px;">${deliveryDate}</div>
+                            </div>
+                        </div>
+
+                        <!-- Payment Details -->
+                        <div style="background:#f9fafb;padding:14px;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:20px;">
+                            <div style="font-size:12px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Payment Method</div>
+                            <div style="font-size:15px;color:#374151;font-weight:600;">${paymentMethod || 'Cash on Delivery'}</div>
+                        </div>
+
+                        <!-- Products Table -->
+                        <div style="margin-bottom:20px;">
+                            <div style="font-size:12px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Order Items</div>
+                            <table style="width:100%;border-collapse:collapse;">
+                                <thead>
+                                    <tr style="border-bottom:2px solid #e5e7eb;">
+                                        <th style="padding:12px 8px;text-align:left;font-weight:700;color:#111827;">Product</th>
+                                        <th style="padding:12px 8px;text-align:right;font-weight:700;color:#111827;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${productRows}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Amount Summary -->
+                        <div style="background:#f9fafb;padding:14px;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:20px;">
+                            <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:800;color:#111827;">
+                                <span>Final Amount:</span>
+                                <span>₹${Number(finalAmount || 0).toFixed(0)}</span>
+                            </div>
+                        </div>
+
+                        <!-- Shipping Address -->
+                        <div style="background:#f9fafb;padding:14px;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:20px;">
+                            <div style="font-size:12px;font-weight:700;color:#111827;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">📍 Shipping Address</div>
+                            <div style="font-size:14px;color:#374151;line-height:1.6;">
+                                ${shippingAddress?.fullName || 'N/A'}<br/>
+                                ${shippingAddress?.addressline1 || 'N/A'}, ${shippingAddress?.city || 'N/A'}, ${shippingAddress?.state || 'N/A'} - ${shippingAddress?.pin || 'N/A'}<br/>
+                                ${shippingAddress?.country || 'India'}<br/>
+                                <strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}
+                            </div>
+                        </div>
+
+                        <!-- CTA Buttons -->
+                        <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+                            <a href="https://eshopperr.me/orders" style="flex:1;min-width:200px;display:inline-block;background:#111827;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;text-align:center;">View Order Details</a>
+                            <a href="https://eshopperr.me/shop/All" style="flex:1;min-width:200px;display:inline-block;background:#fff;color:#111827;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;border:2px solid #111827;text-align:center;">Continue Shopping</a>
+                        </div>
+
+                        <!-- Support -->
+                        <div style="background:#efefef;padding:16px;border-radius:8px;text-align:center;margin-bottom:20px;">
+                            <p style="margin:0 0 8px 0;font-size:14px;color:#6b7280;">Need help? Contact support</p>
+                            <p style="margin:0;"><a href="mailto:support@eshopperr.me" style="color:#0066cc;text-decoration:none;font-weight:600;">support@eshopperr.me</a></p>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="background:#f9fafb;padding:24px;text-align:center;border-top:1px solid #e5e7eb;">
+                        <p style="margin:0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} Eshopper • <a href="https://eshopperr.me" style="color:#0066cc;text-decoration:none;">eshopperr.me</a></p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+
+        // 🔴 STRICT BREVO v3 PAYLOAD FORMAT
+        const mailPayload = {
+            sender: { 
+                name: 'Eshopper',
+                email: 'support@eshopperr.me'
+            },
+            to: [{ 
+                email: toEmail, 
+                name: displayName 
+            }],
+            subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
+            htmlContent,
+            replyTo: { email: 'support@eshopperr.me' }
+        };
+
+        // 🔴 ATTACHMENT HANDLING - Validate before adding
+        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0) {
+            try {
+                // Validate base64 format (only alphanumeric, +, /, =)
+                if (!/^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
+                    console.warn('⚠️ Invalid base64 format for invoice, skipping attachment');
+                } else {
+                    mailPayload.attachment = [
+                        {
+                            content: invoiceBase64.trim(),
+                            name: `Invoice-${orderId}.pdf`
+                        }
+                    ];
+                    console.log(`✅ Invoice attachment added (${(invoiceBase64.length / 1024).toFixed(1)}KB)`);
+                }
+            } catch (attachError) {
+                console.warn('⚠️ Failed to process invoice attachment:', attachError.message);
+                // Continue without attachment - don't fail the email
+            }
+        } else {
+            console.log('⏭️  No invoice PDF to attach (will send email without attachment)');
+        }
+
         console.log(`📤 Sending confirmation email to ${toEmail}...`);
         const response = await axios.post('https://api.brevo.com/v3/smtp/email', mailPayload, {
             headers: {
                 'api-key': BREVO_KEY,
                 'content-type': 'application/json',
-                accept: 'application/json'
+                'accept': 'application/json'
             },
             timeout: 30000
         });
-        console.log(`✅ Confirmation email sent successfully (${response.status})`);
+        
+        console.log(`✅ Confirmation email sent successfully (Status: ${response.status}, Message ID: ${response.data.messageId})`);
         return true;
+
     } catch (error) {
         console.error('❌ Confirmation email failed:', {
             status: error.response?.status,
-            message: error.response?.data || error.message,
+            message: error.response?.data?.message || error.message,
+            data: error.response?.data,
             endpoint: 'brevo.com/v3/smtp/email'
         });
         throw error;
