@@ -661,46 +661,90 @@ const sendWhatsApp = async (number, message) => {
 
     try {
         const endpoint = `${apiUrl}/message/sendText/${instance}`;
-        const payload = {
-            number: contactNumber,
-            text: String(message)
-        };
+        const contactDigits = String(contactNumber || '').replace(/\D/g, '');
+        
+        // Try multiple payload formats that Evolution API might accept
+        const payloadFormats = [
+            // Format 1: Standard (number with 91 prefix)
+            {
+                number: contactNumber,
+                text: String(message)
+            },
+            // Format 2: Without country code
+            {
+                number: contactDigits,
+                text: String(message)
+            },
+            // Format 3: Alternative field names
+            {
+                to: contactNumber,
+                message: String(message)
+            }
+        ];
         
         console.log(`📤 Sending WhatsApp to: ${contactNumber}`);
         console.log(`   Endpoint: ${endpoint}`);
+        console.log(`   Contact (digits only): ${contactDigits}`);
         
-        // Try with WHATSAPP_TOKEN first (as apikey header)
         let response;
-        try {
-            response = await axios.post(endpoint, payload, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': token || apiKey
-                },
-                timeout: 30000
-            });
-        } catch (firstError) {
-            // If first attempt fails and we have API key, try with Authorization header
-            if (apiKey && firstError.response?.status === 401) {
-                console.log(`🔄 Retrying with Authorization header...`);
+        let lastError;
+        
+        for (let i = 0; i < payloadFormats.length; i++) {
+            try {
+                const payload = payloadFormats[i];
+                console.log(`   Attempt ${i + 1} with payload:`, payload);
+                
                 response = await axios.post(endpoint, payload, {
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
+                        'apikey': token || apiKey
                     },
                     timeout: 30000
                 });
-            } else {
-                throw firstError;
+                
+                console.log(`✅ WhatsApp sent successfully on attempt ${i + 1} (Status: ${response.status})`);
+                console.log(`   Response: ${JSON.stringify(response.data)}`);
+                return true;
+                
+            } catch (err) {
+                lastError = err;
+                console.log(`   ❌ Attempt ${i + 1} failed:`, {
+                    status: err.response?.status,
+                    error: err.response?.data?.message || err.message
+                });
+                
+                // If it's a 401, try with Bearer token instead
+                if (err.response?.status === 401 && apiKey && i < payloadFormats.length - 1) {
+                    try {
+                        const bearerPayload = payloadFormats[i];
+                        console.log(`   🔄 Retrying with Authorization Bearer header...`);
+                        response = await axios.post(endpoint, bearerPayload, {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiKey}`
+                            },
+                            timeout: 30000
+                        });
+                        
+                        console.log(`✅ WhatsApp sent with Bearer auth (Status: ${response.status})`);
+                        console.log(`   Response: ${JSON.stringify(response.data)}`);
+                        return true;
+                    } catch (bearerErr) {
+                        lastError = bearerErr;
+                        console.log(`   ❌ Bearer auth also failed:`, {
+                            status: bearerErr.response?.status,
+                            error: bearerErr.response?.data?.message || bearerErr.message
+                        });
+                    }
+                }
             }
         }
         
-        console.log(`✅ WhatsApp sent successfully (Status: ${response.status})`);
-        console.log(`   Response: ${JSON.stringify(response.data)}`);
-        return true;
+        // If all formats failed, throw the last error
+        throw lastError || new Error('All WhatsApp payload formats failed');
         
     } catch (error) {
-        console.error('❌ WhatsApp send failed:', {
+        console.error('❌ WhatsApp send failed after all attempts:', {
             status: error.response?.status,
             message: error.response?.data?.message || error.response?.data || error.message,
             endpoint: error.config?.url,
