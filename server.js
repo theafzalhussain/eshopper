@@ -542,10 +542,8 @@ const buildInvoiceHtml = ({
                     <div class="head">
                         <div class="head-content">
                             <div class="logo-section">
-                                <div class="logo-icon">✨</div>
+                                <img src="https://eshopperr.me/assets/eshopper-logo-horizontal.svg" alt="eShopper Boutique Luxe" style="height:80px; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto;" />
                             </div>
-                            <h1 class="brand-name">eShopper</h1>
-                            <div class="brand-tagline">Boutique Luxe</div>
                             <div class="tag-badge">🏆 Premium Invoice</div>
                         </div>
                     </div>
@@ -1277,7 +1275,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <p class="logo">✨ EShoppper</p>
+            <img src="https://eshopperr.me/assets/eshopper-logo-horizontal.svg" alt="eShopper Boutique Luxe" style="height:60px; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto;" />
             <p class="tagline">Order Status Update</p>
         </div>
 
@@ -1531,8 +1529,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <p class="logo">EShopper</p>
-            <p class="tagline">Boutique Luxe</p>
+            <img src="https://eshopperr.me/assets/eshopper-logo-horizontal.svg" alt="eShopper Boutique Luxe" style="height:60px; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto;" />
         </div>
 
         <!-- Success Banner -->
