@@ -411,7 +411,6 @@ export default function MyOrders() {
             </motion.div>
           )}
         </motion.div>
-        </div>
 
         {loading ? (
           <div className="p-4 text-center bg-white rounded-xl shadow-sm text-muted">Loading orders...</div>
