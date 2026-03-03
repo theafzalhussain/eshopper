@@ -39,6 +39,15 @@ export default function MyOrders() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [downloadingInvoice, setDownloadingInvoice] = useState('')
 
+  const viewInvoiceInline = (orderId) => {
+    if (!orderId || !userId) return
+    const invoiceUrl = `${BASE_URL}/api/order/${encodeURIComponent(orderId)}/invoice?userId=${encodeURIComponent(userId)}&disposition=inline`
+    const opened = window.open(invoiceUrl, '_blank', 'noopener,noreferrer')
+    if (!opened) {
+      setError('Popup blocked. Please allow popups to view invoice.')
+    }
+  }
+
   const downloadInvoice = async (orderId) => {
     if (!orderId || !userId) return
     try {
@@ -352,6 +361,13 @@ export default function MyOrders() {
                     }}
                   >
                     {downloadingInvoice === item.orderId ? '⏳' : '📄'} Invoice
+                  </button>
+                  <button
+                    onClick={() => viewInvoiceInline(item.orderId)}
+                    className="btn btn-outline-dark btn-sm rounded-pill px-3"
+                    style={{ minWidth: '130px' }}
+                  >
+                    👁 View Invoice
                   </button>
                 </div>
               </motion.div>

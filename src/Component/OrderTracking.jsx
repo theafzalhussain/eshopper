@@ -50,6 +50,19 @@ export default function OrderTracking() {
   const activeIndex = useMemo(() => Math.max(0, STEPS.indexOf(status)), [status])
   const progressPercent = useMemo(() => (activeIndex / (STEPS.length - 1)) * 100, [activeIndex])
 
+  const viewInvoiceInline = () => {
+    if (!orderId || !userId) return
+    const invoiceUrl = `${BASE_URL}/api/order/${encodeURIComponent(orderId)}/invoice?userId=${encodeURIComponent(userId)}&disposition=inline`
+    const opened = window.open(invoiceUrl, '_blank', 'noopener,noreferrer')
+    if (!opened) {
+      setToast({
+        id: Date.now(),
+        title: '⚠️ Popup Blocked',
+        message: 'Please allow popups to view invoice in browser.'
+      })
+    }
+  }
+
   const downloadInvoice = async () => {
     if (!orderId || !userId) return
     try {
@@ -724,7 +737,7 @@ export default function OrderTracking() {
 
             {/* Secondary Actions */}
             <div className="row mt-2">
-              <div className="col-md-6 mb-3">
+              <div className="col-md-4 mb-3">
                 <button
                   className="btn btn-outline-warning rounded-pill px-4 btn-block"
                   onClick={downloadInvoice}
@@ -740,7 +753,20 @@ export default function OrderTracking() {
                   {downloadingInvoice ? '⏳ Preparing...' : '📄 Download Invoice'}
                 </button>
               </div>
-              <div className="col-md-6">
+              <div className="col-md-4 mb-3">
+                <button
+                  className="btn btn-outline-dark rounded-pill px-4 btn-block"
+                  onClick={viewInvoiceInline}
+                  style={{
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    padding: '12px 20px'
+                  }}
+                >
+                  👁 View Invoice
+                </button>
+              </div>
+              <div className="col-md-4">
                 <button
                   className="btn rounded-pill px-4 btn-block"
                   onClick={() => window.open('https://wa.me/918447859784', '_blank')}
