@@ -462,19 +462,17 @@ const buildInvoiceHtml = ({
             <meta charset="utf-8"/>
             <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
             <style>
-                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
                 * { box-sizing: border-box; margin: 0; padding: 0; }
                 html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                body { background: #f5f5f3; color: #121212; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; }
+                body { background: #f5f5f3; color: #121212; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
                 .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
                 .card { background: #fff; border: 3px solid #d4af37; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
                 .head { padding: 40px 32px; background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #d4af37 100%); color: #fff; text-align: center; box-shadow: inset 0 0 30px rgba(212, 175, 55, 0.2); position: relative; overflow: hidden; }
                 .head::before { content: ''; position: absolute; top: -50%; right: -50%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(212,175,55,0.15), transparent); border-radius: 50%; }
                 .head-content { position: relative; z-index: 1; }
                 .logo-section { margin-bottom: 16px; }
-                .logo-icon { font-size: 64px; line-height: 1; margin: 0 0 12px 0; display: inline-block; animation: pulse-glow 1.5s ease-in-out infinite; }
-                @keyframes pulse-glow { 0%, 100% { text-shadow: 0 0 16px rgba(212,175,55,0.8), 0 0 32px rgba(212,175,55,0.4); transform: scale(1); } 50% { text-shadow: 0 0 24px rgba(212,175,55,1), 0 0 48px rgba(212,175,55,0.6); transform: scale(1.05); } }
-                .brand-name { font-family: 'Playfair Display', serif; font-size: 56px; font-weight: 700; letter-spacing: 4px; margin: 0 0 4px 0; background: linear-gradient(90deg, #fff9e6, #d4af37, #fff9e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+                .logo-icon { font-size: 64px; line-height: 1; margin: 0 0 12px 0; display: inline-block; }
+                .brand-name { font-size: 56px; font-weight: 700; letter-spacing: 4px; margin: 0 0 4px 0; background: linear-gradient(90deg, #fff9e6, #d4af37, #fff9e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
                 .brand-tagline { font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: #ffd700; font-weight: 700; margin-top: 8px; }
                 .tag-badge { font-size: 11px; letter-spacing: 2px; margin-top: 14px; text-transform: uppercase; color: #fff9e6; font-weight: 700; display: inline-block; border: 1px solid #ffd700; padding: 6px 16px; border-radius: 20px; }
                 .body { padding: 36px; }
@@ -651,34 +649,68 @@ const buildInvoiceHtml = ({
 
 const generateInvoicePdfBuffer = async (orderPayload) => {
     const html = buildInvoiceHtml(orderPayload);
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--font-render-hinting=none'
-        ]
-    });
-
+    let browser;
     try {
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--single-process',
+                '--disable-web-security',
+                '--disable-features=IsolateOrigins,site-per-process'
+            ]
+        });
+
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await page.emulateMediaType('screen');
+        
+        // Set viewport
+        await page.setViewport({ width: 1200, height: 1600 });
+        
+        // Set content with longer timeout
+        await page.setContent(html, { 
+            waitUntil: ['networkidle0', 'domcontentloaded'],
+            timeout: 90000 
+        });
+        
+        // Wait for any animations/fonts to load
+        await page.waitForTimeout(2000);
+        
+        // Generate PDF
         const pdf = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '16mm', right: '12mm', bottom: '16mm', left: '12mm' }
+            margin: { top: '16mm', right: '12mm', bottom: '16mm', left: '12mm' },
+            timeout: 60000
         });
 
-        if (!pdf || !Buffer.isBuffer(pdf) || pdf.length < 1000 || pdf.subarray(0, 4).toString() !== '%PDF') {
-            throw new Error('Generated invoice buffer is not a valid PDF');
+        // Validate PDF
+        if (!pdf || !Buffer.isBuffer(pdf) || pdf.length < 500) {
+            console.error('❌ PDF validation failed: invalid buffer');
+            throw new Error('Generated invoice buffer is not valid');
+        }
+
+        // Check for PDF magic bytes
+        const pdfSignature = pdf.subarray(0, 4).toString('latin1');
+        if (!pdfSignature.startsWith('%PDF')) {
+            console.error('❌ PDF signature check failed:', pdfSignature);
+            throw new Error('Invalid PDF signature');
         }
 
         return pdf;
+    } catch (e) {
+        console.error('❌ PDF generation failed:', e.message, e.stack);
+        throw e;
     } finally {
-        await browser.close();
+        if (browser) {
+            try {
+                await browser.close();
+            } catch (closeErr) {
+                console.error('⚠️ Error closing browser:', closeErr.message);
+            }
+        }
     }
 };
 
@@ -2599,29 +2631,49 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
         const order = await Order.findOne({ orderId, userid: userId }).lean();
         if (!order) return res.status(404).json({ message: 'Order not found' });
 
-        const pdfBuffer = await generateInvoicePdfBuffer({
-            orderId: order.orderId,
-            userName: order.userName,
-            userEmail: order.userEmail,
-            paymentMethod: order.paymentMethod,
-            paymentStatus: order.paymentStatus,
-            finalAmount: Number(order.finalAmount || 0),
-            totalAmount: Number(order.totalAmount || 0),
-            shippingAmount: Number(order.shippingAmount || 0),
-            shippingAddress: order.shippingAddress || {},
-            products: Array.isArray(order.products) ? order.products : [],
-            orderDate: order.orderDate || order.createdAt
-        });
+        // Generate invoice with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `${disposition}; filename="Invoice-${order.orderId}.pdf"`);
-        res.setHeader('Content-Length', String(pdfBuffer.length));
-        res.setHeader('Cache-Control', 'no-store');
-        return res.send(pdfBuffer);
+        try {
+            const pdfBuffer = await generateInvoicePdfBuffer({
+                orderId: order.orderId,
+                userName: order.userName,
+                userEmail: order.userEmail,
+                paymentMethod: order.paymentMethod,
+                paymentStatus: order.paymentStatus,
+                finalAmount: Number(order.finalAmount || 0),
+                totalAmount: Number(order.totalAmount || 0),
+                shippingAmount: Number(order.shippingAmount || 0),
+                shippingAddress: order.shippingAddress || {},
+                products: Array.isArray(order.products) ? order.products : [],
+                orderDate: order.orderDate || order.createdAt
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!pdfBuffer || pdfBuffer.length < 500) {
+                return res.status(500).json({ message: 'Invoice generation failed - empty PDF' });
+            }
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `${disposition}; filename="Invoice-${order.orderId}.pdf"`);
+            res.setHeader('Content-Length', String(pdfBuffer.length));
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            
+            return res.send(pdfBuffer);
+        } catch (pdfErr) {
+            clearTimeout(timeoutId);
+            console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
+            if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
+            return res.status(500).json({ message: 'Failed to generate invoice - please try again' });
+        }
     } catch (e) {
-        console.error('❌ Invoice generation error:', e.message);
+        console.error('❌ Invoice endpoint error:', e.message, e.stack);
         if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ message: 'Failed to generate invoice' });
+        return res.status(500).json({ message: 'Invoice generation error' });
     }
 });
 
