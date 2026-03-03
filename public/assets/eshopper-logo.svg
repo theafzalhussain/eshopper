@@ -1,0 +1,137 @@
+<svg viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <!-- Metallic Gold Gradient -->
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#FFF8DC;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#FFC700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D4AF37;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Premium Gold with Foil Effect -->
+    <filter id="metallic">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.9" />
+      </feComponentTransfer>
+    </filter>
+
+    <!-- Subtle Glow Effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+      <feMerge>
+        <feMergeNode in="coloredBlur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Shadow Effect -->
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="3" stdDeviation="2" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Midnight Black Background -->
+  <rect width="400" height="500" fill="#0a0a0a" />
+
+  <!-- Subtle Border for Premium Feel -->
+  <rect x="10" y="10" width="380" height="480" fill="none" stroke="#2a2a2a" stroke-width="1.5" />
+
+  <!-- ES Monogram Section -->
+  <g id="monogram">
+    <!-- Outer Circle Border (Gold) -->
+    <circle cx="200" cy="140" r="90" fill="none" stroke="url(#goldGradient)" stroke-width="2" opacity="0.8" />
+
+    <!-- Inner Circle Border (Subtle) -->
+    <circle cx="200" cy="140" r="85" fill="none" stroke="url(#goldGradient)" stroke-width="0.5" opacity="0.4" />
+
+    <!-- ES Monogram Text with Metallic Effect -->
+    <text 
+      x="200" 
+      y="155" 
+      font-family="Playfair Display, Georgia, serif" 
+      font-size="76" 
+      font-weight="700"
+      text-anchor="middle" 
+      fill="url(#goldGradient)"
+      letter-spacing="-2"
+      filter="url(#metallic)"
+      style="text-shadow: 0px 1px 3px rgba(0,0,0,0.5);" >
+      ES
+    </text>
+  </g>
+
+  <!-- Decorative Elements (Luxury Accents) -->
+  
+  <!-- Top Ornament -->
+  <g id="top-ornament">
+    <line x1="170" y1="35" x2="230" y2="35" stroke="url(#goldGradient)" stroke-width="1" opacity="0.6" />
+    <circle cx="200" cy="35" r="2.5" fill="url(#goldGradient)" opacity="0.8" />
+    <line x1="185" y1="28" x2="215" y2="28" stroke="url(#goldGradient)" stroke-width="0.5" opacity="0.4" />
+  </g>
+
+  <!-- Bottom Ornament (Mirror) -->
+  <g id="bottom-ornament">
+    <line x1="170" y1="465" x2="230" y2="465" stroke="url(#goldGradient)" stroke-width="1" opacity="0.6" />
+    <circle cx="200" cy="465" r="2.5" fill="url(#goldGradient)" opacity="0.8" />
+    <line x1="185" y1="472" x2="215" y2="472" stroke="url(#goldGradient)" stroke-width="0.5" opacity="0.4" />
+  </g>
+
+  <!-- Brand Name Section -->
+  <text 
+    x="200" 
+    y="250" 
+    font-family="Playfair Display, Georgia, serif" 
+    font-size="48" 
+    font-weight="600"
+    text-anchor="middle" 
+    fill="url(#goldGradient)"
+    letter-spacing="1"
+    filter="url(#metallic)">
+    eShopper
+  </text>
+
+  <!-- Tagline (Optional) -->
+  <text 
+    x="200" 
+    y="285" 
+    font-family="Lato, sans-serif" 
+    font-size="14" 
+    font-weight="300"
+    text-anchor="middle" 
+    fill="url(#goldGradient)"
+    letter-spacing="3"
+    opacity="0.7">
+    BOUTIQUE LUXE
+  </text>
+
+  <!-- Left Decorative Lines -->
+  <g id="left-accent" opacity="0.4">
+    <line x1="50" y1="200" x2="110" y2="200" stroke="url(#goldGradient)" stroke-width="0.75" />
+    <line x1="50" y1="210" x2="110" y2="210" stroke="url(#goldGradient)" stroke-width="0.75" />
+    <line x1="50" y1="220" x2="110" y2="220" stroke="url(#goldGradient)" stroke-width="0.75" />
+  </g>
+
+  <!-- Right Decorative Lines (Mirror) -->
+  <g id="right-accent" opacity="0.4">
+    <line x1="290" y1="200" x2="350" y2="200" stroke="url(#goldGradient)" stroke-width="0.75" />
+    <line x1="290" y1="210" x2="350" y2="210" stroke="url(#goldGradient)" stroke-width="0.75" />
+    <line x1="290" y1="220" x2="350" y2="220" stroke="url(#goldGradient)" stroke-width="0.75" />
+  </g>
+
+  <!-- Luxury Pattern (Subtle Corner Details) -->
+  <g id="corner-details" opacity="0.25">
+    <!-- Top Left -->
+    <path d="M 30 30 L 30 60 L 60 30 Z" fill="none" stroke="url(#goldGradient)" stroke-width="0.75" />
+    
+    <!-- Top Right -->
+    <path d="M 370 30 L 370 60 L 340 30 Z" fill="none" stroke="url(#goldGradient)" stroke-width="0.75" />
+    
+    <!-- Bottom Left -->
+    <path d="M 30 470 L 30 440 L 60 470 Z" fill="none" stroke="url(#goldGradient)" stroke-width="0.75" />
+    
+    <!-- Bottom Right -->
+    <path d="M 370 470 L 370 440 L 340 470 Z" fill="none" stroke="url(#goldGradient)" stroke-width="0.75" />
+  </g>
+</svg>

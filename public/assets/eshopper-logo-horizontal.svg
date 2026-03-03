@@ -1,0 +1,42 @@
+<svg viewBox="0 0 600 120" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#FFF8DC;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#FFC700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#D4AF37;stop-opacity:1" />
+    </linearGradient>
+
+    <filter id="metallic">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1" />
+    </filter>
+  </defs>
+
+  <!-- Midnight Black Background -->
+  <rect width="600" height="120" fill="#0a0a0a" />
+
+  <!-- Decorative Left Accent -->
+  <line x1="40" y1="40" x2="40" y2="80" stroke="url(#goldGradient)" stroke-width="1" opacity="0.6" />
+  <circle cx="40" cy="50" r="1.5" fill="url(#goldGradient)" opacity="0.8" />
+  <circle cx="40" cy="70" r="1.5" fill="url(#goldGradient)" opacity="0.8" />
+
+  <!-- Brand Name -->
+  <text 
+    x="300" 
+    y="80" 
+    font-family="Playfair Display, Georgia, serif" 
+    font-size="72" 
+    font-weight="600"
+    text-anchor="middle" 
+    fill="url(#goldGradient)"
+    letter-spacing="1"
+    filter="url(#metallic)">
+    eShopper
+  </text>
+
+  <!-- Decorative Right Accent -->
+  <line x1="560" y1="40" x2="560" y2="80" stroke="url(#goldGradient)" stroke-width="1" opacity="0.6" />
+  <circle cx="560" cy="50" r="1.5" fill="url(#goldGradient)" opacity="0.8" />
+  <circle cx="560" cy="70" r="1.5" fill="url(#goldGradient)" opacity="0.8" />
+</svg>
