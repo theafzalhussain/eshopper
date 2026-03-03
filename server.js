@@ -819,19 +819,20 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     `;
 
     const mailPayload = {
-        sender: { name: 'EShoppper Boutique Luxe', email: 'support@eshopperr.me' },
+        sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
         to: [{ email: toEmail, name: displayName }],
         subject: `Order Confirmation • ${orderId}`,
         htmlContent,
         replyTo: { email: 'support@eshopperr.me' }
     };
 
-    if (invoiceBase64) {
-        mailPayload.attachment = [{
-            content: invoiceBase64,
-            name: `Invoice-${orderId}.pdf`
-        }];
-    }
+    // TEMPORARILY DISABLED: Testing basic email without attachment first
+    // if (invoiceBase64) {
+    //     mailPayload.attachment = [{
+    //         content: invoiceBase64,
+    //         name: `Invoice-${orderId}.pdf`
+    //     }];
+    // }
 
     try {
         console.log(`📤 Sending confirmation email to ${toEmail}...`);
