@@ -1,23 +1,65 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import axios from 'axios'
 import LefNav from './LefNav'
 import { getCheckout, updateCheckout } from '../../Store/ActionCreaters/CheckoutActionCreators'
 import { BASE_URL } from '../../constants'
-import { ShoppingBag, Truck, AlertCircle } from 'lucide-react'
+import { ShoppingBag, Truck, AlertCircle, ChevronDown, Send } from 'lucide-react'
+import io from 'socket.io-client'
+
+// 📦 All available order statuses
+const ALLOWED_ORDER_STATUS = ['Order Placed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed']
+
+// 🎨 Status badge colors
+const STATUS_BADGE_COLORS = {
+    'Order Placed': 'badge-warning',
+    'Packed': 'badge-info',
+    'Shipped': 'badge-primary',
+    'Out for Delivery': 'badge-success',
+    'Delivered': 'badge-success',
+    'Return Initiated': 'badge-danger',
+    'Return Completed': 'badge-danger',
+    'Refund Initiated': 'badge-warning',
+    'Refund Completed': 'badge-success'
+}
 
 export default function AdminCheckout() {
     const checkouts = useSelector((state) => state.CheckoutStateData)
     const dispatch = useDispatch()
-    const [updating, setUpdating] = React.useState(null)
-    const [notification, setNotification] = React.useState(null)
+    const [updating, setUpdating] = useState(null)
+    const [notification, setNotification] = useState(null)
+    const [expandedRow, setExpandedRow] = useState(null)
+    const [socket, setSocket] = useState(null)
 
     useEffect(() => { 
         dispatch(getCheckout()) 
     }, [dispatch])
 
+    // 🔄 Socket.io setup for real-time updates
+    useEffect(() => {
+        const newSocket = io(BASE_URL)
+        setSocket(newSocket)
+
+        newSocket.on('statusUpdate', (payload) => {
+            console.log('📡 Real-time update received:', payload)
+            // Refresh orders list when update happens
+            setTimeout(() => {
+                dispatch(getCheckout())
+            }, 300)
+        })
+
+        return () => {
+            if (newSocket) newSocket.disconnect()
+        }
+    }, [dispatch])
+
     // 🔴 HANDLE STATUS UPDATE VIA SOCKET.IO API
-    const handleStatusUpdate = async (item, newStatus = 'Packed') => {
+    const handleStatusUpdate = async (item, newStatus) => {
+        if (!newStatus) {
+            setNotification({ type: 'warning', message: '⚠️ Please select a status' })
+            return
+        }
+
         try {
             setUpdating(item.id || item._id)
             
@@ -29,6 +71,7 @@ export default function AdminCheckout() {
             if (response.data?.success) {
                 // Show success notification
                 setNotification({ type: 'success', message: `✅ Order updated to ${newStatus}` })
+                setExpandedRow(null)
                 
                 // Refresh orders list
                 setTimeout(() => {
@@ -42,7 +85,7 @@ export default function AdminCheckout() {
             console.error('❌ Status update error:', error.message)
             const errorMsg = error.response?.data?.message || 'Failed to update order status'
             setNotification({ type: 'error', message: `❌ ${errorMsg}` })
-            setTimeout(() => setNotification(null), 3000)
+            setTimeout(() => setNotification(null), 4000)
         } finally {
             setUpdating(null)
         }
@@ -56,7 +99,7 @@ export default function AdminCheckout() {
                     <div className="col-lg-10">
                         {/* NOTIFICATION */}
                         {notification && (
-                            <div className={`alert alert-${notification.type === 'success' ? 'success' : 'danger'} alert-dismissible fade show mb-4`} role="alert">
+                            <div className={`alert alert-${notification.type === 'success' ? 'success' : notification.type === 'error' ? 'danger' : 'warning'} alert-dismissible fade show mb-4`} role="alert">
                                 <AlertCircle size={16} className="d-inline mr-2" />
                                 {notification.message}
                                 <button type="button" className="close" onClick={() => setNotification(null)}>&times;</button>
@@ -64,49 +107,105 @@ export default function AdminCheckout() {
                         )}
 
                         <div className="bg-white shadow-lg rounded-2xl p-4 border-0">
-                            <h4 className="font-weight-bold mb-4 d-flex align-items-center"><ShoppingBag className="mr-2 text-info"/> Manage All Orders</h4>
+                            <h4 className="font-weight-bold mb-4 d-flex align-items-center">
+                                <ShoppingBag className="mr-2 text-info" /> Manage All Orders
+                            </h4>
+                            
+                            {/* 📌 Quick Status Legend */}
+                            <div className="alert alert-info mb-4" role="alert">
+                                <strong>💡 Tip:</strong> Click the dropdown arrow on any order to view all available status options. Update status instantly without database access!
+                            </div>
+
                             <div className="table-responsive">
                                 <table className="table table-hover">
                                     <thead className="bg-light small">
                                         <tr>
                                             <th>Order ID</th>
                                             <th>Customer ID</th>
-                                            <th>Status</th>
+                                            <th>Current Status</th>
                                             <th>Amount</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {checkouts.map((item, index) => (
-                                            <tr key={index}>
-                                                <td className="align-middle font-weight-bold small text-info">{item.id || item._id}</td>
-                                                <td className="align-middle small">{item.userid}</td>
-                                                <td className="align-middle">
-                                                    <span className={`badge px-3 py-2 rounded-pill ${item.orderstatus === 'Order Placed' ? 'badge-warning' : 'badge-success'}`}>
-                                                        {item.orderstatus}
-                                                    </span>
-                                                </td>
-                                                <td className="align-middle font-weight-bold">₹{item.finalAmount}</td>
-                                                <td className="align-middle text-right">
-                                                    <button
-                                                        onClick={() => handleStatusUpdate(item, 'Packed')}
-                                                        disabled={updating === (item.id || item._id)}
-                                                        className="btn btn-sm btn-info px-3 rounded-pill"
-                                                        title="Update order status to Packed"
-                                                    >
-                                                        {updating === (item.id || item._id) ? (
-                                                            <>
-                                                                <span className="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>
-                                                                Updating...
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Truck size={14} className="mr-1"/> Ship
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                            <React.Fragment key={index}>
+                                                <tr>
+                                                    <td className="align-middle font-weight-bold small text-info">{item.id || item._id}</td>
+                                                    <td className="align-middle small">{item.userid}</td>
+                                                    <td className="align-middle">
+                                                        <span className={`badge px-3 py-2 rounded-pill ${STATUS_BADGE_COLORS[item.orderstatus] || 'badge-secondary'}`}>
+                                                            {item.orderstatus}
+                                                        </span>
+                                                    </td>
+                                                    <td className="align-middle font-weight-bold">₹{item.finalAmount}</td>
+                                                    <td className="align-middle text-right">
+                                                        <button
+                                                            onClick={() => setExpandedRow(expandedRow === index ? null : index)}
+                                                            className="btn btn-sm btn-outline-primary rounded-pill d-flex align-items-center"
+                                                            title="Click to see all status options"
+                                                        >
+                                                            Update Status
+                                                            <ChevronDown 
+                                                                size={16} 
+                                                                className="ml-2" 
+                                                                style={{ 
+                                                                    transform: expandedRow === index ? 'rotate(180deg)' : 'rotate(0deg)',
+                                                                    transition: 'transform 0.3s'
+                                                                }}
+                                                            />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                {/* 📋 EXPANDED STATUS OPTIONS */}
+                                                {expandedRow === index && (
+                                                    <tr style={{ backgroundColor: '#f8f9fa' }}>
+                                                        <td colSpan="5" className="p-4">
+                                                            <div className="row">
+                                                                <div className="col-12 mb-3">
+                                                                    <h6 className="text-muted mb-3">
+                                                                        <Send size={14} className="mr-2" />
+                                                                        Select new status for Order <strong>{item.id || item._id}</strong>:
+                                                                    </h6>
+                                                                </div>
+                                                            </div>
+                                                            <div className="row g-2">
+                                                                {ALLOWED_ORDER_STATUS.map((status) => (
+                                                                    <div key={status} className="col-md-4 col-lg-3 mb-2">
+                                                                        <button
+                                                                            onClick={() => handleStatusUpdate(item, status)}
+                                                                            disabled={
+                                                                                updating === (item.id || item._id) ||
+                                                                                item.orderstatus === status
+                                                                            }
+                                                                            className={`btn btn-sm w-100 rounded-2 ${
+                                                                                item.orderstatus === status
+                                                                                    ? 'btn-secondary disabled'
+                                                                                    : 'btn-outline-success'
+                                                                            }`}
+                                                                            title={item.orderstatus === status ? 'Current status' : `Set to ${status}`}
+                                                                        >
+                                                                            {updating === (item.id || item._id) ? (
+                                                                                <>
+                                                                                    <span className="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true" style={{ width: '12px', height: '12px' }}></span>
+                                                                                    Updating...
+                                                                                </>
+                                                                            ) : item.orderstatus === status ? (
+                                                                                <>
+                                                                                    ✓ {status}
+                                                                                </>
+                                                                            ) : (
+                                                                                status
+                                                                            )}
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
                                         ))}
                                     </tbody>
                                 </table>
