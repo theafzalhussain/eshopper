@@ -993,7 +993,7 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
 const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName, email, estimatedDelivery, finalAmount }) => {
     const displayName = customerName || 'Valued Customer';
     const firstName = displayName.split(' ')[0];
-    const trackingLink = `https://eshopperr.me/orders/${orderId}`;
+    const trackingLink = `https://eshopperr.me/order-tracking/${orderId}`;
 
     console.log(`🎯 Sending Luxe Notifications for ${orderId} -> ${status}`);
 
@@ -1466,7 +1466,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
                                 <div style="font-size:11px;letter-spacing:1.5px;color:#d4af37;text-transform:uppercase;font-weight:700;margin-bottom:8px;">🆔 Order ID</div>
                                 <div style="font-size:24px;font-weight:900;color:#fff;margin-bottom:4px;">${orderId}</div>
                                 <div style="font-size:12px;color:#9ca3af;margin-top:8px;">
-                                    <a href="https://eshopperr.me/orders/${orderId}" style="color:#fbbf24;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+                                    <a href="https://eshopperr.me/order-tracking/${orderId}" style="color:#fbbf24;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;">
                                         Track Order <span style="font-size:10px;">→</span>
                                     </a>
                                 </div>
@@ -1549,7 +1549,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
 
                         <!-- CTA Buttons - Premium Design -->
                         <div style="margin-bottom:28px;">
-                            <a href="https://eshopperr.me/orders/${orderId}" class="button-mobile" style="display:block;background:linear-gradient(135deg,#111827,#1f2937);color:#fff;padding:18px 32px;border-radius:12px;text-decoration:none;font-weight:700;text-align:center;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:16px;letter-spacing:0.5px;">
+                            <a href="https://eshopperr.me/order-tracking/${orderId}" class="button-mobile" style="display:block;background:linear-gradient(135deg,#111827,#1f2937);color:#fff;padding:18px 32px;border-radius:12px;text-decoration:none;font-weight:700;text-align:center;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.3);font-size:16px;letter-spacing:0.5px;">
                                 🔍 TRACK YOUR ORDER
                             </a>
                             <a href="https://eshopperr.me/shop/All" class="button-mobile" style="display:block;background:#fff;color:#111827;padding:18px 32px;border-radius:12px;text-decoration:none;font-weight:700;border:2px solid #111827;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-size:16px;letter-spacing:0.5px;">
@@ -2252,7 +2252,7 @@ app.post('/api/place-order', async (req, res) => {
                         sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
                         to: [{ email: recipientEmail, name: user.name || 'Customer' }],
                         subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
-                        htmlContent: `<div style="font-family:Arial,sans-serif;padding:20px;background:#f8f8f8;"><h2 style="color:#111;">Order Confirmed</h2><p>Hi ${user.name || 'Customer'}, your order <strong>${orderId}</strong> for <strong>₹${Number(payable || 0).toLocaleString('en-IN')}</strong> is confirmed.</p><p>Track: <a href="https://eshopperr.me/orders/${orderId}">https://eshopperr.me/orders/${orderId}</a></p></div>`,
+                        htmlContent: `<div style="font-family:Arial,sans-serif;padding:20px;background:#f8f8f8;"><h2 style="color:#111;">Order Confirmed</h2><p>Hi ${user.name || 'Customer'}, your order <strong>${orderId}</strong> for <strong>₹${Number(payable || 0).toLocaleString('en-IN')}</strong> is confirmed.</p><p>Track: <a href="https://eshopperr.me/order-tracking/${orderId}">https://eshopperr.me/order-tracking/${orderId}</a></p></div>`,
                         replyTo: { email: 'support@eshopperr.me' }
                     }, {
                         headers: {
@@ -2287,7 +2287,7 @@ app.post('/api/place-order', async (req, res) => {
                     .map((item, idx) => `${idx + 1}. ${item.name} × ${item.qty} = Rs.${Number(item.total || 0).toLocaleString('en-IN')}`)
                     .join('\n');
 
-                const caption = `Luxury Experience Starts Now! 💎\n\nHello ${user.name || 'Customer'}, we are thrilled to process your boutique order #${orderId}.\n\n🧾 Order Value: Rs.${Number(payable || 0).toLocaleString('en-IN')}\n💳 Payment: ${paymentMethod || 'COD'}\n📦 Items:\n${itemSummary}${cleanProducts.length > 4 ? `\n+ ${cleanProducts.length - 4} more item(s)` : ''}\n\nWhat happens next?\nOur artisans are now hand-preparing your selection for premium delivery.\n\n📍 Track Your Journey: https://eshopperr.me/orders/${orderId}\n🎧 Support: support@eshopperr.me`;
+                const caption = `Luxury Experience Starts Now! 💎\n\nHello ${user.name || 'Customer'}, we are thrilled to process your boutique order #${orderId}.\n\n🧾 Order Value: Rs.${Number(payable || 0).toLocaleString('en-IN')}\n💳 Payment: ${paymentMethod || 'COD'}\n📦 Items:\n${itemSummary}${cleanProducts.length > 4 ? `\n+ ${cleanProducts.length - 4} more item(s)` : ''}\n\nWhat happens next?\nOur artisans are now hand-preparing your selection for premium delivery.\n\n📍 Track Your Journey: https://eshopperr.me/order-tracking/${orderId}\n🎧 Support: support@eshopperr.me`;
 
                 try {
                     await sendWhatsAppMedia(phoneNumber, mediaUrl, caption);
