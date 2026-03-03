@@ -380,6 +380,11 @@ const Order = mongoose.model('Order', new mongoose.Schema({
     },
     products: Array,
     estimatedArrival: Date,
+    statusHistory: [{
+        status: String,
+        timestamp: { type: Date, default: Date.now },
+        message: String
+    }],
     orderDate: { type: Date, default: Date.now }
 }, opts));
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
@@ -2417,6 +2422,11 @@ app.get('/api/order/:orderId', async (req, res) => {
 
         if (!order) return res.status(404).json({ message: 'Order not found' });
 
+        // 📦 Build comprehensive order response
+        const statusHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [
+            { status: 'Ordered', timestamp: order.orderDate || order.createdAt || new Date() }
+        ];
+
         return res.json({
             orderId: order.orderId,
             userid: order.userid,
@@ -2430,9 +2440,12 @@ app.get('/api/order/:orderId', async (req, res) => {
             finalAmount: order.finalAmount || 0,
             shippingAddress: order.shippingAddress || {},
             products: Array.isArray(order.products) ? order.products : [],
+            estimatedDelivery: order.estimatedArrival || null,
             estimatedArrival: order.estimatedArrival || null,
+            statusHistory: statusHistory,
+            createdAt: order.orderDate || order.createdAt || new Date(),
             orderDate: order.orderDate || order.createdAt,
-            updatedAt: order.updatedAt || order.createdAt
+            updatedAt: order.updatedAt || order.createdAt || new Date()
         });
     } catch (e) {
         console.error('❌ Order fetch error:', e.message);
