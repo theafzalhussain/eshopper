@@ -55,24 +55,57 @@ export default function OrderTracking() {
     try {
       setDownloadingInvoice(true)
       const response = await axios.get(`${BASE_URL}/api/order/${orderId}/invoice?userId=${userId}`, {
-        responseType: 'blob',
+        responseType: 'arraybuffer',
         timeout: 30000
       })
+
+      const contentType = String(response.headers?.['content-type'] || '').toLowerCase()
+      const bytes = new Uint8Array(response.data)
+      const header = String.fromCharCode(...bytes.slice(0, 4))
+      const isPdf = contentType.includes('application/pdf') && header === '%PDF'
+
+      if (!isPdf) {
+        let errorMessage = 'Unable to generate invoice right now'
+        try {
+          const text = new TextDecoder('utf-8').decode(bytes)
+          const parsed = JSON.parse(text)
+          errorMessage = parsed?.message || errorMessage
+        } catch (_) {
+          errorMessage = 'Invoice response invalid. Please try again.'
+        }
+        setToast({
+          id: Date.now(),
+          title: '❌ Download Failed',
+          message: errorMessage
+        })
+        return
+      }
+
       const blob = new Blob([response.data], { type: 'application/pdf' })
       const url = window.URL.createObjectURL(blob)
+
+      const previewWindow = window.open(url, '_blank', 'noopener,noreferrer')
+      if (!previewWindow) {
+        console.warn('Popup blocked while opening invoice preview')
+      }
+
       const link = document.createElement('a')
       link.href = url
       link.download = `Invoice-${orderId}.pdf`
       document.body.appendChild(link)
       link.click()
       link.remove()
-      window.URL.revokeObjectURL(url)
-      showStatusToast('Downloaded')
+      setTimeout(() => window.URL.revokeObjectURL(url), 45000)
+      setToast({
+        id: Date.now(),
+        title: '✅ Invoice Ready',
+        message: 'Invoice downloaded and opened in new tab.'
+      })
     } catch (e) {
       setToast({
         id: Date.now(),
         title: '❌ Download Failed',
-        message: 'Unable to download invoice right now'
+        message: e?.response?.data?.message || 'Unable to download invoice right now'
       })
     } finally {
       setDownloadingInvoice(false)
@@ -98,7 +131,7 @@ export default function OrderTracking() {
     datadogRum.addAction('orderStatusUpdate', {
       orderId,
       userId,
-      newStatus,
+      newStatus: statusText,
       message: messages[nextStatus],
       timestamp: new Date().toISOString(),
       orderAmount: order?.finalAmount || 0

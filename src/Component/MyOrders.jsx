@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { datadogRum } from '@datadog/browser-rum'
 import { BASE_URL } from '../constants'
-import { ArrowRight, ExternalLink, Clock3, PackageSearch, FileDown } from 'lucide-react'
+import { Clock3, PackageSearch } from 'lucide-react'
 
 const FILTERS = ['All', 'In Transit', 'Delivered']
 
@@ -36,6 +36,7 @@ export default function MyOrders() {
   const [searchOrderId, setSearchOrderId] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [downloadingInvoice, setDownloadingInvoice] = useState('')
 
   const downloadInvoice = async (orderId) => {
@@ -43,20 +44,48 @@ export default function MyOrders() {
     try {
       setDownloadingInvoice(orderId)
       const response = await axios.get(`${BASE_URL}/api/order/${orderId}/invoice?userId=${userId}`, {
-        responseType: 'blob',
+        responseType: 'arraybuffer',
         timeout: 30000
       })
+
+      const contentType = String(response.headers?.['content-type'] || '').toLowerCase()
+      const bytes = new Uint8Array(response.data)
+      const header = String.fromCharCode(...bytes.slice(0, 4))
+      const isPdf = contentType.includes('application/pdf') && header === '%PDF'
+
+      if (!isPdf) {
+        let errorMessage = 'Unable to generate invoice right now'
+        try {
+          const text = new TextDecoder('utf-8').decode(bytes)
+          const parsed = JSON.parse(text)
+          errorMessage = parsed?.message || errorMessage
+        } catch (_) {
+          errorMessage = 'Invoice response invalid. Please try again.'
+        }
+        setError(errorMessage)
+        return
+      }
+
       const blob = new Blob([response.data], { type: 'application/pdf' })
       const url = window.URL.createObjectURL(blob)
+
+      const previewWindow = window.open(url, '_blank', 'noopener,noreferrer')
+      if (!previewWindow) {
+        console.warn('Popup blocked while opening invoice preview')
+      }
+
       const link = document.createElement('a')
       link.href = url
       link.download = `Invoice-${orderId}.pdf`
       document.body.appendChild(link)
       link.click()
       link.remove()
-      window.URL.revokeObjectURL(url)
+
+      setTimeout(() => window.URL.revokeObjectURL(url), 45000)
+      setError('')
     } catch (e) {
-      setError('Unable to download invoice right now')
+      const serverMessage = e?.response?.data?.message
+      setError(serverMessage || 'Unable to download invoice right now')
     } finally {
       setDownloadingInvoice('')
     }
@@ -182,24 +211,18 @@ export default function MyOrders() {
               )}
               <button
                 type="button"
-                onClick={() => {
-                  const allFilled = searchOrderId || fromDate || toDate
-                  if (allFilled) {
-                    setFromDate('')
-                    setToDate('')
-                  }
-                }}
+                onClick={() => setShowAdvancedFilters((prev) => !prev)}
                 className="btn btn-outline-dark flex-grow-1"
                 style={{ fontSize: '13px' }}
                 title="Show/Hide Advanced Filters"
               >
-                {fromDate || toDate ? '📅 Clear Dates' : '⚙️ Filters'}
+                {showAdvancedFilters ? '⬆ Hide Filters' : '⚙️ Filters'}
               </button>
             </div>
           </div>
           
           {/* Advanced Date Filters - Show only if needed */}
-          {(fromDate || toDate) && (
+          {showAdvancedFilters && (
             <div className="row mt-3">
               <div className="col-md-6 mb-2 mb-md-0">
                 <label className="small text-muted mb-1" style={{ display: 'block' }}>From Date</label>
@@ -220,6 +243,18 @@ export default function MyOrders() {
                   className="form-control"
                   style={{ borderRadius: '8px' }}
                 />
+              </div>
+              <div className="col-12 mt-3 d-flex justify-content-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFromDate('')
+                    setToDate('')
+                  }}
+                  className="btn btn-sm btn-outline-secondary"
+                >
+                  Clear Date Filters
+                </button>
               </div>
             </div>
           )}
@@ -293,10 +328,18 @@ export default function MyOrders() {
                 <div className="d-flex gap-2 flex-wrap">
                   <button
                     onClick={() => navigate(`/order-tracking/${item.orderId}`)}
-                    className="btn btn-dark btn-sm rounded-pill px-3 flex-grow-1"
-                    style={{ minWidth: '140px' }}
+                    className="btn btn-sm rounded-pill px-3 flex-grow-1"
+                    style={{
+                      minWidth: '140px',
+                      background: 'linear-gradient(135deg, #0f0f10, #2b3138)',
+                      color: '#fff',
+                      border: '1px solid #353b44',
+                      fontWeight: 700,
+                      boxShadow: '0 6px 16px rgba(15,15,16,0.22)',
+                      letterSpacing: '0.2px'
+                    }}
                   >
-                    🔍 Track Order
+                    🔎 Track Order Live
                   </button>
                   <button
                     onClick={() => downloadInvoice(item.orderId)}

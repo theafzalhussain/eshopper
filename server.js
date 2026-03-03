@@ -615,17 +615,29 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
     const html = buildInvoiceHtml(orderPayload);
     const browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--font-render-hinting=none'
+        ]
     });
 
     try {
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
+        await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.emulateMediaType('screen');
         const pdf = await page.pdf({
             format: 'A4',
             printBackground: true,
             margin: { top: '16mm', right: '12mm', bottom: '16mm', left: '12mm' }
         });
+
+        if (!pdf || !Buffer.isBuffer(pdf) || pdf.length < 1000 || pdf.subarray(0, 4).toString() !== '%PDF') {
+            throw new Error('Generated invoice buffer is not a valid PDF');
+        }
+
         return pdf;
     } finally {
         await browser.close();
@@ -2024,6 +2036,11 @@ app.post('/api/place-order', async (req, res) => {
             shippingAddress: addressPayload,
             products: cleanProducts,
             estimatedArrival,
+            statusHistory: [{
+                status: 'Ordered',
+                timestamp: orderDate,
+                message: 'Order placed successfully'
+            }],
             orderDate
         });
 
@@ -2457,6 +2474,7 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
     try {
         const { orderId } = req.params;
         const userId = String(req.query.userId || '').trim();
+        const disposition = String(req.query.disposition || 'attachment').toLowerCase() === 'inline' ? 'inline' : 'attachment';
 
         if (!orderId || !userId) {
             return res.status(400).json({ message: 'orderId and userId are required' });
@@ -2480,7 +2498,9 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
         });
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="Invoice-${order.orderId}.pdf"`);
+        res.setHeader('Content-Disposition', `${disposition}; filename="Invoice-${order.orderId}.pdf"`);
+        res.setHeader('Content-Length', String(pdfBuffer.length));
+        res.setHeader('Cache-Control', 'no-store');
         return res.send(pdfBuffer);
     } catch (e) {
         console.error('❌ Invoice generation error:', e.message);
@@ -2600,6 +2620,15 @@ app.post('/api/update-order-status', async (req, res) => {
         if (!order) return res.status(404).json({ message: 'Order not found' });
 
         order.orderStatus = normalized;
+        const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+        order.statusHistory = [
+            ...existingTimeline,
+            {
+                status: normalized,
+                timestamp: new Date(),
+                message: `Order status changed to ${normalized}`
+            }
+        ];
         await order.save();
 
         const payload = {
