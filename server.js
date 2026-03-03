@@ -857,6 +857,7 @@ const sendOrderWhatsAppNotification = async ({ phone, orderId, status, customerN
 const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
     const apiUrl = process.env.EVOLUTION_API_URL ? process.env.EVOLUTION_API_URL.trim().replace(/\/$/, '') : '';
     const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
+    const apiKey = process.env.EVOLUTION_API_KEY ? process.env.EVOLUTION_API_KEY.trim() : '';
     const instance = process.env.WHATSAPP_INSTANCE || 'eshopper_bot';
 
     const normalizePhoneStrict = (phone = '') => {
@@ -893,9 +894,9 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
         throw new Error('EVOLUTION_API_URL not configured');
     }
 
-    if (!token) {
-        console.error('❌ WHATSAPP_TOKEN not configured');
-        throw new Error('WHATSAPP_TOKEN not configured');
+    if (!token && !apiKey) {
+        console.error('❌ WHATSAPP_TOKEN or EVOLUTION_API_KEY not configured');
+        throw new Error('WHATSAPP credentials not configured');
     }
 
     if (!contactNumber || contactNumber.length < 12) {
@@ -910,31 +911,74 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
 
     try {
         const endpoint = `${apiUrl}/message/sendMedia/${instance}`;
-        
-        const payload = {
-            number: contactNumber,
-            mediatype: 'image',
-            media: mediaUrl,
-            caption: String(caption).trim()
-        };
+        const mediaCaption = String(caption).trim();
+
+        const payloadFormats = [
+            {
+                number: contactNumber,
+                mediatype: 'image',
+                media: mediaUrl,
+                caption: mediaCaption,
+                fileName: `eshopper-order-${Date.now()}.png`
+            },
+            {
+                number: contactNumber,
+                mediatype: 'image',
+                media: mediaUrl,
+                text: mediaCaption
+            },
+            {
+                to: contactNumber,
+                mediatype: 'image',
+                media: mediaUrl,
+                caption: mediaCaption
+            }
+        ];
 
         console.log(`📸 Sending WhatsApp Media to: ${contactNumber}`);
         console.log(`   Endpoint: ${endpoint}`);
         console.log(`   Media: ${mediaUrl}`);
-        console.log(`   Caption: ${caption.substring(0, 50)}...`);
+        console.log(`   Caption: ${mediaCaption.substring(0, 80)}...`);
 
-        const response = await axios.post(endpoint, payload, {
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': token
-            },
-            timeout: 30000
-        });
+        let lastError;
 
-        console.log(`✅ WhatsApp media sent (Status: ${response.status})`);
-        console.log(`   Response: ${JSON.stringify(response.data)}`);
-        return true;
+        for (let i = 0; i < payloadFormats.length; i++) {
+            const payload = payloadFormats[i];
+            try {
+                const response = await axios.post(endpoint, payload, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': token || apiKey
+                    },
+                    timeout: 30000
+                });
 
+                console.log(`✅ WhatsApp media sent on attempt ${i + 1} (Status: ${response.status})`);
+                return true;
+            } catch (err) {
+                lastError = err;
+                console.warn(`⚠️ sendMedia attempt ${i + 1} failed:`, err.response?.status || err.message);
+
+                if (err.response?.status === 401 && apiKey) {
+                    try {
+                        const bearerResponse = await axios.post(endpoint, payload, {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${apiKey}`
+                            },
+                            timeout: 30000
+                        });
+
+                        console.log(`✅ WhatsApp media sent with Bearer auth (Status: ${bearerResponse.status})`);
+                        return true;
+                    } catch (bearerErr) {
+                        lastError = bearerErr;
+                    }
+                }
+            }
+        }
+
+        throw lastError || new Error('All sendMedia payload attempts failed');
     } catch (error) {
         console.error('❌ WhatsApp media send failed:', {
             status: error.response?.status,
@@ -2184,9 +2228,11 @@ app.post('/api/place-order', async (req, res) => {
             if (process.env.SENTRY_DSN) Sentry.captureException(invoiceError);
         }
 
+        const recipientEmail = String(user.email || addressPayload?.email || '').trim();
+
         try {
             await sendOrderConfirmationEmail({
-                toEmail: user.email,
+            toEmail: recipientEmail,
                 userName: user.name,
                 orderId,
                 paymentMethod: paymentMethod || 'COD',
@@ -2199,6 +2245,29 @@ app.post('/api/place-order', async (req, res) => {
         } catch (emailError) {
             console.error('Order confirmation email failed:', emailError.message);
             if (process.env.SENTRY_DSN) Sentry.captureException(emailError);
+
+            try {
+                if (recipientEmail && recipientEmail.includes('@')) {
+                    await axios.post('https://api.brevo.com/v3/smtp/email', {
+                        sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
+                        to: [{ email: recipientEmail, name: user.name || 'Customer' }],
+                        subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
+                        htmlContent: `<div style="font-family:Arial,sans-serif;padding:20px;background:#f8f8f8;"><h2 style="color:#111;">Order Confirmed</h2><p>Hi ${user.name || 'Customer'}, your order <strong>${orderId}</strong> for <strong>₹${Number(payable || 0).toLocaleString('en-IN')}</strong> is confirmed.</p><p>Track: <a href="https://eshopperr.me/orders/${orderId}">https://eshopperr.me/orders/${orderId}</a></p></div>`,
+                        replyTo: { email: 'support@eshopperr.me' }
+                    }, {
+                        headers: {
+                            'api-key': process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '',
+                            'content-type': 'application/json',
+                            'accept': 'application/json'
+                        },
+                        timeout: 15000
+                    });
+                    console.log(`✅ Fallback order email sent for ${orderId}`);
+                }
+            } catch (fallbackEmailError) {
+                console.error(`⚠️ Fallback order email failed for ${orderId}:`, fallbackEmailError.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(fallbackEmailError);
+            }
         }
 
         try {
@@ -2213,7 +2282,12 @@ app.post('/api/place-order', async (req, res) => {
                 console.warn(`⚠️  No phone number found for order ${orderId}, skipping WhatsApp`);
             } else {
                 const mediaUrl = 'https://res.cloudinary.com/dtfvoxw1p/image/upload/v1724068341/order_success_lux.png';
-                const caption = `Luxury Experience Starts Now! 💎\n\nHello ${user.name || 'Customer'}, we are thrilled to process your boutique order #${orderId} totaling Rs.${Number(payable || 0).toFixed(0)}.\n\nWhat happens next?\nOur artisans are now hand-preparing your selection for premium delivery.\n\n📍 Track Your Journey: https://eshopperr.me/orders`;
+                const itemSummary = cleanProducts
+                    .slice(0, 4)
+                    .map((item, idx) => `${idx + 1}. ${item.name} × ${item.qty} = Rs.${Number(item.total || 0).toLocaleString('en-IN')}`)
+                    .join('\n');
+
+                const caption = `Luxury Experience Starts Now! 💎\n\nHello ${user.name || 'Customer'}, we are thrilled to process your boutique order #${orderId}.\n\n🧾 Order Value: Rs.${Number(payable || 0).toLocaleString('en-IN')}\n💳 Payment: ${paymentMethod || 'COD'}\n📦 Items:\n${itemSummary}${cleanProducts.length > 4 ? `\n+ ${cleanProducts.length - 4} more item(s)` : ''}\n\nWhat happens next?\nOur artisans are now hand-preparing your selection for premium delivery.\n\n📍 Track Your Journey: https://eshopperr.me/orders/${orderId}\n🎧 Support: support@eshopperr.me`;
 
                 try {
                     await sendWhatsAppMedia(phoneNumber, mediaUrl, caption);
@@ -2701,17 +2775,37 @@ app.post('/api/update-order-status', async (req, res) => {
 
         // 🔴 TRIGGER LUXURY NOTIFICATIONS (non-blocking via setImmediate)
         setImmediate(() => {
-            sendLuxeStatusNotification({
-                orderId: order.orderId,
-                status: normalized,
-                phone: order.shippingAddress?.phone || order.userPhone,
-                customerName: order.userName,
-                email: order.userEmail,
-                estimatedDelivery: order.estimatedArrival,
-                finalAmount: order.finalAmount
-            }).catch(err => {
-                console.error(`⚠️  Background notification error: ${err.message}`);
-            });
+            User.findById(order.userid).lean()
+                .then((userDoc) => {
+                    const resolvedPhone = order.shippingAddress?.phone || userDoc?.phone || order.userPhone;
+                    const resolvedEmail = order.userEmail || userDoc?.email || '';
+                    const resolvedName = order.userName || userDoc?.name || 'Customer';
+
+                    return sendLuxeStatusNotification({
+                        orderId: order.orderId,
+                        status: normalized,
+                        phone: resolvedPhone,
+                        customerName: resolvedName,
+                        email: resolvedEmail,
+                        estimatedDelivery: order.estimatedArrival,
+                        finalAmount: order.finalAmount
+                    });
+                })
+                .catch((lookupErr) => {
+                    console.warn(`⚠️ User fallback lookup failed for ${order.orderId}:`, lookupErr.message);
+                    return sendLuxeStatusNotification({
+                        orderId: order.orderId,
+                        status: normalized,
+                        phone: order.shippingAddress?.phone || order.userPhone,
+                        customerName: order.userName,
+                        email: order.userEmail,
+                        estimatedDelivery: order.estimatedArrival,
+                        finalAmount: order.finalAmount
+                    });
+                })
+                .catch(err => {
+                    console.error(`⚠️  Background notification error: ${err.message}`);
+                });
         });
 
         return res.json({
