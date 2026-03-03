@@ -630,31 +630,33 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
 const sendWhatsApp = async (number, message) => {
     const apiUrl = process.env.EVOLUTION_API_URL ? process.env.EVOLUTION_API_URL.trim().replace(/\/$/, '') : '';
     const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
+    const apiKey = process.env.EVOLUTION_API_KEY ? process.env.EVOLUTION_API_KEY.trim() : '';
     const instance = process.env.WHATSAPP_INSTANCE || 'eshopper_bot';
     const contactNumber = normalizePhoneForWhatsApp(number);
 
     console.log('🔔 WhatsApp Send Debug:');
-    console.log(`   API URL: ${apiUrl ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   API URL: ${apiUrl ? '✅ Set (' + apiUrl + ')' : '❌ Missing'}`);
     console.log(`   Token: ${token ? '✅ Set' : '❌ Missing'}`);
+    console.log(`   API Key: ${apiKey ? '✅ Set' : '⏭️  Not set'}`);
     console.log(`   Instance: ${instance}`);
     console.log(`   Contact: ${contactNumber || '❌ Invalid'}`);
-    console.log(`   Message: ${message.substring(0, 40)}...`);
+    console.log(`   Message: ${message.substring(0, 50)}...`);
 
     if (!apiUrl) {
         console.error('❌ EVOLUTION_API_URL not set');
-        return false;
+        throw new Error('EVOLUTION_API_URL not configured');
     }
-    if (!token) {
-        console.error('❌ WHATSAPP_TOKEN not set');
-        return false;
+    if (!token && !apiKey) {
+        console.error('❌ WHATSAPP_TOKEN or EVOLUTION_API_KEY not set');
+        throw new Error('WhatsApp credentials not configured');
     }
     if (!contactNumber) {
         console.error('❌ Contact number is invalid:', number);
-        return false;
+        throw new Error(`Invalid phone number: ${number}`);
     }
     if (!message) {
         console.error('❌ Message is empty');
-        return false;
+        throw new Error('Message cannot be empty');
     }
 
     try {
@@ -665,21 +667,44 @@ const sendWhatsApp = async (number, message) => {
         };
         
         console.log(`📤 Sending WhatsApp to: ${contactNumber}`);
-        const response = await axios.post(endpoint, payload, {
-            headers: {
-                'Content-Type': 'application/json',
-                apikey: token
-            },
-            timeout: 30000
-        });
+        console.log(`   Endpoint: ${endpoint}`);
         
-        console.log(`✅ WhatsApp sent successfully: ${response.status}`);
+        // Try with WHATSAPP_TOKEN first (as apikey header)
+        let response;
+        try {
+            response = await axios.post(endpoint, payload, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': token || apiKey
+                },
+                timeout: 30000
+            });
+        } catch (firstError) {
+            // If first attempt fails and we have API key, try with Authorization header
+            if (apiKey && firstError.response?.status === 401) {
+                console.log(`🔄 Retrying with Authorization header...`);
+                response = await axios.post(endpoint, payload, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    timeout: 30000
+                });
+            } else {
+                throw firstError;
+            }
+        }
+        
+        console.log(`✅ WhatsApp sent successfully (Status: ${response.status})`);
+        console.log(`   Response: ${JSON.stringify(response.data)}`);
         return true;
+        
     } catch (error) {
         console.error('❌ WhatsApp send failed:', {
             status: error.response?.status,
-            message: error.response?.data?.message || error.message,
-            url: error.config?.url
+            message: error.response?.data?.message || error.response?.data || error.message,
+            endpoint: error.config?.url,
+            fullError: JSON.stringify(error.response?.data)
         });
         throw error;
     }
@@ -1501,9 +1526,20 @@ app.post('/api/place-order', async (req, res) => {
         }
 
         try {
-            const whatsappMessage = `Luxe Experience Starts Now! 💎 Hi ${user.name || 'Customer'}, your Eshopper Boutique order for Rs.${Number(total || 0).toFixed(0)} is confirmed! Check progress: https://eshopperr.me/orders`;
-            await sendWhatsApp(user.phone || addressPayload?.phone, whatsappMessage);
-            console.log(`✅ Order placement WhatsApp sent for order ${orderId}`);
+            const phoneNumber = user.phone || addressPayload?.phone;
+            console.log(`📱 WhatsApp Debug Info:
+   User Phone: ${user.phone || '❌ Not in user object'}
+   Address Phone: ${addressPayload?.phone || '❌ Not in address'}
+   Final Phone: ${phoneNumber || '❌ Neither found'}
+   Order ID: ${orderId}`);
+            
+            if (!phoneNumber) {
+                console.warn(`⚠️  No phone number found for order ${orderId}, skipping WhatsApp`);
+            } else {
+                const whatsappMessage = `Luxe Experience Starts Now! 💎 Hi ${user.name || 'Customer'}, your Eshopper Boutique order for Rs.${Number(total || 0).toFixed(0)} is confirmed! Check progress: https://eshopperr.me/orders`;
+                await sendWhatsApp(phoneNumber, whatsappMessage);
+                console.log(`✅ Order placement WhatsApp sent for order ${orderId}`);
+            }
         } catch (waError) {
             console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
             if (process.env.SENTRY_DSN) Sentry.captureException(waError);
