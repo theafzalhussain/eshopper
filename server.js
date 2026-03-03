@@ -467,9 +467,15 @@ const buildInvoiceHtml = ({
                 body { background: #f5f5f3; color: #121212; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
                 .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
                 .card { background: #fff; border: 3px solid #d4af37; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
-                .head { padding: 40px 32px; background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #d4af37 100%); color: #fff; text-align: center; box-shadow: inset 0 0 30px rgba(212, 175, 55, 0.2); position: relative; overflow: hidden; }
-                .head::before { content: ''; position: absolute; top: -50%; right: -50%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(212,175,55,0.15), transparent); border-radius: 50%; }
-                .head-content { position: relative; z-index: 1; }
+                .head { padding: 24px 20px; background: #f5f5f3; }
+                .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
+                .brand-center { text-align: center; vertical-align: middle; }
+                .brand-spacer { width: 64px; }
+                .brand-badge { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+                .brand-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
+                .brand-title { font-size: 34px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; line-height: 1.2; }
+                .tagline { font-size: 12px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0 0; }
                 .logo-section { margin-bottom: 16px; }
                 .logo-icon { font-size: 64px; line-height: 1; margin: 0 0 12px 0; display: inline-block; }
                 .brand-name { font-size: 56px; font-weight: 700; letter-spacing: 4px; margin: 0 0 4px 0; background: linear-gradient(90deg, #fff9e6, #d4af37, #fff9e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
@@ -507,8 +513,12 @@ const buildInvoiceHtml = ({
                 .foot-premium { color: #d4af37; font-weight: 700; margin-top: 14px; font-size: 13px; letter-spacing: 1px; }
                 @media (max-width: 768px) {
                     .wrap { padding: 12px; }
-                    .head { padding: 28px 20px; }
+                    .head { padding: 18px 16px; }
                     .body { padding: 24px; }
+                    .brand-left, .brand-spacer { width: 52px; }
+                    .brand-badge { width: 40px; height: 40px; border-radius: 10px; }
+                    .brand-title { font-size: 22px; }
+                    .tagline { font-size: 10px; } 
                     .brand-name { font-size: 40px; letter-spacing: 2px; }
                     .logo-icon { font-size: 48px; }
                     .title { font-size: 24px; }
@@ -540,12 +550,20 @@ const buildInvoiceHtml = ({
                 <div class="card">
                     <!-- PREMIUM HEADER -->
                     <div class="head">
-                        <div class="head-content">
-                            <div class="logo-section">
-                                <img src="https://eshopperr.me/assets/eshopper-logo-horizontal.svg" alt="eShopper Boutique Luxe" style="height:80px; margin-bottom:12px; display:block; margin-left:auto; margin-right:auto;" />
-                            </div>
-                            <div class="tag-badge">🏆 Premium Invoice</div>
-                        </div>
+                        <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td class="brand-left">
+                                    <div class="brand-badge">
+                                        <img src="https://eshopperr.me/assets/eshopper-logo-mark.svg" alt="Logo" />
+                                    </div>
+                                </td>
+                                <td class="brand-center">
+                                    <p class="brand-title">eShopper Boutique Luxe</p>
+                                    <p class="tagline">Premium Fashion Destination</p>
+                                </td>
+                                <td class="brand-spacer"></td>
+                            </tr>
+                        </table>
                     </div>
 
                     <!-- MAIN CONTENT -->
