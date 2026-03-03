@@ -7,11 +7,12 @@ import { BASE_URL } from '../../constants'
 import { ShoppingBag, Truck, AlertCircle, ChevronDown, Send } from 'lucide-react'
 import io from 'socket.io-client'
 
-// 📦 All available order statuses
-const ALLOWED_ORDER_STATUS = ['Order Placed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed']
+// 📦 All available order statuses (must match server ALLOWED_ORDER_STATUS)
+const ALLOWED_ORDER_STATUS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed']
 
 // 🎨 Status badge colors
 const STATUS_BADGE_COLORS = {
+    'Ordered': 'badge-warning',
     'Order Placed': 'badge-warning',
     'Packed': 'badge-info',
     'Shipped': 'badge-primary',
