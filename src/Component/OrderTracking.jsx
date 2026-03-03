@@ -50,11 +50,30 @@ export default function OrderTracking() {
 
   const showStatusToast = (nextStatus) => {
     const statusText = normalizeStatus(nextStatus)
+    const messages = {
+      Ordered: '✅ Order Confirmed - Processing started',
+      Packed: '📦 Luxe Parcel Ready - Beautiful packaging in progress',
+      Shipped: '🚚 White-Glove Delivery - On its divine journey',
+      Delivered: '🎉 Luxury Experience Complete - Thank you!'
+    }
+
     setToast({
       id: Date.now(),
-      title: 'Order Updated',
-      message: `Your order is now ${statusText}`
+      title: '📨 Status Updated',
+      message: messages[nextStatus] || `Status: ${statusText}`
     })
+
+    // 🔴 DATADOG RUM CONVERSION TRACKING
+    datadogRum.addAction('orderStatusUpdate', {
+      orderId,
+      userId,
+      newStatus,
+      message: messages[nextStatus],
+      timestamp: new Date().toISOString(),
+      orderAmount: order?.finalAmount || 0
+    })
+
+    console.log(`📊 Datadog tracked: ${nextStatus}`)
   }
 
   // 🔴 DATADOG CONTEXT - Track order tracking page visit
