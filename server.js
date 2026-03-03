@@ -2523,10 +2523,30 @@ app.get('/api/orders/:userId', async (req, res) => {
             return res.status(400).json({ message: 'userId is required' });
         }
 
+        // 🔴 FETCH FROM ORDER COLLECTION (primary source)
         const orders = await Order.find({ userid: userId })
             .sort({ updatedAt: -1, createdAt: -1 })
             .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
             .lean();
+
+        // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
+        if (orders.length === 0) {
+            const checkoutOrders = await Checkout.find({ userid: userId })
+                .sort({ updatedAt: -1, createdAt: -1 })
+                .lean();
+            
+            return res.json({
+                success: true,
+                orders: checkoutOrders.map((item) => ({
+                    orderId: item.orderId || `CHECKOUT-${item._id}`,
+                    orderStatus: item.orderstatus || 'Order Placed',
+                    finalAmount: Number(item.finalAmount || 0),
+                    paymentStatus: item.paymentstatus || 'Pending',
+                    paymentMethod: item.paymentmode || 'COD',
+                    updatedAt: item.updatedAt || new Date()
+                }))
+            });
+        }
 
         return res.json({
             success: true,
@@ -2788,8 +2808,59 @@ app.post('/api/update-order-status', async (req, res) => {
             });
         }
 
-        const order = await Order.findOne({ orderId });
-        if (!order) return res.status(404).json({ message: 'Order not found' });
+        // 🔴 FIRST: Try to find by orderId (from Order collection)
+        let order = await Order.findOne({ orderId });
+        
+        // 🔴 SECOND: If not found, try by MongoDB _id (from Checkout collection)
+        if (!order && orderId.length === 24) {
+            try {
+                order = await Order.findById(orderId);
+            } catch (idErr) {
+                // Not a valid MongoDB ID, continue
+            }
+        }
+
+        if (!order) {
+            // Final attempt: Search in Checkout and use userid + order data
+            const checkout = await Checkout.findById(orderId).lean();
+            if (!checkout) {
+                return res.status(404).json({ message: 'Order not found in any collection' });
+            }
+            
+            // Create order record from checkout data
+            const newOrder = await Order.create({
+                orderId: orderId,
+                userid: checkout.userid,
+                userName: 'Customer',
+                userEmail: '',
+                paymentMethod: checkout.paymentmode || 'COD',
+                paymentStatus: checkout.paymentstatus || 'Pending',
+                orderStatus: normalized,
+                totalAmount: checkout.totalAmount,
+                shippingAmount: checkout.shippingAmount,
+                finalAmount: checkout.finalAmount,
+                products: checkout.products || [],
+                statusHistory: [{
+                    status: normalized,
+                    timestamp: new Date(),
+                    message: `Order status changed to ${normalized}`
+                }]
+            });
+            order = newOrder;
+        } else {
+            // Update existing order
+            order.orderStatus = normalized;
+            const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+            order.statusHistory = [
+                ...existingTimeline,
+                {
+                    status: normalized,
+                    timestamp: new Date(),
+                    message: `Order status changed to ${normalized}`
+                }
+            ];
+            await order.save();
+        }
 
         order.orderStatus = normalized;
         const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
@@ -2803,6 +2874,12 @@ app.post('/api/update-order-status', async (req, res) => {
         ];
         await order.save();
 
+        // 🔴 SYNC STATUS TO CHECKOUT COLLECTION (prevent data mismatch)
+        await Checkout.updateMany(
+            { userid: order.userid, totalAmount: order.totalAmount, finalAmount: order.finalAmount },
+            { orderstatus: normalized, updatedAt: new Date() }
+        ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
+
         const payload = {
             orderId: order.orderId,
             userId: order.userid,
@@ -2812,7 +2889,7 @@ app.post('/api/update-order-status', async (req, res) => {
 
         // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
         io.to(`user:${order.userid}`).emit('statusUpdate', payload);
-        console.log(`✅ Status updated for order ${orderId} to ${normalized}, emitted to user:${order.userid}`);
+        console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
 
         // 🔴 TRIGGER LUXURY NOTIFICATIONS (non-blocking via setImmediate)
         setImmediate(() => {
