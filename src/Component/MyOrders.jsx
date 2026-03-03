@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { datadogRum } from '@datadog/browser-rum'
 import { BASE_URL } from '../constants'
-import { ArrowRight, ExternalLink, Clock3, PackageSearch } from 'lucide-react'
+import { ArrowRight, ExternalLink, Clock3, PackageSearch, FileDown } from 'lucide-react'
 
 const FILTERS = ['All', 'In Transit', 'Delivered']
 
@@ -36,6 +36,31 @@ export default function MyOrders() {
   const [searchOrderId, setSearchOrderId] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const [downloadingInvoice, setDownloadingInvoice] = useState('')
+
+  const downloadInvoice = async (orderId) => {
+    if (!orderId || !userId) return
+    try {
+      setDownloadingInvoice(orderId)
+      const response = await axios.get(`${BASE_URL}/api/order/${orderId}/invoice?userId=${userId}`, {
+        responseType: 'blob',
+        timeout: 30000
+      })
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Invoice-${orderId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      setError('Unable to download invoice right now')
+    } finally {
+      setDownloadingInvoice('')
+    }
+  }
 
   useEffect(() => {
     datadogRum.setGlobalContextProperty('myOrdersPage', true)
@@ -206,6 +231,14 @@ export default function MyOrders() {
                     Payment: <span className="font-weight-bold text-dark">{item.paymentMethod || 'COD'}</span>
                   </div>
                   <div className="d-flex mt-2 mt-md-0">
+                    <button
+                      onClick={() => downloadInvoice(item.orderId)}
+                      disabled={downloadingInvoice === item.orderId}
+                      className="btn btn-outline-warning btn-sm rounded-pill px-3 mr-2"
+                      style={{ borderColor: '#d1a84a', color: '#7d6122' }}
+                    >
+                      {downloadingInvoice === item.orderId ? 'Preparing...' : 'Invoice'} <FileDown size={13} className="ml-1" />
+                    </button>
                     <button
                       onClick={() => navigate(`/order-tracking/${item.orderId}`)}
                       className="btn btn-dark btn-sm rounded-pill px-3 mr-2"

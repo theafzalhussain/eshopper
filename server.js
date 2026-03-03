@@ -27,6 +27,7 @@ const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require("@google/generative-ai");// 🔐 FIREBASE ADMIN SDK INITIALIZATION
+const puppeteer = require('puppeteer');
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
@@ -393,7 +394,236 @@ const generateOrderId = async () => {
     return `${prefix}${String(nextNumber).padStart(4, '0')}`;
 };
 
-const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival }) => {
+const normalizePhoneForWhatsApp = (phone = '') => {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length === 10) return `91${digits}`;
+    if (digits.startsWith('0') && digits.length === 11) return `91${digits.slice(1)}`;
+    return digits;
+};
+
+const getTrackingLink = (orderId) => {
+    const frontend = String(process.env.FRONTEND_URL || 'https://eshopperr.me').replace(/\/$/, '');
+    return `${frontend}/order-tracking/${encodeURIComponent(orderId)}`;
+};
+
+const buildInvoiceHtml = ({
+    orderId,
+    userName,
+    userEmail,
+    paymentMethod,
+    paymentStatus,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    shippingAddress,
+    products,
+    orderDate
+}) => {
+    const displayName = userName || 'Valued Customer';
+    const safeProducts = Array.isArray(products) ? products : [];
+    const orderDateText = new Date(orderDate || Date.now()).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
+    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
+    const payable = Number(finalAmount || (subtotal + shipping));
+
+    const rows = safeProducts.map((item, idx) => {
+        const qty = Number(item.qty || 1);
+        const price = Number(item.price || 0);
+        const line = Number(item.total || (qty * price));
+        return `
+            <tr>
+                <td>${idx + 1}</td>
+                <td>${item.name || 'Product'}</td>
+                <td>${qty}</td>
+                <td>₹${price.toFixed(0)}</td>
+                <td>₹${line.toFixed(0)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+                * { box-sizing: border-box; }
+                body { margin: 0; background: #f5f5f3; color: #121212; font-family: Inter, Arial, sans-serif; }
+                .wrap { max-width: 860px; margin: 0 auto; padding: 28px; }
+                .card { background: #fff; border: 1px solid #eee6cf; border-radius: 18px; overflow: hidden; }
+                .head { padding: 26px 30px; background: linear-gradient(135deg, #121212, #232323, #b48a2b); color: #fff; }
+                .brand { font-family: 'Playfair Display', serif; font-size: 34px; letter-spacing: .5px; margin: 0; }
+                .tag { font-size: 12px; letter-spacing: 2.4px; opacity: .92; margin-top: 6px; text-transform: uppercase; }
+                .body { padding: 26px 30px 30px; }
+                .title { font-family: 'Playfair Display', serif; font-size: 24px; margin: 0 0 18px; color: #1d1a12; }
+                .meta { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
+                .box { border: 1px solid #eadfbe; border-radius: 12px; padding: 12px 14px; background: #fffdfa; }
+                .k { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #7c6a40; }
+                .v { font-size: 15px; font-weight: 700; margin-top: 5px; color: #191919; word-break: break-word; }
+                table { width: 100%; border-collapse: collapse; margin-top: 16px; border: 1px solid #eadfbe; border-radius: 12px; overflow: hidden; }
+                th { background: #1b1b1b; color: #f3e7c4; font-size: 12px; letter-spacing: .8px; padding: 10px; text-transform: uppercase; text-align: left; }
+                td { border-top: 1px solid #f0ead6; padding: 10px; font-size: 13px; color: #212121; }
+                .totals { margin-top: 16px; border: 1px solid #eadfbe; border-radius: 12px; padding: 14px; background: #fffdfa; }
+                .line { display: flex; justify-content: space-between; margin-bottom: 7px; color: #2f2f2f; font-size: 14px; }
+                .line strong { color: #111; }
+                .final { border-top: 1px dashed #d9c99c; margin-top: 8px; padding-top: 10px; font-size: 20px; font-weight: 800; color: #111; }
+                .ship { margin-top: 16px; border: 1px solid #eadfbe; border-radius: 12px; padding: 14px; background: #fcfaf3; font-size: 13px; line-height: 1.65; color: #2f2f2f; }
+                .foot { margin-top: 16px; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class="wrap">
+                <div class="card">
+                    <div class="head">
+                        <h1 class="brand">Eshopper</h1>
+                        <div class="tag">Boutique Empire • Invoice</div>
+                    </div>
+                    <div class="body">
+                        <h2 class="title">Premium Order Invoice</h2>
+                        <div class="meta">
+                            <div class="box"><div class="k">Order ID</div><div class="v">${orderId}</div></div>
+                            <div class="box"><div class="k">Order Date</div><div class="v">${orderDateText}</div></div>
+                            <div class="box"><div class="k">Customer</div><div class="v">${displayName}</div></div>
+                            <div class="box"><div class="k">Email</div><div class="v">${userEmail || 'N/A'}</div></div>
+                            <div class="box"><div class="k">Payment</div><div class="v">${paymentMethod || 'COD'} • ${paymentStatus || 'Pending'}</div></div>
+                            <div class="box"><div class="k">Invoice Ref</div><div class="v">INV-${orderId}</div></div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:70px">#</th>
+                                    <th>Item</th>
+                                    <th style="width:90px">Qty</th>
+                                    <th style="width:120px">Price</th>
+                                    <th style="width:130px">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows || '<tr><td colspan="5">No items</td></tr>'}</tbody>
+                        </table>
+
+                        <div class="totals">
+                            <div class="line"><span>Subtotal</span><strong>₹${subtotal.toFixed(0)}</strong></div>
+                            <div class="line"><span>Shipping</span><strong>${shipping <= 0 ? 'FREE' : `₹${shipping.toFixed(0)}`}</strong></div>
+                            <div class="line final"><span>Final Amount</span><span>₹${payable.toFixed(0)}</span></div>
+                        </div>
+
+                        <div class="ship">
+                            <div style="font-weight:700;color:#121212;margin-bottom:4px;">Shipping Address</div>
+                            ${shippingAddress?.fullName || ''}<br/>
+                            ${shippingAddress?.addressline1 || ''}, ${shippingAddress?.city || ''}, ${shippingAddress?.state || ''} - ${shippingAddress?.pin || ''}<br/>
+                            ${shippingAddress?.country || 'India'} • ${shippingAddress?.phone || ''}
+                        </div>
+
+                        <div class="foot">This is a system-generated premium invoice by Eshopper Boutique Luxe.</div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
+const generateInvoicePdfBuffer = async (orderPayload) => {
+    const html = buildInvoiceHtml(orderPayload);
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    try {
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+        const pdf = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '16mm', right: '12mm', bottom: '16mm', left: '12mm' }
+        });
+        return pdf;
+    } finally {
+        await browser.close();
+    }
+};
+
+const sendWhatsApp = async (number, message) => {
+    const apiUrl = process.env.EVOLUTION_API_URL ? process.env.EVOLUTION_API_URL.trim().replace(/\/$/, '') : '';
+    const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
+    const contactNumber = normalizePhoneForWhatsApp(number);
+
+    if (!apiUrl || !token || !contactNumber || !message) return false;
+
+    await axios.post(`${apiUrl}/message/sendText/eshopper_bot`, {
+        number: contactNumber,
+        text: String(message)
+    }, {
+        headers: {
+            'Content-Type': 'application/json',
+            apikey: token
+        },
+        timeout: 30000
+    });
+
+    return true;
+};
+
+const sendOrderWhatsAppNotification = async ({ phone, orderId, status, customerName, trackingLink }) => {
+    const displayName = customerName || 'Customer';
+    const safeStatus = status || 'Order Update';
+    const message = `Hi ${displayName}, your order ${orderId} is now ${safeStatus}. Track here: ${trackingLink}`;
+    return sendWhatsApp(phone, message);
+};
+
+const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink }) => {
+    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
+    if (!BREVO_KEY || !toEmail) return false;
+
+    const displayName = userName || 'Valued Customer';
+    const htmlContent = `
+        <div style="margin:0;padding:20px;background:#f7f7f5;font-family:Inter,Arial,sans-serif;color:#111;">
+            <div style="max-width:620px;margin:0 auto;background:#fff;border:1px solid #eadfbe;border-radius:12px;overflow:hidden;">
+                <div style="padding:18px 22px;background:linear-gradient(135deg,#111,#242424,#b48a2b);color:#fff;">
+                    <div style="font-size:22px;font-weight:800;letter-spacing:.5px;">Eshopper</div>
+                    <div style="font-size:11px;letter-spacing:2px;margin-top:4px;opacity:.92;">Order Status Update</div>
+                </div>
+                <div style="padding:22px;">
+                    <p style="margin:0 0 10px;font-size:15px;">Hi <strong>${displayName}</strong>,</p>
+                    <p style="margin:0 0 14px;color:#4b5563;">Your order <strong>${orderId}</strong> has moved to:</p>
+                    <div style="display:inline-block;padding:10px 18px;border-radius:999px;border:1px solid #d9c99c;background:#fff9e8;color:#8a6a17;font-weight:800;letter-spacing:.4px;">${status}</div>
+                    <div style="margin-top:20px;">
+                        <a href="${trackingLink}" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#111;color:#f5deb3;text-decoration:none;font-weight:700;">Track Order</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    await axios.post('https://api.brevo.com/v3/smtp/email', {
+        sender: { name: 'Eshopper Orders', email: 'support@eshopperr.me' },
+        to: [{ email: toEmail, name: displayName }],
+        subject: `Order Update • ${orderId} • ${status}`,
+        htmlContent,
+        replyTo: { email: 'support@eshopperr.me' }
+    }, {
+        headers: {
+            'api-key': BREVO_KEY,
+            'content-type': 'application/json',
+            accept: 'application/json'
+        }
+    });
+
+    return true;
+};
+
+const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival, invoiceBase64 }) => {
     const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
     if (!BREVO_KEY || !toEmail) return false;
 
@@ -465,13 +695,22 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         </div>
     `;
 
-    await axios.post('https://api.brevo.com/v3/smtp/email', {
+    const mailPayload = {
         sender: { name: 'Eshopper Orders', email: 'support@eshopperr.me' },
         to: [{ email: toEmail, name: displayName }],
         subject: `Order Confirmation • ${orderId}`,
         htmlContent,
         replyTo: { email: 'support@eshopperr.me' }
-    }, {
+    };
+
+    if (invoiceBase64) {
+        mailPayload.attachment = [{
+            content: invoiceBase64,
+            name: `Invoice-${orderId}.pdf`
+        }];
+    }
+
+    await axios.post('https://api.brevo.com/v3/smtp/email', mailPayload, {
         headers: {
             'api-key': BREVO_KEY,
             'content-type': 'application/json',
@@ -1005,6 +1244,26 @@ app.post('/api/place-order', async (req, res) => {
 
         await Cart.deleteMany({ userid: userId });
 
+        let invoiceBuffer = null;
+        try {
+            invoiceBuffer = await generateInvoicePdfBuffer({
+                orderId,
+                userName: user.name,
+                userEmail: user.email,
+                paymentMethod: paymentMethod || 'COD',
+                paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+                finalAmount: payable,
+                totalAmount: total,
+                shippingAmount: shipping,
+                shippingAddress: addressPayload,
+                products: cleanProducts,
+                orderDate
+            });
+        } catch (invoiceError) {
+            console.error('Invoice PDF generation failed:', invoiceError.message);
+            if (process.env.SENTRY_DSN) Sentry.captureException(invoiceError);
+        }
+
         try {
             await sendOrderConfirmationEmail({
                 toEmail: user.email,
@@ -1014,11 +1273,20 @@ app.post('/api/place-order', async (req, res) => {
                 finalAmount: payable,
                 shippingAddress: addressPayload,
                 products: cleanProducts,
-                estimatedArrival
+                estimatedArrival,
+                invoiceBase64: invoiceBuffer ? invoiceBuffer.toString('base64') : null
             });
         } catch (emailError) {
             console.error('Order confirmation email failed:', emailError.message);
             if (process.env.SENTRY_DSN) Sentry.captureException(emailError);
+        }
+
+        try {
+            const whatsappMessage = `Luxe Experience Starts Now! 💎 Hi ${user.name || 'Customer'}, your Eshopper Boutique order for Rs.${Number(total || 0).toFixed(0)} is confirmed! Check progress: https://eshopperr.me/orders`;
+            await sendWhatsApp(user.phone || addressPayload?.phone, whatsappMessage);
+        } catch (waError) {
+            console.error('Order WhatsApp notification failed:', waError.message);
+            if (process.env.SENTRY_DSN) Sentry.captureException(waError);
         }
 
         return res.status(201).json({
@@ -1327,6 +1595,42 @@ app.get('/api/order/:orderId', async (req, res) => {
     }
 });
 
+app.get('/api/order/:orderId/invoice', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const userId = String(req.query.userId || '').trim();
+
+        if (!orderId || !userId) {
+            return res.status(400).json({ message: 'orderId and userId are required' });
+        }
+
+        const order = await Order.findOne({ orderId, userid: userId }).lean();
+        if (!order) return res.status(404).json({ message: 'Order not found' });
+
+        const pdfBuffer = await generateInvoicePdfBuffer({
+            orderId: order.orderId,
+            userName: order.userName,
+            userEmail: order.userEmail,
+            paymentMethod: order.paymentMethod,
+            paymentStatus: order.paymentStatus,
+            finalAmount: Number(order.finalAmount || 0),
+            totalAmount: Number(order.totalAmount || 0),
+            shippingAmount: Number(order.shippingAmount || 0),
+            shippingAddress: order.shippingAddress || {},
+            products: Array.isArray(order.products) ? order.products : [],
+            orderDate: order.orderDate || order.createdAt
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="Invoice-${order.orderId}.pdf"`);
+        return res.send(pdfBuffer);
+    } catch (e) {
+        console.error('❌ Invoice generation error:', e.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(e);
+        return res.status(500).json({ message: 'Failed to generate invoice' });
+    }
+});
+
 // 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
 app.get('/api/admin/orders', async (req, res) => {
     try {
@@ -1450,6 +1754,34 @@ app.post('/api/update-order-status', async (req, res) => {
         // EMIT STATUS UPDATE TO USER'S ROOM VIA SOCKET.IO
         io.to(`user:${order.userid}`).emit('statusUpdate', payload);
         console.log(`✅ Status updated for order ${orderId} to ${normalized}, emitted to user:${order.userid}`);
+
+        const user = await User.findById(order.userid).lean();
+        const trackingLink = getTrackingLink(order.orderId);
+
+        const notifyJobs = [
+            sendOrderStatusEmail({
+                toEmail: order.userEmail || user?.email,
+                userName: order.userName || user?.name,
+                orderId: order.orderId,
+                status: order.orderStatus,
+                trackingLink
+            }),
+            sendOrderWhatsAppNotification({
+                phone: user?.phone || order.shippingAddress?.phone,
+                orderId: order.orderId,
+                status: order.orderStatus,
+                customerName: order.userName || user?.name,
+                trackingLink
+            })
+        ];
+
+        const notifyResults = await Promise.allSettled(notifyJobs);
+        notifyResults.forEach((result, idx) => {
+            if (result.status === 'rejected') {
+                const channel = idx === 0 ? 'email' : 'whatsapp';
+                console.error(`❌ Order ${channel} status notification failed:`, result.reason?.message || result.reason);
+            }
+        });
 
         return res.json({ success: true, order: payload });
     } catch (e) {

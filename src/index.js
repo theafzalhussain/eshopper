@@ -30,12 +30,12 @@ console.error = (...args) => {
 };
 
 datadogRum.init({
-  applicationId: '3955c403-a66a-4cfe-a13b-6fbf7f629960',
-  clientToken: 'pub4e55a313802bdb08c6394e6fb377ce8d',
-  site: 'us5.datadoghq.com',
-  service: 'eshopper-frontend',
-  env: 'production',
-  version: '1.0.0',
+  applicationId: process.env.REACT_APP_DATADOG_APP_ID || '3955c403-a66a-4cfe-a13b-6fbf7f629960',
+  clientToken: process.env.REACT_APP_DATADOG_CLIENT_TOKEN || 'pub4e55a313802bdb08c6394e6fb377ce8d',
+  site: process.env.REACT_APP_DATADOG_SITE || 'us5.datadoghq.com',
+  service: process.env.REACT_APP_DATADOG_SERVICE || 'eshopper-frontend',
+  env: process.env.REACT_APP_DATADOG_ENV || process.env.NODE_ENV || 'production',
+  version: process.env.REACT_APP_DATADOG_VERSION || '1.0.0',
   sessionSampleRate: 100,
   sessionReplaySampleRate: 100,
   trackUserInteractions: true,

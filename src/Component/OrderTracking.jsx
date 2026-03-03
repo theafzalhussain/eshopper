@@ -4,15 +4,16 @@ import axios from 'axios'
 import { io } from 'socket.io-client'
 import { motion } from 'framer-motion'
 import { datadogRum } from '@datadog/browser-rum'
+import confetti from 'canvas-confetti'
 import { BASE_URL } from '../constants'
 import { Package, Archive, Truck, BadgeCheck } from 'lucide-react'
 
 const STEPS = ['Ordered', 'Packed', 'Shipped', 'Delivered']
 const STATUS_COLOR = {
-  Ordered: '#0ea5e9',       // blue-500
-  Packed: '#f59e0b',        // amber-500
-  Shipped: '#ca8a04',       // text-yellow-600 (amber-700)
-  Delivered: '#16a34a'      // green-600
+  Ordered: '#8b6c2f',
+  Packed: '#b48b2a',
+  Shipped: '#d1a84a',
+  Delivered: '#1f8f54'
 }
 
 const STATUS_ICON = {
@@ -41,9 +42,20 @@ export default function OrderTracking() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [socketConnected, setSocketConnected] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [didCelebrate, setDidCelebrate] = useState(false)
 
   const activeIndex = useMemo(() => Math.max(0, STEPS.indexOf(status)), [status])
   const progressPercent = useMemo(() => (activeIndex / (STEPS.length - 1)) * 100, [activeIndex])
+
+  const showStatusToast = (nextStatus) => {
+    const statusText = normalizeStatus(nextStatus)
+    setToast({
+      id: Date.now(),
+      title: 'Order Updated',
+      message: `Your order is now ${statusText}`
+    })
+  }
 
   // 🔴 DATADOG CONTEXT - Track order tracking page visit
   useEffect(() => {
@@ -80,7 +92,8 @@ export default function OrderTracking() {
         if (!mounted) return
 
         setOrder(data)
-        setStatus(normalizeStatus(data?.orderStatus))
+        const initialStatus = normalizeStatus(data?.orderStatus)
+        setStatus(initialStatus)
         console.log('✅ Order fetched:', data)
       } catch (e) {
         if (!mounted) return
@@ -124,7 +137,13 @@ export default function OrderTracking() {
         if (payload?.orderId === orderId && payload?.status) {
           if (mounted) {
             const nextStatus = normalizeStatus(payload.status)
-            setStatus(nextStatus)
+            setStatus((prev) => {
+              if (prev !== nextStatus) {
+                showStatusToast(nextStatus)
+              }
+              return nextStatus
+            })
+            setOrder((prev) => ({ ...(prev || {}), updatedAt: payload.updatedAt || new Date().toISOString() }))
             datadogRum.addAction('orderStatusUpdated', {
               orderId,
               newStatus: nextStatus,
@@ -148,6 +167,31 @@ export default function OrderTracking() {
       if (socketRef) socketRef.disconnect()
     }
   }, [orderId, userId])
+
+  useEffect(() => {
+    if (!toast?.id) return undefined
+    const timeout = setTimeout(() => setToast(null), 3400)
+    return () => clearTimeout(timeout)
+  }, [toast])
+
+  useEffect(() => {
+    if (status !== 'Delivered' || didCelebrate) return
+
+    confetti({
+      particleCount: 140,
+      spread: 85,
+      origin: { y: 0.7 },
+      colors: ['#f5deb3', '#d4af37', '#111111', '#ffffff']
+    })
+
+    datadogRum.addAction('orderDeliveredConversion', {
+      orderId,
+      userId,
+      deliveredAt: new Date().toISOString(),
+      orderAmount: Number(order?.finalAmount || 0)
+    })
+    setDidCelebrate(true)
+  }, [status, didCelebrate, orderId, userId, order])
 
   if (loading) {
     return (
@@ -178,6 +222,32 @@ export default function OrderTracking() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f6f6f4', padding: '100px 16px 40px' }}>
+      {toast && (
+        <motion.div
+          initial={{ opacity: 0, y: -16, x: 18 }}
+          animate={{ opacity: 1, y: 0, x: 0 }}
+          exit={{ opacity: 0, y: -10, x: 20 }}
+          className="position-fixed"
+          style={{
+            top: 24,
+            right: 20,
+            zIndex: 1000,
+            minWidth: 260,
+            background: '#111111',
+            border: '1px solid #d4af37',
+            color: '#f8e8c7',
+            borderRadius: 14,
+            boxShadow: '0 14px 34px rgba(0,0,0,0.35)',
+            padding: '12px 14px'
+          }}
+        >
+          <div style={{ fontSize: 12, letterSpacing: '.9px', textTransform: 'uppercase', color: '#d4af37', fontWeight: 700 }}>
+            {toast.title}
+          </div>
+          <div style={{ marginTop: 4, fontSize: 13, color: '#f4eee0' }}>{toast.message}</div>
+        </motion.div>
+      )}
+
       <div className="container" style={{ maxWidth: 900 }}>
         {/* HEADER */}
         <div className="mb-5 text-center">
@@ -195,7 +265,7 @@ export default function OrderTracking() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="p-4 p-md-5 shadow-lg rounded-3xl bg-white"
-          style={{ border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}
+          style={{ border: '1px solid #f1e8d1', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}
         >
           {/* ORDER INFO */}
           <div className="d-flex justify-content-between align-items-center mb-4 pb-3" style={{ borderBottom: '2px solid #f0f0f0' }}>
@@ -230,7 +300,7 @@ export default function OrderTracking() {
               style={{
                 height: 10,
                 borderRadius: 99,
-                background: `linear-gradient(90deg, ${STATUS_COLOR.Ordered}, ${STATUS_COLOR.Packed}, ${STATUS_COLOR.Shipped}, ${STATUS_COLOR.Delivered})`,
+                background: `linear-gradient(90deg, #7f5f1f, #b48b2a, #d7b15a, #1f8f54)`,
                 position: 'absolute',
                 top: 0,
                 left: 0,
@@ -337,7 +407,7 @@ export default function OrderTracking() {
               {status === 'Ordered' && '✅ Your order has been placed successfully'}
               {status === 'Packed' && '📦 Your order is being packed with care'}
               {status === 'Shipped' && '🚚 Your order is on its way to you'}
-              {status === 'Delivered' && '🎉 Your order has been delivered! Thank you for shopping with us'}
+              {status === 'Delivered' && '🎉 Delivered! Thank you for choosing Boutique Luxe. Your premium order is complete.'}
             </p>
           </motion.div>
 
