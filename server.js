@@ -2797,7 +2797,7 @@ app.get('/api/admin/order/:orderId', async (req, res) => {
 });
 
 // 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
-app.post('/api/update-order-status', async (req, res) => {
+const handleOrderStatusUpdate = async (req, res) => {
     try {
         const { orderId, status } = req.body;
         const normalized = normalizeOrderStatus(status);
@@ -2862,17 +2862,14 @@ app.post('/api/update-order-status', async (req, res) => {
             await order.save();
         }
 
-        order.orderStatus = normalized;
-        const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
-        order.statusHistory = [
-            ...existingTimeline,
-            {
+        if (!Array.isArray(order.statusHistory) || order.statusHistory.length === 0) {
+            order.statusHistory = [{
                 status: normalized,
                 timestamp: new Date(),
                 message: `Order status changed to ${normalized}`
-            }
-        ];
-        await order.save();
+            }];
+            await order.save();
+        }
 
         // 🔴 SYNC STATUS TO CHECKOUT COLLECTION (prevent data mismatch)
         await Checkout.updateMany(
@@ -2936,7 +2933,11 @@ app.post('/api/update-order-status', async (req, res) => {
         if (process.env.SENTRY_DSN) Sentry.captureException(e);
         return res.status(500).json({ message: 'Failed to update order status' });
     }
-});
+};
+
+app.post('/api/update-order-status', handleOrderStatusUpdate);
+app.post('/update-order-status', handleOrderStatusUpdate);
+app.post('/api/admin/update-order-status', handleOrderStatusUpdate);
 
 app.post('/api/chat', async (req, res) => {
     try {
