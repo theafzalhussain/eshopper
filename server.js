@@ -18,6 +18,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
+const Sentry = require('@sentry/node');
 
 try {
     let firebaseCredentials;
@@ -74,7 +75,22 @@ try {
 
 const app = express();
 
-// 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
+// � INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
+if (process.env.SENTRY_DSN) {
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV || 'production',
+        tracesSampleRate: 0.1,
+        integrations: [
+            new Sentry.Integrations.Http({ tracing: true })
+        ]
+    });
+    console.log('✅ Sentry initialized for error tracking');
+} else {
+    console.log('⚠️  Sentry DSN not configured - error tracking disabled');
+}
+
+// �🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
 app.set('trust proxy', 1);
 
 // 🔴 SENTRY v10 no longer uses Sentry.Handlers.requestHandler()
@@ -815,7 +831,9 @@ const sendWhatsApp = async (number, message) => {
     }
     if (!contactNumber || contactNumber.length < 12) {
         console.error('❌ Contact number is invalid or too short:', contactNumber);
-        throw new Error(`Invalid phone number format. Expected 91XXXXXXXXXX, got: ${contactNumber}`);
+        // Return silently instead of throwing - fallback to email only
+        console.warn('⚠️  Skipping WhatsApp due to invalid phone number');
+        return false;
     }
     if (!message || String(message).trim().length === 0) {
         console.error('❌ Message is empty');
@@ -1138,7 +1156,13 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     console.warn(`⚠️  Packed WhatsApp skipped (expected):`, waErr.message);
                 } else {
                     console.error(`⚠️  Packed WhatsApp failed (non-critical):`, waErr.message);
-                    if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                    try {
+                        if (process.env.SENTRY_DSN && Sentry) {
+                            Sentry.captureException(waErr);
+                        }
+                    } catch (sentryErr) {
+                        console.warn('⚠️  Could not report to Sentry:', sentryErr.message);
+                    }
                 }
             }
 
@@ -1156,7 +1180,13 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                 console.log(`✅ Packed email sent for ${orderId}`);
             } catch (emailErr) {
                 console.error(`⚠️  Packed email failed (non-critical):`, emailErr.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                try {
+                    if (process.env.SENTRY_DSN && Sentry) {
+                        Sentry.captureException(emailErr);
+                    }
+                } catch (sentryErr) {
+                    console.warn('⚠️  Could not report email error to Sentry:', sentryErr.message);
+                }
             }
         }
 
@@ -1174,7 +1204,13 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     console.warn(`⚠️  Shipped WhatsApp skipped (expected):`, waErr.message);
                 } else {
                     console.error(`⚠️  Shipped WhatsApp media failed (non-critical):`, waErr.message);
-                    if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                    try {
+                        if (process.env.SENTRY_DSN && Sentry) {
+                            Sentry.captureException(waErr);
+                        }
+                    } catch (sentryErr) {
+                        console.warn('⚠️  Could not report to Sentry:', sentryErr.message);
+                    }
                 }
             }
 
