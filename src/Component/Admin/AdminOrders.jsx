@@ -4,25 +4,28 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 
-const ALLOWED_STATUSES = ['Order Placed', 'Packed', 'Shipped', 'Delivered'];
+const ALLOWED_STATUSES = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const STATUS_COLORS = {
-    'Order Placed': 'bg-blue-100 text-blue-800 border-blue-300',
+    'Ordered': 'bg-blue-100 text-blue-800 border-blue-300',
     'Packed': 'bg-amber-100 text-amber-800 border-amber-300',
     'Shipped': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    'Out for Delivery': 'bg-orange-100 text-orange-800 border-orange-300',
     'Delivered': 'bg-green-100 text-green-800 border-green-300'
 };
 
 const STATUS_ICONS = {
-    'Order Placed': <Package size={16} />,
+    'Ordered': <Package size={16} />,
     'Packed': <Package size={16} />,
     'Shipped': <Truck size={16} />,
+    'Out for Delivery': <MapPin size={16} />,
     'Delivered': <CheckCircle2 size={16} />
 };
 
 const NEXT_STATUS = {
-    'Order Placed': 'Packed',
+    'Ordered': 'Packed',
     'Packed': 'Shipped',
-    'Shipped': 'Delivered',
+    'Shipped': 'Out for Delivery',
+    'Out for Delivery': 'Delivered',
     'Delivered': null
 };
 
@@ -257,8 +260,8 @@ export default function AdminOrders() {
                                             <p className="text-sm font-semibold text-green-600">₹{order.finalAmount.toLocaleString('en-IN')}</p>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border ${STATUS_COLORS[order.orderStatus] || STATUS_COLORS['Order Placed']}`}>
-                                                {STATUS_ICONS[order.orderStatus] || STATUS_ICONS['Order Placed']}
+                                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border ${STATUS_COLORS[order.orderStatus] || STATUS_COLORS['Ordered']}`}>
+                                                {STATUS_ICONS[order.orderStatus] || STATUS_ICONS['Ordered']}
                                                 {order.orderStatus}
                                             </span>
                                         </td>

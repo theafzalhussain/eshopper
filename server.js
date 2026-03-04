@@ -148,6 +148,7 @@ const normalizeOrderStatus = (s = '') => {
     if (v === 'ordered') return 'Ordered';
     if (v === 'packed') return 'Packed';
     if (v === 'shipped') return 'Shipped';
+    if (v === 'out for delivery') return 'Out for Delivery';
     if (v === 'delivered') return 'Delivered';
     return null;
 };
