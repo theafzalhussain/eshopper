@@ -23,7 +23,7 @@ const getStatusStyles = (status) => {
   if (s === 'Ordered') return { bg: '#e0f2fe', color: '#0ea5e9' }
   if (s === 'Packed') return { bg: '#fef3c7', color: '#f59e0b' }
   if (s === 'Shipped') return { bg: '#fef9c3', color: '#ca8a04' }
-  if (s === 'Out for Delivery') return { bg: '#ffe0b2', color: '#ff9500' }
+  if (s === 'Out for Delivery') return { bg: '#fefce8', color: '#a89646' }
   return { bg: '#dcfce7', color: '#16a34a' }
 }
 

@@ -12,7 +12,7 @@ const STATUS_COLOR = {
   Ordered: '#8b6c2f',
   Packed: '#b48b2a',
   Shipped: '#d1a84a',
-  'Out for Delivery': '#ff9500',
+  'Out for Delivery': '#a89646',
   Delivered: '#1f8f54'
 }
 
