@@ -2580,7 +2580,7 @@ app.post('/api/place-order', async (req, res) => {
                     console.log(`✅ Order placement WhatsApp sent for order ${orderId}`);
                 } catch (waErr) {
                     if (isExpectedWhatsAppError(waErr)) {
-                        console.warn(`⚠️  Order WhatsApp skipped (expected) for ${orderId}:`, waErr.message);
+                        console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waErr.message);
                     } else {
                         console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waErr.message);
                         if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
@@ -2589,7 +2589,7 @@ app.post('/api/place-order', async (req, res) => {
             }
         } catch (waError) {
             if (isExpectedWhatsAppError(waError)) {
-                console.warn(`⚠️  Order WhatsApp skipped (expected) for ${orderId}:`, waError.message);
+                console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waError.message);
             } else {
                 console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
                 if (process.env.SENTRY_DSN) Sentry.captureException(waError);
