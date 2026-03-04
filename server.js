@@ -19,6 +19,7 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
 const Sentry = require('@sentry/node');
+const puppeteer = require('puppeteer');
 
 try {
     let firebaseCredentials;
@@ -2450,6 +2451,112 @@ app.post('/api/place-order', async (req, res) => {
         console.error('❌ Place Order Error:', e.message);
         if (process.env.SENTRY_DSN) Sentry.captureException(e);
         return res.status(500).json({ message: 'Failed to place order' });
+    }
+});
+
+// ==================== TEST NOTIFICATION ENDPOINT ====================
+app.post('/api/test-notification', async (req, res) => {
+    try {
+        const { phone, email, testType } = req.body;
+
+        if (!phone && !email) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Phone or email is required' 
+            });
+        }
+
+        const results = {
+            email: { attempted: false, success: false, error: null },
+            whatsapp: { attempted: false, success: false, error: null },
+            config: {
+                evolutionApiUrl: process.env.EVOLUTION_API_URL ? '✅ Configured' : '❌ Missing',
+                whatsappToken: process.env.WHATSAPP_TOKEN ? '✅ Configured' : '❌ Missing',
+                evolutionApiKey: process.env.EVOLUTION_API_KEY ? '✅ Configured' : '❌ Missing',
+                brevoApiKey: process.env.BREVO_API_KEY ? '✅ Configured' : '❌ Missing',
+                whatsappInstance: process.env.WHATSAPP_INSTANCE || 'eshopper_bot',
+                whatsappSenderNumber: process.env.WHATSAPP_SENDER_NUMBER || '❌ Missing'
+            }
+        };
+
+        // Test WhatsApp Notification
+        if (phone) {
+            results.whatsapp.attempted = true;
+            try {
+                const mediaUrl = 'https://res.cloudinary.com/dtfvoxw1p/image/upload/v1724068341/order_success_lux.png';
+                const testCaption = `✨ TEST NOTIFICATION 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello! This is a test message from Eshopper.\n\n✅ WhatsApp Integration: WORKING\nTimestamp: ${new Date().toLocaleString('en-IN')}\n\nIf you receive this, your WhatsApp notifications are configured correctly! 🎉\n━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+                
+                await sendWhatsAppMedia(phone, mediaUrl, testCaption);
+                results.whatsapp.success = true;
+                results.whatsapp.message = 'WhatsApp notification sent successfully';
+            } catch (waError) {
+                results.whatsapp.success = false;
+                results.whatsapp.error = waError.message;
+                results.whatsapp.details = {
+                    status: waError.response?.status,
+                    data: waError.response?.data
+                };
+            }
+        }
+
+        // Test Email Notification
+        if (email) {
+            results.email.attempted = true;
+            try {
+                await axios.post('https://api.brevo.com/v3/smtp/email', {
+                    sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
+                    to: [{ email: email, name: 'Test User' }],
+                    subject: '✅ Test Notification - Eshopper Boutique',
+                    htmlContent: `
+                        <div style="font-family:Arial,sans-serif;padding:20px;background:#f8f8f8;">
+                            <h2 style="color:#111;">✨ Test Email Notification</h2>
+                            <p>This is a test email from your Eshopper notification system.</p>
+                            <p><strong>Email Integration:</strong> ✅ WORKING</p>
+                            <p><strong>Timestamp:</strong> ${new Date().toLocaleString('en-IN')}</p>
+                            <p>If you receive this, your email notifications are configured correctly! 🎉</p>
+                            <hr style="border:1px solid #ddd;margin:20px 0;" />
+                            <p style="font-size:12px;color:#666;">This is an automated test message from Eshopper Boutique Luxe</p>
+                        </div>
+                    `,
+                    replyTo: { email: 'support@eshopperr.me' }
+                }, {
+                    headers: {
+                        'api-key': process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '',
+                        'content-type': 'application/json',
+                        'accept': 'application/json'
+                    },
+                    timeout: 15000
+                });
+                results.email.success = true;
+                results.email.message = 'Email notification sent successfully';
+            } catch (emailError) {
+                results.email.success = false;
+                results.email.error = emailError.message;
+                results.email.details = {
+                    status: emailError.response?.status,
+                    data: emailError.response?.data
+                };
+            }
+        }
+
+        const allSuccess = 
+            (!results.email.attempted || results.email.success) && 
+            (!results.whatsapp.attempted || results.whatsapp.success);
+
+        return res.status(allSuccess ? 200 : 207).json({
+            success: allSuccess,
+            message: allSuccess ? 'All notifications sent successfully' : 'Some notifications failed',
+            results
+        });
+
+    } catch (e) {
+        console.error('❌ Test Notification Error:', e.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(e);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to test notifications',
+            error: e.message 
+        });
     }
 });
 

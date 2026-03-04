@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Test - Eshopper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-test {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-test:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-test:active {
+            transform: translateY(0);
+        }
+
+        .btn-test:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-config {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-config:hover {
+            background: #e0e0e0;
+        }
+
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .results h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .result-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .result-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .result-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .result-info {
+            background: #cce5ff;
+            color: #004085;
+            border-left: 4px solid #0c5460;
+        }
+
+        .config-info {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #856404;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #ffeeba;
+        }
+
+        .config-item:last-child {
+            border-bottom: none;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .note {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #004085;
+            border-left: 4px solid #007bff;
+        }
+
+        .note strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Notification System Test</h1>
+        <p class="subtitle">Test your WhatsApp and Email notifications</p>
+
+        <form id="testForm">
+            <div class="form-group">
+                <label for="phone">📱 Phone Number (with country code)</label>
+                <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone" 
+                    placeholder="918447859784"
+                    pattern="[0-9]+"
+                >
+                <small style="color: #666; font-size: 12px;">Format: 91XXXXXXXXXX (use 91 for India)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="email">📧 Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="test@example.com"
+                >
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn-test" id="testBtn">
+                    <span id="btnText">Test Notifications</span>
+                    <div class="spinner" id="spinner" style="display: none;"></div>
+                </button>
+                <button type="button" class="btn-config" onclick="checkConfig()">
+                    Check Config
+                </button>
+            </div>
+        </form>
+
+        <div class="note">
+            <strong>📝 Instructions:</strong>
+            • Enter your phone number (with country code) to test WhatsApp<br>
+            • Enter your email address to test Email notifications<br>
+            • You can test both or either one<br>
+            • Check the results below after clicking "Test Notifications"
+        </div>
+
+        <div class="results" id="results">
+            <h3>Test Results</h3>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const phone = document.getElementById('phone').value.trim();
+            const email = document.getElementById('email').value.trim();
+            
+            if (!phone && !email) {
+                alert('Please enter at least phone number or email address');
+                return;
+            }
+            
+            const testBtn = document.getElementById('testBtn');
+            const btnText = document.getElementById('btnText');
+            const spinner = document.getElementById('spinner');
+            const results = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            // Show loading state
+            testBtn.disabled = true;
+            btnText.textContent = 'Testing...';
+            spinner.style.display = 'block';
+            results.classList.remove('show');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/test-notification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phone, email })
+                });
+                
+                const data = await response.json();
+                
+                // Show results
+                let html = '';
+                
+                // WhatsApp results
+                if (data.results.whatsapp.attempted) {
+                    const wa = data.results.whatsapp;
+                    html += `
+                        <div class="result-item ${wa.success ? 'result-success' : 'result-error'}">
+                            <strong>📱 WhatsApp:</strong> ${wa.success ? '✅ Success' : '❌ Failed'}<br>
+                            ${wa.message || wa.error || ''}
+                            ${wa.details ? `<br><small>${JSON.stringify(wa.details)}</small>` : ''}
+                        </div>
+                    `;
+                }
+                
+                // Email results
+                if (data.results.email.attempted) {
+                    const em = data.results.email;
+                    html += `
+                        <div class="result-item ${em.success ? 'result-success' : 'result-error'}">
+                            <strong>📧 Email:</strong> ${em.success ? '✅ Success' : '❌ Failed'}<br>
+                            ${em.message || em.error || ''}
+                            ${em.details ? `<br><small>${JSON.stringify(em.details)}</small>` : ''}
+                        </div>
+                    `;
+                }
+                
+                // Configuration info
+                html += '<div class="config-info"><strong>Configuration Status:</strong>';
+                Object.entries(data.results.config).forEach(([key, value]) => {
+                    html += `<div class="config-item"><span>${key}:</span><span>${value}</span></div>`;
+                });
+                html += '</div>';
+                
+                resultsContent.innerHTML = html;
+                results.classList.add('show');
+                
+            } catch (error) {
+                resultsContent.innerHTML = `
+                    <div class="result-item result-error">
+                        <strong>❌ Error:</strong> ${error.message}
+                    </div>
+                `;
+                results.classList.add('show');
+            } finally {
+                // Reset button
+                testBtn.disabled = false;
+                btnText.textContent = 'Test Notifications';
+                spinner.style.display = 'none';
+            }
+        });
+        
+        async function checkConfig() {
+            const resultsContent = document.getElementById('resultsContent');
+            const results = document.getElementById('results');
+            
+            resultsContent.innerHTML = '<div class="result-item result-info">Checking configuration...</div>';
+            results.classList.add('show');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/test-notification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                let html = '<div class="config-info"><strong>Environment Configuration:</strong>';
+                if (data.results && data.results.config) {
+                    Object.entries(data.results.config).forEach(([key, value]) => {
+                        html += `<div class="config-item"><span>${key}:</span><span>${value}</span></div>`;
+                    });
+                } else {
+                    html += '<div class="result-item result-error">Unable to fetch configuration</div>';
+                }
+                html += '</div>';
+                
+                resultsContent.innerHTML = html;
+                
+            } catch (error) {
+                resultsContent.innerHTML = `
+                    <div class="result-item result-error">
+                        <strong>❌ Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
