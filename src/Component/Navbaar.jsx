@@ -166,41 +166,42 @@ export default function Navbaar() {
                                         <ShoppingCart size={22} />
                                     </motion.div>
                                     
-                                    {/* Premium Cart Badge */}
+                                    {/* Premium Cart Badge - Compact & Glowing */}
                                     <AnimatePresence mode="wait">
                                         {cartCount > 0 && (
                                             <motion.div
                                                 key={cartCount}
                                                 initial={{ scale: 0, y: -10 }}
                                                 animate={{ 
-                                                    scale: cartAnimation ? [0, 1.4, 0.9, 1.1, 1] : 1, 
+                                                    scale: cartAnimation ? [0, 1.35, 0.88, 1.08, 1] : 1, 
                                                     y: 0 
                                                 }}
                                                 exit={{ scale: 0, y: -10 }}
                                                 transition={{ 
                                                     type: 'spring', 
-                                                    stiffness: 400, 
-                                                    damping: 15,
-                                                    duration: 0.6
+                                                    stiffness: 450, 
+                                                    damping: 12,
+                                                    duration: 0.5
                                                 }}
                                                 className={`cart-badge-premium ${cartAnimation ? 'cart-badge-added' : ''}`}
                                                 style={{
                                                     position: 'absolute',
-                                                    top: '-8px',
-                                                    right: '-12px',
-                                                    width: '28px',
-                                                    height: '28px',
+                                                    top: '-6px',
+                                                    right: '-10px',
+                                                    width: '22px',
+                                                    height: '22px',
                                                     borderRadius: '50%',
-                                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                                     color: '#fff',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    fontSize: '12px',
-                                                    fontWeight: '700',
-                                                    boxShadow: '0 4px 16px rgba(16,185,129,0.35)',
-                                                    border: '2px solid #fff',
-                                                    letterSpacing: '0.3px'
+                                                    fontSize: '10px',
+                                                    fontWeight: '800',
+                                                    boxShadow: '0 0 12px rgba(16,185,129,0.6), 0 4px 12px rgba(16,185,129,0.3), inset 0 1px 3px rgba(255,255,255,0.4)',
+                                                    border: '2px solid rgba(255,255,255,0.95)',
+                                                    letterSpacing: '0.2px',
+                                                    backdropFilter: 'blur(4px)'
                                                 }}
                                             >
                                                 {cartCount > 99 ? '99+' : cartCount}
@@ -277,24 +278,25 @@ export default function Navbaar() {
                                             initial={{ scale: 0, y: -10 }}
                                             animate={{ scale: 1, y: 0 }}
                                             exit={{ scale: 0, y: -10 }}
-                                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                            transition={{ type: 'spring', stiffness: 380, damping: 15 }}
                                             style={{
                                                 position: 'absolute',
-                                                top: '-6px',
-                                                right: '-10px',
-                                                width: '24px',
-                                                height: '24px',
+                                                top: '-5px',
+                                                right: '-8px',
+                                                width: '20px',
+                                                height: '20px',
                                                 borderRadius: '50%',
-                                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                                                 color: '#fff',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                fontSize: '11px',
-                                                fontWeight: '700',
-                                                boxShadow: '0 4px 12px rgba(16,185,129,0.4)',
-                                                border: '2px solid #fff',
-                                                letterSpacing: '0.2px'
+                                                fontSize: '9px',
+                                                fontWeight: '800',
+                                                boxShadow: '0 0 10px rgba(16,185,129,0.6), 0 3px 10px rgba(16,185,129,0.3), inset 0 1px 2px rgba(255,255,255,0.4)',
+                                                border: '2px solid rgba(255,255,255,0.95)',
+                                                letterSpacing: '0.1px',
+                                                backdropFilter: 'blur(4px)'
                                             }}
                                         >
                                             {cartCount > 99 ? '99+' : cartCount}

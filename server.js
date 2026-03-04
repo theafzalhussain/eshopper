@@ -1037,6 +1037,9 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
     const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
     const apiKey = process.env.EVOLUTION_API_KEY ? process.env.EVOLUTION_API_KEY.trim() : '';
     const instance = process.env.WHATSAPP_INSTANCE || 'eshopper_bot';
+    const botPhoneNumber = process.env.BOT_PHONE_NUMBER ? String(process.env.BOT_PHONE_NUMBER).trim() : '918447859784';
+    const normalizedSender = botPhoneNumber.replace(/\D/g, '');
+    if (normalizedSender.length > 12) normalizedSender = normalizedSender.slice(-12);
 
     const normalizePhoneStrict = (phone = '') => {
         let digits = String(phone || '').replace(/\D/g, '');
@@ -1087,39 +1090,78 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
         throw new Error('Media URL and caption required');
     }
 
+    // 🔴 SELF-LOOP PREVENTION FOR MEDIA
+    if (normalizedSender && contactNumber === normalizedSender) {
+        console.warn(`⚠️  SELF-LOOP DETECTED in sendWhatsAppMedia! Would send to bot's own number: ${contactNumber}`);
+        const selfLoopError = new Error('Cannot send media to bot\'s own number (self-loop prevention)');
+        selfLoopError.code = 'WHATSAPP_SELF_LOOP';
+        selfLoopError.isExpected = true;
+        throw selfLoopError;
+    }
+
     try {
         const endpoint = `${apiUrl}/message/sendMedia/${instance}`;
         const mediaCaption = String(caption).trim();
-        const toCandidates = [contactNumber, `${contactNumber}@s.whatsapp.net`];
+        
+        // 🔴 VALIDATE MEDIA URL WITH BETTER ERROR HANDLING
+        let mediaUrlValid = true;
+        try {
+            console.log(`🔍 Validating media URL: ${mediaUrl}`);
+            const urlCheck = await axios.head(mediaUrl, { 
+                timeout: 8000,
+                maxRedirects: 5,
+                headers: { 'User-Agent': 'Eshopper-WhatsApp-Client/1.0' }
+            });
+            console.log(`✅ Media URL validated (status: ${urlCheck.status})`);
+        } catch (urlCheckErr) {
+            mediaUrlValid = false;
+            console.error(`❌ Media URL inaccessible: ${urlCheckErr.message} (${urlCheckErr.response?.status || 'no status'})`);
+            console.warn(`⚠️  Evolution API may fail to fetch this URL. Proceeding with text fallback strategy.`);
+        }
 
-        const payloadFormats = toCandidates.flatMap((to) => ([
+        // If media URL is invalid, fail gracefully
+        if (!mediaUrlValid) {
+            const mediaErr = new Error('Media URL is not accessible');
+            mediaErr.code = 'WHATSAPP_MEDIA_UNREACHABLE';
+            mediaErr.isExpected = true;
+            throw mediaErr;
+        }
+
+        // OPTIMIZED payloads - use simplest format that Evolution API accepts
+        const payloadFormats = [
             {
-                number: to,
-                mediatype: 'image',
-                media: mediaUrl,
-                caption: mediaCaption,
-                fileName: `eshopper-order-${Date.now()}.png`
-            },
-            {
-                number: to,
-                mediatype: 'image',
-                media: mediaUrl,
-                mimetype: 'image/png',
-                caption: mediaCaption,
-                text: mediaCaption
-            },
-            {
-                to,
+                number: contactNumber,
                 mediatype: 'image',
                 media: mediaUrl,
                 caption: mediaCaption
+            },
+            {
+                number: `${contactNumber}@s.whatsapp.net`,
+                mediatype: 'image',
+                media: mediaUrl,
+                caption: mediaCaption
+            },
+            {
+                number: contactNumber,
+                mediatype: 'image',
+                media: mediaUrl,
+                mimetype: 'image/png',
+                caption: mediaCaption
+            },
+            {
+                number: `${contactNumber}@s.whatsapp.net`,
+                mediatype: 'image',
+                media: mediaUrl,
+                mimetype: 'image/png',
+                caption: mediaCaption
             }
-        ]));
+        ];
 
         console.log(`📸 Sending WhatsApp Media to: ${contactNumber}`);
         console.log(`   Endpoint: ${endpoint}`);
-        console.log(`   Media: ${mediaUrl}`);
-        console.log(`   Caption: ${mediaCaption.substring(0, 80)}...`);
+        console.log(`   Media URL Valid: ${mediaUrlValid ? '✅ Yes' : '❌ No'}`);
+        console.log(`   Caption: ${mediaCaption.substring(0, 60)}${mediaCaption.length > 60 ? '...' : ''}`);
+        console.log(`   Total payload variants to try: ${payloadFormats.length}`);
 
         let lastError;
         let lastStatus;
@@ -1166,6 +1208,7 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
             }
         }
 
+
         // 400-level media validation errors are common with provider payload quirks.
         // Soft-fail here so caller can use text fallback without noisy exception propagation.
         if (lastStatus === 400) {
@@ -1178,6 +1221,18 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
 
         throw lastError || new Error('All sendMedia payload attempts failed');
     } catch (error) {
+        // Detect URL accessibility issues early
+        if (error.code === 'WHATSAPP_MEDIA_UNREACHABLE') {
+            console.error('⚠️  Media URL is not accessible - triggering text fallback');
+            throw error;
+        }
+
+        // Expected errors (don't clutter logs)
+        if (error.isExpected) {
+            console.error('⚠️  Expected WhatsApp media error:', error.message);
+            throw error;
+        }
+
         console.error('❌ WhatsApp media send failed:', {
             status: error.response?.status,
             message: error.response?.data?.message || error.message,
@@ -1198,30 +1253,16 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
 
     try {
         if (status === 'Packed') {
-            // 📦 PACKED: Text + Email
+            // 📦 PACKED: WhatsApp + Email (Parallel)
             const whatsappMsg = `📦 YOUR ORDER IS BEAUTIFULLY PACKED! ✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is now expertly packed!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Packed & Ready to Ship\n💎 Quality Check: Completed\n🎁 Premium Packaging: Applied\n\n📅 NEXT STEPS:\n→ Your order will ship out within 24 hours\n→ You'll receive a tracking update shortly\n→ Expected delivery by: ${estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Soon'}\n\n🔗 TRACK NOW: ${trackingLink}\n\n💬 Questions? Reply to this message\n📞 Call: 8447859784\n\n🙏 Thank you for choosing Eshopper Boutique! 💎`;
             
-            try {
-                await sendWhatsApp(phone, whatsappMsg);
-                console.log(`✅ Packed WhatsApp sent for ${orderId}`);
-            } catch (waErr) {
-                if (isExpectedWhatsAppError(waErr)) {
-                    console.warn(`⚠️  Packed WhatsApp skipped (expected):`, waErr.message);
-                } else {
-                    console.error(`⚠️  Packed WhatsApp failed (non-critical):`, waErr.message);
-                    try {
-                        if (process.env.SENTRY_DSN && Sentry) {
-                            Sentry.captureException(waErr);
-                        }
-                    } catch (sentryErr) {
-                        console.warn('⚠️  Could not report to Sentry:', sentryErr.message);
-                    }
-                }
-            }
-
-            // Send packed email
-            try {
-                await sendOrderStatusEmail({
+            // Send both WhatsApp and Email in parallel
+            const packedResults = await Promise.allSettled([
+                sendWhatsApp(phone, whatsappMsg).then(() => {
+                    console.log(`✅ Packed WhatsApp sent for ${orderId}`);
+                    return { type: 'WhatsApp', success: true };
+                }),
+                sendOrderStatusEmail({
                     toEmail: email,
                     userName: displayName,
                     orderId,
@@ -1229,53 +1270,38 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     trackingLink,
                     estimatedDelivery,
                     totalAmount: finalAmount
-                });
-                console.log(`✅ Packed email sent for ${orderId}`);
-            } catch (emailErr) {
-                console.error(`⚠️  Packed email failed (non-critical):`, emailErr.message);
-                try {
-                    if (process.env.SENTRY_DSN && Sentry) {
-                        Sentry.captureException(emailErr);
+                }).then(() => {
+                    console.log(`✅ Packed email sent for ${orderId}`);
+                    return { type: 'Email', success: true };
+                })
+            ]);
+
+            // Check results
+            packedResults.forEach(result => {
+                if (result.status === 'rejected') {
+                    const notificationType = result.reason?.type || 'Notification';
+                    const isExpected = isExpectedWhatsAppError(result.reason);
+                    const severity = isExpected ? '⚠️ ' : '⚠️ ';
+                    console.log(`${severity}Packed ${notificationType} failed (non-critical): ${result.reason?.message}`);
+                    if (!isExpected && process.env.SENTRY_DSN && Sentry) {
+                        Sentry.captureException(result.reason);
                     }
-                } catch (sentryErr) {
-                    console.warn('⚠️  Could not report email error to Sentry:', sentryErr.message);
                 }
-            }
+            });
         }
 
         else if (status === 'Shipped') {
-            // 🚚 SHIPPED: Media + Email (White-Glove experience)
-            const mediaUrl = 'https://res.cloudinary.com/dtfvoxw1p/image/upload/v1724068341/order_success_lux.png';
+            // 🚚 SHIPPED: WhatsApp + Email (Parallel)
             const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Soon';
-            const caption = `🚚 YOUR ORDER IS ON THE WAY! 📍✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is shipping!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Premium Delivery\n🚚 Shipping: Fast & Secure\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n📅 DELIVERY WINDOW:\n📍 Expected Arrival: ${deliveryDate}\n⏰ Delivery Time: 9 AM - 6 PM\n\n🎯 WHAT TO EXPECT:\n✓ Professional White-Glove delivery\n✓ Careful handling of your selection\n✓ Real-time location tracking\n✓ Safe placement at your doorstep\n\n🔗 LIVE TRACKING: ${trackingLink}\n\n💡 PRO TIP:\n→ Ensure someone is available for delivery\n→ Keep door accessible\n→ Contact us if you need delivery rescheduling\n\n📞 DELIVERY SUPPORT:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n\n💎 Thank you for your business!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+            const shippedMsg = `🚚 YOUR ORDER IS ON THE WAY! 📍✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is shipping!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Premium Delivery\n🚚 Shipping: Fast & Secure\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n📅 DELIVERY WINDOW:\n📍 Expected Arrival: ${deliveryDate}\n⏰ Delivery Time: 9 AM - 6 PM\n\n🎯 WHAT TO EXPECT:\n✓ Professional White-Glove delivery\n✓ Careful handling of your selection\n✓ Real-time location tracking\n✓ Safe placement at your doorstep\n\n🔗 LIVE TRACKING: ${trackingLink}\n\n💡 PRO TIP:\n→ Ensure someone is available for delivery\n→ Keep door accessible\n→ Contact us if you need delivery rescheduling\n\n📞 DELIVERY SUPPORT:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n\n💎 Thank you for your business!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-            try {
-                await sendWhatsAppMedia(phone, mediaUrl, caption);
-                console.log(`✅ Shipped WhatsApp media sent for ${orderId}`);
-            } catch (waErr) {
-                if (isExpectedWhatsAppError(waErr)) {
-                    console.warn(`⚠️  Shipped WhatsApp skipped (expected):`, waErr.message);
-                } else {
-                    console.warn(`⚠️  Shipped WhatsApp media failed, trying text fallback:`, waErr.message);
-                    try {
-                        await sendWhatsApp(phone, `🚚 Update: Your order ${orderId} is now Shipped. Track here: ${trackingLink}`);
-                        console.log(`✅ Shipped WhatsApp text fallback sent for ${orderId}`);
-                    } catch (fallbackErr) {
-                        console.error(`⚠️  Shipped WhatsApp fallback failed (non-critical):`, fallbackErr.message);
-                        try {
-                            if (process.env.SENTRY_DSN && Sentry && !isExpectedWhatsAppError(fallbackErr)) {
-                                Sentry.captureException(fallbackErr);
-                            }
-                        } catch (sentryErr) {
-                            console.warn('⚠️  Could not report to Sentry:', sentryErr.message);
-                        }
-                    }
-                }
-            }
-
-            // Send shipped email
-            try {
-                await sendOrderStatusEmail({
+            // Send both WhatsApp and Email in parallel
+            const shippedResults = await Promise.allSettled([
+                sendWhatsApp(phone, shippedMsg).then(() => {
+                    console.log(`✅ Shipped WhatsApp sent for ${orderId}`);
+                    return { type: 'WhatsApp', success: true };
+                }),
+                sendOrderStatusEmail({
                     toEmail: email,
                     userName: displayName,
                     orderId,
@@ -1283,33 +1309,72 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     trackingLink,
                     estimatedDelivery,
                     totalAmount: finalAmount
-                });
-                console.log(`✅ Shipped email sent for ${orderId}`);
-            } catch (emailErr) {
-                console.error(`⚠️  Shipped email failed (non-critical):`, emailErr.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
-            }
+                }).then(() => {
+                    console.log(`✅ Shipped email sent for ${orderId}`);
+                    return { type: 'Email', success: true };
+                })
+            ]);
+
+            // Check results
+            shippedResults.forEach(result => {
+                if (result.status === 'rejected') {
+                    const isExpected = isExpectedWhatsAppError(result.reason);
+                    console.log(`⚠️  Shipped notification failed (non-critical): ${result.reason?.message}`);
+                    if (!isExpected && process.env.SENTRY_DSN && Sentry) {
+                        Sentry.captureException(result.reason);
+                    }
+                }
+            });
+        }
+
+        else if (status === 'Out for Delivery') {
+            // 🚗 OUT FOR DELIVERY: WhatsApp + Email (Parallel)
+            const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Today';
+            const outForDeliveryMsg = `🚗 YOUR ORDER IS OUT FOR DELIVERY! 📍\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour package is with our delivery partner!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Delivery (Final Mile)\n🚗 Location: On the way to your address\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n⏰ EXPECTED DELIVERY:\n📍 Expected Today: ${deliveryDate}\n🕐 Delivery Window: 9 AM - 6 PM\n\n📲 LIVE TRACKING:\n→ Track your package in real-time\n→ Get SMS/WhatsApp updates\n→ Know exact arrival time\n\n🔗 TRACK LIVE: ${trackingLink}\n\n🏠 BE READY:\n✓ Ensure someone is home\n✓ Keep your door accessible\n✓ Have payment ready if COD\n✓ Keep phone nearby for delivery call\n\n❓ NEED HELP?\n→ Contact driver directly\n→ WhatsApp: wa.me/918447859784\n→ Call: 8447859784\n\n📞 DELIVERY SUPPORT TEAM:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n• Chat: Available 24/7\n\n💡 PRO TIP:\nIf you miss delivery, reschedule instantly from tracking page or WhatsApp us!\n\n🎁 Almost there!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+            // Send both WhatsApp and Email in parallel
+            const outForDeliveryResults = await Promise.allSettled([
+                sendWhatsApp(phone, outForDeliveryMsg).then(() => {
+                    console.log(`✅ Out for Delivery WhatsApp sent for ${orderId}`);
+                    return { type: 'WhatsApp', success: true };
+                }),
+                sendOrderStatusEmail({
+                    toEmail: email,
+                    userName: displayName,
+                    orderId,
+                    status: 'Out for Delivery',
+                    trackingLink,
+                    estimatedDelivery,
+                    totalAmount: finalAmount
+                }).then(() => {
+                    console.log(`✅ Out for Delivery email sent for ${orderId}`);
+                    return { type: 'Email', success: true };
+                })
+            ]);
+
+            // Check results
+            outForDeliveryResults.forEach(result => {
+                if (result.status === 'rejected') {
+                    const isExpected = isExpectedWhatsAppError(result.reason);
+                    console.log(`⚠️  Out for Delivery notification failed (non-critical): ${result.reason?.message}`);
+                    if (!isExpected && process.env.SENTRY_DSN && Sentry) {
+                        Sentry.captureException(result.reason);
+                    }
+                }
+            });
         }
 
         else if (status === 'Delivered') {
-            // 🎉 DELIVERED: Celebration message
+            // 🎉 DELIVERED: WhatsApp + Email (Parallel)
             const whatsappMsg = `🎉 ORDER DELIVERED! 💎✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nCongratulations, ${firstName}!\nYour premium selection has arrived!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n✅ Status: Successfully Delivered\n✅ Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n✅ Delivery Quality: Premium Packaging ✓\n\n🎁 WHAT YOU RECEIVED:\nYour beautifully packaged selection!\n(Check all items are in perfect condition)\n\n⭐ YOUR EXPERIENCE MATTERS!\nPlease share your feedback:\n→ Rate this product\n→ Write a review\n→ Tag us on social media\n\n🔗 PURCHASE LINK: ${trackingLink}\n\n📝 NEXT STEPS:\n✓ Inspect items for quality\n✓ Check packaging condition\n✓ Contact us for any issues\n✓ Share your experience\n\n💰 LOYALTY BONUS:\nGet 5% off on your next purchase!\nUse code at checkout: ESTHANKYOU5\n\n🌟 EXPLORE MORE:\nVisit our collection: https://eshopperr.me\nShop seasonal curations\nDiscover new premium items\n\n❓ SUPPORT:\n📞 WhatsApp: wa.me/918447859784\n📧 Email: support@eshopperr.me\n💬 Chat: Available 9 AM - 9 PM\n\n🙏 THANK YOU!\nFor choosing Eshopper Boutique Luxe\nYour satisfaction is our pride! 💎\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
-            try {
-                await sendWhatsApp(phone, whatsappMsg);
-                console.log(`✅ Delivered WhatsApp sent for ${orderId}`);
-            } catch (waErr) {
-                if (isExpectedWhatsAppError(waErr)) {
-                    console.warn(`⚠️  Delivered WhatsApp skipped (expected):`, waErr.message);
-                } else {
-                    console.error(`⚠️  Delivered WhatsApp failed (non-critical):`, waErr.message);
-                    if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
-                }
-            }
-
-            // Send delivery celebration email
-            try {
-                await sendOrderStatusEmail({
+            // Send both WhatsApp and Email in parallel
+            const deliveredResults = await Promise.allSettled([
+                sendWhatsApp(phone, whatsappMsg).then(() => {
+                    console.log(`✅ Delivered WhatsApp sent for ${orderId}`);
+                    return { type: 'WhatsApp', success: true };
+                }),
+                sendOrderStatusEmail({
                     toEmail: email,
                     userName: displayName,
                     orderId,
@@ -1317,12 +1382,22 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     trackingLink,
                     estimatedDelivery,
                     totalAmount: finalAmount
-                });
-                console.log(`✅ Delivered email sent for ${orderId}`);
-            } catch (emailErr) {
-                console.error(`⚠️  Delivered email failed (non-critical):`, emailErr.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
-            }
+                }).then(() => {
+                    console.log(`✅ Delivered email sent for ${orderId}`);
+                    return { type: 'Email', success: true };
+                })
+            ]);
+
+            // Check results
+            deliveredResults.forEach(result => {
+                if (result.status === 'rejected') {
+                    const isExpected = isExpectedWhatsAppError(result.reason);
+                    console.log(`⚠️  Delivered notification failed (non-critical): ${result.reason?.message}`);
+                    if (!isExpected && process.env.SENTRY_DSN && Sentry) {
+                        Sentry.captureException(result.reason);
+                    }
+                }
+            });
         }
 
     } catch (error) {
@@ -1342,6 +1417,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
         'Ordered': { emoji: '✅', color: '#28a745', bg1: '#d4edda', bg2: '#c3e6cb', msg: 'Order Confirmed! Payment received.' },
         'Packed': { emoji: '📦', color: '#0066cc', bg1: '#d1ecf1', bg2: '#bee5eb', msg: 'Packed & ready for shipment!' },
         'Shipped': { emoji: '🚚', color: '#ff6600', bg1: '#fff3cd', bg2: '#ffeaa7', msg: 'On the way to you!' },
+        'Out for Delivery': { emoji: '🚗', color: '#ff9500', bg1: '#ffe0b2', bg2: '#ffcc80', msg: 'Out for delivery - arriving today!' },
         'Delivered': { emoji: '🎉', color: '#27ae60', bg1: '#d4edda', bg2: '#c3e6cb', msg: 'Successfully delivered!' }
     };
     
@@ -2467,7 +2543,6 @@ app.post('/api/place-order', async (req, res) => {
             if (!phoneNumber) {
                 console.warn(`⚠️  No phone number found for order ${orderId}, skipping WhatsApp`);
             } else {
-                const mediaUrl = 'https://res.cloudinary.com/dtfvoxw1p/image/upload/v1724068341/order_success_lux.png';
                 const itemSummary = cleanProducts
                     .slice(0, 5)
                     .map((item, idx) => `   ${idx + 1}. ${item.name}\n      Qty: ${item.qty} | Rate: ₹${Number(item.price || 0).toLocaleString('en-IN')} | Subtotal: ₹${Number(item.total || 0).toLocaleString('en-IN')}`)
@@ -2480,15 +2555,11 @@ app.post('/api/place-order', async (req, res) => {
                 deliveryDate.setDate(deliveryDate.getDate() + estimatedDays);
                 const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 
-                const caption = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')} (FREE on orders above ₹999)\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT METHOD: ${paymentMethod === 'COD' ? 'Cash on Delivery (Pay at gate)' : paymentMethod || 'Card Payment'}\n\n📅 ESTIMATED DELIVERY:\n   Expected by: ${formattedDeliveryDate}\n   Status: Your order is being prepared\n\n🎯 WHAT'S NEXT?\n✓ We're hand-preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery to your doorstep\n✓ Real-time tracking available\n\n🔗 ACTION LINKS:\n📍 Track Order Live: https://eshopperr.me/order-tracking/${orderId}\n💬 WhatsApp Support: https://wa.me/918447859784\n✉️ Email Support: support@eshopperr.me\n\n❓ NEED HELP?\n• Track your order anytime\n• Check delivery status\n• Modify or cancel order\n• Return or exchange items\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🙏 We appreciate your business!\nHappy shopping with Eshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+                const whatsappMsg = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')}\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT: ${paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod || 'Card'}\n\n📅 ESTIMATED DELIVERY: ${formattedDeliveryDate}\n\n🎯 NEXT STEPS:\n✓ We're preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery\n\n🔗 TRACK: https://eshopperr.me/order-tracking/${orderId}\n\n🙏 Thank you for your business!\nEshopper Boutique Luxe`;
 
                 try {
-                    await sendWhatsAppMedia(phoneNumber, mediaUrl, caption);
-                    console.log(`✅ Order placement WhatsApp media sent for order ${orderId}`);
-                } catch (mediaError) {
-                    console.warn(`⚠️ WhatsApp media failed for ${orderId}, falling back to text:`, mediaError.message);
-                    await sendWhatsApp(phoneNumber, caption);
-                    console.log(`✅ Order placement WhatsApp text fallback sent for order ${orderId}`);
+                    await sendWhatsApp(phoneNumber, whatsappMsg);
+                    console.log(`✅ Order placement WhatsApp sent for order ${orderId}`);
                 }
             }
         } catch (waError) {
@@ -2541,10 +2612,9 @@ app.post('/api/test-notification', async (req, res) => {
         if (phone) {
             results.whatsapp.attempted = true;
             try {
-                const mediaUrl = 'https://res.cloudinary.com/dtfvoxw1p/image/upload/v1724068341/order_success_lux.png';
-                const testCaption = `✨ TEST NOTIFICATION 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello! This is a test message from Eshopper.\n\n✅ WhatsApp Integration: WORKING\nTimestamp: ${new Date().toLocaleString('en-IN')}\n\nIf you receive this, your WhatsApp notifications are configured correctly! 🎉\n━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+                const testCaption = `✨ TEST NOTIFICATION 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello! This is a test message from Eshopper.\n\n✅ WhatsApp Integration: WORKING\nTimestamp: ${new Date().toLocaleString('en-IN')}\n\nIf you receive this, your WhatsApp notifications are configured correctly! 🎉\n\n🎯 You'll receive order confirmations, shipment updates, and delivery notifications on WhatsApp.\n\n🔗 Need Help?\nWhatsApp: wa.me/918447859784\nEmail: support@eshopperr.me\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━`;
                 
-                await sendWhatsAppMedia(phone, mediaUrl, testCaption);
+                await sendWhatsApp(phone, testCaption);
                 results.whatsapp.success = true;
                 results.whatsapp.message = 'WhatsApp notification sent successfully';
             } catch (waError) {
