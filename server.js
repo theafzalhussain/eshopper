@@ -433,6 +433,559 @@ const getTrackingLink = (orderId) => {
     return `${frontend}/order-tracking/${encodeURIComponent(orderId)}`;
 };
 
+// 🔴 BUILD ORDER RECEIPT HTML - For immediate download when order is placed
+const buildOrderReceiptHtml = ({
+    orderId,
+    userName,
+    userEmail,
+    paymentMethod,
+    paymentStatus,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    shippingAddress,
+    products,
+    orderDate
+}) => {
+    const displayName = userName || 'Valued Customer';
+    const safeProducts = Array.isArray(products) ? products : [];
+    const orderDateObj = new Date(orderDate || Date.now());
+    const orderDateText = orderDateObj.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    // Calculate estimated delivery (5-7 days from now)
+    const deliveryDateMin = new Date(orderDateObj.getTime() + 5 * 24 * 60 * 60 * 1000);
+    const deliveryDateMax = new Date(orderDateObj.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const deliveryDateText = `${deliveryDateMin.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - ${deliveryDateMax.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
+    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
+    const payable = Number(finalAmount || (subtotal + shipping));
+
+    const rows = safeProducts.map((item, idx) => {
+        const qty = Number(item.qty || 1);
+        const price = Number(item.price || 0);
+        const line = Number(item.total || (qty * price));
+        const itemDesc = item.name ? `${item.name}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}` : 'Product';
+        return `
+            <tr>
+                <td style="width:8%; text-align:center;">${String(idx + 1).padStart(2, '0')}</td>
+                <td style="width:50%;"><strong>${itemDesc}</strong></td>
+                <td style="width:12%; text-align:center; font-weight:600;">${qty}</td>
+                <td style="width:30%; text-align:right; font-weight:600; color:#d4af37;">₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { background: #f5f5f3; color: #2c2c2c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
+                .wrap { max-width: 900px; margin: 0 auto; padding: 16px; position: relative; }
+                
+                /* WATERMARK */
+                .watermark {
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%) rotate(-45deg);
+                    font-size: 72px;
+                    font-weight: 300;
+                    color: rgba(212, 175, 55, 0.08);
+                    white-space: nowrap;
+                    pointer-events: none;
+                    z-index: 0;
+                    letter-spacing: 8px;
+                    font-style: italic;
+                }
+                
+                .card { background: #fdfdfd; border: 2px solid #d4af37; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); position: relative; z-index: 1; }
+                .head { padding: 24px 20px; background: linear-gradient(135deg, #fdfdfd, #f9f7f4); border-bottom: 1px solid #e8dcc8; }
+                .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
+                .brand-center { text-align: center; vertical-align: middle; }
+                .brand-spacer { width: 64px; }
+                .brand-badge { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+                .brand-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
+                .brand-title { font-size: 34px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; line-height: 1.2; }
+                .tagline { font-size: 12px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0 0; }
+                .body { padding: 36px; }
+                .title { font-size: 36px; font-weight: 900; margin: 0 0 12px; color: #0f0f0f; letter-spacing: 2px; text-align: center; }
+                .subtitle { font-size: 14px; color: #8b7521; text-align: center; font-weight: 700; letter-spacing: 1px; margin-bottom: 28px; }
+                .status-badge { display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 12px 24px; border-radius: 20px; font-weight: 700; margin: 0 auto 16px; display: block; text-align: center; width: fit-content; box-shadow: 0 4px 12px rgba(31,143,84,0.3); }
+                .status-message { text-align: center; color: #0f0f0f; font-weight: 600; font-size: 14px; margin-bottom: 32px; }
+                .next-steps { margin: 32px 0; }
+                .steps-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center; }
+                .steps-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+                .step { border: 2px solid #d4af37; border-radius: 12px; padding: 20px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
+                .step-icon { font-size: 32px; margin-bottom: 12px; }
+                .step-text { font-size: 12px; font-weight: 700; color: #0f0f0f; }
+                .delivery-highlight { border: 3px solid #d4af37; border-radius: 14px; padding: 24px; background: linear-gradient(135deg, #a37f1f 0%, #d4af37 50%, #8b7521 100%); text-align: center; margin: 32px 0; box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
+                .delivery-label { color: #fff; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
+                .delivery-date { color: #fff; font-size: 24px; font-weight: 900; letter-spacing: 1px; }
+                .items-section { margin: 32px 0; }
+                .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
+                table { width: 100%; border-collapse: collapse; background: #fff; }
+                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; }
+                td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; }
+                tr:nth-child(odd) { background: #fafaf8; }
+                tr:hover { background: #f5f0e6; }
+                .summary-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
+                .summary-box { border: 2px solid #d4af37; border-radius: 12px; padding: 18px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
+                .summary-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 10px; }
+                .summary-value { font-size: 18px; font-weight: 900; color: #0f0f0f; }
+                .disclaimer { border-left: 4px solid #d4af37; padding: 16px; background: #f9f7f4; margin: 32px 0; font-size: 12px; color: #555; line-height: 1.8; }
+                .disclaimer-title { font-weight: 700; color: #0f0f0f; margin-bottom: 8px; }
+                .footer { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e8dcc8; }
+                .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.8; }
+                .foot-premium { color: #d4af37; font-weight: 700; margin-top: 14px; font-size: 13px; letter-spacing: 1px; }
+                @media (max-width: 768px) {
+                    .steps-container { grid-template-columns: 1fr; gap: 12px; }
+                    .summary-boxes { grid-template-columns: 1fr; gap: 12px; }
+                    .title { font-size: 28px; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="watermark">eShopper Luxe</div>
+            <div class="wrap">
+                <div class="card">
+                    <!-- PREMIUM HEADER -->
+                    <div class="head">
+                        <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td class="brand-left">
+                                    <div class="brand-badge">
+                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
+                                    </div>
+                                </td>
+                                <td class="brand-center">
+                                    <p class="brand-title">eShopper Boutique Luxe</p>
+                                    <p class="tagline">Premium Fashion Destination</p>
+                                </td>
+                                <td class="brand-spacer"></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- MAIN CONTENT -->
+                    <div class="body">
+                        <h1 class="title">ORDER PLACEMENT RECEIPT</h1>
+                        <p class="subtitle">Your Luxury Purchase has been Registered</p>
+                        
+                        <!-- STATUS BADGE -->
+                        <div style="text-align: center; margin-bottom: 32px;">
+                            <div class="status-badge">✓ Order Received</div>
+                            <div class="status-message">Our artisans have started verifying your premium selection</div>
+                        </div>
+
+                        <!-- NEXT STEPS -->
+                        <div class="next-steps">
+                            <div class="steps-title">⏳ Your Order Journey</div>
+                            <div class="steps-container">
+                                <div class="step">
+                                    <div class="step-icon">✓</div>
+                                    <div class="step-text">Quality Check</div>
+                                </div>
+                                <div class="step">
+                                    <div class="step-icon">📦</div>
+                                    <div class="step-text">White-Glove Packing</div>
+                                </div>
+                                <div class="step">
+                                    <div class="step-icon">🚚</div>
+                                    <div class="step-text">Courier Handover</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ESTIMATED DELIVERY -->
+                        <div class="delivery-highlight">
+                            <div class="delivery-label">📅 Expected Delivery</div>
+                            <div class="delivery-date">${deliveryDateText}</div>
+                        </div>
+
+                        <!-- ORDER DETAILS -->
+                        <div class="items-section">
+                            <div class="section-title">📦 Your Order</div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width:8%">#</th>
+                                        <th style="width:50%">Item</th>
+                                        <th style="width:12%">Qty</th>
+                                        <th style="width:30%">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
+                            </table>
+                        </div>
+
+                        <!-- SUMMARY -->
+                        <div class="summary-boxes">
+                            <div class="summary-box">
+                                <div class="summary-label">📦 Subtotal</div>
+                                <div class="summary-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                            </div>
+                            <div class="summary-box">
+                                <div class="summary-label">🚚 Shipping</div>
+                                <div class="summary-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</div>
+                            </div>
+                            <div class="summary-box">
+                                <div class="summary-label">💰 Total</div>
+                                <div class="summary-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                            </div>
+                        </div>
+
+                        <!-- PAYMENT INFO -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 32px 0;">
+                            <div style="border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 2px 8px rgba(212,175,55,0.1);">
+                                <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 8px;">💳 Payment Method</div>
+                                <div style="font-size: 15px; font-weight: 700; color: #0f0f0f;">${paymentMethod || 'Cash on Delivery'}</div>
+                            </div>
+                            <div style="border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 2px 8px rgba(212,175,55,0.1);">
+                                <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 8px;">📊 Order Date</div>
+                                <div style="font-size: 15px; font-weight: 700; color: #0f0f0f;">${orderDateText}</div>
+                            </div>
+                        </div>
+
+                        <!-- DISCLAIMER -->
+                        <div class="disclaimer">
+                            <div class="disclaimer-title">📋 IMPORTANT NOTICE</div>
+                            This is a preliminary receipt confirming that your order has been successfully placed. Your official Tax Invoice will be generated and sent to you upon successful delivery of your order. We appreciate your purchase and look forward to serving you!
+                        </div>
+
+                        <!-- FOOTER -->
+                        <div class="footer">
+                            <div class="foot">
+                                <strong>For support:</strong> support@eshopperr.me<br/>
+                                <strong>Website:</strong> eshopperr.me<br/>
+                                <strong>Order ID:</strong> ${orderId}
+                            </div>
+                            <div class="foot-premium">💎 eShopper Boutique Luxe • Premium Edition • Authenticity Guaranteed 💎</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
+// 🔴 BUILD TAX INVOICE HTML - For download after delivery with legal compliance
+const buildTaxInvoiceHtml = ({
+    orderId,
+    userName,
+    userEmail,
+    paymentMethod,
+    paymentStatus,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    shippingAddress,
+    products,
+    orderDate
+}) => {
+    const displayName = userName || 'Valued Customer';
+    const safeProducts = Array.isArray(products) ? products : [];
+    const orderDateText = new Date(orderDate || Date.now()).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
+    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
+    const payable = Number(finalAmount || (subtotal + shipping));
+
+    const rows = safeProducts.map((item, idx) => {
+        const qty = Number(item.qty || 1);
+        const price = Number(item.price || 0);
+        const line = Number(item.total || (qty * price));
+        const itemDesc = item.name ? `${item.name}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}` : 'Product';
+        const hsn = item.hsn || '6204';
+        const unitPrice = price;
+        const discountPct = item.discountPercent || 0;
+        const taxRate = 18; // IGST
+        const taxAmount = Math.round((line * taxRate) / 100);
+        const priceBeforeTax = line;
+
+        return `
+            <tr>
+                <td style="width:6%; text-align:center;">${String(idx + 1).padStart(2, '0')}</td>
+                <td style="width:3%; text-align:center; font-weight:600;">${hsn}</td>
+                <td style="width:38%;"><strong>${itemDesc}</strong></td>
+                <td style="width:8%; text-align:center;">${qty}</td>
+                <td style="width:12%; text-align:right; font-weight:600;">₹${unitPrice.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                <td style="width:10%; text-align:center;">${discountPct}%</td>
+                <td style="width:12%; text-align:right; font-weight:600;">₹${priceBeforeTax.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                <td style="width:11%; text-align:right; font-weight:700; color:#1f8f54;">₹${taxAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { background: #f5f5f3; color: #1a1a1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.5; }
+                .wrap { max-width: 900px; margin: 0 auto; padding: 16px; position: relative; }
+                
+                /* PAID STAMP */
+                .paid-stamp {
+                    position: fixed;
+                    top: 30%;
+                    right: 10%;
+                    transform: rotate(25deg);
+                    font-size: 64px;
+                    font-weight: 900;
+                    color: rgba(31, 143, 84, 0.15);
+                    white-space: nowrap;
+                    pointer-events: none;
+                    z-index: 0;
+                    letter-spacing: 2px;
+                    text-transform: uppercase;
+                    border: 3px solid rgba(31, 143, 84, 0.15);
+                    padding: 12px 28px;
+                    border-radius: 8px;
+                }
+                
+                .card { background: #fff; border: 2px solid #d4af37; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; z-index: 1; }
+                .head { padding: 22px 20px; background: #f5f5f3; border-bottom: 1px solid #e8dcc8; position: relative; }
+                .tax-label { position: absolute; top: 20px; right: 20px; font-size: 14px; font-weight: 900; color: #d4af37; letter-spacing: 2px; text-transform: uppercase; }
+                .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
+                .brand-center { text-align: center; vertical-align: middle; }
+                .brand-spacer { width: 64px; }
+                .brand-badge { width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+                .brand-badge img { width: 100%; height: 100%; object-fit: contain; }
+                .brand-title { font-size: 32px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; }
+                .tagline { font-size: 11px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 4px 0 0 0; }
+                .body { padding: 32px; }
+                .title { font-size: 20px; font-weight: 800; margin: 0 0 12px; color: #0f0f0f; letter-spacing: 1px; }
+                .seller-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; font-size: 12px; line-height: 1.8; }
+                .seller-box { border: 1px solid #d4af37; padding: 12px; background: #f9f7f4; border-radius: 8px; }
+                .seller-title { font-weight: 800; color: #0f0f0f; margin-bottom: 8px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+                .seller-text { color: #333; font-size: 11px; }
+                .items-section { margin: 24px 0; }
+                .section-title { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: #0f0f0f; font-weight: 800; margin-bottom: 12px; }
+                table { width: 100%; border-collapse: collapse; background: #fff; }
+                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 10px; letter-spacing: 1px; padding: 12px 8px; text-transform: uppercase; font-weight: 800; text-align: left; border: 1px solid #d4af37; white-space: nowrap; }
+                td { border: 1px solid #e8dcc8; padding: 11px 8px; font-size: 12px; color: #1a1a1a; }
+                tr:nth-child(even) { background: #f5f5f3; }
+                tr:nth-child(odd) { background: #fff; }
+                tr:hover { background: #fffef8; }
+                .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+                .summary-box { border: 1px solid #d4af37; padding: 14px; background: #f9f7f4; border-radius: 8px; text-align: center; }
+                .summary-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 6px; }
+                .summary-value { font-size: 16px; font-weight: 800; color: #0f0f0f; }
+                .payment-info { border: 2px solid #1f8f54; padding: 16px; background: rgba(31, 143, 84, 0.05); border-radius: 8px; margin: 20px 0; }
+                .payment-badge { display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 8px 16px; border-radius: 14px; font-weight: 800; font-size: 11px; letter-spacing: 1px; margin-bottom: 10px; }
+                .payment-detail { font-size: 12px; color: #333; margin: 6px 0; }
+                .qr-section { text-align: center; margin: 20px 0; padding: 16px; background: #f9f7f4; border-radius: 8px; border: 1px solid #d4af37; }
+                .qr-unit { display: inline-block; width: 120px; height: 120px; background: #fff; border: 2px solid #d4af37; border-radius: 6px; }
+                .qr-label { font-size: 10px; margin-top: 8px; color: #666; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; }
+                .signature-block { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0; padding-top: 16px; border-top: 1px solid #e8dcc8; }
+                .sig-item { text-align: center; }
+                .sig-line { border-top: 2px solid #000; margin-bottom: 4px; height: 40px; }
+                .sig-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #333; font-weight: 700; }
+                .return-box { border-left: 4px solid #d4af37; padding: 12px; background: #f9f7f4; margin: 16px 0; font-size: 11px; color: #333; border-radius: 4px; }
+                .return-title { font-weight: 800; color: #0f0f0f; margin-bottom: 6px; }
+                .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e8dcc8; }
+                .foot { font-size: 11px; color: #666; text-align: center; line-height: 1.7; }
+                .foot-premium { color: #d4af37; font-weight: 800; margin-top: 8px; font-size: 12px; letter-spacing: 1px; }
+                @media (max-width: 768px) {
+                    .body { padding: 20px; }
+                    .seller-section { grid-template-columns: 1fr; }
+                    .signature-block { grid-template-columns: 1fr; }
+                    table { font-size: 11px; }
+                    th, td { padding: 8px 6px; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="paid-stamp">PAID</div>
+            <div class="wrap">
+                <div class="card">
+                    <!-- PREMIUM HEADER -->
+                    <div class="head">
+                        <div class="tax-label">TAX INVOICE</div>
+                        <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td class="brand-left">
+                                    <div class="brand-badge">
+                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
+                                    </div>
+                                </td>
+                                <td class="brand-center">
+                                    <p class="brand-title">eShopper Boutique Luxe</p>
+                                    <p class="tagline">Premium Fashion Destination</p>
+                                </td>
+                                <td class="brand-spacer"></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- MAIN CONTENT -->
+                    <div class="body">
+                        <!-- SELLER INFO -->
+                        <div class="seller-section">
+                            <div class="seller-box">
+                                <div class="seller-title">📋 Seller Details</div>
+                                <div class="seller-text">
+                                    <strong>eShopper Boutique Luxe</strong><br/>
+                                    Premium Fashion Destination<br/><br/>
+                                    <strong>GSTIN:</strong> 07AADCR5055K1Z1<br/>
+                                    <strong>PAN:</strong> AADCR5055K<br/>
+                                    <strong>Registered Office:</strong><br/>
+                                    Plot No. 101, Tech Park,<br/>
+                                    New Delhi - 110001, India
+                                </div>
+                            </div>
+                            <div class="seller-box">
+                                <div class="seller-title">🛍️ Bill To / Ship To</div>
+                                <div class="seller-text">
+                                    <strong>${shippingAddress?.fullName || 'Customer'}</strong><br/>
+                                    ${shippingAddress?.addressline1 || 'Address Line'}<br/>
+                                    ${shippingAddress?.city || 'City'}, ${shippingAddress?.state || 'State'} - ${shippingAddress?.pin || 'PIN'}<br/>
+                                    ${shippingAddress?.country || 'India'}<br/>
+                                    <strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}<br/>
+                                    <strong>Email:</strong> ${userEmail || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ORDER META -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+                            <div style="border: 1px solid #d4af37; padding: 10px; background: #f9f7f4; border-radius: 6px;">
+                                <div style="font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 4px;">🆔 Invoice #</div>
+                                <div style="font-size: 13px; font-weight: 800; color: #0f0f0f;">${orderId}</div>
+                            </div>
+                            <div style="border: 1px solid #d4af37; padding: 10px; background: #f9f7f4; border-radius: 6px;">
+                                <div style="font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 4px;">📅 Invoice Date</div>
+                                <div style="font-size: 13px; font-weight: 800; color: #0f0f0f;">Today</div>
+                            </div>
+                            <div style="border: 1px solid #d4af37; padding: 10px; background: #f9f7f4; border-radius: 6px;">
+                                <div style="font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 4px;">📦 Order Date</div>
+                                <div style="font-size: 13px; font-weight: 800; color: #0f0f0f;">${orderDateText}</div>
+                            </div>
+                        </div>
+
+                        <!-- ITEMS TABLE WITH HSN & TAX -->
+                        <div class="items-section">
+                            <div class="section-title">📦 Itemized Breakdown</div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width:6%">#</th>
+                                        <th style="width:3%">HSN</th>
+                                        <th style="width:38%">Description</th>
+                                        <th style="width:8%">Qty</th>
+                                        <th style="width:12%">Unit Price</th>
+                                        <th style="width:10%">Disc %</th>
+                                        <th style="width:12%">Amount</th>
+                                        <th style="width:11%">Tax (18%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows || '<tr><td colspan="8" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
+                            </table>
+                        </div>
+
+                        <!-- SUMMARY -->
+                        <div class="summary-grid">
+                            <div class="summary-box">
+                                <div class="summary-label">🛍️ Subtotal</div>
+                                <div class="summary-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                            </div>
+                            <div class="summary-box">
+                                <div class="summary-label">🚚 Shipping</div>
+                                <div class="summary-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</div>
+                            </div>
+                            <div class="summary-box">
+                                <div class="summary-label">💰 Total Amount</div>
+                                <div class="summary-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                            </div>
+                            <div class="summary-box">
+                                <div class="summary-label">💳 Payment Method</div>
+                                <div class="summary-value">${paymentMethod || 'COD'}</div>
+                            </div>
+                        </div>
+
+                        <!-- PAYMENT INFO BADGE -->
+                        <div class="payment-info">
+                            <div class="payment-badge">✓ PAYMENT RECEIVED</div>
+                            <div class="payment-detail"><strong>Status:</strong> ${paymentStatus === 'Paid' ? 'Paid Successfully' : 'Payment Pending'}</div>
+                            <div class="payment-detail"><strong>Payment ID:</strong> PAY-${orderId.substring(0, 8)}</div>
+                            <div class="payment-detail"><strong>Mode:</strong> ${paymentMethod || 'Cash on Delivery'}</div>
+                        </div>
+
+                        <!-- QR CODE -->
+                        <div class="qr-section">
+                            <div style="font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 10px;">📱 Scan for Order Status & Returns</div>
+                            <svg class="qr-unit" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="200" height="200" fill="white"/>
+                                <rect x="20" y="20" width="50" height="50" fill="black"/>
+                                <rect x="30" y="30" width="30" height="30" fill="white"/>
+                                <rect x="130" y="20" width="50" height="50" fill="black"/>
+                                <rect x="140" y="30" width="30" height="30" fill="white"/>
+                                <rect x="20" y="130" width="50" height="50" fill="black"/>
+                                <rect x="30" y="140" width="30" height="30" fill="white"/>
+                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.4"/>
+                            </svg>
+                            <div class="qr-label">Links to Order History & Return Policy</div>
+                        </div>
+
+                        <!-- SIGNATURE BLOCK -->
+                        <div class="signature-block">
+                            <div class="sig-item">
+                                <div class="sig-line"></div>
+                                <div class="sig-label">Authorized Signatory</div>
+                            </div>
+                            <div class="sig-item">
+                                <div style="text-align: center; margin-bottom: 8px; font-size: 20px;">🔒</div>
+                                <div class="sig-label">Security Seal</div>
+                            </div>
+                        </div>
+
+                        <!-- RETURN INFO -->
+                        <div class="return-box">
+                            <div class="return-title">📱 Scan for Easy 7-Day Returns & Exchange Policy</div>
+                            This invoice QR code provides quick access to our comprehensive return and exchange policy. Returns are accepted within 7 days of delivery in original condition.
+                        </div>
+
+                        <!-- FOOTER -->
+                        <div class="footer">
+                            <div class="foot">
+                                This is a computer-generated Tax Invoice and does not require a physical signature per GST Rules.<br/>
+                                <strong>Support:</strong> support@eshopperr.me | <strong>Website:</strong> eshopperr.me
+                            </div>
+                            <div class="foot-premium">💎 eShopper Boutique Luxe • TAX INVOICE • Certified Authentic 💎</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
 const buildInvoiceHtml = ({
     orderId,
     userName,
@@ -724,7 +1277,13 @@ const buildInvoiceHtml = ({
 };
 
 const generateInvoicePdfBuffer = async (orderPayload) => {
-    const html = buildInvoiceHtml(orderPayload);
+    // Determine which HTML builder to use based on delivery status
+    const isDelivered = orderPayload?.isDelivered || false;
+    const htmlBuilder = isDelivered 
+        ? buildTaxInvoiceHtml 
+        : buildOrderReceiptHtml;
+    
+    const html = htmlBuilder(orderPayload);
     let browser;
     try {
         browser = await puppeteer.launch({
@@ -2672,7 +3231,8 @@ app.post('/api/place-order', async (req, res) => {
                 shippingAmount: shipping,
                 shippingAddress: addressPayload,
                 products: cleanProducts,
-                orderDate
+                orderDate,
+                isDelivered: false  // Email #1: Order Receipt (not yet delivered)
             });
         } catch (invoiceError) {
             console.error('Invoice PDF generation failed:', invoiceError.message);
@@ -3295,6 +3855,10 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
         try {
+            // Check if order is delivered to determine which invoice to show
+            const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+            const isDelivered = orderStatus === 'delivered';
+            
             const pdfBuffer = await generateInvoicePdfBuffer({
                 orderId: order.orderId,
                 userName: order.userName,
@@ -3306,7 +3870,8 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
                 shippingAmount: Number(order.shippingAmount || 0),
                 shippingAddress: order.shippingAddress || {},
                 products: Array.isArray(order.products) ? order.products : [],
-                orderDate: order.orderDate || order.createdAt
+                orderDate: order.orderDate || order.createdAt,
+                isDelivered: isDelivered  // Auto-detect: Receipt or Tax Invoice
             });
 
             clearTimeout(timeoutId);
@@ -3315,8 +3880,9 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
                 return res.status(500).json({ message: 'Invoice generation failed - empty PDF' });
             }
 
+            const fileName = isDelivered ? `TaxInvoice-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`;
             res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `${disposition}; filename="Invoice-${order.orderId}.pdf"`);
+            res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
             res.setHeader('Content-Length', String(pdfBuffer.length));
             res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
             res.setHeader('Pragma', 'no-cache');
@@ -3333,6 +3899,85 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
         console.error('❌ Invoice endpoint error:', e.message, e.stack);
         if (process.env.SENTRY_DSN) Sentry.captureException(e);
         return res.status(500).json({ message: 'Invoice generation error' });
+    }
+});
+
+// 🔴 SMART DOWNLOAD ENDPOINT - Returns Receipt or Tax Invoice based on Delivery Status
+app.get('/api/orders/:orderId/download', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const userId = String(req.query.userId || '').trim();
+        const pdfType = String(req.query.type || 'receipt').toLowerCase();
+
+        if (!orderId || !userId) {
+            return res.status(400).json({ message: 'orderId and userId are required' });
+        }
+
+        if (!['receipt', 'final'].includes(pdfType)) {
+            return res.status(400).json({ message: 'Invalid PDF type. Use "receipt" or "final"' });
+        }
+
+        // Fetch order
+        const order = await Order.findOne({ orderId, userid: userId }).lean();
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Check order status
+        const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+        const isDelivered = orderStatus === 'delivered';
+
+        // Determine filename based on delivery status
+        const fileName = isDelivered ? `TaxInvoice-${orderId}.pdf` : `Receipt-${orderId}.pdf`;
+
+        console.log(`📥 Download Request: Order ${orderId} | Type: ${pdfType} | Status: ${orderStatus} | Delivered: ${isDelivered}`);
+
+        // Generate PDF with timeout
+        const timeoutId = setTimeout(() => {}, 120000);
+
+        try {
+            const pdfBuffer = await generateInvoicePdfBuffer({
+                orderId: order.orderId,
+                userName: order.userName,
+                userEmail: order.userEmail,
+                paymentMethod: order.paymentMethod,
+                paymentStatus: order.paymentStatus,
+                finalAmount: Number(order.finalAmount || 0),
+                totalAmount: Number(order.totalAmount || 0),
+                shippingAmount: Number(order.shippingAmount || 0),
+                shippingAddress: order.shippingAddress || {},
+                products: Array.isArray(order.products) ? order.products : [],
+                orderDate: order.orderDate || order.createdAt,
+                isDelivered: isDelivered,  // Pass delivery status for footer customization
+                pdfType: pdfType // 'receipt' or 'final'
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!pdfBuffer || pdfBuffer.length < 500) {
+                return res.status(500).json({ message: 'PDF generation failed - invalid buffer' });
+            }
+
+            // Set response headers
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.setHeader('Content-Length', String(pdfBuffer.length));
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+
+            console.log(`✅ PDF generated successfully: ${fileName}`);
+            return res.send(pdfBuffer);
+        } catch (pdfErr) {
+            clearTimeout(timeoutId);
+            console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
+            if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
+            return res.status(500).json({ message: 'Failed to generate PDF - please try again' });
+        }
+    } catch (e) {
+        console.error('❌ Download endpoint error:', e.message, e.stack);
+        if (process.env.SENTRY_DSN) Sentry.captureException(e);
+        return res.status(500).json({ message: 'Download error' });
     }
 });
 
@@ -3611,6 +4256,9 @@ app.post('/api/admin/confirm-order', async (req, res) => {
         // Generate PDF invoice for Email #2
         let invoiceBase64 = null;
         try {
+            const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+            const isDelivered = orderStatus === 'delivered';
+            
             const invoiceBuffer = await generateInvoicePdfBuffer({
                 orderId: order.orderId,
                 userName: order.userName,
@@ -3622,7 +4270,8 @@ app.post('/api/admin/confirm-order', async (req, res) => {
                 shippingAmount: order.shippingAmount,
                 shippingAddress: order.shippingAddress,
                 products: order.products || [],
-                orderDate: order.orderDate || new Date()
+                orderDate: order.orderDate || new Date(),
+                isDelivered: isDelivered  // Email #2: Receipt or Tax Invoice based on status
             });
             if (invoiceBuffer) {
                 invoiceBase64 = invoiceBuffer.toString('base64');

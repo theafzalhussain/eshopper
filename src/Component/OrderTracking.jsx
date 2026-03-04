@@ -113,10 +113,19 @@ export default function OrderTracking() {
     if (!orderId || !userId) return
     try {
       setDownloadingInvoice(true)
-      const response = await axios.get(`${BASE_URL}/api/order/${orderId}/invoice?userId=${userId}`, {
-        responseType: 'arraybuffer',
-        timeout: 30000
-      })
+      
+      // Determine PDF type based on delivery status
+      const isDelivered = status === 'Delivered'
+      const pdfType = isDelivered ? 'final' : 'receipt'
+      
+      // Call the smart endpoint that checks status and generates appropriate PDF
+      const response = await axios.get(
+        `${BASE_URL}/api/orders/${orderId}/download?userId=${userId}&type=${pdfType}`,
+        {
+          responseType: 'arraybuffer',
+          timeout: 30000
+        }
+      )
 
       const contentType = String(response.headers?.['content-type'] || '').toLowerCase()
       const bytes = new Uint8Array(response.data)
@@ -124,13 +133,13 @@ export default function OrderTracking() {
       const isPdf = contentType.includes('application/pdf') && header === '%PDF'
 
       if (!isPdf) {
-        let errorMessage = 'Unable to generate invoice right now'
+        let errorMessage = 'Unable to generate PDF right now'
         try {
           const text = new TextDecoder('utf-8').decode(bytes)
           const parsed = JSON.parse(text)
           errorMessage = parsed?.message || errorMessage
         } catch (_) {
-          errorMessage = 'Invoice response invalid. Please try again.'
+          errorMessage = 'PDF response invalid. Please try again.'
         }
         setToast({
           id: Date.now(),
@@ -145,26 +154,29 @@ export default function OrderTracking() {
 
       const previewWindow = window.open(url, '_blank', 'noopener,noreferrer')
       if (!previewWindow) {
-        console.warn('Popup blocked while opening invoice preview')
+        console.warn('Popup blocked while opening PDF preview')
       }
 
+      const fileName = isDelivered ? `TaxInvoice-${orderId}.pdf` : `Receipt-${orderId}.pdf`
       const link = document.createElement('a')
       link.href = url
-      link.download = `Invoice-${orderId}.pdf`
+      link.download = fileName
       document.body.appendChild(link)
       link.click()
       link.remove()
       setTimeout(() => window.URL.revokeObjectURL(url), 45000)
+      
+      const pdfLabel = isDelivered ? 'Tax Invoice' : 'Receipt'
       setToast({
         id: Date.now(),
-        title: '✅ Invoice Ready',
-        message: 'Invoice downloaded and opened in new tab.'
+        title: '✅ PDF Ready',
+        message: `${pdfLabel} downloaded and opened in new tab.`
       })
     } catch (e) {
       setToast({
         id: Date.now(),
         title: '❌ Download Failed',
-        message: e?.response?.data?.message || 'Unable to download invoice right now'
+        message: e?.response?.data?.message || 'Unable to download PDF right now'
       })
     } finally {
       setDownloadingInvoice(false)
@@ -799,7 +811,8 @@ export default function OrderTracking() {
 
             {/* Secondary Actions - Enhanced Premium Buttons */}
             <div className="d-flex flex-wrap gap-3" style={{ rowGap: '12px' }}>
-              {/* Download Invoice Button */}
+            {/* Download Invoice Button - Dynamic based on Status */}
+            <div style={{ position: 'relative', flex: '1 1 auto', minWidth: '150px' }}>
               <motion.button
                 whileHover={{ 
                   scale: 1.03,
@@ -811,8 +824,7 @@ export default function OrderTracking() {
                 disabled={downloadingInvoice}
                 className="btn btn-sm rounded-pill"
                 style={{ 
-                  flex: '1 1 auto',
-                  minWidth: '150px',
+                  width: '100%',
                   background: downloadingInvoice ? 'linear-gradient(135deg, #e6d5a8, #d4c291)' : 'linear-gradient(135deg, #f5eccc, #ede3b3)',
                   color: '#7d6122',
                   border: '1.5px solid #d1a84a',
@@ -829,9 +841,45 @@ export default function OrderTracking() {
                 }}
               >
                 <span style={{ position: 'relative', zIndex: 2 }}>
-                  {downloadingInvoice ? '⏳ Downloading...' : '📥 Download Invoice'}
+                  {downloadingInvoice 
+                    ? '⏳ Generating...' 
+                    : status === 'Delivered' 
+                      ? '📄 Download Tax Invoice' 
+                      : '📥 Download Receipt'
+                  }
                 </span>
               </motion.button>
+              
+              {/* Verified Badge - Shows when Delivered */}
+              {status === 'Delivered' && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8, x: 8 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  transition={{ delay: 0.2, type: 'spring' }}
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    background: 'linear-gradient(135deg, #1f8f54, #16a34a)',
+                    color: '#fff',
+                    borderRadius: '50%',
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    boxShadow: '0 4px 12px rgba(31,143,84,0.4)',
+                    border: '2px solid #fff',
+                    zIndex: 10
+                  }}
+                  title="Order Verified & Delivered"
+                >
+                  ✓
+                </motion.div>
+              )}
+            </div>
 
               {/* View Invoice Button */}
               <motion.button
