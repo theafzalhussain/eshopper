@@ -5,13 +5,14 @@ import { io } from 'socket.io-client'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { BASE_URL } from '../constants'
-import { Package, Archive, Truck, BadgeCheck } from 'lucide-react'
+import { Package, Archive, Truck, MapPin, BadgeCheck } from 'lucide-react'
 
-const STEPS = ['Ordered', 'Packed', 'Shipped', 'Delivered']
+const STEPS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered']
 const STATUS_COLOR = {
   Ordered: '#8b6c2f',
   Packed: '#b48b2a',
   Shipped: '#d1a84a',
+  'Out for Delivery': '#ff9500',
   Delivered: '#1f8f54'
 }
 
@@ -19,6 +20,7 @@ const STATUS_ICON = {
   Ordered: Package,
   Packed: Archive,
   Shipped: Truck,
+  'Out for Delivery': MapPin,
   Delivered: BadgeCheck
 }
 
@@ -26,6 +28,7 @@ const STATUS_SUBTEXT = {
   Ordered: 'Your order has been confirmed and moved to our luxury processing desk.',
   Packed: 'Your item has been sanitized and packed with premium care.',
   Shipped: 'Your luxury package is in transit via our elite courier partner.',
+  'Out for Delivery': 'Your order is out for delivery and will reach you today.',
   Delivered: 'Delivered at your doorstep. We hope your Luxe experience was exceptional.'
 }
 
@@ -34,6 +37,7 @@ const normalizeStatus = (value = '') => {
   if (raw === 'order placed' || raw === 'ordered') return 'Ordered'
   if (raw === 'packed') return 'Packed'
   if (raw === 'shipped') return 'Shipped'
+  if (raw === 'out for delivery') return 'Out for Delivery'
   if (raw === 'delivered') return 'Delivered'
   return 'Ordered'
 }

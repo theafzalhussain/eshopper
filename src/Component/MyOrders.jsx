@@ -13,6 +13,7 @@ const normalizeStatus = (value = '') => {
   if (raw === 'order placed' || raw === 'ordered') return 'Ordered'
   if (raw === 'packed') return 'Packed'
   if (raw === 'shipped') return 'Shipped'
+  if (raw === 'out for delivery') return 'Out for Delivery'
   if (raw === 'delivered') return 'Delivered'
   return 'Ordered'
 }
@@ -22,6 +23,7 @@ const getStatusStyles = (status) => {
   if (s === 'Ordered') return { bg: '#e0f2fe', color: '#0ea5e9' }
   if (s === 'Packed') return { bg: '#fef3c7', color: '#f59e0b' }
   if (s === 'Shipped') return { bg: '#fef9c3', color: '#ca8a04' }
+  if (s === 'Out for Delivery') return { bg: '#ffe0b2', color: '#ff9500' }
   return { bg: '#dcfce7', color: '#16a34a' }
 }
 
