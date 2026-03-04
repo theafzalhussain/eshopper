@@ -1,3 +1,7 @@
 {
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --legacy-peer-deps",
+  "outputDirectory": "build",
+  "nodeVersion": "20.x",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
