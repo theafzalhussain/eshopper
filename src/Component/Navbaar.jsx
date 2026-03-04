@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ShoppingCart, User } from 'lucide-react'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { BASE_URL } from '../constants'
+import { getCart } from '../Store/ActionCreaters/CartActionCreators'
 
 export default function Navbaar() {
     const navigate = useNavigate()
+    const dispatch = useDispatch()
     const location = useLocation()
     const [isScrolled, setIsScrolled] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -16,8 +18,10 @@ export default function Navbaar() {
     const name = localStorage.getItem("name")
     
     // Redux cart selector with animation trigger
-    const cartItems = useSelector(state => state.CartReducer || [])
-    const cartCount = cartItems.length
+    const cartItems = useSelector(state => state.CartStateData || [])
+    const userId = localStorage.getItem('userid')
+    const userCartItems = cartItems.filter((item) => String(item.userid || '') === String(userId || ''))
+    const cartCount = userCartItems.reduce((sum, item) => sum + Number(item.qty || 1), 0)
     const prevCartCount = useRef(cartCount)
 
     // 🎯 Trigger animation when product is added to cart
@@ -29,6 +33,10 @@ export default function Navbaar() {
         }
         prevCartCount.current = cartCount
     }, [cartCount])
+
+    useEffect(() => {
+        if (localStorage.getItem('login')) dispatch(getCart())
+    }, [dispatch, location.pathname])
 
     useEffect(() => {
         const handleScroll = () => { setIsScrolled(window.scrollY > 40) }

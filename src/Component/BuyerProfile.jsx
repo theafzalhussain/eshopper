@@ -81,21 +81,21 @@ export default function BuyerProfile({ user }) {
                     <motion.button
                         whileHover={{ 
                             scale: 1.02,
-                            boxShadow: '0 20px 40px rgba(212,175,55,0.25)'
+                            y: -2
                         }}
                         whileTap={{ scale: 0.98 }}
                         style={{
                             width: '100%',
                             padding: '14px 24px',
-                            background: 'linear-gradient(135deg, #D4AF37, #b8860b)',
+                            background: 'linear-gradient(135deg, #17a2b8, #138496)',
                             color: '#fff',
-                            border: '1.5px solid rgba(212,175,55,0.3)',
+                            border: '1.5px solid rgba(23,162,184,0.35)',
                             borderRadius: '12px',
                             fontWeight: '700',
                             fontSize: '14px',
                             letterSpacing: '0.5px',
                             cursor: 'pointer',
-                            boxShadow: '0 12px 30px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.3)',
+                            boxShadow: 'none',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             backdropFilter: 'blur(10px)'
                         }}

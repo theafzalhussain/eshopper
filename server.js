@@ -206,6 +206,23 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
+// 🖼️ BRAND LOGO SOURCES (robust for invoice/email rendering)
+const BRAND_SITE_URL = (process.env.BRAND_SITE_URL || process.env.FRONTEND_URL || 'https://eshopperr.me').trim().replace(/\/$/, '');
+const BRAND_LOGO_PRIMARY_URL = process.env.BRAND_LOGO_URL || `${BRAND_SITE_URL}/assets/eshopper-logo-mark.svg`;
+const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_SITE_URL}/logo192.png`;
+const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_FALLBACK_URL;
+
+let BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
+try {
+    const localLogoPath = path.join(__dirname, 'public', 'assets', 'eshopper-logo-mark.svg');
+    if (fs.existsSync(localLogoPath)) {
+        const svg = fs.readFileSync(localLogoPath, 'utf8');
+        BRAND_LOGO_PDF_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+} catch (logoErr) {
+    console.warn('⚠️ Could not inline local brand logo for PDF:', logoErr.message);
+}
+
 // 🔧 DATABASE CONNECTION SETUP
 const MONGO_URI = process.env.MONGODB_URI;
 
@@ -577,7 +594,7 @@ const buildInvoiceHtml = ({
                             <tr>
                                 <td class="brand-left">
                                     <div class="brand-badge">
-                                        <img src="https://eshopperr.me/assets/eshopper-logo-mark.svg" alt="Logo" />
+                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
                                     </div>
                                 </td>
                                 <td class="brand-center">
@@ -732,20 +749,34 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
             waitUntil: ['networkidle0', 'domcontentloaded'],
             timeout: 90000 
         });
+
+        // Wait for web fonts/styles to settle (safe across Puppeteer versions)
+        await page.evaluate(async () => {
+            if (document.fonts && document.fonts.ready) {
+                try {
+                    await document.fonts.ready;
+                } catch (_) {}
+            }
+        });
         
         // Wait for any animations/fonts to load
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Generate PDF
-        const pdf = await page.pdf({
+        const pdfRaw = await page.pdf({
             format: 'A4',
             printBackground: true,
             margin: { top: '16mm', right: '12mm', bottom: '16mm', left: '12mm' },
             timeout: 60000
         });
 
+        // Puppeteer can return Uint8Array in some versions; normalize to Buffer
+        const pdf = Buffer.isBuffer(pdfRaw)
+            ? pdfRaw
+            : (pdfRaw ? Buffer.from(pdfRaw) : Buffer.alloc(0));
+
         // Validate PDF
-        if (!pdf || !Buffer.isBuffer(pdf) || pdf.length < 500) {
+        if (!pdf || pdf.length < 200) {
             console.error('❌ PDF validation failed: invalid buffer');
             throw new Error('Generated invoice buffer is not valid');
         }
@@ -1059,28 +1090,31 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
     try {
         const endpoint = `${apiUrl}/message/sendMedia/${instance}`;
         const mediaCaption = String(caption).trim();
+        const toCandidates = [contactNumber, `${contactNumber}@s.whatsapp.net`];
 
-        const payloadFormats = [
+        const payloadFormats = toCandidates.flatMap((to) => ([
             {
-                number: contactNumber,
+                number: to,
                 mediatype: 'image',
                 media: mediaUrl,
                 caption: mediaCaption,
                 fileName: `eshopper-order-${Date.now()}.png`
             },
             {
-                number: contactNumber,
+                number: to,
                 mediatype: 'image',
                 media: mediaUrl,
+                mimetype: 'image/png',
+                caption: mediaCaption,
                 text: mediaCaption
             },
             {
-                to: contactNumber,
+                to,
                 mediatype: 'image',
                 media: mediaUrl,
                 caption: mediaCaption
             }
-        ];
+        ]));
 
         console.log(`📸 Sending WhatsApp Media to: ${contactNumber}`);
         console.log(`   Endpoint: ${endpoint}`);
@@ -1088,6 +1122,8 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
         console.log(`   Caption: ${mediaCaption.substring(0, 80)}...`);
 
         let lastError;
+        let lastStatus;
+        let lastResponseData;
 
         for (let i = 0; i < payloadFormats.length; i++) {
             const payload = payloadFormats[i];
@@ -1104,7 +1140,12 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
                 return true;
             } catch (err) {
                 lastError = err;
-                console.warn(`⚠️ sendMedia attempt ${i + 1} failed:`, err.response?.status || err.message);
+                lastStatus = err.response?.status;
+                lastResponseData = err.response?.data;
+                console.warn(`⚠️ sendMedia attempt ${i + 1} failed:`, lastStatus || err.message);
+                if (lastResponseData) {
+                    console.warn('⚠️ sendMedia error payload:', typeof lastResponseData === 'string' ? lastResponseData : JSON.stringify(lastResponseData));
+                }
 
                 if (err.response?.status === 401 && apiKey) {
                     try {
@@ -1125,12 +1166,23 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
             }
         }
 
+        // 400-level media validation errors are common with provider payload quirks.
+        // Soft-fail here so caller can use text fallback without noisy exception propagation.
+        if (lastStatus === 400) {
+            const softError = new Error('sendMedia rejected payload with 400; use text fallback');
+            softError.code = 'WHATSAPP_MEDIA_BAD_REQUEST';
+            softError.isExpected = true;
+            softError.details = lastResponseData;
+            throw softError;
+        }
+
         throw lastError || new Error('All sendMedia payload attempts failed');
     } catch (error) {
         console.error('❌ WhatsApp media send failed:', {
             status: error.response?.status,
             message: error.response?.data?.message || error.message,
-            endpoint: error.config?.url
+            endpoint: error.config?.url,
+            data: error.response?.data || error.details
         });
         throw error;
     }
@@ -1204,13 +1256,19 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                 if (isExpectedWhatsAppError(waErr)) {
                     console.warn(`⚠️  Shipped WhatsApp skipped (expected):`, waErr.message);
                 } else {
-                    console.error(`⚠️  Shipped WhatsApp media failed (non-critical):`, waErr.message);
+                    console.warn(`⚠️  Shipped WhatsApp media failed, trying text fallback:`, waErr.message);
                     try {
-                        if (process.env.SENTRY_DSN && Sentry) {
-                            Sentry.captureException(waErr);
+                        await sendWhatsApp(phone, `🚚 Update: Your order ${orderId} is now Shipped. Track here: ${trackingLink}`);
+                        console.log(`✅ Shipped WhatsApp text fallback sent for ${orderId}`);
+                    } catch (fallbackErr) {
+                        console.error(`⚠️  Shipped WhatsApp fallback failed (non-critical):`, fallbackErr.message);
+                        try {
+                            if (process.env.SENTRY_DSN && Sentry && !isExpectedWhatsAppError(fallbackErr)) {
+                                Sentry.captureException(fallbackErr);
+                            }
+                        } catch (sentryErr) {
+                            console.warn('⚠️  Could not report to Sentry:', sentryErr.message);
                         }
-                    } catch (sentryErr) {
-                        console.warn('⚠️  Could not report to Sentry:', sentryErr.message);
                     }
                 }
             }
@@ -1375,7 +1433,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
                 <tr>
                     <td class="brand-left">
                         <div class="brand-badge">
-                            <img src="https://eshopperr.me/assets/eshopper-logo-mark.svg" alt="eShopper Logo" />
+                            <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
                         </div>
                     </td>
                     <td class="brand-center">
@@ -1650,7 +1708,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
                 <tr>
                     <td class="brand-left">
                         <div class="brand-badge">
-                            <img src="https://eshopperr.me/assets/eshopper-logo-mark.svg" alt="eShopper Logo" />
+                            <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
                         </div>
                     </td>
                     <td class="brand-center">

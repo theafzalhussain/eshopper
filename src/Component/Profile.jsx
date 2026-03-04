@@ -306,19 +306,19 @@ export default function Profile() {
                             >
                                 <Link to="/update-profile" style={{ textDecoration: 'none',marginBottom: '12px' }}>
                                     <motion.button
-                                        whileHover={{ scale: 1.02, boxShadow: '0 16px 32px rgba(212,175,55,0.25)' }}
+                                        whileHover={{ scale: 1.02, y: -2 }}
                                         whileTap={{ scale: 0.98 }}
                                         style={{
                                             width: '100%',
                                             padding: '12px 24px',
-                                            background: 'linear-gradient(135deg, #D4AF37, #b8860b)',
+                                            background: 'linear-gradient(135deg, #17a2b8, #138496)',
                                             color: '#fff',
                                             border: 'none',
                                             borderRadius: '12px',
                                             fontWeight: '700',
                                             fontSize: '13px',
                                             letterSpacing: '0.4px',
-                                            boxShadow: '0 8px 20px rgba(212,175,55,0.2)',
+                                            boxShadow: 'none',
                                             cursor: 'pointer',
                                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                                         }}
@@ -373,14 +373,15 @@ export default function Profile() {
                             >
                                 <motion.button
                                     onClick={() => navigate("/wishlist")}
-                                    whileHover={{ y: -6, scale: 1.02, boxShadow: '0 24px 48px rgba(212,175,55,0.25)' }}
+                                    whileHover={{ y: -4, scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     className="p-5 w-100 rounded-3xl border-0 text-left"
                                     style={{
                                         background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.08))',
                                         border: '2px solid #D4AF37',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        cursor: 'pointer'
+                                        cursor: 'pointer',
+                                        boxShadow: 'none'
                                     }}
                                 >
                                     <Heart size={28} style={{ color: '#D4AF37', marginBottom: '12px' }} />
@@ -402,14 +403,15 @@ export default function Profile() {
                             >
                                 <motion.button
                                     onClick={() => navigate("/cart")}
-                                    whileHover={{ y: -6, scale: 1.02, boxShadow: '0 24px 48px rgba(212,175,55,0.25)' }}
+                                    whileHover={{ y: -4, scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     className="p-5 w-100 rounded-3xl border-0 text-left"
                                     style={{
                                         background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))',
                                         border: '2px solid #10b981',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        cursor: 'pointer'
+                                        cursor: 'pointer',
+                                        boxShadow: 'none'
                                     }}
                                 >
                                     <ShoppingCart size={28} style={{ color: '#10b981', marginBottom: '12px' }} />
@@ -431,7 +433,7 @@ export default function Profile() {
                             >
                                 <motion.button
                                     onClick={() => navigate("/my-orders")}
-                                    whileHover={{ y: -6, scale: 1.01, boxShadow: '0 24px 48px rgba(30,30,30,0.15)' }}
+                                    whileHover={{ y: -4, scale: 1.01 }}
                                     whileTap={{ scale: 0.98 }}
                                     className="p-5 w-100 rounded-3xl border-0 text-left"
                                     style={{
@@ -439,7 +441,8 @@ export default function Profile() {
                                         border: '2px solid rgba(212,175,55,0.3)',
                                         color: '#fff',
                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        cursor: 'pointer'
+                                        cursor: 'pointer',
+                                        boxShadow: 'none'
                                     }}
                                 >
                                     <Package size={28} style={{ color: '#D4AF37', marginBottom: '12px' }} />
@@ -549,7 +552,7 @@ export default function Profile() {
                                                                 e.stopPropagation()
                                                                 navigate(`/order-tracking/${item.orderId}`)
                                                             }}
-                                                            whileHover={{ scale: 1.05 }}
+                                                            whileHover={{ scale: 1.04, y: -1 }}
                                                             whileTap={{ scale: 0.95 }}
                                                             className="btn btn-sm rounded-pill px-4"
                                                             style={{
@@ -559,7 +562,7 @@ export default function Profile() {
                                                                 fontWeight: '700',
                                                                 fontSize: '11px',
                                                                 letterSpacing: '0.3px',
-                                                                boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+                                                                boxShadow: 'none',
                                                                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                                                             }}
                                                         >
