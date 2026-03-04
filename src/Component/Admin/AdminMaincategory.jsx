@@ -18,23 +18,6 @@ export default function AdminMaincategory() {
         id: item.id || item._id // Atlas Compatibility
     })) || []
 
-    const columns = [
-        { field: 'id', headerName: 'ID', width: 220 },
-        { field: 'name', headerName: 'Category Name', width: 250, renderCell: (p) => <span className="font-weight-bold">{p.value}</span> },
-        {
-            field: "edit", headerName: "Edit", width: 100,
-            renderCell: ({ row }) => (
-                <button className="btn btn-outline-info rounded-circle" onClick={() => navigate(`/admin-update-maincategory/${row.id}`)}><Edit3 size={18}/></button>
-            )
-        },
-        {
-            field: "delete", headerName: "Delete", width: 100,
-            renderCell: ({ row }) => (
-                <button className="btn btn-outline-danger rounded-circle" onClick={() => {if(window.confirm("Delete?")) dispatch(deleteMaincategory({id: row.id}))}}><Trash2 size={18}/></button>
-            )
-        },
-    ];
-
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
             <div className="container-fluid px-lg-5">
@@ -46,7 +29,37 @@ export default function AdminMaincategory() {
                                 <h4 className="font-weight-bold d-flex align-items-center"><Layers className="mr-2 text-info"/> Maincategories</h4>
                                 <Link to="/admin-add-maincategory" className='btn btn-info rounded-pill px-4 shadow-sm font-weight-bold'><Plus size={18}/> ADD NEW</Link>
                             </div>
-                            <div className="alert alert-info">Maincategories interface is temporarily unavailable.</div>
+                            <div style={{ overflowX: 'auto', width: '100%' }}>
+                                <table className="table table-hover" style={{ minWidth: '700px' }}>
+                                    <thead className="table-dark">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Category Name</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {rows.length ? rows.map((row) => (
+                                            <tr key={row.id}>
+                                                <td>{row.id}</td>
+                                                <td className="font-weight-bold">{row.name}</td>
+                                                <td>
+                                                    <button className="btn btn-sm btn-info rounded-circle mr-2" onClick={() => navigate(`/admin-update-maincategory/${row.id}`)}>
+                                                        <Edit3 size={14} />
+                                                    </button>
+                                                    <button className="btn btn-sm btn-danger rounded-circle" onClick={() => { if (window.confirm("Delete this main category?")) dispatch(deleteMaincategory({ id: row.id })) }}>
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )) : (
+                                            <tr>
+                                                <td colSpan="3" className="text-center text-muted py-4">No main categories found.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </motion.div>
                     </div>
                 </div>
