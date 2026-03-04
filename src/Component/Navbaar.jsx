@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ShoppingCart, User } from 'lucide-react'
@@ -11,12 +11,24 @@ export default function Navbaar() {
     const [isScrolled, setIsScrolled] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [profilePic, setProfilePic] = useState(localStorage.getItem('pic') || '')
+    const [cartAnimation, setCartAnimation] = useState(false)
     const role = localStorage.getItem("role")
     const name = localStorage.getItem("name")
     
-    // Redux cart selector
+    // Redux cart selector with animation trigger
     const cartItems = useSelector(state => state.CartReducer || [])
     const cartCount = cartItems.length
+    const prevCartCount = useRef(cartCount)
+
+    // 🎯 Trigger animation when product is added to cart
+    useEffect(() => {
+        if (cartCount > prevCartCount.current) {
+            // Product added - trigger premium animation!
+            setCartAnimation(true)
+            setTimeout(() => setCartAnimation(false), 800)
+        }
+        prevCartCount.current = cartCount
+    }, [cartCount])
 
     useEffect(() => {
         const handleScroll = () => { setIsScrolled(window.scrollY > 40) }
@@ -131,9 +143,17 @@ export default function Navbaar() {
                                 <Link to="/cart" className="text-dark mr-4 h5 position-relative mb-0" title="Shopping Cart">
                                     <motion.div
                                         initial={{ scale: 0.8, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
+                                        animate={{ 
+                                            scale: cartAnimation ? [1, 1.2, 0.95, 1.05, 1] : 1, 
+                                            rotate: cartAnimation ? [0, -10, 10, -10, 0] : 0,
+                                            opacity: 1 
+                                        }}
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.95 }}
+                                        transition={{
+                                            scale: { duration: 0.6, ease: "easeInOut" },
+                                            rotate: { duration: 0.5, ease: "easeInOut" }
+                                        }}
                                     >
                                         <ShoppingCart size={22} />
                                     </motion.div>
@@ -144,10 +164,18 @@ export default function Navbaar() {
                                             <motion.div
                                                 key={cartCount}
                                                 initial={{ scale: 0, y: -10 }}
-                                                animate={{ scale: 1, y: 0 }}
+                                                animate={{ 
+                                                    scale: cartAnimation ? [0, 1.4, 0.9, 1.1, 1] : 1, 
+                                                    y: 0 
+                                                }}
                                                 exit={{ scale: 0, y: -10 }}
-                                                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                                                className="cart-badge-premium"
+                                                transition={{ 
+                                                    type: 'spring', 
+                                                    stiffness: 400, 
+                                                    damping: 15,
+                                                    duration: 0.6
+                                                }}
+                                                className={`cart-badge-premium ${cartAnimation ? 'cart-badge-added' : ''}`}
                                                 style={{
                                                     position: 'absolute',
                                                     top: '-8px',
