@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { io } from 'socket.io-client'
 import { BASE_URL } from '../constants'
-import { Clock3, PackageSearch } from 'lucide-react'
+import { Clock3, MessageCircle, PackageSearch } from 'lucide-react'
 
 const FILTERS = ['All', 'In Transit', 'Delivered']
 
@@ -40,6 +40,11 @@ export default function MyOrders() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [downloadingInvoice, setDownloadingInvoice] = useState('')
   const [socketConnected, setSocketConnected] = useState(false)
+
+  const openWhatsAppSupport = (orderId) => {
+    const message = `Hi Luxe Support, I need assistance with my Order: ${orderId}`
+    window.open(`https://wa.me/918447859784?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
+  }
 
   const viewInvoiceInline = (orderId) => {
     if (!orderId || !userId) return
@@ -226,9 +231,23 @@ export default function MyOrders() {
             <h2 className="font-weight-bold mb-1" style={{ color: '#111' }}>My Orders</h2>
             <p className="text-muted mb-0">Track all your recent and past orders in one place</p>
           </div>
-          <button className="btn btn-dark rounded-pill px-4 mt-2 mt-md-0" onClick={() => navigate('/profile')}>
-            Back to Profile
-          </button>
+          <div className="d-flex align-items-center mt-2 mt-md-0" style={{ gap: '12px' }}>
+            <span
+              className="px-3 py-2 rounded-pill"
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#fff',
+                background: socketConnected ? '#10b981' : '#ef4444',
+                boxShadow: socketConnected ? '0 4px 12px rgba(16,185,129,0.28)' : 'none'
+              }}
+            >
+              {socketConnected ? '🟢 Live Connected' : '🔴 Connecting...'}
+            </span>
+            <button className="btn btn-dark rounded-pill px-4" onClick={() => navigate('/profile')}>
+              Back to Profile
+            </button>
+          </div>
         </div>
 
         {/* 🌟 PREMIUM FILTER BUTTONS */}
@@ -476,8 +495,55 @@ export default function MyOrders() {
                   </div>
                 </div>
 
+                {(Array.isArray(item.orderItems) && item.orderItems.length > 0) || (Array.isArray(item.products) && item.products.length > 0) ? (
+                  <div
+                    className="d-flex align-items-center mb-4"
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '12px',
+                      padding: '12px'
+                    }}
+                  >
+                    {(() => {
+                      const firstItem = (item.orderItems && item.orderItems[0]) || (item.products && item.products[0]) || {}
+                      const image = firstItem.image || firstItem.pic || firstItem.pic1 || ''
+                      const title = firstItem.title || firstItem.name || 'Ordered Item'
+                      const price = Number(firstItem.price || firstItem.finalprice || 0)
+                      return (
+                        <>
+                          <div
+                            style={{
+                              width: '64px',
+                              height: '64px',
+                              borderRadius: '12px',
+                              overflow: 'hidden',
+                              border: '1px solid #cbd5e1',
+                              boxShadow: '0 8px 24px rgba(15,23,42,0.12)',
+                              marginRight: '12px',
+                              background: '#fff'
+                            }}
+                          >
+                            {image ? (
+                              <img src={image} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div className="d-flex align-items-center justify-content-center h-100" style={{ color: '#64748b', fontSize: '11px', fontWeight: 700 }}>
+                                No Image
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-grow-1">
+                            <p className="font-weight-bold small mb-1" style={{ color: '#111' }}>{title}</p>
+                            <p className="small text-muted mb-0">₹{price.toLocaleString('en-IN')}</p>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                ) : null}
+
                 {/* Premium Action Buttons */}
-                <div className="d-flex gap-3 flex-wrap align-items-center">
+                <div className="d-flex gap-4 flex-wrap align-items-center">
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
@@ -535,6 +601,25 @@ export default function MyOrders() {
                     }}
                   >
                     👁 View
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => openWhatsAppSupport(item.orderId)}
+                    className="btn btn-sm rounded-pill px-4"
+                    style={{
+                      minWidth: '145px',
+                      background: '#25D366',
+                      color: '#fff',
+                      border: '1.5px solid #1ea952',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      boxShadow: '0 6px 16px rgba(37,211,102,0.25)'
+                    }}
+                    title="Chat with Luxe Support"
+                  >
+                    <MessageCircle size={14} className="mr-1" /> Chat Support
                   </motion.button>
                 </div>
               </motion.div>

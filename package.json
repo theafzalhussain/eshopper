@@ -19,6 +19,7 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.13.6",
     "bcryptjs": "^2.4.3",
+    "canvas-confetti": "^1.9.4",
     "cloudinary": "^2.0.0",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
