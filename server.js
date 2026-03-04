@@ -1623,6 +1623,181 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     }
 };
 
+// ==================== EMAIL #1: ORDER PLACED (IMMEDIATE NOTIFICATION) ====================
+const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, products, shippingAddress }) => {
+    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
+    if (!BREVO_KEY) {
+        console.error('❌ BREVO_API_KEY not configured');
+        throw new Error('BREVO_API_KEY not configured');
+    }
+    if (!toEmail || !toEmail.includes('@')) {
+        console.error('❌ Invalid email:', toEmail);
+        throw new Error('Invalid toEmail address');
+    }
+
+    try {
+        const firstName = (userName || 'Valued Customer').split(' ')[0];
+        const safeProducts = Array.isArray(products) ? products : [];
+        
+        const productRows = safeProducts.slice(0, 3).map(p => `
+            <tr>
+                <td style="padding:12px; border-bottom:1px solid #333; vertical-align:top;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                            <td style="width:70px; padding-right:12px;">
+                                ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:70px; height:70px; object-fit:cover; border-radius:8px; border:1px solid #444;" />` : `<div style="width:70px; height:70px; background:#1a1a1a; border-radius:8px; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-size:28px;">📦</div>`}
+                            </td>
+                            <td style="vertical-align:top;">
+                                <div style="font-weight:700; color:#fff; font-size:14px; margin:0 0 6px 0;">${p.name}</div>
+                                <div style="font-size:12px; color:#999;">Qty: <strong>${p.qty || 1}</strong> | ₹${Number(p.price || 0).toLocaleString()}</div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        `).join('');
+
+        const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:sans-serif; background:#050505; color:#fff; }
+        .header-bar { background:linear-gradient(135deg, #d4af37 0%, #ffd700 100%); padding:16px 0; text-align:center; }
+        .header-text { color:#050505; font-size:13px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; }
+        .container { max-width:600px; margin:0 auto; background:#0f0f0f; }
+        .header { padding:32px 24px; text-align:center; background:linear-gradient(180deg, #1a1a1a 0%, #050505 100%); border-bottom:3px solid #d4af37; }
+        .logo { width:45px; height:45px; margin:0 auto 16px; }
+        .logo img { width:100%; height:auto; }
+        .title { font-size:28px; font-weight:900; color:#d4af37; margin:0; letter-spacing:1px; text-transform:uppercase; }
+        .subtitle { font-size:12px; color:#999; margin:8px 0 0 0; letter-spacing:1px; }
+        .badge { display:inline-block; background:#d4af37; color:#050505; padding:8px 16px; border-radius:20px; font-size:11px; font-weight:900; margin-top:12px; }
+        .content { padding:32px 24px; }
+        .greeting-box { background:linear-gradient(135deg, #1a3a52, #0d2436); padding:20px; border-radius:12px; border-left:4px solid #d4af37; margin-bottom:30px; }
+        .greeting { font-size:15px; color:#e5e7eb; line-height:1.6; margin:0; }
+        .greeting strong { color:#d4af37; }
+        .section-title { font-size:13px; font-weight:900; color:#d4af37; margin:0 0 16px 0; text-transform:uppercase; letter-spacing:1px; }
+        .order-id-box { background:#1a1a1a; padding:20px; border-radius:12px; border:2px solid #d4af37; margin-bottom:30px; text-align:center; }
+        .order-id-label { font-size:11px; color:#999; text-transform:uppercase; letter-spacing:1px; margin:0 0 8px 0; }
+        .order-id { font-size:24px; font-weight:900; color:#d4af37; margin:0; letter-spacing:1px; }
+        .order-date { font-size:12px; color:#666; margin:12px 0 0 0; }
+        .product-table { width:100%; border-collapse:collapse; background:#1a1a1a; border-radius:8px; overflow:hidden; margin-bottom:30px; }
+        .product-table td { color:#fff; }
+        .product-table tr:last-child td { border-bottom:none; }
+        .amount-box { background:#1a1a1a; padding:20px; border-radius:12px; border:1px solid #333; margin-bottom:30px; }
+        .amount-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #333; font-size:14px; }
+        .amount-row:last-child { border-bottom:none; border-top:2px solid #d4af37; padding-top:14px; margin-top:8px; }
+        .amount-label { color:#999; }
+        .amount-value { color:#fff; font-weight:700; }
+        .total-value { color:#d4af37; font-size:20px; font-weight:900; }
+        .button { display:block; background:#d4af37; color:#050505; padding:14px 28px; border-radius:8px; text-decoration:none; font-weight:900; text-align:center; frequency:14px; margin:30px 0; transition:all 0.3s; }
+        .button:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.4); }
+        .footer { padding:30px 24px; text-align:center; border-top:1px solid #333; background:#050505; }
+        .footer-text { font-size:12px; color:#666; margin:8px 0; }
+        .footer-link { color:#d4af37; text-decoration:none; font-weight:700; }
+        @media (max-width:600px) {
+            .header { padding:24px 16px; }
+            .content { padding:20px 16px; }
+            .footer { padding:20px 16px; }
+            .title { font-size:22px; }
+            .greeting-box { padding:16px; }
+            .product-table td { padding:10px 8px !important; font-size:13px; }
+            .button { padding:12px 24px; font-size:13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-bar">
+        <p class="header-text">✨ ORDER RECEIVED ✨</p>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
+            </div>
+            <h1 class="title">We've Received Your Request!</h1>
+            <p class="subtitle">Thank you for choosing eShopper Boutique Luxe</p>
+            <span class="badge">📦 ORDER PLACED</span>
+        </div>
+        
+        <div class="content">
+            <div class="greeting-box">
+                <p class="greeting">Hi <strong>${firstName}</strong>,</p>
+                <p class="greeting" style="margin-top:8px;">We've received your order. Our premium team is now reviewing and processing your request. You'll receive a confirmation email shortly with full details.</p>
+            </div>
+            
+            <p class="section-title">📋 Order Details</p>
+            <div class="order-id-box">
+                <p class="order-id-label">Your Order ID</p>
+                <p class="order-id">${orderId}</p>
+                <p class="order-date">Placed on ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+            </div>
+            
+            ${safeProducts.length > 0 ? `
+            <p class="section-title">📦 Items in Your Order</p>
+            <table class="product-table">
+                <tbody>${productRows}</tbody>
+            </table>
+            ${safeProducts.length > 3 ? `<p style="font-size:12px; color:#999; margin:-20px 0 20px 0;">+ ${safeProducts.length - 3} more item(s)</p>` : ''}
+            ` : ''}
+            
+            <p class="section-title">💰 Order Total</p>
+            <div class="amount-box">
+                <div class="amount-row">
+                    <span class="amount-label">Total Amount</span>
+                    <span class="amount-value total-value">₹ ${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+                </div>
+            </div>
+            
+            <a href="https://eshopperr.me/order-tracking/${orderId}" class="button">Track Your Order</a>
+            
+            <p style="font-size:13px; color:#666; text-align:center; margin-top:24px;">
+                📧 Keep an eye on your inbox for the full order confirmation email.<br>
+                <span style="display:block; margin-top:8px; font-size:11px;">Expected shortly...</span>
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p class="footer-text">eShopper Boutique Luxe</p>
+            <p class="footer-text">Premium Fashion Destination</p>
+            <p class="footer-text" style="margin-top:16px;">
+                <a href="mailto:support@eshopperr.me" class="footer-link">📧 support@eshopperr.me</a>
+            </p>
+            <p class="footer-text" style="margin-top:8px; font-size:10px; color:#555;">
+                This is an automated message. Please don't reply directly to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+            sender: { name: 'eShopper Boutique Luxe', email: 'support@eshopperr.me' },
+            to: [{ email: toEmail, name: userName || 'Customer' }],
+            subject: "We've received your request! 📦",
+            htmlContent: htmlContent,
+            replyTo: { email: 'support@eshopperr.me' }
+        }, {
+            headers: {
+                'api-key': BREVO_KEY,
+                'content-type': 'application/json',
+                'accept': 'application/json'
+            },
+            timeout: 15000
+        });
+
+        console.log(`✅ Order Placed email sent to ${toEmail} for ${orderId}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Order Placed email failed:', error.message);
+        return false;
+    }
+};
+
+// ==================== EMAIL #2: ORDER CONFIRMED (ULTRA-PREMIUM) ====================
 const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival, invoiceBase64, orderStatus = 'Ordered' }) => {
     const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
     if (!BREVO_KEY) {
@@ -2515,22 +2690,32 @@ app.post('/api/place-order', async (req, res) => {
 
         const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
+        // 📧 EMAIL #1: Send "Order Placed" email immediately
         try {
-            await sendOrderConfirmationEmail({
-            toEmail: recipientEmail,
+            await sendOrderPlacedEmail({
+                toEmail: recipientEmail,
                 userName: user.name,
                 orderId,
-                paymentMethod: paymentMethod || 'COD',
                 finalAmount: payable,
-                shippingAddress: addressPayload,
                 products: cleanProducts,
-                estimatedArrival,
-                invoiceBase64: invoiceBuffer ? invoiceBuffer.toString('base64') : null,
-                orderStatus: 'Ordered'
+                shippingAddress: addressPayload
             });
-        } catch (emailError) {
-            console.error('Order confirmation email failed:', emailError.message);
-            if (process.env.SENTRY_DSN) Sentry.captureException(emailError);
+            console.log(`✅ Email #1 (Order Placed) sent for ${orderId}`);
+        } catch (email1Error) {
+            console.error('❌ Email #1 (Order Placed) failed:', email1Error.message);
+            if (process.env.SENTRY_DSN) Sentry.captureException(email1Error);
+        }
+
+        // 📧 EMAIL #2: Send "Order Confirmed" ultra-premium email (will be sent when payment verifies)
+        // This is prepared for later use when order status changes to confirmed
+        try {
+            // For now, we can send it after a short delay or trigger it from payment verification webhook
+            // Uncommenting below will send both emails - adjust timing as needed
+            // await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+            // await sendOrderConfirmationEmail({...});
+        } catch (email2Error) {
+            console.error('Email #2 (Order Confirmed) - Prepared but not sent yet');
+        }
 
             try {
                 if (recipientEmail && recipientEmail.includes('@')) {
