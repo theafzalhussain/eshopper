@@ -407,18 +407,45 @@ export default function OrderTracking() {
             position: 'relative'
           }}
         >
-          {/* ORDER INFO - PREMIUM LAYOUT */}
-          <div className="p-4 rounded-xl mb-4" style={{ background: '#f9f9f7', border: '1px solid #f0e8d8' }}>
+          {/* ORDER INFO - PREMIUM LAYOUT WITH ENHANCED DETAILS */}
+          <div className="p-4 rounded-xl mb-4" style={{ background: 'linear-gradient(135deg, #fafaf8, #f9f7f4)', border: '2px solid #d4af37' }}>
             <div className="row">
-              <div className="col-12 text-md-right">
-                {order?.finalAmount && (
-                  <div>
-                    <p className="text-muted small mb-1">Total Amount</p>
-                    <p className="font-weight-bold" style={{ fontSize: '18px', background: 'linear-gradient(135deg, #d4af37, #b8860b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                      ₹{Number(order.finalAmount).toLocaleString('en-IN')}
-                    </p>
-                  </div>
-                )}
+              <div className="col-md-6 mb-3 mb-md-0">
+                <div className="d-flex flex-column">
+                  <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase' }}>Payment Status</p>
+                  <p className="font-weight-bold mb-3" style={{ fontSize: '14px', color: order?.paymentStatus === 'Paid' ? '#27ae60' : '#ff9500' }}>
+                    {order?.paymentStatus === 'Paid' ? '✅ Paid' : order?.paymentStatus === 'Pending' ? '⏳ Pending' : order?.paymentStatus}
+                  </p>
+                  <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase' }}>Payment Method</p>
+                  <p className="font-weight-bold" style={{ fontSize: '14px', color: '#2c2c2c' }}>
+                    {order?.paymentMethod || 'N/A'}
+                  </p>
+                </div>
+              </div>
+              <div className="col-md-6 text-md-right">
+                <div className="d-flex flex-column align-items-md-end">
+                  {order?.totalAmount && (
+                    <>
+                      <p className="text-muted small mb-1" style={{ fontSize: '11px' }}>Subtotal</p>
+                      <p className="mb-2" style={{ fontSize: '13px', color: '#666' }}>₹{Number(order.totalAmount).toLocaleString('en-IN')}</p>
+                    </>
+                  )}
+                  {order?.shippingAmount > 0 && (
+                    <>
+                      <p className="text-muted small mb-1" style={{ fontSize: '11px' }}>Shipping</p>
+                      <p className="mb-2" style={{ fontSize: '13px', color: '#666' }}>₹{Number(order.shippingAmount).toLocaleString('en-IN')}</p>
+                    </>
+                  )}
+                  {order?.finalAmount && (
+                    <>
+                      <hr style={{ margin: '8px 0', borderColor: '#d4af37', borderWidth: '1.5px' }} />
+                      <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount</p>
+                      <p className="font-weight-bold" style={{ fontSize: '22px', background: 'linear-gradient(135deg, #d4af37, #b8860b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                        ₹{Number(order.finalAmount).toLocaleString('en-IN')}
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -737,19 +764,21 @@ export default function OrderTracking() {
 
           {/* ACTION BUTTONS - PREMIUM ANIMATIONS */}
           <div className="mt-5">
-            {/* Primary Action */}
+            {/* Primary Action - Centered Back Button */}
             <div className="row mb-4">
-              <div className="col-md-6">
+              <div className="col-12">
                 <motion.button
                   whileHover={{ 
                     scale: 1.02,
                     boxShadow: '0 20px 40px rgba(15,15,16,0.3)'
                   }}
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate('/my-orders')}
                   className="btn btn-block rounded-pill"
                   style={{ 
                     width: '100%',
+                    maxWidth: '400px',
+                    margin: '0 auto',
                     fontWeight: '700', 
                     fontSize: '15px', 
                     padding: '14px 28px',
@@ -759,7 +788,8 @@ export default function OrderTracking() {
                     letterSpacing: '0.4px',
                     boxShadow: '0 10px 30px rgba(15,15,16,0.2)',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'block'
                   }}
                 >
                   ← Back to My Orders
