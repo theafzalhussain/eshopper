@@ -1260,8 +1260,16 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
             // Send both WhatsApp and Email in parallel
             const packedResults = await Promise.allSettled([
                 sendWhatsApp(phone, whatsappMsg).then(() => {
-                    console.log(`✅ Packed WhatsApp sent for ${orderId}`);
+                    console.log(`✅ Packed WhatsApp sent successfully to ${phone}`);
                     return { type: 'WhatsApp', success: true };
+                }).catch((err) => {
+                    console.error(`❌ Packed WhatsApp FAILED:`, {
+                        phone: phone,
+                        error: err.message,
+                        status: err.response?.status,
+                        data: err.response?.data
+                    });
+                    throw err;
                 }),
                 sendOrderStatusEmail({
                     toEmail: email,
@@ -1272,7 +1280,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     estimatedDelivery,
                     totalAmount: finalAmount
                 }).then(() => {
-                    console.log(`✅ Packed email sent for ${orderId}`);
+                    console.log(`✅ Packed email sent to ${email}`);
                     return { type: 'Email', success: true };
                 })
             ]);
@@ -2553,14 +2561,18 @@ app.post('/api/place-order', async (req, res) => {
 
         try {
             const phoneNumber = addressPayload?.phone || user.phone;
-            console.log(`📱 WhatsApp Debug Info:
-   User Phone: ${user.phone || '❌ Not in user object'}
-   Address Phone: ${addressPayload?.phone || '❌ Not in address'}
-   Final Phone: ${phoneNumber || '❌ Neither found'}
-   Order ID: ${orderId}`);
+            console.log(`📱 WhatsApp Debug Info for Order ${orderId}:`);
+            console.log(`   User ID: ${userId}`);
+            console.log(`   User Phone: ${user.phone || '❌ NOT FOUND'}`);
+            console.log(`   Address Phone: ${addressPayload?.phone || '❌ NOT FOUND'}`);
+            console.log(`   Final Phone: ${phoneNumber || '❌ MISSING - WhatsApp will be skipped'}`);
+            console.log(`   User Email: ${user.email}`);
+            console.log(`   User Name: ${user.name}`);
             
             if (!phoneNumber) {
-                console.warn(`⚠️  No phone number found for order ${orderId}, skipping WhatsApp`);
+                console.error(`❌ WHATSAPP SKIPPED: No phone number found for order ${orderId}`);
+                console.error(`   → User needs to update profile with phone number`);
+                console.error(`   → Go to: https://eshopperr.me/profile`);
             } else {
                 const itemSummary = cleanProducts
                     .slice(0, 5)
@@ -2577,13 +2589,18 @@ app.post('/api/place-order', async (req, res) => {
                 const whatsappMsg = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')}\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT: ${paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod || 'Card'}\n\n📅 ESTIMATED DELIVERY: ${formattedDeliveryDate}\n\n🎯 NEXT STEPS:\n✓ We're preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery\n\n🔗 TRACK: https://eshopperr.me/order-tracking/${orderId}\n\n🙏 Thank you for your business!\nEshopper Boutique Luxe`;
 
                 try {
+                    console.log(`📤 Attempting to send WhatsApp to ${phoneNumber} for order ${orderId}...`);
                     await sendWhatsApp(phoneNumber, whatsappMsg);
-                    console.log(`✅ Order placement WhatsApp sent for order ${orderId}`);
+                    console.log(`✅ SUCCESS: Order placement WhatsApp sent for order ${orderId}`);
                 } catch (waErr) {
                     if (isExpectedWhatsAppError(waErr)) {
                         console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waErr.message);
                     } else {
-                        console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waErr.message);
+                        console.error(`❌ WHATSAPP SEND ERROR for order ${orderId}:`);
+                        console.error(`   Error: ${waErr.message}`);
+                        console.error(`   Phone: ${phoneNumber}`);
+                        console.error(`   Status: ${waErr.response?.status}`);
+                        console.error(`   Data: ${JSON.stringify(waErr.response?.data)}`);
                         if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
                     }
                 }
@@ -2600,7 +2617,11 @@ app.post('/api/place-order', async (req, res) => {
         return res.status(201).json({
             success: true,
             message: 'Order placed successfully',
-            order: orderDoc
+            order: orderDoc,
+            notifications: {
+                email: '✅ Sent',
+                whatsapp: phoneNumber ? '✅ Sent' : '⚠️ Skipped - Please add phone in profile'
+            }
         });
     } catch (e) {
         console.error('❌ Place Order Error:', e.message);
@@ -2710,6 +2731,70 @@ app.post('/api/test-notification', async (req, res) => {
             success: false, 
             message: 'Failed to test notifications',
             error: e.message 
+        });
+    }
+});
+
+// ==================== WHATSAPP DIAGNOSTIC ENDPOINT ====================
+app.get('/api/check-whatsapp-status/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const user = await User.findById(userId).lean();
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        const phoneNumber = user.phone || '';
+        const hasPhone = !!phoneNumber && phoneNumber.trim().length > 0;
+
+        // Check if phone is valid format
+        const normalizePhoneStrict = (phone = '') => {
+            let digits = String(phone || '').replace(/\D/g, '');
+            if (digits.length === 10) return `91${digits}`;
+            if (digits.length === 12 && digits.startsWith('91')) return digits;
+            return '';
+        };
+
+        const normalizedPhone = normalizePhoneStrict(phoneNumber);
+        const isValidFormat = !!normalizedPhone;
+
+        console.log(`🔍 WhatsApp Status Check for User ${userId}:`);
+        console.log(`   Name: ${user.name || 'N/A'}`);
+        console.log(`   Email: ${user.email || 'N/A'}`);
+        console.log(`   Raw Phone: "${phoneNumber}"`);
+        console.log(`   Has Phone: ${hasPhone ? '✅ Yes' : '❌ No'}`);
+        console.log(`   Valid Format: ${isValidFormat ? '✅ Yes' : '❌ No'}`);
+
+        return res.status(200).json({
+            success: true,
+            userId,
+            user: {
+                name: user.name,
+                email: user.email,
+                phone: phoneNumber,
+                hasPhone,
+                isValidFormat,
+                normalizedPhone: normalizedPhone || 'INVALID'
+            },
+            whatsappStatus: {
+                configured: hasPhone && isValidFormat ? '✅ READY' : '❌ NOT CONFIGURED',
+                action: hasPhone && isValidFormat 
+                    ? 'User will receive WhatsApp notifications'
+                    : 'User needs to add phone number to profile',
+                updateLink: 'https://eshopperr.me/profile'
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ WhatsApp Status Check Error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to check WhatsApp status',
+            error: error.message
         });
     }
 });
