@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ShoppingCart, User } from 'lucide-react'
+import { useSelector } from 'react-redux'
 import { BASE_URL } from '../constants'
 
 export default function Navbaar() {
@@ -12,6 +13,10 @@ export default function Navbaar() {
     const [profilePic, setProfilePic] = useState(localStorage.getItem('pic') || '')
     const role = localStorage.getItem("role")
     const name = localStorage.getItem("name")
+    
+    // Redux cart selector
+    const cartItems = useSelector(state => state.CartReducer || [])
+    const cartCount = cartItems.length
 
     useEffect(() => {
         const handleScroll = () => { setIsScrolled(window.scrollY > 40) }
@@ -123,9 +128,49 @@ export default function Navbaar() {
                                 )}
                             </ul>
                             <div className="navbar-right-box d-flex align-items-center ml-4">
-                                <Link to="/cart" className="text-dark mr-4 h5 position-relative mb-0">
-                                    <ShoppingCart size={22} />
-                                    <span className="cart-badge bg-info"></span>
+                                <Link to="/cart" className="text-dark mr-4 h5 position-relative mb-0" title="Shopping Cart">
+                                    <motion.div
+                                        initial={{ scale: 0.8, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <ShoppingCart size={22} />
+                                    </motion.div>
+                                    
+                                    {/* Premium Cart Badge */}
+                                    <AnimatePresence mode="wait">
+                                        {cartCount > 0 && (
+                                            <motion.div
+                                                key={cartCount}
+                                                initial={{ scale: 0, y: -10 }}
+                                                animate={{ scale: 1, y: 0 }}
+                                                exit={{ scale: 0, y: -10 }}
+                                                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                                className="cart-badge-premium"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-8px',
+                                                    right: '-12px',
+                                                    width: '28px',
+                                                    height: '28px',
+                                                    borderRadius: '50%',
+                                                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                    color: '#fff',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '12px',
+                                                    fontWeight: '700',
+                                                    boxShadow: '0 4px 16px rgba(16,185,129,0.35)',
+                                                    border: '2px solid #fff',
+                                                    letterSpacing: '0.3px'
+                                                }}
+                                            >
+                                                {cartCount > 99 ? '99+' : cartCount}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </Link>
                                 {localStorage.getItem("login") ? (
                                     <div className="dropdown d-inline premium-dropdown-wrapper">
@@ -180,9 +225,46 @@ export default function Navbaar() {
 
                         {/* --- MOBILE MENU TOGGLE (Visible on Mobile Only) --- */}
                         <div className="mobile-menu-toggle d-lg-none d-flex align-items-center">
-                            <Link to="/cart" className="text-dark mr-3 position-relative">
-                                <ShoppingCart size={20} />
-                                <span className="cart-badge bg-info"></span>
+                            <Link to="/cart" className="text-dark mr-3 position-relative" title="Shopping Cart">
+                                <motion.div
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <ShoppingCart size={20} />
+                                </motion.div>
+                                
+                                {/* Premium Cart Badge - Mobile */}
+                                <AnimatePresence mode="wait">
+                                    {cartCount > 0 && (
+                                        <motion.div
+                                            key={`mobile-${cartCount}`}
+                                            initial={{ scale: 0, y: -10 }}
+                                            animate={{ scale: 1, y: 0 }}
+                                            exit={{ scale: 0, y: -10 }}
+                                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '-6px',
+                                                right: '-10px',
+                                                width: '24px',
+                                                height: '24px',
+                                                borderRadius: '50%',
+                                                background: 'linear-gradient(135deg, #10b981, #059669)',
+                                                color: '#fff',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '11px',
+                                                fontWeight: '700',
+                                                boxShadow: '0 4px 12px rgba(16,185,129,0.4)',
+                                                border: '2px solid #fff',
+                                                letterSpacing: '0.2px'
+                                            }}
+                                        >
+                                            {cartCount > 99 ? '99+' : cartCount}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </Link>
                             <button 
                                 className="hamburger-btn" 
@@ -499,6 +581,34 @@ export default function Navbaar() {
                 .mobile-menu-footer { padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); }
 
                 .cart-badge { position: absolute; top: -5px; right: -8px; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #fff; }
+                
+                /* 🎁 PREMIUM CART BADGE */
+                .cart-badge-premium {
+                    animation: badgePulse 0.6s ease-in-out infinite;
+                }
+                
+                @keyframes badgePulse {
+                    0%, 100% {
+                        box-shadow: 0 4px 16px rgba(16,185,129,0.35), 0 0 0 0 rgba(16,185,129,0.5);
+                    }
+                    50% {
+                        box-shadow: 0 4px 16px rgba(16,185,129,0.25), 0 0 0 8px rgba(16,185,129,0.2);
+                    }
+                }
+                
+                @keyframes cartBounce {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.15); }
+                }
+                
+                .navbar-right-box {
+                    position: relative;
+                }
+                
+                .navbar-right-box a:hover .cart-badge-premium {
+                    animation: cartBounce 0.4s ease-in-out;
+                }
+                
                 .animate-up { animation: fadeUpNav 0.3s ease forwards; }
                 @keyframes fadeUpNav { from {opacity:0; transform:translateY(10px)} to {opacity:1; transform:translateY(0)} }
 

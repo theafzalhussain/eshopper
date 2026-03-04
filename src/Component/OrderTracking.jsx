@@ -395,7 +395,13 @@ export default function OrderTracking() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="p-4 p-md-5 shadow-lg rounded-3xl bg-white"
-          style={{ border: '1px solid #f1e8d1', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}
+          style={{ 
+            border: '1.5px solid rgba(212,175,55,0.2)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
+            backdropFilter: 'blur(8px)',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95))',
+            position: 'relative'
+          }}
         >
           {/* ORDER INFO - PREMIUM LAYOUT */}
           <div className="p-4 rounded-xl mb-4" style={{ background: '#f9f9f7', border: '1px solid #f0e8d8' }}>
@@ -725,75 +731,141 @@ export default function OrderTracking() {
             </div>
           </motion.div>
 
-          {/* ACTION BUTTONS */}
+          {/* ACTION BUTTONS - PREMIUM ANIMATIONS */}
           <div className="mt-5">
-            <div className="row">
-              <div className="col-md-6 mb-3">
-                <button
-                  className="btn btn-dark rounded-pill px-4 btn-block"
+            {/* Primary Action */}
+            <div className="row mb-4">
+              <div className="col-md-6">
+                <motion.button
+                  whileHover={{ 
+                    scale: 1.02,
+                    boxShadow: '0 20px 40px rgba(15,15,16,0.3)'
+                  }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => navigate('/profile')}
-                  style={{ fontWeight: '600', fontSize: '14px', padding: '12px 20px' }}
+                  className="btn btn-block rounded-pill"
+                  style={{ 
+                    width: '100%',
+                    fontWeight: '700', 
+                    fontSize: '15px', 
+                    padding: '14px 28px',
+                    background: 'linear-gradient(135deg, #0f0f10, #1a1f26)',
+                    color: '#fff',
+                    border: '1.5px solid #2b3138',
+                    letterSpacing: '0.4px',
+                    boxShadow: '0 10px 30px rgba(15,15,16,0.2)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: 'pointer'
+                  }}
                 >
                   ← Back to My Orders
-                </button>
+                </motion.button>
               </div>
             </div>
 
-            {/* Secondary Actions */}
-            <div className="d-flex flex-wrap gap-4 mt-2">
-              <button
-                className="btn btn-outline-dark rounded-pill px-4"
-                onClick={() => setToast({ id: Date.now(), title: '🟢 Live Tracking', message: 'Real-time tracking is active via secure socket connection.' })}
-                style={{ fontWeight: '600', fontSize: '14px', padding: '12px 20px' }}
-              >
-                🔎 Track Order Live
-              </button>
-
-              <button
-                className="btn btn-outline-warning rounded-pill px-4"
+            {/* Secondary Actions - Enhanced Premium Buttons */}
+            <div className="d-flex flex-wrap gap-3" style={{ rowGap: '12px' }}>
+              {/* Download Invoice Button */}
+              <motion.button
+                whileHover={{ 
+                  scale: 1.03,
+                  boxShadow: '0 16px 36px rgba(209,168,74,0.25)',
+                  y: -2
+                }}
+                whileTap={{ scale: 0.95 }}
                 onClick={downloadInvoice}
                 disabled={downloadingInvoice}
-                style={{
-                  fontWeight: '600',
-                  fontSize: '14px',
+                className="btn btn-sm rounded-pill"
+                style={{ 
+                  flex: '1 1 auto',
+                  minWidth: '150px',
+                  background: downloadingInvoice ? 'linear-gradient(135deg, #e6d5a8, #d4c291)' : 'linear-gradient(135deg, #f5eccc, #ede3b3)',
+                  color: '#7d6122',
+                  border: '1.5px solid #d1a84a',
+                  fontWeight: '700',
+                  fontSize: '13px',
                   padding: '12px 20px',
-                  borderColor: '#d1a84a',
-                  color: '#7d6122'
+                  letterSpacing: '0.3px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px rgba(209,168,74,0.15)',
+                  cursor: downloadingInvoice ? 'not-allowed' : 'pointer',
+                  opacity: downloadingInvoice ? 0.75 : 1,
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}
               >
-                {downloadingInvoice ? '⏳ Preparing...' : '📄 Download Invoice'}
-              </button>
+                <span style={{ position: 'relative', zIndex: 2 }}>
+                  {downloadingInvoice ? '⏳ Downloading...' : '📥 Download Invoice'}
+                </span>
+              </motion.button>
 
-              <button
-                className="btn btn-outline-dark rounded-pill px-4"
+              {/* View Invoice Button */}
+              <motion.button
+                whileHover={{ 
+                  scale: 1.03,
+                  boxShadow: '0 16px 36px rgba(0,0,0,0.15)',
+                  y: -2
+                }}
+                whileTap={{ scale: 0.95 }}
                 onClick={viewInvoiceInline}
-                style={{
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  padding: '12px 20px'
+                className="btn btn-sm rounded-pill"
+                style={{ 
+                  flex: '1 1 auto',
+                  minWidth: '130px',
+                  background: 'linear-gradient(135deg, #f5f5f5, #e8e8e8)',
+                  color: '#333',
+                  border: '1.5px solid #d9d9d9',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  padding: '12px 20px',
+                  letterSpacing: '0.3px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}
               >
-                👁 View Invoice
-              </button>
+                <span style={{ position: 'relative', zIndex: 2 }}>
+                  👁 View Invoice
+                </span>
+              </motion.button>
 
-              <button
-                className="btn rounded-pill px-4"
+              {/* Chat Support Button */}
+              <motion.button
+                whileHover={{ 
+                  scale: 1.03,
+                  boxShadow: '0 16px 36px rgba(37,211,102,0.3)',
+                  y: -2
+                }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   const message = `Hi Luxe Support, I need assistance with my Order: ${orderId}`
                   window.open(`https://wa.me/918447859784?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
                 }}
+                className="btn btn-sm rounded-pill"
                 style={{
-                  fontWeight: '600',
-                  fontSize: '14px',
+                  flex: '1 1 auto',
+                  minWidth: '150px',
+                  background: 'linear-gradient(135deg, #25D366, #1aa84f)',
+                  color: '#fff',
+                  border: '1.5px solid #1ea952',
+                  fontWeight: '700',
+                  fontSize: '13px',
                   padding: '12px 20px',
-                  background: '#25D366',
-                  color: 'white',
-                  border: 'none'
+                  letterSpacing: '0.3px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px rgba(37,211,102,0.25)',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}
                 title="Chat with our Luxe Concierge"
               >
-                💬 Chat Support
-              </button>
+                <span style={{ position: 'relative', zIndex: 2 }}>
+                  💬 Chat Support
+                </span>
+              </motion.button>
             </div>
           </div>
 
@@ -836,6 +908,43 @@ export default function OrderTracking() {
           }
         }
 
+        /* Premium Button Shimmer Animation */
+        @keyframes shimmer {
+          0% {
+            background-position: -1000px 0;
+          }
+          100% {
+            background-position: 1000px 0;
+          }
+        }
+
+        .btn:hover::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+          animation: shimmer 0.6s ease-in-out;
+          pointer-events: none;
+        }
+
+        /* Premium Card Glow on Hover */
+        @keyframes card-glow {
+          0%, 100% {
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+          }
+          50% {
+            box-shadow: 0 15px 50px rgba(212,175,55,0.12);
+          }
+        }
+
+        .btn {
+          position: relative;
+          overflow: hidden;
+        }
+
         @media (max-width: 576px) {
           .container {
             padding-left: 0 !important;
@@ -861,6 +970,9 @@ export default function OrderTracking() {
           }
           .text-md-right {
             text-align: left;
+          }
+          .d-flex.gap-3 {
+            gap: 8px !important;
           }
         }
 

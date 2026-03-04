@@ -432,17 +432,18 @@ export default function MyOrders() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05, duration: 0.4 }}
-                whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(0,0,0,0.12)' }}
+                whileHover={{ y: -6, boxShadow: '0 24px 50px rgba(212,175,55,0.15)' }}
                 className="mb-3"
                 style={{ 
-                  background: 'linear-gradient(135deg, #ffffff, #fbfbfb)',
-                  border: '1.5px solid #e8e8e8',
-                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95))',
+                  border: '1.5px solid rgba(212,175,55,0.2)',
+                  borderRadius: '18px',
                   padding: '24px',
-                  boxShadow: '0 6px 20px rgba(0,0,0,0.08)',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
                   cursor: 'pointer',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  backdropFilter: 'blur(10px)'
+                  backdropFilter: 'blur(10px)',
+                  position: 'relative'
                 }}
               >
                 {/* Header Row - Premium Layout */}
@@ -542,84 +543,134 @@ export default function MyOrders() {
                   </div>
                 ) : null}
 
-                {/* Premium Action Buttons */}
-                <div className="d-flex gap-4 flex-wrap align-items-center">
+                {/* Premium Action Buttons - Enhanced Animations */}
+                <div className="d-flex gap-3 flex-wrap align-items-center" style={{ rowGap: '10px' }}>
+                  {/* Track Order Button */}
                   <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ 
+                      scale: 1.03,
+                      boxShadow: '0 20px 40px rgba(15,15,16,0.3)',
+                      y: -3
+                    }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => navigate(`/order-tracking/${item.orderId}`)}
-                    className="btn btn-sm rounded-pill px-4 flex-grow-1"
+                    className="btn btn-sm rounded-pill"
                     style={{
-                      minWidth: '160px',
-                      background: 'linear-gradient(135deg, #0f0f10, #2b3138)',
+                      flex: '1 1 auto',
+                      minWidth: '150px',
+                      background: 'linear-gradient(135deg, #0f0f10, #1a1f26)',
                       color: '#fff',
                       border: '1.5px solid #353b44',
-                      fontWeight: 700,
-                      fontSize: '14px',
+                      fontWeight: '700',
+                      fontSize: '13px',
                       letterSpacing: '0.3px',
+                      padding: '11px 18px',
                       boxShadow: '0 8px 20px rgba(15,15,16,0.25)',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    🔎 Track Order Live
+                    <span style={{ position: 'relative', zIndex: 2 }}>
+                      🔎 Track Order
+                    </span>
                   </motion.button>
                   
+                  {/* Download Invoice Button */}
                   <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ 
+                      scale: 1.03,
+                      boxShadow: '0 20px 40px rgba(209,168,74,0.25)',
+                      y: -3
+                    }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => downloadInvoice(item.orderId)}
                     disabled={downloadingInvoice === item.orderId}
-                    className="btn btn-sm rounded-pill px-4"
+                    className="btn btn-sm rounded-pill"
                     style={{ 
-                      minWidth: '130px',
-                      background: 'linear-gradient(135deg, #fff9e6, #f5eccc)',
+                      flex: '1 1 auto',
+                      minWidth: '140px',
+                      background: downloadingInvoice === item.orderId ? 'linear-gradient(135deg, #e6d5a8, #d4c291)' : 'linear-gradient(135deg, #f5eccc, #ede3b3)',
                       color: '#7d6122',
                       border: '1.5px solid #d1a84a',
-                      fontWeight: 700,
+                      fontWeight: '700',
                       fontSize: '13px',
-                      opacity: downloadingInvoice === item.orderId ? 0.7 : 1,
-                      boxShadow: '0 4px 12px rgba(209,168,74,0.2)',
-                      cursor: downloadingInvoice === item.orderId ? 'not-allowed' : 'pointer'
+                      padding: '11px 18px',
+                      letterSpacing: '0.3px',
+                      opacity: downloadingInvoice === item.orderId ? 0.75 : 1,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 8px 18px rgba(209,168,74,0.2)',
+                      cursor: downloadingInvoice === item.orderId ? 'not-allowed' : 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    {downloadingInvoice === item.orderId ? '⏳ Downloading...' : '📥 Download'}
+                    <span style={{ position: 'relative', zIndex: 2 }}>
+                      {downloadingInvoice === item.orderId ? '⏳ Downloading...' : '📥 Download'}
+                    </span>
                   </motion.button>
                   
+                  {/* View Invoice Button */}
                   <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ 
+                      scale: 1.03,
+                      boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                      y: -3
+                    }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => viewInvoiceInline(item.orderId)}
-                    className="btn btn-sm rounded-pill px-4"
+                    className="btn btn-sm rounded-pill"
                     style={{ 
-                      minWidth: '120px',
-                      background: 'linear-gradient(135deg, #f0f0f0, #e8e8e8)',
+                      flex: '1 1 auto',
+                      minWidth: '110px',
+                      background: 'linear-gradient(135deg, #f5f5f5, #e8e8e8)',
                       color: '#333',
-                      border: '1.5px solid #ddd',
-                      fontWeight: 700,
+                      border: '1.5px solid #d9d9d9',
+                      fontWeight: '700',
                       fontSize: '13px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                      padding: '11px 18px',
+                      letterSpacing: '0.3px',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 8px 18px rgba(0,0,0,0.08)',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    👁 View
+                    <span style={{ position: 'relative', zIndex: 2 }}>
+                      👁 View
+                    </span>
                   </motion.button>
 
+                  {/* Chat Support Button */}
                   <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ 
+                      scale: 1.03,
+                      boxShadow: '0 20px 40px rgba(37,211,102,0.3)',
+                      y: -3
+                    }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => openWhatsAppSupport(item.orderId)}
-                    className="btn btn-sm rounded-pill px-4"
+                    className="btn btn-sm rounded-pill"
                     style={{
-                      minWidth: '145px',
-                      background: '#25D366',
+                      flex: '1 1 auto',
+                      minWidth: '140px',
+                      background: 'linear-gradient(135deg, #25D366, #1aa84f)',
                       color: '#fff',
                       border: '1.5px solid #1ea952',
-                      fontWeight: 700,
+                      fontWeight: '700',
                       fontSize: '13px',
-                      boxShadow: '0 6px 16px rgba(37,211,102,0.25)'
+                      padding: '11px 18px',
+                      letterSpacing: '0.3px',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 8px 18px rgba(37,211,102,0.25)',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                     title="Chat with Luxe Support"
                   >
-                    <MessageCircle size={14} className="mr-1" /> Chat Support
+                    <span style={{ position: 'relative', zIndex: 2 }}>
+                      💬 Chat Support
+                    </span>
                   </motion.button>
                 </div>
               </motion.div>
