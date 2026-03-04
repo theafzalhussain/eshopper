@@ -1839,280 +1839,265 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             </tr>
         `).join('');
 
+        // Generate delivery date
+        const deliveryDate = estimatedArrival ? new Date(estimatedArrival).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : new Date(Date.now() + 5*24*60*60*1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
         const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        * { box-sizing:border-box; }
-        body { margin:0; padding:0; font-family:sans-serif; background:#0a0a0a; -webkit-font-smoothing:antialiased; }
-        table { border-collapse:collapse; }
-        img { border:0; height:auto; line-height:100%; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
-        .brand-table { width:100%; border-collapse:collapse; table-layout:fixed; position:relative; z-index:1; }
-        .brand-left { width:68px; text-align:left; vertical-align:middle; }
-        .brand-center { text-align:center; vertical-align:middle; }
-        .brand-spacer { width:68px; }
-        .brand-badge { width:50px; height:50px; border-radius:12px; background:#fff; border:2px solid #d4af37; overflow:hidden; padding:6px; box-sizing:border-box; flex-shrink:0; }
-        .brand-badge img { width:100%; height:100%; object-fit:contain; display:block; max-width:100%; height:auto; }
-        .brand-title { margin:0; font-size:34px; font-weight:900; letter-spacing:1.2px; color:#f9e7b2; }
-        .tagline { font-size:11px; color:#d4af37; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin:8px 0 0 0; position:relative; z-index:1; }
-        .success-banner { background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%); padding:48px 24px; text-align:center; border-bottom:5px solid #28a745; position:relative; overflow:hidden; }
-        .success-banner::after { content:''; position:absolute; top:-50%; right:-10%; width:400px; height:400px; background:rgba(40,167,69,0.1); border-radius:50%; }
-        .emoji-xl { font-size:68px; line-height:1; margin:0 0 16px 0; }
-        .title { font-size:32px; font-weight:900; color:#155724; margin:0 0 8px 0; letter-spacing:0.5px; }
-        .subtitle { font-size:15px; color:#155724; margin:0 0 16px 0; line-height:1.5; }
-        .badge { display:inline-block; background:linear-gradient(135deg,#D4AF37 0%,#FFD700 50%,#D4AF37 100%); color:#000; padding:11px 26px; border-radius:30px; font-size:12px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; box-shadow:0 4px 12px rgba(212,175,55,0.4); }
-        .content { padding:40px 24px; }
-        .greeting { margin:0 0 32px 0; padding:20px; background:linear-gradient(135deg,#f0f9ff,#e0f2fe); border-radius:12px; border-left:5px solid #0284c7; }
-        .greeting-text { font-size:16px; color:#333; margin:0; line-height:1.6; }
-        .greeting-bold { font-weight:800; color:#0f0f10; }
-        .section-title { font-size:18px; font-weight:900; color:#0f0f10; margin:0 0 20px 0; display:flex; align-items:center; gap:10px; text-transform:uppercase; letter-spacing:1px; }
-
-        .cards-row { display:table; width:100%; table-layout:fixed; border-spacing:16px 0; margin:0 0 40px 0; }
-        .card-cell { display:table-cell; width:50%; vertical-align:top; }
-        .card-order { width:100%; min-width:0; padding:32px; background:linear-gradient(135deg,#1e1b4b,#312e81,#4c1d95); border-radius:20px; border:3px solid #6366f1; position:relative; overflow:hidden; box-shadow:0 8px 32px rgba(99,102,241,0.3); transition:all 0.3s ease; }
-        .card-order:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(99,102,241,0.4); }
-        .card-order::before { content:''; position:absolute; top:-60%; right:-40%; width:250px; height:250px; background:radial-gradient(circle, rgba(168,85,247,0.2), transparent); border-radius:50%; animation:pulse 3s ease-in-out infinite; }
-        .card-delivery { width:100%; min-width:0; padding:32px; background:linear-gradient(135deg,#064e3b,#065f46,#047857); border-radius:20px; border:3px solid #10b981; position:relative; overflow:hidden; box-shadow:0 8px 32px rgba(16,185,129,0.3); transition:all 0.3s ease; }
-        .card-delivery:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(16,185,129,0.4); }
-        .card-delivery::before { content:''; position:absolute; top:-60%; right:-40%; width:250px; height:250px; background:radial-gradient(circle, rgba(52,211,153,0.2), transparent); border-radius:50%; animation:pulse 3s ease-in-out infinite; }
-        .card-label-lg { font-size:13px; color:#fbbf24; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; margin:0 0 16px 0; position:relative; z-index:1; text-shadow:0 2px 8px rgba(251,191,36,0.3); }
-        .card-value-lg { font-size:32px; font-weight:900; color:#fff; margin:0 0 12px 0; position:relative; z-index:1; letter-spacing:-0.5px; text-shadow:0 4px 12px rgba(0,0,0,0.3); }
-        .card-sub-lg { font-size:14px; color:#e5e7eb; margin:0; position:relative; z-index:1; font-weight:500; opacity:0.9; }
-        .product-section { margin:0 0 40px 0; }
-        .product-table { width:100%; border-collapse:collapse; background:#fff; overflow:hidden; }
-        .product-table tr:last-child td { border-bottom:none; }
-        .amount-section { margin:0 0 40px 0; }
-        .amount-box { background:linear-gradient(135deg,#f9fafb,#f3f4f6); padding:28px; border-radius:16px; border:2px dashed #d1d5db; }
-        .amount-row { display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px dashed #e5e7eb; }
-        .amount-row:last-child { border-bottom:3px solid #0f0f10; padding-top:16px; }
-        .amount-label { color:#6b7280; font-size:14px; font-weight:600; }
-        .amount-value { font-weight:700; font-size:16px; color:#374151; }
-        .total-row { padding:20px 0 0 0 !important; }
-        .total-label { font-weight:800; font-size:16px; color:#0f0f10; text-transform:uppercase; }
-        .total-value { font-size:28px; font-weight:900; background:linear-gradient(135deg,#ffd700,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        .payment-section { margin:0 0 40px 0; }
-        .payment-box { padding:24px; background:linear-gradient(135deg,#f0fdf4,#dcfce7); border-radius:16px; border:3px solid #22c55e; position:relative; overflow:hidden; }
-        .payment-box::before { content:''; position:absolute; top:-50%; right:-10%; width:300px; height:300px; background:rgba(34,197,94,0.1); border-radius:50%; }
-        .payment-label { font-size:12px; color:#166534; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin:0 0 12px 0; }
-        .payment-method { font-size:18px; font-weight:900; color:#15803d; margin:0; display:flex; align-items:center; gap:8px; position:relative; z-index:1; }
-        .payment-detail { font-size:13px; color:#166534; margin:12px 0 0 0; display:flex; align-items:center; gap:6px; }
-        .address-section { margin:0 0 40px 0; }
-        .address-box { padding:24px; background:#f9fafb; border-radius:16px; border:2px solid #e5e7eb; position:relative; }
-        .address-line { font-size:14px; color:#374151; line-height:1.8; margin:0; }
-        .address-name { font-weight:800; font-size:15px; color:#0f0f10; margin:0 0 12px 0; }
-        .address-phone { margin-top:12px; padding-top:12px; border-top:1px dashed #d1d5db; font-size:13px; color:#6b7280; }
-        .button-primary { display:block; background:linear-gradient(135deg,#111827,#0f0f10); color:#fff; padding:18px 32px; border-radius:12px; text-decoration:none; font-weight:800; text-align:center; font-size:15px; letter-spacing:1px; margin:0 0 16px 0; box-shadow:0 6px 20px rgba(0,0,0,0.3); transition:all 0.3s ease; }
-        .button-primary:hover { transform:translateY(-3px); box-shadow:0 8px 25px rgba(0,0,0,0.4); }
-        .support-section { margin:0 0 40px 0; padding:30px 20px; background:#f7e8a9; border-radius:26px; border:4px solid #efb11f; text-align:center; position:relative; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-        .support-section::before { content:none; }
-        .support-emoji { font-size:56px; margin:0 0 10px 0; position:relative; z-index:1; line-height:1; animation:none; }
-        .support-title { font-size:36px; font-weight:900; color:#7b340f; margin:0 0 10px 0; position:relative; z-index:1; letter-spacing:0.1px; }
-        .support-text { font-size:15px; color:#a34d12; margin:0 0 20px 0; line-height:1.5; position:relative; z-index:1; max-width:640px; }
-        .support-links { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; position:relative; z-index:1; align-items:center; width:100%; }
-        .support-btn { min-width:160px; padding:11px 18px; border-radius:13px; text-decoration:none; font-weight:900; font-size:18px; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s ease; letter-spacing:0.3px; text-transform:uppercase; white-space:nowrap; box-shadow:none; }
-        .btn-email { background:#ffffff; color:#124ac1; border:2px solid #efb11f; }
-        .btn-email:hover { transform:none; box-shadow:none; background:#ffffff; }
-        .btn-whatsapp { background:#22c55e; color:#124ac1; border:2px solid #22c55e; box-shadow:none; }
-        .btn-whatsapp:hover { transform:none; box-shadow:none; }
-        .footer { background:linear-gradient(135deg,#0f0f10,#1a1a2e); padding:48px 24px; text-align:center; border-top:3px solid #d4af37; position:relative; overflow:hidden; }
-        .footer::before { content:''; position:absolute; top:-50%; left:50%; transform:translateX(-50%); width:400px; height:400px; background:radial-gradient(circle, rgba(255,215,0,0.15), transparent); border-radius:50%; animation:pulse 5s ease-in-out infinite; }
-        .footer-eshop { font-size:32px; font-weight:900; background:linear-gradient(135deg,#ffd700 0%, #ffed4e 25%, #ff6b6b 50%, #4ecdc4 75%, #d4af37 100%); background-size:200% 200%; -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:0 0 16px 0; letter-spacing:3px; position:relative; z-index:1; animation:colorShift 4s ease-in-out infinite, glow 2s ease-in-out infinite; display:inline-block; text-shadow:0 0 40px rgba(255,215,0,0.8); }
-        .footer-eshop::before { content:'✨'; margin-right:12px; font-size:28px; animation:sparkle 2s ease-in-out infinite; }
-        .footer-eshop::after { content:'✨'; margin-left:12px; font-size:28px; animation:sparkle 2s ease-in-out infinite 1s; }
-        .footer-text { font-size:12px; color:#9ca3af; margin:0; line-height:1.8; }
-        .footer-link { color:#d4af37; text-decoration:none; font-weight:700; }
-            @media (max-width:640px) {
-            .container { border-radius:0; }
-            .header { padding:20px 14px; }
-            .brand-left, .brand-spacer { width:50px; }
-            .brand-badge { width:40px; height:40px; border-radius:10px; padding:4px; }
-            .brand-title { font-size:22px; letter-spacing:0.8px; }
-            .tagline { font-size:10px; letter-spacing:1.4px; }
-            .success-banner { padding:32px 16px; }
-            .emoji-xl { font-size:56px; }
-            .title { font-size:26px; }
-            .content { padding:24px 16px; }
-
-            .journey-icon { font-size:32px; }
-            .cards-row { display:block !important; width:100% !important; border-spacing:0 !important; }
-            .card-cell { display:block !important; width:100% !important; margin:0 0 16px 0 !important; }
-            .card-cell:last-child { margin-bottom:0 !important; }
-            .card-order, .card-delivery { width:100% !important; min-width:100% !important; padding:24px; }
-            .card-value-lg { font-size:26px; }
-            
-            .support-section { width:100% !important; max-width:100% !important; padding:24px 16px !important; }
-            .support-section table { width:100% !important; max-width:100% !important; margin:0 !important; }
-            .support-section tr { display:block !important; width:100% !important; }
-            .support-section td { display:block !important; width:100% !important; padding:8px 0 !important; text-align:center !important; }
-            .support-emoji { font-size:42px !important; margin:0 0 10px 0 !important; }
-            .support-title { font-size:22px !important; margin:0 0 10px 0 !important; }
-            .support-text { font-size:13px !important; margin:0 0 16px 0 !important; }
-            .support-btn { display:block !important; width:100% !important; max-width:320px !important; margin:6px auto !important; font-size:13px !important; padding:14px 18px !important; }
-            .amount-box { padding:20px; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',sans-serif; background:#050505; color:#fff; }
+        .wrapper { max-width:600px; margin:0 auto; background:#050505; }
+        .header { background:linear-gradient(135deg,#1a1a1a 0%,#050505 100%); padding:32px 24px; text-align:center; border-bottom:3px solid #d4af37; }
+        .logo-box { margin-bottom:16px; }
+        .logo-img { width:50px; height:50px; border:2px solid #d4af37; border-radius:12px; background:#fff; padding:6px; box-sizing:border-box; }
+        .elite-title { font-size:32px; font-weight:900; color:#d4af37; margin:12px 0 8px 0; letter-spacing:2px; font-style:italic; }
+        .verified-badge { display:inline-block; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; padding:6px 16px; border-radius:20px; font-size:11px; font-weight:900; letter-spacing:1px; margin-top:8px; }
+        .timeline-section { padding:32px 24px; background:linear-gradient(180deg, #0f0f0f 0%, #050505 100%); position:relative; }
+        .timeline-title { font-size:13px; font-weight:900; color:#d4af37; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:24px; }
+        .timeline { position:relative; padding:0 24px; }
+        .timeline-item { display:flex; margin-bottom:24px; position:relative; }
+        .timeline-item:last-child { margin-bottom:0; }
+        .timeline-item::before { content:''; position:absolute; left:8px; top:28px; width:2px; height:calc(100% + 24px); background:#d4af37; }
+        .timeline-item:last-child::before { display:none; }
+        .timeline-dot { width:20px; height:20px; background:#d4af37; border-radius:50%; position:relative; z-index:1; margin-right:16px; flex-shrink:0; }
+        .timeline-dot.completed { box-shadow:0 0 12px rgba(212,175,55,0.6); }
+        .timeline-content { padding-top:2px; }
+        .timeline-label { font-weight:900; color:#d4af37; font-size:12px; text-transform:uppercase; margin-bottom:4px; }
+        .timeline-status { font-size:13px; color:#999; }
+        .products-section { padding:32px 24px; border-top:1px solid #333; }
+        .section-title { font-size:13px; font-weight:900; color:#d4af37; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:20px; }
+        .product-item { background:#1a1a1a; border:1px solid #333; border-radius:12px; padding:16px; margin-bottom:16px; display:flex; gap:16px; }
+        .product-img { width:80px; height:80px; background:#2a2a2a; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:28px; border:1px solid #444; overflow:hidden; }
+        .product-img img { width:100%; height:100%; object-fit:cover; }
+        .product-details { flex:1; }
+        .product-name { font-weight:700; color:#fff; font-size:14px; margin-bottom:8px; }
+        .product-badge { display:inline-block; background:rgba(212,175,55,0.1); border:1px solid #d4af37; color:#d4af37; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:900; white-space:nowrap; }
+        .product-price { font-size:16px; font-weight:900; color:#d4af37; margin-top:8px; }
+        .delivery-card { background:linear-gradient(135deg, #065f46 0%, #047857 100%); padding:24px; border-radius:12px; border-left:4px solid #10b981; margin:32px 24px; }
+        .delivery-label { font-size:11px; color:#a7f3d0; font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+        .delivery-date { font-size:24px; font-weight:900; color:#fbbf24; margin-bottom:8px; }
+        .delivery-text { font-size:13px; color:#d1fae5; }
+        .concierge-section { padding:32px 24px; background:linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%); border:2px solid #d4af37; border-radius:12px; margin:32px 24px; text-align:center; }
+        .concierge-emoji { font-size:48px; margin-bottom:12px; }
+        .concierge-title { font-size:22px; font-weight:900; color:#8b6914; margin-bottom:8px; }
+        .concierge-text { font-size:13px; color:#9c6d1f; margin-bottom:20px; line-height:1.6; }
+        .concierge-buttons { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+        .btn { display:inline-block; padding:12px 20px; border-radius:8px; text-decoration:none; font-weight:900; font-size:12px; text-transform:uppercase; border:none; cursor:pointer; transition:all 0.3s; }
+        .btn-whatsapp { background:#22c55e; color:#fff; }
+        .btn-whatsapp:hover { background:#16a34a; transform:translateY(-2px); }
+        .btn-email { background:#fff; color:#8b6914; border:2px solid #d4af37; }
+        .btn-email:hover { background:#fffbf0; }
+        .amount-section { padding:32px 24px; border-top:1px solid #333; }
+        .amount-box { background:#1a1a1a; padding:20px; border-radius:12px; border:1px solid #333; }
+        .amount-row { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #333; font-size:14px; }
+        .amount-row:last-child { border-bottom:none; border-top:2px solid #d4af37; padding-top:16px; margin-top:8px; }
+        .amount-label { color:#999; }
+        .amount-value { color:#fff; font-weight:700; }
+        .total-row .amount-label { color:#d4af37; font-weight:900; text-transform:uppercase; font-size:13px; }
+        .total-row .amount-value { color:#d4af37; font-size:24px; font-weight:900; }
+        .trust-section { padding:32px 24px; background:rgba(212,175,55,0.05); border-top:1px solid #333; }
+        .trust-items { display:flex; justify-content:space-around; gap:16px; flex-wrap:wrap; }
+        .trust-item { text-align:center; flex:1; min-width:140px; }
+        .trust-icon { font-size:28px; margin-bottom:8px; }
+        .trust-text { font-size:11px; color:#999; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+        .footer { padding:32px 24px; text-align:center; background:#0a0a0a; border-top:1px solid #333; }
+        .footer-brand { font-size:20px; font-weight:900; color:#d4af37; margin-bottom:12px; letter-spacing:1px; }
+        .footer-links { margin-bottom:16px; font-size:11px; }
+        .footer-links a { color:#d4af37; text-decoration:none; margin:0 8px; font-weight:700; }
+        .footer-text { font-size:11px; color:#666; line-height:1.8; }
+        @media (max-width:600px) {
+            .wrapper { font-size:14px; }
+            .header { padding:20px 16px; }
+            .elite-title { font-size:24px; }
+            .timeline { padding:0 16px; }
+            .products-section, .delivery-card, .concierge-section, .amount-section, .trust-section, .footer { padding:24px 16px; }
+            .product-item { flex-direction:column; }
+            .product-img { width:100%; height:100px; }
+            .concierge-buttons { flex-direction:column; }
+            .btn { width:100%; }
+            .trust-items { flex-direction:column; }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                    <td class="brand-left">
-                        <div class="brand-badge">
-                            <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
+<body style="margin:0; padding:0; background:#050505;">
+        <div class="wrapper">
+            <!-- HEADER WITH LOGO -->
+            <div class="header">
+                <div class="logo-box">
+                    <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper" class="logo-img" onerror="this.onerror=null; this.src='${BRAND_LOGO_FALLBACK_URL}';" />
+                </div>
+                <div class="elite-title">✨ YOUR ORDER IS CONFIRMED ✨</div>
+                <span class="verified-badge">✅ PAYMENT VERIFIED</span>
+            </div>
+
+            <!-- TIMELINE SECTION -->
+            <div class="timeline-section">
+                <div class="timeline-title">🚀 Order Journey</div>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-dot completed"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-label">Payment Verified ✅</div>
+                            <div class="timeline-status">Order is now securing placement</div>
                         </div>
-                    </td>
-                    <td class="brand-center">
-                        <p class="brand-title">eShopper Boutique Luxe</p>
-                        <p class="tagline">Premium Fashion Destination</p>
-                    </td>
-                    <td class="brand-spacer"></td>
-                </tr>
-            </table>
-        </div>
-
-        <!-- Success Banner -->
-        <div class="success-banner">
-            <div class="emoji-xl">✅</div>
-            <div class="title">ORDER CONFIRMED!</div>
-            <div class="subtitle">Thank you for choosing Eshopper Boutique Luxe</div>
-            <div class="badge">✨ Premium Care Activated</div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="content">
-            <!-- Greeting -->
-            <div class="greeting">
-                <p class="greeting-text">Hi <span class="greeting-bold">${firstName}</span>,<br>Your order has been confirmed and is now being prepared with our signature white-glove service. Here's everything you need to know:</p>
-            </div>
-
-            <!-- Order Details Cards -->
-            <div class="section-title">📋 Order Details</div>
-            <div class="cards-row">
-                <div class="card-cell">
-                    <div class="card-order">
-                        <p class="card-label-lg">🆔 ORDER ID</p>
-                        <p class="card-value-lg">${orderId}</p>
-                        <p class="card-sub-lg">Order Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                     </div>
-                </div>
-                <div class="card-cell">
-                    <div class="card-delivery">
-                        <p class="card-label-lg">🚚 EST. DELIVERY</p>
-                        <p class="card-value-lg" style="color:#ffd700; text-shadow:0 4px 12px rgba(255,215,0,0.4);">${deliveryDate}</p>
-                        <p class="card-sub-lg">Premium white-glove delivery</p>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-label">Quality Inspection ⏳</div>
+                            <div class="timeline-status">Hand-selected & tested for perfection</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-label">Signature Packaging</div>
+                            <div class="timeline-status">Premium wrapping & white-glove care</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-label">Elite Dispatch</div>
+                            <div class="timeline-status">Shipping to your address</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Products Section -->
-            <div class="section-title">📦 Order Items</div>
-            <div class="product-section">
-                <table class="product-table">
-                    <tbody>
-                        ${productRows}
-                    </tbody>
-                </table>
-                ${safeProducts.length > 5 ? `<p style="font-size:13px; color:#6b7280; margin:16px 0 0 0; padding:0 16px; background:#f9fafb; padding:12px 16px; border-radius:8px;">+ ${safeProducts.length - 5} more item(s) in your order</p>` : ''}
+            <!-- ORDER INFO CARDS -->
+            <div style="padding:24px; display:flex; gap:16px;">
+                <div style="flex:1; background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding:20px; border-radius:12px; border:2px solid #a78bfa;">
+                    <div style="font-size:11px; color:#fff; font-weight:900; text-transform:uppercase; margin-bottom:8px;">Order ID</div>
+                    <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:4px;">${orderId.slice(-6)}</div>
+                    <div style="font-size:11px; color:#e0e7ff;">${orderId}</div>
+                </div>
+                <div style="flex:1; background:linear-gradient(135deg, #10b981 0%, #059669 100%); padding:20px; border-radius:12px; border:2px solid #6ee7b7;">
+                    <div style="font-size:11px; color:#fff; font-weight:900; text-transform:uppercase; margin-bottom:8px;">Est. Arrival</div>
+                    <div style="font-size:18px; font-weight:900; color:#fbbf24;">${deliveryDate}</div>
+                    <div style="font-size:11px; color:#d1fae5;">Free Premium Delivery</div>
+                </div>
             </div>
 
-            <!-- Amount Breakdown -->
-            <div class="section-title">💳 Order Summary</div>
+            <!-- PRODUCTS SECTION -->
+            <div class="products-section">
+                <div class="section-title">📦 Your Selection</div>
+                ${products.slice(0, 5).map((product, index) => {
+                    const productName = product.title || product.name || 'Product';
+                    const productPrice = product.price || 0;
+                    const productImage = product.image || product.imageURL || '';
+                    const quantity = product.qt || product.quantity || 1;
+                    return `
+                    <div class="product-item">
+                        <div class="product-img">
+                            ${productImage ? `<img src="${productImage}" alt="${productName}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';" />` : '📷'}
+                        </div>
+                        <div class="product-details">
+                            <div class="product-name">${productName}</div>
+                            <div class="product-badge">Hand-inspected for quality</div>
+                            <div style="color:#999; font-size:12px; margin-top:8px;">Qty: ${quantity}</div>
+                            <div class="product-price">₹${(productPrice * quantity).toLocaleString('en-IN')}</div>
+                        </div>
+                    </div>
+                    `;
+                }).join('')}
+            </div>
+
+            <!-- DELIVERY INSIGHT CARD -->
+            <div class="delivery-card">
+                <div class="delivery-label">🎁 Expected Arrival</div>
+                <div class="delivery-date">${deliveryDate}</div>
+                <div class="delivery-text">Your curated selection is being prepared with utmost care and will reach you soon</div>
+            </div>
+
+            <!-- PERSONAL CONCIERGE SECTION -->
+            <div class="concierge-section">
+                <div class="concierge-emoji">👑</div>
+                <div class="concierge-title">Personal Concierge</div>
+                <div class="concierge-text">Our dedicated team is here to assist with any questions about your order. Reach out anytime!</div>
+                <div class="concierge-buttons">
+                    <a href="https://wa.me/918447859784?text=Order%20${orderId}%20-%20I%20need%20help" class="btn btn-whatsapp">💬 WhatsApp Support</a>
+                    <a href="mailto:support@eshopperr.me?subject=Order%20${orderId}" class="btn btn-email">📧 Email Us</a>
+                </div>
+            </div>
+
+            <!-- AMOUNT BREAKDOWN -->
             <div class="amount-section">
+                <div class="section-title">💰 Amount Breakdown</div>
                 <div class="amount-box">
                     <div class="amount-row">
-                        <span class="amount-label">Subtotal</span>
-                        <span class="amount-value">₹ ${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+                        <div class="amount-label">Subtotal</div>
+                        <div class="amount-value">₹${(finalAmount * 0.95).toLocaleString('en-IN')}</div>
                     </div>
                     <div class="amount-row">
-                        <span class="amount-label">Delivery Charges</span>
-                        <span class="amount-value" style="color:#10b981; font-weight:800;">FREE 🎁</span>
+                        <div class="amount-label">Shipping</div>
+                        <div class="amount-value">FREE 🎁</div>
                     </div>
                     <div class="amount-row">
-                        <span class="amount-label">Taxes & Fees</span>
-                        <span class="amount-value">Included</span>
+                        <div class="amount-label">Taxes</div>
+                        <div class="amount-value">₹${(finalAmount * 0.05).toLocaleString('en-IN')}</div>
                     </div>
                     <div class="amount-row total-row">
-                        <span class="total-label">💰 Total Amount</span>
-                        <span class="total-value">₹ ${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+                        <div class="amount-label total-label">Total Amount</div>
+                        <div class="amount-value total-value">₹${finalAmount.toLocaleString('en-IN')}</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Payment Method -->
-            <div class="section-title">💳 Payment Method</div>
-            <div class="payment-section">
-                <div class="payment-box">
-                    <p class="payment-label">💳 Payment Method</p>
-                    <p class="payment-method">
-                        ${paymentMethod === 'Cash on Delivery' ? '🏧' : paymentMethod === 'NetBanking' ? '🏦' : paymentMethod === 'Debit Card' ? '💳' : paymentMethod === 'Credit Card' ? '💳' : '💰'}
-                        ${paymentMethod || 'Cash on Delivery'}
-                    </p>
-                    ${paymentMethod === 'Cash on Delivery' ? '<p class="payment-detail">✓ Pay securely when you receive your order</p>' : '<p class="payment-detail">✓ Payment received & confirmed</p>'}
+            <!-- PAYMENT INFO -->
+            <div style="padding:24px; text-align:center; background:rgba(34,197,94,0.1); border-radius:12px; margin:0 24px 24px 24px; border:1px solid #22c55e;">
+                <div style="font-size:12px; color:#22c55e; font-weight:900; text-transform:uppercase; margin-bottom:8px;">✅ Payment Method</div>
+                <div style="font-size:16px; font-weight:900; color:#fff;">${paymentMethod || 'Secure Payment'}</div>
+                <div style="font-size:12px; color:#a7f3d0; margin-top:8px;">Payment successfully processed & verified</div>
+            </div>
+
+            <!-- SHIPPING ADDRESS -->
+            <div style="padding:24px; margin:0 24px 24px 24px;">
+                <div class="section-title">📍 Shipping to</div>
+                <div style="background:#1a1a1a; padding:16px; border-radius:12px; border:1px solid #333; line-height:1.8;">
+                    <div style="font-weight:900; color:#fff; font-size:14px; margin-bottom:8px;">${shippingAddress.name || userName}</div>
+                    <div style="font-size:13px; color:#999;">
+                        <div>${shippingAddress.street || ''}</div>
+                        <div>${shippingAddress.city || ''}, ${shippingAddress.state || ''} ${shippingAddress.zip || ''}</div>
+                        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #333; color:#999; font-size:12px;">
+                            📱 ${shippingAddress.phone || ''} 
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Shipping Address -->
-            <div class="section-title">📍 Shipping Address</div>
-            <div class="address-section">
-                <div class="address-box">
-                    <p class="address-name">${shippingAddress?.fullName || 'N/A'}</p>
-                    <p class="address-line">${shippingAddress?.addressline1 || 'N/A'}</p>
-                    <p class="address-line">${shippingAddress?.city || 'N/A'}, ${shippingAddress?.state || 'N/A'} - ${shippingAddress?.pin || 'N/A'}</p>
-                    <p class="address-line">${shippingAddress?.country || 'India'}</p>
-                    <p class="address-phone">📱 <strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}</p>
+            <!-- TRUST SECTION -->
+            <div class="trust-section">
+                <div class="trust-items">
+                    <div class="trust-item">
+                        <div class="trust-icon">🛡️</div>
+                        <div class="trust-text">Authenticity Guaranteed</div>
+                    </div>
+                    <div class="trust-item">
+                        <div class="trust-icon">↩️</div>
+                        <div class="trust-text">Easy 7-Day Returns</div>
+                    </div>
+                    <div class="trust-item">
+                        <div class="trust-icon">🚚</div>
+                        <div class="trust-text">Free Premium Shipping</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Primary Action Button -->
-            <a href="https://eshopperr.me/my-orders" class="button-primary">🔍 VIEW & TRACK YOUR ORDER</a>
-
-            <!-- Support Section -->
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" class="support-section" style="margin:0 0 40px 0; box-sizing:border-box; overflow:hidden;">
-                <tr>
-                    <td style="padding:32px 24px; background:linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%); border-radius:16px; border:3px solid #d4af37; text-align:center; overflow:hidden; box-sizing:border-box; box-shadow:0 4px 12px rgba(212,175,55,0.15);">
-                        <div class="support-emoji" style="font-size:52px; margin:0 0 12px 0; line-height:1;">🎧</div>
-                        <div class="support-title" style="font-size:26px; font-weight:900; color:#8b6914; margin:0 0 12px 0; letter-spacing:0.5px;">Need Assistance?</div>
-                        <div class="support-text" style="font-size:14px; color:#9c6d1f; margin:0 0 20px 0; line-height:1.6; max-width:100%;">Our premium support team is available 24/7 to help you</div>
-                        <table align="center" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:100%; width:100%;">
-                            <tr>
-                                <td width="50%" style="padding:8px; display:inline-block; width:48%;">
-                                    <a href="mailto:support@eshopperr.me" class="support-btn btn-email" style="display:block; width:100%; padding:13px 12px; border-radius:10px; text-decoration:none; font-weight:900; font-size:14px; background:#ffffff; color:#1a1a1a; border:2px solid #d4af37; text-transform:uppercase; box-sizing:border-box; text-align:center; min-width:140px;">✉ Email</a>
-                                </td>
-                                <td width="50%" style="padding:8px; display:inline-block; width:48%;">
-                                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-btn btn-whatsapp" style="display:block; width:100%; padding:13px 12px; border-radius:10px; text-decoration:none; font-weight:900; font-size:14px; background:#22c55e; color:#ffffff; border:2px solid #1f9d4e; text-transform:uppercase; box-sizing:border-box; text-align:center; min-width:140px;">💬 WhatsApp</a>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-            </table>
+            <!-- FOOTER -->
+            <div class="footer">
+                <div class="footer-brand">✨ eShopper ✨</div>
+                <div class="footer-text">
+                    Thank you for choosing eShopper. We're committed to delivering excellence.<br><br>
+                    <strong>Need help?</strong> Reach us at <a href="mailto:support@eshopperr.me" style="color:#d4af37; text-decoration:none; font-weight:900;">support@eshopperr.me</a> or via WhatsApp
+                </div>
+            </div>
         </div>
-
-        <!-- Footer -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" class="footer" style="background:#0f0f10; overflow:hidden; box-sizing:border-box;">
-            <tr>
-                <td style="padding:32px 24px; text-align:center; border-top:3px solid #d4af37;">
-                    <p class="footer-eshop" style="font-size:26px; font-weight:900; color:#d4af37; margin:0 0 16px 0; letter-spacing:2px;">✨ ESHOPPER ✨</p>
-                    <div style="margin:0 0 16px 0;">
-                        <a href="https://eshopperr.me/privacy-policy" style="color:#d4af37; text-decoration:none; font-size:12px; margin:0 8px; font-weight:600;">Privacy Policy</a>
-                        <span style="color:#666;">•</span>
-                        <a href="https://eshopperr.me/terms" style="color:#d4af37; text-decoration:none; font-size:12px; margin:0 8px; font-weight:600;">Terms</a>
-                        <span style="color:#666;">•</span>
-                        <a href="https://eshopperr.me/unsubscribe" style="color:#d4af37; text-decoration:none; font-size:12px; margin:0 8px; font-weight:600;">Unsubscribe</a>
-                    </div>
-                    <p class="footer-text" style="font-size:11px; color:#666; margin:0; line-height:1.8;">
-                        © ${new Date().getFullYear()} Eshopper Boutique Luxe. All rights reserved.<br>
-                        <a href="https://eshopperr.me" class="footer-link" style="color:#d4af37; text-decoration:none; font-weight:600;">eshopperr.me</a>
-                    </p>
-                </td>
-            </tr>
-        </table>
-    </div>
-</body>
+    </body>
 </html>`;
 
         const mailPayload = {
