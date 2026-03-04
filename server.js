@@ -1624,7 +1624,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
 };
 
 // ==================== EMAIL #1: ORDER PLACED (IMMEDIATE NOTIFICATION) ====================
-const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, products, shippingAddress }) => {
+const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, products, shippingAddress, invoiceBuffer }) => {
     const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
     if (!BREVO_KEY) {
         console.error('❌ BREVO_API_KEY not configured');
@@ -1779,7 +1779,13 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
             to: [{ email: toEmail, name: userName || 'Customer' }],
             subject: "We've received your request! 📦",
             htmlContent: htmlContent,
-            replyTo: { email: 'support@eshopperr.me' }
+            replyTo: { email: 'support@eshopperr.me' },
+            ...(invoiceBuffer && {
+                attachment: [{
+                    content: invoiceBuffer.toString('base64'),
+                    name: `Order-${orderId}-Invoice.pdf`
+                }]
+            })
         }, {
             headers: {
                 'api-key': BREVO_KEY,
@@ -2121,7 +2127,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         return true;
     } catch (error) {
         console.error('❌ Confirmation email failed:', error.message);
-        throw error;
+        return false;
     }
 };
 
@@ -2683,7 +2689,8 @@ app.post('/api/place-order', async (req, res) => {
                 orderId,
                 finalAmount: payable,
                 products: cleanProducts,
-                shippingAddress: addressPayload
+                shippingAddress: addressPayload,
+                invoiceBuffer: invoiceBuffer
             });
             console.log(`✅ Email #1 (Order Placed) sent for ${orderId}`);
         } catch (email1Error) {
@@ -3565,6 +3572,126 @@ const handleOrderStatusUpdate = async (req, res) => {
 
 app.post('/api/update-order-status', handleOrderStatusUpdate);
 app.post('/update-order-status', handleOrderStatusUpdate);
+// ==================== ADMIN: CONFIRM ORDER (Send Email #2) ====================
+app.post('/api/admin/confirm-order', async (req, res) => {
+    try {
+        const { orderId } = req.body;
+
+        if (!orderId) {
+            return res.status(400).json({ message: 'orderId is required' });
+        }
+
+        // Find order
+        let order = await Order.findOne({ orderId });
+        if (!order) {
+            try {
+                order = await Order.findById(orderId);
+            } catch (err) {
+                // Try checkout collection
+                const checkout = await Checkout.findById(orderId).lean();
+                if (checkout) {
+                    order = await Order.findOne({ userid: checkout.userid, finalAmount: checkout.finalAmount }).lean();
+                }
+            }
+        }
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Generate PDF invoice for Email #2
+        let invoiceBase64 = null;
+        try {
+            const invoiceBuffer = await generateInvoicePdfBuffer({
+                orderId: order.orderId,
+                userName: order.userName,
+                userEmail: order.userEmail,
+                paymentMethod: order.paymentMethod || 'COD',
+                paymentStatus: 'Verified',
+                finalAmount: order.finalAmount,
+                totalAmount: order.totalAmount,
+                shippingAmount: order.shippingAmount,
+                shippingAddress: order.shippingAddress,
+                products: order.products || [],
+                orderDate: order.orderDate || new Date()
+            });
+            if (invoiceBuffer) {
+                invoiceBase64 = invoiceBuffer.toString('base64');
+            }
+        } catch (pdfError) {
+            console.error('❌ PDF generation for Email #2 failed:', pdfError.message);
+        }
+
+        // Send Email #2: Order Confirmed (Ultra-Premium)
+        const emailSent = await sendOrderConfirmationEmail({
+            toEmail: order.userEmail,
+            userName: order.userName,
+            orderId: order.orderId,
+            paymentMethod: order.paymentMethod || 'COD',
+            finalAmount: order.finalAmount,
+            shippingAddress: order.shippingAddress,
+            products: order.products || [],
+            estimatedArrival: order.estimatedArrival,
+            invoiceBase64: invoiceBase64,
+            orderStatus: 'Confirmed'
+        });
+
+        if (!emailSent) {
+            console.warn(`⚠️ Email #2 (Confirmation) failed for ${orderId}, but updating status anyway`);
+        }
+
+        // Update order status to "Confirmed"
+        order.orderStatus = 'Confirmed';
+        order.confirmationEmailSent = true;
+        order.confirmationEmailSentAt = new Date();
+        const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+        order.statusHistory = [
+            ...existingTimeline,
+            {
+                status: 'Confirmed',
+                timestamp: new Date(),
+                message: 'Order confirmed by admin - Confirmation email sent'
+            }
+        ];
+        await order.save();
+
+        // Sync to checkout collection
+        await Checkout.updateMany(
+            { userid: order.userid, finalAmount: order.finalAmount },
+            { orderstatus: 'Confirmed', updatedAt: new Date() }
+        ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
+
+        // Real-time update via Socket.IO
+        io.to(`user:${order.userid}`).emit('statusUpdate', {
+            orderId: order.orderId,
+            status: 'Confirmed',
+            message: 'Your order has been confirmed! Check your email for full details.',
+            emailSent: emailSent
+        });
+
+        res.json({
+            success: true,
+            message: 'Order confirmed successfully',
+            orderId: order.orderId,
+            emailSent: emailSent,
+            order: {
+                orderId: order.orderId,
+                status: order.orderStatus,
+                userEmail: order.userEmail,
+                confirmationEmailSentAt: order.confirmationEmailSentAt
+            }
+        });
+    } catch (error) {
+        console.error('❌ Admin Confirm Order Error:', error.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to confirm order',
+            error: error.message
+        });
+    }
+});
+
 app.post('/api/admin/update-order-status', handleOrderStatusUpdate);
 
 app.post('/api/chat', async (req, res) => {
