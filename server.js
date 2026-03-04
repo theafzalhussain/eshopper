@@ -1260,15 +1260,10 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
             // Send both WhatsApp and Email in parallel
             const packedResults = await Promise.allSettled([
                 sendWhatsApp(phone, whatsappMsg).then(() => {
-                    console.log(`✅ Packed WhatsApp sent successfully to ${phone}`);
+                    console.log(`✅ WhatsApp sent for ${orderId} (Packed)`);
                     return { type: 'WhatsApp', success: true };
                 }).catch((err) => {
-                    console.error(`❌ Packed WhatsApp FAILED:`, {
-                        phone: phone,
-                        error: err.message,
-                        status: err.response?.status,
-                        data: err.response?.data
-                    });
+                    console.log(`ℹ️  WhatsApp skipped for ${orderId} (Packed):`, err.message);
                     throw err;
                 }),
                 sendOrderStatusEmail({
@@ -1280,7 +1275,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     estimatedDelivery,
                     totalAmount: finalAmount
                 }).then(() => {
-                    console.log(`✅ Packed email sent to ${email}`);
+                    console.log(`✅ Email sent for ${orderId} (Packed)`);
                     return { type: 'Email', success: true };
                 })
             ]);
@@ -2561,18 +2556,9 @@ app.post('/api/place-order', async (req, res) => {
 
         try {
             const phoneNumber = addressPayload?.phone || user.phone;
-            console.log(`📱 WhatsApp Debug Info for Order ${orderId}:`);
-            console.log(`   User ID: ${userId}`);
-            console.log(`   User Phone: ${user.phone || '❌ NOT FOUND'}`);
-            console.log(`   Address Phone: ${addressPayload?.phone || '❌ NOT FOUND'}`);
-            console.log(`   Final Phone: ${phoneNumber || '❌ MISSING - WhatsApp will be skipped'}`);
-            console.log(`   User Email: ${user.email}`);
-            console.log(`   User Name: ${user.name}`);
             
             if (!phoneNumber) {
-                console.error(`❌ WHATSAPP SKIPPED: No phone number found for order ${orderId}`);
-                console.error(`   → User needs to update profile with phone number`);
-                console.error(`   → Go to: https://eshopperr.me/profile`);
+                console.log(`ℹ️  WhatsApp skipped for order ${orderId}: User profile has no phone number`);
             } else {
                 const itemSummary = cleanProducts
                     .slice(0, 5)
@@ -2589,18 +2575,14 @@ app.post('/api/place-order', async (req, res) => {
                 const whatsappMsg = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')}\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT: ${paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod || 'Card'}\n\n📅 ESTIMATED DELIVERY: ${formattedDeliveryDate}\n\n🎯 NEXT STEPS:\n✓ We're preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery\n\n🔗 TRACK: https://eshopperr.me/order-tracking/${orderId}\n\n🙏 Thank you for your business!\nEshopper Boutique Luxe`;
 
                 try {
-                    console.log(`📤 Attempting to send WhatsApp to ${phoneNumber} for order ${orderId}...`);
+                    console.log(`📤 Sending WhatsApp to ${phoneNumber} for order ${orderId}`);
                     await sendWhatsApp(phoneNumber, whatsappMsg);
-                    console.log(`✅ SUCCESS: Order placement WhatsApp sent for order ${orderId}`);
+                    console.log(`✅ WhatsApp sent for order ${orderId}`);
                 } catch (waErr) {
                     if (isExpectedWhatsAppError(waErr)) {
-                        console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waErr.message);
+                        console.log(`ℹ️  WhatsApp skipped for ${orderId}:`, waErr.message);
                     } else {
-                        console.error(`❌ WHATSAPP SEND ERROR for order ${orderId}:`);
-                        console.error(`   Error: ${waErr.message}`);
-                        console.error(`   Phone: ${phoneNumber}`);
-                        console.error(`   Status: ${waErr.response?.status}`);
-                        console.error(`   Data: ${JSON.stringify(waErr.response?.data)}`);
+                        console.error(`⚠️  WhatsApp failed for ${orderId}:`, waErr.message);
                         if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
                     }
                 }
@@ -2617,11 +2599,7 @@ app.post('/api/place-order', async (req, res) => {
         return res.status(201).json({
             success: true,
             message: 'Order placed successfully',
-            order: orderDoc,
-            notifications: {
-                email: '✅ Sent',
-                whatsapp: phoneNumber ? '✅ Sent' : '⚠️ Skipped - Please add phone in profile'
-            }
+            order: orderDoc
         });
     } catch (e) {
         console.error('❌ Place Order Error:', e.message);
