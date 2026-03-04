@@ -21,6 +21,8 @@ const path = require('path');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
 
+let firebaseAdminReady = false;
+
 try {
     let firebaseCredentials;
 
@@ -52,13 +54,14 @@ try {
         credential: admin.credential.cert(firebaseCredentials),
         projectId: firebaseCredentials.project_id,
     });
+    firebaseAdminReady = true;
 
     console.log('✅ Firebase Admin SDK initialized successfully');
     console.log(`🔐 Project ID: ${firebaseCredentials.project_id}`);
     console.log(`📧 Service Account: ${firebaseCredentials.client_email}`);
 
 } catch (err) {
-    console.error('❌ CRITICAL: Firebase Admin SDK initialization failed');
+    console.error('❌ Firebase Admin SDK initialization failed');
     console.error('   Error:', err.message);
     console.error('');
     console.error('📋 Setup Instructions:');
@@ -71,7 +74,7 @@ try {
     console.error('   1. Place firebase-admin.json in project root');
     console.error('   2. Ensure it is in .gitignore');
     console.error('');
-    process.exit(1);
+    console.error('⚠️ Continuing without Firebase Admin. Firebase auth-sync route will be unavailable until credentials are fixed.');
 }
 
 const app = express();
@@ -2690,6 +2693,12 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
 // ============ FIREBASE AUTH SYNC ROUTE ============
 app.post('/api/auth-sync', async (req, res) => {
     try {
+        if (!firebaseAdminReady) {
+            return res.status(503).json({
+                message: 'Firebase authentication service is temporarily unavailable. Please try again shortly.'
+            });
+        }
+
         const { idToken, uid, email, phone, name, pic, provider } = req.body;
         const normalizedEmail = email ? email.toLowerCase().trim() : null;
         const normalizedPhone = phone ? phone.trim() : null;
