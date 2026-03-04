@@ -2560,6 +2560,13 @@ app.post('/api/place-order', async (req, res) => {
                 try {
                     await sendWhatsApp(phoneNumber, whatsappMsg);
                     console.log(`✅ Order placement WhatsApp sent for order ${orderId}`);
+                } catch (waErr) {
+                    if (isExpectedWhatsAppError(waErr)) {
+                        console.warn(`⚠️  Order WhatsApp skipped (expected) for ${orderId}:`, waErr.message);
+                    } else {
+                        console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waErr.message);
+                        if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                    }
                 }
             }
         } catch (waError) {
