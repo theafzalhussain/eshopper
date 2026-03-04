@@ -210,8 +210,8 @@ app.use((err, req, res, next) => {
 // 🖼️ BRAND LOGO SOURCES (robust for invoice/email rendering)
 const BRAND_SITE_URL = (process.env.BRAND_SITE_URL || process.env.FRONTEND_URL || 'https://eshopperr.me').trim().replace(/\/$/, '');
 const BRAND_LOGO_PRIMARY_URL = process.env.BRAND_LOGO_URL || `${BRAND_SITE_URL}/assets/eshopper-logo-mark.svg`;
-const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_SITE_URL}/logo192.png`;
-const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_FALLBACK_URL;
+const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_SITE_URL}/assets/eshopper-logo-horizontal.svg`;
+const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || `${BRAND_SITE_URL}/assets/eshopper-logo-horizontal.svg`;
 
 let BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
 try {
@@ -1675,7 +1675,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         .brand-left { width:68px; text-align:left; vertical-align:middle; }
         .brand-center { text-align:center; vertical-align:middle; }
         .brand-spacer { width:68px; }
-        .brand-badge { width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg,#0a0a0a,#16213e); border:2px solid #d4af37; color:#ffd700; font-size:30px; font-weight:900; line-height:46px; text-align:center; overflow:hidden; }
+        .brand-badge { width:50px; height:50px; border-radius:12px; background:#fff; border:2px solid #d4af37; overflow:hidden; padding:6px; box-sizing:border-box; }
         .brand-badge img { width:100%; height:100%; object-fit:contain; display:block; }
         .brand-title { margin:0; font-size:34px; font-weight:900; letter-spacing:1.2px; color:#f9e7b2; }
         .tagline { font-size:11px; color:#d4af37; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin:8px 0 0 0; position:relative; z-index:1; }
@@ -1749,7 +1749,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             .container { border-radius:0; }
             .header { padding:20px 14px; }
             .brand-left, .brand-spacer { width:50px; }
-            .brand-badge { width:40px; height:40px; line-height:36px; font-size:22px; border-radius:10px; }
+            .brand-badge { width:40px; height:40px; border-radius:10px; padding:4px; }
             .brand-title { font-size:22px; letter-spacing:0.8px; }
             .tagline { font-size:10px; letter-spacing:1.4px; }
             .success-banner { padding:32px 16px; }
@@ -1763,12 +1763,13 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             .card-cell:last-child { margin-bottom:0 !important; }
             .card-order, .card-delivery { width:100% !important; min-width:100% !important; padding:24px; }
             .card-value-lg { font-size:26px; }
-            .support-section { padding:22px 14px; margin-bottom:16px; border-radius:20px; }
-            .support-emoji { font-size:46px; margin:0 0 8px 0; }
-            .support-title { font-size:28px; }
-            .support-text { font-size:14px; margin:0 0 16px 0; }
-            .support-links { gap:10px; flex-direction:column; }
-            .support-btn { width:100%; max-width:230px; min-width:0; padding:10px 14px; font-size:16px; }
+            .support-section td { padding:24px 16px !important; border-radius:14px !important; }
+            .support-emoji { font-size:42px !important; margin:0 0 10px 0 !important; }
+            .support-title { font-size:22px !important; margin:0 0 10px 0 !important; }
+            .support-text { font-size:13px !important; margin:0 0 16px 0 !important; }
+            .support-section table { max-width:100% !important; }
+            .support-section td[width="50%"] { display:block !important; width:100% !important; padding:6px 0 !important; }
+            .support-btn { display:block !important; width:100% !important; max-width:240px !important; margin:0 auto !important; font-size:13px !important; padding:12px 16px !important; }
             .amount-box { padding:20px; }
         }
     </style>
@@ -1844,7 +1845,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
                 <div class="amount-box">
                     <div class="amount-row">
                         <span class="amount-label">Subtotal</span>
-                        <span class="amount-value">₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+                        <span class="amount-value">₹ ${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
                     </div>
                     <div class="amount-row">
                         <span class="amount-label">Delivery Charges</span>
@@ -1856,7 +1857,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
                     </div>
                     <div class="amount-row total-row">
                         <span class="total-label">💰 Total Amount</span>
-                        <span class="total-value">₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+                        <span class="total-value">₹ ${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
                     </div>
                 </div>
             </div>
@@ -1892,17 +1893,17 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             <!-- Support Section -->
             <table width="100%" cellpadding="0" cellspacing="0" border="0" class="support-section" style="margin:0 0 40px 0; box-sizing:border-box; overflow:hidden;">
                 <tr>
-                    <td style="padding:28px 20px; background:#f7e8a9; border-radius:20px; border:3px solid #efb11f; text-align:center; overflow:hidden; box-sizing:border-box;">
-                        <div class="support-emoji" style="font-size:48px; margin:0 0 10px 0;">🎧</div>
-                        <div class="support-title" style="font-size:28px; font-weight:900; color:#7b340f; margin:0 0 10px 0;">Need Assistance?</div>
-                        <div class="support-text" style="font-size:14px; color:#a34d12; margin:0 0 18px 0; line-height:1.5; max-width:100%;">Our premium support team is available 24/7</div>
-                        <table align="center" cellpadding="0" cellspacing="0" border="0">
+                    <td style="padding:32px 24px; background:linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%); border-radius:16px; border:3px solid #d4af37; text-align:center; overflow:hidden; box-sizing:border-box; box-shadow:0 4px 12px rgba(212,175,55,0.15);">
+                        <div class="support-emoji" style="font-size:52px; margin:0 0 12px 0; line-height:1;">🎧</div>
+                        <div class="support-title" style="font-size:26px; font-weight:900; color:#8b6914; margin:0 0 12px 0; letter-spacing:0.5px;">Need Assistance?</div>
+                        <div class="support-text" style="font-size:14px; color:#9c6d1f; margin:0 0 20px 0; line-height:1.6; max-width:100%;">Our premium support team is available 24/7 to help you</div>
+                        <table align="center" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:360px;">
                             <tr>
-                                <td style="padding:6px;">
-                                    <a href="mailto:support@eshopperr.me" class="support-btn btn-email" style="display:inline-block; min-width:140px; padding:11px 16px; border-radius:12px; text-decoration:none; font-weight:900; font-size:15px; background:#ffffff; color:#124ac1; border:2px solid #efb11f; text-transform:uppercase;">✉ Email</a>
+                                <td width="50%" style="padding:6px;">
+                                    <a href="mailto:support@eshopperr.me" class="support-btn btn-email" style="display:block; width:100%; padding:13px 18px; border-radius:10px; text-decoration:none; font-weight:900; font-size:14px; background:#ffffff; color:#1a1a1a; border:2px solid #d4af37; text-transform:uppercase; box-sizing:border-box; text-align:center;">✉ Email</a>
                                 </td>
-                                <td style="padding:6px;">
-                                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-btn btn-whatsapp" style="display:inline-block; min-width:140px; padding:11px 16px; border-radius:12px; text-decoration:none; font-weight:900; font-size:15px; background:#22c55e; color:#ffffff; border:2px solid #22c55e; text-transform:uppercase;">💬 WhatsApp</a>
+                                <td width="50%" style="padding:6px;">
+                                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-btn btn-whatsapp" style="display:block; width:100%; padding:13px 18px; border-radius:10px; text-decoration:none; font-weight:900; font-size:14px; background:#22c55e; color:#ffffff; border:2px solid #1f9d4e; text-transform:uppercase; box-sizing:border-box; text-align:center;">💬 WhatsApp</a>
                                 </td>
                             </tr>
                         </table>
