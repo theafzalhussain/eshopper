@@ -1640,21 +1640,23 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
 
         const productRows = safeProducts.slice(0, 5).map(p => `
             <tr>
-                <td style="padding:20px 24px; border-bottom:1px solid #e5e7eb; background:#f9fafb;">
-                    <div style="display:flex; align-items:flex-start; gap:24px;">
-                        <div style="flex-shrink:0; padding:8px; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-                            ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:90px; height:90px; object-fit:cover; border-radius:8px; border:2px solid #e5e7eb; box-shadow:0 2px 6px rgba(0,0,0,0.05); display:block;" />` : `<div style="width:90px; height:90px; background:linear-gradient(135deg,#e5e7eb,#d1d5db); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:36px; border:2px solid #d1d5db;">📦</div>`}
-                        </div>
-                        <div style="flex:1; padding:4px 0;">
-                            <div style="font-weight:800; color:#111827; font-size:16px; margin:0 0 8px 0; line-height:1.4;">${p.name}</div>
-                            <div style="font-size:13px; color:#6b7280; margin:8px 0; display:flex; gap:12px; align-items:center; background:#fff; padding:8px 12px; border-radius:6px; display:inline-flex;">
-                                <span style="display:flex; align-items:center; gap:4px;"><span style="color:#9ca3af;">Qty:</span> <strong style="color:#111827;">${p.qty || 1}</strong></span>
-                                <span style="color:#e5e7eb;">•</span>
-                                <span style="color:#6b7280;">₹${Number(p.price || 0).toLocaleString()} each</span>
-                            </div>
-                            <div style="font-size:16px; color:#fff; font-weight:800; margin-top:12px; display:inline-block; background:linear-gradient(135deg,#ffd700,#d4af37); padding:8px 16px; border-radius:8px; box-shadow:0 4px 12px rgba(212,175,55,0.3);">₹${Number(p.total || 0).toLocaleString()}</div>
-                        </div>
-                    </div>
+                <td style="padding:16px; border-bottom:1px solid #333;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1A1A1A; border-radius:12px; overflow:hidden; box-sizing:border-box;">
+                        <tr>
+                            <td style="width:100px; padding:12px; vertical-align:top;">
+                                ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:90px; height:90px; object-fit:cover; border-radius:12px; display:block; border:2px solid #333; box-sizing:border-box; height:auto; max-height:90px;" />` : `<div style="width:90px; height:90px; background:#2A2A2A; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:32px; border:2px solid #333; box-sizing:border-box;">📦</div>`}
+                            </td>
+                            <td style="padding:12px; vertical-align:top; box-sizing:border-box;">
+                                <div style="font-weight:700; color:#fff; font-size:15px; margin:0 0 8px 0; line-height:1.4; font-family:sans-serif;">${p.name}</div>
+                                <div style="font-size:13px; color:#999; margin:6px 0; font-family:sans-serif;">
+                                    <span style="color:#999;">Qty:</span> <strong style="color:#fff;">${p.qty || 1}</strong>
+                                    <span style="color:#666; margin:0 8px;">•</span>
+                                    <span style="color:#999;">₹${Number(p.price || 0).toLocaleString()} each</span>
+                                </div>
+                                <div style="font-size:18px; color:#D4AF37; font-weight:900; margin-top:10px; font-family:sans-serif;">₹${Number(p.total || 0).toLocaleString()}</div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
         `).join('');
@@ -1665,16 +1667,10 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes pulse { 0%, 100% { opacity:1; } 50% { opacity:0.5; } }
-        @keyframes gradientShift { 0%, 100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
-        @keyframes colorShift { 0% { filter:hue-rotate(0deg) brightness(1); } 25% { filter:hue-rotate(15deg) brightness(1.2); } 50% { filter:hue-rotate(30deg) brightness(1.1); } 75% { filter:hue-rotate(15deg) brightness(1.2); } 100% { filter:hue-rotate(0deg) brightness(1); } }
-        @keyframes glow { 0%, 100% { text-shadow:0 0 20px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.4), 0 0 60px rgba(212,175,55,0.3); } 50% { text-shadow:0 0 30px rgba(255,215,0,0.8), 0 0 60px rgba(255,215,0,0.6), 0 0 90px rgba(212,175,55,0.5); } }
-        @keyframes sparkle { 0%, 100% { opacity:1; transform:scale(1) rotate(0deg); } 25% { opacity:0.8; transform:scale(1.1) rotate(5deg); } 50% { opacity:1; transform:scale(1.15) rotate(-5deg); } 75% { opacity:0.9; transform:scale(1.05) rotate(3deg); } }
-        body { margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto Mono', Roboto, sans-serif; background:#f3f4f6; }
-        .container { max-width:650px; margin:0 auto; background:#fff; box-shadow:0 10px 30px rgba(0,0,0,0.15); }
-        .header { background:linear-gradient(135deg,#0f0f10,#1a1a2e,#16213e); padding:26px 18px; position:relative; overflow:hidden; }
-        .header::before { content:''; position:absolute; top:-50%; right:-10%; width:300px; height:300px; background:radial-gradient(circle, rgba(255,215,0,0.2), transparent); border-radius:50%; animation:pulse 4s ease-in-out infinite; }
+        * { box-sizing:border-box; }
+        body { margin:0; padding:0; font-family:sans-serif; background:#0a0a0a; -webkit-font-smoothing:antialiased; }
+        table { border-collapse:collapse; }
+        img { border:0; height:auto; line-height:100%; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
         .brand-table { width:100%; border-collapse:collapse; table-layout:fixed; position:relative; z-index:1; }
         .brand-left { width:68px; text-align:left; vertical-align:middle; }
         .brand-center { text-align:center; vertical-align:middle; }
@@ -1685,10 +1681,10 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         .tagline { font-size:11px; color:#d4af37; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin:8px 0 0 0; position:relative; z-index:1; }
         .success-banner { background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%); padding:48px 24px; text-align:center; border-bottom:5px solid #28a745; position:relative; overflow:hidden; }
         .success-banner::after { content:''; position:absolute; top:-50%; right:-10%; width:400px; height:400px; background:rgba(40,167,69,0.1); border-radius:50%; }
-        .emoji-xl { font-size:80px; line-height:1; margin:0 0 16px 0; animation:pulse 2s infinite; }
-        .title { font-size:36px; font-weight:900; color:#155724; margin:0 0 8px 0; letter-spacing:1px; position:relative; z-index:1; }
-        .subtitle { font-size:16px; color:#155724; margin:0 0 16px 0; line-height:1.5; }
-        .badge { display:inline-block; background:linear-gradient(135deg,#28a745,#20c997); color:#fff; padding:10px 28px; border-radius:25px; font-size:12px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; box-shadow:0 4px 15px rgba(40,167,69,0.3); }
+        .emoji-xl { font-size:68px; line-height:1; margin:0 0 16px 0; }
+        .title { font-size:32px; font-weight:900; color:#155724; margin:0 0 8px 0; letter-spacing:0.5px; }
+        .subtitle { font-size:15px; color:#155724; margin:0 0 16px 0; line-height:1.5; }
+        .badge { display:inline-block; background:linear-gradient(135deg,#D4AF37 0%,#FFD700 50%,#D4AF37 100%); color:#000; padding:11px 26px; border-radius:30px; font-size:12px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; box-shadow:0 4px 12px rgba(212,175,55,0.4); }
         .content { padding:40px 24px; }
         .greeting { margin:0 0 32px 0; padding:20px; background:linear-gradient(135deg,#f0f9ff,#e0f2fe); border-radius:12px; border-left:5px solid #0284c7; }
         .greeting-text { font-size:16px; color:#333; margin:0; line-height:1.6; }
@@ -1757,8 +1753,8 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             .brand-title { font-size:22px; letter-spacing:0.8px; }
             .tagline { font-size:10px; letter-spacing:1.4px; }
             .success-banner { padding:32px 16px; }
-            .emoji-xl { font-size:64px; }
-            .title { font-size:28px; }
+            .emoji-xl { font-size:56px; }
+            .title { font-size:26px; }
             .content { padding:24px 16px; }
 
             .journey-icon { font-size:32px; }
@@ -1894,25 +1890,46 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             <a href="https://eshopperr.me/my-orders" class="button-primary">🔍 VIEW & TRACK YOUR ORDER</a>
 
             <!-- Support Section -->
-            <div class="support-section">
-                <div class="support-emoji">🎧</div>
-                <div class="support-title">Need Assistance?</div>
-                <div class="support-text">Our premium support team is available 24/7 to help you with any questions or concerns</div>
-                <div class="support-links">
-                    <a href="mailto:support@eshopperr.me" class="support-btn btn-email">✉ Email Us</a>
-                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-btn btn-whatsapp">💬 WhatsApp</a>
-                </div>
-            </div>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" class="support-section" style="margin:0 0 40px 0; box-sizing:border-box; overflow:hidden;">
+                <tr>
+                    <td style="padding:28px 20px; background:#f7e8a9; border-radius:20px; border:3px solid #efb11f; text-align:center; overflow:hidden; box-sizing:border-box;">
+                        <div class="support-emoji" style="font-size:48px; margin:0 0 10px 0;">🎧</div>
+                        <div class="support-title" style="font-size:28px; font-weight:900; color:#7b340f; margin:0 0 10px 0;">Need Assistance?</div>
+                        <div class="support-text" style="font-size:14px; color:#a34d12; margin:0 0 18px 0; line-height:1.5; max-width:100%;">Our premium support team is available 24/7</div>
+                        <table align="center" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td style="padding:6px;">
+                                    <a href="mailto:support@eshopperr.me" class="support-btn btn-email" style="display:inline-block; min-width:140px; padding:11px 16px; border-radius:12px; text-decoration:none; font-weight:900; font-size:15px; background:#ffffff; color:#124ac1; border:2px solid #efb11f; text-transform:uppercase;">✉ Email</a>
+                                </td>
+                                <td style="padding:6px;">
+                                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-btn btn-whatsapp" style="display:inline-block; min-width:140px; padding:11px 16px; border-radius:12px; text-decoration:none; font-weight:900; font-size:15px; background:#22c55e; color:#ffffff; border:2px solid #22c55e; text-transform:uppercase;">💬 WhatsApp</a>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <!-- Footer -->
-        <div class="footer">
-            <p class="footer-eshop">EShopper</p>
-            <p class="footer-text">
-                © ${new Date().getFullYear()} Eshopper Boutique Luxe. All rights reserved.<br>
-                <a href="https://eshopperr.me" class="footer-link">eshopperr.me</a>
-            </p>
-        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" class="footer" style="background:#0f0f10; overflow:hidden; box-sizing:border-box;">
+            <tr>
+                <td style="padding:32px 24px; text-align:center; border-top:3px solid #d4af37;">
+                    <p class="footer-eshop" style="font-size:26px; font-weight:900; color:#d4af37; margin:0 0 16px 0; letter-spacing:2px;">✨ ESHOPPER ✨</p>
+                    <div style="margin:0 0 16px 0;">
+                        <a href="https://eshopperr.me/privacy-policy" style="color:#d4af37; text-decoration:none; font-size:12px; margin:0 8px; font-weight:600;">Privacy Policy</a>
+                        <span style="color:#666;">•</span>
+                        <a href="https://eshopperr.me/terms" style="color:#d4af37; text-decoration:none; font-size:12px; margin:0 8px; font-weight:600;">Terms</a>
+                        <span style="color:#666;">•</span>
+                        <a href="https://eshopperr.me/unsubscribe" style="color:#d4af37; text-decoration:none; font-size:12px; margin:0 8px; font-weight:600;">Unsubscribe</a>
+                    </div>
+                    <p class="footer-text" style="font-size:11px; color:#666; margin:0; line-height:1.8;">
+                        © ${new Date().getFullYear()} Eshopper Boutique Luxe. All rights reserved.<br>
+                        <a href="https://eshopperr.me" class="footer-link" style="color:#d4af37; text-decoration:none; font-weight:600;">eshopperr.me</a>
+                    </p>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>`;
