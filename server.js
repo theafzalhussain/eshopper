@@ -1678,8 +1678,8 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         .brand-left { width:68px; text-align:left; vertical-align:middle; }
         .brand-center { text-align:center; vertical-align:middle; }
         .brand-spacer { width:68px; }
-        .brand-badge { width:50px; height:50px; border-radius:12px; background:#fff; border:2px solid #d4af37; overflow:hidden; padding:6px; box-sizing:border-box; }
-        .brand-badge img { width:100%; height:100%; object-fit:contain; display:block; }
+        .brand-badge { width:50px; height:50px; border-radius:12px; background:#fff; border:2px solid #d4af37; overflow:hidden; padding:6px; box-sizing:border-box; flex-shrink:0; }
+        .brand-badge img { width:100%; height:100%; object-fit:contain; display:block; max-width:100%; height:auto; }
         .brand-title { margin:0; font-size:34px; font-weight:900; letter-spacing:1.2px; color:#f9e7b2; }
         .tagline { font-size:11px; color:#d4af37; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin:8px 0 0 0; position:relative; z-index:1; }
         .success-banner { background:linear-gradient(135deg,#d4edda 0%,#c3e6cb 100%); padding:48px 24px; text-align:center; border-bottom:5px solid #28a745; position:relative; overflow:hidden; }
@@ -1748,7 +1748,7 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         .footer-eshop::after { content:'✨'; margin-left:12px; font-size:28px; animation:sparkle 2s ease-in-out infinite 1s; }
         .footer-text { font-size:12px; color:#9ca3af; margin:0; line-height:1.8; }
         .footer-link { color:#d4af37; text-decoration:none; font-weight:700; }
-        @media (max-width:640px) {
+            @media (max-width:640px) {
             .container { border-radius:0; }
             .header { padding:20px 14px; }
             .brand-left, .brand-spacer { width:50px; }
@@ -1766,13 +1766,15 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             .card-cell:last-child { margin-bottom:0 !important; }
             .card-order, .card-delivery { width:100% !important; min-width:100% !important; padding:24px; }
             .card-value-lg { font-size:26px; }
-            .support-section td { padding:24px 16px !important; border-radius:14px !important; }
+            
+            .support-section { width:100% !important; max-width:100% !important; padding:24px 16px !important; }
+            .support-section table { width:100% !important; max-width:100% !important; margin:0 !important; }
+            .support-section tr { display:block !important; width:100% !important; }
+            .support-section td { display:block !important; width:100% !important; padding:8px 0 !important; text-align:center !important; }
             .support-emoji { font-size:42px !important; margin:0 0 10px 0 !important; }
             .support-title { font-size:22px !important; margin:0 0 10px 0 !important; }
             .support-text { font-size:13px !important; margin:0 0 16px 0 !important; }
-            .support-section table { max-width:100% !important; }
-            .support-section td[width="50%"] { display:block !important; width:100% !important; padding:6px 0 !important; }
-            .support-btn { display:block !important; width:100% !important; max-width:240px !important; margin:0 auto !important; font-size:13px !important; padding:12px 16px !important; }
+            .support-btn { display:block !important; width:100% !important; max-width:320px !important; margin:6px auto !important; font-size:13px !important; padding:14px 18px !important; }
             .amount-box { padding:20px; }
         }
     </style>
@@ -1900,13 +1902,13 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
                         <div class="support-emoji" style="font-size:52px; margin:0 0 12px 0; line-height:1;">🎧</div>
                         <div class="support-title" style="font-size:26px; font-weight:900; color:#8b6914; margin:0 0 12px 0; letter-spacing:0.5px;">Need Assistance?</div>
                         <div class="support-text" style="font-size:14px; color:#9c6d1f; margin:0 0 20px 0; line-height:1.6; max-width:100%;">Our premium support team is available 24/7 to help you</div>
-                        <table align="center" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:360px;">
+                        <table align="center" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:100%; width:100%;">
                             <tr>
-                                <td width="50%" style="padding:6px;">
-                                    <a href="mailto:support@eshopperr.me" class="support-btn btn-email" style="display:block; width:100%; padding:13px 18px; border-radius:10px; text-decoration:none; font-weight:900; font-size:14px; background:#ffffff; color:#1a1a1a; border:2px solid #d4af37; text-transform:uppercase; box-sizing:border-box; text-align:center;">✉ Email</a>
+                                <td width="50%" style="padding:8px; display:inline-block; width:48%;">
+                                    <a href="mailto:support@eshopperr.me" class="support-btn btn-email" style="display:block; width:100%; padding:13px 12px; border-radius:10px; text-decoration:none; font-weight:900; font-size:14px; background:#ffffff; color:#1a1a1a; border:2px solid #d4af37; text-transform:uppercase; box-sizing:border-box; text-align:center; min-width:140px;">✉ Email</a>
                                 </td>
-                                <td width="50%" style="padding:6px;">
-                                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-btn btn-whatsapp" style="display:block; width:100%; padding:13px 18px; border-radius:10px; text-decoration:none; font-weight:900; font-size:14px; background:#22c55e; color:#ffffff; border:2px solid #1f9d4e; text-transform:uppercase; box-sizing:border-box; text-align:center;">💬 WhatsApp</a>
+                                <td width="50%" style="padding:8px; display:inline-block; width:48%;">
+                                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-btn btn-whatsapp" style="display:block; width:100%; padding:13px 12px; border-radius:10px; text-decoration:none; font-weight:900; font-size:14px; background:#22c55e; color:#ffffff; border:2px solid #1f9d4e; text-transform:uppercase; box-sizing:border-box; text-align:center; min-width:140px;">💬 WhatsApp</a>
                                 </td>
                             </tr>
                         </table>
@@ -2557,8 +2559,15 @@ app.post('/api/place-order', async (req, res) => {
         try {
             const phoneNumber = addressPayload?.phone || user.phone;
             
+            console.log(`\n🔔 WhatsApp Notification Debug for Order ${orderId}:`);
+            console.log(`   User: ${user.name} (${userId})`);
+            console.log(`   Email: ${user.email}`);
+            console.log(`   Phone from profile: "${user.phone || 'NOT SET'}"`);
+            console.log(`   Phone from address: "${addressPayload?.phone || 'NOT PROVIDED'}"`);
+            console.log(`   Final phone: "${phoneNumber || 'MISSING'}"\n`);
+            
             if (!phoneNumber) {
-                console.log(`ℹ️  WhatsApp skipped for order ${orderId}: User profile has no phone number`);
+                console.log(`ℹ️  WhatsApp SKIPPED - No phone number in profile. User should update profile at: https://eshopperr.me/profile\n`);
             } else {
                 const itemSummary = cleanProducts
                     .slice(0, 5)
