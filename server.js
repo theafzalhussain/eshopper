@@ -3576,6 +3576,15 @@ app.post('/update-order-status', handleOrderStatusUpdate);
 app.post('/api/admin/confirm-order', async (req, res) => {
     try {
         const { orderId } = req.body;
+        
+        // 🔒 SECURITY: Verify admin role
+        const adminSecret = req.headers['x-admin-secret'] || req.body.adminSecret;
+        if (adminSecret !== process.env.ADMIN_SECRET && process.env.ADMIN_SECRET) {
+            return res.status(403).json({ 
+                message: 'Unauthorized - Admin access required',
+                success: false 
+            });
+        }
 
         if (!orderId) {
             return res.status(400).json({ message: 'orderId is required' });
