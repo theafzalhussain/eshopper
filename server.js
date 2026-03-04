@@ -1,19 +1,7 @@
 // 🔴 LOAD ENV VARIABLES FIRST
 require('dotenv').config();
 
-// 🔴 SENTRY v10 - MUST INITIALIZE BEFORE REQUIRING EXPRESS/FRAMEWORKS
-const Sentry = require('@sentry/node');
-if (process.env.SENTRY_DSN) {
-    Sentry.init({
-        dsn: process.env.SENTRY_DSN,
-        environment: process.env.NODE_ENV || 'production',
-        tracesSampleRate: 1.0,
-        integrations: [Sentry.expressIntegration()],
-    });
-    console.log('✅ Sentry initialized');
-}
-
-// NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS (after Sentry.init)
+// NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -26,8 +14,7 @@ const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { GoogleGenerativeAI } = require("@google/generative-ai");// 🔐 FIREBASE ADMIN SDK INITIALIZATION
-const puppeteer = require('puppeteer');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
@@ -322,7 +309,6 @@ const sendMail = async (to, otp) => {
         return true;
     } catch (error) {
         console.error("❌ BREVO CRITICAL ERROR:", error.response ? error.response.data : error.message);
-        if (process.env.SENTRY_DSN) Sentry.captureException(error);
         throw error;
     }
 };
@@ -2492,15 +2478,7 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// 🧪 SENTRY TEST ROUTE - Remove after testing
-app.get('/debug-sentry', (req, res) => {
-    throw new Error('Sentry Test Error - Working!');
-});
 
-// 🔴 SENTRY ERROR HANDLER - Must be after all routes (v10 way)
-if (process.env.SENTRY_DSN && typeof Sentry.setupExpressErrorHandler === 'function') {
-    Sentry.setupExpressErrorHandler(app);
-}
 
 const PORT = process.env.PORT || 5000;
 

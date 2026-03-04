@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteMaincategory, getMaincategory } from '../../Store/ActionCreaters/MaincategoryActionCreators';
@@ -47,7 +46,7 @@ export default function AdminMaincategory() {
                                 <h4 className="font-weight-bold d-flex align-items-center"><Layers className="mr-2 text-info"/> Maincategories</h4>
                                 <Link to="/admin-add-maincategory" className='btn btn-info rounded-pill px-4 shadow-sm font-weight-bold'><Plus size={18}/> ADD NEW</Link>
                             </div>
-                            <div style={{ height: 450, width: '100%' }}><DataGrid rows={rows} columns={columns} pageSize={7} disableSelectionOnClick /></div>
+                            <div className="alert alert-info">Maincategories interface is temporarily unavailable.</div>
                         </motion.div>
                     </div>
                 </div>

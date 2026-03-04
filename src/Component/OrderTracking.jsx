@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { io } from 'socket.io-client'
 import { motion } from 'framer-motion'
-import { datadogRum } from '@datadog/browser-rum'
-import confetti from 'canvas-confetti'
 import { BASE_URL } from '../constants'
 import { Package, Archive, Truck, BadgeCheck } from 'lucide-react'
 
@@ -140,31 +138,14 @@ export default function OrderTracking() {
       message: messages[nextStatus] || `Status: ${statusText}`
     })
 
-    // 🔴 DATADOG RUM CONVERSION TRACKING
-    datadogRum.addAction('orderStatusUpdate', {
-      orderId,
-      userId,
-      newStatus: statusText,
-      message: messages[nextStatus],
-      timestamp: new Date().toISOString(),
-      orderAmount: order?.finalAmount || 0
-    })
-
-    console.log(`📊 Datadog tracked: ${nextStatus}`)
+    // Status update notification
+    console.log(`📊 Status Updated: ${nextStatus}`)
   }
 
-  // 🔴 DATADOG CONTEXT - Track order tracking page visit
+  // Track page visit
   useEffect(() => {
-    datadogRum.setGlobalContextProperty('orderTracking', true)
-    datadogRum.setGlobalContextProperty('orderId', orderId || '')
-    datadogRum.setGlobalContextProperty('userId', userId || '')
-    datadogRum.addAction('orderTrackingPageLoad', { orderId, userId })
-
-    return () => {
-      datadogRum.removeGlobalContextProperty('orderTracking')
-      datadogRum.removeGlobalContextProperty('orderId')
-      datadogRum.removeGlobalContextProperty('userId')
-    }
+    console.log('Tracking order:', orderId)
+    return () => {}
   }, [orderId, userId])
 
   // 🔴 FETCH ORDER + SOCKET.IO SETUP
@@ -208,7 +189,6 @@ export default function OrderTracking() {
           ? '❌ Order not found. Please check the tracking link.'
           : '❌ Failed to load order. Please try again.'
         setError(errorMsg)
-        datadogRum.addError(new Error(errorMsg), { orderId })
       } finally {
         if (mounted) setLoading(false)
       }
@@ -227,7 +207,6 @@ export default function OrderTracking() {
         if (mounted) {
           setSocketConnected(true)
           console.log('✅ Socket connected, room:', `user:${userId}`)
-          datadogRum.addAction('socketConnected', { userId })
         }
       })
 
@@ -260,11 +239,6 @@ export default function OrderTracking() {
               }
             ])
             
-            datadogRum.addAction('orderStatusUpdated', {
-              orderId,
-              newStatus: nextStatus,
-              timestamp: payload.updatedAt
-            })
             console.log('🔄 Status updated to:', nextStatus)
           }
         }
@@ -272,7 +246,6 @@ export default function OrderTracking() {
 
       socketRef.on('error', (error) => {
         console.error('❌ Socket error:', error)
-        datadogRum.addError(new Error(error), { orderId })
       })
     }
 
@@ -293,19 +266,7 @@ export default function OrderTracking() {
   useEffect(() => {
     if (status !== 'Delivered' || didCelebrate) return
 
-    confetti({
-      particleCount: 140,
-      spread: 85,
-      origin: { y: 0.7 },
-      colors: ['#f5deb3', '#d4af37', '#111111', '#ffffff']
-    })
-
-    datadogRum.addAction('orderDeliveredConversion', {
-      orderId,
-      userId,
-      deliveredAt: new Date().toISOString(),
-      orderAmount: Number(order?.finalAmount || 0)
-    })
+    // Order delivered celebration
     setDidCelebrate(true)
   }, [status, didCelebrate, orderId, userId, order])
 

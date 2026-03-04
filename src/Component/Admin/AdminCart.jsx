@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteCart, getCart } from '../../Store/ActionCreaters/CartActionCreators';
@@ -62,14 +61,7 @@ export default function AdminCart() {
                     </div>
                     <div className="col-lg-10 col-12 mt-2">
                         <h5 className='bg-info text-center text-light p-2'>Cart <Link to="/admin-add-cart" className='float-right'><span className="material-symbols-outlined text-light">add</span></Link></h5>
-                        <div style={{ height: 400, width: '100%' }}>
-                            <DataGrid
-                                rows={rows}
-                                columns={columns}
-                                pageSize={5}
-                                rowsPerPageOptions={[5]}
-                            />
-                        </div>
+                        <div className="alert alert-info">Cart management interface is temporarily unavailable.</div>
                     </div>
                 </div>
             </div>

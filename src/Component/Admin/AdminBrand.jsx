@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteBrand, getBrand } from '../../Store/ActionCreaters/BrandActionCreators';
@@ -29,6 +28,13 @@ export default function AdminBrand() {
     ];
 
     return (
-        <div className="container-fluid my-5 py-3"><div className="row"><div className="col-lg-2"><LefNav /></div><div className="col-lg-10"><div className="bg-white p-4 shadow-xl rounded-2xl"><div className="d-flex justify-content-between mb-4"><h4 className="font-weight-bold">Partner Brands</h4><Link to="/admin-add-brand" className='btn btn-info px-4 rounded-pill'>+ BRAND</Link></div><DataGrid rows={rows} columns={columns} autoHeight disableSelectionOnClick /></div></div></div></div>
+        <div className="container-fluid my-5 py-3">
+            <div className="row">
+                <div className="col-lg-2"><LefNav /></div>
+                <div className="col-lg-10">
+                    <div className="alert alert-info">Brand management interface is loading...</div>
+                </div>
+            </div>
+        </div>
     )
 }

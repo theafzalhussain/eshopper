@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { datadogRum } from '@datadog/browser-rum'
 import { io } from 'socket.io-client'
 import { BASE_URL } from '../constants'
 import { Clock3, PackageSearch } from 'lucide-react'
@@ -104,11 +103,6 @@ export default function MyOrders() {
   }
 
   useEffect(() => {
-    datadogRum.setGlobalContextProperty('myOrdersPage', true)
-    return () => datadogRum.removeGlobalContextProperty('myOrdersPage')
-  }, [])
-
-  useEffect(() => {
     const fetchOrders = async () => {
       if (!userId) {
         setError('Please login to view your orders')
@@ -150,7 +144,6 @@ export default function MyOrders() {
       if (mounted) {
         setSocketConnected(true)
         console.log('✅ MyOrders Socket connected, room:', `user:${userId}`)
-        datadogRum.addAction('myOrdersSocketConnected', { userId })
       }
     })
 
@@ -177,17 +170,11 @@ export default function MyOrders() {
             return order
           })
         })
-
-        datadogRum.addAction('myOrdersStatusUpdated', {
-          orderId: payload.orderId,
-          newStatus: payload.status
-        })
       }
     })
 
     socketRef_local.on('error', (error) => {
       console.error('❌ Socket error in MyOrders:', error)
-      datadogRum.addError(new Error(error), { context: 'MyOrders' })
     })
 
     return () => {

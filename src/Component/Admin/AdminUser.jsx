@@ -1,55 +1,13 @@
 import React, { useEffect } from 'react'
-import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteUser, getUser } from '../../Store/ActionCreaters/UserActionCreators';
 import { motion } from 'framer-motion'
-import { Trash2, Shield, User as UserIcon, Mail, Phone } from 'lucide-react'
+import { Trash2, Shield, User as UserIcon } from 'lucide-react'
 
 export default function AdminUsers() {
     const users = useSelector((state) => state.UserStateData)
     const dispatch = useDispatch()
-
-    const columns = [
-        { field: 'id', headerName: 'ID', width: 100 },
-        { 
-            field: 'name', 
-            headerName: 'Full Name', 
-            width: 200, 
-            renderCell: ({row}) => (
-                <div className="d-flex align-items-center">
-                    <div className="bg-light rounded-circle p-2 mr-2"><UserIcon size={14}/></div>
-                    <span className="font-weight-bold">{row.name}</span>
-                </div>
-            )
-        },
-        { field: 'username', headerName: 'Username', width: 150 },
-        { field: 'email', headerName: 'Email', width: 220 },
-        { field: 'phone', headerName: 'Phone', width: 130 },
-        { 
-            field: 'role', 
-            headerName: 'Role', 
-            width: 120,
-            renderCell: ({row}) => (
-                <span className={`badge rounded-pill px-3 py-2 ${row.role === 'Admin' ? 'badge-danger' : 'badge-info'}`}>
-                    {row.role}
-                </span>
-            )
-        },
-        {
-            field: "delete",
-            headerName: "Action",
-            width: 100,
-            renderCell: ({ row }) => (
-                <button 
-                    className="btn btn-sm btn-outline-danger rounded-circle border-0"
-                    onClick={() => { if(window.confirm("Permanent delete this user?")) dispatch(deleteUser({ id: row.id })) }}
-                >
-                    <Trash2 size={18} />
-                </button>
-            ),
-        }
-    ];
 
     useEffect(() => { dispatch(getUser()) }, [dispatch])
 
@@ -64,14 +22,42 @@ export default function AdminUsers() {
                                 <Shield className="text-info mr-2" />
                                 <h4 className="font-weight-bold mb-0">Registered Users</h4>
                             </div>
-                            <div style={{ height: 600, width: '100%' }}>
-                                <DataGrid 
-                                    rows={users} 
-                                    columns={columns} 
-                                    pageSize={10} 
-                                    disableSelectionOnClick
-                                    className="border-0"
-                                />
+                            <div style={{ overflowX: 'auto', width: '100%' }}>
+                                <table className="table table-hover table-sm">
+                                    <thead className="table-dark">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Full Name</th>
+                                            <th>Username</th>
+                                            <th>Email</th>
+                                            <th>Phone</th>
+                                            <th>Role</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {users.map((row) => (
+                                            <tr key={row.id}>
+                                                <td className="small">{row.id}</td>
+                                                <td>
+                                                    <div className="d-flex align-items-center">
+                                                        <div className="bg-light rounded-circle p-1 mr-2"><UserIcon size={12}/></div>
+                                                        <span className="font-weight-bold">{row.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="small">{row.username}</td>
+                                                <td className="small">{row.email}</td>
+                                                <td className="small">{row.phone}</td>
+                                                <td><span className={`badge rounded-pill px-2 py-1 text-white ${row.role === 'Admin' ? 'bg-danger' : 'bg-info'}`}>{row.role}</span></td>
+                                                <td>
+                                                    <button className="btn btn-sm btn-outline-danger rounded-circle border-0" onClick={() => { if(window.confirm("Permanent delete this user?")) dispatch(deleteUser({ id: row.id })) }}>
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </motion.div>
                     </div>

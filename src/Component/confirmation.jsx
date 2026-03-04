@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import confetti from 'canvas-confetti';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
@@ -69,26 +68,10 @@ const Confirmation = () => {
     syncOrder();
   }, []);
 
-  // Fire confetti animation on mount
+  // Fire success animation on mount
   useEffect(() => {
     if (order) {
-      // Left to right confetti
-      confetti({
-        particleCount: 70,
-        spread: 60,
-        origin: { x: 0, y: 0.6 },
-        colors: ['#d4af37', '#ffd700', '#ffed4e', '#ffd700', '#c9a961'],
-        duration: 2200,
-      });
-
-      // Right to left confetti
-      confetti({
-        particleCount: 70,
-        spread: 60,
-        origin: { x: 1, y: 0.6 },
-        colors: ['#d4af37', '#ffd700', '#ffed4e', '#ffd700', '#c9a961'],
-        duration: 2200,
-      });
+      console.log('✅ Order confirmation received');
     }
   }, [order]);
 

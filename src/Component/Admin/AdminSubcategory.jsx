@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { DataGrid } from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteSubcategory, getSubcategory } from '../../Store/ActionCreaters/SubcategoryActionCreators';
@@ -39,7 +38,7 @@ export default function AdminSubcategory() {
                 <div className="row">
                     <div className="col-lg-3"><LefNav /></div>
                     <div className="col-lg-9">
-                        <div className="bg-white p-4 shadow rounded-2xl"><div className="d-flex justify-content-between mb-4"><h4 className="font-weight-bold"><Grid size={22}/> Subcategories</h4><Link to="/admin-add-subcategory" className='btn btn-info px-4 rounded-pill font-weight-bold'>+ ADD NEW</Link></div><DataGrid rows={rows} columns={columns} autoHeight /></div>
+                        <div className="bg-white p-4 shadow rounded-2xl"><div className="d-flex justify-content-between mb-4"><h4 className="font-weight-bold"><Grid size={22}/> Subcategories</h4><Link to="/admin-add-subcategory" className='btn btn-info px-4 rounded-pill font-weight-bold'>+ ADD NEW</Link></div><div className="alert alert-info">Subcategories interface is temporarily unavailable.</div></div>
                     </div>
                 </div>
             </div>
