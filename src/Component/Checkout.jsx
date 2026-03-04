@@ -12,6 +12,7 @@ import { BASE_URL } from '../constants'
 export default function Checkout() {
     var [mode, setMode] = useState("COD")
     var [user, setuser] = useState({})
+    var [phone, setphone] = useState("") // 📱 NEW: Allow user to enter phone
     var [cart, setcart] = useState([])
     var [total, settotal] = useState(0)
     var [shipping, setshipping] = useState(0)
@@ -30,7 +31,12 @@ export default function Checkout() {
         const userId = localStorage.getItem("userid")
         
         var userData = users.find((item) => item.id === userId)
-        if (userData) setuser(userData)
+        if (userData) {
+            setuser(userData)
+            if (!phone && userData.phone) { // 📱 Initialize phone from profile
+                setphone(userData.phone)
+            }
+        }
 
         var userCart = carts.filter((item) => item.userid === userId)
         if (userCart) {
@@ -47,6 +53,12 @@ export default function Checkout() {
             const userid = localStorage.getItem("userid")
             if (!userid || cart.length === 0 || placingOrder) return
 
+            // 📱 Validate phone before sending
+            if (!phone || phone.trim().length < 10) {
+                alert('📱 कृपया अपना सही फोन नंबर दर्ज करें! (Please enter your correct phone number)')
+                return
+            }
+
             setplacingOrder(true)
 
             const payload = {
@@ -57,7 +69,7 @@ export default function Checkout() {
                 finalAmount: final,
                 shippingAddress: {
                     fullName: user?.name || '',
-                    phone: user?.phone || '',
+                    phone: phone, // 📱 Use entered phone
                     addressline1: user?.addressline1 || '',
                     city: user?.city || '',
                     state: user?.state || '',
@@ -158,7 +170,26 @@ export default function Checkout() {
                                 </div>
                             </div>
 
-                            <button onClick={placeOrder} disabled={placingOrder || cart.length === 0} className="btn btn-info btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold">
+                            {/* 📱 Phone Number for WhatsApp Notifications */}
+                            <h5 className="font-weight-bold mb-2">📱 Phone for Notifications</h5>
+                            <div className="mb-4">
+                                <input 
+                                    type="tel" 
+                                    className="form-control form-control-lg rounded-pill" 
+                                    placeholder="10-digit phone number (WhatsApp updates)"
+                                    value={phone}
+                                    onChange={(e) => setphone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                    style={{
+                                        borderColor: phone && phone.length === 10 ? '#28a745' : '#ddd',
+                                        borderWidth: '2px'
+                                    }}
+                                />
+                                <small className={phone && phone.length === 10 ? 'text-success' : 'text-muted'}>
+                                    {phone && phone.length === 10 ? '✅ Phone valid - You\'ll get WhatsApp updates' : '⏳ Enter 10-digit number for WhatsApp notifications'}
+                                </small>
+                            </div>
+
+                            <button onClick={placeOrder} disabled={placingOrder || cart.length === 0 || !phone || phone.length < 10} className="btn btn-info btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold">
                                 {placingOrder ? 'PLACING ORDER...' : 'PLACE ORDER NOW'}
                             </button>
                         </div>
