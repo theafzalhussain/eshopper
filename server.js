@@ -2404,9 +2404,6 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             </tr>
         `).join('');
 
-        // Generate delivery date
-        const deliveryDate = estimatedArrival ? new Date(estimatedArrival).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : new Date(Date.now() + 5*24*60*60*1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-
         const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
@@ -3291,7 +3288,6 @@ app.post('/api/place-order', async (req, res) => {
                 console.error(`⚠️ Fallback order email failed for ${orderId}:`, fallbackEmailError.message);
                 if (process.env.SENTRY_DSN) Sentry.captureException(fallbackEmailError);
             }
-        }
 
         try {
             const phoneNumber = addressPayload?.phone || user.phone;
