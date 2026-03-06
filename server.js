@@ -658,184 +658,148 @@ const buildOrderReceiptHtml = ({
         const sizeText = item.size ? ` (Size: ${item.size})` : '';
         const colorText = item.color ? `, ${item.color}` : '';
         const itemDesc = `${item.name || 'Product'}${sizeText}${colorText}`;
+        const itemImage = item.pic || item.image || item.imageURL || item.pic1 || '';
         return `
             <tr>
-                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#999; border:1px solid #333;">${idx + 1}</td>
-                <td style="padding:12px 10px; font-size:13px; color:#e5e5e5; font-weight:600; border:1px solid #333;">${itemDesc}</td>
-                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#e5e5e5; border:1px solid #333;">${qty}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#aaa; border:1px solid #333;">₹${price.toLocaleString('en-IN')}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#D4AF37; font-weight:700; border:1px solid #333;">₹${line.toLocaleString('en-IN')}</td>
-                .watermark {
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%) rotate(-45deg);
-                    font-size: 72px;
-                    font-weight: 300;
-                    color: rgba(212, 175, 55, 0.08);
-                    white-space: nowrap;
-                    pointer-events: none;
-                    z-index: 0;
-                    letter-spacing: 8px;
-                    font-style: italic;
-                }
-                
-                .card { background: #fdfdfd; border: 2px solid #d4af37; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); position: relative; z-index: 1; }
-                .head { padding: 24px 20px; background: linear-gradient(135deg, #fdfdfd, #f9f7f4); border-bottom: 1px solid #e8dcc8; }
+                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#666; border:1px solid #e8dcc8;">${idx + 1}</td>
+                <td style="padding:12px 10px; font-size:13px; color:#111; font-weight:600; border:1px solid #e8dcc8;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                            <td style="width:44px; padding-right:10px; vertical-align:middle;">
+                                ${itemImage ? `<img src="${itemImage}" alt="${itemDesc}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #d4af37;" />` : `<div style="width:40px; height:40px; border-radius:6px; border:1px solid #d4af37; display:flex; align-items:center; justify-content:center; font-size:20px;">📦</div>`}
+                            </td>
+                            <td style="vertical-align:middle;">${itemDesc}</td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#111; border:1px solid #e8dcc8;">${qty}</td>
+                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#666; border:1px solid #e8dcc8;">₹${price.toLocaleString('en-IN')}</td>
+                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#d4af37; font-weight:700; border:1px solid #e8dcc8;">₹${line.toLocaleString('en-IN')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <style>
+                @page { size: A4 portrait; margin: 12mm; }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { background: #ffffff; color: #2c2c2c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
+                .wrap { max-width: 900px; margin: 0 auto; padding: 0; }
+                .card { background: #ffffff; border: 3px solid #d4af37; border-radius: 0; overflow: hidden; }
+                .head { padding: 24px 20px; background: #ffffff; border-bottom: 2px solid #d4af37; }
                 .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
+                .brand-left { width: 70px; text-align: center; vertical-align: middle; }
                 .brand-center { text-align: center; vertical-align: middle; }
-                .brand-spacer { width: 64px; }
-                .brand-badge { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-                .brand-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
-                .brand-title { font-size: 34px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; line-height: 1.2; }
-                .tagline { font-size: 12px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0 0; }
-                .body { padding: 36px; }
-                .title { font-size: 36px; font-weight: 900; margin: 0 0 12px; color: #0f0f0f; letter-spacing: 2px; text-align: center; }
-                .subtitle { font-size: 14px; color: #8b7521; text-align: center; font-weight: 700; letter-spacing: 1px; margin-bottom: 28px; }
-                .status-badge { display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 12px 24px; border-radius: 20px; font-weight: 700; margin: 0 auto 16px; display: block; text-align: center; width: fit-content; box-shadow: 0 4px 12px rgba(31,143,84,0.3); }
-                .status-message { text-align: center; color: #0f0f0f; font-weight: 600; font-size: 14px; margin-bottom: 32px; }
-                .next-steps { margin: 32px 0; }
-                .steps-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center; }
-                .steps-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
-                .step { border: 2px solid #d4af37; border-radius: 12px; padding: 20px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .step-icon { font-size: 32px; margin-bottom: 12px; }
-                .step-text { font-size: 12px; font-weight: 700; color: #0f0f0f; }
-                .delivery-highlight { border: 3px solid #d4af37; border-radius: 14px; padding: 24px; background: linear-gradient(135deg, #a37f1f 0%, #d4af37 50%, #8b7521 100%); text-align: center; margin: 32px 0; box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
-                .delivery-label { color: #fff; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
-                .delivery-date { color: #fff; font-size: 24px; font-weight: 900; letter-spacing: 1px; }
-                .items-section { margin: 32px 0; }
-                .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
-                table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; }
-                td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; }
-                tr:nth-child(odd) { background: #fafaf8; }
-                tr:hover { background: #f5f0e6; }
-                .summary-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
-                .summary-box { border: 2px solid #d4af37; border-radius: 12px; padding: 18px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .summary-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 10px; }
-                .summary-value { font-size: 18px; font-weight: 900; color: #0f0f0f; }
-                .disclaimer { border-left: 4px solid #d4af37; padding: 16px; background: #f9f7f4; margin: 32px 0; font-size: 12px; color: #555; line-height: 1.8; }
-                .disclaimer-title { font-weight: 700; color: #0f0f0f; margin-bottom: 8px; }
-                .footer { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e8dcc8; }
-                .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.8; }
-                .foot-premium { color: #d4af37; font-weight: 700; margin-top: 14px; font-size: 13px; letter-spacing: 1px; }
-                @media (max-width: 768px) {
-                    .steps-container { grid-template-columns: 1fr; gap: 12px; }
-                    .summary-boxes { grid-template-columns: 1fr; gap: 12px; }
-                    .title { font-size: 28px; }
-                }
+                .brand-spacer { width: 70px; }
+                .logo-emoji { font-size: 48px; line-height: 1; }
+                .brand-title { font-size: 28px; font-weight: 900; color: #d4af37; letter-spacing: 2px; margin: 0; line-height: 1.2; text-transform: uppercase; }
+                .tagline { font-size: 11px; color: #8b7521; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin: 6px 0 0 0; }
+                .body { padding: 32px 24px; }
+                .doc-title { font-size: 32px; font-weight: 900; margin: 0 0 8px; color: #d4af37; letter-spacing: 2px; text-align: center; text-transform: uppercase; }
+                .subtitle { font-size: 12px; color: #8b7521; text-align: center; font-weight: 700; letter-spacing: 1px; margin-bottom: 32px; }
+                .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 28px; }
+                .meta-box { border: 2px solid #d4af37; padding: 16px; background: #fffef8; border-radius: 0; }
+                .meta-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 8px; }
+                .meta-value { font-size: 14px; font-weight: 900; color: #0f0f0f; }
+                .address-section { margin: 28px 0; border: 2px solid #d4af37; padding: 20px; background: #fffef8; }
+                .address-title { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 900; margin-bottom: 12px; }
+                .address-text { font-size: 13px; color: #333; line-height: 1.8; }
+                .items-section { margin: 28px 0; }
+                .section-title { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 900; margin-bottom: 12px; }
+                table.items { width: 100%; border-collapse: collapse; background: #fff; border: 2px solid #d4af37; }
+                table.items th { background: #d4af37; color: #0f0f0f; font-size: 11px; letter-spacing: 1px; padding: 12px 10px; text-transform: uppercase; font-weight: 900; text-align: left; border: 1px solid #c09d2f; }
+                table.items td { padding: 12px 10px; font-size: 13px; color: #2c2c2c; }
+                .totals-section { margin: 28px 0; }
+                .totals-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e8dcc8; font-size: 14px; }
+                .totals-row.grand { border-top: 3px solid #d4af37; border-bottom: none; padding-top: 14px; margin-top: 8px; }
+                .totals-label { color: #666; font-weight: 600; }
+                .totals-value { color: #0f0f0f; font-weight: 700; }
+                .grand .totals-label { color: #d4af37; font-size: 16px; font-weight: 900; text-transform: uppercase; }
+                .grand .totals-value { color: #d4af37; font-size: 20px; font-weight: 900; }
+                .footer-note { margin: 32px 0 0 0; padding: 16px; border-left: 4px solid #d4af37; background: #fffef8; font-size: 11px; color: #555; line-height: 1.8; }
+                .footer-note strong { color: #0f0f0f; }
+                .footer { margin-top: 28px; padding-top: 16px; border-top: 2px solid #e8dcc8; text-align: center; }
+                .foot-text { font-size: 11px; color: #666; line-height: 1.8; }
+                .foot-brand { font-size: 12px; color: #d4af37; font-weight: 900; margin-top: 12px; letter-spacing: 1px; }
             </style>
         </head>
         <body>
-            <div class="watermark">eShopper Luxe</div>
             <div class="wrap">
                 <div class="card">
-                    <!-- PREMIUM HEADER -->
                     <div class="head">
                         <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
                             <tr>
                                 <td class="brand-left">
-                                    <div class="brand-badge">
-                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-                                    </div>
+                                    <img src="${BRAND_LOGO_PDF_SRC}" alt="eShopper Logo" style="width:48px; height:48px; border-radius:12px; border:2px solid #d4af37; object-fit:contain; background:#fff; box-shadow:0 0 0 3px rgba(212,175,55,0.15), 0 8px 18px rgba(0,0,0,0.22); padding:3px; display:block; margin:0 auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                                    <div class="logo-emoji" style="display:none;">💎</div>
                                 </td>
                                 <td class="brand-center">
-                                    <p class="brand-title">eShopper Boutique Luxe</p>
-                                    <p class="tagline">Premium Fashion Destination</p>
+                                    <p class="brand-title">ORDER RECEIPT</p>
+                                    <p class="tagline">eShopper Boutique Luxe</p>
                                 </td>
                                 <td class="brand-spacer"></td>
                             </tr>
                         </table>
                     </div>
 
-                    <!-- MAIN CONTENT -->
                     <div class="body">
-                        <h1 class="title">ORDER RECEIPT</h1>
-                        <p class="subtitle">Thank you for your premium order</p>
-                        
-                        <!-- STATUS BADGE -->
-                        <div style="text-align: center; margin-bottom: 28px;">
-                            <div style="display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 10px 24px; border-radius: 20px; font-weight: 900; font-size: 12px; letter-spacing: 1px;">✓ ORDER RECEIVED</div>
+                        <h1 class="doc-title">ORDER RECEIPT</h1>
+                        <p class="subtitle">Thank you for your selection</p>
+
+                        <div class="meta-grid">
+                            <div class="meta-box"><div class="meta-label">🆔 Order ID</div><div class="meta-value">${orderId}</div></div>
+                            <div class="meta-box"><div class="meta-label">📅 Order Date</div><div class="meta-value">${orderDateText}</div></div>
+                            <div class="meta-box"><div class="meta-label">💳 Payment Mode</div><div class="meta-value">${paymentMethod || 'Cash on Delivery'}</div></div>
+                            <div class="meta-box"><div class="meta-label">📊 Payment Status</div><div class="meta-value">${paymentStatus || 'Pending'}</div></div>
                         </div>
 
-                        <!-- ORDER STEPS -->
-                        <div style="margin: 32px 0;">
-                            <div style="font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center;">⏳ Order Processing Steps</div>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
-                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
-                                    <div style="font-size: 28px; margin-bottom: 8px;">✓</div>
-                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Quality Check</div>
-                                </div>
-                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
-                                    <div style="font-size: 28px; margin-bottom: 8px;">📦</div>
-                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Premium Packaging</div>
-                                </div>
-                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
-                                    <div style="font-size: 28px; margin-bottom: 8px;">🚚</div>
-                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Dispatch</div>
-                                </div>
+                        <div class="address-section">
+                            <div class="address-title">📍 SHIPPING TO</div>
+                            <div class="address-text">
+                                <strong>${shippingAddress?.fullName || displayName}</strong><br/>
+                                ${shippingAddress?.addressline1 || 'Address Line 1'}<br/>
+                                ${shippingAddress?.city || 'City'}, ${shippingAddress?.state || 'State'} - ${shippingAddress?.pin || 'PIN'}<br/>
+                                ${shippingAddress?.country || 'India'}<br/>
+                                <strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}<br/>
+                                <strong>Email:</strong> ${userEmail || 'N/A'}
                             </div>
                         </div>
 
-                        <!-- ORDER DETAILS -->
                         <div class="items-section">
-                            <div class="section-title">📦 Your Order</div>
-                            <table>
+                            <div class="section-title">📦 ORDER DETAILS</div>
+                            <table class="items">
                                 <thead>
                                     <tr>
-                                        <th style="width:8%">#</th>
-                                        <th style="width:50%">Item</th>
-                                        <th style="width:12%">Qty</th>
-                                        <th style="width:30%">Amount</th>
+                                        <th style="width:8%; text-align:center;">S.No</th>
+                                        <th style="width:45%;">Item Description</th>
+                                        <th style="width:12%; text-align:center;">Quantity</th>
+                                        <th style="width:18%; text-align:right;">Unit Price</th>
+                                        <th style="width:17%; text-align:right;">Subtotal</th>
                                     </tr>
                                 </thead>
-                                <tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
+                                <tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:20px;">No items found</td></tr>'}</tbody>
                             </table>
                         </div>
 
-                        <!-- SUMMARY -->
-                        <div class="summary-boxes">
-                            <div class="summary-box">
-                                <div class="summary-label">📦 Subtotal</div>
-                                <div class="summary-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                            </div>
-                            <div class="summary-box">
-                                <div class="summary-label">🚚 Shipping</div>
-                                <div class="summary-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</div>
-                            </div>
-                            <div class="summary-box">
-                                <div class="summary-label">💰 Total</div>
-                                <div class="summary-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                        <div class="totals-section">
+                            <div style="width: 100%; max-width: 400px; margin-left: auto; border: 2px solid #d4af37; padding: 16px; background: #fffef8;">
+                                <div class="totals-row"><span class="totals-label">Subtotal:</span><span class="totals-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
+                                <div class="totals-row"><span class="totals-label">Shipping:</span><span class="totals-value">${shipping <= 0 ? 'FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</span></div>
+                                <div class="totals-row grand"><span class="totals-label">GRAND TOTAL:</span><span class="totals-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
                             </div>
                         </div>
 
-                        <!-- PAYMENT INFO -->
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 32px 0;">
-                            <div style="border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 2px 8px rgba(212,175,55,0.1);">
-                                <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 8px;">💳 Payment Method</div>
-                                <div style="font-size: 15px; font-weight: 700; color: #0f0f0f;">${paymentMethod || 'Cash on Delivery'}</div>
-                            </div>
-                            <div style="border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 2px 8px rgba(212,175,55,0.1);">
-                                <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 8px;">📊 Order Date</div>
-                                <div style="font-size: 15px; font-weight: 700; color: #0f0f0f;">${orderDateText}</div>
-                            </div>
-                        </div>
+                        <div class="footer-note"><strong>Thank you for your selection.</strong> Your items are being prepared by our artisans. This is a computer-generated receipt and does not require a signature.</div>
 
-                        <!-- DISCLAIMER -->
-                        <div class="disclaimer">
-                            <div class="disclaimer-title">📋 IMPORTANT NOTICE</div>
-                            This is a preliminary receipt confirming that your order has been successfully placed. Your official Tax Invoice will be generated and sent to you upon successful delivery of your order. We appreciate your purchase and look forward to serving you!
-                        </div>
-
-                        <!-- FOOTER -->
                         <div class="footer">
-                            <div class="foot">
-                                <strong>For support:</strong> support@eshopperr.me<br/>
-                                <strong>Website:</strong> eshopperr.me<br/>
-                                <strong>Order ID:</strong> ${orderId}
-                            </div>
-                            <div class="foot-premium">💎 eShopper Boutique Luxe • Premium Edition • Authenticity Guaranteed 💎</div>
+                            <div class="foot-text">For support: <strong>support@eshopperr.me</strong><br/>Website: <strong>eshopperr.me</strong></div>
+                            <div class="foot-brand">💎 eShopper Boutique Luxe • Premium Fashion Destination 💎</div>
                         </div>
                     </div>
                 </div>
@@ -884,10 +848,20 @@ const buildOrderConfirmationProformaHtml = ({
         const price = Number(item.price || 0);
         const line = Number(item.total || (qty * price));
         const itemDesc = item.name ? `${item.name}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}` : 'Product';
+        const itemImage = item.pic || item.image || item.imageURL || item.pic1 || '';
         return `
             <tr>
                 <td style="width:8%; text-align:center;">${String(idx + 1).padStart(2, '0')}</td>
-                <td style="width:52%;"><strong>${itemDesc}</strong><br/><span style="font-size:10px;color:#555;">Quality Inspected: Yes</span></td>
+                <td style="width:52%;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                            <td style="width:46px; padding-right:10px; vertical-align:top;">
+                                ${itemImage ? `<img src="${itemImage}" alt="${itemDesc}" style="width:42px; height:42px; object-fit:cover; border-radius:6px; border:1px solid #d4af37;" />` : `<div style="width:42px; height:42px; border-radius:6px; border:1px solid #d4af37; display:flex; align-items:center; justify-content:center; font-size:20px;">📦</div>`}
+                            </td>
+                            <td style="vertical-align:top;"><strong>${itemDesc}</strong><br/><span style="font-size:10px;color:#555;">Quality Inspected: Yes</span></td>
+                        </tr>
+                    </table>
+                </td>
                 <td style="width:10%; text-align:center; font-weight:700;">${qty}</td>
                 <td style="width:15%; text-align:right; font-weight:700;">₹${price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
                 <td style="width:15%; text-align:right; font-weight:800; color:#1f8f54;">₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
@@ -911,7 +885,7 @@ const buildOrderConfirmationProformaHtml = ({
                 .watermark { position:absolute; top:110px; left:50%; transform:translateX(-50%) rotate(-18deg); color:rgba(31,143,84,0.10); font-size:52px; font-weight:900; letter-spacing:2px; white-space:nowrap; }
                 .head { padding:18px 20px; background:#faf8f2; border-bottom:1px solid #eadfbf; }
                 .brand { display:flex; align-items:center; gap:10px; }
-                .brand img { width:42px; height:42px; border-radius:8px; border:1px solid #d4af37; background:#fff; object-fit:contain; }
+                .brand img { width:44px; height:44px; border-radius:10px; border:2px solid #d4af37; background:#fff; object-fit:contain; box-shadow:0 0 0 3px rgba(212,175,55,0.12), 0 8px 16px rgba(0,0,0,0.20); padding:3px; }
                 .brand-title { font-size:22px; font-weight:900; color:#8b7521; }
                 .title { margin-top:10px; font-size:15px; letter-spacing:1.5px; text-transform:uppercase; font-weight:800; color:#2a2a2a; }
                 .badge { display:inline-block; margin-top:10px; background:linear-gradient(135deg,#1f8f54,#16a34a); color:#fff; font-size:11px; font-weight:900; padding:7px 12px; border-radius:14px; }
@@ -951,7 +925,10 @@ const buildOrderConfirmationProformaHtml = ({
                     <div class="watermark">Verified & Confirmed</div>
                     <div class="head">
                         <div class="brand">
-                            <div style="font-size:48px; font-weight:900; color:#d4af37; margin-bottom:8px;">💎</div>
+                            <div style="position:relative; width:48px; height:48px; margin-bottom:8px;">
+                                <img src="${BRAND_LOGO_PDF_SRC}" alt="eShopper Logo" style="width:48px; height:48px; border-radius:12px; border:2px solid #d4af37; object-fit:contain; background:#fff; box-shadow:0 0 0 3px rgba(212,175,55,0.15), 0 8px 18px rgba(0,0,0,0.22); padding:3px; display:block; margin:0 auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                                <div style="display:none; font-size:48px; font-weight:900; color:#d4af37; line-height:1;">💎</div>
+                            </div>
                             <div class="brand-title">eShopper Boutique Luxe</div>
                         </div>
                         <div class="title">Order Confirmation Proforma Invoice</div>
@@ -1035,6 +1012,10 @@ const buildTaxInvoiceHtml = ({
     const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
     const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
     const payable = Number(finalAmount || (subtotal + shipping));
+    const taxableValue = Number((payable / 1.18).toFixed(2));
+    const cgstAmount = Number((taxableValue * 0.09).toFixed(2));
+    const sgstAmount = Number((taxableValue * 0.09).toFixed(2));
+    const gstTotal = Number((cgstAmount + sgstAmount).toFixed(2));
 
     const rows = safeProducts.map((item, idx) => {
         const qty = Number(item.qty || 1);
@@ -1044,20 +1025,22 @@ const buildTaxInvoiceHtml = ({
         const hsn = item.hsn || '6204';
         const unitPrice = price;
         const discountPct = item.discountPercent || 0;
-        const taxRate = 18; // IGST
-        const taxAmount = Math.round((line * taxRate) / 100);
-        const priceBeforeTax = line;
+        const taxableLine = Number((line / 1.18).toFixed(2));
+        const cgstLine = Number((taxableLine * 0.09).toFixed(2));
+        const sgstLine = Number((taxableLine * 0.09).toFixed(2));
 
         return `
             <tr>
                 <td style="width:6%; text-align:center;">${String(idx + 1).padStart(2, '0')}</td>
                 <td style="width:3%; text-align:center; font-weight:600;">${hsn}</td>
-                <td style="width:38%;"><strong>${itemDesc}</strong></td>
+                <td style="width:30%;"><strong>${itemDesc}</strong></td>
                 <td style="width:8%; text-align:center;">${qty}</td>
-                <td style="width:12%; text-align:right; font-weight:600;">₹${unitPrice.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                <td style="width:10%; text-align:center;">${discountPct}%</td>
-                <td style="width:12%; text-align:right; font-weight:600;">₹${priceBeforeTax.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                <td style="width:11%; text-align:right; font-weight:700; color:#1f8f54;">₹${taxAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                <td style="width:10%; text-align:right; font-weight:600;">₹${unitPrice.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                <td style="width:8%; text-align:center;">${discountPct}%</td>
+                <td style="width:12%; text-align:right; font-weight:600;">₹${taxableLine.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                <td style="width:11%; text-align:right; font-weight:700; color:#1f8f54;">₹${cgstLine.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                <td style="width:11%; text-align:right; font-weight:700; color:#1f8f54;">₹${sgstLine.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                <td style="width:11%; text-align:right; font-weight:700; color:#0f0f0f;">₹${line.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
             </tr>
         `;
     }).join('');
@@ -1097,7 +1080,7 @@ const buildTaxInvoiceHtml = ({
                 .head { padding: 22px 20px; background: #f5f5f3; border-bottom: 1px solid #e8dcc8; position: relative; }
                 .tax-label { position: absolute; top: 20px; right: 20px; font-size: 14px; font-weight: 900; color: #d4af37; letter-spacing: 2px; text-transform: uppercase; }
                 .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
+                .brand-left { width: 64px; text-align: center; vertical-align: middle; }
                 .brand-center { text-align: center; vertical-align: middle; }
                 .brand-spacer { width: 64px; }
                 .brand-badge { width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; overflow: hidden; display: flex; align-items: center; justify-content: center; }
@@ -1156,9 +1139,8 @@ const buildTaxInvoiceHtml = ({
                         <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
                             <tr>
                                 <td class="brand-left">
-                                    <div class="brand-badge">
-                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-                                    </div>
+                                    <img src="${BRAND_LOGO_PDF_SRC}" alt="eShopper Logo" style="width:44px; height:44px; border-radius:12px; border:2px solid #d4af37; object-fit:contain; background:#fff; box-shadow:0 0 0 3px rgba(212,175,55,0.15), 0 8px 18px rgba(0,0,0,0.22); padding:3px; display:block; margin:0 auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                                    <div style="display:none; font-size:42px; line-height:1;">💎</div>
                                 </td>
                                 <td class="brand-center">
                                     <p class="brand-title">eShopper Boutique Luxe</p>
@@ -1222,15 +1204,17 @@ const buildTaxInvoiceHtml = ({
                                     <tr>
                                         <th style="width:6%">#</th>
                                         <th style="width:3%">HSN</th>
-                                        <th style="width:38%">Description</th>
+                                        <th style="width:30%">Description</th>
                                         <th style="width:8%">Qty</th>
-                                        <th style="width:12%">Unit Price</th>
-                                        <th style="width:10%">Disc %</th>
-                                        <th style="width:12%">Amount</th>
-                                        <th style="width:11%">Tax (18%)</th>
+                                        <th style="width:10%">Unit Price</th>
+                                        <th style="width:8%">Disc %</th>
+                                        <th style="width:12%">Taxable</th>
+                                        <th style="width:11%">CGST 9%</th>
+                                        <th style="width:11%">SGST 9%</th>
+                                        <th style="width:11%">Line Total</th>
                                     </tr>
                                 </thead>
-                                <tbody>${rows || '<tr><td colspan="8" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
+                                <tbody>${rows || '<tr><td colspan="10" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
                             </table>
                         </div>
 
@@ -1247,6 +1231,22 @@ const buildTaxInvoiceHtml = ({
                             <div class="summary-box">
                                 <div class="summary-label">💰 Total Amount</div>
                                 <div class="summary-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                            </div>
+                            <div class="summary-box">
+                                <div class="summary-label">📊 Taxable Value</div>
+                                <div class="summary-value">₹${taxableValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
+                            </div>
+                            <div class="summary-box">
+                                <div class="summary-label">📈 CGST (9%)</div>
+                                <div class="summary-value">₹${cgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
+                            </div>
+                            <div class="summary-box">
+                                <div class="summary-label">📈 SGST (9%)</div>
+                                <div class="summary-value">₹${sgstAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
+                            </div>
+                            <div class="summary-box">
+                                <div class="summary-label">🧾 Total GST</div>
+                                <div class="summary-value">₹${gstTotal.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
                             </div>
                             <div class="summary-box">
                                 <div class="summary-label">💳 Payment Method</div>
@@ -1369,7 +1369,7 @@ const buildInvoiceHtml = ({
                 .card { background: #fff; border: 3px solid #d4af37; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
                 .head { padding: 24px 20px; background: #f5f5f3; }
                 .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
+                .brand-left { width: 64px; text-align: center; vertical-align: middle; }
                 .brand-center { text-align: center; vertical-align: middle; }
                 .brand-spacer { width: 64px; }
                 .brand-badge { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; }
@@ -1473,9 +1473,8 @@ const buildInvoiceHtml = ({
                         <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
                             <tr>
                                 <td class="brand-left">
-                                    <div class="brand-badge">
-                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-                                    </div>
+                                    <img src="${BRAND_LOGO_PDF_SRC}" alt="eShopper Logo" style="width:44px; height:44px; border-radius:12px; border:2px solid #d4af37; object-fit:contain; background:#fff; box-shadow:0 0 0 3px rgba(212,175,55,0.15), 0 8px 18px rgba(0,0,0,0.22); padding:3px; display:block; margin:0 auto;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                                    <div style="display:none; font-size:42px; line-height:1;">💎</div>
                                 </td>
                                 <td class="brand-center">
                                     <p class="brand-title">eShopper Boutique Luxe</p>
@@ -2141,11 +2140,42 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
     const firstName = displayName.split(' ')[0];
     const trackingLink = `https://eshopperr.me/order-tracking/${orderId}`;
 
+    const buildStatusInvoiceBase64 = async (pdfType, statusLabel, attachmentLabel) => {
+        try {
+            const invoiceBuffer = await generateInvoicePdfBuffer({
+                orderId,
+                userName: displayName,
+                userEmail: email,
+                paymentMethod: paymentMethod || 'Online',
+                paymentStatus: paymentStatus || 'Paid',
+                finalAmount: Number(finalAmount || 0),
+                totalAmount: Number(totalAmount || finalAmount || 0),
+                shippingAmount: Number(shippingAmount || 0),
+                shippingAddress: shippingAddress || { fullName: displayName, phone },
+                products: Array.isArray(products) ? products : [],
+                orderDate: new Date(),
+                estimatedArrival: estimatedDelivery,
+                orderStatus: statusLabel,
+                pdfType,
+                isDelivered: statusLabel === 'Delivered'
+            });
+            return invoiceBuffer ? invoiceBuffer.toString('base64') : '';
+        } catch (pdfErr) {
+            console.warn(`⚠️ ${attachmentLabel} invoice generation skipped for ${orderId}:`, pdfErr.message);
+            await sendAdminAlert({
+                title: `${attachmentLabel} Invoice PDF Failed`,
+                details: `Order ${orderId}: ${attachmentLabel.toLowerCase()} invoice generation failed. Email sent without attachment. Error: ${pdfErr.message}`
+            });
+            return '';
+        }
+    };
+
     console.log(`🎯 Sending Luxe Notifications for ${orderId} -> ${status}`);
 
     try {
         if (status === 'Packed') {
             // 📦 PACKED: WhatsApp + Email (Parallel)
+            const packedInvoiceBase64 = await buildStatusInvoiceBase64('confirmation', 'Packed', 'Packed/Confirmation');
             const whatsappMsg = `📦 YOUR ORDER IS BEAUTIFULLY PACKED! ✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is now expertly packed!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Packed & Ready to Ship\n💎 Quality Check: Completed\n🎁 Premium Packaging: Applied\n\n📅 NEXT STEPS:\n→ Your order will ship out within 24 hours\n→ You'll receive a tracking update shortly\n→ Expected delivery by: ${estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Soon'}\n\n🔗 TRACK NOW: ${trackingLink}\n\n💬 Questions? Reply to this message\n📞 Call: 8447859784\n\n🙏 Thank you for choosing Eshopper Boutique! 💎`;
             
             // Send both WhatsApp and Email in parallel
@@ -2164,7 +2194,10 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     status: 'Packed',
                     trackingLink,
                     estimatedDelivery,
-                    totalAmount: finalAmount
+                    totalAmount: finalAmount,
+                    products: Array.isArray(products) ? products : [],
+                    invoiceBase64: packedInvoiceBase64,
+                    attachmentName: `Confirmation-${orderId}.pdf`
                 }).then(() => {
                     console.log(`✅ Email queued for ${orderId} (Packed)`);
                     return { type: 'Email', success: true };
@@ -2187,6 +2220,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
 
         else if (status === 'Shipped') {
             // 🚚 SHIPPED: WhatsApp + Email (Parallel)
+            const shippedInvoiceBase64 = await buildStatusInvoiceBase64('confirmation', 'Shipped', 'Shipped/Confirmation');
             const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Soon';
             const shippedMsg = `🚚 YOUR ORDER IS ON THE WAY! 📍✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is shipping!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Premium Delivery\n🚚 Shipping: Fast & Secure\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n📅 DELIVERY WINDOW:\n📍 Expected Arrival: ${deliveryDate}\n⏰ Delivery Time: 9 AM - 6 PM\n\n🎯 WHAT TO EXPECT:\n✓ Professional White-Glove delivery\n✓ Careful handling of your selection\n✓ Real-time location tracking\n✓ Safe placement at your doorstep\n\n🔗 LIVE TRACKING: ${trackingLink}\n\n💡 PRO TIP:\n→ Ensure someone is available for delivery\n→ Keep door accessible\n→ Contact us if you need delivery rescheduling\n\n📞 DELIVERY SUPPORT:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n\n💎 Thank you for your business!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
@@ -2203,7 +2237,10 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     status: 'Shipped',
                     trackingLink,
                     estimatedDelivery,
-                    totalAmount: finalAmount
+                    totalAmount: finalAmount,
+                    products: Array.isArray(products) ? products : [],
+                    invoiceBase64: shippedInvoiceBase64,
+                    attachmentName: `Confirmation-${orderId}.pdf`
                 }).then(() => {
                     console.log(`✅ Shipped email queued for ${orderId}`);
                     return { type: 'Email', success: true };
@@ -2224,6 +2261,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
 
         else if (status === 'Out for Delivery') {
             // 🚗 OUT FOR DELIVERY: WhatsApp + Email (Parallel)
+            const outForDeliveryInvoiceBase64 = await buildStatusInvoiceBase64('confirmation', 'Out for Delivery', 'Out for Delivery/Confirmation');
             const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Today';
             const outForDeliveryMsg = `🚗 YOUR ORDER IS OUT FOR DELIVERY! 📍\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour package is with our delivery partner!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Delivery (Final Mile)\n🚗 Location: On the way to your address\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n⏰ EXPECTED DELIVERY:\n📍 Expected Today: ${deliveryDate}\n🕐 Delivery Window: 9 AM - 6 PM\n\n📲 LIVE TRACKING:\n→ Track your package in real-time\n→ Get SMS/WhatsApp updates\n→ Know exact arrival time\n\n🔗 TRACK LIVE: ${trackingLink}\n\n🏠 BE READY:\n✓ Ensure someone is home\n✓ Keep your door accessible\n✓ Have payment ready if COD\n✓ Keep phone nearby for delivery call\n\n❓ NEED HELP?\n→ Contact driver directly\n→ WhatsApp: wa.me/918447859784\n→ Call: 8447859784\n\n📞 DELIVERY SUPPORT TEAM:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n• Chat: Available 24/7\n\n💡 PRO TIP:\nIf you miss delivery, reschedule instantly from tracking page or WhatsApp us!\n\n🎁 Almost there!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
@@ -2240,7 +2278,10 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     status: 'Out for Delivery',
                     trackingLink,
                     estimatedDelivery,
-                    totalAmount: finalAmount
+                    totalAmount: finalAmount,
+                    products: Array.isArray(products) ? products : [],
+                    invoiceBase64: outForDeliveryInvoiceBase64,
+                    attachmentName: `Confirmation-${orderId}.pdf`
                 }).then(() => {
                     console.log(`✅ Out for Delivery email queued for ${orderId}`);
                     return { type: 'Email', success: true };
@@ -2305,6 +2346,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     trackingLink,
                     estimatedDelivery,
                     totalAmount: finalAmount,
+                    products: Array.isArray(products) ? products : [],
                     invoiceBase64: finalInvoiceBase64,
                     attachmentName: `FinalTaxInvoice-${orderId}.pdf`
                 }).then(() => {
@@ -2331,22 +2373,46 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
     }
 };
 
-const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, invoiceBase64, attachmentName }) => {
+const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, products, invoiceBase64, attachmentName }) => {
     if (!toEmail) return false;
 
     const displayName = userName || 'Valued Customer';
     const firstName = displayName.split(' ')[0];
     
     const statusConfig = {
-        'Ordered': { emoji: '✅', color: '#16a34a', bg1: '#d1fae5', bg2: '#a7f3d0', msg: 'Order Confirmed! Payment received.', lightBg: '#ecfdf5' },
-        'Packed': { emoji: '📦', color: '#0066cc', bg1: '#dbeafe', bg2: '#bfdbfe', msg: 'Packed with premium care!', lightBg: '#f0f9ff' },
-        'Shipped': { emoji: '🚚', color: '#f59e0b', bg1: '#fef3c7', bg2: '#fde68a', msg: 'On premium delivery!', lightBg: '#fffbeb' },
-        'Out for Delivery': { emoji: '🚗', color: '#f97316', bg1: '#ffedd5', bg2: '#fed7aa', msg: 'Arriving today with care!', lightBg: '#fff7ed' },
-        'Delivered': { emoji: '🎉', color: '#16a34a', bg1: '#d1fae5', bg2: '#a7f3d0', msg: 'Successfully delivered!', lightBg: '#ecfdf5' }
+        'Packed': { emoji: '📦', color: '#0066cc', bg1: '#dbeafe', bg2: '#bfdbfe', msg: 'Your order is packed and ready for dispatch.', lightBg: '#f0f9ff' },
+        'Shipped': { emoji: '🚚', color: '#f59e0b', bg1: '#fef3c7', bg2: '#fde68a', msg: 'Your order has been shipped and is on the way.', lightBg: '#fffbeb' },
+        'Out for Delivery': { emoji: '🛵', color: '#f97316', bg1: '#ffedd5', bg2: '#fed7aa', msg: 'Your order is out for delivery and will arrive soon.', lightBg: '#fff7ed' },
+        'Delivered': { emoji: '🎉', color: '#16a34a', bg1: '#d1fae5', bg2: '#a7f3d0', msg: 'Your order has been delivered successfully. Thank you!', lightBg: '#ecfdf5' }
     };
     
     const config = statusConfig[status] || { emoji: '📦', color: '#111827', bg1: '#f9fafb', bg2: '#f3f4f6', msg: status };
     const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+    const safeProducts = Array.isArray(products) ? products : [];
+    const productRows = safeProducts.slice(0, 3).map((p) => {
+        const productName = p.name || p.title || 'Product';
+        const productQty = Number(p.qty || p.quantity || p.qt || 1);
+        const productPrice = Number(p.price || 0);
+        const productImage = p.pic || p.image || p.imageURL || p.pic1 || '';
+        return `
+            <tr>
+                <td style="padding:12px; border-bottom:1px solid #222;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                            <td style="width:74px; padding-right:12px; vertical-align:top;">
+                                ${productImage ? `<img src="${productImage}" alt="${productName}" style="width:72px; height:72px; object-fit:cover; border-radius:8px; border:1px solid #D4AF37; display:block;" />` : `<div style="width:72px; height:72px; background:#1a1a1a; border-radius:8px; border:1px solid #D4AF37; display:flex; align-items:center; justify-content:center; font-size:28px;">📦</div>`}
+                            </td>
+                            <td style="vertical-align:top;">
+                                <div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:6px;">${productName}</div>
+                                <div style="font-size:12px; color:#999;">Qty: <strong style="color:#D4AF37;">${productQty}</strong></div>
+                                <div style="font-size:12px; color:#999; margin-top:4px;">₹${productPrice.toLocaleString('en-IN')} each</div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        `;
+    }).join('');
 
     const htmlContent = `<!DOCTYPE html>
 <html>
@@ -2361,7 +2427,9 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
         .brand-left { width:64px; text-align:left; vertical-align:middle; }
         .brand-center { text-align:center; vertical-align:middle; }
         .brand-spacer { width:64px; }
-        .logo-emoji { font-size:56px; line-height:1; margin:0 auto 16px; }
+        .logo-wrap { width:64px; height:64px; margin:0 auto 16px; border-radius:16px; background:linear-gradient(135deg,#1a1a1a,#0f172a); border:1px solid rgba(212,175,55,0.45); box-shadow:0 0 0 3px rgba(212,175,55,0.12), 0 10px 22px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; }
+        .logo-img { width:54px; height:54px; border-radius:12px; border:2px solid #D4AF37; object-fit:contain; background:#fff; padding:3px; display:block; }
+        .logo-fallback { display:none; font-size:56px; line-height:1; }
         .brand-title { font-size:28px; font-weight:900; color:#D4AF37; letter-spacing:1.5px; margin:0; line-height:1.2; text-transform:uppercase; }
         .tagline { font-size:12px; color:#888; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; margin:8px 0 0 0; }
         .status-banner { background:linear-gradient(135deg,${config.bg1},${config.bg2}); padding:40px 24px; text-align:center; border-bottom:4px solid ${config.color}; margin:0; }
@@ -2388,6 +2456,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
         .info-box { padding:20px; border-radius:12px; border-left:4px solid ${config.color}; background:linear-gradient(135deg,${config.bg1},${config.bg2}); margin:0 0 28px 0; }
         .info-title { font-size:13px; font-weight:700; color:${config.color}; text-transform:uppercase; margin:0 0 8px 0; }
         .info-text { font-size:14px; color:#333; margin:0; line-height:1.6; }
+        .products-table { width:100%; border-collapse:collapse; background:#151515; border:1px solid #333; border-radius:10px; overflow:hidden; margin:0 0 24px 0; }
         .button-group { margin:0 0 28px 0; }
         .button { display:block; background:#D4AF37; color:#0A0A0A; padding:16px 32px; border-radius:8px; text-decoration:none; font-weight:900; text-align:center; font-size:15px; letter-spacing:1px; margin:0 0 12px 0; box-shadow:0 4px 12px rgba(212,175,55,0.3); transition:all 0.3s; }
         .button:hover { transform:translateY(-2px); }
@@ -2428,7 +2497,10 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="logo-emoji">💎</div>
+            <div class="logo-wrap">
+                <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                <div class="logo-fallback">💎</div>
+            </div>
             <h1 class="brand-title">eShopper</h1>
             <p class="tagline">Boutique Luxe • Order Update</p>
         </div>
@@ -2479,6 +2551,12 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
                 <p style="margin:0; font-size:12px; color:#28a745; font-weight:700;">💳 ORDER AMOUNT</p>
                 <p style="margin:8px 0 0 0; font-size:22px; font-weight:900; color:#28a745;">₹${Number(totalAmount).toLocaleString('en-IN')}</p>
             </div>
+            ` : ''}
+
+            ${safeProducts.length > 0 ? `
+            <p style="font-size:13px; font-weight:900; color:#D4AF37; letter-spacing:1px; text-transform:uppercase; margin:0 0 12px 0;">🛍️ Product Details</p>
+            <table class="products-table"><tbody>${productRows}</tbody></table>
+            ${safeProducts.length > 3 ? `<p style="font-size:12px; color:#777; text-align:center; margin:-10px 0 20px 0;">+ ${safeProducts.length - 3} more item(s)</p>` : ''}
             ` : ''}
 
             <!-- Action Button -->
@@ -2552,7 +2630,7 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
                     <table width="100%" cellpadding="0" cellspacing="0" border="0">
                         <tr>
                             <td style="width:80px; padding-right:14px; vertical-align:middle;">
-                                ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid #D4AF37; display:block;" />` : `<div style="width:80px; height:80px; background:#1a1a1a; border-radius:8px; border:2px solid #D4AF37; display:table-cell; text-align:center; vertical-align:middle; font-size:32px;">📦</div>`}
+                                ${(p.pic || p.image || p.imageURL || p.pic1) ? `<img src="${p.pic || p.image || p.imageURL || p.pic1}" alt="${p.name}" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid #D4AF37; display:block;" />` : `<div style="width:80px; height:80px; background:#1a1a1a; border-radius:8px; border:2px solid #D4AF37; display:table-cell; text-align:center; vertical-align:middle; font-size:32px;">📦</div>`}
                             </td>
                             <td style="vertical-align:middle;">
                                 <div style="font-weight:700; color:#fff; font-size:15px; margin:0 0 6px 0;">${p.name}</div>
@@ -2576,7 +2654,9 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
         .email-wrapper { width:100%; background:#0A0A0A; padding:20px 0; }
         .container { max-width:600px; margin:0 auto; background:#0A0A0A; border:2px solid #D4AF37; border-radius:12px; overflow:hidden; }
         .header { padding:40px 30px; text-align:center; background:linear-gradient(180deg, #1a1a1a 0%, #0A0A0A 100%); border-bottom:3px solid #D4AF37; }
-        .logo-emoji { font-size:56px; margin:0 auto 18px; width:70px; height:70px; line-height:70px; }
+        .logo-wrap { width:68px; height:68px; margin:0 auto 18px; border-radius:16px; background:linear-gradient(135deg,#1a1a1a,#0f172a); border:1px solid rgba(212,175,55,0.45); box-shadow:0 0 0 3px rgba(212,175,55,0.12), 0 10px 22px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; }
+        .logo-img { width:58px; height:58px; border-radius:12px; border:2px solid #D4AF37; object-fit:contain; background:#fff; padding:3px; display:block; }
+        .logo-fallback { display:none; font-size:56px; line-height:1; }
         .brand-name { font-size:32px; font-weight:900; color:#D4AF37; margin:0 0 8px 0; letter-spacing:1.5px; text-transform:uppercase; }
         .tagline { font-size:13px; color:#888; margin:0; letter-spacing:1.2px; text-transform:uppercase; }
         .status-badge { display:inline-block; background:#D4AF37; color:#0A0A0A; padding:10px 24px; border-radius:25px; font-size:12px; font-weight:900; margin-top:16px; letter-spacing:1px; }
@@ -2611,7 +2691,9 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
             .content { padding:30px 20px; }
             .footer { padding:24px 20px; }
             .brand-name { font-size:26px; }
-            .logo-emoji { font-size:48px; width:60px; height:60px; line-height:60px; }
+            .logo-wrap { width:60px; height:60px; }
+            .logo-img { width:50px; height:50px; }
+            .logo-fallback { font-size:48px; }
             .greeting-box { padding:18px; }
             .info-table td { padding:12px 10px; font-size:13px; }
             .track-button { padding:14px 28px; font-size:14px; }
@@ -2622,7 +2704,10 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
     <div class="email-wrapper">
         <div class="container">
             <div class="header">
-                <div class="logo-emoji">💎</div>
+                <div class="logo-wrap">
+                    <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                    <div class="logo-fallback">💎</div>
+                </div>
                 <h1 class="brand-name">eShopper</h1>
                 <p class="tagline">Boutique Luxe</p>
                 <span class="status-badge">📦 ORDER RECEIVED</span>
@@ -2748,7 +2833,9 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
         .wrapper { max-width:600px; margin:0 auto; background:#050505; }
         .header { background:linear-gradient(135deg,#1a1a1a 0%,#050505 100%); padding:32px 24px; text-align:center; border-bottom:3px solid #d4af37; }
         .logo-box { margin-bottom:16px; }
-        .logo-img { width:50px; height:50px; border:2px solid #d4af37; border-radius:12px; background:#fff; padding:6px; box-sizing:border-box; }
+        .logo-wrap { width:68px; height:68px; margin:0 auto 10px; border-radius:16px; background:linear-gradient(135deg,#1a1a1a,#0f172a); border:1px solid rgba(212,175,55,0.45); box-shadow:0 0 0 3px rgba(212,175,55,0.12), 0 10px 22px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; }
+        .logo-img { width:58px; height:58px; border-radius:12px; border:2px solid #d4af37; object-fit:contain; background:#fff; padding:3px; display:block; }
+        .logo-fallback { display:none; font-size:56px; line-height:1; }
         .elite-title { font-size:32px; font-weight:900; color:#d4af37; margin:12px 0 8px 0; letter-spacing:2px; font-style:italic; }
         .verified-badge { display:inline-block; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; padding:6px 16px; border-radius:20px; font-size:11px; font-weight:900; letter-spacing:1px; margin-top:8px; }
         .timeline-section { padding:32px 24px; background:linear-gradient(180deg, #0f0f0f 0%, #050505 100%); position:relative; }
@@ -2823,7 +2910,10 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             <!-- HEADER WITH LOGO -->
             <div class="header">
                 <div class="logo-box">
-                    <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper" class="logo-img" onerror="this.onerror=null; this.src='${BRAND_LOGO_FALLBACK_URL}';" />
+                    <div class="logo-wrap">
+                        <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                        <div class="logo-fallback">💎</div>
+                    </div>
                 </div>
                 <div class="elite-title">✨ YOUR ORDER IS CONFIRMED ✨</div>
                 <span class="verified-badge">✅ PAYMENT VERIFIED</span>
@@ -2881,10 +2971,10 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             <!-- PRODUCTS SECTION -->
             <div class="products-section">
                 <div class="section-title">📦 Your Selection</div>
-                ${products.slice(0, 5).map((product, index) => {
+                ${safeProducts.slice(0, 5).map((product, index) => {
                     const productName = product.title || product.name || 'Product';
                     const productPrice = product.price || 0;
-                    const productImage = product.image || product.imageURL || '';
+                    const productImage = product.pic || product.image || product.imageURL || product.pic1 || '';
                     const quantity = product.qt || product.quantity || 1;
                     return `
                     <div class="product-item">
@@ -2954,12 +3044,12 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
             <div style="padding:24px; margin:0 24px 24px 24px;">
                 <div class="section-title">📍 Shipping to</div>
                 <div style="background:#1a1a1a; padding:16px; border-radius:12px; border:1px solid #333; line-height:1.8;">
-                    <div style="font-weight:900; color:#fff; font-size:14px; margin-bottom:8px;">${shippingAddress.name || userName}</div>
+                    <div style="font-weight:900; color:#fff; font-size:14px; margin-bottom:8px;">${shippingAddress?.name || shippingAddress?.fullName || userName}</div>
                     <div style="font-size:13px; color:#999;">
-                        <div>${shippingAddress.street || ''}</div>
-                        <div>${shippingAddress.city || ''}, ${shippingAddress.state || ''} ${shippingAddress.zip || ''}</div>
+                        <div>${shippingAddress?.street || shippingAddress?.addressline1 || ''}</div>
+                        <div>${shippingAddress?.city || ''}, ${shippingAddress?.state || ''} ${shippingAddress?.zip || shippingAddress?.pin || ''}</div>
                         <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #333; color:#999; font-size:12px;">
-                            📱 ${shippingAddress.phone || ''} 
+                            📱 ${shippingAddress?.phone || ''} 
                         </div>
                     </div>
                 </div>
@@ -4176,8 +4266,8 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
             // Map status -> PDF variant
             const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
             const isDelivered = orderStatus === 'delivered';
-            const isConfirmed = orderStatus === 'confirmed' || orderStatus === 'ordered';
-            const pdfType = isDelivered ? 'final' : (isConfirmed ? 'confirmation' : 'receipt');
+            const isConfirmationStage = ['confirmed', 'packed', 'shipped', 'out for delivery'].includes(orderStatus);
+            const pdfType = isDelivered ? 'final' : (isConfirmationStage ? 'confirmation' : 'receipt');
             
             const pdfBuffer = await generateInvoicePdfBuffer({
                 orderId: order.orderId,
@@ -4204,7 +4294,7 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
 
             const fileName = isDelivered
                 ? `TaxInvoice-${order.orderId}.pdf`
-                : (isConfirmed ? `Confirmation-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`);
+                : (isConfirmationStage ? `Confirmation-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`);
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
             res.setHeader('Content-Length', String(pdfBuffer.length));
