@@ -96,27 +96,13 @@ export default function OrderTracking() {
     [activeIndex, timelineMap]
   )
 
-  const viewInvoiceInline = () => {
-    if (!orderId || !userId) return
-    const invoiceUrl = `${BASE_URL}/api/order/${encodeURIComponent(orderId)}/invoice?userId=${encodeURIComponent(userId)}&disposition=inline`
-    const opened = window.open(invoiceUrl, '_blank', 'noopener,noreferrer')
-    if (!opened) {
-      setToast({
-        id: Date.now(),
-        title: '⚠️ Popup Blocked',
-        message: 'Please allow popups to view invoice in browser.'
-      })
-    }
-  }
-
   const downloadInvoice = async () => {
     if (!orderId || !userId) return
     try {
       setDownloadingInvoice(true)
       
-      // Determine PDF type based on delivery status
-      const isDelivered = status === 'Delivered'
-      const pdfType = isDelivered ? 'final' : 'receipt'
+      // Keep download action receipt-only for now.
+      const pdfType = 'receipt'
       
       // Call the smart endpoint that checks status and generates appropriate PDF
       const response = await axios.get(
@@ -157,7 +143,7 @@ export default function OrderTracking() {
         console.warn('Popup blocked while opening PDF preview')
       }
 
-      const fileName = isDelivered ? `TaxInvoice-${orderId}.pdf` : `Receipt-${orderId}.pdf`
+      const fileName = `Receipt-${orderId}.pdf`
       const link = document.createElement('a')
       link.href = url
       link.download = fileName
@@ -166,11 +152,10 @@ export default function OrderTracking() {
       link.remove()
       setTimeout(() => window.URL.revokeObjectURL(url), 45000)
       
-      const pdfLabel = isDelivered ? 'Tax Invoice' : 'Receipt'
       setToast({
         id: Date.now(),
         title: '✅ PDF Ready',
-        message: `${pdfLabel} downloaded and opened in new tab.`
+        message: 'Receipt downloaded and opened in new tab.'
       })
     } catch (e) {
       setToast({
@@ -843,75 +828,13 @@ export default function OrderTracking() {
                 <span style={{ position: 'relative', zIndex: 2 }}>
                   {downloadingInvoice 
                     ? '⏳ Generating...' 
-                    : status === 'Delivered' 
-                      ? '📄 Download Tax Invoice' 
-                      : '📥 Download Receipt'
+                    : '📥 Download Receipt'
                   }
                 </span>
               </motion.button>
               
-              {/* Verified Badge - Shows when Delivered */}
-              {status === 'Delivered' && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8, x: 8 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  transition={{ delay: 0.2, type: 'spring' }}
-                  style={{
-                    position: 'absolute',
-                    top: '-8px',
-                    right: '-8px',
-                    background: 'linear-gradient(135deg, #1f8f54, #16a34a)',
-                    color: '#fff',
-                    borderRadius: '50%',
-                    width: '28px',
-                    height: '28px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px',
-                    fontWeight: 'bold',
-                    boxShadow: '0 4px 12px rgba(31,143,84,0.4)',
-                    border: '2px solid #fff',
-                    zIndex: 10
-                  }}
-                  title="Order Verified & Delivered"
-                >
-                  ✓
-                </motion.div>
-              )}
+              {/* Verified badge removed with tax-invoice CTA for now. */}
             </div>
-
-              {/* View Invoice Button */}
-              <motion.button
-                whileHover={{ 
-                  scale: 1.03,
-                  boxShadow: '0 16px 36px rgba(0,0,0,0.15)',
-                  y: -2
-                }}
-                whileTap={{ scale: 0.95 }}
-                onClick={viewInvoiceInline}
-                className="btn btn-sm rounded-pill"
-                style={{ 
-                  flex: '1 1 auto',
-                  minWidth: '130px',
-                  background: 'linear-gradient(135deg, #f5f5f5, #e8e8e8)',
-                  color: '#333',
-                  border: '1.5px solid #d9d9d9',
-                  fontWeight: '700',
-                  fontSize: '13px',
-                  padding: '12px 20px',
-                  letterSpacing: '0.3px',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-              >
-                <span style={{ position: 'relative', zIndex: 2 }}>
-                  👁 View Invoice
-                </span>
-              </motion.button>
 
               {/* Chat Support Button */}
               <motion.button
