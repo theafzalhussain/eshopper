@@ -28,9 +28,6 @@ const getStatusStyles = (status) => {
 }
 
 const getInvoiceButtonText = (status) => {
-  const s = normalizeStatus(status)
-  if (s === 'Delivered') return '📄 Download Tax Invoice'
-  if (s === 'Packed' || s === 'Shipped' || s === 'Out for Delivery') return '📋 Download Confirmation'
   return '🧾 Download Receipt'
 }
 
@@ -53,15 +50,6 @@ export default function MyOrders() {
   const openWhatsAppSupport = (orderId) => {
     const message = `Hi Luxe Support, I need assistance with my Order: ${orderId}`
     window.open(`https://wa.me/918447859784?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
-  }
-
-  const viewInvoiceInline = (orderId) => {
-    if (!orderId || !userId) return
-    const invoiceUrl = `${BASE_URL}/api/order/${encodeURIComponent(orderId)}/invoice?userId=${encodeURIComponent(userId)}&disposition=inline`
-    const opened = window.open(invoiceUrl, '_blank', 'noopener,noreferrer')
-    if (!opened) {
-      setError('Popup blocked. Please allow popups to view invoice.')
-    }
   }
 
   const downloadInvoice = async (orderId) => {
@@ -619,37 +607,6 @@ export default function MyOrders() {
                     </span>
                   </motion.button>
                   
-                  {/* View Invoice Button */}
-                  <motion.button
-                    whileHover={{ 
-                      scale: 1.03,
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-                      y: -3
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => viewInvoiceInline(item.orderId)}
-                    className="btn btn-sm rounded-pill"
-                    style={{ 
-                      flex: '1 1 auto',
-                      minWidth: '110px',
-                      background: 'linear-gradient(135deg, #f5f5f5, #e8e8e8)',
-                      color: '#333',
-                      border: '1.5px solid #d9d9d9',
-                      fontWeight: '700',
-                      fontSize: '13px',
-                      padding: '11px 18px',
-                      letterSpacing: '0.3px',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 8px 18px rgba(0,0,0,0.08)',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <span style={{ position: 'relative', zIndex: 2 }}>
-                      👁 View
-                    </span>
-                  </motion.button>
-
                   {/* Chat Support Button */}
                   <motion.button
                     whileHover={{ 

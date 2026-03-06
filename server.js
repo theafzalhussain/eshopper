@@ -156,6 +156,11 @@ const normalizeOrderStatus = (s = '') => {
     return null;
 };
 
+// Feature toggles for clean baseline (disabled by default).
+const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'false').toLowerCase() === 'true';
+const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
+const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'false').toLowerCase() === 'true';
+
 // 🔴 SOCKET.IO AUTHENTICATION MIDDLEWARE
 io.use(async (socket, next) => {
     try {
@@ -468,6 +473,9 @@ let bullEmailQueue = null;
 let bullQueueMode = false;
 
 const executeEmailJob = async (jobType, payload) => {
+    if (!FEATURE_EMAIL_NOTIFICATIONS) {
+        return { skipped: true, reason: 'email-notifications-disabled' };
+    }
     if (jobType === 'order-placed') return sendOrderPlacedEmail(payload);
     if (jobType === 'order-confirmed') return sendOrderConfirmationEmail(payload);
     if (jobType === 'order-status') return sendOrderStatusEmail(payload);
@@ -520,6 +528,9 @@ const processMemoryEmailQueue = async () => {
 };
 
 const enqueueEmailJob = async (jobType, payload) => {
+    if (!FEATURE_EMAIL_NOTIFICATIONS) {
+        return { skipped: true, reason: 'email-notifications-disabled' };
+    }
     if (!EMAIL_QUEUE_ENABLED) {
         return executeEmailJob(jobType, payload);
     }
@@ -1618,6 +1629,9 @@ const buildInvoiceHtml = ({
 };
 
 const generateInvoicePdfBuffer = async (orderPayload) => {
+    if (!FEATURE_INVOICE_SYSTEM) {
+        throw new Error('Invoice system disabled');
+    }
     // Determine which HTML builder to use based on explicit type + status fallback
     const requestedType = String(orderPayload?.pdfType || '').trim().toLowerCase();
     const normalizedStatus = String(orderPayload?.orderStatus || '').trim().toLowerCase();
@@ -1711,6 +1725,9 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
 };
 
 const sendWhatsApp = async (number, message) => {
+    if (!FEATURE_WHATSAPP_NOTIFICATIONS) {
+        return { skipped: true, reason: 'whatsapp-notifications-disabled' };
+    }
     const apiUrl = process.env.EVOLUTION_API_URL ? process.env.EVOLUTION_API_URL.trim().replace(/\/$/, '') : '';
     const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
     const apiKey = process.env.EVOLUTION_API_KEY ? process.env.EVOLUTION_API_KEY.trim() : '';
@@ -1940,6 +1957,9 @@ const sendOrderWhatsAppNotification = async ({ phone, orderId, status, customerN
 
 // 🔴 WHATSAPP MEDIA FUNCTION - FOR SHIPPED STATUS WITH IMAGE
 const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
+    if (!FEATURE_WHATSAPP_NOTIFICATIONS) {
+        return { skipped: true, reason: 'whatsapp-notifications-disabled' };
+    }
     const apiUrl = process.env.EVOLUTION_API_URL ? process.env.EVOLUTION_API_URL.trim().replace(/\/$/, '') : '';
     const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
     const apiKey = process.env.EVOLUTION_API_KEY ? process.env.EVOLUTION_API_KEY.trim() : '';
@@ -2152,6 +2172,9 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
 
 // 🔴 LUXURY STATUS NOTIFICATION ORCHESTRATOR
 const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName, email, estimatedDelivery, finalAmount, totalAmount, shippingAmount, paymentMethod, paymentStatus, shippingAddress, products }) => {
+    if (!FEATURE_EMAIL_NOTIFICATIONS && !FEATURE_WHATSAPP_NOTIFICATIONS) {
+        return { skipped: true, reason: 'notifications-disabled' };
+    }
     const displayName = customerName || 'Valued Customer';
     const firstName = displayName.split(' ')[0];
     const trackingLink = `https://eshopperr.me/order-tracking/${orderId}`;
@@ -3566,49 +3589,48 @@ const placeOrderHandler = async (req, res) => {
         await Cart.deleteMany({ userid: userId });
 
         let invoiceBuffer = null;
-        try {
-            invoiceBuffer = await generateInvoicePdfBuffer({
-                orderId,
-                userName: user.name,
-                userEmail: user.email,
-                paymentMethod: paymentMethod || 'COD',
-                paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
-                finalAmount: payable,
-                totalAmount: total,
-                shippingAmount: shipping,
-                shippingAddress: addressPayload,
-                products: cleanProducts,
-                orderDate,
-                orderStatus: 'Order Placed',
-                pdfType: 'receipt',
-                isDelivered: false  // Email #1: Order Receipt (not yet delivered)
-            });
-        } catch (invoiceError) {
-            console.error('Invoice PDF generation failed:', invoiceError.message);
-            if (process.env.SENTRY_DSN) Sentry.captureException(invoiceError);
-            await sendAdminAlert({
-                title: 'Order Placed PDF Failed',
-                details: `Order ${orderId}: receipt PDF generation failed. Email will be sent without attachment. Error: ${invoiceError.message}`
-            });
+        if (FEATURE_INVOICE_SYSTEM) {
+            try {
+                invoiceBuffer = await generateInvoicePdfBuffer({
+                    orderId,
+                    userName: user.name,
+                    userEmail: user.email,
+                    paymentMethod: paymentMethod || 'COD',
+                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+                    finalAmount: payable,
+                    totalAmount: total,
+                    shippingAmount: shipping,
+                    shippingAddress: addressPayload,
+                    products: cleanProducts,
+                    orderDate,
+                    orderStatus: 'Order Placed',
+                    pdfType: 'receipt',
+                    isDelivered: false
+                });
+            } catch (invoiceError) {
+                console.error('Invoice PDF generation failed:', invoiceError.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(invoiceError);
+            }
         }
 
         const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
-        // 📧 EMAIL #1: Send "Order Placed" immediately via queue (with Receipt attachment when available)
-        try {
-            await enqueueEmailJob('order-placed', {
-                toEmail: recipientEmail,
-                userName: user.name,
-                orderId,
-                finalAmount: payable,
-                products: cleanProducts,
-                shippingAddress: addressPayload,
-                invoiceBuffer: invoiceBuffer
-            });
-            console.log(`✅ Email #1 (Order Placed) queued for ${orderId}`);
-        } catch (email1Error) {
-            console.error('❌ Email #1 (Order Placed) queue failed:', email1Error.message);
-            if (process.env.SENTRY_DSN) Sentry.captureException(email1Error);
+        if (FEATURE_EMAIL_NOTIFICATIONS) {
+            try {
+                await enqueueEmailJob('order-placed', {
+                    toEmail: recipientEmail,
+                    userName: user.name,
+                    orderId,
+                    finalAmount: payable,
+                    products: cleanProducts,
+                    shippingAddress: addressPayload,
+                    invoiceBuffer: invoiceBuffer
+                });
+                console.log(`✅ Email #1 (Order Placed) queued for ${orderId}`);
+            } catch (email1Error) {
+                console.error('❌ Email #1 (Order Placed) queue failed:', email1Error.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(email1Error);
+            }
         }
 
         // 📧 EMAIL #2: Send "Order Confirmed" ultra-premium email (will be sent when payment verifies)
@@ -3621,8 +3643,7 @@ const placeOrderHandler = async (req, res) => {
         } catch (email2Error) {
             console.error('Email #2 (Order Confirmed) - Prepared but not sent yet');
         }
-
-
+        if (FEATURE_WHATSAPP_NOTIFICATIONS) {
         try {
             const phoneNumber = addressPayload?.phone || user.phone;
             
@@ -3671,6 +3692,7 @@ const placeOrderHandler = async (req, res) => {
                 if (process.env.SENTRY_DSN) Sentry.captureException(waError);
             }
         }
+        }
 
         return res.status(201).json({
             success: true,
@@ -3689,6 +3711,12 @@ app.post('/api/orders', placeOrderHandler);
 
 // ==================== TEST NOTIFICATION ENDPOINT ====================
 app.post('/api/test-notification', async (req, res) => {
+    if (!FEATURE_EMAIL_NOTIFICATIONS && !FEATURE_WHATSAPP_NOTIFICATIONS) {
+        return res.status(410).json({
+            success: false,
+            message: 'Notification system is currently disabled'
+        });
+    }
     try {
         const { phone, email, testType } = req.body;
 
@@ -3794,6 +3822,12 @@ app.post('/api/test-notification', async (req, res) => {
 
 // ==================== WHATSAPP DIAGNOSTIC ENDPOINT ====================
 app.get('/api/check-whatsapp-status/:userId', async (req, res) => {
+    if (!FEATURE_WHATSAPP_NOTIFICATIONS) {
+        return res.status(410).json({
+            success: false,
+            message: 'WhatsApp system is currently disabled'
+        });
+    }
     try {
         const { userId } = req.params;
         const user = await User.findById(userId).lean();
@@ -4171,6 +4205,9 @@ app.get('/api/order/:orderId', async (req, res) => {
 });
 
 app.get('/api/order/:orderId/invoice', async (req, res) => {
+    if (!FEATURE_INVOICE_SYSTEM) {
+        return res.status(410).json({ message: 'Invoice system is currently disabled' });
+    }
     try {
         const { orderId } = req.params;
         const userId = String(req.query.userId || '').trim();
@@ -4243,6 +4280,9 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
 
 // 🔴 SMART DOWNLOAD ENDPOINT - Returns Receipt or Tax Invoice based on Delivery Status
 app.get('/api/orders/:orderId/download', async (req, res) => {
+    if (!FEATURE_INVOICE_SYSTEM) {
+        return res.status(410).json({ message: 'Invoice system is currently disabled' });
+    }
     try {
         const { orderId } = req.params;
         const userId = String(req.query.userId || '').trim();
@@ -4325,6 +4365,12 @@ app.get('/api/orders/:orderId/download', async (req, res) => {
 
 // 🔴 DYNAMIC INVOICE DOWNLOADER - Auto-detects PDF type based on order status
 app.get('/api/orders/:id/download-invoice', async (req, res) => {
+    if (!FEATURE_INVOICE_SYSTEM) {
+        return res.status(410).json({
+            success: false,
+            message: 'Invoice system is currently disabled'
+        });
+    }
     try {
         const orderId = String(req.params.id || '').trim();
         const userId = String(req.query.userId || '').trim();
@@ -4615,52 +4661,54 @@ const handleOrderStatusUpdate = async (req, res) => {
         io.to(`user:${order.userid}`).emit('statusUpdate', payload);
         console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
 
-        // 🔴 TRIGGER LUXURY NOTIFICATIONS (non-blocking via setImmediate)
-        setImmediate(() => {
-            User.findById(order.userid).lean()
-                .then((userDoc) => {
-                    const resolvedPhone = order.shippingAddress?.phone || userDoc?.phone || order.userPhone;
-                    const resolvedEmail = order.userEmail || userDoc?.email || '';
-                    const resolvedName = order.userName || userDoc?.name || 'Customer';
+        // 🔴 TRIGGER LUXURY NOTIFICATIONS (disabled unless explicitly enabled)
+        if (FEATURE_EMAIL_NOTIFICATIONS || FEATURE_WHATSAPP_NOTIFICATIONS) {
+            setImmediate(() => {
+                User.findById(order.userid).lean()
+                    .then((userDoc) => {
+                        const resolvedPhone = order.shippingAddress?.phone || userDoc?.phone || order.userPhone;
+                        const resolvedEmail = order.userEmail || userDoc?.email || '';
+                        const resolvedName = order.userName || userDoc?.name || 'Customer';
 
-                    return sendLuxeStatusNotification({
-                        orderId: order.orderId,
-                        status: normalized,
-                        phone: resolvedPhone,
-                        customerName: resolvedName,
-                        email: resolvedEmail,
-                        estimatedDelivery: order.estimatedArrival,
-                        finalAmount: order.finalAmount,
-                        totalAmount: order.totalAmount,
-                        shippingAmount: order.shippingAmount,
-                        paymentMethod: order.paymentMethod,
-                        paymentStatus: order.paymentStatus,
-                        shippingAddress: order.shippingAddress,
-                        products: order.products
+                        return sendLuxeStatusNotification({
+                            orderId: order.orderId,
+                            status: normalized,
+                            phone: resolvedPhone,
+                            customerName: resolvedName,
+                            email: resolvedEmail,
+                            estimatedDelivery: order.estimatedArrival,
+                            finalAmount: order.finalAmount,
+                            totalAmount: order.totalAmount,
+                            shippingAmount: order.shippingAmount,
+                            paymentMethod: order.paymentMethod,
+                            paymentStatus: order.paymentStatus,
+                            shippingAddress: order.shippingAddress,
+                            products: order.products
+                        });
+                    })
+                    .catch((lookupErr) => {
+                        console.warn(`⚠️ User fallback lookup failed for ${order.orderId}:`, lookupErr.message);
+                        return sendLuxeStatusNotification({
+                            orderId: order.orderId,
+                            status: normalized,
+                            phone: order.shippingAddress?.phone || order.userPhone,
+                            customerName: order.userName,
+                            email: order.userEmail,
+                            estimatedDelivery: order.estimatedArrival,
+                            finalAmount: order.finalAmount,
+                            totalAmount: order.totalAmount,
+                            shippingAmount: order.shippingAmount,
+                            paymentMethod: order.paymentMethod,
+                            paymentStatus: order.paymentStatus,
+                            shippingAddress: order.shippingAddress,
+                            products: order.products
+                        });
+                    })
+                    .catch(err => {
+                        console.error(`⚠️  Background notification error: ${err.message}`);
                     });
-                })
-                .catch((lookupErr) => {
-                    console.warn(`⚠️ User fallback lookup failed for ${order.orderId}:`, lookupErr.message);
-                    return sendLuxeStatusNotification({
-                        orderId: order.orderId,
-                        status: normalized,
-                        phone: order.shippingAddress?.phone || order.userPhone,
-                        customerName: order.userName,
-                        email: order.userEmail,
-                        estimatedDelivery: order.estimatedArrival,
-                        finalAmount: order.finalAmount,
-                        totalAmount: order.totalAmount,
-                        shippingAmount: order.shippingAmount,
-                        paymentMethod: order.paymentMethod,
-                        paymentStatus: order.paymentStatus,
-                        shippingAddress: order.shippingAddress,
-                        products: order.products
-                    });
-                })
-                .catch(err => {
-                    console.error(`⚠️  Background notification error: ${err.message}`);
-                });
-        });
+            });
+        }
 
         return res.json({
             success: true,
@@ -4714,54 +4762,54 @@ app.post('/api/admin/confirm-order', async (req, res) => {
 
         // Generate Proforma PDF for Email #2 (Confirmed)
         let invoiceBase64 = null;
-        try {
-            const invoiceBuffer = await generateInvoicePdfBuffer({
-                orderId: order.orderId,
-                userName: order.userName,
-                userEmail: order.userEmail,
-                paymentMethod: order.paymentMethod || 'COD',
-                paymentStatus: 'Verified',
-                finalAmount: order.finalAmount,
-                totalAmount: order.totalAmount,
-                shippingAmount: order.shippingAmount,
-                shippingAddress: order.shippingAddress,
-                products: order.products || [],
-                orderDate: order.orderDate || new Date(),
-                estimatedArrival: order.estimatedArrival,
-                deliveryPartner: order.deliveryPartner,
-                orderStatus: 'Confirmed',
-                pdfType: 'confirmation'
-            });
-            if (invoiceBuffer) {
-                invoiceBase64 = invoiceBuffer.toString('base64');
+        if (FEATURE_INVOICE_SYSTEM) {
+            try {
+                const invoiceBuffer = await generateInvoicePdfBuffer({
+                    orderId: order.orderId,
+                    userName: order.userName,
+                    userEmail: order.userEmail,
+                    paymentMethod: order.paymentMethod || 'COD',
+                    paymentStatus: 'Verified',
+                    finalAmount: order.finalAmount,
+                    totalAmount: order.totalAmount,
+                    shippingAmount: order.shippingAmount,
+                    shippingAddress: order.shippingAddress,
+                    products: order.products || [],
+                    orderDate: order.orderDate || new Date(),
+                    estimatedArrival: order.estimatedArrival,
+                    deliveryPartner: order.deliveryPartner,
+                    orderStatus: 'Confirmed',
+                    pdfType: 'confirmation'
+                });
+                if (invoiceBuffer) {
+                    invoiceBase64 = invoiceBuffer.toString('base64');
+                }
+            } catch (pdfError) {
+                console.error('❌ PDF generation for Email #2 failed:', pdfError.message);
             }
-        } catch (pdfError) {
-            console.error('❌ PDF generation for Email #2 failed:', pdfError.message);
-            await sendAdminAlert({
-                title: 'Order Confirmation PDF Failed',
-                details: `Order ${order.orderId}: proforma PDF generation failed. Confirmation email sent without attachment. Error: ${pdfError.message}`
-            });
         }
 
         // Send Email #2: Order Confirmed (Ultra-Premium) via queue with Proforma attachment
         let emailSent = true;
-        try {
-            await enqueueEmailJob('order-confirmed', {
-                toEmail: order.userEmail,
-                userName: order.userName,
-                orderId: order.orderId,
-                paymentMethod: order.paymentMethod || 'COD',
-                finalAmount: order.finalAmount,
-                shippingAddress: order.shippingAddress,
-                products: order.products || [],
-                estimatedArrival: order.estimatedArrival,
-                invoiceBase64: invoiceBase64,
-                orderStatus: 'Confirmed'
-            });
-        } catch (confirmQueueErr) {
-            emailSent = false;
-            console.warn(`⚠️ Email #2 queue failed for ${orderId}:`, confirmQueueErr.message);
-            if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
+        if (FEATURE_EMAIL_NOTIFICATIONS) {
+            try {
+                await enqueueEmailJob('order-confirmed', {
+                    toEmail: order.userEmail,
+                    userName: order.userName,
+                    orderId: order.orderId,
+                    paymentMethod: order.paymentMethod || 'COD',
+                    finalAmount: order.finalAmount,
+                    shippingAddress: order.shippingAddress,
+                    products: order.products || [],
+                    estimatedArrival: order.estimatedArrival,
+                    invoiceBase64: invoiceBase64,
+                    orderStatus: 'Confirmed'
+                });
+            } catch (confirmQueueErr) {
+                emailSent = false;
+                console.warn(`⚠️ Email #2 queue failed for ${orderId}:`, confirmQueueErr.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
+            }
         }
 
         if (!emailSent) {
