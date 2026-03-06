@@ -109,16 +109,25 @@
                         <td style="padding: 0 40px 30px 40px;">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
-                                    <!-- Shipping Address -->
+                                    <!-- Shipping Address - Premium -->
                                     <td width="48%" style="vertical-align: top; padding-right: 10px;">
-                                        <div style="background-color: #151515; border: 1px solid #2A2A2A; border-radius: 8px; padding: 20px;">
-                                            <div style="color: #D4AF37; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 12px; text-transform: uppercase;">Shipping Address</div>
-                                            <div style="color: #FFFFFF; font-size: 14px; font-weight: 600; margin-bottom: 8px;">{{SHIPPING_NAME}}</div>
-                                            <div style="color: #B8B8B8; font-size: 13px; line-height: 1.5;">
-                                                {{SHIPPING_ADDRESS}}<br>
-                                                {{SHIPPING_CITY}}, {{SHIPPING_STATE}} {{SHIPPING_PIN}}<br>
-                                                Phone: {{SHIPPING_PHONE}}
-                                            </div>
+                                        <div style="background: linear-gradient(135deg, #1A1A1A 0%, #2A2520 100%); border: 1px solid #D4AF37; border-radius: 10px; padding: 22px; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15);">
+                                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                                <tr>
+                                                    <td>
+                                                        <div style="margin-bottom: 14px;">
+                                                            <span style="color: #D4AF37; font-size: 20px; margin-right: 8px;">📍</span>
+                                                            <span style="color: #D4AF37; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">SHIPPING TO</span>
+                                                        </div>
+                                                        <div style="color: #FFFFFF; font-size: 15px; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.3px;">{{SHIPPING_NAME}}</div>
+                                                        <div style="color: #E0E0E0; font-size: 13px; line-height: 1.7; font-weight: 400;">
+                                                            {{SHIPPING_ADDRESS}}<br>
+                                                            {{SHIPPING_CITY}}, {{SHIPPING_STATE}} {{SHIPPING_PIN}}<br>
+                                                            <span style="color: #D4AF37; font-weight: 600;">📱</span> <span style="color: #FFFFFF; font-weight: 600;">{{SHIPPING_PHONE}}</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </table>
                                         </div>
                                     </td>
                                     <td width="4%"></td>
@@ -169,20 +178,28 @@
                         </td>
                     </tr>
 
-                    <!-- Support Section -->
+                    <!-- Personal Concierge Section -->
                     <tr>
-                        <td style="padding: 25px 40px; background-color: #151515; border-top: 1px solid #2A2A2A; text-align: center;">
-                            <div style="color: #B8B8B8; font-size: 14px; margin-bottom: 15px;">Need Help?</div>
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
+                        <td style="padding: 30px 40px; background: linear-gradient(135deg, #FFF9E6 0%, #FFF5D6 100%); border-top: 2px solid #D4AF37; text-align: center;">
+                            <div style="margin-bottom: 12px;">
+                                <span style="font-size: 42px;">👑</span>
+                            </div>
+                            <div style="color: #C19A3A; font-size: 24px; font-weight: 800; margin-bottom: 10px; letter-spacing: 0.5px;">Personal Concierge</div>
+                            <div style="color: #B8860B; font-size: 14px; margin-bottom: 25px; line-height: 1.5; max-width: 420px; margin-left: auto; margin-right: auto;">
+                                Our dedicated team is here to assist with any questions about your order. Reach out anytime!
+                            </div>
+                            
+                            <!-- Centered Button Container -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
                                 <tr>
-                                    <td style="padding: 0 10px;">
-                                        <a href="{{WHATSAPP_SUPPORT_URL}}" style="display: inline-block; background-color: #25D366; color: #FFFFFF; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600;">
-                                            💬 WhatsApp Support
+                                    <td style="padding: 0 8px;">
+                                        <a href="{{WHATSAPP_SUPPORT_URL}}" style="display: inline-block; background-color: #25D366; color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3); min-width: 180px; text-align: center;">
+                                            💬 WHATSAPP SUPPORT
                                         </a>
                                     </td>
-                                    <td style="padding: 0 10px;">
-                                        <a href="{{INSTAGRAM_URL}}" style="display: inline-block; background: linear-gradient(45deg, #F58529, #DD2A7B, #8134AF); color: #FFFFFF; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600;">
-                                            📸 Instagram
+                                    <td style="padding: 0 8px;">
+                                        <a href="mailto:{{SUPPORT_EMAIL}}" style="display: inline-block; background-color: #FFFFFF; color: #2563EB; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border: 2px solid #2563EB; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); min-width: 180px; text-align: center;">
+                                            📧 EMAIL US
                                         </a>
                                     </td>
                                 </tr>
