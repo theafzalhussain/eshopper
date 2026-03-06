@@ -130,100 +130,112 @@ const Confirmation = () => {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '30px', marginBottom: '40px' }}>
+        {/* Premium Info Cards - Equal Size & Responsive */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
           
-          {/* Order ID & ETA Card */}
+          {/* Order ID Card - Premium Purple Theme */}
           <div
             style={{
-              backgroundColor: 'white',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
               padding: '30px',
-              borderRadius: '12px',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-              border: '2px solid #d4af37',
+              borderRadius: '16px',
+              boxShadow: '0 10px 30px rgba(99, 102, 241, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              position: 'relative',
+              overflow: 'hidden',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-              <ShoppingBag size={32} style={{ color: '#d4af37', marginRight: '12px' }} />
-              <div>
-                <p style={{ fontSize: '12px', color: '#999', margin: '0' }}>ORDER ID</p>
-                <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#2c2c2c', margin: '0' }}>
-                  {order.orderId}
-                </h3>
-              </div>
-            </div>
-            <div style={{ paddingTop: '15px', borderTop: '1px solid #e0e0e0' }}>
-              <p style={{ fontSize: '12px', color: '#999', margin: '8px 0' }}>PAYMENT METHOD</p>
-              <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#2c2c2c', margin: '0' }}>
-                {order.paymentMethod || 'Card'}
+            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '50%' }}></div>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '1.5px', color: 'rgba(255, 255, 255, 0.8)', margin: '0 0 8px 0', textTransform: 'uppercase' }}>ORDER ID</p>
+              <h3 style={{ fontSize: '28px', fontWeight: '900', color: '#ffffff', margin: '0 0 4px 0', letterSpacing: '-0.5px' }}>
+                {order.orderId?.split('-').pop() || '0000'}
+              </h3>
+              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', margin: '0', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+                {order.orderId}
               </p>
             </div>
           </div>
 
-          {/* ETA Card */}
+          {/* Estimated Arrival Card - Premium Green Theme */}
           <div
             style={{
-              backgroundColor: 'white',
+              background: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
               padding: '30px',
-              borderRadius: '12px',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-              border: '2px solid #d4af37',
+              borderRadius: '16px',
+              boxShadow: '0 10px 30px rgba(16, 185, 129, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              position: 'relative',
+              overflow: 'hidden',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-              <Truck size={32} style={{ color: '#d4af37', marginRight: '12px' }} />
-              <div>
-                <p style={{ fontSize: '12px', color: '#999', margin: '0' }}>ESTIMATED DELIVERY</p>
-                <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#2c2c2c', margin: '0' }}>
-                  {estimatedArrival.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
-                </h3>
-              </div>
-            </div>
-            <div style={{ paddingTop: '15px', borderTop: '1px solid #e0e0e0' }}>
-              <p style={{ fontSize: '12px', color: '#999', margin: '8px 0' }}>STATUS</p>
-              <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#27ae60', margin: '0' }}>
-                Confirmed & Processing
+            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '50%' }}></div>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '1.5px', color: 'rgba(255, 255, 255, 0.8)', margin: '0 0 8px 0', textTransform: 'uppercase' }}>Est. Arrival</p>
+              <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#ffffff', margin: '0 0 4px 0', letterSpacing: '-0.5px' }}>
+                {estimatedArrival.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </h3>
+              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', margin: '0', fontWeight: '600' }}>
+                Free Premium Delivery
               </p>
-            </div>
-          </div>
-
-          {/* Shipping Address Card */}
-          <div
-            style={{
-              backgroundColor: 'white',
-              padding: '30px',
-              borderRadius: '12px',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-              border: '2px solid #d4af37',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '15px' }}>
-              <MapPin size={32} style={{ color: '#d4af37', marginRight: '12px', marginTop: '3px' }} />
-              <div>
-                <p style={{ fontSize: '12px', color: '#999', margin: '0 0 8px 0' }}>SHIPPING TO</p>
-                <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#2c2c2c', margin: '0' }}>
-                  {order.shippingAddress?.fullName}
-                </p>
-                <p style={{ fontSize: '13px', color: '#666', margin: '5px 0 0 0' }}>
-                  {order.shippingAddress?.addressline1 || order.shippingAddress?.address || '-'}
-                </p>
-                <p style={{ fontSize: '13px', color: '#666', margin: '0' }}>
-                  {order.shippingAddress?.city || '-'}, {order.shippingAddress?.state || '-'} {order.shippingAddress?.pin || order.shippingAddress?.zipCode || '-'}
-                </p>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Products Section */}
+        {/* Shipping Address Card - Full Width Premium */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+            padding: '30px',
+            borderRadius: '16px',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+            marginBottom: '40px',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ position: 'absolute', top: '0', right: '0', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%)', borderRadius: '50%' }}></div>
+          <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+            <div style={{ flex: '0 0 auto' }}>
+              <MapPin size={36} style={{ color: '#d4af37' }} />
+            </div>
+            <div style={{ flex: '1 1 300px' }}>
+              <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '1.5px', color: '#d4af37', margin: '0 0 8px 0', textTransform: 'uppercase' }}>Shipping To</p>
+              <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#ffffff', margin: '0 0 10px 0' }}>
+                {order.shippingAddress?.fullName}
+              </p>
+              <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)', margin: '0', lineHeight: '1.6' }}>
+                {order.shippingAddress?.addressline1 || order.shippingAddress?.address || '-'}
+                <br />
+                {order.shippingAddress?.city || '-'}, {order.shippingAddress?.state || '-'} {order.shippingAddress?.pin || order.shippingAddress?.zipCode || '-'}
+              </p>
+            </div>
+            <div style={{ flex: '0 0 auto', backgroundColor: 'rgba(212, 175, 55, 0.1)', padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(212, 175, 55, 0.3)' }}>
+              <p style={{ fontSize: '11px', color: '#d4af37', margin: '0 0 5px 0', textTransform: 'uppercase', fontWeight: '600' }}>Payment</p>
+              <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#ffffff', margin: '0' }}>
+                {order.paymentMethod || 'Card'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Premium Products Section */}
         <div style={{ marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#2c2c2c', marginBottom: '20px' }}>
-            Order Items
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '25px', paddingBottom: '15px', borderBottom: '2px solid #d4af37' }}>
+            <ShoppingBag size={28} style={{ color: '#d4af37', marginRight: '12px' }} />
+            <h2 style={{ fontSize: '26px', fontWeight: 'bold', color: '#2c2c2c', margin: '0' }}>
+              Your Selection
+            </h2>
+            <span style={{ marginLeft: 'auto', backgroundColor: '#d4af37', color: 'white', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold' }}>
+              {order.products?.length || 0} {order.products?.length === 1 ? 'Item' : 'Items'}
+            </span>
+          </div>
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '20px',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+              gap: '25px',
             }}
           >
             {order.products?.map((product, idx) => (
@@ -231,35 +243,105 @@ const Confirmation = () => {
                 key={idx}
                 style={{
                   backgroundColor: 'white',
-                  borderRadius: '12px',
+                  borderRadius: '16px',
                   overflow: 'hidden',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  border: '1px solid #e0e0e0',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  border: '1px solid #f0f0f0',
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                  e.currentTarget.style.boxShadow = '0 8px 30px rgba(212, 175, 55, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
                 }}
               >
-                {product.pic && (
-                  <img
-                    src={product.pic}
-                    alt={product.name}
-                    style={{
-                      width: '100%',
-                      height: '200px',
-                      objectFit: 'cover',
-                      backgroundColor: '#f5f5f5',
-                    }}
-                  />
-                )}
-                <div style={{ padding: '15px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#2c2c2c', margin: '0 0 8px 0', minHeight: '40px' }}>
+                {/* Premium Quality Badge */}
+                <div style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 2, background: 'linear-gradient(135deg, #d4af37 0%, #c9a961 100%)', color: 'white', padding: '6px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.5px', boxShadow: '0 2px 10px rgba(212, 175, 55, 0.4)' }}>
+                  Hand-inspected for quality
+                </div>
+                
+                {/* Product Image */}
+                <div style={{ position: 'relative', width: '100%', height: '280px', backgroundColor: '#f9f9f9', overflow: 'hidden' }}>
+                  {product.pic ? (
+                    <img
+                      src={product.pic}
+                      alt={product.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s ease',
+                      }}
+                      onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = `
+                          <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);">
+                            <div style="text-align: center; color: #999;">
+                              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                              </svg>
+                              <p style="margin: 10px 0 0 0; font-size: 12px;">Image Unavailable</p>
+                            </div>
+                          </div>
+                        `;
+                      }}
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%)' }}>
+                      <div style={{ textAlign: 'center', color: '#999' }}>
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                          <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <p style={{ margin: '10px 0 0 0', fontSize: '12px' }}>Product Image</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Product Details */}
+                <div style={{ padding: '20px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 'bold', color: '#2c2c2c', margin: '0 0 12px 0', minHeight: '44px', lineHeight: '1.5', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {product.name}
                   </h4>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: '13px', color: '#666', margin: '0' }}>
-                      Qty: <span style={{ fontWeight: 'bold' }}>{product.qty}</span>
-                    </p>
-                    <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#d4af37', margin: '0' }}>
-                      ₹{(product.total || product.qty * product.price).toFixed(2)}
-                    </p>
+                  
+                  {/* Product Meta Info */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    {product.size && (
+                      <span style={{ backgroundColor: '#f5f5f5', color: '#666', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', border: '1px solid #e0e0e0' }}>
+                        Size: {product.size}
+                      </span>
+                    )}
+                    {product.color && (
+                      <span style={{ backgroundColor: '#f5f5f5', color: '#666', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', border: '1px solid #e0e0e0' }}>
+                        {product.color}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Price & Quantity */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #f0f0f0' }}>
+                    <div>
+                      <p style={{ fontSize: '11px', color: '#999', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quantity</p>
+                      <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#2c2c2c', margin: '0' }}>
+                        {product.qty}
+                      </p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontSize: '11px', color: '#999', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total</p>
+                      <p style={{ fontSize: '18px', fontWeight: 'bold', color: '#d4af37', margin: '0' }}>
+                        ₹{(product.total || product.qty * product.price).toFixed(2)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
