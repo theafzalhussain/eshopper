@@ -55,7 +55,6 @@ export default function OrderTracking() {
   const [toast, setToast] = useState(null)
   const [didCelebrate, setDidCelebrate] = useState(false)
   const [statusTimeline, setStatusTimeline] = useState([])
-  const [downloadingInvoice, setDownloadingInvoice] = useState(false)
 
   const activeIndex = useMemo(() => Math.max(0, STEPS.indexOf(status)), [status])
   const progressPercent = useMemo(() => (activeIndex / (STEPS.length - 1)) * 100, [activeIndex])
@@ -95,78 +94,6 @@ export default function OrderTracking() {
     })),
     [activeIndex, timelineMap]
   )
-
-  const downloadInvoice = async () => {
-    if (!orderId || !userId) return
-    try {
-      setDownloadingInvoice(true)
-      
-      // Keep download action receipt-only for now.
-      const pdfType = 'receipt'
-      
-      // Call the smart endpoint that checks status and generates appropriate PDF
-      const response = await axios.get(
-        `${BASE_URL}/api/orders/${orderId}/download?userId=${userId}&type=${pdfType}`,
-        {
-          responseType: 'arraybuffer',
-          timeout: 30000
-        }
-      )
-
-      const contentType = String(response.headers?.['content-type'] || '').toLowerCase()
-      const bytes = new Uint8Array(response.data)
-      const header = String.fromCharCode(...bytes.slice(0, 4))
-      const isPdf = contentType.includes('application/pdf') && header === '%PDF'
-
-      if (!isPdf) {
-        let errorMessage = 'Unable to generate PDF right now'
-        try {
-          const text = new TextDecoder('utf-8').decode(bytes)
-          const parsed = JSON.parse(text)
-          errorMessage = parsed?.message || errorMessage
-        } catch (_) {
-          errorMessage = 'PDF response invalid. Please try again.'
-        }
-        setToast({
-          id: Date.now(),
-          title: '❌ Download Failed',
-          message: errorMessage
-        })
-        return
-      }
-
-      const blob = new Blob([response.data], { type: 'application/pdf' })
-      const url = window.URL.createObjectURL(blob)
-
-      const previewWindow = window.open(url, '_blank', 'noopener,noreferrer')
-      if (!previewWindow) {
-        console.warn('Popup blocked while opening PDF preview')
-      }
-
-      const fileName = `Receipt-${orderId}.pdf`
-      const link = document.createElement('a')
-      link.href = url
-      link.download = fileName
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      setTimeout(() => window.URL.revokeObjectURL(url), 45000)
-      
-      setToast({
-        id: Date.now(),
-        title: '✅ PDF Ready',
-        message: 'Receipt downloaded and opened in new tab.'
-      })
-    } catch (e) {
-      setToast({
-        id: Date.now(),
-        title: '❌ Download Failed',
-        message: e?.response?.data?.message || 'Unable to download PDF right now'
-      })
-    } finally {
-      setDownloadingInvoice(false)
-    }
-  }
 
   const showStatusToast = (nextStatus) => {
     const statusText = normalizeStatus(nextStatus)
@@ -796,46 +723,6 @@ export default function OrderTracking() {
 
             {/* Secondary Actions - Enhanced Premium Buttons */}
             <div className="d-flex flex-wrap gap-3" style={{ rowGap: '12px' }}>
-            {/* Download Invoice Button - Dynamic based on Status */}
-            <div style={{ position: 'relative', flex: '1 1 auto', minWidth: '150px' }}>
-              <motion.button
-                whileHover={{ 
-                  scale: 1.03,
-                  boxShadow: '0 16px 36px rgba(209,168,74,0.25)',
-                  y: -2
-                }}
-                whileTap={{ scale: 0.95 }}
-                onClick={downloadInvoice}
-                disabled={downloadingInvoice}
-                className="btn btn-sm rounded-pill"
-                style={{ 
-                  width: '100%',
-                  background: downloadingInvoice ? 'linear-gradient(135deg, #e6d5a8, #d4c291)' : 'linear-gradient(135deg, #f5eccc, #ede3b3)',
-                  color: '#7d6122',
-                  border: '1.5px solid #d1a84a',
-                  fontWeight: '700',
-                  fontSize: '13px',
-                  padding: '12px 20px',
-                  letterSpacing: '0.3px',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 8px 20px rgba(209,168,74,0.15)',
-                  cursor: downloadingInvoice ? 'not-allowed' : 'pointer',
-                  opacity: downloadingInvoice ? 0.75 : 1,
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-              >
-                <span style={{ position: 'relative', zIndex: 2 }}>
-                  {downloadingInvoice 
-                    ? '⏳ Generating...' 
-                    : '📥 Download Receipt'
-                  }
-                </span>
-              </motion.button>
-              
-              {/* Verified badge removed with tax-invoice CTA for now. */}
-            </div>
-
               {/* Chat Support Button */}
               <motion.button
                 whileHover={{ 

@@ -27,10 +27,6 @@ const getStatusStyles = (status) => {
   return { bg: '#dcfce7', color: '#16a34a' }
 }
 
-const getInvoiceButtonText = (status) => {
-  return '🧾 Download Receipt'
-}
-
 export default function MyOrders() {
   const navigate = useNavigate()
   const userId = localStorage.getItem('userid')
@@ -44,64 +40,11 @@ export default function MyOrders() {
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-  const [downloadingInvoice, setDownloadingInvoice] = useState('')
   const [socketConnected, setSocketConnected] = useState(false)
 
   const openWhatsAppSupport = (orderId) => {
     const message = `Hi Luxe Support, I need assistance with my Order: ${orderId}`
     window.open(`https://wa.me/918447859784?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
-  }
-
-  const downloadInvoice = async (orderId) => {
-    if (!orderId || !userId) return
-    try {
-      setDownloadingInvoice(orderId)
-      const response = await axios.get(`${BASE_URL}/api/orders/${orderId}/download-invoice?userId=${userId}`, {
-        responseType: 'arraybuffer',
-        timeout: 30000
-      })
-
-      const contentType = String(response.headers?.['content-type'] || '').toLowerCase()
-      const bytes = new Uint8Array(response.data)
-      const header = String.fromCharCode(...bytes.slice(0, 4))
-      const isPdf = contentType.includes('application/pdf') && header === '%PDF'
-
-      if (!isPdf) {
-        let errorMessage = 'Unable to generate invoice right now'
-        try {
-          const text = new TextDecoder('utf-8').decode(bytes)
-          const parsed = JSON.parse(text)
-          errorMessage = parsed?.message || errorMessage
-        } catch (_) {
-          errorMessage = 'Invoice response invalid. Please try again.'
-        }
-        setError(errorMessage)
-        return
-      }
-
-      const blob = new Blob([response.data], { type: 'application/pdf' })
-      const url = window.URL.createObjectURL(blob)
-
-      const previewWindow = window.open(url, '_blank', 'noopener,noreferrer')
-      if (!previewWindow) {
-        console.warn('Popup blocked while opening invoice preview')
-      }
-
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `Invoice-${orderId}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-
-      setTimeout(() => window.URL.revokeObjectURL(url), 45000)
-      setError('')
-    } catch (e) {
-      const serverMessage = e?.response?.data?.message
-      setError(serverMessage || 'Unable to download invoice right now')
-    } finally {
-      setDownloadingInvoice('')
-    }
   }
 
   useEffect(() => {
@@ -570,40 +513,6 @@ export default function MyOrders() {
                   >
                     <span style={{ position: 'relative', zIndex: 2 }}>
                       🔎 Track Order
-                    </span>
-                  </motion.button>
-                  
-                  {/* Download Invoice Button - Dynamic Text */}
-                  <motion.button
-                    whileHover={{ 
-                      scale: 1.03,
-                      boxShadow: '0 20px 40px rgba(209,168,74,0.25)',
-                      y: -3
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => downloadInvoice(item.orderId)}
-                    disabled={downloadingInvoice === item.orderId}
-                    className="btn btn-sm rounded-pill"
-                    style={{ 
-                      flex: '1 1 auto',
-                      minWidth: '180px',
-                      background: downloadingInvoice === item.orderId ? 'linear-gradient(135deg, #e6d5a8, #d4c291)' : 'linear-gradient(135deg, #f5eccc, #ede3b3)',
-                      color: '#7d6122',
-                      border: '1.5px solid #d1a84a',
-                      fontWeight: '700',
-                      fontSize: '13px',
-                      padding: '11px 18px',
-                      letterSpacing: '0.3px',
-                      opacity: downloadingInvoice === item.orderId ? 0.75 : 1,
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 8px 18px rgba(209,168,74,0.2)',
-                      cursor: downloadingInvoice === item.orderId ? 'not-allowed' : 'pointer',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                  >
-                    <span style={{ position: 'relative', zIndex: 2 }}>
-                      {downloadingInvoice === item.orderId ? '⏳ Downloading...' : getInvoiceButtonText(item.orderStatus)}
                     </span>
                   </motion.button>
                   
