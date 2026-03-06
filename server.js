@@ -212,20 +212,10 @@ app.use((err, req, res, next) => {
 
 // 🖼️ BRAND LOGO SOURCES (robust for invoice/email rendering)
 const BRAND_SITE_URL = (process.env.BRAND_SITE_URL || process.env.FRONTEND_URL || 'https://eshopperr.me').trim().replace(/\/$/, '');
-const BRAND_LOGO_PRIMARY_URL = process.env.BRAND_LOGO_URL || `${BRAND_SITE_URL}/assets/eshopper-logo-mark.svg`;
-const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_SITE_URL}/assets/eshopper-logo-horizontal.svg`;
-const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || `${BRAND_SITE_URL}/assets/eshopper-logo-horizontal.svg`;
-
-let BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
-try {
-    const localLogoPath = path.join(__dirname, 'public', 'assets', 'eshopper-logo-mark.svg');
-    if (fs.existsSync(localLogoPath)) {
-        const svg = fs.readFileSync(localLogoPath, 'utf8');
-        BRAND_LOGO_PDF_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-    }
-} catch (logoErr) {
-    console.warn('⚠️ Could not inline local brand logo for PDF:', logoErr.message);
-}
+const BRAND_LOGO_PRIMARY_URL = process.env.BRAND_LOGO_URL || `${BRAND_SITE_URL}/logo512.png`;
+const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_SITE_URL}/logo192.png`;
+const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_PRIMARY_URL;
+const BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
 
 // 🔧 DATABASE CONNECTION SETUP
 const MONGO_URI = process.env.MONGODB_URI;
@@ -349,6 +339,204 @@ const sendMail = async (to, otp) => {
         console.error("❌ BREVO CRITICAL ERROR:", error.response ? error.response.data : error.message);
         throw error;
     }
+};
+
+const SMTP_HOST = process.env.SMTP_HOST ? process.env.SMTP_HOST.trim() : '';
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_USER = process.env.SMTP_USER ? process.env.SMTP_USER.trim() : '';
+const SMTP_PASS = process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : '';
+const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL ? process.env.SMTP_FROM_EMAIL.trim() : 'support@eshopperr.me';
+const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME ? process.env.SMTP_FROM_NAME.trim() : 'eShopper Boutique Luxe';
+const SMTP_ENABLED = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
+
+let smtpTransporter = null;
+if (SMTP_ENABLED) {
+    smtpTransporter = nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_PORT === 465,
+        auth: { user: SMTP_USER, pass: SMTP_PASS }
+    });
+    console.log(`✅ SMTP configured (${SMTP_HOST}:${SMTP_PORT})`);
+} else {
+    console.log('ℹ️ SMTP not fully configured, Brevo API fallback will be used for transactional emails');
+}
+
+const normalizeAttachmentsForBrevo = (attachments = []) => {
+    if (!Array.isArray(attachments) || attachments.length === 0) return [];
+    return attachments
+        .filter(Boolean)
+        .map((item) => {
+            const name = item.filename || item.name || 'attachment.pdf';
+            let content = item.content || item.contentBase64 || '';
+            if (Buffer.isBuffer(content)) {
+                content = content.toString('base64');
+            }
+            return { name, content: String(content || '') };
+        })
+        .filter((item) => item.content.length > 0);
+};
+
+const sendTransactionalEmail = async ({ toEmail, toName, subject, htmlContent, textContent = '', attachments = [] }) => {
+    if (!toEmail || !String(toEmail).includes('@')) {
+        throw new Error('Invalid recipient email');
+    }
+
+    if (smtpTransporter) {
+        const smtpAttachments = (attachments || []).map((item) => {
+            const filename = item.filename || item.name || 'attachment.pdf';
+            const contentType = item.contentType || undefined;
+            let content = item.content || item.contentBase64 || '';
+            if (typeof content === 'string' && /^[A-Za-z0-9+/=]+$/.test(content) && !content.includes('<html')) {
+                content = Buffer.from(content, 'base64');
+            }
+            return { filename, content, contentType };
+        });
+
+        await smtpTransporter.sendMail({
+            from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
+            to: toName ? `"${toName}" <${toEmail}>` : toEmail,
+            subject,
+            html: htmlContent,
+            text: textContent || undefined,
+            replyTo: 'support@eshopperr.me',
+            attachments: smtpAttachments
+        });
+        return { provider: 'nodemailer' };
+    }
+
+    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
+    if (!BREVO_KEY) {
+        throw new Error('No email provider configured (SMTP or BREVO_API_KEY)');
+    }
+
+    const payload = {
+        sender: { name: SMTP_FROM_NAME, email: SMTP_FROM_EMAIL },
+        to: [{ email: toEmail, name: toName || 'Customer' }],
+        subject,
+        htmlContent,
+        replyTo: { email: 'support@eshopperr.me' }
+    };
+
+    if (textContent) payload.textContent = textContent;
+    const brevoAttachments = normalizeAttachmentsForBrevo(attachments);
+    if (brevoAttachments.length > 0) payload.attachment = brevoAttachments;
+
+    await axios.post('https://api.brevo.com/v3/smtp/email', payload, {
+        headers: {
+            'api-key': BREVO_KEY,
+            'content-type': 'application/json',
+            'accept': 'application/json'
+        },
+        timeout: 30000
+    });
+    return { provider: 'brevo' };
+};
+
+const sendAdminAlert = async ({ title, details }) => {
+    const adminEmail = process.env.ADMIN_EMAIL || 'support@eshopperr.me';
+    if (!adminEmail || !adminEmail.includes('@')) return;
+
+    const safeTitle = title || 'System Alert';
+    const safeDetails = details || 'No details provided';
+    const html = `
+        <div style="font-family:Arial,sans-serif;background:#fff3cd;border:1px solid #facc15;padding:16px;border-radius:10px;max-width:640px;margin:0 auto;">
+            <h3 style="margin:0 0 8px 0;color:#7a2e0e;">⚠️ ${safeTitle}</h3>
+            <p style="margin:0 0 8px 0;color:#333;">${safeDetails}</p>
+            <p style="margin:0;color:#666;font-size:12px;">Time: ${new Date().toLocaleString('en-IN')}</p>
+        </div>
+    `;
+
+    try {
+        await sendTransactionalEmail({
+            toEmail: adminEmail,
+            toName: 'Admin',
+            subject: `⚠️ ${safeTitle}`,
+            htmlContent: html,
+            textContent: `${safeTitle}\n${safeDetails}`
+        });
+    } catch (alertErr) {
+        console.error('⚠️ Admin alert send failed:', alertErr.message);
+    }
+};
+
+const EMAIL_QUEUE_ENABLED = String(process.env.EMAIL_QUEUE_ENABLED || 'true').toLowerCase() !== 'false';
+const memoryEmailQueue = [];
+let memoryQueueRunning = false;
+
+let bullEmailQueue = null;
+let bullQueueMode = false;
+
+const executeEmailJob = async (jobType, payload) => {
+    if (jobType === 'order-placed') return sendOrderPlacedEmail(payload);
+    if (jobType === 'order-confirmed') return sendOrderConfirmationEmail(payload);
+    if (jobType === 'order-status') return sendOrderStatusEmail(payload);
+    throw new Error(`Unknown email job type: ${jobType}`);
+};
+
+try {
+    const redisUrl = process.env.REDIS_URL ? process.env.REDIS_URL.trim() : '';
+    if (redisUrl) {
+        const { Queue, Worker } = require('bullmq');
+        const IORedis = require('ioredis');
+        const redisConnection = new IORedis(redisUrl, {
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false
+        });
+
+        bullEmailQueue = new Queue('email-dispatch', { connection: redisConnection });
+        const queueConcurrency = Number(process.env.EMAIL_QUEUE_CONCURRENCY || 4);
+
+        new Worker(
+            'email-dispatch',
+            async (job) => executeEmailJob(job.name, job.data || {}),
+            { connection: redisConnection, concurrency: queueConcurrency }
+        ).on('failed', (job, err) => {
+            console.error(`⚠️ BullMQ email job failed (${job?.name || 'unknown'}):`, err?.message || err);
+            if (process.env.SENTRY_DSN && Sentry && err) Sentry.captureException(err);
+        });
+
+        bullQueueMode = true;
+        console.log(`✅ BullMQ email queue enabled (concurrency: ${queueConcurrency})`);
+    }
+} catch (queueErr) {
+    bullQueueMode = false;
+    console.warn('⚠️ BullMQ unavailable, falling back to in-memory email queue:', queueErr.message);
+}
+
+const processMemoryEmailQueue = async () => {
+    if (memoryQueueRunning) return;
+    memoryQueueRunning = true;
+    while (memoryEmailQueue.length > 0) {
+        const job = memoryEmailQueue.shift();
+        try {
+            await executeEmailJob(job.jobType, job.payload);
+        } catch (queueErr) {
+            console.error(`⚠️ Email queue job failed (${job.jobType}):`, queueErr.message);
+            if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(queueErr);
+        }
+    }
+    memoryQueueRunning = false;
+};
+
+const enqueueEmailJob = async (jobType, payload) => {
+    if (!EMAIL_QUEUE_ENABLED) {
+        return executeEmailJob(jobType, payload);
+    }
+
+    if (bullQueueMode && bullEmailQueue) {
+        await bullEmailQueue.add(jobType, payload || {}, {
+            removeOnComplete: 100,
+            removeOnFail: 200,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 2000 }
+        });
+        return true;
+    }
+
+    memoryEmailQueue.push({ jobType, payload });
+    setImmediate(processMemoryEmailQueue);
+    return true;
 };
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
@@ -676,6 +864,169 @@ const buildOrderReceiptHtml = ({
                                 <strong>Order ID:</strong> ${orderId}
                             </div>
                             <div class="foot-premium">💎 eShopper Boutique Luxe • Premium Edition • Authenticity Guaranteed 💎</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
+// 🔴 BUILD ORDER CONFIRMATION PROFORMA HTML - For verified/confirmed orders
+const buildOrderConfirmationProformaHtml = ({
+    orderId,
+    userName,
+    userEmail,
+    paymentMethod,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    shippingAddress,
+    products,
+    orderDate,
+    estimatedArrival,
+    deliveryPartner
+}) => {
+    const displayName = userName || 'Valued Customer';
+    const safeProducts = Array.isArray(products) ? products : [];
+    const orderDateObj = new Date(orderDate || Date.now());
+    const orderDateText = orderDateObj.toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    const expectedDate = new Date(estimatedArrival || (Date.now() + 6 * 24 * 60 * 60 * 1000));
+    const expectedDateText = expectedDate.toLocaleDateString('en-IN', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+
+    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
+    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
+    const payable = Number(finalAmount || (subtotal + shipping));
+
+    const partner = deliveryPartner || 'Delhivery';
+    const trackingLink = `${BRAND_SITE_URL}/order-tracking/${encodeURIComponent(orderId || '')}`;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(trackingLink)}`;
+
+    const rows = safeProducts.map((item, idx) => {
+        const qty = Number(item.qty || 1);
+        const price = Number(item.price || 0);
+        const line = Number(item.total || (qty * price));
+        const itemDesc = item.name ? `${item.name}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}` : 'Product';
+        return `
+            <tr>
+                <td style="width:8%; text-align:center;">${String(idx + 1).padStart(2, '0')}</td>
+                <td style="width:52%;"><strong>${itemDesc}</strong><br/><span style="font-size:10px;color:#555;">Quality Inspected: Yes</span></td>
+                <td style="width:10%; text-align:center; font-weight:700;">${qty}</td>
+                <td style="width:15%; text-align:right; font-weight:700;">₹${price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                <td style="width:15%; text-align:right; font-weight:800; color:#1f8f54;">₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <style>
+                @page { size: A4 portrait; margin: 12mm; }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { background:#f6f6f4; color:#1a1a1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
+                .wrap { max-width: 900px; margin: 0 auto; padding: 6px; position: relative; }
+                .card { background:#fff; border:2px solid #d4af37; border-radius:12px; overflow:hidden; position:relative; }
+                .watermark { position:absolute; top:110px; left:50%; transform:translateX(-50%) rotate(-18deg); color:rgba(31,143,84,0.10); font-size:52px; font-weight:900; letter-spacing:2px; white-space:nowrap; }
+                .head { padding:18px 20px; background:#faf8f2; border-bottom:1px solid #eadfbf; }
+                .brand { display:flex; align-items:center; gap:10px; }
+                .brand img { width:42px; height:42px; border-radius:8px; border:1px solid #d4af37; background:#fff; object-fit:contain; }
+                .brand-title { font-size:22px; font-weight:900; color:#8b7521; }
+                .title { margin-top:10px; font-size:15px; letter-spacing:1.5px; text-transform:uppercase; font-weight:800; color:#2a2a2a; }
+                .badge { display:inline-block; margin-top:10px; background:linear-gradient(135deg,#1f8f54,#16a34a); color:#fff; font-size:11px; font-weight:900; padding:7px 12px; border-radius:14px; }
+                .body { padding:20px; }
+                .delivery { border:1px solid #d4af37; border-radius:10px; padding:14px; background:#fffaf0; margin-bottom:16px; }
+                .delivery .k { font-size:10px; letter-spacing:1px; color:#8b7521; font-weight:800; text-transform:uppercase; }
+                .delivery .v { margin-top:7px; font-size:18px; color:#111; font-weight:900; }
+                .delivery .sub { margin-top:4px; font-size:12px; color:#555; }
+                .meta { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+                .box { border:1px solid #e6dcc4; border-radius:8px; padding:10px; background:#fcfbf8; }
+                .box .k { font-size:10px; color:#7c6b3a; text-transform:uppercase; letter-spacing:1px; font-weight:800; }
+                .box .v { margin-top:6px; font-size:12px; font-weight:700; color:#222; }
+                table { width:100%; border-collapse:collapse; }
+                th { background:#1a1a1a; color:#d4af37; text-transform:uppercase; font-size:10px; letter-spacing:1px; font-weight:800; padding:10px 8px; text-align:left; }
+                td { border:1px solid #ececec; padding:10px 8px; font-size:12px; }
+                tbody tr:nth-child(odd) { background:#ffffff; }
+                tbody tr:nth-child(even) { background:#f3f3f3; }
+                .summary { margin-top:14px; margin-left:auto; width:280px; border:1px solid #dadada; border-radius:8px; padding:10px 12px; }
+                .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; font-size:12px; }
+                .row:last-child { border-bottom:none; }
+                .grand { font-weight:900; font-size:15px; color:#0f0f0f; }
+                .footer { display:flex; justify-content:space-between; gap:14px; margin-top:18px; }
+                .terms { flex:1; border-left:3px solid #d4af37; background:#faf8f2; padding:10px 12px; font-size:10.5px; color:#555; line-height:1.6; }
+                .qr { width:120px; text-align:center; }
+                .qr img { width:90px; height:90px; border:1px solid #d4af37; border-radius:6px; background:#fff; }
+                .qr p { font-size:10px; color:#666; margin-top:6px; }
+                @media (max-width:700px) {
+                    .meta { grid-template-columns:1fr; }
+                    .footer { flex-direction:column; }
+                    .summary { width:100%; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="wrap">
+                <div class="card">
+                    <div class="watermark">Verified & Confirmed</div>
+                    <div class="head">
+                        <div class="brand">
+                            <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'"/>
+                            <div class="brand-title">eShopper Boutique Luxe</div>
+                        </div>
+                        <div class="title">Order Confirmation Proforma Invoice</div>
+                        <span class="badge">Verified & Confirmed</span>
+                    </div>
+
+                    <div class="body">
+                        <div class="delivery">
+                            <div class="k">Expected Delivery</div>
+                            <div class="v">${expectedDateText}</div>
+                            <div class="sub">Delivery Partner: ${partner}</div>
+                        </div>
+
+                        <div class="meta">
+                            <div class="box"><div class="k">Order ID</div><div class="v">${orderId || '-'}</div></div>
+                            <div class="box"><div class="k">Date</div><div class="v">${orderDateText}</div></div>
+                            <div class="box"><div class="k">Payment</div><div class="v">${paymentMethod || 'COD'} | ₹${payable.toLocaleString('en-IN')}</div></div>
+                        </div>
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:8%">#</th>
+                                    <th style="width:52%">Itemized Detail</th>
+                                    <th style="width:10%">Qty</th>
+                                    <th style="width:15%">Unit</th>
+                                    <th style="width:15%">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows || '<tr><td colspan="5" style="text-align:center">No items found</td></tr>'}</tbody>
+                        </table>
+
+                        <div class="summary">
+                            <div class="row"><span>Subtotal</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
+                            <div class="row"><span>Shipping</span><span>${shipping <= 0 ? 'Free' : `₹${shipping.toLocaleString('en-IN')}`}</span></div>
+                            <div class="row grand"><span>Grand Total</span><span>₹${payable.toLocaleString('en-IN')}</span></div>
+                        </div>
+
+                        <div class="footer">
+                            <div class="terms">
+                                <strong>Cancellation & Return Policy (Summary):</strong><br/>
+                                Orders can be cancelled before dispatch. Return requests are accepted as per policy window for eligible items in original condition with tags and packaging intact.
+                            </div>
+                            <div class="qr">
+                                <img src="${qrSrc}" alt="Support QR"/>
+                                <p>Scan to open Order Tracking</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1280,11 +1631,17 @@ const buildInvoiceHtml = ({
 };
 
 const generateInvoicePdfBuffer = async (orderPayload) => {
-    // Determine which HTML builder to use based on delivery status
-    const isDelivered = orderPayload?.isDelivered || false;
-    const htmlBuilder = isDelivered 
-        ? buildTaxInvoiceHtml 
-        : buildOrderReceiptHtml;
+    // Determine which HTML builder to use based on explicit type + status fallback
+    const requestedType = String(orderPayload?.pdfType || '').trim().toLowerCase();
+    const normalizedStatus = String(orderPayload?.orderStatus || '').trim().toLowerCase();
+    const isDelivered = orderPayload?.isDelivered || normalizedStatus === 'delivered';
+
+    let htmlBuilder = buildOrderReceiptHtml;
+    if (requestedType === 'confirmation' || requestedType === 'proforma' || requestedType === 'confirmed') {
+        htmlBuilder = buildOrderConfirmationProformaHtml;
+    } else if (requestedType === 'final' || requestedType === 'tax' || requestedType === 'invoice' || isDelivered) {
+        htmlBuilder = buildTaxInvoiceHtml;
+    }
     
     const html = htmlBuilder(orderPayload);
     let browser;
@@ -1807,7 +2164,7 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
 };
 
 // 🔴 LUXURY STATUS NOTIFICATION ORCHESTRATOR
-const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName, email, estimatedDelivery, finalAmount }) => {
+const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName, email, estimatedDelivery, finalAmount, totalAmount, shippingAmount, paymentMethod, paymentStatus, shippingAddress, products }) => {
     const displayName = customerName || 'Valued Customer';
     const firstName = displayName.split(' ')[0];
     const trackingLink = `https://eshopperr.me/order-tracking/${orderId}`;
@@ -1828,7 +2185,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     console.log(`ℹ️  WhatsApp skipped for ${orderId} (Packed):`, err.message);
                     throw err;
                 }),
-                sendOrderStatusEmail({
+                enqueueEmailJob('order-status', {
                     toEmail: email,
                     userName: displayName,
                     orderId,
@@ -1837,7 +2194,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     estimatedDelivery,
                     totalAmount: finalAmount
                 }).then(() => {
-                    console.log(`✅ Email sent for ${orderId} (Packed)`);
+                    console.log(`✅ Email queued for ${orderId} (Packed)`);
                     return { type: 'Email', success: true };
                 })
             ]);
@@ -1867,7 +2224,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     console.log(`✅ Shipped WhatsApp sent for ${orderId}`);
                     return { type: 'WhatsApp', success: true };
                 }),
-                sendOrderStatusEmail({
+                enqueueEmailJob('order-status', {
                     toEmail: email,
                     userName: displayName,
                     orderId,
@@ -1876,7 +2233,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     estimatedDelivery,
                     totalAmount: finalAmount
                 }).then(() => {
-                    console.log(`✅ Shipped email sent for ${orderId}`);
+                    console.log(`✅ Shipped email queued for ${orderId}`);
                     return { type: 'Email', success: true };
                 })
             ]);
@@ -1904,7 +2261,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     console.log(`✅ Out for Delivery WhatsApp sent for ${orderId}`);
                     return { type: 'WhatsApp', success: true };
                 }),
-                sendOrderStatusEmail({
+                enqueueEmailJob('order-status', {
                     toEmail: email,
                     userName: displayName,
                     orderId,
@@ -1913,7 +2270,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     estimatedDelivery,
                     totalAmount: finalAmount
                 }).then(() => {
-                    console.log(`✅ Out for Delivery email sent for ${orderId}`);
+                    console.log(`✅ Out for Delivery email queued for ${orderId}`);
                     return { type: 'Email', success: true };
                 })
             ]);
@@ -1932,6 +2289,34 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
 
         else if (status === 'Delivered') {
             // 🎉 DELIVERED: WhatsApp + Email (Parallel)
+            let finalInvoiceBase64 = '';
+            try {
+                const invoiceBuffer = await generateInvoicePdfBuffer({
+                    orderId,
+                    userName: displayName,
+                    userEmail: email,
+                    paymentMethod: paymentMethod || 'Online',
+                    paymentStatus: paymentStatus || 'Paid',
+                    finalAmount: Number(finalAmount || 0),
+                    totalAmount: Number(totalAmount || finalAmount || 0),
+                    shippingAmount: Number(shippingAmount || 0),
+                    shippingAddress: shippingAddress || { fullName: displayName, phone },
+                    products: Array.isArray(products) ? products : [],
+                    orderDate: new Date(),
+                    estimatedArrival: estimatedDelivery,
+                    orderStatus: 'Delivered',
+                    pdfType: 'final',
+                    isDelivered: true
+                });
+                if (invoiceBuffer) finalInvoiceBase64 = invoiceBuffer.toString('base64');
+            } catch (pdfErr) {
+                console.warn(`⚠️ Final invoice generation skipped for ${orderId}:`, pdfErr.message);
+                await sendAdminAlert({
+                    title: 'Final Tax Invoice PDF Failed',
+                    details: `Order ${orderId}: final tax invoice generation failed on Delivered status. Delivered email sent without attachment. Error: ${pdfErr.message}`
+                });
+            }
+
             const whatsappMsg = `🎉 ORDER DELIVERED! 💎✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nCongratulations, ${firstName}!\nYour premium selection has arrived!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n✅ Status: Successfully Delivered\n✅ Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n✅ Delivery Quality: Premium Packaging ✓\n\n🎁 WHAT YOU RECEIVED:\nYour beautifully packaged selection!\n(Check all items are in perfect condition)\n\n⭐ YOUR EXPERIENCE MATTERS!\nPlease share your feedback:\n→ Rate this product\n→ Write a review\n→ Tag us on social media\n\n🔗 PURCHASE LINK: ${trackingLink}\n\n📝 NEXT STEPS:\n✓ Inspect items for quality\n✓ Check packaging condition\n✓ Contact us for any issues\n✓ Share your experience\n\n💰 LOYALTY BONUS:\nGet 5% off on your next purchase!\nUse code at checkout: ESTHANKYOU5\n\n🌟 EXPLORE MORE:\nVisit our collection: https://eshopperr.me\nShop seasonal curations\nDiscover new premium items\n\n❓ SUPPORT:\n📞 WhatsApp: wa.me/918447859784\n📧 Email: support@eshopperr.me\n💬 Chat: Available 9 AM - 9 PM\n\n🙏 THANK YOU!\nFor choosing Eshopper Boutique Luxe\nYour satisfaction is our pride! 💎\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
             // Send both WhatsApp and Email in parallel
@@ -1940,16 +2325,18 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
                     console.log(`✅ Delivered WhatsApp sent for ${orderId}`);
                     return { type: 'WhatsApp', success: true };
                 }),
-                sendOrderStatusEmail({
+                enqueueEmailJob('order-status', {
                     toEmail: email,
                     userName: displayName,
                     orderId,
                     status: 'Delivered',
                     trackingLink,
                     estimatedDelivery,
-                    totalAmount: finalAmount
+                    totalAmount: finalAmount,
+                    invoiceBase64: finalInvoiceBase64,
+                    attachmentName: `FinalTaxInvoice-${orderId}.pdf`
                 }).then(() => {
-                    console.log(`✅ Delivered email sent for ${orderId}`);
+                    console.log(`✅ Delivered email queued for ${orderId}`);
                     return { type: 'Email', success: true };
                 })
             ]);
@@ -1972,9 +2359,8 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
     }
 };
 
-const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount }) => {
-    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-    if (!BREVO_KEY || !toEmail) return false;
+const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, invoiceBase64, attachmentName }) => {
+    if (!toEmail) return false;
 
     const displayName = userName || 'Valued Customer';
     const firstName = displayName.split(' ')[0];
@@ -2164,20 +2550,24 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
 </html>`;
 
     try {
-        await axios.post('https://api.brevo.com/v3/smtp/email', {
-            sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
-            to: [{ email: toEmail, name: displayName }],
+        const attachments = [];
+        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
+            attachments.push({
+                filename: attachmentName || `Invoice-${orderId}.pdf`,
+                content: invoiceBase64.trim(),
+                contentType: 'application/pdf'
+            });
+        }
+
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: displayName,
             subject: `${config.emoji} ${status} - Order ${orderId} | Eshopper Boutique`,
             htmlContent,
-            replyTo: { email: 'support@eshopperr.me' }
-        }, {
-            headers: {
-                'api-key': BREVO_KEY,
-                'content-type': 'application/json',
-                'accept': 'application/json'
-            }
+            attachments
         });
-        console.log(`✅ Status email sent: ${orderId} -> ${status}`);
+
+        console.log(`✅ Status email sent via ${result.provider}: ${orderId} -> ${status}`);
         return true;
     } catch (error) {
         console.error('❌ Status email failed:', error.message);
@@ -2187,11 +2577,6 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
 
 // ==================== EMAIL #1: ORDER PLACED (IMMEDIATE NOTIFICATION) ====================
 const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, products, shippingAddress, invoiceBuffer }) => {
-    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-    if (!BREVO_KEY) {
-        console.error('❌ BREVO_API_KEY not configured');
-        throw new Error('BREVO_API_KEY not configured');
-    }
     if (!toEmail || !toEmail.includes('@')) {
         console.error('❌ Invalid email:', toEmail);
         throw new Error('Invalid toEmail address');
@@ -2336,28 +2721,19 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 </body>
 </html>`;
 
-        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
-            sender: { name: 'eShopper Boutique Luxe', email: 'support@eshopperr.me' },
-            to: [{ email: toEmail, name: userName || 'Customer' }],
+        const attachments = invoiceBuffer
+            ? [{ filename: `Receipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
+            : [];
+
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: userName || 'Customer',
             subject: "We've received your request! 📦",
-            htmlContent: htmlContent,
-            replyTo: { email: 'support@eshopperr.me' },
-            ...(invoiceBuffer && {
-                attachment: [{
-                    content: invoiceBuffer.toString('base64'),
-                    name: `Order-${orderId}-Invoice.pdf`
-                }]
-            })
-        }, {
-            headers: {
-                'api-key': BREVO_KEY,
-                'content-type': 'application/json',
-                'accept': 'application/json'
-            },
-            timeout: 15000
+            htmlContent,
+            attachments
         });
 
-        console.log(`✅ Order Placed email sent to ${toEmail} for ${orderId}`);
+        console.log(`✅ Order Placed email sent via ${result.provider} to ${toEmail} for ${orderId}`);
         return true;
     } catch (error) {
         console.error('❌ Order Placed email failed:', error.message);
@@ -2367,11 +2743,6 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 
 // ==================== EMAIL #2: ORDER CONFIRMED (ULTRA-PREMIUM) ====================
 const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival, invoiceBase64, orderStatus = 'Ordered' }) => {
-    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-    if (!BREVO_KEY) {
-        console.error('❌ BREVO_API_KEY not configured');
-        throw new Error('BREVO_API_KEY not configured');
-    }
     if (!toEmail || !toEmail.includes('@')) {
         console.error('❌ Invalid email:', toEmail);
         throw new Error('Invalid toEmail address');
@@ -2665,24 +3036,20 @@ const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentM
     </body>
 </html>`;
 
-        const mailPayload = {
-            sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
-            to: [{ email: toEmail, name: displayName }],
-            subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
-            htmlContent,
-            replyTo: { email: 'support@eshopperr.me' }
-        };
-
+        const attachments = [];
         if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
-            mailPayload.attachment = [{ content: invoiceBase64.trim(), name: `Invoice-${orderId}.pdf` }];
+            attachments.push({ filename: `Confirmation-${orderId}.pdf`, content: invoiceBase64.trim(), contentType: 'application/pdf' });
         }
 
-        await axios.post('https://api.brevo.com/v3/smtp/email', mailPayload, {
-            headers: { 'api-key': BREVO_KEY, 'content-type': 'application/json', 'accept': 'application/json' },
-            timeout: 30000
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: displayName,
+            subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
+            htmlContent,
+            attachments
         });
 
-        console.log(`✅ Confirmation email sent to ${toEmail}`);
+        console.log(`✅ Confirmation email sent via ${result.provider} to ${toEmail}`);
         return true;
     } catch (error) {
         console.error('❌ Confirmation email failed:', error.message);
@@ -3148,7 +3515,7 @@ app.post('/api/cart/clear/:userid', async (req, res) => {
     }
 });
 
-app.post('/api/place-order', async (req, res) => {
+const placeOrderHandler = async (req, res) => {
     try {
         const { userId, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products } = req.body;
 
@@ -3238,18 +3605,24 @@ app.post('/api/place-order', async (req, res) => {
                 shippingAddress: addressPayload,
                 products: cleanProducts,
                 orderDate,
+                orderStatus: 'Order Placed',
+                pdfType: 'receipt',
                 isDelivered: false  // Email #1: Order Receipt (not yet delivered)
             });
         } catch (invoiceError) {
             console.error('Invoice PDF generation failed:', invoiceError.message);
             if (process.env.SENTRY_DSN) Sentry.captureException(invoiceError);
+            await sendAdminAlert({
+                title: 'Order Placed PDF Failed',
+                details: `Order ${orderId}: receipt PDF generation failed. Email will be sent without attachment. Error: ${invoiceError.message}`
+            });
         }
 
         const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
-        // 📧 EMAIL #1: Send "Order Placed" email immediately
+        // 📧 EMAIL #1: Send "Order Placed" immediately via queue (with Receipt attachment when available)
         try {
-            await sendOrderPlacedEmail({
+            await enqueueEmailJob('order-placed', {
                 toEmail: recipientEmail,
                 userName: user.name,
                 orderId,
@@ -3258,9 +3631,9 @@ app.post('/api/place-order', async (req, res) => {
                 shippingAddress: addressPayload,
                 invoiceBuffer: invoiceBuffer
             });
-            console.log(`✅ Email #1 (Order Placed) sent for ${orderId}`);
+            console.log(`✅ Email #1 (Order Placed) queued for ${orderId}`);
         } catch (email1Error) {
-            console.error('❌ Email #1 (Order Placed) failed:', email1Error.message);
+            console.error('❌ Email #1 (Order Placed) queue failed:', email1Error.message);
             if (process.env.SENTRY_DSN) Sentry.captureException(email1Error);
         }
 
@@ -3275,28 +3648,6 @@ app.post('/api/place-order', async (req, res) => {
             console.error('Email #2 (Order Confirmed) - Prepared but not sent yet');
         }
 
-            try {
-                if (recipientEmail && recipientEmail.includes('@')) {
-                    await axios.post('https://api.brevo.com/v3/smtp/email', {
-                        sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
-                        to: [{ email: recipientEmail, name: user.name || 'Customer' }],
-                        subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
-                        htmlContent: `<div style="font-family:Arial,sans-serif;padding:20px;background:#f8f8f8;"><h2 style="color:#111;">Order Confirmed</h2><p>Hi ${user.name || 'Customer'}, your order <strong>${orderId}</strong> for <strong>₹${Number(payable || 0).toLocaleString('en-IN')}</strong> is confirmed.</p><p>Track: <a href="https://eshopperr.me/order-tracking/${orderId}">https://eshopperr.me/order-tracking/${orderId}</a></p></div>`,
-                        replyTo: { email: 'support@eshopperr.me' }
-                    }, {
-                        headers: {
-                            'api-key': process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '',
-                            'content-type': 'application/json',
-                            'accept': 'application/json'
-                        },
-                        timeout: 15000
-                    });
-                    console.log(`✅ Fallback order email sent for ${orderId}`);
-                }
-            } catch (fallbackEmailError) {
-                console.error(`⚠️ Fallback order email failed for ${orderId}:`, fallbackEmailError.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(fallbackEmailError);
-            }
 
         try {
             const phoneNumber = addressPayload?.phone || user.phone;
@@ -3357,7 +3708,10 @@ app.post('/api/place-order', async (req, res) => {
         if (process.env.SENTRY_DSN) Sentry.captureException(e);
         return res.status(500).json({ message: 'Failed to place order' });
     }
-});
+};
+
+app.post('/api/place-order', placeOrderHandler);
+app.post('/api/orders', placeOrderHandler);
 
 // ==================== TEST NOTIFICATION ENDPOINT ====================
 app.post('/api/test-notification', async (req, res) => {
@@ -3860,9 +4214,11 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
         try {
-            // Check if order is delivered to determine which invoice to show
+            // Map status -> PDF variant
             const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
             const isDelivered = orderStatus === 'delivered';
+            const isConfirmed = orderStatus === 'confirmed' || orderStatus === 'ordered';
+            const pdfType = isDelivered ? 'final' : (isConfirmed ? 'confirmation' : 'receipt');
             
             const pdfBuffer = await generateInvoicePdfBuffer({
                 orderId: order.orderId,
@@ -3876,6 +4232,8 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
                 shippingAddress: order.shippingAddress || {},
                 products: Array.isArray(order.products) ? order.products : [],
                 orderDate: order.orderDate || order.createdAt,
+                orderStatus: order.orderStatus || order.status || 'Ordered',
+                pdfType,
                 isDelivered: isDelivered  // Auto-detect: Receipt or Tax Invoice
             });
 
@@ -3885,7 +4243,9 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
                 return res.status(500).json({ message: 'Invoice generation failed - empty PDF' });
             }
 
-            const fileName = isDelivered ? `TaxInvoice-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`;
+            const fileName = isDelivered
+                ? `TaxInvoice-${order.orderId}.pdf`
+                : (isConfirmed ? `Confirmation-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`);
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
             res.setHeader('Content-Length', String(pdfBuffer.length));
@@ -3918,8 +4278,8 @@ app.get('/api/orders/:orderId/download', async (req, res) => {
             return res.status(400).json({ message: 'orderId and userId are required' });
         }
 
-        if (!['receipt', 'final'].includes(pdfType)) {
-            return res.status(400).json({ message: 'Invalid PDF type. Use "receipt" or "final"' });
+        if (!['receipt', 'confirmation', 'final'].includes(pdfType)) {
+            return res.status(400).json({ message: 'Invalid PDF type. Use "receipt", "confirmation", or "final"' });
         }
 
         // Fetch order
@@ -3932,8 +4292,10 @@ app.get('/api/orders/:orderId/download', async (req, res) => {
         const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
         const isDelivered = orderStatus === 'delivered';
 
-        // Determine filename based on delivery status
-        const fileName = isDelivered ? `TaxInvoice-${orderId}.pdf` : `Receipt-${orderId}.pdf`;
+        // Determine filename based on requested type
+        const fileName = pdfType === 'final'
+            ? `TaxInvoice-${orderId}.pdf`
+            : (pdfType === 'confirmation' ? `Confirmation-${orderId}.pdf` : `Receipt-${orderId}.pdf`);
 
         console.log(`📥 Download Request: Order ${orderId} | Type: ${pdfType} | Status: ${orderStatus} | Delivered: ${isDelivered}`);
 
@@ -3953,8 +4315,9 @@ app.get('/api/orders/:orderId/download', async (req, res) => {
                 shippingAddress: order.shippingAddress || {},
                 products: Array.isArray(order.products) ? order.products : [],
                 orderDate: order.orderDate || order.createdAt,
+                orderStatus: order.orderStatus || order.status || 'Ordered',
                 isDelivered: isDelivered,  // Pass delivery status for footer customization
-                pdfType: pdfType // 'receipt' or 'final'
+                pdfType: pdfType // 'receipt' | 'confirmation' | 'final'
             });
 
             clearTimeout(timeoutId);
@@ -3983,6 +4346,111 @@ app.get('/api/orders/:orderId/download', async (req, res) => {
         console.error('❌ Download endpoint error:', e.message, e.stack);
         if (process.env.SENTRY_DSN) Sentry.captureException(e);
         return res.status(500).json({ message: 'Download error' });
+    }
+});
+
+// 🔴 DYNAMIC INVOICE DOWNLOADER - Auto-detects PDF type based on order status
+app.get('/api/orders/:id/download-invoice', async (req, res) => {
+    try {
+        const orderId = String(req.params.id || '').trim();
+        const userId = String(req.query.userId || '').trim();
+
+        // Validation
+        if (!orderId || !userId) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'orderId and userId are required' 
+            });
+        }
+
+        // Fetch order with authentication check
+        const order = await Order.findOne({ orderId, userid: userId }).lean();
+        if (!order) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Order not found or you do not have access to this order' 
+            });
+        }
+
+        // Determine PDF type based on order status
+        const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+        
+        let pdfType = 'receipt'; // Default for 'Pending'/'Ordered'
+        let fileName = `Receipt-${orderId}.pdf`;
+        
+        if (orderStatus === 'delivered') {
+            // Delivered → Final Tax Invoice
+            pdfType = 'final';
+            fileName = `TaxInvoice-${orderId}.pdf`;
+        } else if (
+            orderStatus === 'confirmed' || 
+            orderStatus === 'packed' || 
+            orderStatus === 'shipped' || 
+            orderStatus === 'out for delivery'
+        ) {
+            // Confirmed to Out for Delivery → Proforma Confirmation
+            pdfType = 'confirmation';
+            fileName = `Confirmation-${orderId}.pdf`;
+        }
+
+        console.log(`📥 Dynamic Invoice Download: ${orderId} | Status: ${orderStatus} → PDF Type: ${pdfType}`);
+
+        // Generate PDF with timeout protection
+        const timeoutId = setTimeout(() => {}, 120000);
+
+        try {
+            const pdfBuffer = await generateInvoicePdfBuffer({
+                orderId: order.orderId,
+                userName: order.userName,
+                userEmail: order.userEmail,
+                paymentMethod: order.paymentMethod,
+                paymentStatus: order.paymentStatus,
+                finalAmount: Number(order.finalAmount || 0),
+                totalAmount: Number(order.totalAmount || 0),
+                shippingAmount: Number(order.shippingAmount || 0),
+                shippingAddress: order.shippingAddress || {},
+                products: Array.isArray(order.products) ? order.products : [],
+                orderDate: order.orderDate || order.createdAt,
+                orderStatus: order.orderStatus || order.status || 'Ordered',
+                isDelivered: orderStatus === 'delivered',
+                pdfType: pdfType
+            });
+
+            clearTimeout(timeoutId);
+
+            // Validate PDF buffer
+            if (!pdfBuffer || pdfBuffer.length < 500) {
+                throw new Error('Generated PDF buffer is invalid or too small');
+            }
+
+            // Stream PDF to frontend with proper headers
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.setHeader('Content-Length', String(pdfBuffer.length));
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+
+            console.log(`✅ Dynamic invoice generated: ${fileName} (${pdfBuffer.length} bytes)`);
+            return res.send(pdfBuffer);
+
+        } catch (pdfErr) {
+            clearTimeout(timeoutId);
+            console.error(`❌ PDF generation failed for ${orderId}:`, pdfErr.message);
+            if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(pdfErr);
+            return res.status(500).json({ 
+                success: false,
+                message: 'Failed to generate invoice. Please try again later.' 
+            });
+        }
+
+    } catch (err) {
+        console.error('❌ Dynamic invoice download error:', err.message, err.stack);
+        if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(err);
+        return res.status(500).json({ 
+            success: false,
+            message: 'Unable to process invoice download request' 
+        });
     }
 });
 
@@ -4188,7 +4656,13 @@ const handleOrderStatusUpdate = async (req, res) => {
                         customerName: resolvedName,
                         email: resolvedEmail,
                         estimatedDelivery: order.estimatedArrival,
-                        finalAmount: order.finalAmount
+                        finalAmount: order.finalAmount,
+                        totalAmount: order.totalAmount,
+                        shippingAmount: order.shippingAmount,
+                        paymentMethod: order.paymentMethod,
+                        paymentStatus: order.paymentStatus,
+                        shippingAddress: order.shippingAddress,
+                        products: order.products
                     });
                 })
                 .catch((lookupErr) => {
@@ -4200,7 +4674,13 @@ const handleOrderStatusUpdate = async (req, res) => {
                         customerName: order.userName,
                         email: order.userEmail,
                         estimatedDelivery: order.estimatedArrival,
-                        finalAmount: order.finalAmount
+                        finalAmount: order.finalAmount,
+                        totalAmount: order.totalAmount,
+                        shippingAmount: order.shippingAmount,
+                        paymentMethod: order.paymentMethod,
+                        paymentStatus: order.paymentStatus,
+                        shippingAddress: order.shippingAddress,
+                        products: order.products
                     });
                 })
                 .catch(err => {
@@ -4258,12 +4738,9 @@ app.post('/api/admin/confirm-order', async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // Generate PDF invoice for Email #2
+        // Generate Proforma PDF for Email #2 (Confirmed)
         let invoiceBase64 = null;
         try {
-            const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-            const isDelivered = orderStatus === 'delivered';
-            
             const invoiceBuffer = await generateInvoicePdfBuffer({
                 orderId: order.orderId,
                 userName: order.userName,
@@ -4276,28 +4753,42 @@ app.post('/api/admin/confirm-order', async (req, res) => {
                 shippingAddress: order.shippingAddress,
                 products: order.products || [],
                 orderDate: order.orderDate || new Date(),
-                isDelivered: isDelivered  // Email #2: Receipt or Tax Invoice based on status
+                estimatedArrival: order.estimatedArrival,
+                deliveryPartner: order.deliveryPartner,
+                orderStatus: 'Confirmed',
+                pdfType: 'confirmation'
             });
             if (invoiceBuffer) {
                 invoiceBase64 = invoiceBuffer.toString('base64');
             }
         } catch (pdfError) {
             console.error('❌ PDF generation for Email #2 failed:', pdfError.message);
+            await sendAdminAlert({
+                title: 'Order Confirmation PDF Failed',
+                details: `Order ${order.orderId}: proforma PDF generation failed. Confirmation email sent without attachment. Error: ${pdfError.message}`
+            });
         }
 
-        // Send Email #2: Order Confirmed (Ultra-Premium)
-        const emailSent = await sendOrderConfirmationEmail({
-            toEmail: order.userEmail,
-            userName: order.userName,
-            orderId: order.orderId,
-            paymentMethod: order.paymentMethod || 'COD',
-            finalAmount: order.finalAmount,
-            shippingAddress: order.shippingAddress,
-            products: order.products || [],
-            estimatedArrival: order.estimatedArrival,
-            invoiceBase64: invoiceBase64,
-            orderStatus: 'Confirmed'
-        });
+        // Send Email #2: Order Confirmed (Ultra-Premium) via queue with Proforma attachment
+        let emailSent = true;
+        try {
+            await enqueueEmailJob('order-confirmed', {
+                toEmail: order.userEmail,
+                userName: order.userName,
+                orderId: order.orderId,
+                paymentMethod: order.paymentMethod || 'COD',
+                finalAmount: order.finalAmount,
+                shippingAddress: order.shippingAddress,
+                products: order.products || [],
+                estimatedArrival: order.estimatedArrival,
+                invoiceBase64: invoiceBase64,
+                orderStatus: 'Confirmed'
+            });
+        } catch (confirmQueueErr) {
+            emailSent = false;
+            console.warn(`⚠️ Email #2 queue failed for ${orderId}:`, confirmQueueErr.message);
+            if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
+        }
 
         if (!emailSent) {
             console.warn(`⚠️ Email #2 (Confirmation) failed for ${orderId}, but updating status anyway`);

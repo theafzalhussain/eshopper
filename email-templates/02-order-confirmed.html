@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmed - Boutique Luxe</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0A0A0A;">
+    <table align="center" width="100%" style="background-color: #0A0A0A; padding: 20px 0;">
+        <tr>
+            <td align="center">
+                <!-- Main Container -->
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; border-radius: 8px; overflow: hidden;">
+                    
+                    <!-- Header with Logo -->
+                    <tr>
+                        <td align="center" style="padding: 30px 20px; background: linear-gradient(135deg, #0A0A0A 0%, #1a1a1a 100%); border-bottom: 2px solid #D4AF37;">
+                            <img src="{{LOGO_URL}}" alt="Boutique Luxe" width="120" height="auto" style="margin-bottom: 15px;">
+                            <h2 style="margin: 0; color: #D4AF37; font-size: 24px; letter-spacing: 2px;">ORDER CONFIRMED</h2>
+                            <p style="margin: 8px 0 0 0; color: #999; font-size: 12px;">Your luxury order is verified and processing</p>
+                        </td>
+                    </tr>
+
+                    <!-- Confirmation Badge -->
+                    <tr>
+                        <td align="center" style="padding: 20px;">
+                            <table align="center" cellpadding="15" cellspacing="0" style="background-color: #0A0A0A; border: 2px solid #4CAF50; border-radius: 6px;">
+                                <tr>
+                                    <td align="center">
+                                        <span style="font-size: 28px; color: #4CAF50;">✓</span>
+                                        <p style="margin: 8px 0 0 0; color: #4CAF50; font-size: 16px; font-weight: 600; letter-spacing: 1px;">CONFIRMED</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Estimated Delivery Hero -->
+                    <tr>
+                        <td style="padding: 25px 20px; text-align: center; background: linear-gradient(135deg, #D4AF37 0%, #c99f2e 100%); border-radius: 4px; margin: 20px;">
+                            <p style="margin: 0; color: #0A0A0A; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Expected Arrival</p>
+                            <h1 style="margin: 8px 0 0 0; color: #0A0A0A; font-size: 28px; font-weight: bold;">{{DELIVERY_DATE}}</h1>
+                            <p style="margin: 8px 0 0 0; color: #1a1a1a; font-size: 12px;">Delivered with our premium service guarantee</p>
+                        </td>
+                    </tr>
+
+                    <!-- The Luxe Promise -->
+                    <tr>
+                        <td style="padding: 20px; background-color: #0A0A0A; border-left: 4px solid #D4AF37;">
+                            <p style="margin: 0 0 10px 0; color: #D4AF37; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Our Luxe Promise</p>
+                            <p style="margin: 0; color: #fff; font-size: 13px; line-height: 1.8;">
+                                Our experts are conducting a comprehensive <strong>10-point quality check</strong> on your items. Each piece is authenticated, sanitized, and packed with meticulous care before shipment. Your satisfaction is our luxury standard.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Order ID & Date -->
+                    <tr>
+                        <td style="padding: 20px;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="50%" style="padding-right: 10px;">
+                                        <p style="margin: 0 0 8px 0; color: #D4AF37; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Order ID</p>
+                                        <p style="margin: 0; color: #fff; font-size: 16px; font-weight: bold;">#ESHP-2026-{{ORDER_ID}}</p>
+                                    </td>
+                                    <td width="50%" style="padding-left: 10px;">
+                                        <p style="margin: 0 0 8px 0; color: #D4AF37; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Confirmed On</p>
+                                        <p style="margin: 0; color: #fff; font-size: 16px; font-weight: bold;">{{CONFIRMATION_DATE}}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Detailed Order Summary -->
+                    <tr>
+                        <td style="padding: 20px;">
+                            <p style="margin: 0 0 15px 0; color: #D4AF37; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Order Summary</p>
+                            
+                            <!-- Price Breakdown -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px;">
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding: 12px 0; color: #fff; font-size: 13px;">Subtotal ({{ITEM_COUNT}} items)</td>
+                                    <td style="padding: 12px 0; color: #fff; font-size: 13px; text-align: right; font-weight: 500;">₹{{SUBTOTAL}}</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding: 12px 0; color: #fff; font-size: 13px;">Shipping Charges</td>
+                                    <td style="padding: 12px 0; color: #4CAF50; font-size: 13px; text-align: right; font-weight: 600;">FREE</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding: 12px 0; color: #fff; font-size: 13px;">GST & Taxes</td>
+                                    <td style="padding: 12px 0; color: #fff; font-size: 13px; text-align: right; font-weight: 500;">₹{{TAX}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 15px 0; color: #D4AF37; font-size: 14px; font-weight: bold; text-transform: uppercase;">Total Paid</td>
+                                    <td style="padding: 15px 0; color: #D4AF37; font-size: 18px; text-align: right; font-weight: bold;">₹{{TOTAL_AMOUNT}}</td>
+                                </tr>
+                            </table>
+
+                            <!-- Item Details -->
+                            <p style="margin: 20px 0 15px 0; color: #D4AF37; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Your Items</p>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                                <!-- Item Row 1 -->
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding: 15px 0; vertical-align: top;">
+                                        <table cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding-right: 12px;">
+                                                    <img src="{{ITEM_1_IMAGE}}" alt="{{ITEM_1_NAME}}" width="85" height="85" style="border-radius: 4px; object-fit: cover; border: 1px solid #333;">
+                                                </td>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0 0 4px 0; color: #fff; font-size: 13px; font-weight: 500;">{{ITEM_1_NAME}}</p>
+                                                    <p style="margin: 0 0 4px 0; color: #999; font-size: 11px;">Size: {{ITEM_1_SIZE}} | SKU: {{ITEM_1_SKU}}</p>
+                                                    <p style="margin: 0; color: #D4AF37; font-size: 12px; font-weight: 600;">₹{{ITEM_1_PRICE}} x {{ITEM_1_QTY}}</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td style="padding: 15px 0; text-align: right; vertical-align: top;">
+                                        <p style="margin: 0; color: #D4AF37; font-size: 14px; font-weight: 600;">₹{{ITEM_1_SUBTOTAL}}</p>
+                                    </td>
+                                </tr>
+                                <!-- Item Row 2 -->
+                                <tr style="border-bottom: 1px solid #333;">
+                                    <td style="padding: 15px 0; vertical-align: top;">
+                                        <table cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding-right: 12px;">
+                                                    <img src="{{ITEM_2_IMAGE}}" alt="{{ITEM_2_NAME}}" width="85" height="85" style="border-radius: 4px; object-fit: cover; border: 1px solid #333;">
+                                                </td>
+                                                <td style="vertical-align: top;">
+                                                    <p style="margin: 0 0 4px 0; color: #fff; font-size: 13px; font-weight: 500;">{{ITEM_2_NAME}}</p>
+                                                    <p style="margin: 0 0 4px 0; color: #999; font-size: 11px;">Size: {{ITEM_2_SIZE}} | SKU: {{ITEM_2_SKU}}</p>
+                                                    <p style="margin: 0; color: #D4AF37; font-size: 12px; font-weight: 600;">₹{{ITEM_2_PRICE}} x {{ITEM_2_QTY}}</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td style="padding: 15px 0; text-align: right; vertical-align: top;">
+                                        <p style="margin: 0; color: #D4AF37; font-size: 14px; font-weight: 600;">₹{{ITEM_2_SUBTOTAL}}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Delivery & Billing Info -->
+                    <tr>
+                        <td style="padding: 20px;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="48%" style="padding-right: 15px; vertical-align: top;">
+                                        <p style="margin: 0 0 10px 0; color: #D4AF37; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Delivery Address</p>
+                                        <table width="100%" cellpadding="12" cellspacing="0" style="background-color: #0A0A0A; border: 1px solid #333; border-radius: 4px;">
+                                            <tr>
+                                                <td style="color: #fff; font-size: 12px; line-height: 1.8; border-left: 3px solid #D4AF37; padding-left: 12px;">
+                                                    <p style="margin: 0; font-weight: 600;">{{CUSTOMER_NAME}}</p>
+                                                    <p style="margin: 6px 0 0 0; color: #999; font-size: 11px;">{{ADDRESS_LINE_1}}</p>
+                                                    <p style="margin: 4px 0 0 0; color: #999; font-size: 11px;">{{CITY}}, {{STATE}} {{PINCODE}}</p>
+                                                    <p style="margin: 4px 0 0 0; color: #999; font-size: 11px;">📞 {{PHONE}}</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td width="48%" style="padding-left: 15px; vertical-align: top;">
+                                        <p style="margin: 0 0 10px 0; color: #D4AF37; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Payment Method</p>
+                                        <table width="100%" cellpadding="12" cellspacing="0" style="background-color: #0A0A0A; border: 1px solid #333; border-radius: 4px;">
+                                            <tr>
+                                                <td style="border-left: 3px solid #D4AF37; padding-left: 12px;">
+                                                    <p style="margin: 0; color: #fff; font-size: 12px; font-weight: 600;">{{PAYMENT_METHOD}}</p>
+                                                    <p style="margin: 4px 0 0 0; color: #4CAF50; font-size: 11px; font-weight: 600;">✓ PAID SUCCESSFULLY</p>
+                                                    <p style="margin: 4px 0 0 0; color: #999; font-size: 11px;">Ref: {{PAYMENT_ID}}</p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Social Proof -->
+                    <tr>
+                        <td style="padding: 20px; text-align: center; background: linear-gradient(135deg, #0A0A0A 0%, #1a1a1a 100%); border-top: 1px solid #333; border-bottom: 1px solid #333;">
+                            <p style="margin: 0; color: #fff; font-size: 13px; line-height: 1.8;">
+                                <span style="color: #D4AF37; font-weight: 600;">🌟 Join our 50k+ Luxe Community</span><br>
+                                <span style="color: #999; font-size: 12px;">Follow us on Instagram @boutique.luxe for exclusive previews, style tips, and member-only deals</span>
+                            </p>
+                            <a href="https://instagram.com/boutique.luxe" style="display: inline-block; margin-top: 10px; padding: 10px 25px; background-color: #E1306C; color: #fff; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 600;">📸 Follow on Instagram</a>
+                        </td>
+                    </tr>
+
+                    <!-- Action Button -->
+                    <tr>
+                        <td style="padding: 20px; text-align: center;">
+                            <a href="{{BASE_URL}}/orders/{{ORDER_ID}}" style="display: inline-block; padding: 14px 40px; background-color: #D4AF37; color: #0A0A0A; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 14px; letter-spacing: 1px; text-transform: uppercase;">Track Your Order</a>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 25px 20px; text-align: center; background: linear-gradient(135deg, #0A0A0A 0%, #1a1a1a 100%); border-top: 1px solid #333;">
+                            <p style="margin: 0 0 15px 0; color: #D4AF37; font-size: 13px; font-weight: 600;">
+                                <strong>Need Assistance?</strong>
+                            </p>
+                            <table align="center" cellpadding="0" cellspacing="10" style="margin-bottom: 15px;">
+                                <tr>
+                                    <td>
+                                        <a href="https://wa.me/919999999999?text=Hi%20Boutique%20Luxe%20I%20have%20a%20question" style="display: inline-block; padding: 10px 20px; background-color: #25D366; color: #fff; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 600;">WhatsApp Support</a>
+                                    </td>
+                                    <td>
+                                        <a href="mailto:support@boutique-luxe.com" style="display: inline-block; padding: 10px 20px; background-color: #D4AF37; color: #0A0A0A; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: 600;">Email Support</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 0; color: #999; font-size: 11px; line-height: 1.6;">
+                                <a href="{{BASE_URL}}/faq" style="color: #D4AF37; text-decoration: none;">FAQ</a> | 
+                                <a href="{{BASE_URL}}/returns" style="color: #D4AF37; text-decoration: none;">Returns</a> | 
+                                <a href="{{BASE_URL}}/privacy" style="color: #D4AF37; text-decoration: none;">Privacy</a>
+                            </p>
+                            <p style="margin: 10px 0 0 0; color: #666; font-size: 10px;">
+                                © 2026 Boutique Luxe. All rights reserved.<br>
+                                Premium Fashion Redefined
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

@@ -27,6 +27,13 @@ const getStatusStyles = (status) => {
   return { bg: '#dcfce7', color: '#16a34a' }
 }
 
+const getInvoiceButtonText = (status) => {
+  const s = normalizeStatus(status)
+  if (s === 'Delivered') return '📄 Download Tax Invoice'
+  if (s === 'Packed' || s === 'Shipped' || s === 'Out for Delivery') return '📋 Download Confirmation'
+  return '🧾 Download Receipt'
+}
+
 export default function MyOrders() {
   const navigate = useNavigate()
   const userId = localStorage.getItem('userid')
@@ -61,7 +68,7 @@ export default function MyOrders() {
     if (!orderId || !userId) return
     try {
       setDownloadingInvoice(orderId)
-      const response = await axios.get(`${BASE_URL}/api/order/${orderId}/invoice?userId=${userId}`, {
+      const response = await axios.get(`${BASE_URL}/api/orders/${orderId}/download-invoice?userId=${userId}`, {
         responseType: 'arraybuffer',
         timeout: 30000
       })
@@ -578,7 +585,7 @@ export default function MyOrders() {
                     </span>
                   </motion.button>
                   
-                  {/* Download Invoice Button */}
+                  {/* Download Invoice Button - Dynamic Text */}
                   <motion.button
                     whileHover={{ 
                       scale: 1.03,
@@ -591,7 +598,7 @@ export default function MyOrders() {
                     className="btn btn-sm rounded-pill"
                     style={{ 
                       flex: '1 1 auto',
-                      minWidth: '140px',
+                      minWidth: '180px',
                       background: downloadingInvoice === item.orderId ? 'linear-gradient(135deg, #e6d5a8, #d4c291)' : 'linear-gradient(135deg, #f5eccc, #ede3b3)',
                       color: '#7d6122',
                       border: '1.5px solid #d1a84a',
@@ -608,7 +615,7 @@ export default function MyOrders() {
                     }}
                   >
                     <span style={{ position: 'relative', zIndex: 2 }}>
-                      {downloadingInvoice === item.orderId ? '⏳ Downloading...' : '📥 Download'}
+                      {downloadingInvoice === item.orderId ? '⏳ Downloading...' : getInvoiceButtonText(item.orderStatus)}
                     </span>
                   </motion.button>
                   
