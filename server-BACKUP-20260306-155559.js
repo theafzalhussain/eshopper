@@ -624,7 +624,7 @@ const getTrackingLink = (orderId) => {
     return `${frontend}/order-tracking/${encodeURIComponent(orderId)}`;
 };
 
-// 🔴 BUILD ORDER RECEIPT HTML - Luxury design with 💎 emoji logo
+// 🔴 BUILD ORDER RECEIPT HTML - Premium design for Order Placed
 const buildOrderReceiptHtml = ({
     orderId,
     userName,
@@ -651,20 +651,27 @@ const buildOrderReceiptHtml = ({
     const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
     const payable = Number(finalAmount || (subtotal + shipping));
 
+    const customerAddress = shippingAddress ? `
+        ${shippingAddress.fullName || displayName}<br/>
+        ${shippingAddress.addressline1 || ''}<br/>
+        ${shippingAddress.addressline2 ? `${shippingAddress.addressline2}<br/>` : ''}
+        ${shippingAddress.city || ''}, ${shippingAddress.state || ''} ${shippingAddress.pincode || ''}<br/>
+        📞 ${shippingAddress.phoneNumber || 'N/A'}<br/>
+        ✉️ ${userEmail || 'N/A'}
+    ` : `${displayName}<br/>${userEmail || 'N/A'}`;
+
     const rows = safeProducts.map((item, idx) => {
         const qty = Number(item.qty || 1);
         const price = Number(item.price || 0);
         const line = Number(item.total || (qty * price));
-        const sizeText = item.size ? ` (Size: ${item.size})` : '';
-        const colorText = item.color ? `, ${item.color}` : '';
-        const itemDesc = `${item.name || 'Product'}${sizeText}${colorText}`;
+        const itemDesc = `${item.name || 'Product'}${item.size ? ` (Size: ${item.size})` : ''}${item.color ? `, ${item.color}` : ''}`;
         return `
             <tr>
-                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#666; border:1px solid #e8dcc8;">${idx + 1}</td>
-                <td style="padding:12px 10px; font-size:13px; color:#111; font-weight:600; border:1px solid #e8dcc8;">${itemDesc}</td>
-                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#111; border:1px solid #e8dcc8;">${qty}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#666; border:1px solid #e8dcc8;">₹${price.toLocaleString('en-IN')}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#d4af37; font-weight:700; border:1px solid #e8dcc8;">₹${line.toLocaleString('en-IN')}</td>
+                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#666;">${idx + 1}</td>
+                <td style="padding:12px 10px; font-size:13px; color:#111; font-weight:600;">${itemDesc}</td>
+                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#111;">${qty}</td>
+                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#666;">₹${price.toLocaleString('en-IN')}</td>
+                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#d4af37; font-weight:700;">₹${line.toLocaleString('en-IN')}</td>
             </tr>
         `;
     }).join('');
