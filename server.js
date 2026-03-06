@@ -642,8 +642,8 @@ const buildOrderReceiptHtml = ({
     const safeProducts = Array.isArray(products) ? products : [];
     const orderDateObj = new Date(orderDate || Date.now());
     const orderDateText = orderDateObj.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
+        day: 'numeric',
+        month: 'long',
         year: 'numeric'
     });
 
@@ -660,28 +660,11 @@ const buildOrderReceiptHtml = ({
         const itemDesc = `${item.name || 'Product'}${sizeText}${colorText}`;
         return `
             <tr>
-                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#666; border:1px solid #e8dcc8;">${idx + 1}</td>
-                <td style="padding:12px 10px; font-size:13px; color:#111; font-weight:600; border:1px solid #e8dcc8;">${itemDesc}</td>
-                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#111; border:1px solid #e8dcc8;">${qty}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#666; border:1px solid #e8dcc8;">₹${price.toLocaleString('en-IN')}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#d4af37; font-weight:700; border:1px solid #e8dcc8;">₹${line.toLocaleString('en-IN')}</td>
-            </tr>
-        `;
-    }).join('');
-
-    return `
-        <!doctype html>
-        <html>
-        <head>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                body { background: #f5f5f3; color: #2c2c2c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
-                .wrap { max-width: 900px; margin: 0 auto; padding: 16px; position: relative; }
-                
-                /* WATERMARK */
+                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#999; border:1px solid #333;">${idx + 1}</td>
+                <td style="padding:12px 10px; font-size:13px; color:#e5e5e5; font-weight:600; border:1px solid #333;">${itemDesc}</td>
+                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#e5e5e5; border:1px solid #333;">${qty}</td>
+                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#aaa; border:1px solid #333;">₹${price.toLocaleString('en-IN')}</td>
+                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#D4AF37; font-weight:700; border:1px solid #333;">₹${line.toLocaleString('en-IN')}</td>
                 .watermark {
                     position: fixed;
                     top: 50%;
@@ -768,38 +751,31 @@ const buildOrderReceiptHtml = ({
 
                     <!-- MAIN CONTENT -->
                     <div class="body">
-                        <h1 class="title">ORDER PLACEMENT RECEIPT</h1>
-                        <p class="subtitle">Your Luxury Purchase has been Registered</p>
+                        <h1 class="title">ORDER RECEIPT</h1>
+                        <p class="subtitle">Thank you for your premium order</p>
                         
                         <!-- STATUS BADGE -->
-                        <div style="text-align: center; margin-bottom: 32px;">
-                            <div class="status-badge">✓ Order Received</div>
-                            <div class="status-message">Our artisans have started verifying your premium selection</div>
+                        <div style="text-align: center; margin-bottom: 28px;">
+                            <div style="display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 10px 24px; border-radius: 20px; font-weight: 900; font-size: 12px; letter-spacing: 1px;">✓ ORDER RECEIVED</div>
                         </div>
 
-                        <!-- NEXT STEPS -->
-                        <div class="next-steps">
-                            <div class="steps-title">⏳ Your Order Journey</div>
-                            <div class="steps-container">
-                                <div class="step">
-                                    <div class="step-icon">✓</div>
-                                    <div class="step-text">Quality Check</div>
+                        <!-- ORDER STEPS -->
+                        <div style="margin: 32px 0;">
+                            <div style="font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center;">⏳ Order Processing Steps</div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
+                                    <div style="font-size: 28px; margin-bottom: 8px;">✓</div>
+                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Quality Check</div>
                                 </div>
-                                <div class="step">
-                                    <div class="step-icon">📦</div>
-                                    <div class="step-text">White-Glove Packing</div>
+                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
+                                    <div style="font-size: 28px; margin-bottom: 8px;">📦</div>
+                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Premium Packaging</div>
                                 </div>
-                                <div class="step">
-                                    <div class="step-icon">🚚</div>
-                                    <div class="step-text">Courier Handover</div>
+                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
+                                    <div style="font-size: 28px; margin-bottom: 8px;">🚚</div>
+                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Dispatch</div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- ESTIMATED DELIVERY -->
-                        <div class="delivery-highlight">
-                            <div class="delivery-label">📅 Expected Delivery</div>
-                            <div class="delivery-date">${deliveryDateText}</div>
                         </div>
 
                         <!-- ORDER DETAILS -->
@@ -2362,11 +2338,11 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     const firstName = displayName.split(' ')[0];
     
     const statusConfig = {
-        'Ordered': { emoji: '✅', color: '#28a745', bg1: '#d4edda', bg2: '#c3e6cb', msg: 'Order Confirmed! Payment received.' },
-        'Packed': { emoji: '📦', color: '#0066cc', bg1: '#d1ecf1', bg2: '#bee5eb', msg: 'Packed & ready for shipment!' },
-        'Shipped': { emoji: '🚚', color: '#ff6600', bg1: '#fff3cd', bg2: '#ffeaa7', msg: 'On the way to you!' },
-        'Out for Delivery': { emoji: '🚗', color: '#ff9500', bg1: '#ffe0b2', bg2: '#ffcc80', msg: 'Out for delivery - arriving today!' },
-        'Delivered': { emoji: '🎉', color: '#27ae60', bg1: '#d4edda', bg2: '#c3e6cb', msg: 'Successfully delivered!' }
+        'Ordered': { emoji: '✅', color: '#16a34a', bg1: '#d1fae5', bg2: '#a7f3d0', msg: 'Order Confirmed! Payment received.', lightBg: '#ecfdf5' },
+        'Packed': { emoji: '📦', color: '#0066cc', bg1: '#dbeafe', bg2: '#bfdbfe', msg: 'Packed with premium care!', lightBg: '#f0f9ff' },
+        'Shipped': { emoji: '🚚', color: '#f59e0b', bg1: '#fef3c7', bg2: '#fde68a', msg: 'On premium delivery!', lightBg: '#fffbeb' },
+        'Out for Delivery': { emoji: '🚗', color: '#f97316', bg1: '#ffedd5', bg2: '#fed7aa', msg: 'Arriving today with care!', lightBg: '#fff7ed' },
+        'Delivered': { emoji: '🎉', color: '#16a34a', bg1: '#d1fae5', bg2: '#a7f3d0', msg: 'Successfully delivered!', lightBg: '#ecfdf5' }
     };
     
     const config = statusConfig[status] || { emoji: '📦', color: '#111827', bg1: '#f9fafb', bg2: '#f3f4f6', msg: status };
@@ -2378,31 +2354,30 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#f5f5f5; }
-        .container { max-width:600px; margin:0 auto; background:#fff; }
-        .header { background:linear-gradient(135deg,#0f0f0f,#1a1a1a); padding:24px 18px; }
+        body { margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#0A0A0A; }
+        .container { max-width:600px; margin:0 auto; background:#0A0A0A; border:2px solid #D4AF37; border-radius:12px; overflow:hidden; }
+        .header { background:linear-gradient(135deg,#1a1a1a,#0A0A0A); padding:32px 24px; text-align:center; border-bottom:3px solid #D4AF37; }
         .brand-table { width:100%; border-collapse:collapse; table-layout:fixed; }
         .brand-left { width:64px; text-align:left; vertical-align:middle; }
         .brand-center { text-align:center; vertical-align:middle; }
         .brand-spacer { width:64px; }
-        .brand-badge { width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg,#0a0a0a,#16213e); border:2px solid #d4af37; color:#ffd700; font-size:28px; font-weight:900; line-height:44px; text-align:center; overflow:hidden; }
-        .brand-badge img { width:100%; height:100%; object-fit:contain; display:block; }
-        .brand-title { font-size:30px; font-weight:900; color:#f9e7b2; letter-spacing:1px; margin:0; line-height:1.2; }
-        .tagline { font-size:11px; color:#d4af37; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin:8px 0 0 0; }
-        .status-banner { background:linear-gradient(135deg,${config.bg1},${config.bg2}); padding:40px 24px; text-align:center; border-bottom:4px solid ${config.color}; }
+        .logo-emoji { font-size:56px; line-height:1; margin:0 auto 16px; }
+        .brand-title { font-size:28px; font-weight:900; color:#D4AF37; letter-spacing:1.5px; margin:0; line-height:1.2; text-transform:uppercase; }
+        .tagline { font-size:12px; color:#888; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; margin:8px 0 0 0; }
+        .status-banner { background:linear-gradient(135deg,${config.bg1},${config.bg2}); padding:40px 24px; text-align:center; border-bottom:4px solid ${config.color}; margin:0; }
         .emoji-large { font-size:72px; line-height:1; margin:0 0 16px 0; }
         .status-title { font-size:28px; font-weight:800; color:${config.color}; margin:0 0 8px 0; letter-spacing:0.5px; }
         .status-subtitle { font-size:14px; color:${config.color}; opacity:0.85; margin:0; }
-        .content { padding:32px 24px; }
-        .greeting { margin:0 0 28px 0; }
-        .greeting h2 { margin:0 0 12px 0; font-size:24px; color:#111827; font-weight:700; }
-        .greeting p { margin:0; color:#555; font-size:15px; line-height:1.6; }
+        .content { padding:32px 24px; background:#0A0A0A; }
+        .greeting { margin:0 0 24px 0; }
+        .greeting h2 { margin:0 0 12px 0; font-size:20px; color:#fff; font-weight:700; }
+        .greeting p { margin:0; color:#aaa; font-size:14px; line-height:1.6; }
         .cards { display:flex; gap:16px; flex-wrap:wrap; margin:0 0 28px 0; }
         .card { flex:1; min-width:200px; padding:20px; border-radius:12px; text-align:center; }
-        .card-dark { background:linear-gradient(135deg,#111827,#1f2937); border:1px solid #333; }
+        .card-dark { background:#1a1a1a; border:1px solid #333; }
         .card-colored { background:linear-gradient(135deg,${config.bg1},${config.bg2}); border:2px solid ${config.color}; }
         .card-label { font-size:11px; letter-spacing:1.5px; color:${config.color}; text-transform:uppercase; font-weight:700; margin:0 0 8px 0; }
-        .card-value { font-size:20px; font-weight:900; color:#fff; margin:0; }
+        .card-value { font-size:20px; font-weight:900; color:#fff; margin:0 0 4px 0; }
         .card-sub { font-size:12px; color:#9ca3af; margin:8px 0 0 0; }
         .card-dark .card-label { color:#d4af37; }
         .card-dark .card-value { color:#fff; }
@@ -2414,20 +2389,20 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
         .info-title { font-size:13px; font-weight:700; color:${config.color}; text-transform:uppercase; margin:0 0 8px 0; }
         .info-text { font-size:14px; color:#333; margin:0; line-height:1.6; }
         .button-group { margin:0 0 28px 0; }
-        .button { display:block; background:linear-gradient(135deg,#111827,#1f2937); color:#fff; padding:16px 32px; border-radius:12px; text-decoration:none; font-weight:700; text-align:center; font-size:15px; letter-spacing:0.5px; margin:0 0 12px 0; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
-        .button:hover { opacity:0.9; }
-        .support-box { background:#f7e8a9; padding:30px 20px; border-radius:26px; border:4px solid #efb11f; text-align:center; margin:0 0 20px 0; }
-        .support-emoji { font-size:56px; margin:0 0 10px 0; line-height:1; }
-        .support-title { font-size:36px; font-weight:900; color:#7b340f; margin:0 0 10px 0; letter-spacing:0.1px; }
-        .support-text { font-size:15px; color:#a34d12; margin:0 0 20px 0; line-height:1.5; }
-        .support-links { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; align-items:center; }
-        .support-link { display:inline-flex; align-items:center; justify-content:center; min-width:160px; padding:11px 18px; border-radius:13px; text-decoration:none; font-weight:900; font-size:18px; letter-spacing:0.3px; text-transform:uppercase; }
-        .link-email { background:#ffffff; color:#124ac1; border:2px solid #efb11f; }
-        .link-whatsapp { background:#22c55e; color:#124ac1; border:2px solid #22c55e; }
-        .footer { background:linear-gradient(135deg,#111827,#0f0f0f); padding:32px 24px; text-align:center; }
-        .footer-logo { font-size:18px; font-weight:800; background:linear-gradient(135deg,#ffd700,#d4af37); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin:0 0 12px 0; }
-        .footer-text { font-size:12px; color:#9ca3af; margin:0; }
-        .footer-link { color:#d4af37; text-decoration:none; font-weight:600; }
+        .button { display:block; background:#D4AF37; color:#0A0A0A; padding:16px 32px; border-radius:8px; text-decoration:none; font-weight:900; text-align:center; font-size:15px; letter-spacing:1px; margin:0 0 12px 0; box-shadow:0 4px 12px rgba(212,175,55,0.3); transition:all 0.3s; }
+        .button:hover { transform:translateY(-2px); }
+        .support-box { background:linear-gradient(135deg,#1a1a1a,#0A0A0A); padding:28px 24px; border-radius:12px; border-left:4px solid #D4AF37; text-align:center; margin:0 0 20px 0; }
+        .support-emoji { font-size:48px; margin:0 0 12px 0; line-height:1; }
+        .support-title { font-size:22px; font-weight:900; color:#D4AF37; margin:0 0 10px 0; letter-spacing:1px; }
+        .support-text { font-size:14px; color:#aaa; margin:0 0 18px 0; line-height:1.6; }
+        .support-links { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+        .support-link { display:inline-block; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; letter-spacing:0.5px; text-transform:uppercase; }
+        .link-email { background:#D4AF37; color:#0A0A0A; }
+        .link-whatsapp { background:#22c55e; color:#fff; }
+        .footer { background:#0A0A0A; padding:28px 24px; text-align:center; border-top:2px solid #333; }
+        .footer-logo { font-size:18px; font-weight:900; color:#D4AF37; margin:0 0 10px 0; letter-spacing:1px; }
+        .footer-text { font-size:12px; color:#666; margin:0 0 4px 0; line-height:1.6; }
+        .footer-link { color:#D4AF37; text-decoration:none; font-weight:700; }
         @media (max-width:600px) {
             .cards { flex-direction:column; }
             .card { min-width:100% !important; }
@@ -2453,20 +2428,9 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                    <td class="brand-left">
-                        <div class="brand-badge">
-                            <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-                        </div>
-                    </td>
-                    <td class="brand-center">
-                        <p class="brand-title">eShopper Boutique Luxe</p>
-                        <p class="tagline">Order Status Update</p>
-                    </td>
-                    <td class="brand-spacer"></td>
-                </tr>
-            </table>
+            <div class="logo-emoji">💎</div>
+            <h1 class="brand-title">eShopper</h1>
+            <p class="tagline">Boutique Luxe • Order Update</p>
         </div>
 
         <!-- Status Banner -->
@@ -2584,15 +2548,16 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
         
         const productRows = safeProducts.slice(0, 3).map(p => `
             <tr>
-                <td style="padding:12px; border-bottom:1px solid #333; vertical-align:top;">
+                <td style="padding:14px; border-bottom:1px solid #222; vertical-align:middle;">
                     <table width="100%" cellpadding="0" cellspacing="0" border="0">
                         <tr>
-                            <td style="width:70px; padding-right:12px;">
-                                ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:70px; height:70px; object-fit:cover; border-radius:8px; border:1px solid #444;" />` : `<div style="width:70px; height:70px; background:#1a1a1a; border-radius:8px; border:1px solid #444; display:flex; align-items:center; justify-content:center; font-size:28px;">📦</div>`}
+                            <td style="width:80px; padding-right:14px; vertical-align:middle;">
+                                ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid #D4AF37; display:block;" />` : `<div style="width:80px; height:80px; background:#1a1a1a; border-radius:8px; border:2px solid #D4AF37; display:table-cell; text-align:center; vertical-align:middle; font-size:32px;">📦</div>`}
                             </td>
-                            <td style="vertical-align:top;">
-                                <div style="font-weight:700; color:#fff; font-size:14px; margin:0 0 6px 0;">${p.name}</div>
-                                <div style="font-size:12px; color:#999;">Qty: <strong>${p.qty || 1}</strong> | ₹${Number(p.price || 0).toLocaleString()}</div>
+                            <td style="vertical-align:middle;">
+                                <div style="font-weight:700; color:#fff; font-size:15px; margin:0 0 6px 0;">${p.name}</div>
+                                <div style="font-size:13px; color:#aaa;">Quantity: <strong style="color:#D4AF37;">${p.qty || 1}</strong></div>
+                                <div style="font-size:13px; color:#aaa; margin-top:4px;">Price: <strong style="color:#D4AF37;">₹${Number(p.price || 0).toLocaleString('en-IN')}</strong></div>
                             </td>
                         </tr>
                     </table>
@@ -2607,111 +2572,109 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { box-sizing:border-box; margin:0; padding:0; }
-        body { font-family:sans-serif; background:#050505; color:#fff; }
-        .header-bar { background:linear-gradient(135deg, #d4af37 0%, #ffd700 100%); padding:16px 0; text-align:center; }
-        .header-text { color:#050505; font-size:13px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; }
-        .container { max-width:600px; margin:0 auto; background:#0f0f0f; }
-        .header { padding:32px 24px; text-align:center; background:linear-gradient(180deg, #1a1a1a 0%, #050505 100%); border-bottom:3px solid #d4af37; }
-        .logo { width:45px; height:45px; margin:0 auto 16px; }
-        .logo img { width:100%; height:auto; }
-        .title { font-size:28px; font-weight:900; color:#d4af37; margin:0; letter-spacing:1px; text-transform:uppercase; }
-        .subtitle { font-size:12px; color:#999; margin:8px 0 0 0; letter-spacing:1px; }
-        .badge { display:inline-block; background:#d4af37; color:#050505; padding:8px 16px; border-radius:20px; font-size:11px; font-weight:900; margin-top:12px; }
-        .content { padding:32px 24px; }
-        .greeting-box { background:linear-gradient(135deg, #1a3a52, #0d2436); padding:20px; border-radius:12px; border-left:4px solid #d4af37; margin-bottom:30px; }
-        .greeting { font-size:15px; color:#e5e7eb; line-height:1.6; margin:0; }
-        .greeting strong { color:#d4af37; }
-        .section-title { font-size:13px; font-weight:900; color:#d4af37; margin:0 0 16px 0; text-transform:uppercase; letter-spacing:1px; }
-        .order-id-box { background:#1a1a1a; padding:20px; border-radius:12px; border:2px solid #d4af37; margin-bottom:30px; text-align:center; }
-        .order-id-label { font-size:11px; color:#999; text-transform:uppercase; letter-spacing:1px; margin:0 0 8px 0; }
-        .order-id { font-size:24px; font-weight:900; color:#d4af37; margin:0; letter-spacing:1px; }
-        .order-date { font-size:12px; color:#666; margin:12px 0 0 0; }
-        .product-table { width:100%; border-collapse:collapse; background:#1a1a1a; border-radius:8px; overflow:hidden; margin-bottom:30px; }
-        .product-table td { color:#fff; }
-        .product-table tr:last-child td { border-bottom:none; }
-        .amount-box { background:#1a1a1a; padding:20px; border-radius:12px; border:1px solid #333; margin-bottom:30px; }
-        .amount-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #333; font-size:14px; }
-        .amount-row:last-child { border-bottom:none; border-top:2px solid #d4af37; padding-top:14px; margin-top:8px; }
-        .amount-label { color:#999; }
-        .amount-value { color:#fff; font-weight:700; }
-        .total-value { color:#d4af37; font-size:20px; font-weight:900; }
-        .button { display:block; background:#d4af37; color:#050505; padding:14px 28px; border-radius:8px; text-decoration:none; font-weight:900; text-align:center; frequency:14px; margin:30px 0; transition:all 0.3s; }
-        .button:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(212,175,55,0.4); }
-        .footer { padding:30px 24px; text-align:center; border-top:1px solid #333; background:#050505; }
-        .footer-text { font-size:12px; color:#666; margin:8px 0; }
-        .footer-link { color:#d4af37; text-decoration:none; font-weight:700; }
+        body { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#0A0A0A; color:#fff; line-height:1.6; }
+        .email-wrapper { width:100%; background:#0A0A0A; padding:20px 0; }
+        .container { max-width:600px; margin:0 auto; background:#0A0A0A; border:2px solid #D4AF37; border-radius:12px; overflow:hidden; }
+        .header { padding:40px 30px; text-align:center; background:linear-gradient(180deg, #1a1a1a 0%, #0A0A0A 100%); border-bottom:3px solid #D4AF37; }
+        .logo-emoji { font-size:56px; margin:0 auto 18px; width:70px; height:70px; line-height:70px; }
+        .brand-name { font-size:32px; font-weight:900; color:#D4AF37; margin:0 0 8px 0; letter-spacing:1.5px; text-transform:uppercase; }
+        .tagline { font-size:13px; color:#888; margin:0; letter-spacing:1.2px; text-transform:uppercase; }
+        .status-badge { display:inline-block; background:#D4AF37; color:#0A0A0A; padding:10px 24px; border-radius:25px; font-size:12px; font-weight:900; margin-top:16px; letter-spacing:1px; }
+        .content { padding:40px 30px; }
+        .greeting-box { background:#1a1a1a; padding:24px; border-radius:10px; border-left:4px solid #D4AF37; margin-bottom:30px; }
+        .greeting { font-size:16px; color:#e5e5e5; line-height:1.7; margin:0; }
+        .greeting strong { color:#D4AF37; font-weight:700; }
+        .section-title { font-size:14px; font-weight:900; color:#D4AF37; margin:0 0 18px 0; text-transform:uppercase; letter-spacing:1.2px; }
+        .order-id-box { background:#1a1a1a; padding:24px; border-radius:10px; border:2px solid #D4AF37; margin-bottom:30px; text-align:center; }
+        .order-id-label { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 10px 0; }
+        .order-id { font-size:26px; font-weight:900; color:#D4AF37; margin:0; letter-spacing:1.2px; font-family:monospace; }
+        .order-date { font-size:13px; color:#666; margin:14px 0 0 0; }
+        .info-table { width:100%; border-collapse:collapse; background:#1a1a1a; border-radius:10px; overflow:hidden; margin-bottom:30px; border:1px solid #333; }
+        .info-table td { padding:14px; color:#e5e5e5; font-size:14px; border-bottom:1px solid #222; }
+        .info-table tr:last-child td { border-bottom:none; }
+        .amount-box { background:#1a1a1a; padding:24px; border-radius:10px; border:1px solid #333; margin-bottom:30px; }
+        .amount-row { display:table; width:100%; padding:12px 0; border-bottom:1px solid #333; font-size:15px; }
+        .amount-row:last-child { border-bottom:none; border-top:2px solid #D4AF37; padding-top:16px; margin-top:10px; }
+        .amount-label { display:table-cell; color:#aaa; }
+        .amount-value { display:table-cell; color:#fff; font-weight:700; text-align:right; }
+        .total-value { color:#D4AF37; font-size:22px; font-weight:900; }
+        .track-button { display:block; background:#D4AF37; color:#0A0A0A; padding:16px 32px; border-radius:8px; text-decoration:none; font-weight:900; text-align:center; font-size:15px; margin:30px 0; transition:all 0.3s; letter-spacing:0.5px; }
+        .track-button:hover { background:#ffd700; transform:translateY(-2px); }
+        .info-note { font-size:13px; color:#666; text-align:center; margin-top:28px; line-height:1.6; }
+        .footer { padding:32px 30px; text-align:center; border-top:2px solid #333; background:#0A0A0A; }
+        .footer-brand { font-size:18px; font-weight:900; color:#D4AF37; margin:0 0 6px 0; letter-spacing:1px; }
+        .footer-text { font-size:12px; color:#666; margin:6px 0; }
+        .footer-link { color:#D4AF37; text-decoration:none; font-weight:700; }
+        .footer-link:hover { color:#ffd700; }
         @media (max-width:600px) {
-            .header { padding:24px 16px; }
-            .content { padding:20px 16px; }
-            .footer { padding:20px 16px; }
-            .title { font-size:22px; }
-            .greeting-box { padding:16px; }
-            .product-table td { padding:10px 8px !important; font-size:13px; }
-            .button { padding:12px 24px; font-size:13px; }
+            .header { padding:30px 20px; }
+            .content { padding:30px 20px; }
+            .footer { padding:24px 20px; }
+            .brand-name { font-size:26px; }
+            .logo-emoji { font-size:48px; width:60px; height:60px; line-height:60px; }
+            .greeting-box { padding:18px; }
+            .info-table td { padding:12px 10px; font-size:13px; }
+            .track-button { padding:14px 28px; font-size:14px; }
         }
     </style>
 </head>
 <body>
-    <div class="header-bar">
-        <p class="header-text">✨ ORDER RECEIVED ✨</p>
-    </div>
-    
-    <div class="container">
-        <div class="header">
-            <div class="logo">
-                <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-            </div>
-            <h1 class="title">We've Received Your Request!</h1>
-            <p class="subtitle">Thank you for choosing eShopper Boutique Luxe</p>
-            <span class="badge">📦 ORDER PLACED</span>
-        </div>
-        
-        <div class="content">
-            <div class="greeting-box">
-                <p class="greeting">Hi <strong>${firstName}</strong>,</p>
-                <p class="greeting" style="margin-top:8px;">We've received your order. Our premium team is now reviewing and processing your request. You'll receive a confirmation email shortly with full details.</p>
+    <div class="email-wrapper">
+        <div class="container">
+            <div class="header">
+                <div class="logo-emoji">💎</div>
+                <h1 class="brand-name">eShopper</h1>
+                <p class="tagline">Boutique Luxe</p>
+                <span class="status-badge">📦 ORDER RECEIVED</span>
             </div>
             
-            <p class="section-title">📋 Order Details</p>
-            <div class="order-id-box">
-                <p class="order-id-label">Your Order ID</p>
-                <p class="order-id">${orderId}</p>
-                <p class="order-date">Placed on ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-            </div>
-            
-            ${safeProducts.length > 0 ? `
-            <p class="section-title">📦 Items in Your Order</p>
-            <table class="product-table">
-                <tbody>${productRows}</tbody>
-            </table>
-            ${safeProducts.length > 3 ? `<p style="font-size:12px; color:#999; margin:-20px 0 20px 0;">+ ${safeProducts.length - 3} more item(s)</p>` : ''}
-            ` : ''}
-            
-            <p class="section-title">💰 Order Total</p>
-            <div class="amount-box">
-                <div class="amount-row">
-                    <span class="amount-label">Total Amount</span>
-                    <span class="amount-value total-value">₹ ${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+            <div class="content">
+                <div class="greeting-box">
+                    <p class="greeting">Hello <strong>${firstName}</strong>,</p>
+                    <p class="greeting" style="margin-top:10px;">Thank you for choosing eShopper! We've successfully received your order and our team is now reviewing your request. You'll receive a detailed confirmation email shortly with all order information.</p>
                 </div>
+                
+                <p class="section-title">📋 Order Summary</p>
+                <div class="order-id-box">
+                    <p class="order-id-label">Order ID</p>
+                    <p class="order-id">${orderId}</p>
+                    <p class="order-date">Placed on ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                </div>
+                
+                ${safeProducts.length > 0 ? `
+                <p class="section-title">🛍️ Items Ordered</p>
+                <table class="info-table">
+                    <tbody>${productRows}</tbody>
+                </table>
+                ${safeProducts.length > 3 ? `<p style="font-size:13px; color:#888; margin:-20px 0 25px 0; text-align:center;">+ ${safeProducts.length - 3} more item(s) in your order</p>` : ''}
+                ` : ''}
+                
+                <p class="section-title">💰 Payment Details</p>
+                <div class="amount-box">
+                    <div class="amount-row">
+                        <span class="amount-label">Order Total</span>
+                        <span class="amount-value total-value">₹ ${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                </div>
+                
+                <a href="https://eshopperr.me/order-tracking/${orderId}" class="track-button">TRACK YOUR ORDER</a>
+                
+                <p class="info-note">
+                    📧 You'll receive a confirmation email with complete order details and invoice shortly.<br>
+                    <span style="display:block; margin-top:8px; font-size:12px; color:#555;">Our team is processing your request...</span>
+                </p>
             </div>
             
-            <a href="https://eshopperr.me/order-tracking/${orderId}" class="button">Track Your Order</a>
-            
-            <p style="font-size:13px; color:#666; text-align:center; margin-top:24px;">
-                📧 Keep an eye on your inbox for the full order confirmation email.<br>
-                <span style="display:block; margin-top:8px; font-size:11px;">Expected shortly...</span>
-            </p>
-        </div>
-        
-        <div class="footer">
-            <p class="footer-text">eShopper Boutique Luxe</p>
-            <p class="footer-text">Premium Fashion Destination</p>
-            <p class="footer-text" style="margin-top:16px;">
-                <a href="mailto:support@eshopperr.me" class="footer-link">📧 support@eshopperr.me</a>
-            </p>
-            <p class="footer-text" style="margin-top:8px; font-size:10px; color:#555;">
-                This is an automated message. Please don't reply directly to this email.
-            </p>
+            <div class="footer">
+                <p class="footer-brand">eShopper Boutique Luxe</p>
+                <p class="footer-text">Premium Fashion & Lifestyle Destination</p>
+                <p class="footer-text" style="margin-top:16px;">
+                    <a href="mailto:support@eshopperr.me" class="footer-link">📧 support@eshopperr.me</a>
+                </p>
+                <p class="footer-text" style="margin-top:10px; font-size:11px; color:#555;">
+                    This is an automated notification. Please do not reply to this email.
+                </p>
+            </div>
         </div>
     </div>
 </body>
@@ -2724,7 +2687,7 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
         const result = await sendTransactionalEmail({
             toEmail,
             toName: userName || 'Customer',
-            subject: "We've received your request! 📦",
+            subject: "✨ Order Received - Thank You for Shopping with Us!",
             htmlContent,
             attachments
         });
