@@ -156,8 +156,8 @@ const normalizeOrderStatus = (s = '') => {
     return null;
 };
 
-// Feature toggles for clean baseline (disabled by default).
-const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'false').toLowerCase() === 'true';
+// Feature toggles for clean baseline (enable email notifications).
+const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'true').toLowerCase() === 'true';
 const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
 const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'false').toLowerCase() === 'true';
 
@@ -548,6 +548,226 @@ const enqueueEmailJob = async (jobType, payload) => {
     memoryEmailQueue.push({ jobType, payload });
     setImmediate(processMemoryEmailQueue);
     return true;
+};
+
+// ==================== 🎨 EMAIL TEMPLATE SYSTEM - PREMIUM AUTOMATION ====================
+const Handlebars = require('handlebars');
+const fsPromises = require('fs').promises;
+
+// Load and compile email template with Handlebars
+const loadEmailTemplate = async (templateName, data) => {
+    try {
+        const templatePath = path.join(__dirname, 'email-templates', templateName);
+        const templateSource = await fsPromises.readFile(templatePath, 'utf-8');
+        const template = Handlebars.compile(templateSource);
+        return template(data);
+    } catch (error) {
+        console.error(`❌ Error loading template ${templateName}:`, error.message);
+        throw error;
+    }
+};
+
+// Map order status to email template file
+const ORDER_STATUS_TEMPLATES = {
+    'order placed': '01-order-placed.html',
+    'placed': '01-order-placed.html',
+    'ordered': '02-order-confirmed.html',
+    'confirmed': '02-order-confirmed.html',
+    'packed': '03-order-packed.html',
+    'shipped': '04-order-shipped.html',
+    'out for delivery': '05-out-for-delivery.html',
+    'delivered': '06-order-delivered.html'
+};
+
+// Get email subject by status
+const getEmailSubject = (status, orderId) => {
+    const statusLower = String(status || '').toLowerCase();
+    const subjects = {
+        'order placed': `✓ Order Received - ${orderId} | eShopper Luxe`,
+        'placed': `✓ Order Received - ${orderId} | eShopper Luxe`,
+        'ordered': `🎉 Order Confirmed - ${orderId} | eShopper Luxe`,
+        'confirmed': `🎉 Order Confirmed - ${orderId} | eShopper Luxe`,
+        'packed': `📦 Order Packed with Care - ${orderId} | eShopper Luxe`,
+        'shipped': `🚚 Order Shipped - Track Your Package | ${orderId}`,
+        'out for delivery': `⏰ Arriving Today! - ${orderId} | eShopper Luxe`,
+        'delivered': `🎉 Delivered Successfully - ${orderId} | Rate Your Experience`
+    };
+    return subjects[statusLower] || `Order Update - ${orderId}`;
+};
+
+// Map order data to template variables
+const mapOrderToTemplateData = (order, user = null) => {
+    const frontendUrl = (process.env.FRONTEND_URL || 'https://eshopperr.me').replace(/\/$/, '');
+    const logoUrl = process.env.BRAND_LOGO_URL || `${frontendUrl}/logo512.png`;
+    
+    // Safe access to shipping address
+    const shipping = order.shippingAddress || {};
+    const customerName = order.userName || user?.name || shipping.fullName || 'Valued Customer';
+    const firstName = customerName.split(' ')[0];
+    
+    // Safe access to products
+    const products = Array.isArray(order.products) ? order.products.map(p => ({
+        name: p.name || 'Product',
+        image: p.pic || p.image || p.pic1 || `${frontendUrl}/placeholder.jpg`,
+        category: p.maincategory || p.category || 'Fashion',
+        quantity: p.qty || p.quantity || 1,
+        price: p.price || p.finalprice || 0,
+        total: p.total || (p.price * (p.qty || 1)) || 0,
+        size: p.size || '',
+        color: p.color || ''
+    })) : [];
+    
+    // Calculate amounts
+    const totalAmount = Number(order.totalAmount || 0);
+    const shippingAmount = Number(order.shippingAmount || 0);
+    const finalAmount = Number(order.finalAmount || totalAmount + shippingAmount);
+    const gstAmount = Math.round(finalAmount * 0.18); // Assuming 18% GST
+    
+    // Format dates
+    const orderDate = new Date(order.orderDate || order.createdAt || Date.now()).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+    
+    const estimatedDelivery = order.estimatedArrival 
+        ? new Date(order.estimatedArrival).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        })
+        : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    
+    return {
+        // Brand
+        BRAND_LOGO_URL: logoUrl,
+        
+        // Order details
+        ORDER_ID: order.orderId,
+        ORDER_DATE: orderDate,
+        TOTAL_AMOUNT: finalAmount,
+        
+        // Customer
+        CUSTOMER_NAME: firstName,
+        CUSTOMER_EMAIL: order.userEmail || user?.email || '',
+        
+        // Shipping
+        SHIPPING_NAME: shipping.fullName || customerName,
+        SHIPPING_ADDRESS: shipping.addressline1 || 'N/A',
+        SHIPPING_CITY: shipping.city || '',
+        SHIPPING_STATE: shipping.state || '',
+        SHIPPING_PIN: shipping.pin || '',
+        SHIPPING_PHONE: shipping.phone || user?.phone || '',
+        
+        // Products
+        PRODUCTS: products,
+        
+        // Amounts
+        SUBTOTAL: totalAmount,
+        SHIPPING_AMOUNT: shippingAmount,
+        GST_AMOUNT: gstAmount,
+        
+        // Payment
+        PAYMENT_METHOD: order.paymentMethod || 'COD',
+        PAYMENT_STATUS: order.paymentStatus || 'Pending',
+        TRANSACTION_ID: order.transactionId || `TXN${Date.now()}`,
+        
+        // Billing (same as shipping if not provided)
+        BILLING_NAME: shipping.fullName || customerName,
+        
+        // Delivery
+        ESTIMATED_DELIVERY_DATE: estimatedDelivery,
+        DELIVERY_TIME_SLOT: '10:00 AM - 6:00 PM',
+        
+        // Packed info
+        PACKED_DATE: orderDate,
+        ITEMS_COUNT: products.length,
+        PACKAGE_WEIGHT: `${(products.length * 0.5).toFixed(1)} kg`,
+        
+        // Courier info (defaults)
+        COURIER_NAME: order.courierName || 'Delhivery',
+        AWB_NUMBER: order.awbNumber || `AWB${Date.now()}`,
+        SHIPPED_DATE: orderDate,
+        CARRIER_WEBSITE: order.carrierWebsite || 'https://www.delhivery.com/track',
+        
+        // Delivery agent
+        AGENT_NAME: order.agentName || 'Delivery Partner',
+        AGENT_PHONE: order.agentPhone || '+91 98765 43210',
+        
+        // Delivered info
+        DELIVERED_DATE: orderDate,
+        RECEIVED_BY: 'Self',
+        
+        // Links
+        TRACKING_URL: `${frontendUrl}/order-tracking/${order.orderId}`,
+        INVOICE_URL: `${frontendUrl}/invoice/${order.orderId}`,
+        TAX_INVOICE_URL: `${frontendUrl}/invoice/tax/${order.orderId}`,
+        RATING_URL: `${frontendUrl}/rate-order/${order.orderId}`,
+        REVIEW_URL: `${frontendUrl}/review/${order.orderId}`,
+        REFERRAL_URL: `${frontendUrl}/refer`,
+        REFERRAL_CODE: `LUXE${new Date().getFullYear()}${firstName.toUpperCase()}`,
+        LIVE_MAP_URL: `${frontendUrl}/live-tracking/${order.orderId}`,
+        
+        // Support
+        WHATSAPP_SUPPORT_URL: 'https://wa.me/918447859784',
+        INSTAGRAM_URL: 'https://instagram.com/eshopperluxe',
+        SUPPORT_EMAIL: 'support@eshopperr.me',
+        SUPPORT_PHONE: '+91 8447859784',
+        PRIVACY_POLICY_URL: `${frontendUrl}/privacy`,
+        TERMS_URL: `${frontendUrl}/terms`,
+        RETURN_POLICY_URL: `${frontendUrl}/returns`
+    };
+};
+
+// Send order email based on status
+const sendOrderEmail = async (order, status, user = null) => {
+    try {
+        if (!FEATURE_EMAIL_NOTIFICATIONS) {
+            console.log('⏭️ Email notifications disabled');
+            return { skipped: true };
+        }
+        
+        const statusLower = String(status || order.orderStatus || '').toLowerCase();
+        const templateFile = ORDER_STATUS_TEMPLATES[statusLower];
+        
+        if (!templateFile) {
+            console.warn(`⚠️ No email template for status: ${status}`);
+            return { skipped: true };
+        }
+        
+        const customerEmail = order.userEmail || user?.email;
+        if (!customerEmail || !customerEmail.includes('@')) {
+            console.warn(`⚠️ Invalid email for order ${order.orderId}`);
+            return { skipped: true };
+        }
+        
+        // Map order data to template variables
+        const templateData = mapOrderToTemplateData(order, user);
+        
+        // Load and render template
+        const htmlContent = await loadEmailTemplate(templateFile, templateData);
+        
+        // Send email
+        await sendTransactionalEmail({
+            toEmail: customerEmail,
+            toName: templateData.CUSTOMER_NAME,
+            subject: getEmailSubject(statusLower, order.orderId),
+            htmlContent: htmlContent,
+            textContent: `Your order ${order.orderId} status: ${status}`
+        });
+        
+        console.log(`✅ Email sent for ${status}: ${order.orderId} → ${customerEmail}`);
+        return { success: true };
+        
+    } catch (error) {
+        console.error(`❌ Error sending order email:`, error.message);
+        if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(error);
+        return { error: error.message };
+    }
 };
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
@@ -3615,34 +3835,20 @@ const placeOrderHandler = async (req, res) => {
 
         const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
+        // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY
         if (FEATURE_EMAIL_NOTIFICATIONS) {
-            try {
-                await enqueueEmailJob('order-placed', {
-                    toEmail: recipientEmail,
-                    userName: user.name,
-                    orderId,
-                    finalAmount: payable,
-                    products: cleanProducts,
-                    shippingAddress: addressPayload,
-                    invoiceBuffer: invoiceBuffer
-                });
-                console.log(`✅ Email #1 (Order Placed) queued for ${orderId}`);
-            } catch (email1Error) {
-                console.error('❌ Email #1 (Order Placed) queue failed:', email1Error.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(email1Error);
-            }
+            setImmediate(async () => {
+                try {
+                    await sendOrderEmail(orderDoc, 'Order Placed', user);
+                    console.log(`✅ Order Placed email sent for ${orderId} → ${recipientEmail}`);
+                } catch (emailErr) {
+                    console.error(`⚠️ Order Placed email failed for ${orderId}:`, emailErr.message);
+                    if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                }
+            });
         }
 
-        // 📧 EMAIL #2: Send "Order Confirmed" ultra-premium email (will be sent when payment verifies)
-        // This is prepared for later use when order status changes to confirmed
-        try {
-            // For now, we can send it after a short delay or trigger it from payment verification webhook
-            // Uncommenting below will send both emails - adjust timing as needed
-            // await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-            // await sendOrderConfirmationEmail({...});
-        } catch (email2Error) {
-            console.error('Email #2 (Order Confirmed) - Prepared but not sent yet');
-        }
+        // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
         try {
             const phoneNumber = addressPayload?.phone || user.phone;
@@ -4661,8 +4867,29 @@ const handleOrderStatusUpdate = async (req, res) => {
         io.to(`user:${order.userid}`).emit('statusUpdate', payload);
         console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
 
-        // 🔴 TRIGGER LUXURY NOTIFICATIONS (disabled unless explicitly enabled)
-        if (FEATURE_EMAIL_NOTIFICATIONS || FEATURE_WHATSAPP_NOTIFICATIONS) {
+        // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
+        if (FEATURE_EMAIL_NOTIFICATIONS) {
+            setImmediate(() => {
+                User.findById(order.userid).lean()
+                    .then(async (userDoc) => {
+                        try {
+                            await sendOrderEmail(order, normalized, userDoc);
+                        } catch (emailErr) {
+                            console.error(`⚠️ Email send error for ${order.orderId}:`, emailErr.message);
+                        }
+                    })
+                    .catch(err => {
+                        console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
+                        // Try sending without user data
+                        sendOrderEmail(order, normalized, null).catch(e => 
+                            console.error(`⚠️ Email fallback failed:`, e.message)
+                        );
+                    });
+            });
+        }
+
+        // 🔴 TRIGGER LUXURY NOTIFICATIONS (WhatsApp - disabled unless explicitly enabled)
+        if (FEATURE_WHATSAPP_NOTIFICATIONS) {
             setImmediate(() => {
                 User.findById(order.userid).lean()
                     .then((userDoc) => {
@@ -4676,24 +4903,6 @@ const handleOrderStatusUpdate = async (req, res) => {
                             phone: resolvedPhone,
                             customerName: resolvedName,
                             email: resolvedEmail,
-                            estimatedDelivery: order.estimatedArrival,
-                            finalAmount: order.finalAmount,
-                            totalAmount: order.totalAmount,
-                            shippingAmount: order.shippingAmount,
-                            paymentMethod: order.paymentMethod,
-                            paymentStatus: order.paymentStatus,
-                            shippingAddress: order.shippingAddress,
-                            products: order.products
-                        });
-                    })
-                    .catch((lookupErr) => {
-                        console.warn(`⚠️ User fallback lookup failed for ${order.orderId}:`, lookupErr.message);
-                        return sendLuxeStatusNotification({
-                            orderId: order.orderId,
-                            status: normalized,
-                            phone: order.shippingAddress?.phone || order.userPhone,
-                            customerName: order.userName,
-                            email: order.userEmail,
                             estimatedDelivery: order.estimatedArrival,
                             finalAmount: order.finalAmount,
                             totalAmount: order.totalAmount,
