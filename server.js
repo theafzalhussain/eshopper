@@ -660,11 +660,26 @@ const buildOrderReceiptHtml = ({
         const itemDesc = `${item.name || 'Product'}${sizeText}${colorText}`;
         return `
             <tr>
-                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#999; border:1px solid #333;">${idx + 1}</td>
-                <td style="padding:12px 10px; font-size:13px; color:#e5e5e5; font-weight:600; border:1px solid #333;">${itemDesc}</td>
-                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#e5e5e5; border:1px solid #333;">${qty}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#aaa; border:1px solid #333;">₹${price.toLocaleString('en-IN')}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#D4AF37; font-weight:700; border:1px solid #333;">₹${line.toLocaleString('en-IN')}</td>
+                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#666; border:1px solid #e8dcc8;">${idx + 1}</td>
+                <td style="padding:12px 10px; font-size:13px; color:#111; font-weight:600; border:1px solid #e8dcc8;">${itemDesc}</td>
+                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#111; border:1px solid #e8dcc8;">${qty}</td>
+                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#666; border:1px solid #e8dcc8;">₹${price.toLocaleString('en-IN')}</td>
+                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#d4af37; font-weight:700; border:1px solid #e8dcc8;">₹${line.toLocaleString('en-IN')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { background: #f5f5f3; color: #2c2c2c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
+                .wrap { max-width: 900px; margin: 0 auto; padding: 16px; position: relative; }
                 .watermark {
                     position: fixed;
                     top: 50%;
