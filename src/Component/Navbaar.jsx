@@ -119,19 +119,16 @@ export default function Navbaar() {
             <nav className="navbar navbar-light bg-white border-bottom py-2 shadow-sm">
                 <div className="container">
                     <div className="d-flex align-items-center justify-content-between w-100">
-                        {/* --- 🔥 PREMIUM LOGO --- */}
+                        {/* --- GOLD LOGO IMAGE --- */}
                         <Link className="navbar-brand d-flex align-items-center mb-0" to="/">
-                            <motion.div 
+                            <motion.img 
                                 initial={{ x: -20, opacity: 0 }}
                                 animate={{ x: 0, opacity: 1 }}
-                                className="logo-wrapper"
-                            >
-                                <span className="logo-e">E</span>
-                                <div className="logo-text-box">
-                                    <span className="logo-brand-name">SHOPPER</span>
-                                    <span className="logo-tagline">BOUTIQUE LUXE</span>
-                                </div>
-                            </motion.div>
+                                src={BASE_URL + '/logo-final.png'}
+                                alt="ESHOPPER Premium Logo"
+                                style={{ height: 60, width: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 2px 8px #bfa14a88)' }}
+                                className="premium-logo-img"
+                            />
                         </Link>
 
                         {/* --- DESKTOP NAV (Hidden on Mobile) --- */}
