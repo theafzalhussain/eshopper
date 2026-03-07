@@ -152,82 +152,99 @@ const Confirmation = () => {
   const estimatedArrival = new Date(order.estimatedArrival || new Date().setDate(new Date().getDate() + 7));
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9f7f4', paddingTop: '80px', paddingBottom: '40px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
-        
-        {/* Hero Section */}
-        <div
-          style={{
-            textAlign: 'center',
-            marginBottom: '60px',
-            padding: '40px',
-            background: 'linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%)',
-            borderRadius: '12px',
-            color: 'white',
-          }}
-        >
-          <div style={{ marginBottom: '20px' }}>
-            <CheckCircle2 size={80} style={{ margin: '0 auto', color: '#d4af37' }} />
-          </div>
-          <h1 style={{ fontSize: '36px', fontWeight: 'bold', marginBottom: '10px', color: '#d4af37' }}>
-            Order Confirmed!
-          </h1>
-          <p style={{ fontSize: '16px', color: '#ccc', marginBottom: '5px' }}>
-            Thank you for your purchase from eShopper Boutique
-          </p>
-          <p style={{ fontSize: '14px', color: '#999' }}>
-            A confirmation email has been sent to your registered email address
-          </p>
-        </div>
 
-        {/* Premium Info Cards - Equal Size & Responsive */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-          
-          {/* Order ID Card - Premium Purple Theme */}
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              padding: '30px',
-              borderRadius: '16px',
-              boxShadow: '0 10px 30px rgba(99, 102, 241, 0.3)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '50%' }}></div>
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '1.5px', color: 'rgba(255, 255, 255, 0.8)', margin: '0 0 8px 0', textTransform: 'uppercase' }}>ORDER ID</p>
-              <h3 style={{ fontSize: '28px', fontWeight: '900', color: '#ffffff', margin: '0 0 4px 0', letterSpacing: '-0.5px' }}>
-                {order.orderId?.split('-').pop() || '0000'}
-              </h3>
-              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', margin: '0', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
-                {order.orderId}
-              </p>
+        {/* Premium Order Summary Section - Redesigned */}
+        <div style={{
+          background: 'linear-gradient(135deg, #fffbe6 0%, #f9f7f4 100%)',
+          borderRadius: '18px',
+          boxShadow: '0 8px 32px rgba(212,175,55,0.10)',
+          border: '1.5px solid #f3e9c7',
+          padding: '36px 36px 28px 36px',
+          marginBottom: '36px',
+          display: 'grid',
+          gridTemplateColumns: '1.2fr 1fr 1fr',
+          gap: '32px',
+          alignItems: 'center',
+        }}>
+          {/* Amount Box - Premium, Full, Detailed */}
+          <div style={{
+            background: 'linear-gradient(135deg, #fff 60%, #f7e9c7 100%)',
+            borderRadius: '14px',
+            boxShadow: '0 2px 12px rgba(212,175,55,0.08)',
+            border: '1.5px solid #f3e9c7',
+            padding: '28px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            minHeight: '140px',
+            justifyContent: 'center',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2px' }}>
+              <span style={{ fontWeight: 700, color: '#bfa13a', fontSize: '13px', letterSpacing: '1.2px' }}>AMOUNT</span>
+              <span style={{ background: '#d4af37', color: 'white', fontWeight: 700, fontSize: '11px', borderRadius: '8px', padding: '2px 10px', marginLeft: '8px', letterSpacing: '1px' }}>PAID</span>
+            </div>
+            <div style={{ fontSize: '2.2rem', fontWeight: 900, color: '#bfa13a', letterSpacing: '-1px', marginBottom: '2px' }}>
+              ₹{(order.finalAmount || order.totalAmount || 0).toLocaleString('en-IN')}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+              <span style={{ fontSize: '13px', color: '#888', fontWeight: 500 }}>Order Type:</span>
+              <span style={{ fontSize: '13px', color: '#222', fontWeight: 700 }}>{order.orderType || 'Standard'}</span>
+              <span style={{ fontSize: '13px', color: '#bfa13a', fontWeight: 700, marginLeft: '8px' }}>{order.status || 'Confirmed'}</span>
+            </div>
+            <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
+              Order ID: <span style={{ color: '#bfa13a', fontWeight: 700 }}>{order.orderId}</span>
             </div>
           </div>
-
-          {/* Estimated Arrival Card - Premium Green Theme */}
-          <div
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
-              padding: '30px',
-              borderRadius: '16px',
-              boxShadow: '0 10px 30px rgba(16, 185, 129, 0.3)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '50%' }}></div>
-            <div style={{ position: 'relative', zIndex: 1 }}>
-              <p style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '1.5px', color: 'rgba(255, 255, 255, 0.8)', margin: '0 0 8px 0', textTransform: 'uppercase' }}>Est. Arrival</p>
-              <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#ffffff', margin: '0 0 4px 0', letterSpacing: '-0.5px' }}>
-                {estimatedArrival.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-              </h3>
-              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', margin: '0', fontWeight: '600' }}>
-                Free Premium Delivery
-              </p>
+          {/* Payment Method - Premium Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, #f7fafc 60%, #e6f7ff 100%)',
+            borderRadius: '14px',
+            boxShadow: '0 2px 12px rgba(16,185,129,0.08)',
+            border: '1.5px solid #e0f2fe',
+            padding: '28px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            minHeight: '140px',
+            justifyContent: 'center',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2px' }}>
+              <span style={{ fontWeight: 700, color: '#089981', fontSize: '13px', letterSpacing: '1.2px' }}>PAYMENT METHOD</span>
+              <span style={{ background: '#10b981', color: 'white', fontWeight: 700, fontSize: '11px', borderRadius: '8px', padding: '2px 10px', marginLeft: '8px', letterSpacing: '1px' }}>SECURE</span>
+            </div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#089981', letterSpacing: '-1px', marginBottom: '2px' }}>
+              {order.paymentMethod || 'Card'}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+              <span style={{ fontSize: '13px', color: '#888', fontWeight: 500 }}>Txn ID:</span>
+              <span style={{ fontSize: '13px', color: '#222', fontWeight: 700 }}>{order.transactionId || 'N/A'}</span>
+            </div>
+            <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
+              Status: <span style={{ color: '#10b981', fontWeight: 700 }}>{order.paymentStatus || 'Success'}</span>
+            </div>
+          </div>
+          {/* Delivery - Premium Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, #f0fff4 60%, #e6fffa 100%)',
+            borderRadius: '14px',
+            boxShadow: '0 2px 12px rgba(16,185,129,0.08)',
+            border: '1.5px solid #e0f2fe',
+            padding: '28px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            minHeight: '140px',
+            justifyContent: 'center',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2px' }}>
+              <span style={{ fontWeight: 700, color: '#089981', fontSize: '13px', letterSpacing: '1.2px' }}>EXPECTED DELIVERY</span>
+              <span style={{ background: '#10b981', color: 'white', fontWeight: 700, fontSize: '11px', borderRadius: '8px', padding: '2px 10px', marginLeft: '8px', letterSpacing: '1px' }}>⚡ TODAY</span>
+            </div>
+            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#089981', letterSpacing: '-1px', marginBottom: '2px' }}>
+              {estimatedArrival.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </div>
+            <div style={{ fontSize: '12px', color: '#aaa', marginTop: '2px' }}>
+              Fastest Delivery Available
             </div>
           </div>
         </div>
