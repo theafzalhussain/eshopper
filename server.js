@@ -94,41 +94,42 @@ if (process.env.SENTRY_DSN) {
     console.log('⚠️  Sentry DSN not configured - error tracking disabled');
 }
 
-// �🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
+
+// 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
 app.set('trust proxy', 1);
 
-// 🔴 SENTRY v10 no longer uses Sentry.Handlers.requestHandler()
-
-// �🔒 CORS - Production domain hardcoded (frontend is at eshopperr.me)
+// 🔒 CORS - Robust production config
 const corsOptions = {
     origin: function(origin, callback) {
         // Allow no origin (server-to-server, mobile)
         if (!origin) return callback(null, true);
-        
         // Allow localhost for development
         if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
             return callback(null, true);
         }
-        
         // Allow production frontend domains
         if (origin === 'https://eshopperr.me' || 
             origin === 'https://www.eshopperr.me' || 
             origin === process.env.FRONTEND_URL) {
             return callback(null, true);
         }
-        
         // Allow all Vercel preview deployments (*.vercel.app)
-        if (origin && origin.includes('.vercel.app')) {
+        if (origin && origin.endsWith('.vercel.app')) {
             return callback(null, true);
         }
-        
         console.warn(`⚠️  CORS rejected: ${origin}`);
         return callback(new Error('CORS policy: Unauthorized origin'));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"]
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 };
+
+// Apply CORS before any routes or middleware
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
 const httpServer = http.createServer(app);
@@ -138,8 +139,9 @@ const io = new Server(httpServer, {
             'https://eshopperr.me',
             'https://www.eshopperr.me',
             'http://localhost:3000',
-            'http://127.0.0.1:3000'
-        ],
+            'http://127.0.0.1:3000',
+            process.env.FRONTEND_URL
+        ].filter(Boolean),
         credentials: true
     },
     transports: ['websocket', 'polling']
@@ -187,8 +189,7 @@ io.on('connection', (socket) => {
     });
 });
 
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+
 
 app.use(express.json());
 
@@ -200,17 +201,23 @@ const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHe
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
 app.use(globalLimiter);
 
-// 📊 REQUEST LOGGING MIDDLEWARE
+
+// 📊 REQUEST LOGGING MIDDLEWARE (with CORS origin info)
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    const origin = req.headers.origin || 'NO-ORIGIN';
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} | Origin: ${origin}`);
     next();
 });
 
-// 🛡️ GLOBAL ERROR HANDLER FOR MALFORMED REQUESTS
+// 🛡️ GLOBAL ERROR HANDLER FOR MALFORMED REQUESTS & CORS
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
         console.warn('⚠️ Malformed JSON request detected');
         return res.status(400).json({ message: 'Invalid request format. Please check your input.' });
+    }
+    if (err.message && err.message.includes('CORS')) {
+        console.warn('⚠️ CORS error:', err.message);
+        return res.status(403).json({ message: 'CORS error: Unauthorized origin' });
     }
     next(err);
 });
