@@ -694,7 +694,6 @@ const Confirmation = () => {
             Questions? Contact us at <strong>support@eshopperr.me</strong> or call our customer service team
           </p>
         </div>
-      </div>
     </>
   );
 };
