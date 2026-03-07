@@ -150,22 +150,21 @@ const Confirmation = () => {
   }
 
   const estimatedArrival = new Date(order.estimatedArrival || new Date().setDate(new Date().getDate() + 7));
-
   return (
-
-        {/* Premium Order Summary Section - Redesigned */}
-        <div style={{
-          background: 'linear-gradient(135deg, #fffbe6 0%, #f9f7f4 100%)',
-          borderRadius: '18px',
-          boxShadow: '0 8px 32px rgba(212,175,55,0.10)',
-          border: '1.5px solid #f3e9c7',
-          padding: '36px 36px 28px 36px',
-          marginBottom: '36px',
-          display: 'grid',
-          gridTemplateColumns: '1.2fr 1fr 1fr',
-          gap: '32px',
-          alignItems: 'center',
-        }}>
+    <div>
+      {/* Premium Order Summary Section - Redesigned */}
+      <div style={{
+        background: 'linear-gradient(135deg, #fffbe6 0%, #f9f7f4 100%)',
+        borderRadius: '18px',
+        boxShadow: '0 8px 32px rgba(212,175,55,0.10)',
+        border: '1.5px solid #f3e9c7',
+        padding: '36px 36px 28px 36px',
+        marginBottom: '36px',
+        display: 'grid',
+        gridTemplateColumns: '1.2fr 1fr 1fr',
+        gap: '32px',
+        alignItems: 'center',
+      }}>
           {/* Amount Box - Premium, Full, Detailed */}
           <div style={{
             background: 'linear-gradient(135deg, #fff 60%, #f7e9c7 100%)',
