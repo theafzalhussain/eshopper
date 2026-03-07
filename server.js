@@ -628,6 +628,7 @@ const getEmailSubject = (status, orderId) => {
 // Map order data to template variables
 const mapOrderToTemplateData = (order, user = null) => {
     const frontendUrl = (process.env.FRONTEND_URL || 'https://eshopperr.me').replace(/\/$/, '');
+    const backendUrl = (process.env.BACKEND_URL || process.env.API_URL || 'https://api.eshopperr.me').replace(/\/$/, '');
     const logoUrl = process.env.BRAND_LOGO_URL || `${frontendUrl}/logo512.png`;
     
     // Safe access to shipping address
@@ -734,8 +735,8 @@ const mapOrderToTemplateData = (order, user = null) => {
         
         // Links
         TRACKING_URL: `${frontendUrl}/order-tracking/${order.orderId}`,
-        INVOICE_URL: `${frontendUrl}/invoice/${order.orderId}`,
-        TAX_INVOICE_URL: `${frontendUrl}/invoice/tax/${order.orderId}`,
+        INVOICE_URL: `${backendUrl}/api/orders/${order.orderId}/download-invoice?userId=${order.userid || order.userId || ''}`,
+        TAX_INVOICE_URL: `${backendUrl}/api/orders/${order.orderId}/download-invoice?userId=${order.userid || order.userId || ''}`,
         RATING_URL: `${frontendUrl}/rate-order/${order.orderId}`,
         REVIEW_URL: `${frontendUrl}/review/${order.orderId}`,
         REFERRAL_URL: `${frontendUrl}/refer`,
