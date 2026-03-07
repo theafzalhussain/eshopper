@@ -184,7 +184,7 @@ const resolveEstimatedArrival = ({ status, explicitDate, expectedDays }) => {
 // Feature toggles for clean baseline (enable email notifications).
 const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'true').toLowerCase() === 'true';
 const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
-const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'false').toLowerCase() === 'true';
+const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'true').toLowerCase() === 'true';
 
 // 🔴 SOCKET.IO AUTHENTICATION MIDDLEWARE
 io.use(async (socket, next) => {
