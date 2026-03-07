@@ -113,6 +113,9 @@ function verifyOtp(orderId, otp) {
     return orderOtpMap.get(orderId) === otp;
 }
 
+// --- MOVE ENDPOINTS AFTER APP INITIALIZATION ---
+// (Place these after 'const app = express();')
+
 // --- ORDER STATUS HOOKS FOR WHATSAPP AUTOMATION ---
 // Example: Call sendWhatsAppNotification(order, status, otp) wherever order status changes
 // For demo, add a sample endpoint:
