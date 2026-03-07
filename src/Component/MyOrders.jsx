@@ -27,6 +27,28 @@ const getStatusStyles = (status) => {
   return { bg: '#dcfce7', color: '#16a34a' }
 }
 
+const getDeliveryLabel = (deliveryDate) => {
+  if (!deliveryDate) return null;
+  
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  const delivery = new Date(deliveryDate);
+  
+  // Reset time to compare only dates
+  today.setHours(0, 0, 0, 0);
+  tomorrow.setHours(0, 0, 0, 0);
+  delivery.setHours(0, 0, 0, 0);
+  
+  if (delivery.getTime() === today.getTime()) {
+    return { label: 'Today', color: '#10b981', emoji: '⚡' };
+  } else if (delivery.getTime() === tomorrow.getTime()) {
+    return { label: 'Tomorrow', color: '#f59e0b', emoji: '🚀' };
+  }
+  return null;
+}
+
 export default function MyOrders() {
   const navigate = useNavigate()
   const userId = localStorage.getItem('userid')
@@ -476,12 +498,42 @@ export default function MyOrders() {
                     {(() => {
                       const eta = item.estimatedArrival || item.estimatedDelivery
                       if (!eta) return null
+                      const deliveryLabel = getDeliveryLabel(eta)
                       return (
                         <>
                           <div className="small mt-3" style={{ color: '#999', fontSize: '11px', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
                             Expected Delivery
                           </div>
-                          <div className="font-weight-bold mt-2" style={{ fontSize: '14px', color: '#8b6c2f', letterSpacing: '0.2px' }}>
+                          
+                          {/* Show Today/Tomorrow badge */}
+                          {deliveryLabel && (
+                            <div style={{ 
+                              display: 'inline-block',
+                              background: `linear-gradient(135deg, ${deliveryLabel.color}15, ${deliveryLabel.color}25)`,
+                              border: `2px solid ${deliveryLabel.color}`,
+                              borderRadius: '8px',
+                              padding: '4px 12px',
+                              marginTop: '8px',
+                              boxShadow: `0 2px 8px ${deliveryLabel.color}30`
+                            }}>
+                              <span style={{ 
+                                fontSize: '16px', 
+                                fontWeight: 'bold', 
+                                color: deliveryLabel.color,
+                                letterSpacing: '0.3px',
+                                textTransform: 'uppercase'
+                              }}>
+                                {deliveryLabel.emoji} {deliveryLabel.label}
+                              </span>
+                            </div>
+                          )}
+                          
+                          <div className="font-weight-bold" style={{ 
+                            fontSize: '14px', 
+                            color: '#8b6c2f', 
+                            letterSpacing: '0.2px',
+                            marginTop: deliveryLabel ? '6px' : '8px'
+                          }}>
                             {new Date(eta).toLocaleDateString('en-IN', {
                               day: 'numeric',
                               month: 'short',

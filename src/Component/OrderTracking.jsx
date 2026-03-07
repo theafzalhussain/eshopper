@@ -81,6 +81,29 @@ export default function OrderTracking() {
     return order?.estimatedArrival || order?.estimatedDelivery || null
   }, [order])
 
+  // Helper to calculate if delivery is today or tomorrow
+  const getDeliveryLabel = useMemo(() => {
+    if (!expectedDeliveryDate) return null;
+    
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const deliveryDate = new Date(expectedDeliveryDate);
+    
+    // Reset time to compare only dates
+    today.setHours(0, 0, 0, 0);
+    tomorrow.setHours(0, 0, 0, 0);
+    deliveryDate.setHours(0, 0, 0, 0);
+    
+    if (deliveryDate.getTime() === today.getTime()) {
+      return { label: 'Today', color: '#10b981', emoji: '⚡' };
+    } else if (deliveryDate.getTime() === tomorrow.getTime()) {
+      return { label: 'Tomorrow', color: '#f59e0b', emoji: '🚀' };
+    }
+    return null;
+  }, [expectedDeliveryDate]);
+
   const timelineMap = useMemo(() => {
     const map = {}
     ;(statusTimeline || []).forEach((entry) => {
@@ -441,9 +464,37 @@ export default function OrderTracking() {
             >
               <div className="d-flex align-items-center">
                 <div style={{ fontSize: '32px', marginRight: '16px' }}>📅</div>
-                <div>
+                <div style={{ flex: 1 }}>
                   <p className="text-muted small mb-1" style={{ color: '#6b5b2b' }}>Expected Delivery</p>
-                  <p className="font-weight-bold mb-0" style={{ fontSize: '18px', color: '#5f4b1b' }}>
+                  
+                  {/* Show Today/Tomorrow label prominently */}
+                  {getDeliveryLabel && (
+                    <div style={{ 
+                      display: 'inline-block',
+                      background: `linear-gradient(135deg, ${getDeliveryLabel.color}15, ${getDeliveryLabel.color}25)`,
+                      border: `2px solid ${getDeliveryLabel.color}`,
+                      borderRadius: '12px',
+                      padding: '8px 20px',
+                      marginBottom: '8px',
+                      boxShadow: `0 4px 12px ${getDeliveryLabel.color}30`
+                    }}>
+                      <span style={{ 
+                        fontSize: '28px', 
+                        fontWeight: 'bold', 
+                        color: getDeliveryLabel.color,
+                        letterSpacing: '0.5px',
+                        textTransform: 'uppercase'
+                      }}>
+                        {getDeliveryLabel.emoji} {getDeliveryLabel.label}
+                      </span>
+                    </div>
+                  )}
+                  
+                  <p className="font-weight-bold mb-0" style={{ 
+                    fontSize: '18px', 
+                    color: '#5f4b1b',
+                    marginTop: getDeliveryLabel ? '8px' : '0'
+                  }}>
                     {new Date(expectedDeliveryDate).toLocaleDateString('en-IN', { 
                       weekday: 'long', 
                       year: 'numeric', 
