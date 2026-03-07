@@ -1967,10 +1967,13 @@ const buildPremiumOrderReceiptHtml = ({
                 html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                 body { margin: 0; background: #f5f3ee; color: #141414; font-family: 'Segoe UI', Arial, sans-serif; }
                 .sheet { border: 2px solid #c8a74b; border-radius: 12px; background: #fff; overflow: hidden; }
-                .head { padding: 22px 24px; background: linear-gradient(135deg, #111 0%, #2b2b2b 100%); color: #fff; }
-                .brand { font-size: 26px; font-weight: 900; letter-spacing: .8px; color: #d9bc68; }
-                .sub { margin-top: 4px; font-size: 11px; letter-spacing: 1.3px; text-transform: uppercase; color: #d2d2d2; }
-                .title { margin-top: 14px; font-size: 22px; font-weight: 800; letter-spacing: .8px; }
+                .head { padding: 22px 24px; background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%); color: #fff; position: relative; display: flex; align-items: center; justify-content: center; min-height: 120px; }
+                .logo { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); width: 60px; height: 60px; background: #d9bc68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; color: #0d0d0d; box-shadow: 0 4px 12px rgba(217, 188, 104, 0.3); }
+                .header-center { text-align: center; }
+                .brand { font-size: 32px; font-weight: 900; letter-spacing: 1.2px; color: #d9bc68; text-shadow: 0 2px 8px rgba(217, 188, 104, 0.4); }
+                .brand-e { color: #f7dc6f; }
+                .sub { margin-top: 6px; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #d2d2d2; font-weight: 600; }
+                .title { margin-top: 10px; font-size: 20px; font-weight: 800; letter-spacing: .8px; background: linear-gradient(135deg, #d9bc68, #f7dc6f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
                 .body { padding: 20px 22px 16px; }
                 .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
                 .box { border: 1px solid #dfd6bf; background: #fcfaf4; border-radius: 8px; padding: 10px; }
@@ -1996,9 +1999,12 @@ const buildPremiumOrderReceiptHtml = ({
         <body>
             <div class="sheet">
                 <div class="head">
-                    <div class="brand">eShopper Boutique Luxe</div>
-                    <div class="sub">Premium Order Document</div>
-                    <div class="title">Order Receipt</div>
+                    <div class="logo">eS</div>
+                    <div class="header-center">
+                        <div class="brand"><span class="brand-e">e</span>Shopper Boutique Luxe</div>
+                        <div class="sub">Premium Order Document</div>
+                        <div class="title">Order Receipt</div>
+                    </div>
                 </div>
                 <div class="body">
                     <div class="meta">
@@ -2095,9 +2101,12 @@ const buildPremiumOrderConfirmationProformaHtml = ({
                 body { margin: 0; background: #f6f5f2; color: #161616; font-family: 'Segoe UI', Arial, sans-serif; }
                 .sheet { border: 2px solid #c5a24a; border-radius: 12px; background: #fff; overflow: hidden; position: relative; }
                 .mark { position: absolute; top: 120px; left: 50%; transform: translateX(-50%) rotate(-18deg); color: rgba(23, 140, 86, 0.10); font-size: 52px; font-weight: 900; white-space: nowrap; letter-spacing: 1px; }
-                .head { padding: 20px 22px; background: #151515; color: #fff; }
-                .brand { font-size: 24px; font-weight: 900; color: #d9bc68; letter-spacing: .6px; }
-                .title { margin-top: 10px; font-size: 19px; font-weight: 800; letter-spacing: .6px; }
+                .head { padding: 20px 22px; background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%); color: #fff; position: relative; display: flex; align-items: center; justify-content: center; min-height: 115px; }
+                .logo { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); width: 58px; height: 58px; background: #d9bc68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 900; color: #0d0d0d; box-shadow: 0 4px 12px rgba(217, 188, 104, 0.3); }
+                .header-center { text-align: center; }
+                .brand { font-size: 30px; font-weight: 900; color: #d9bc68; letter-spacing: 1.1px; text-shadow: 0 2px 8px rgba(217, 188, 104, 0.4); }
+                .brand-e { color: #f7dc6f; }
+                .title { margin-top: 10px; font-size: 19px; font-weight: 800; letter-spacing: .6px; background: linear-gradient(135deg, #d9bc68, #f7dc6f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
                 .badge { margin-top: 8px; display: inline-block; background: linear-gradient(135deg, #178c56, #1fac6b); color: #fff; border-radius: 16px; padding: 7px 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .9px; }
                 .body { padding: 18px 20px 16px; position: relative; z-index: 2; }
                 .delivery { border: 1px solid #d9c28a; border-radius: 8px; background: #fff8e8; padding: 11px; margin-bottom: 10px; }
@@ -2132,8 +2141,11 @@ const buildPremiumOrderConfirmationProformaHtml = ({
             <div class="sheet">
                 <div class="mark">Verified and Confirmed</div>
                 <div class="head">
-                    <div class="brand">eShopper Boutique Luxe</div>
-                    <div class="title">Order Confirmation Proforma Invoice</div>
+                    <div class="logo">eS</div>
+                    <div class="header-center">
+                        <div class="brand"><span class="brand-e">e</span>Shopper Boutique Luxe</div>
+                        <div class="title">Order Confirmation Proforma Invoice</div>
+                    </div>
                     <span class="badge">Verified and Confirmed</span>
                 </div>
                 <div class="body">
@@ -2245,10 +2257,13 @@ const buildPremiumTaxInvoiceHtml = ({
                 body { margin: 0; background: #f5f4f0; color: #141414; font-family: 'Segoe UI', Arial, sans-serif; }
                 .paid { position: fixed; top: 42%; right: 9%; transform: rotate(24deg); border: 3px solid rgba(31, 143, 84, 0.2); color: rgba(31, 143, 84, 0.2); font-size: 54px; font-weight: 900; letter-spacing: 2px; padding: 10px 20px; border-radius: 8px; }
                 .sheet { border: 2px solid #c8a74b; border-radius: 12px; background: #fff; overflow: hidden; position: relative; z-index: 2; }
-                .head { padding: 20px 22px; background: #151515; color: #fff; position: relative; }
-                .brand { font-size: 24px; font-weight: 900; color: #d9bc68; letter-spacing: .8px; }
-                .tax { position: absolute; right: 22px; top: 20px; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: #d9bc68; font-weight: 900; }
-                .sub { margin-top: 5px; color: #d0d0d0; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+                .head { padding: 20px 22px; background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%); color: #fff; position: relative; display: flex; align-items: center; justify-content: center; min-height: 115px; }
+                .logo { position: absolute; left: 22px; top: 50%; transform: translateY(-50%); width: 58px; height: 58px; background: #d9bc68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 900; color: #0d0d0d; box-shadow: 0 4px 12px rgba(217, 188, 104, 0.3); }
+                .header-center { text-align: center; }
+                .brand { font-size: 30px; font-weight: 900; color: #d9bc68; letter-spacing: 1.1px; text-shadow: 0 2px 8px rgba(217, 188, 104, 0.4); }
+                .brand-e { color: #f7dc6f; }
+                .tax { position: absolute; right: 22px; top: 20px; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: #f7dc6f; font-weight: 800; background: rgba(217, 188, 104, 0.15); padding: 6px 12px; border-radius: 6px; border: 1px solid #d9bc68; }
+                .sub { margin-top: 5px; color: #d0d0d0; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
                 .body { padding: 16px 20px; }
                 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
                 .box { border: 1px solid #dccfae; background: #faf8f1; border-radius: 8px; padding: 9px 10px; font-size: 11px; line-height: 1.7; }
@@ -2281,9 +2296,12 @@ const buildPremiumTaxInvoiceHtml = ({
             <div class="paid">PAID</div>
             <div class="sheet">
                 <div class="head">
-                    <div class="brand">eShopper Boutique Luxe</div>
+                    <div class="logo">eS</div>
                     <div class="tax">Final Tax Invoice</div>
-                    <div class="sub">GST Compliant Legal Invoice</div>
+                    <div class="header-center">
+                        <div class="brand"><span class="brand-e">e</span>Shopper Boutique Luxe</div>
+                        <div class="sub">GST Compliant Legal Invoice</div>
+                    </div>
                 </div>
                 <div class="body">
                     <div class="grid2">
