@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmed - Luxe Gold Edition</title>
+    <style type="text/css">
+        @media only screen and (max-width: 620px) {
+            .main-wrap { width: 100% !important; }
+            .mobile-pad { padding-left: 16px !important; padding-right: 16px !important; }
+            .mobile-top { padding-top: 20px !important; }
+            .stack-col { display: block !important; width: 100% !important; }
+            .stack-gap { display: block !important; width: 100% !important; height: 10px !important; }
+            .hide-mobile { display: none !important; }
+            .product-cell { display: block !important; width: 100% !important; text-align: left !important; }
+            .hero-title { font-size: 28px !important; line-height: 35px !important; }
+            .product-image { width: 100% !important; max-width: 230px !important; height: auto !important; }
+            .mobile-center { text-align: center !important; }
+            .cta-btn { width: 100% !important; box-sizing: border-box !important; }
+        }
+    </style>
+</head>
+<body style="margin:0; padding:0; background:#0D0D0D; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#0D0D0D;">
+        <tr>
+            <td align="center" style="padding:24px 12px;">
+                <table role="presentation" width="600" class="main-wrap" cellspacing="0" cellpadding="0" border="0" style="width:600px; max-width:600px; background:#121212; border:1px solid #262626; border-radius:14px;">
+
+                    <tr>
+                        <td align="center" class="mobile-pad mobile-top" style="padding:30px 36px 20px 36px; border-bottom:1px solid #242424;">
+                            <img src="{{BRAND_LOGO_URL}}" alt="eShopper" style="height:44px; width:auto; display:block; margin:0 auto 14px auto;">
+                            <table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #D4AF37; border-radius:18px;">
+                                <tr>
+                                    <td style="padding:8px 14px; color:#FFFFFF; font-size:12px; font-weight:700; letter-spacing:0.7px; text-transform:uppercase;">
+                                        <span style="display:inline-block; width:14px; height:14px; line-height:14px; text-align:center; border-radius:50%; background:#1FA75A; color:#fff; font-size:10px; margin-right:7px;">&#10003;</span>Order Confirmed
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="mobile-pad" style="padding:26px 36px; border-bottom:1px solid #242424; background:linear-gradient(180deg,#191919 0%,#121212 100%);">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center" style="color:#D4AF37; font-size:12px; text-transform:uppercase; font-weight:700; letter-spacing:1.3px; padding-bottom:10px;">
+                                        Order #{{ORDER_ID}} | {{ORDER_DATE}}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" class="hero-title" style="color:#FFFFFF; font-size:35px; line-height:42px; font-weight:900; padding-bottom:10px;">
+                                        Expected by {{ESTIMATED_DELIVERY_DATE}}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="color:#C4C4C4; font-size:14px; line-height:22px;">
+                                        Our artisans are now preparing your handpicked selection.
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="mobile-pad" style="padding:26px 36px 20px 36px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #2A2A2A; border-radius:12px; overflow:hidden;">
+                                <tr style="background:#171717;">
+                                    <td class="hide-mobile" width="82" style="padding:12px; color:#D4AF37; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; border-bottom:1px solid #2A2A2A;">Image</td>
+                                    <td style="padding:12px; color:#D4AF37; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; border-bottom:1px solid #2A2A2A;">Product</td>
+                                    <td class="hide-mobile" width="52" style="padding:12px; color:#D4AF37; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; border-bottom:1px solid #2A2A2A; text-align:center;">Qty</td>
+                                    <td class="hide-mobile" width="92" style="padding:12px; color:#D4AF37; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; border-bottom:1px solid #2A2A2A; text-align:right;">Price</td>
+                                </tr>
+
+                                {{#each PRODUCTS}}
+                                <tr style="background:#121212;">
+                                    <td class="product-cell" style="padding:12px; border-bottom:1px solid #252525; vertical-align:top;">
+                                        <img src="{{this.image}}" alt="{{this.name}}" class="product-image" style="display:block; width:72px; height:72px; object-fit:cover; border-radius:12px; border:1px solid #353535;">
+                                    </td>
+                                    <td class="product-cell" style="padding:12px; border-bottom:1px solid #252525; vertical-align:top;">
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                            <tr>
+                                                <td style="color:#FFFFFF; font-size:15px; line-height:22px; font-weight:700; padding-bottom:2px;">{{this.name}}</td>
+                                            </tr>
+                                            {{#if this.category}}
+                                            <tr>
+                                                <td style="color:#9E9E9E; font-size:12px; line-height:18px;">Category: {{this.category}}</td>
+                                            </tr>
+                                            {{/if}}
+                                            {{#if this.size}}
+                                            <tr>
+                                                <td style="color:#9E9E9E; font-size:12px; line-height:18px;">Size: {{this.size}}</td>
+                                            </tr>
+                                            {{/if}}
+                                            {{#if this.color}}
+                                            <tr>
+                                                <td style="color:#9E9E9E; font-size:12px; line-height:18px;">Color: {{this.color}}</td>
+                                            </tr>
+                                            {{/if}}
+                                        </table>
+                                    </td>
+                                    <td class="product-cell" style="padding:12px; border-bottom:1px solid #252525; color:#FFFFFF; font-size:14px; text-align:center; font-weight:700; vertical-align:top;">{{this.quantity}}</td>
+                                    <td class="product-cell" style="padding:12px; border-bottom:1px solid #252525; color:#D4AF37; font-size:16px; text-align:right; font-weight:800; vertical-align:top;">Rs {{this.total}}</td>
+                                </tr>
+                                {{/each}}
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="mobile-pad" style="padding:0 36px 20px 36px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td class="stack-col" width="49%" style="background:#1A1A1A; border:1px solid #2D2D2D; border-radius:12px; padding:16px; vertical-align:top;">
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                            <tr><td style="color:#D4AF37; font-size:12px; text-transform:uppercase; letter-spacing:0.7px; font-weight:700; padding-bottom:8px;">Shipping Address</td></tr>
+                                            <tr><td style="color:#FFFFFF; font-size:14px; line-height:21px; font-weight:700;">{{SHIPPING_NAME}}</td></tr>
+                                            <tr>
+                                                <td style="color:#BDBDBD; font-size:13px; line-height:20px; padding-top:6px;">
+                                                    {{SHIPPING_ADDRESS}}<br>
+                                                    {{SHIPPING_CITY}}, {{SHIPPING_STATE}} {{SHIPPING_PIN}}<br>
+                                                    {{SHIPPING_PHONE}}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td class="stack-gap" width="2%">&nbsp;</td>
+                                    <td class="stack-col" width="49%" style="background:#1A1A1A; border:1px solid #2D2D2D; border-radius:12px; padding:16px; vertical-align:top;">
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                            <tr><td style="color:#D4AF37; font-size:12px; text-transform:uppercase; letter-spacing:0.7px; font-weight:700; padding-bottom:8px;">Payment Details</td></tr>
+                                            <tr><td style="color:#FFFFFF; font-size:14px; line-height:21px; font-weight:700;">{{PAYMENT_METHOD}}</td></tr>
+                                            <tr>
+                                                <td style="color:#BDBDBD; font-size:13px; line-height:20px; padding-top:6px;">
+                                                    Transaction ID: <span style="color:#D4AF37;">{{TRANSACTION_ID}}</span><br>
+                                                    Billed to: {{BILLING_NAME}}<br>
+                                                    {{CUSTOMER_EMAIL}}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="mobile-pad" style="padding:0 36px 20px 36px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#151515; border:1px solid #2D2D2D; border-radius:12px;">
+                                <tr>
+                                    <td style="padding:16px;">
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                            <tr>
+                                                <td style="color:#FFFFFF; font-size:14px; line-height:20px; padding:6px 0;">Subtotal</td>
+                                                <td style="color:#FFFFFF; font-size:14px; line-height:20px; padding:6px 0; text-align:right; font-weight:700;">Rs {{SUBTOTAL}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color:#FFFFFF; font-size:14px; line-height:20px; padding:6px 0;">Shipping</td>
+                                                <td style="color:#D4AF37; font-size:14px; line-height:20px; padding:6px 0; text-align:right; font-weight:700;">Complimentary</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="color:#9B9B9B; font-size:14px; line-height:20px; padding:6px 0;">Estimated Tax/GST</td>
+                                                <td style="color:#9B9B9B; font-size:14px; line-height:20px; padding:6px 0; text-align:right; font-weight:600;">Rs {{GST_AMOUNT}}</td>
+                                            </tr>
+                                            <tr><td colspan="2" style="border-top:1px solid #343434; font-size:1px; line-height:1px;">&nbsp;</td></tr>
+                                            <tr>
+                                                <td style="color:#D4AF37; font-size:17px; line-height:23px; padding-top:10px; font-weight:700;">Order Total</td>
+                                                <td style="color:#D4AF37; font-size:31px; line-height:34px; padding-top:10px; text-align:right; font-weight:900;">Rs {{TOTAL_AMOUNT}}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="mobile-pad" style="padding:0 36px 20px 36px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#111111; border:1px solid #282828; border-radius:12px;">
+                                <tr>
+                                    <td class="stack-col mobile-center" width="33.33%" style="padding:13px 8px; border-right:1px solid #242424; color:#FFFFFF; text-align:center; font-size:12px; line-height:18px;">
+                                        <span style="font-size:18px; color:#D4AF37;">&#10022;</span><br>10-Point Quality Check
+                                    </td>
+                                    <td class="stack-col mobile-center" width="33.33%" style="padding:13px 8px; border-right:1px solid #242424; color:#FFFFFF; text-align:center; font-size:12px; line-height:18px;">
+                                        <span style="font-size:18px; color:#D4AF37;">&#128737;</span><br>Insured Shipping
+                                    </td>
+                                    <td class="stack-col mobile-center" width="33.33%" style="padding:13px 8px; color:#FFFFFF; text-align:center; font-size:12px; line-height:18px;">
+                                        <span style="font-size:18px; color:#D4AF37;">&#8635;</span><br>7-Day Easy Returns
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="center" class="mobile-pad" style="padding:0 36px 24px 36px; border-bottom:1px solid #242424;">
+                            <table role="presentation" align="center" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center" style="padding-bottom:12px;">
+                                        <a href="{{TRACKING_URL}}" class="cta-btn" style="display:inline-block; padding:14px 34px; border-radius:999px; text-decoration:none; color:#121212; font-size:14px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; background:linear-gradient(135deg,#E0BF5A 0%,#D4AF37 52%,#B99225 100%);">View Order</a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{INVOICE_URL}}" style="color:#D4AF37; text-decoration:none; font-size:13px; font-weight:600; margin-right:14px;">Download Invoice</a>
+                                        <a href="{{INSTAGRAM_URL}}" style="color:#D4AF37; text-decoration:none; font-size:13px; font-weight:600; margin-right:14px;">Instagram</a>
+                                        <a href="mailto:{{SUPPORT_EMAIL}}" style="color:#D4AF37; text-decoration:none; font-size:13px; font-weight:600;">Support</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td align="center" class="mobile-pad" style="padding:16px 36px 22px 36px; color:#7B7B7B; font-size:11px; line-height:18px;">
+                            eShopper Luxe. Thank you for your order.<br>
+                            You are receiving this email because order {{ORDER_ID}} was confirmed.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
