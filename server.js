@@ -381,8 +381,8 @@ app.use((err, req, res, next) => {
 const BRAND_SITE_URL = (process.env.BRAND_SITE_URL || process.env.FRONTEND_URL || 'https://eshopperr.me').trim().replace(/\/$/, '');
 const BRAND_LOGO_PRIMARY_URL = process.env.BRAND_LOGO_URL || `${BRAND_SITE_URL}/logo512.png`;
 const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_SITE_URL}/logo192.png`;
-const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_PRIMARY_URL;
-const BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
+const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || `${BRAND_SITE_URL}/logo-premium-email.png`;
+const BRAND_LOGO_PDF_SRC = `${BRAND_SITE_URL}/logo-premium-invoice.png`;
 
 // 🔧 DATABASE CONNECTION SETUP
 const MONGO_URI = process.env.MONGODB_URI;
