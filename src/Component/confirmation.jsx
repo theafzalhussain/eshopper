@@ -399,7 +399,7 @@ const Confirmation = () => {
           </div>
         </div>
 
-        {/* Price Summary */}
+        {/* Price Summary with Enhanced Left Section */}
         <div
           style={{
             backgroundColor: 'white',
@@ -410,24 +410,125 @@ const Confirmation = () => {
             border: '1px solid #e0e0e0',
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', maxWidth: '500px', marginLeft: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'start' }}>
+            {/* Left Section - Order Benefits & Features */}
             <div>
-              <p style={{ fontSize: '13px', color: '#999', margin: '0 0 5px 0' }}>Subtotal</p>
-              <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#2c2c2c', margin: '0' }}>
-                ₹{(order.totalAmount || 0).toFixed(2)}
-              </p>
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#2c2c2c', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '24px' }}>✨</span> Your Benefits
+              </h3>
+              
+              {/* Benefit Cards */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Free Shipping */}
+                <div style={{ 
+                  background: 'linear-gradient(135deg, #10b98115 0%, #10b98125 100%)',
+                  border: '1px solid #10b981',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <span style={{ fontSize: '24px' }}>🚚</span>
+                  <div>
+                    <p style={{ margin: '0', fontSize: '13px', fontWeight: 'bold', color: '#10b981' }}>Free Shipping</p>
+                    <p style={{ margin: '0', fontSize: '11px', color: '#666' }}>No extra charges</p>
+                  </div>
+                </div>
+
+                {/* Secure Packaging */}
+                <div style={{ 
+                  background: 'linear-gradient(135deg, #f59e0b15 0%, #f59e0b25 100%)',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <span style={{ fontSize: '24px' }}>📦</span>
+                  <div>
+                    <p style={{ margin: '0', fontSize: '13px', fontWeight: 'bold', color: '#f59e0b' }}>Premium Packaging</p>
+                    <p style={{ margin: '0', fontSize: '11px', color: '#666' }}>Hand-wrapped with care</p>
+                  </div>
+                </div>
+
+                {/* Quality Guarantee */}
+                <div style={{ 
+                  background: 'linear-gradient(135deg, #8b5cf615 0%, #8b5cf625 100%)',
+                  border: '1px solid #8b5cf6',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <span style={{ fontSize: '24px' }}>✅</span>
+                  <div>
+                    <p style={{ margin: '0', fontSize: '13px', fontWeight: 'bold', color: '#8b5cf6' }}>Quality Checked</p>
+                    <p style={{ margin: '0', fontSize: '11px', color: '#666' }}>100% authentic products</p>
+                  </div>
+                </div>
+
+                {/* Easy Returns */}
+                <div style={{ 
+                  background: 'linear-gradient(135deg, #ef444415 0%, #ef444425 100%)',
+                  border: '1px solid #ef4444',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <span style={{ fontSize: '24px' }}>🔄</span>
+                  <div>
+                    <p style={{ margin: '0', fontSize: '13px', fontWeight: 'bold', color: '#ef4444' }}>Easy Returns</p>
+                    <p style={{ margin: '0', fontSize: '11px', color: '#666' }}>7-day return policy</p>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Right Section - Price Breakdown */}
             <div>
-              <p style={{ fontSize: '13px', color: '#999', margin: '0 0 5px 0' }}>Shipping</p>
-              <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#2c2c2c', margin: '0' }}>
-                ₹{(order.shippingAmount || 0).toFixed(2)}
-              </p>
-            </div>
-            <div style={{ gridColumn: '1 / -1', borderTop: '2px solid #e0e0e0', paddingTop: '15px' }}>
-              <p style={{ fontSize: '13px', color: '#999', margin: '0 0 5px 0' }}>Total Amount</p>
-              <p style={{ fontSize: '20px', fontWeight: 'bold', color: '#d4af37', margin: '0' }}>
-                ₹{(order.finalAmount || 0).toFixed(2)}
-              </p>
+              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#2c2c2c', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '24px' }}>💰</span> Order Summary
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p style={{ fontSize: '13px', color: '#999', margin: '0' }}>Subtotal</p>
+                  <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#2c2c2c', margin: '0' }}>
+                    ₹{(order.totalAmount || 0).toFixed(2)}
+                  </p>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <p style={{ fontSize: '13px', color: '#999', margin: '0' }}>Shipping</p>
+                  <p style={{ fontSize: '16px', fontWeight: 'bold', color: order.shippingAmount > 0 ? '#2c2c2c' : '#10b981', margin: '0' }}>
+                    {order.shippingAmount > 0 ? `₹${(order.shippingAmount || 0).toFixed(2)}` : 'FREE'}
+                  </p>
+                </div>
+                
+                <div style={{ 
+                  borderTop: '2px solid #e0e0e0', 
+                  paddingTop: '15px',
+                  background: 'linear-gradient(135deg, #d4af3715, #d4af3725)',
+                  borderRadius: '8px',
+                  padding: '15px',
+                  marginTop: '10px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontSize: '15px', color: '#666', margin: '0', fontWeight: '600' }}>Total Amount</p>
+                    <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#d4af37', margin: '0' }}>
+                      ₹{(order.finalAmount || 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <p style={{ fontSize: '11px', color: '#999', margin: '8px 0 0 0', textAlign: 'right' }}>
+                    Payment: {order.paymentMethod || 'COD'}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -574,7 +675,7 @@ const Confirmation = () => {
           }}
         >
           <p style={{ fontSize: '14px', color: '#666', margin: '0' }}>
-            Questions? Contact us at <strong>support@eshopperboutique.com</strong> or call our customer service team
+            Questions? Contact us at <strong>support@eshopperr.me</strong> or call our customer service team
           </p>
         </div>
       </div>
