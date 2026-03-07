@@ -1,3 +1,141 @@
+
+// --- WHATSAPP NOTIFICATION INTEGRATION (Evolution API) ---
+const EV_API_URL = process.env.EVOLUTION_API_URL;
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+const WHATSAPP_INSTANCE = process.env.WHATSAPP_INSTANCE;
+const WHATSAPP_SENDER_NUMBER = process.env.WHATSAPP_SENDER_NUMBER;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+
+if (EV_API_URL && WHATSAPP_TOKEN && WHATSAPP_INSTANCE && WHATSAPP_SENDER_NUMBER) {
+    console.log('✅ Evolution API WhatsApp integration ready');
+} else {
+    console.warn('⚠️  Evolution API WhatsApp env vars missing. WhatsApp notifications disabled.');
+}
+
+// --- PREMIUM WHATSAPP MESSAGE TEMPLATES ---
+function buildWhatsAppMessage(order, status, otp = null) {
+    // Premium, detailed, status-specific templates
+    const productList = (order.products || []).map((p, i) => `  ${i + 1}. ${p.name}${p.size ? ` (${p.size})` : ''} x${p.qty || 1}`).join('\n');
+    const deliveryDate = order.estimatedArrival ? new Date(order.estimatedArrival).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const supportLine = '\nNeed help? Chat with us: support@eshopperr.me';
+    const brandFooter = '\n━━━━━━━━━━━━━━━━━━\nThank you for choosing *eShopper* ✨';
+    const orderSummary = `*Order ID:* ${order.orderId}\n*Amount:* ₹${order.finalAmount || order.totalAmount || 0}\n*Payment:* ${order.paymentMethod || 'N/A'}\n${productList ? '*Items:*\n' + productList + '\n' : ''}`;
+
+    switch (status) {
+        case 'Ordered':
+            return (
+                `🛒 *Order Placed Successfully!*\n━━━━━━━━━━━━━━━━━━\n` +
+                orderSummary +
+                (deliveryDate ? `*Est. Delivery:* ${deliveryDate}\n` : '') +
+                '\nYour order has been received and is being processed.' +
+                supportLine + brandFooter
+            );
+        case 'Confirmed':
+            return (
+                `✅ *Order Confirmed!*\n━━━━━━━━━━━━━━━━━━\n` +
+                orderSummary +
+                (deliveryDate ? `*Est. Delivery:* ${deliveryDate}\n` : '') +
+                '\nWe have confirmed your order and will pack it soon.' +
+                supportLine + brandFooter
+            );
+        case 'Packed':
+            return (
+                `📦 *Order Packed!*\n━━━━━━━━━━━━━━━━━━\n` +
+                orderSummary +
+                (deliveryDate ? `*Est. Delivery:* ${deliveryDate}\n` : '') +
+                '\nYour order is packed and ready to be shipped.' +
+                supportLine + brandFooter
+            );
+        case 'Shipped':
+            return (
+                `🚚 *Order Shipped!*\n━━━━━━━━━━━━━━━━━━\n` +
+                orderSummary +
+                (deliveryDate ? `*Est. Delivery:* ${deliveryDate}\n` : '') +
+                (order.trackingId ? `*Tracking ID:* ${order.trackingId}\n` : '') +
+                '\nYour order is on its way! Track your shipment from your eShopper account.' +
+                supportLine + brandFooter
+            );
+        case 'Out for Delivery':
+            return (
+                `🚚 *Out for Delivery!*\n━━━━━━━━━━━━━━━━━━\n` +
+                orderSummary +
+                (deliveryDate ? `*Delivery Today:* ${deliveryDate}\n` : '') +
+                (otp ? `\n*Delivery OTP:* _${otp}_\nPlease share this OTP with our delivery partner to receive your order.\n` : '') +
+                '\nGet ready! Your order will arrive soon.' +
+                supportLine + brandFooter
+            );
+        case 'Delivered':
+            return (
+                `🎉 *Order Delivered!*\n━━━━━━━━━━━━━━━━━━\n` +
+                orderSummary +
+                (deliveryDate ? `*Delivered On:* ${deliveryDate}\n` : '') +
+                '\nWe hope you love your purchase! If you need any help, we are just a message away.' +
+                supportLine + brandFooter
+            );
+        default:
+            return (
+                `🛍️ *eShopper Order Update*\n━━━━━━━━━━━━━━━━━━\n` +
+                orderSummary +
+                (deliveryDate ? `*Est. Delivery:* ${deliveryDate}\n` : '') +
+                supportLine + brandFooter
+            );
+    }
+}
+
+// --- SEND WHATSAPP MESSAGE VIA EVOLUTION API ---
+async function sendWhatsAppNotification(order, status, otp = null) {
+    if (!EV_API_URL || !WHATSAPP_TOKEN || !WHATSAPP_INSTANCE || !WHATSAPP_SENDER_NUMBER || !FEATURE_WHATSAPP_NOTIFICATIONS) return;
+    const msg = buildWhatsAppMessage(order, status, otp);
+    try {
+        // WhatsApp API expects: { token, instance, to, message }
+        await axios.post(`${EV_API_URL}/send-message`, {
+            token: WHATSAPP_TOKEN,
+            instance: WHATSAPP_INSTANCE,
+            to: order.userPhone || WHATSAPP_SENDER_NUMBER,
+            message: msg
+        });
+        console.log(`✅ WhatsApp notification sent for order ${order.orderId} [${status}]`);
+    } catch (err) {
+        console.error('❌ WhatsApp notification failed:', err.message);
+    }
+}
+
+// --- OTP GENERATION/VERIFICATION (for Out for Delivery) ---
+const crypto = require('crypto');
+const orderOtpMap = new Map(); // In-memory for demo; use DB in production
+function generateOtp(orderId) {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    orderOtpMap.set(orderId, otp);
+    setTimeout(() => orderOtpMap.delete(orderId), 60 * 60 * 1000); // OTP valid for 1 hour
+    return otp;
+}
+function verifyOtp(orderId, otp) {
+    return orderOtpMap.get(orderId) === otp;
+}
+
+// --- ORDER STATUS HOOKS FOR WHATSAPP AUTOMATION ---
+// Example: Call sendWhatsAppNotification(order, status, otp) wherever order status changes
+// For demo, add a sample endpoint:
+app.post('/api/order/:orderId/update-status', async (req, res) => {
+    const { orderId } = req.params;
+    const { status } = req.body;
+    // TODO: Fetch order from DB and update status
+    let order = { orderId, finalAmount: 999, paymentMethod: 'COD', products: [{ name: 'Sample Product' }], estimatedArrival: new Date() };
+    let otp = null;
+    if (status === 'Out for Delivery') {
+        otp = generateOtp(orderId);
+    }
+    await sendWhatsAppNotification(order, status, otp);
+    res.json({ ok: true, status, otp });
+});
+
+// OTP verification endpoint
+app.post('/api/order/:orderId/verify-otp', (req, res) => {
+    const { orderId } = req.params;
+    const { otp } = req.body;
+    const valid = verifyOtp(orderId, otp);
+    res.json({ valid });
+});
 // 🔴 LOAD ENV VARIABLES FIRST
 require('dotenv').config();
 
@@ -5292,6 +5430,13 @@ const handleOrderStatusUpdate = async (req, res) => {
                 }
             ];
             await order.save();
+
+            // --- WhatsApp Notification Automation ---
+            let otp = null;
+            if (normalized === 'Out for Delivery') {
+                otp = generateOtp(order.orderId);
+            }
+            await sendWhatsAppNotification(order, normalized, otp);
         }
 
         if (!Array.isArray(order.statusHistory) || order.statusHistory.length === 0) {
