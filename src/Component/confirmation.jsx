@@ -151,7 +151,7 @@ const Confirmation = () => {
 
   const estimatedArrival = new Date(order.estimatedArrival || new Date().setDate(new Date().getDate() + 7));
   return (
-    <div>
+    <>
       {/* Premium Order Summary Section - Redesigned */}
       <div style={{
         background: 'linear-gradient(135deg, #fffbe6 0%, #f9f7f4 100%)',
@@ -695,7 +695,7 @@ const Confirmation = () => {
           </p>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
