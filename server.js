@@ -3364,6 +3364,16 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
         const firstName = (userName || 'Valued Customer').split(' ')[0];
         const safeProducts = Array.isArray(products) ? products : [];
 
+        // Convert base64 string to buffer if needed (for queue serialization)
+        let pdfBuffer = null;
+        if (invoiceBuffer) {
+            if (Buffer.isBuffer(invoiceBuffer)) {
+                pdfBuffer = invoiceBuffer;
+            } else if (typeof invoiceBuffer === 'string' && invoiceBuffer.length > 0) {
+                pdfBuffer = Buffer.from(invoiceBuffer, 'base64');
+            }
+        }
+
         // Prefer the dedicated template file first to keep dispatcher behavior consistent.
         try {
             const templateOrder = {
@@ -3384,8 +3394,8 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
                 email: toEmail
             }));
 
-            const templateAttachments = invoiceBuffer
-                ? [{ filename: `OrderReceipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
+            const templateAttachments = pdfBuffer
+                ? [{ filename: `OrderReceipt-${orderId}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
                 : [];
 
             const result = await sendTransactionalEmail({
@@ -3397,7 +3407,7 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
                 attachments: templateAttachments
             });
 
-            console.log(`✅ Order Placed template email sent via ${result.provider} to ${toEmail} for ${orderId}`);
+            console.log(`✅ Order Placed template email sent via ${result.provider} to ${toEmail} for ${orderId}${pdfBuffer ? ' with PDF attachment' : ''}`);
             return true;
         } catch (templateErr) {
             console.warn(`⚠️ Order Placed template fallback for ${orderId}:`, templateErr.message);
@@ -4237,6 +4247,9 @@ const placeOrderHandler = async (req, res) => {
         if (FEATURE_EMAIL_NOTIFICATIONS) {
             setImmediate(async () => {
                 try {
+                    // Convert buffer to base64 for queue serialization
+                    const invoiceBase64 = invoiceBuffer ? invoiceBuffer.toString('base64') : null;
+                    
                     await enqueueEmailJob('order-placed', {
                         toEmail: recipientEmail,
                         userName: user.name,
@@ -4244,9 +4257,9 @@ const placeOrderHandler = async (req, res) => {
                         finalAmount: payable,
                         products: cleanProducts,
                         shippingAddress: addressPayload,
-                        invoiceBuffer
+                        invoiceBuffer: invoiceBase64
                     });
-                    console.log(`✅ Order Placed email sent for ${orderId} → ${recipientEmail}`);
+                    console.log(`✅ Order Placed email enqueued for ${orderId} → ${recipientEmail}`);
                 } catch (emailErr) {
                     console.error(`⚠️ Order Placed email failed for ${orderId}:`, emailErr.message);
                     if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
