@@ -55,6 +55,7 @@ export default function OrderTracking() {
   const [toast, setToast] = useState(null)
   const [didCelebrate, setDidCelebrate] = useState(false)
   const [statusTimeline, setStatusTimeline] = useState([])
+  const [downloadingDoc, setDownloadingDoc] = useState(false)
 
   const activeIndex = useMemo(() => Math.max(0, STEPS.indexOf(status)), [status])
   const progressPercent = useMemo(() => (activeIndex / (STEPS.length - 1)) * 100, [activeIndex])
@@ -75,6 +76,10 @@ export default function OrderTracking() {
       ''
     )
   }, [primaryItem])
+
+  const expectedDeliveryDate = useMemo(() => {
+    return order?.estimatedArrival || order?.estimatedDelivery || null
+  }, [order])
 
   const timelineMap = useMemo(() => {
     const map = {}
@@ -112,6 +117,46 @@ export default function OrderTracking() {
 
     // Status update notification
     console.log(`📊 Status Updated: ${nextStatus}`)
+  }
+
+  const getDocumentLabel = (currentStatus) => {
+    const normalized = normalizeStatus(currentStatus)
+    if (normalized === 'Delivered') return 'Download Tax Invoice'
+    if (normalized === 'Ordered') return 'Download Receipt'
+    return 'Download Proforma'
+  }
+
+  const downloadOrderDocument = async () => {
+    if (!orderId || !userId) return
+
+    try {
+      setDownloadingDoc(true)
+      const response = await axios.get(
+        `${BASE_URL}/api/orders/${encodeURIComponent(orderId)}/download-invoice?userId=${encodeURIComponent(userId)}`,
+        {
+          responseType: 'blob',
+          timeout: 45000
+        }
+      )
+
+      const disposition = response.headers?.['content-disposition'] || ''
+      const filenameMatch = disposition.match(/filename="?([^\";]+)"?/i)
+      const fileName = filenameMatch?.[1] || `Invoice-${orderId}.pdf`
+      const objectUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(objectUrl)
+    } catch (e) {
+      console.error('Failed to download order document:', e)
+      window.alert('Unable to download document right now. Please try again.')
+    } finally {
+      setDownloadingDoc(false)
+    }
   }
 
   // Track page visit
@@ -200,7 +245,12 @@ export default function OrderTracking() {
               }
               return nextStatus
             })
-            setOrder((prev) => ({ ...(prev || {}), updatedAt: payload.updatedAt || new Date().toISOString() }))
+            setOrder((prev) => ({
+              ...(prev || {}),
+              estimatedArrival: payload.estimatedArrival || payload.estimatedDelivery || prev?.estimatedArrival || prev?.estimatedDelivery || null,
+              estimatedDelivery: payload.estimatedDelivery || payload.estimatedArrival || prev?.estimatedDelivery || prev?.estimatedArrival || null,
+              updatedAt: payload.updatedAt || new Date().toISOString()
+            }))
             
             // Add to timeline
             setStatusTimeline((prev) => [
@@ -375,7 +425,7 @@ export default function OrderTracking() {
           </div>
 
           {/* ESTIMATED DELIVERY */}
-          {order?.estimatedDelivery && (
+          {expectedDeliveryDate && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -394,7 +444,7 @@ export default function OrderTracking() {
                 <div>
                   <p className="text-muted small mb-1" style={{ color: '#6b5b2b' }}>Expected Delivery</p>
                   <p className="font-weight-bold mb-0" style={{ fontSize: '18px', color: '#5f4b1b' }}>
-                    {new Date(order.estimatedDelivery).toLocaleDateString('en-IN', { 
+                    {new Date(expectedDeliveryDate).toLocaleDateString('en-IN', { 
                       weekday: 'long', 
                       year: 'numeric', 
                       month: 'long', 
@@ -756,6 +806,40 @@ export default function OrderTracking() {
               >
                 <span style={{ position: 'relative', zIndex: 2 }}>
                   💬 Chat Support
+                </span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{
+                  scale: 1.03,
+                  boxShadow: '0 16px 36px rgba(212,175,55,0.28)',
+                  y: -2
+                }}
+                whileTap={{ scale: 0.95 }}
+                onClick={downloadOrderDocument}
+                disabled={downloadingDoc}
+                className="btn btn-sm rounded-pill"
+                style={{
+                  flex: '1 1 auto',
+                  minWidth: '180px',
+                  background: 'linear-gradient(135deg, #d4af37, #b08a2c)',
+                  color: '#111',
+                  border: '1.5px solid #9b7a22',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  padding: '12px 20px',
+                  letterSpacing: '0.3px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px rgba(212,175,55,0.22)',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  opacity: downloadingDoc ? 0.7 : 1
+                }}
+                title="Download status-based order document"
+              >
+                <span style={{ position: 'relative', zIndex: 2 }}>
+                  {downloadingDoc ? 'Preparing PDF...' : `📄 ${getDocumentLabel(status)}`}
                 </span>
               </motion.button>
             </div>

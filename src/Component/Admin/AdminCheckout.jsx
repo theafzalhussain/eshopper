@@ -24,6 +24,24 @@ const STATUS_BADGE_COLORS = {
     'Refund Completed': 'badge-success'
 }
 
+const QUICK_ETA_OPTIONS = [
+    { label: 'Today', days: 0 },
+    { label: '+1d', days: 1 },
+    { label: '+2d', days: 2 },
+    { label: '+3d', days: 3 },
+    { label: '+5d', days: 5 }
+]
+
+const toInputDate = (value) => {
+    if (!value) return ''
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return ''
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+}
+
 export default function AdminCheckout() {
     const checkouts = useSelector((state) => state.CheckoutStateData)
     const dispatch = useDispatch()
@@ -31,6 +49,21 @@ export default function AdminCheckout() {
     const [notification, setNotification] = useState(null)
     const [expandedRow, setExpandedRow] = useState(null)
     const [socket, setSocket] = useState(null)
+    const [etaDateByOrder, setEtaDateByOrder] = useState({})
+
+    const getDateFromDays = (days) => {
+        const next = new Date()
+        next.setHours(0, 0, 0, 0)
+        next.setDate(next.getDate() + Number(days || 0))
+        return toInputDate(next)
+    }
+
+    const setQuickEta = (orderKey, days) => {
+        setEtaDateByOrder((prev) => ({
+            ...prev,
+            [orderKey]: getDateFromDays(days)
+        }))
+    }
 
     useEffect(() => { 
         dispatch(getCheckout()) 
@@ -63,10 +96,13 @@ export default function AdminCheckout() {
 
         try {
             setUpdating(item.id || item._id)
+            const orderKey = item.id || item._id || item.orderId
+            const etaDate = etaDateByOrder[orderKey] || ''
             
             const response = await axios.post(`${BASE_URL}/api/update-order-status`, {
-                orderId: item.id || item._id || item.orderId,
-                status: newStatus
+                orderId: orderKey,
+                status: newStatus,
+                ...(etaDate ? { estimatedArrival: etaDate } : {})
             }, { timeout: 10000 })
 
             if (response.data?.success) {
@@ -169,6 +205,50 @@ export default function AdminCheckout() {
                                                                         <Send size={14} className="mr-2" />
                                                                         Select new status for Order <strong>{item.id || item._id}</strong>:
                                                                     </h6>
+                                                                    <div className="mb-3" style={{ maxWidth: 300 }}>
+                                                                        <div className="d-flex align-items-center justify-content-between mb-1">
+                                                                            <label className="small font-weight-bold text-muted d-block mb-0">Expected Delivery Date (Optional)</label>
+                                                                            <button
+                                                                                type="button"
+                                                                                className="btn btn-link btn-sm p-0"
+                                                                                style={{ fontSize: '11px', fontWeight: 700 }}
+                                                                                onClick={() => {
+                                                                                    const orderKey = item.id || item._id || item.orderId
+                                                                                    setEtaDateByOrder((prev) => ({ ...prev, [orderKey]: '' }))
+                                                                                }}
+                                                                            >
+                                                                                Clear
+                                                                            </button>
+                                                                        </div>
+                                                                        <input
+                                                                            type="date"
+                                                                            className="form-control form-control-sm"
+                                                                            value={etaDateByOrder[item.id || item._id || item.orderId] || ''}
+                                                                            onChange={(e) => {
+                                                                                const orderKey = item.id || item._id || item.orderId
+                                                                                setEtaDateByOrder((prev) => ({
+                                                                                    ...prev,
+                                                                                    [orderKey]: e.target.value
+                                                                                }))
+                                                                            }}
+                                                                        />
+                                                                        <div className="mt-2 d-flex flex-wrap" style={{ gap: '6px' }}>
+                                                                            {QUICK_ETA_OPTIONS.map((opt) => (
+                                                                                <button
+                                                                                    key={`${item.id || item._id || item.orderId}-${opt.days}`}
+                                                                                    type="button"
+                                                                                    className="btn btn-sm btn-outline-primary rounded-pill"
+                                                                                    style={{ fontSize: '11px', fontWeight: 700, padding: '3px 9px' }}
+                                                                                    onClick={() => {
+                                                                                        const orderKey = item.id || item._id || item.orderId
+                                                                                        setQuickEta(orderKey, opt.days)
+                                                                                    }}
+                                                                                >
+                                                                                    {opt.label}
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                             <div className="row g-2">

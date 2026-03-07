@@ -27,6 +27,24 @@ const STATUS_ICONS = {
     'Delivered': <Check size={16} />
 };
 
+const QUICK_ETA_OPTIONS = [
+    { label: 'Today', days: 0 },
+    { label: '+1d', days: 1 },
+    { label: '+2d', days: 2 },
+    { label: '+3d', days: 3 },
+    { label: '+5d', days: 5 }
+];
+
+const toInputDate = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+};
+
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -45,8 +63,27 @@ export default function AdminOrders() {
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [expandedHistory, setExpandedHistory] = useState(null);
+    const [etaDateByOrder, setEtaDateByOrder] = useState({});
+    const [etaDaysByOrder, setEtaDaysByOrder] = useState({});
 
     const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://api.eshopperr.me';
+
+    const getDateFromDays = (days) => {
+        const next = new Date();
+        next.setHours(0, 0, 0, 0);
+        next.setDate(next.getDate() + Number(days || 0));
+        return toInputDate(next);
+    };
+
+    const setQuickEta = (orderId, days) => {
+        setEtaDaysByOrder((prev) => ({ ...prev, [orderId]: String(days) }));
+        setEtaDateByOrder((prev) => ({ ...prev, [orderId]: getDateFromDays(days) }));
+    };
+
+    const clearEta = (orderId) => {
+        setEtaDateByOrder((prev) => ({ ...prev, [orderId]: '' }));
+        setEtaDaysByOrder((prev) => ({ ...prev, [orderId]: '' }));
+    };
 
     // Socket.io setup for real-time updates
     useEffect(() => {
@@ -56,9 +93,22 @@ export default function AdminOrders() {
             console.log('📡 Real-time update received:', payload);
             setOrders(prev => prev.map(order =>
                 order.orderId === payload.orderId
-                    ? { ...order, orderStatus: payload.status, updatedAt: payload.updatedAt }
+                    ? {
+                        ...order,
+                        orderStatus: payload.status,
+                        estimatedArrival: payload.estimatedArrival || payload.estimatedDelivery || order.estimatedArrival || null,
+                        estimatedDelivery: payload.estimatedDelivery || payload.estimatedArrival || order.estimatedDelivery || null,
+                        updatedAt: payload.updatedAt
+                    }
                     : order
             ));
+
+            if (payload?.orderId && (payload?.estimatedArrival || payload?.estimatedDelivery)) {
+                setEtaDateByOrder((prev) => ({
+                    ...prev,
+                    [payload.orderId]: toInputDate(payload.estimatedArrival || payload.estimatedDelivery)
+                }));
+            }
         };
 
         socket.on('statusUpdate', handleStatusUpdate);
@@ -81,7 +131,17 @@ export default function AdminOrders() {
             };
 
             const response = await axios.get(`${BASE_URL}/api/admin/orders`, { params });
-            setOrders(response.data.orders || []);
+            const list = response.data.orders || [];
+            setOrders(list);
+            setEtaDateByOrder((prev) => {
+                const next = { ...prev };
+                list.forEach((o) => {
+                    if (!next[o.orderId]) {
+                        next[o.orderId] = toInputDate(o.estimatedArrival || o.estimatedDelivery);
+                    }
+                });
+                return next;
+            });
             setTotalPages(response.data.pages || 0);
             setSelectedOrders(new Set());
             setSelectAll(false);
@@ -98,6 +158,12 @@ export default function AdminOrders() {
             setUpdating(orderId);
             setDropdownOpen(null);
 
+            const etaDate = etaDateByOrder[orderId] || '';
+            const etaDaysRaw = etaDaysByOrder[orderId];
+            const etaDays = etaDaysRaw === '' || etaDaysRaw === undefined || etaDaysRaw === null
+                ? undefined
+                : Number(etaDaysRaw);
+
             // Special handling for "Confirmed" status - use premium email endpoint
             const endpoint = newStatus === 'Confirmed' 
                 ? `${BASE_URL}/api/admin/confirm-order`
@@ -112,8 +178,17 @@ export default function AdminOrders() {
                 : {};
 
             const response = newStatus === 'Confirmed'
-                ? await axios.post(endpoint, { orderId }, config)
-                : await axios.post(endpoint, { orderId, status: newStatus });
+                ? await axios.post(endpoint, {
+                    orderId,
+                    ...(etaDate ? { estimatedArrival: etaDate } : {}),
+                    ...(Number.isFinite(etaDays) ? { expectedDays: etaDays } : {})
+                }, config)
+                : await axios.post(endpoint, {
+                    orderId,
+                    status: newStatus,
+                    ...(etaDate ? { estimatedArrival: etaDate } : {}),
+                    ...(Number.isFinite(etaDays) ? { expectedDays: etaDays } : {})
+                });
 
             if (response.data.success) {
                 const emailInfo = newStatus === 'Confirmed' && response.data.emailSent 
@@ -175,7 +250,17 @@ export default function AdminOrders() {
 
             for (const orderId of ordersToConfirm) {
                 try {
-                    const response = await axios.post(`${BASE_URL}/api/admin/confirm-order`, { orderId }, config);
+                    const etaDate = etaDateByOrder[orderId] || '';
+                    const etaDaysRaw = etaDaysByOrder[orderId];
+                    const etaDays = etaDaysRaw === '' || etaDaysRaw === undefined || etaDaysRaw === null
+                        ? undefined
+                        : Number(etaDaysRaw);
+
+                    const response = await axios.post(`${BASE_URL}/api/admin/confirm-order`, {
+                        orderId,
+                        ...(etaDate ? { estimatedArrival: etaDate } : {}),
+                        ...(Number.isFinite(etaDays) ? { expectedDays: etaDays } : {})
+                    }, config);
                     if (response.data.success) {
                         successCount++;
                     } else {
@@ -365,7 +450,8 @@ export default function AdminOrders() {
                                                     <th>Amount</th>
                                                     <th>Status</th>
                                                     <th>Items</th>
-                                                    <th>Updated</th>
+                                                            <th>Expected</th>
+                                                            <th>Updated</th>
                                                     <th>Action</th>
                                                 </tr>
                                             </thead>
@@ -400,6 +486,15 @@ export default function AdminOrders() {
                                                                 </span>
                                                             </td>
                                                             <td>{order.productCount || order.products?.length || 0} item{(order.productCount || order.products?.length || 0) !== 1 ? 's' : ''}</td>
+                                                            <td>
+                                                                {order.estimatedArrival || order.estimatedDelivery
+                                                                    ? new Date(order.estimatedArrival || order.estimatedDelivery).toLocaleDateString('en-IN', {
+                                                                        day: 'numeric',
+                                                                        month: 'short',
+                                                                        year: 'numeric'
+                                                                    })
+                                                                    : 'N/A'}
+                                                            </td>
                                                             <td>{new Date(order.updatedAt).toLocaleDateString('en-IN')}</td>
                                                             <td>
                                                                 <div className="position-relative">
@@ -427,6 +522,61 @@ export default function AdminOrders() {
                                                                             animate={{ opacity: 1, y: 0 }}
                                                                             className="admin-status-dropdown"
                                                                         >
+                                                                            <div className="admin-eta-panel p-2 border-bottom">
+                                                                                <div className="d-flex align-items-center justify-content-between mb-2">
+                                                                                    <label className="small font-weight-bold mb-0 d-block text-muted">Expected Delivery Date</label>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="btn btn-link btn-sm p-0"
+                                                                                        onClick={() => clearEta(order.orderId)}
+                                                                                        style={{ fontSize: '11px', fontWeight: 700 }}
+                                                                                    >
+                                                                                        Clear
+                                                                                    </button>
+                                                                                </div>
+                                                                                <input
+                                                                                    type="date"
+                                                                                    value={etaDateByOrder[order.orderId] || ''}
+                                                                                    onChange={(e) => setEtaDateByOrder((prev) => ({
+                                                                                        ...prev,
+                                                                                        [order.orderId]: e.target.value
+                                                                                    }))}
+                                                                                    className="form-control form-control-sm"
+                                                                                />
+                                                                                <label className="small font-weight-bold mb-1 mt-2 d-block text-muted">Or Delivery in Days</label>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="0"
+                                                                                    placeholder="Auto by status"
+                                                                                    value={etaDaysByOrder[order.orderId] ?? ''}
+                                                                                    onChange={(e) => setEtaDaysByOrder((prev) => ({
+                                                                                        ...prev,
+                                                                                        [order.orderId]: e.target.value
+                                                                                    }))}
+                                                                                    className="form-control form-control-sm"
+                                                                                />
+                                                                                <div className="admin-eta-quick-wrap mt-2">
+                                                                                    {QUICK_ETA_OPTIONS.map((opt) => (
+                                                                                        <button
+                                                                                            key={`${order.orderId}-${opt.days}`}
+                                                                                            type="button"
+                                                                                            className="admin-eta-chip"
+                                                                                            onClick={() => setQuickEta(order.orderId, opt.days)}
+                                                                                        >
+                                                                                            {opt.label}
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                                {!!etaDateByOrder[order.orderId] && (
+                                                                                    <div className="small text-muted mt-2" style={{ fontSize: '11px' }}>
+                                                                                        ETA: {new Date(etaDateByOrder[order.orderId]).toLocaleDateString('en-IN', {
+                                                                                            day: 'numeric',
+                                                                                            month: 'short',
+                                                                                            year: 'numeric'
+                                                                                        })}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
                                                                             {ALLOWED_STATUSES.map((status) => (
                                                                                 <button
                                                                                     key={status}
@@ -451,7 +601,7 @@ export default function AdminOrders() {
                                                                 animate={{ opacity: 1 }}
                                                                 className="bg-light"
                                                             >
-                                                                <td colSpan="9" className="p-3">
+                                                                <td colSpan="10" className="p-3">
                                                                     <div className="bg-white rounded p-3 border">
                                                                         <h4 className="h6 font-weight-bold mb-3">📋 Status History</h4>
                                                                         <div>
@@ -474,7 +624,7 @@ export default function AdminOrders() {
 
                                                         {order.statusHistory && order.statusHistory.length > 0 && (
                                                             <tr className="bg-light">
-                                                                <td colSpan="9" className="py-2 px-3">
+                                                                <td colSpan="10" className="py-2 px-3">
                                                                     <button
                                                                         onClick={() => setExpandedHistory(expandedHistory === order.orderId ? null : order.orderId)}
                                                                         className="btn btn-link btn-sm p-0"

@@ -156,6 +156,31 @@ const normalizeOrderStatus = (s = '') => {
     return null;
 };
 
+const STATUS_DELIVERY_DAYS = {
+    Ordered: 7,
+    Packed: 5,
+    Shipped: 3,
+    'Out for Delivery': 1,
+    Delivered: 0
+};
+
+const resolveEstimatedArrival = ({ status, explicitDate, expectedDays }) => {
+    const explicit = explicitDate ? new Date(explicitDate) : null;
+    if (explicit && !Number.isNaN(explicit.getTime())) {
+        return explicit;
+    }
+
+    const customDays = Number(expectedDays);
+    const fallbackDays = Number.isFinite(customDays) && customDays >= 0
+        ? customDays
+        : (STATUS_DELIVERY_DAYS[status] ?? 7);
+
+    const next = new Date();
+    next.setHours(0, 0, 0, 0);
+    next.setDate(next.getDate() + fallbackDays);
+    return next;
+};
+
 // Feature toggles for clean baseline (enable email notifications).
 const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'true').toLowerCase() === 'true';
 const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
@@ -465,6 +490,11 @@ const sendAdminAlert = async ({ title, details }) => {
     }
 };
 
+const isValidBase64Payload = (value = '') => {
+    const raw = String(value || '').trim();
+    return raw.length > 0 && /^[A-Za-z0-9+/=]+$/.test(raw);
+};
+
 const EMAIL_QUEUE_ENABLED = String(process.env.EMAIL_QUEUE_ENABLED || 'true').toLowerCase() !== 'false';
 const memoryEmailQueue = [];
 let memoryQueueRunning = false;
@@ -724,7 +754,7 @@ const mapOrderToTemplateData = (order, user = null) => {
 };
 
 // Send order email based on status
-const sendOrderEmail = async (order, status, user = null) => {
+const sendOrderEmail = async (order, status, user = null, options = {}) => {
     try {
         if (!FEATURE_EMAIL_NOTIFICATIONS) {
             console.log('⏭️ Email notifications disabled');
@@ -739,7 +769,7 @@ const sendOrderEmail = async (order, status, user = null) => {
             return { skipped: true };
         }
         
-        const customerEmail = order.userEmail || user?.email;
+        const customerEmail = options.toEmail || order.userEmail || user?.email;
         if (!customerEmail || !customerEmail.includes('@')) {
             console.warn(`⚠️ Invalid email for order ${order.orderId}`);
             return { skipped: true };
@@ -754,10 +784,11 @@ const sendOrderEmail = async (order, status, user = null) => {
         // Send email
         await sendTransactionalEmail({
             toEmail: customerEmail,
-            toName: templateData.CUSTOMER_NAME,
-            subject: getEmailSubject(statusLower, order.orderId),
+            toName: options.toName || templateData.CUSTOMER_NAME,
+            subject: options.subject || getEmailSubject(statusLower, order.orderId),
             htmlContent: htmlContent,
-            textContent: `Your order ${order.orderId} status: ${status}`
+            textContent: options.textContent || `Your order ${order.orderId} status: ${status}`,
+            attachments: Array.isArray(options.attachments) ? options.attachments : []
         });
         
         console.log(`✅ Email sent for ${status}: ${order.orderId} → ${customerEmail}`);
@@ -1848,6 +1879,492 @@ const buildInvoiceHtml = ({
     `;
 };
 
+const formatMoneyInr = (value) => `₹${Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+
+const amountToWordsIndian = (amountValue) => {
+    const amount = Math.round(Number(amountValue || 0));
+    if (!Number.isFinite(amount) || amount <= 0) return 'Zero Rupees Only';
+
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    const twoDigit = (n) => {
+        if (n < 10) return ones[n];
+        if (n < 20) return teens[n - 10];
+        const t = Math.floor(n / 10);
+        const o = n % 10;
+        return `${tens[t]}${o ? ` ${ones[o]}` : ''}`.trim();
+    };
+
+    const threeDigit = (n) => {
+        const h = Math.floor(n / 100);
+        const r = n % 100;
+        if (!h) return twoDigit(r);
+        return `${ones[h]} Hundred${r ? ` ${twoDigit(r)}` : ''}`.trim();
+    };
+
+    const crore = Math.floor(amount / 10000000);
+    const lakh = Math.floor((amount % 10000000) / 100000);
+    const thousand = Math.floor((amount % 100000) / 1000);
+    const rest = amount % 1000;
+
+    const parts = [];
+    if (crore) parts.push(`${threeDigit(crore)} Crore`);
+    if (lakh) parts.push(`${threeDigit(lakh)} Lakh`);
+    if (thousand) parts.push(`${threeDigit(thousand)} Thousand`);
+    if (rest) parts.push(threeDigit(rest));
+
+    return `${parts.join(' ').trim()} Rupees Only`;
+};
+
+const buildPremiumOrderReceiptHtml = ({
+    orderId,
+    userName,
+    paymentMethod,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    shippingAddress,
+    products,
+    orderDate
+}) => {
+    const safeProducts = Array.isArray(products) ? products : [];
+    const orderDateText = new Date(orderDate || Date.now()).toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
+    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
+    const payable = Number(finalAmount || (subtotal + shipping));
+
+    const rows = safeProducts.map((item, idx) => {
+        const qty = Number(item.qty || 1);
+        const price = Number(item.price || 0);
+        const line = Number(item.total || qty * price);
+        const name = item.name || item.title || 'Product';
+        const variant = [item.size ? `Size: ${item.size}` : '', item.color || ''].filter(Boolean).join(' • ');
+        return `
+            <tr>
+                <td>${idx + 1}</td>
+                <td><strong>${name}</strong>${variant ? `<br/><span class="muted">${variant}</span>` : ''}</td>
+                <td class="center">${qty}</td>
+                <td class="right">${formatMoneyInr(price)}</td>
+                <td class="right strong">${formatMoneyInr(line)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <style>
+                @page { size: A4; margin: 12mm; }
+                * { box-sizing: border-box; }
+                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { margin: 0; background: #f5f3ee; color: #141414; font-family: 'Segoe UI', Arial, sans-serif; }
+                .sheet { border: 2px solid #c8a74b; border-radius: 12px; background: #fff; overflow: hidden; }
+                .head { padding: 22px 24px; background: linear-gradient(135deg, #111 0%, #2b2b2b 100%); color: #fff; }
+                .brand { font-size: 26px; font-weight: 900; letter-spacing: .8px; color: #d9bc68; }
+                .sub { margin-top: 4px; font-size: 11px; letter-spacing: 1.3px; text-transform: uppercase; color: #d2d2d2; }
+                .title { margin-top: 14px; font-size: 22px; font-weight: 800; letter-spacing: .8px; }
+                .body { padding: 20px 22px 16px; }
+                .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+                .box { border: 1px solid #dfd6bf; background: #fcfaf4; border-radius: 8px; padding: 10px; }
+                .k { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #7a6a3b; font-weight: 700; }
+                .v { margin-top: 6px; font-size: 12px; font-weight: 700; color: #222; word-break: break-word; }
+                table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+                th { background: #171717; color: #d9bc68; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 9px 8px; text-align: left; border: 1px solid #c8a74b; }
+                td { border: 1px solid #e7e1d0; padding: 9px 8px; font-size: 12px; }
+                tbody tr:nth-child(even) { background: #faf7ef; }
+                .center { text-align: center; }
+                .right { text-align: right; }
+                .strong { font-weight: 800; }
+                .muted { font-size: 10px; color: #666; }
+                .totals { margin-top: 12px; margin-left: auto; width: 290px; border: 1px solid #ddd1ad; border-radius: 8px; background: #fffaf0; padding: 10px 12px; }
+                .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #ece5d3; font-size: 12px; }
+                .row:last-child { border-bottom: none; }
+                .grand { font-weight: 900; font-size: 15px; color: #111; }
+                .note { margin-top: 14px; border-left: 3px solid #c8a74b; background: #f9f5ea; padding: 10px 12px; font-size: 11px; line-height: 1.6; color: #444; }
+                .footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #e7dcc3; font-size: 10px; color: #666; text-align: center; line-height: 1.7; }
+                @media (max-width: 760px) { .meta { grid-template-columns: 1fr; } .totals { width: 100%; } }
+            </style>
+        </head>
+        <body>
+            <div class="sheet">
+                <div class="head">
+                    <div class="brand">eShopper Boutique Luxe</div>
+                    <div class="sub">Premium Order Document</div>
+                    <div class="title">Order Receipt</div>
+                </div>
+                <div class="body">
+                    <div class="meta">
+                        <div class="box"><div class="k">Receipt No</div><div class="v">${orderId || '-'}</div></div>
+                        <div class="box"><div class="k">Receipt Date</div><div class="v">${orderDateText}</div></div>
+                        <div class="box"><div class="k">Payment Method</div><div class="v">${paymentMethod || 'COD'}</div></div>
+                    </div>
+                    <div class="box" style="margin-bottom: 10px;"><div class="k">Customer</div><div class="v">${userName || 'Valued Customer'}${shippingAddress?.city ? ` • ${shippingAddress.city}` : ''}</div></div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:8%">#</th>
+                                <th style="width:46%">Item</th>
+                                <th style="width:12%">Qty</th>
+                                <th style="width:17%">Unit Price</th>
+                                <th style="width:17%">Line Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows || '<tr><td colspan="5" class="center">No items available</td></tr>'}</tbody>
+                    </table>
+                    <div class="totals">
+                        <div class="row"><span>Subtotal</span><span>${formatMoneyInr(subtotal)}</span></div>
+                        <div class="row"><span>Shipping</span><span>${shipping <= 0 ? 'Free' : formatMoneyInr(shipping)}</span></div>
+                        <div class="row grand"><span>Total Paid</span><span>${formatMoneyInr(payable)}</span></div>
+                    </div>
+                    <div class="note">
+                        This is an acknowledgement of order placement and payment initiation. A detailed proforma/final tax invoice will be shared as per order progress and delivery status.
+                    </div>
+                    <div class="footer">
+                        Support: support@eshopperr.me | Website: ${BRAND_SITE_URL}<br/>
+                        This is a system-generated receipt.
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
+const buildPremiumOrderConfirmationProformaHtml = ({
+    orderId,
+    userName,
+    paymentMethod,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    products,
+    orderDate,
+    estimatedArrival,
+    deliveryPartner
+}) => {
+    const safeProducts = Array.isArray(products) ? products : [];
+    const orderedAt = new Date(orderDate || Date.now());
+    const orderDateText = orderedAt.toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    const etaDate = new Date(estimatedArrival || (Date.now() + 5 * 24 * 60 * 60 * 1000));
+    const expectedDateText = etaDate.toLocaleDateString('en-IN', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+
+    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
+    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
+    const payable = Number(finalAmount || (subtotal + shipping));
+    const trackingLink = `${BRAND_SITE_URL}/order-tracking/${encodeURIComponent(orderId || '')}`;
+    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(trackingLink)}`;
+
+    const rows = safeProducts.map((item, idx) => {
+        const qty = Number(item.qty || 1);
+        const price = Number(item.price || 0);
+        const line = Number(item.total || qty * price);
+        const desc = `${item.name || item.title || 'Product'}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}`;
+        return `
+            <tr>
+                <td class="center">${idx + 1}</td>
+                <td><strong>${desc}</strong><br/><span class="muted">Quality Inspected: Yes</span></td>
+                <td class="center">${qty}</td>
+                <td class="right">${formatMoneyInr(price)}</td>
+                <td class="right strong">${formatMoneyInr(line)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <style>
+                @page { size: A4; margin: 12mm; }
+                * { box-sizing: border-box; }
+                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { margin: 0; background: #f6f5f2; color: #161616; font-family: 'Segoe UI', Arial, sans-serif; }
+                .sheet { border: 2px solid #c5a24a; border-radius: 12px; background: #fff; overflow: hidden; position: relative; }
+                .mark { position: absolute; top: 120px; left: 50%; transform: translateX(-50%) rotate(-18deg); color: rgba(23, 140, 86, 0.10); font-size: 52px; font-weight: 900; white-space: nowrap; letter-spacing: 1px; }
+                .head { padding: 20px 22px; background: #151515; color: #fff; }
+                .brand { font-size: 24px; font-weight: 900; color: #d9bc68; letter-spacing: .6px; }
+                .title { margin-top: 10px; font-size: 19px; font-weight: 800; letter-spacing: .6px; }
+                .badge { margin-top: 8px; display: inline-block; background: linear-gradient(135deg, #178c56, #1fac6b); color: #fff; border-radius: 16px; padding: 7px 12px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .9px; }
+                .body { padding: 18px 20px 16px; position: relative; z-index: 2; }
+                .delivery { border: 1px solid #d9c28a; border-radius: 8px; background: #fff8e8; padding: 11px; margin-bottom: 10px; }
+                .k { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #7a6938; font-weight: 700; }
+                .v { margin-top: 5px; font-size: 16px; font-weight: 900; color: #141414; }
+                .sub { margin-top: 3px; font-size: 11px; color: #575757; }
+                .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 10px; }
+                .box { border: 1px solid #e4dbc4; border-radius: 8px; background: #fcfbf7; padding: 9px; }
+                .box .vk { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: #7a6938; font-weight: 700; }
+                .box .vv { margin-top: 5px; font-size: 12px; font-weight: 700; color: #222; }
+                table { width: 100%; border-collapse: collapse; }
+                th { background: #191919; color: #d9bc68; font-size: 10px; text-transform: uppercase; letter-spacing: .9px; padding: 9px 8px; text-align: left; border: 1px solid #cab068; }
+                td { border: 1px solid #ebe6d8; padding: 9px 8px; font-size: 12px; }
+                tbody tr:nth-child(even) { background: #f4f4f4; }
+                .center { text-align: center; }
+                .right { text-align: right; }
+                .strong { font-weight: 800; }
+                .muted { font-size: 10px; color: #666; }
+                .summary { width: 285px; margin-left: auto; margin-top: 10px; border: 1px solid #d8ceb0; border-radius: 8px; padding: 9px 11px; background: #fffaf0; }
+                .row { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid #ece5d4; }
+                .row:last-child { border-bottom: none; }
+                .grand { font-size: 15px; font-weight: 900; color: #111; }
+                .foot { margin-top: 12px; display: flex; justify-content: space-between; gap: 10px; }
+                .terms { flex: 1; border-left: 3px solid #c8a74b; background: #faf6eb; padding: 9px 11px; font-size: 10px; color: #4f4f4f; line-height: 1.65; }
+                .qr { width: 118px; text-align: center; }
+                .qr img { width: 88px; height: 88px; border: 1px solid #c8a74b; border-radius: 5px; background: #fff; }
+                .qr p { margin: 6px 0 0; font-size: 9px; color: #666; }
+                @media (max-width: 760px) { .meta { grid-template-columns: 1fr; } .foot { flex-direction: column; } .summary { width: 100%; } }
+            </style>
+        </head>
+        <body>
+            <div class="sheet">
+                <div class="mark">Verified and Confirmed</div>
+                <div class="head">
+                    <div class="brand">eShopper Boutique Luxe</div>
+                    <div class="title">Order Confirmation Proforma Invoice</div>
+                    <span class="badge">Verified and Confirmed</span>
+                </div>
+                <div class="body">
+                    <div class="delivery">
+                        <div class="k">Expected Delivery</div>
+                        <div class="v">${expectedDateText}</div>
+                        <div class="sub">Delivery Partner: ${deliveryPartner || 'Delhivery'}</div>
+                    </div>
+
+                    <div class="meta">
+                        <div class="box"><div class="vk">Order ID</div><div class="vv">${orderId || '-'}</div></div>
+                        <div class="box"><div class="vk">Order Date</div><div class="vv">${orderDateText}</div></div>
+                        <div class="box"><div class="vk">Payment</div><div class="vv">${paymentMethod || 'COD'} • ${formatMoneyInr(payable)}</div></div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:8%">#</th>
+                                <th style="width:52%">Itemized Detail</th>
+                                <th style="width:10%">Qty</th>
+                                <th style="width:15%">Unit</th>
+                                <th style="width:15%">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows || '<tr><td colspan="5" class="center">No items available</td></tr>'}</tbody>
+                    </table>
+
+                    <div class="summary">
+                        <div class="row"><span>Subtotal</span><span>${formatMoneyInr(subtotal)}</span></div>
+                        <div class="row"><span>Shipping</span><span>${shipping <= 0 ? 'Free' : formatMoneyInr(shipping)}</span></div>
+                        <div class="row grand"><span>Grand Total</span><span>${formatMoneyInr(payable)}</span></div>
+                    </div>
+
+                    <div class="foot">
+                        <div class="terms">
+                            <strong>Cancellation and Return Policy (Summary):</strong><br/>
+                            Orders may be cancelled before dispatch. Eligible items can be returned as per policy window in original condition with tags and packaging.
+                        </div>
+                        <div class="qr">
+                            <img src="${qrSrc}" alt="Tracking QR"/>
+                            <p>Scan to track this order</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
+const buildPremiumTaxInvoiceHtml = ({
+    orderId,
+    userName,
+    userEmail,
+    paymentMethod,
+    paymentStatus,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    shippingAddress,
+    products,
+    orderDate
+}) => {
+    const safeProducts = Array.isArray(products) ? products : [];
+    const invoiceDateText = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const orderDateText = new Date(orderDate || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const gross = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
+    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - gross));
+    const taxableValue = gross + Math.max(0, shipping);
+    const cgst = Math.round((taxableValue * 9) / 100);
+    const sgst = Math.round((taxableValue * 9) / 100);
+    const grandTotal = Number(finalAmount || (taxableValue + cgst + sgst));
+    const totalTax = cgst + sgst;
+
+    const rows = safeProducts.map((item, idx) => {
+        const qty = Number(item.qty || 1);
+        const price = Number(item.price || 0);
+        const line = Number(item.total || qty * price);
+        const discountPct = Number(item.discountPercent || 0);
+        const taxableLine = Math.max(0, Math.round(line * (100 - discountPct) / 100));
+        const lineTax = Math.round(taxableLine * 0.18);
+        const name = `${item.name || item.title || 'Product'}${item.size ? ` • ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}`;
+        return `
+            <tr>
+                <td class="center">${idx + 1}</td>
+                <td class="center">${item.hsn || '6204'}</td>
+                <td>${name}</td>
+                <td class="center">${qty}</td>
+                <td class="right">${formatMoneyInr(price)}</td>
+                <td class="center">${discountPct}%</td>
+                <td class="right">${formatMoneyInr(taxableLine)}</td>
+                <td class="right strong">${formatMoneyInr(lineTax)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <style>
+                @page { size: A4; margin: 12mm; }
+                * { box-sizing: border-box; }
+                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                body { margin: 0; background: #f5f4f0; color: #141414; font-family: 'Segoe UI', Arial, sans-serif; }
+                .paid { position: fixed; top: 42%; right: 9%; transform: rotate(24deg); border: 3px solid rgba(31, 143, 84, 0.2); color: rgba(31, 143, 84, 0.2); font-size: 54px; font-weight: 900; letter-spacing: 2px; padding: 10px 20px; border-radius: 8px; }
+                .sheet { border: 2px solid #c8a74b; border-radius: 12px; background: #fff; overflow: hidden; position: relative; z-index: 2; }
+                .head { padding: 20px 22px; background: #151515; color: #fff; position: relative; }
+                .brand { font-size: 24px; font-weight: 900; color: #d9bc68; letter-spacing: .8px; }
+                .tax { position: absolute; right: 22px; top: 20px; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: #d9bc68; font-weight: 900; }
+                .sub { margin-top: 5px; color: #d0d0d0; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+                .body { padding: 16px 20px; }
+                .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+                .box { border: 1px solid #dccfae; background: #faf8f1; border-radius: 8px; padding: 9px 10px; font-size: 11px; line-height: 1.7; }
+                .title { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #765f2d; font-weight: 800; margin-bottom: 4px; }
+                .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+                .m { border: 1px solid #e5dbc2; border-radius: 7px; background: #fcfbf7; padding: 8px; }
+                .mk { font-size: 9px; text-transform: uppercase; color: #776236; letter-spacing: .8px; font-weight: 800; }
+                .mv { margin-top: 4px; font-size: 12px; font-weight: 700; color: #202020; }
+                table { width: 100%; border-collapse: collapse; }
+                th { background: #181818; color: #d9bc68; border: 1px solid #c8a74b; font-size: 9.5px; letter-spacing: .8px; padding: 8px 6px; text-transform: uppercase; text-align: left; }
+                td { border: 1px solid #ece6d4; padding: 8px 6px; font-size: 11px; }
+                tbody tr:nth-child(even) { background: #f7f7f7; }
+                .center { text-align: center; }
+                .right { text-align: right; }
+                .strong { font-weight: 800; }
+                .summary { margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+                .totals { border: 1px solid #dbcda9; border-radius: 8px; background: #fffaf0; padding: 8px 11px; }
+                .r { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 1px solid #ece4cf; }
+                .r:last-child { border-bottom: none; }
+                .grand { font-size: 15px; font-weight: 900; color: #111; }
+                .amount-words { border: 1px dashed #c8a74b; border-radius: 8px; background: #fcfaf3; padding: 9px 10px; font-size: 11px; line-height: 1.6; }
+                .bank { border-left: 3px solid #c8a74b; background: #faf6eb; border-radius: 6px; padding: 9px 10px; font-size: 10px; line-height: 1.7; margin-top: 10px; }
+                .sign { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+                .signbox { border-top: 1px solid #dfd5be; padding-top: 12px; text-align: center; font-size: 10px; color: #555; }
+                .footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e6dcc2; text-align: center; font-size: 10px; color: #666; line-height: 1.7; }
+                @media (max-width: 760px) { .grid2, .meta, .summary, .sign { grid-template-columns: 1fr; } }
+            </style>
+        </head>
+        <body>
+            <div class="paid">PAID</div>
+            <div class="sheet">
+                <div class="head">
+                    <div class="brand">eShopper Boutique Luxe</div>
+                    <div class="tax">Final Tax Invoice</div>
+                    <div class="sub">GST Compliant Legal Invoice</div>
+                </div>
+                <div class="body">
+                    <div class="grid2">
+                        <div class="box">
+                            <div class="title">Seller Details</div>
+                            <strong>eShopper Boutique Luxe</strong><br/>
+                            GSTIN: 07AADCR5055K1Z1<br/>
+                            PAN: AADCR5055K<br/>
+                            Plot No. 101, Tech Park,<br/>
+                            New Delhi - 110001, India
+                        </div>
+                        <div class="box">
+                            <div class="title">Bill To / Ship To</div>
+                            <strong>${shippingAddress?.fullName || userName || 'Customer'}</strong><br/>
+                            ${shippingAddress?.addressline1 || 'Address line not available'}<br/>
+                            ${shippingAddress?.city || 'City'}, ${shippingAddress?.state || 'State'} - ${shippingAddress?.pin || 'PIN'}<br/>
+                            ${shippingAddress?.country || 'India'}<br/>
+                            Phone: ${shippingAddress?.phone || 'N/A'}<br/>
+                            Email: ${userEmail || 'N/A'}
+                        </div>
+                    </div>
+
+                    <div class="meta">
+                        <div class="m"><div class="mk">Invoice No.</div><div class="mv">${orderId || '-'}</div></div>
+                        <div class="m"><div class="mk">Invoice Date</div><div class="mv">${invoiceDateText}</div></div>
+                        <div class="m"><div class="mk">Order Date</div><div class="mv">${orderDateText}</div></div>
+                        <div class="m"><div class="mk">Payment</div><div class="mv">${paymentMethod || 'COD'} • ${paymentStatus || 'Paid'}</div></div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:5%">#</th>
+                                <th style="width:8%">HSN</th>
+                                <th style="width:33%">Item Description</th>
+                                <th style="width:7%">Qty</th>
+                                <th style="width:13%">Unit Price</th>
+                                <th style="width:8%">Disc %</th>
+                                <th style="width:14%">Taxable Value</th>
+                                <th style="width:12%">Tax (18%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows || '<tr><td colspan="8" class="center">No items available</td></tr>'}</tbody>
+                    </table>
+
+                    <div class="summary">
+                        <div class="amount-words">
+                            <div class="title">Amount in Words</div>
+                            <strong>${amountToWordsIndian(grandTotal)}</strong>
+                            <div style="margin-top: 8px;"><strong>GST Breakup:</strong> CGST (9%): ${formatMoneyInr(cgst)} | SGST (9%): ${formatMoneyInr(sgst)}</div>
+                        </div>
+                        <div class="totals">
+                            <div class="r"><span>Taxable Amount</span><span>${formatMoneyInr(taxableValue)}</span></div>
+                            <div class="r"><span>Total GST</span><span>${formatMoneyInr(totalTax)}</span></div>
+                            <div class="r"><span>Shipping</span><span>${shipping <= 0 ? 'Free' : formatMoneyInr(shipping)}</span></div>
+                            <div class="r grand"><span>Grand Total</span><span>${formatMoneyInr(grandTotal)}</span></div>
+                        </div>
+                    </div>
+
+                    <div class="bank">
+                        <strong>Payment and Bank Details:</strong><br/>
+                        Account Name: Eshopper Retail Private Limited<br/>
+                        Bank: HDFC Bank | A/C: 502000XXXXXX19 | IFSC: HDFC0001234<br/>
+                        UPI: eshopper@hdfcbank
+                    </div>
+
+                    <div class="sign">
+                        <div class="signbox">Authorized Signature</div>
+                        <div class="signbox">For eShopper Boutique Luxe</div>
+                    </div>
+
+                    <div class="footer">
+                        This is a computer-generated legal tax invoice and does not require a manual signature.<br/>
+                        Support: support@eshopperr.me | ${BRAND_SITE_URL}
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
 const generateInvoicePdfBuffer = async (orderPayload) => {
     if (!FEATURE_INVOICE_SYSTEM) {
         throw new Error('Invoice system disabled');
@@ -1857,11 +2374,11 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
     const normalizedStatus = String(orderPayload?.orderStatus || '').trim().toLowerCase();
     const isDelivered = orderPayload?.isDelivered || normalizedStatus === 'delivered';
 
-    let htmlBuilder = buildOrderReceiptHtml;
+    let htmlBuilder = buildPremiumOrderReceiptHtml;
     if (requestedType === 'confirmation' || requestedType === 'proforma' || requestedType === 'confirmed') {
-        htmlBuilder = buildOrderConfirmationProformaHtml;
+        htmlBuilder = buildPremiumOrderConfirmationProformaHtml;
     } else if (requestedType === 'final' || requestedType === 'tax' || requestedType === 'invoice' || isDelivered) {
-        htmlBuilder = buildTaxInvoiceHtml;
+        htmlBuilder = buildPremiumTaxInvoiceHtml;
     }
     
     const html = htmlBuilder(orderPayload);
@@ -2589,7 +3106,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
     }
 };
 
-const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, invoiceBase64, attachmentName }) => {
+const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, shippingAmount, paymentMethod, paymentStatus, shippingAddress, products, invoiceBase64, attachmentName }) => {
     if (!toEmail) return false;
 
     const displayName = userName || 'Valued Customer';
@@ -2604,7 +3121,59 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     };
     
     const config = statusConfig[status] || { emoji: '📦', color: '#111827', bg1: '#f9fafb', bg2: '#f3f4f6', msg: status };
+    const normalizedStatus = normalizeOrderStatus(status) || status;
+    const statusLower = String(normalizedStatus || '').toLowerCase();
     const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+
+    const attachments = [];
+    const shouldAttachFinalInvoice = normalizedStatus === 'Delivered';
+    if (shouldAttachFinalInvoice && isValidBase64Payload(invoiceBase64)) {
+        attachments.push({
+            filename: attachmentName || `FinalTaxInvoice-${orderId}.pdf`,
+            content: String(invoiceBase64).trim(),
+            contentType: 'application/pdf'
+        });
+    }
+
+    const templateFile = ORDER_STATUS_TEMPLATES[statusLower];
+    if (templateFile) {
+        try {
+            const templateOrder = {
+                orderId,
+                userName: displayName,
+                userEmail: toEmail,
+                orderStatus: normalizedStatus,
+                finalAmount: Number(totalAmount || 0),
+                totalAmount: Number(totalAmount || 0),
+                shippingAmount: Number(shippingAmount || 0),
+                paymentMethod: paymentMethod || 'COD',
+                paymentStatus: paymentStatus || 'Pending',
+                estimatedArrival: estimatedDelivery || null,
+                shippingAddress: shippingAddress || {},
+                products: Array.isArray(products) ? products : [],
+                orderDate: new Date()
+            };
+
+            const htmlContent = await loadEmailTemplate(templateFile, mapOrderToTemplateData(templateOrder, {
+                name: displayName,
+                email: toEmail
+            }));
+
+            const result = await sendTransactionalEmail({
+                toEmail,
+                toName: displayName,
+                subject: getEmailSubject(statusLower, orderId),
+                htmlContent,
+                textContent: `Your order ${orderId} status: ${normalizedStatus}`,
+                attachments
+            });
+
+            console.log(`✅ Status template email sent via ${result.provider}: ${orderId} -> ${normalizedStatus}`);
+            return true;
+        } catch (templateErr) {
+            console.warn(`⚠️ Status template fallback (${orderId} -> ${normalizedStatus}):`, templateErr.message);
+        }
+    }
 
     const htmlContent = `<!DOCTYPE html>
 <html>
@@ -2768,15 +3337,6 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
 </html>`;
 
     try {
-        const attachments = [];
-        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
-            attachments.push({
-                filename: attachmentName || `Invoice-${orderId}.pdf`,
-                content: invoiceBase64.trim(),
-                contentType: 'application/pdf'
-            });
-        }
-
         const result = await sendTransactionalEmail({
             toEmail,
             toName: displayName,
@@ -2803,6 +3363,45 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
     try {
         const firstName = (userName || 'Valued Customer').split(' ')[0];
         const safeProducts = Array.isArray(products) ? products : [];
+
+        // Prefer the dedicated template file first to keep dispatcher behavior consistent.
+        try {
+            const templateOrder = {
+                orderId,
+                userName,
+                userEmail: toEmail,
+                orderStatus: 'Order Placed',
+                finalAmount: Number(finalAmount || 0),
+                totalAmount: Number(finalAmount || 0),
+                shippingAmount: 0,
+                shippingAddress: shippingAddress || {},
+                products: safeProducts,
+                orderDate: new Date()
+            };
+
+            const htmlContent = await loadEmailTemplate('01-order-placed.html', mapOrderToTemplateData(templateOrder, {
+                name: userName,
+                email: toEmail
+            }));
+
+            const templateAttachments = invoiceBuffer
+                ? [{ filename: `OrderReceipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
+                : [];
+
+            const result = await sendTransactionalEmail({
+                toEmail,
+                toName: userName || 'Customer',
+                subject: getEmailSubject('order placed', orderId),
+                htmlContent,
+                textContent: `Your order ${orderId} has been placed successfully.`,
+                attachments: templateAttachments
+            });
+
+            console.log(`✅ Order Placed template email sent via ${result.provider} to ${toEmail} for ${orderId}`);
+            return true;
+        } catch (templateErr) {
+            console.warn(`⚠️ Order Placed template fallback for ${orderId}:`, templateErr.message);
+        }
         
         const productRows = safeProducts.slice(0, 3).map(p => `
             <tr>
@@ -2939,7 +3538,7 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 </html>`;
 
         const attachments = invoiceBuffer
-            ? [{ filename: `Receipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
+            ? [{ filename: `OrderReceipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
             : [];
 
         const result = await sendTransactionalEmail({
@@ -3638,7 +4237,15 @@ const placeOrderHandler = async (req, res) => {
         if (FEATURE_EMAIL_NOTIFICATIONS) {
             setImmediate(async () => {
                 try {
-                    await sendOrderEmail(orderDoc, 'Order Placed', user);
+                    await enqueueEmailJob('order-placed', {
+                        toEmail: recipientEmail,
+                        userName: user.name,
+                        orderId,
+                        finalAmount: payable,
+                        products: cleanProducts,
+                        shippingAddress: addressPayload,
+                        invoiceBuffer
+                    });
                     console.log(`✅ Order Placed email sent for ${orderId} → ${recipientEmail}`);
                 } catch (emailErr) {
                     console.error(`⚠️ Order Placed email failed for ${orderId}:`, emailErr.message);
@@ -4093,7 +4700,7 @@ app.get('/api/orders/:userId', async (req, res) => {
         // 🔴 FETCH FROM ORDER COLLECTION (primary source)
         const orders = await Order.find({ userid: userId })
             .sort({ updatedAt: -1, createdAt: -1 })
-            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
+            .select('orderId orderStatus finalAmount paymentStatus paymentMethod estimatedArrival updatedAt createdAt')
             .lean();
 
         // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
@@ -4110,6 +4717,8 @@ app.get('/api/orders/:userId', async (req, res) => {
                     finalAmount: Number(item.finalAmount || 0),
                     paymentStatus: item.paymentstatus || 'Pending',
                     paymentMethod: item.paymentmode || 'COD',
+                    estimatedArrival: item.estimatedArrival || null,
+                    estimatedDelivery: item.estimatedArrival || null,
                     updatedAt: item.updatedAt || new Date()
                 }))
             });
@@ -4123,6 +4732,8 @@ app.get('/api/orders/:userId', async (req, res) => {
                 finalAmount: Number(item.finalAmount || 0),
                 paymentStatus: item.paymentStatus || 'Pending',
                 paymentMethod: item.paymentMethod || 'COD',
+                estimatedArrival: item.estimatedArrival || null,
+                estimatedDelivery: item.estimatedArrival || null,
                 updatedAt: item.updatedAt || item.createdAt || new Date()
             }))
         });
@@ -4144,7 +4755,7 @@ app.get('/api/orders/recent/:userId', async (req, res) => {
         const orders = await Order.find({ userid: userId })
             .sort({ updatedAt: -1, createdAt: -1 })
             .limit(limit)
-            .select('orderId orderStatus finalAmount updatedAt createdAt')
+            .select('orderId orderStatus finalAmount estimatedArrival updatedAt createdAt')
             .lean();
 
         return res.json({
@@ -4153,6 +4764,8 @@ app.get('/api/orders/recent/:userId', async (req, res) => {
                 orderId: item.orderId,
                 orderStatus: item.orderStatus || 'Order Placed',
                 finalAmount: Number(item.finalAmount || 0),
+                estimatedArrival: item.estimatedArrival || null,
+                estimatedDelivery: item.estimatedArrival || null,
                 updatedAt: item.updatedAt || item.createdAt || new Date()
             }))
         });
@@ -4233,8 +4846,8 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
             // Map status -> PDF variant
             const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
             const isDelivered = orderStatus === 'delivered';
-            const isConfirmed = orderStatus === 'confirmed' || orderStatus === 'ordered';
-            const pdfType = isDelivered ? 'final' : (isConfirmed ? 'confirmation' : 'receipt');
+            const isReceiptStage = orderStatus === 'ordered' || orderStatus === 'order placed';
+            const pdfType = isDelivered ? 'final' : (isReceiptStage ? 'receipt' : 'confirmation');
             
             const pdfBuffer = await generateInvoicePdfBuffer({
                 orderId: order.orderId,
@@ -4261,7 +4874,7 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
 
             const fileName = isDelivered
                 ? `TaxInvoice-${order.orderId}.pdf`
-                : (isConfirmed ? `Confirmation-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`);
+                : (isReceiptStage ? `Receipt-${order.orderId}.pdf` : `Confirmation-${order.orderId}.pdf`);
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
             res.setHeader('Content-Length', String(pdfBuffer.length));
@@ -4509,7 +5122,7 @@ app.get('/api/admin/orders', async (req, res) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products')
+            .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount estimatedArrival updatedAt createdAt products')
             .lean();
 
         return res.json({
@@ -4526,6 +5139,8 @@ app.get('/api/admin/orders', async (req, res) => {
                 orderStatus: item.orderStatus || 'Order Placed',
                 paymentStatus: item.paymentStatus || 'Pending',
                 finalAmount: Number(item.finalAmount || 0),
+                estimatedArrival: item.estimatedArrival || null,
+                estimatedDelivery: item.estimatedArrival || null,
                 productCount: Array.isArray(item.products) ? item.products.length : 0,
                 updatedAt: item.updatedAt || item.createdAt || new Date()
             }))
@@ -4577,7 +5192,7 @@ app.get('/api/admin/order/:orderId', async (req, res) => {
 // 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
 const handleOrderStatusUpdate = async (req, res) => {
     try {
-        const { orderId, status } = req.body;
+        const { orderId, status, estimatedArrival, estimatedDelivery, expectedDays } = req.body;
         const normalized = normalizeOrderStatus(status);
 
         if (!orderId || !normalized) {
@@ -4588,6 +5203,11 @@ const handleOrderStatusUpdate = async (req, res) => {
 
         // 🔴 FIRST: Try to find by orderId (from Order collection)
         let order = await Order.findOne({ orderId });
+        const nextEstimatedArrival = resolveEstimatedArrival({
+            status: normalized,
+            explicitDate: estimatedArrival || estimatedDelivery,
+            expectedDays
+        });
         
         // 🔴 SECOND: If not found, try by MongoDB _id (from Checkout collection)
         if (!order && orderId.length === 24) {
@@ -4618,6 +5238,7 @@ const handleOrderStatusUpdate = async (req, res) => {
                 shippingAmount: checkout.shippingAmount,
                 finalAmount: checkout.finalAmount,
                 products: checkout.products || [],
+                estimatedArrival: nextEstimatedArrival,
                 statusHistory: [{
                     status: normalized,
                     timestamp: new Date(),
@@ -4628,6 +5249,7 @@ const handleOrderStatusUpdate = async (req, res) => {
         } else {
             // Update existing order
             order.orderStatus = normalized;
+            order.estimatedArrival = nextEstimatedArrival;
             const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
             order.statusHistory = [
                 ...existingTimeline,
@@ -4659,6 +5281,8 @@ const handleOrderStatusUpdate = async (req, res) => {
             orderId: order.orderId,
             userId: order.userid,
             status: order.orderStatus,
+            estimatedArrival: order.estimatedArrival || null,
+            estimatedDelivery: order.estimatedArrival || null,
             updatedAt: new Date().toISOString()
         };
 
@@ -4666,24 +5290,67 @@ const handleOrderStatusUpdate = async (req, res) => {
         io.to(`user:${order.userid}`).emit('statusUpdate', payload);
         console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
 
-        // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
-        if (FEATURE_EMAIL_NOTIFICATIONS) {
+        // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE (email-only path)
+        if (FEATURE_EMAIL_NOTIFICATIONS && !FEATURE_WHATSAPP_NOTIFICATIONS) {
             setImmediate(() => {
-                User.findById(order.userid).lean()
-                    .then(async (userDoc) => {
+                (async () => {
+                    let invoiceBase64 = '';
+                    let attachmentName = '';
+
+                    if (normalized === 'Delivered' && FEATURE_INVOICE_SYSTEM) {
                         try {
-                            await sendOrderEmail(order, normalized, userDoc);
-                        } catch (emailErr) {
-                            console.error(`⚠️ Email send error for ${order.orderId}:`, emailErr.message);
+                            const finalPdfBuffer = await generateInvoicePdfBuffer({
+                                orderId: order.orderId,
+                                userName: order.userName,
+                                userEmail: order.userEmail,
+                                paymentMethod: order.paymentMethod || 'COD',
+                                paymentStatus: order.paymentStatus || 'Paid',
+                                finalAmount: Number(order.finalAmount || 0),
+                                totalAmount: Number(order.totalAmount || order.finalAmount || 0),
+                                shippingAmount: Number(order.shippingAmount || 0),
+                                shippingAddress: order.shippingAddress || {},
+                                products: Array.isArray(order.products) ? order.products : [],
+                                orderDate: order.orderDate || new Date(),
+                                estimatedArrival: order.estimatedArrival,
+                                orderStatus: 'Delivered',
+                                pdfType: 'final',
+                                isDelivered: true
+                            });
+
+                            if (finalPdfBuffer && finalPdfBuffer.length > 0) {
+                                invoiceBase64 = finalPdfBuffer.toString('base64');
+                                attachmentName = `FinalTaxInvoice-${order.orderId}.pdf`;
+                            }
+                        } catch (pdfErr) {
+                            console.warn(`⚠️ Final invoice generation skipped for ${order.orderId}:`, pdfErr.message);
+                            await sendAdminAlert({
+                                title: 'Final Tax Invoice PDF Failed',
+                                details: `Order ${order.orderId}: final tax invoice generation failed on Delivered status. Delivered email sent without attachment. Error: ${pdfErr.message}`
+                            });
                         }
-                    })
-                    .catch(err => {
-                        console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
-                        // Try sending without user data
-                        sendOrderEmail(order, normalized, null).catch(e => 
-                            console.error(`⚠️ Email fallback failed:`, e.message)
-                        );
-                    });
+                    }
+
+                    try {
+                        await enqueueEmailJob('order-status', {
+                            toEmail: order.userEmail,
+                            userName: order.userName,
+                            orderId: order.orderId,
+                            status: normalized,
+                            trackingLink: getTrackingLink(order.orderId),
+                            estimatedDelivery: order.estimatedArrival,
+                            totalAmount: order.finalAmount,
+                            shippingAmount: order.shippingAmount,
+                            paymentMethod: order.paymentMethod,
+                            paymentStatus: order.paymentStatus,
+                            shippingAddress: order.shippingAddress,
+                            products: order.products,
+                            invoiceBase64,
+                            attachmentName
+                        });
+                    } catch (emailErr) {
+                        console.error(`⚠️ Email send error for ${order.orderId}:`, emailErr.message);
+                    }
+                })();
             });
         }
 
@@ -4721,6 +5388,7 @@ const handleOrderStatusUpdate = async (req, res) => {
         return res.json({
             success: true,
             message: `Order status updated to ${normalized}`,
+            estimatedArrival: order.estimatedArrival || null,
             order: payload
         });
     } catch (e) {
@@ -4735,7 +5403,7 @@ app.post('/update-order-status', handleOrderStatusUpdate);
 // ==================== ADMIN: CONFIRM ORDER (Send Email #2) ====================
 app.post('/api/admin/confirm-order', async (req, res) => {
     try {
-        const { orderId } = req.body;
+        const { orderId, estimatedArrival, estimatedDelivery, expectedDays } = req.body;
         
         // 🔒 SECURITY: Verify admin role
         const adminSecret = req.headers['x-admin-secret'] || req.body.adminSecret;
@@ -4767,6 +5435,13 @@ app.post('/api/admin/confirm-order', async (req, res) => {
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
+
+        // Ensure ETA exists before generating proforma so email attachment and UI stay aligned.
+        order.estimatedArrival = resolveEstimatedArrival({
+            status: 'Ordered',
+            explicitDate: estimatedArrival || estimatedDelivery,
+            expectedDays
+        });
 
         // Generate Proforma PDF for Email #2 (Confirmed)
         let invoiceBase64 = null;
@@ -4849,6 +5524,8 @@ app.post('/api/admin/confirm-order', async (req, res) => {
         io.to(`user:${order.userid}`).emit('statusUpdate', {
             orderId: order.orderId,
             status: 'Confirmed',
+            estimatedArrival: order.estimatedArrival || null,
+            estimatedDelivery: order.estimatedArrival || null,
             message: 'Your order has been confirmed! Check your email for full details.',
             emailSent: emailSent
         });
@@ -4861,6 +5538,7 @@ app.post('/api/admin/confirm-order', async (req, res) => {
             order: {
                 orderId: order.orderId,
                 status: order.orderStatus,
+                estimatedArrival: order.estimatedArrival || null,
                 userEmail: order.userEmail,
                 confirmationEmailSentAt: order.confirmationEmailSentAt
             }

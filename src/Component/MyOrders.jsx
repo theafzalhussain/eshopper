@@ -41,10 +41,48 @@ export default function MyOrders() {
   const [toDate, setToDate] = useState('')
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [socketConnected, setSocketConnected] = useState(false)
+  const [downloadingOrderId, setDownloadingOrderId] = useState('')
 
   const openWhatsAppSupport = (orderId) => {
     const message = `Hi Luxe Support, I need assistance with my Order: ${orderId}`
     window.open(`https://wa.me/918447859784?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
+  }
+
+  const getDocumentLabel = (status) => {
+    const normalized = normalizeStatus(status)
+    if (normalized === 'Delivered') return 'Download Tax Invoice'
+    if (normalized === 'Ordered') return 'Download Receipt'
+    return 'Download Proforma'
+  }
+
+  const downloadOrderDocument = async (orderId) => {
+    if (!orderId || !userId) return
+
+    try {
+      setDownloadingOrderId(orderId)
+      const response = await axios.get(`${BASE_URL}/api/orders/${encodeURIComponent(orderId)}/download-invoice?userId=${encodeURIComponent(userId)}`, {
+        responseType: 'blob',
+        timeout: 45000
+      })
+
+      const disposition = response.headers?.['content-disposition'] || ''
+      const filenameMatch = disposition.match(/filename="?([^\";]+)"?/i)
+      const fileName = filenameMatch?.[1] || `Invoice-${orderId}.pdf`
+      const objectUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+
+      const link = document.createElement('a')
+      link.href = objectUrl
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(objectUrl)
+    } catch (e) {
+      console.error('Failed to download order document:', e)
+      window.alert('Unable to download document right now. Please try again.')
+    } finally {
+      setDownloadingOrderId('')
+    }
   }
 
   useEffect(() => {
@@ -109,6 +147,8 @@ export default function MyOrders() {
               return {
                 ...order,
                 orderStatus: payload.status,
+                estimatedArrival: payload.estimatedArrival || payload.estimatedDelivery || order.estimatedArrival || order.estimatedDelivery || null,
+                estimatedDelivery: payload.estimatedDelivery || payload.estimatedArrival || order.estimatedDelivery || order.estimatedArrival || null,
                 updatedAt: payload.updatedAt || new Date().toISOString()
               }
             }
@@ -433,6 +473,24 @@ export default function MyOrders() {
                     <div className="font-weight-bold mt-2" style={{ fontSize: '16px', color: '#333', letterSpacing: '0.2px' }}>
                       {item.paymentMethod || 'Cash on Delivery'}
                     </div>
+                    {(() => {
+                      const eta = item.estimatedArrival || item.estimatedDelivery
+                      if (!eta) return null
+                      return (
+                        <>
+                          <div className="small mt-3" style={{ color: '#999', fontSize: '11px', fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                            Expected Delivery
+                          </div>
+                          <div className="font-weight-bold mt-2" style={{ fontSize: '14px', color: '#8b6c2f', letterSpacing: '0.2px' }}>
+                            {new Date(eta).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </div>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
 
@@ -545,6 +603,39 @@ export default function MyOrders() {
                   >
                     <span style={{ position: 'relative', zIndex: 2 }}>
                       💬 Chat Support
+                    </span>
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{
+                      scale: 1.03,
+                      boxShadow: '0 20px 40px rgba(212,175,55,0.26)',
+                      y: -3
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => downloadOrderDocument(item.orderId)}
+                    disabled={downloadingOrderId === item.orderId}
+                    className="btn btn-sm rounded-pill"
+                    style={{
+                      flex: '1 1 auto',
+                      minWidth: '170px',
+                      background: 'linear-gradient(135deg, #d4af37, #b08a2c)',
+                      color: '#111',
+                      border: '1.5px solid #9b7a22',
+                      fontWeight: '800',
+                      fontSize: '12px',
+                      padding: '11px 16px',
+                      letterSpacing: '0.3px',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 8px 18px rgba(212,175,55,0.22)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      opacity: downloadingOrderId === item.orderId ? 0.7 : 1
+                    }}
+                    title="Download status-based order document"
+                  >
+                    <span style={{ position: 'relative', zIndex: 2 }}>
+                      {downloadingOrderId === item.orderId ? 'Preparing PDF...' : `📄 ${getDocumentLabel(item.orderStatus)}`}
                     </span>
                   </motion.button>
                 </div>
