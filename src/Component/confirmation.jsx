@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
-import { CheckCircle2, ShoppingBag, User, MessageCircle, Truck, MapPin, Calendar } from 'lucide-react';
+import { CheckCircle2, ShoppingBag, User, MessageCircle, Truck, MapPin, Calendar, FileDown } from 'lucide-react';
 import { clearCart } from '../Store/ActionCreaters/CartActionCreators';
 import { API_ENDPOINTS, BASE_URL, BRAND_LOGO_URL, FRONTEND_URL } from '../constants';
 
@@ -11,6 +11,7 @@ const Confirmation = () => {
   const dispatch = useDispatch();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
   const users = useSelector((state) => state.UserStateData || []);
 
   const localUserId = localStorage.getItem('userid');
@@ -87,6 +88,55 @@ const Confirmation = () => {
 
   const safeNum = (value) => Number(value || 0);
   const money = (value) => `₹${safeNum(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // Dynamic invoice label based on order status
+  const getDocumentLabel = (status) => {
+    if (!status) return 'Download Receipt';
+    const normalizedStatus = status.toLowerCase().replace(/\s+/g, '');
+    if (normalizedStatus === 'delivered') return 'Download Tax Invoice';
+    if (normalizedStatus === 'confirmed') return 'Download Proforma Invoice';
+    return 'Download Receipt';
+  };
+
+  // Download invoice with loading state
+  const downloadOrderDocument = async () => {
+    if (!order?.orderId || !userId) {
+      alert('Order information missing. Please try again.');
+      return;
+    }
+
+    setDownloadingInvoice(true);
+    try {
+      const response = await axios({
+        method: 'GET',
+        url: `${BASE_URL}/api/orders/${order.orderId}/download-invoice?userId=${userId}`,
+        responseType: 'blob',
+      });
+
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'invoice.pdf';
+      if (contentDisposition) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download invoice error:', error);
+      alert(error.response?.data?.message || 'Failed to download invoice. Please try again later.');
+    } finally {
+      setDownloadingInvoice(false);
+    }
+  };
 
   if (loading || !order) {
     return (
@@ -447,6 +497,45 @@ const Confirmation = () => {
           >
             <User size={20} />
             Track in Profile
+          </button>
+
+          <button
+            onClick={downloadOrderDocument}
+            disabled={downloadingInvoice}
+            style={{
+              background: downloadingInvoice
+                ? 'linear-gradient(135deg, #999 0%, #666 100%)'
+                : 'linear-gradient(135deg, #d4af37 0%, #c9a961 100%)',
+              color: 'white',
+              padding: '15px 30px',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: downloadingInvoice ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              transition: 'all 0.3s ease',
+              boxShadow: downloadingInvoice ? 'none' : '0 4px 15px rgba(212, 175, 55, 0.3)',
+              opacity: downloadingInvoice ? 0.7 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!downloadingInvoice) {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 6px 20px rgba(212, 175, 55, 0.4)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!downloadingInvoice) {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 15px rgba(212, 175, 55, 0.3)';
+              }
+            }}
+          >
+            <FileDown size={20} />
+            {downloadingInvoice ? 'Preparing PDF...' : getDocumentLabel(order?.status)}
           </button>
 
           <button
