@@ -108,14 +108,7 @@ const allowedOrigins = [
     process.env.FRONTEND_URL?.replace('www.', ''),
 ];
 const corsOptions = {
-    origin: function(origin, callback) {
-        if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
-            return callback(null, true);
-        }
-        console.warn(`⚠️  CORS rejected: ${origin}`);
-        return callback(new Error('CORS policy: Unauthorized origin'));
-    },
+    origin: '*',
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
