@@ -578,8 +578,8 @@ const loadEmailTemplate = async (templateName, data) => {
 const ORDER_STATUS_TEMPLATES = {
     'order placed': '01-order-placed.html',
     'placed': '01-order-placed.html',
-    'ordered': 'order_confirmed.html',
-    'confirmed': 'order_confirmed.html',
+    // 'ordered': 'order_confirmed.html',
+    // 'confirmed': 'order_confirmed.html',
     'packed': '03-order-packed.html',
     'shipped': '04-order-shipped.html',
     'out for delivery': '05-out-for-delivery.html',
@@ -2966,47 +2966,6 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 };
 
 // ==================== EMAIL #2: ORDER CONFIRMED (ULTRA-PREMIUM) ====================
-const sendOrderConfirmationEmail = async ({ toEmail, userName, orderId, paymentMethod, finalAmount, shippingAddress, products, estimatedArrival, invoiceBase64, orderStatus = 'Ordered' }) => {
-    if (!toEmail || !toEmail.includes('@')) {
-        console.error('❌ Invalid email:', toEmail);
-        throw new Error('Invalid toEmail address');
-    }
-
-    try {
-        const displayName = userName || 'Valued Customer';
-        const firstName = displayName.split(' ')[0];
-        const safeProducts = Array.isArray(products) ? products : [];
-        const deliveryDate = estimatedArrival ? new Date(estimatedArrival).toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'N/A';
-        const totalItems = safeProducts.reduce((sum, p) => sum + (p.qty || 1), 0);
-
-        const productRows = safeProducts.slice(0, 5).map(p => `
-            <tr>
-                <td style="padding:16px; border-bottom:1px solid #333;">
-                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1A1A1A; border-radius:12px; overflow:hidden; box-sizing:border-box;">
-                        <tr>
-                            <td style="width:100px; padding:12px; vertical-align:top;">
-                                ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:90px; height:90px; object-fit:cover; border-radius:12px; display:block; border:2px solid #333; box-sizing:border-box; height:auto; max-height:90px;" />` : `<div style="width:90px; height:90px; background:#2A2A2A; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:32px; border:2px solid #333; box-sizing:border-box;">📦</div>`}
-                            </td>
-                            <td style="padding:12px; vertical-align:top; box-sizing:border-box;">
-                                <div style="font-weight:700; color:#fff; font-size:15px; margin:0 0 8px 0; line-height:1.4; font-family:sans-serif;">${p.name}</div>
-                                <div style="font-size:13px; color:#999; margin:6px 0; font-family:sans-serif;">
-                                    <span style="color:#999;">Qty:</span> <strong style="color:#fff;">${p.qty || 1}</strong>
-                                    <span style="color:#666; margin:0 8px;">•</span>
-                                    <span style="color:#999;">₹${Number(p.price || 0).toLocaleString()} each</span>
-                                </div>
-                                <div style="font-size:18px; color:#D4AF37; font-weight:900; margin-top:10px; font-family:sans-serif;">₹${Number(p.total || 0).toLocaleString()}</div>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        `).join('');
-
-        const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
         body { font-family:'Segoe UI',sans-serif; background:#050505; color:#fff; }
