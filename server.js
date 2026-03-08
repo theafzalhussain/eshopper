@@ -99,22 +99,18 @@ if (process.env.SENTRY_DSN) {
 app.set('trust proxy', 1);
 
 // 🔒 CORS - Robust production config
+const allowedOrigins = [
+    'https://eshopperr.me',
+    'https://www.eshopperr.me',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL?.replace('www.', ''),
+];
 const corsOptions = {
     origin: function(origin, callback) {
-        // Allow no origin (server-to-server, mobile)
         if (!origin) return callback(null, true);
-        // Allow localhost for development
-        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-            return callback(null, true);
-        }
-        // Allow production frontend domains
-        if (origin === 'https://eshopperr.me' || 
-            origin === 'https://www.eshopperr.me' || 
-            origin === process.env.FRONTEND_URL) {
-            return callback(null, true);
-        }
-        // Allow all Vercel preview deployments (*.vercel.app)
-        if (origin && origin.endsWith('.vercel.app')) {
+        if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
             return callback(null, true);
         }
         console.warn(`⚠️  CORS rejected: ${origin}`);
@@ -126,6 +122,14 @@ const corsOptions = {
     preflightContinue: false,
     optionsSuccessStatus: 204
 };
+// Health check endpoint for uptime monitoring and debugging
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        time: new Date().toISOString(),
+        message: 'API is running',
+    });
+});
 
 // Apply CORS before any routes or middleware
 app.use(cors(corsOptions));
