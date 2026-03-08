@@ -110,25 +110,23 @@
           <td style="padding:10px 12px;font-size:11px;font-weight:bold;color:#aaaaaa;font-family:Arial,sans-serif;letter-spacing:1px;border-bottom:1px solid #333333;text-align:center;">QTY</td>
           <td style="padding:10px 12px;font-size:11px;font-weight:bold;color:#aaaaaa;font-family:Arial,sans-serif;letter-spacing:1px;border-bottom:1px solid #333333;text-align:right;">PRICE</td>
         </tr>
-        <!-- Item Row (Dynamic) -->
-        {{#each products}}
+        <!-- Item Row -->
         <tr style="background-color:#222222;">
           <td style="padding:14px 12px;vertical-align:middle;">
-            <img src="{{this.image}}" width="60" height="60" alt="{{this.name}}" style="border-radius:6px;display:block;background-color:#333;"/>
+            <img src="https://via.placeholder.com/60x60/444444/cccccc?text=👔" width="60" height="60" alt="mens formal shirts" style="border-radius:6px;display:block;background-color:#333;"/>
           </td>
           <td style="padding:14px 12px;vertical-align:middle;">
-            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">{{this.name}}</p>
-            <p style="margin:0 0 2px 0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Size: {{this.size}}</p>
-            <p style="margin:0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Color: {{this.color}}</p>
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">mens formal shirts</p>
+            <p style="margin:0 0 2px 0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Size: S</p>
+            <p style="margin:0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Color: green</p>
           </td>
           <td style="padding:14px 12px;vertical-align:middle;text-align:center;">
-            <p style="margin:0;font-size:13px;color:#ffffff;font-family:Arial,sans-serif;">{{this.quantity}}</p>
+            <p style="margin:0;font-size:13px;color:#ffffff;font-family:Arial,sans-serif;">1</p>
           </td>
           <td style="padding:14px 12px;vertical-align:middle;text-align:right;">
-            <p style="margin:0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">₹{{this.price}}</p>
+            <p style="margin:0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">₹2500</p>
           </td>
         </tr>
-        {{/each}}
       </table>
     </td>
   </tr>
