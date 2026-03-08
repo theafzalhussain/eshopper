@@ -578,8 +578,8 @@ const loadEmailTemplate = async (templateName, data) => {
 const ORDER_STATUS_TEMPLATES = {
     'order placed': '01-order-placed.html',
     'placed': '01-order-placed.html',
-    'ordered': '02-order-confirmed.html',
-    'confirmed': '02-order-confirmed.html',
+    'ordered': 'order_confirmed.html',
+    'confirmed': 'order_confirmed.html',
     'packed': '03-order-packed.html',
     'shipped': '04-order-shipped.html',
     'out for delivery': '05-out-for-delivery.html',
