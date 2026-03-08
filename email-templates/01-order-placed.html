@@ -1,3 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Received - eShopper Luxe</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0A0A0A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0A0A0A;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <!-- Main Container -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #1A1A1A; border-radius: 12px; box-shadow: 0 8px 32px rgba(212, 175, 55, 0.15);">
+                    
+                    <!-- Header with Logo -->
+                    <tr>
+                        <td style="padding: 30px 40px; background: linear-gradient(135deg, #1A1A1A 0%, #2A2520 100%); border-radius: 12px 12px 0 0; border-bottom: 2px solid #D4AF37;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td align="left" style="vertical-align: middle;">
+                                        <img src="{{BRAND_LOGO_URL}}" alt="eShopper Luxe" style="height: 45px; display: block;" />
+                                    </td>
+                                    <td align="right" style="vertical-align: middle;">
+                                        <div style="text-align: right;">
+                                            <div style="color: #D4AF37; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px;">ORDER ID</div>
+                                            <div style="color: #FFFFFF; font-size: 16px; font-weight: 700;">{{ORDER_ID}}</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Order Received Banner -->
+                    <tr>
+                        <td style="padding: 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="background: linear-gradient(90deg, #D4AF37 0%, #F4D03F 100%); padding: 20px 40px; text-align: center;">
+                                        <div style="color: #0A0A0A; font-size: 24px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">
+                                            ✓ ORDER RECEIVED
+                                        </div>
+                                        <div style="color: #1A1A1A; font-size: 12px; font-weight: 600; margin-top: 5px;">
+                                            {{ORDER_DATE}}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Hero Message -->
+                    <tr>
+                        <td style="padding: 35px 40px; text-align: center; border-bottom: 1px solid #2A2A2A;">
+                            <div style="color: #FFFFFF; font-size: 22px; font-weight: 700; margin-bottom: 12px; line-height: 1.4;">
+                                Hi {{CUSTOMER_NAME}},
+                            </div>
+                            <div style="color: #B8B8B8; font-size: 15px; line-height: 1.6; max-width: 450px; margin: 0 auto;">
+                                Your luxury selection is now in our queue. We are verifying your items and preparing them for dispatch.
+                            </div>
+                            <div style="margin-top: 20px; padding: 12px 20px; background-color: #0F1F0F; border-left: 3px solid #4CAF50; border-radius: 6px; display: inline-block;">
+                                <span style="color: #4CAF50; font-size: 13px; font-weight: 600;">✓</span>
+                                <span style="color: #B8B8B8; font-size: 13px; margin-left: 8px;">Payment Received & Verified</span>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Items Table -->
+                    <tr>
+                        <td style="padding: 30px 40px;">
+                            <div style="color: #D4AF37; font-size: 14px; font-weight: 700; letter-spacing: 1px; margin-bottom: 20px; text-transform: uppercase;">
+                                Order Summary
+                            </div>
+                            
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #2A2A2A; border-radius: 8px; overflow: hidden;">
+                                <!-- Table Header -->
+                                <tr style="background-color: #151515;">
+                                    <td style="padding: 12px 15px; color: #D4AF37; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 1px solid #2A2A2A;" width="80">ITEM</td>
+                                    <td style="padding: 12px 15px; color: #D4AF37; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 1px solid #2A2A2A;">DETAILS</td>
+                                    <td style="padding: 12px 15px; color: #D4AF37; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; text-align: center; border-bottom: 1px solid #2A2A2A;" width="60">QTY</td>
+                                    <td style="padding: 12px 15px; color: #D4AF37; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; text-align: right; border-bottom: 1px solid #2A2A2A;" width="90">PRICE</td>
+                                </tr>
+                                
+                                <!-- Product Rows (Dynamic) -->
+                                {{#each PRODUCTS}}
+                                <tr style="background-color: #1A1A1A;">
+                                    <td style="padding: 15px; border-bottom: 1px solid #2A2A2A;">
+                                        <img src="{{this.image}}" alt="{{this.name}}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #2A2A2A;" />
+                                    </td>
+                                    <td style="padding: 15px; border-bottom: 1px solid #2A2A2A; vertical-align: top;">
+                                        <div style="color: #FFFFFF; font-size: 14px; font-weight: 600; margin-bottom: 6px;">{{this.name}}</div>
+                                        {{#if this.size}}
+                                        <div style="color: #888888; font-size: 12px; margin-bottom: 3px;">Size: {{this.size}}</div>
+                                        {{/if}}
+                                        {{#if this.color}}
+                                        <div style="color: #888888; font-size: 12px;">Color: {{this.color}}</div>
+                                        {{/if}}
+                                    </td>
+                                    <td style="padding: 15px; color: #FFFFFF; font-size: 14px; font-weight: 600; text-align: center; border-bottom: 1px solid #2A2A2A; vertical-align: top;">{{this.quantity}}</td>
+                                    <td style="padding: 15px; color: #FFFFFF; font-size: 14px; font-weight: 700; text-align: right; border-bottom: 1px solid #2A2A2A; vertical-align: top;">₹{{this.price}}</td>
+                                </tr>
+                                {{/each}}
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
