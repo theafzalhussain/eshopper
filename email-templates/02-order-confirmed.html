@@ -1,169 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=600, initial-scale=1.0">
     <title>Order Confirmed - eShopper Boutique Luxe</title>
-  </head>
-  <body style="margin:0; padding:0; background:#111;">
-    <table width="100%" bgcolor="#111" cellpadding="0" cellspacing="0" style="padding:40px 0;">
-      <tr>
-        <td align="center">
-          <table width="600" cellpadding="0" cellspacing="0" style="background:#000; border-radius:16px; font-family:Segoe UI,Arial,sans-serif; color:#fff; box-shadow:0 4px 32px #0008;">
-            <!-- Header -->
-            <tr>
-              <td colspan="3" style="background:#4CAF50; padding:0;">
-                <table width="100%">
-                  <tr>
-                    <td style="padding:18px 32px; font-size:28px;">🎉</td>
-                    <td style="padding:18px 0; font-weight:700; font-size:22px; color:#fff; letter-spacing:1px;">ORDER CONFIRMED!</td>
-                    <td align="right" style="padding:18px 32px;">
-                      <span style="background:#388e3c; color:#fff; border-radius:16px; padding:4px 16px; font-weight:600; font-size:14px;">CONFIRMED</span>
-                    </td>
-                  </tr>
+</head>
+<body style="margin:0; padding:0; background:#000; font-family: 'Segoe UI', Arial, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#000;">
+        <tr>
+            <td align="center" style="padding:0;">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#181818; border-radius:16px; box-shadow:0 8px 32px rgba(76,175,80,0.10); max-width:600px;">
+                    <!-- Green Banner -->
+                    <tr>
+                        <td style="background:#4CAF50; border-radius:16px 16px 0 0; padding:18px 32px 10px 32px; text-align:left;">
+                            <span style="font-size:24px; vertical-align:middle;">🎉</span>
+                            <span style="color:#fff; font-size:20px; font-weight:800; letter-spacing:1px; margin-left:10px;">ORDER CONFIRMED!</span>
+                            <span style="float:right; background:#222; color:#fff; font-size:13px; font-weight:600; border-radius:12px; padding:6px 16px; margin-top:2px;">CONFIRMED</span>
+                        </td>
+                    </tr>
+                    <!-- Order ID & Date -->
+                    <tr>
+                        <td style="padding:0 32px 0 32px; background:#181818;">
+                            <table width="100%" style="margin-top:10px;">
+                                <tr>
+                                    <td style="color:#D4AF37; font-size:13px; font-weight:600;">Order #{{ORDER_ID}}</td>
+                                    <td style="color:#B8B8B8; font-size:13px; text-align:right;">{{ORDER_DATE}}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Hero Text -->
+                    <tr>
+                        <td style="padding:32px 32px 0 32px; text-align:left;">
+                            <div style="color:#fff; font-size:24px; font-weight:700; margin-bottom:8px;">Hi {{CUSTOMER_NAME}}! 👋</div>
+                            <div style="color:#B8B8B8; font-size:15px;">Your order has been <span style="color:#4CAF50; font-weight:700;">confirmed</span> and is being prepared by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.</div>
+                        </td>
+                    </tr>
+                    <!-- Expected Arrival Box -->
+                    <tr>
+                        <td style="padding:32px 32px 0 32px;">
+                            <table width="100%" style="background:#FFF8E1; border:2px solid #D4AF37; border-radius:12px;">
+                                <tr>
+                                    <td style="padding:18px 0; text-align:center;">
+                                        <div style="color:#D4AF37; font-size:13px; font-weight:700; letter-spacing:1px;">EXPECTED ARRIVAL</div>
+                                        <div style="color:#222; font-size:24px; font-weight:900; margin-top:4px;">{{EXPECTED_ARRIVAL}}</div>
+                                        <div style="color:#B8B8B8; font-size:13px; margin-top:2px;">3-5 Business Days</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Luxe Promise -->
+                    <tr>
+                        <td style="padding:32px 32px 0 32px;">
+                            <table width="100%" style="background:#102010; border-radius:10px;">
+                                <tr>
+                                    <td align="center" style="width:33.3%; padding:18px 0;">
+                                        <div style="font-size:28px; color:#D4AF37;">🔍</div>
+                                        <div style="color:#fff; font-size:14px; font-weight:700; margin-top:6px;">Quality Check</div>
+                                        <div style="color:#B8B8B8; font-size:12px;">10-point inspection by experts</div>
+                                    </td>
+                                    <td align="center" style="width:33.3%; padding:18px 0;">
+                                        <div style="font-size:28px; color:#4CAF50;">📦</div>
+                                        <div style="color:#fff; font-size:14px; font-weight:700; margin-top:6px;">Premium Packaging</div>
+                                        <div style="color:#B8B8B8; font-size:12px;">Eco-friendly luxury boxes</div>
+                                    </td>
+                                    <td align="center" style="width:33.3%; padding:18px 0;">
+                                        <div style="font-size:28px; color:#D4AF37;">🛡️</div>
+                                        <div style="color:#fff; font-size:14px; font-weight:700; margin-top:6px;">100% Authentic</div>
+                                        <div style="color:#B8B8B8; font-size:12px;">Guaranteed genuine products</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Order Details Table -->
+                    <tr>
+                        <td style="padding:32px 32px 0 32px;">
+                            <table width="100%" style="background:#111; border-radius:10px;">
+                                <tr>
+                                    <td colspan="3" style="color:#D4AF37; font-size:14px; font-weight:700; letter-spacing:1px; padding-bottom:10px;">ORDER DETAILS</td>
+                                </tr>
+                                <tr style="background:#181818;">
+                                    <td style="width:80px; padding:10px 0;">
+                                        <img src="{{PRODUCT_IMAGE}}" alt="Product" style="width:60px; height:60px; border-radius:8px; object-fit:cover; border:1px solid #222;" />
+                                    </td>
+                                    <td style="vertical-align:top; padding-left:12px;">
+                                        <div style="color:#fff; font-size:15px; font-weight:600;">{{PRODUCT_NAME}}</div>
+                                        <div style="color:#B8B8B8; font-size:13px;">Size: {{PRODUCT_SIZE}}</div>
+                                        <div style="color:#B8B8B8; font-size:13px;">Color: {{PRODUCT_COLOR}}</div>
+                                    </td>
+                                    <td style="text-align:right; vertical-align:top;">
+                                        <div style="color:#fff; font-size:15px; font-weight:700;">₹{{PRODUCT_PRICE}}</div>
+                                        <div style="color:#B8B8B8; font-size:13px;">Qty: {{PRODUCT_QTY}}</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Amount Breakdown -->
+                    <tr>
+                        <td style="padding:32px 32px 0 32px;">
+                            <table width="100%" style="background:#181818; border-radius:10px;">
+                                <tr>
+                                    <td style="color:#B8B8B8; font-size:14px;">Item Price</td>
+                                    <td style="color:#fff; font-size:14px; text-align:right;">₹{{ITEM_PRICE}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color:#B8B8B8; font-size:14px;">Shipping Charges</td>
+                                    <td style="color:#fff; font-size:14px; text-align:right;">₹{{SHIPPING_CHARGES}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color:#B8B8B8; font-size:14px;">GST (Included)</td>
+                                    <td style="color:#fff; font-size:14px; text-align:right;">₹{{GST}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="color:#D4AF37; font-size:16px; font-weight:700; padding-top:10px;">Total Amount Paid</td>
+                                    <td style="color:#D4AF37; font-size:18px; font-weight:900; text-align:right; padding-top:10px;">₹{{TOTAL_AMOUNT}}</td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td style="text-align:right; padding-top:2px;"><span style="color:#4CAF50; font-size:13px; font-weight:700;">&#10004; PAID</span></td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Shipping & Billing Info -->
+                    <tr>
+                        <td style="padding:32px 32px 0 32px;">
+                            <table width="100%">
+                                <tr>
+                                    <td style="width:48%; background:#181818; border-radius:10px; padding:18px; vertical-align:top; color:#fff;">
+                                        <div style="color:#4CAF50; font-size:13px; font-weight:700; margin-bottom:6px;">📍 SHIPPING TO</div>
+                                        <div style="font-size:15px; font-weight:700;">{{SHIPPING_NAME}}</div>
+                                        <div style="color:#B8B8B8; font-size:13px;">{{SHIPPING_ADDRESS}}<br>{{SHIPPING_CITY}}, {{SHIPPING_STATE}} {{SHIPPING_PIN}}<br>Phone: {{SHIPPING_PHONE}}</div>
+                                    </td>
+                                    <td style="width:4%;"></td>
+                                    <td style="width:48%; background:#181818; border-radius:10px; padding:18px; vertical-align:top; color:#fff;">
+                                        <div style="color:#FFD700; font-size:13px; font-weight:700; margin-bottom:6px;">🧾 BILLING INFO</div>
+                                        <div style="font-size:15px; font-weight:700;">{{BILLING_NAME}}</div>
+                                        <div style="color:#B8B8B8; font-size:13px;">Email: {{BILLING_EMAIL}}<br><span style="color:#D4AF37; font-weight:700;">Transaction ID:</span> <span style="color:#FFD700; font-weight:700;">{{TRANSACTION_ID}}</span></div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <!-- Buttons -->
+                    <tr>
+                        <td style="padding:32px 32px 0 32px; text-align:center;">
+                            <a href="{{TRACKING_URL}}" style="display:inline-block; background:#4CAF50; color:#fff; text-decoration:none; padding:16px 48px; border-radius:8px; font-size:15px; font-weight:700; margin-right:10px;">TRACK YOUR ORDER</a>
+                            <a href="{{RECEIPT_URL}}" style="display:inline-block; background:#181818; color:#fff; border:1.5px solid #fff; text-decoration:none; padding:16px 48px; border-radius:8px; font-size:15px; font-weight:700;">VIEW RECEIPT</a>
+                        </td>
+                    </tr>
+                    <!-- Instagram & Rating -->
+                    <tr>
+                        <td style="padding:32px 32px 0 32px; text-align:center; background:#102010; border-radius:10px;">
+                            <div style="color:#FFD700; font-size:15px; font-weight:700; margin-bottom:8px;">Join our 50,000+ Luxe community</div>
+                            <div style="margin-bottom:10px;">
+                                <span style="color:#FFD700; font-size:22px;">★★★★★</span>
+                            </div>
+                            <a href="{{INSTAGRAM_URL}}" style="display:inline-block; background:linear-gradient(90deg,#fd5,#f25,#c13584,#833ab4); color:#fff; text-decoration:none; padding:12px 36px; border-radius:8px; font-size:15px; font-weight:700;">Follow us on Instagram</a>
+                        </td>
+                    </tr>
+                    <!-- Support Buttons -->
+                    <tr>
+                        <td style="padding:32px 32px 0 32px; text-align:center;">
+                            <a href="{{WHATSAPP_SUPPORT_URL}}" style="display:inline-block; background:#25D366; color:#fff; text-decoration:none; padding:12px 32px; border-radius:8px; font-size:14px; font-weight:700; margin-right:10px;">WhatsApp Us</a>
+                            <a href="mailto:{{SUPPORT_EMAIL}}" style="display:inline-block; background:#181818; color:#fff; border:1.5px solid #fff; text-decoration:none; padding:12px 32px; border-radius:8px; font-size:14px; font-weight:700;">Email Support</a>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding:24px 32px 24px 32px; background:#000; border-radius:0 0 16px 16px; text-align:center; color:#666; font-size:12px;">
+                            © 2026 eShopper Luxe. All rights reserved.<br>
+                            Shop 3, Sahid Marg, Near Power, Lucknow – 226001, UP, India<br>
+                            GSTIN: 09XXXXX1234X1Z5 | CIN: U51909UP2020PTC123456<br>
+                            <a href="{{PRIVACY_POLICY_URL}}" style="color:#D4AF37; text-decoration:none; font-size:11px; margin:0 10px;">Privacy</a>
+                            <span style="color:#333;">|</span>
+                            <a href="{{TERMS_URL}}" style="color:#D4AF37; text-decoration:none; font-size:11px; margin:0 10px;">Terms</a>
+                            <span style="color:#333;">|</span>
+                            <a href="{{UNSUBSCRIBE_URL}}" style="color:#D4AF37; text-decoration:none; font-size:11px; margin:0 10px;">Unsubscribe</a>
+                        </td>
+                    </tr>
                 </table>
-                <div style="background:#222; color:#fff; font-size:14px; padding:0 32px 12px 32px;">
-                  Order #ESHP-2026-0038 &nbsp;|&nbsp; 7 March 2026
-                </div>
-              </td>
-            </tr>
-            <!-- Hero Text -->
-            <tr>
-              <td colspan="3" style="padding:32px 32px 0 32px;">
-                <div style="font-size:28px; font-weight:700; margin-bottom:8px;">Hi Afzal! 👋</div>
-                <div style="font-size:16px; color:#bbb; margin-bottom:18px;">
-                  Your order has been <span style="color:#4CAF50; font-weight:600;">confirmed</span> and is now being prepared by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.
-                </div>
-              </td>
-            </tr>
-            <!-- Expected Arrival -->
-            <tr>
-              <td colspan="3" style="padding:0 32px 24px 32px;">
-                <div style="background:#ffe066; border:2px solid #D4AF37; border-radius:12px; padding:18px; text-align:center; margin:0 auto; max-width:340px;">
-                  <div style="color:#bfa13a; font-weight:700; font-size:15px; letter-spacing:1px; margin-bottom:4px;">EXPECTED ARRIVAL</div>
-                  <div style="color:#000; font-weight:800; font-size:26px; letter-spacing:1px;">14 March 2026</div>
-                  <div style="color:#555; font-size:13px; margin-top:2px;">3-5 Business Days</div>
-                </div>
-              </td>
-            </tr>
-            <!-- Luxe Promise -->
-            <tr>
-              <td colspan="3" style="padding:0 32px 24px 32px;">
-                <table width="100%" style="background:#101010; border-radius:10px;">
-                  <tr>
-                    <td align="center" style="padding:16px;">
-                      <div style="font-size:28px; color:#D4AF37;">🔍</div>
-                      <div style="font-weight:600; color:#4CAF50; margin-top:6px;">Quality Check</div>
-                      <div style="color:#bbb; font-size:13px;">10-point inspection by experts</div>
-                    </td>
-                    <td align="center" style="padding:16px;">
-                      <div style="font-size:28px; color:#D4AF37;">📦</div>
-                      <div style="font-weight:600; color:#4CAF50; margin-top:6px;">Premium Packaging</div>
-                      <div style="color:#bbb; font-size:13px;">Eco-friendly luxury boxes</div>
-                    </td>
-                    <td align="center" style="padding:16px;">
-                      <div style="font-size:28px; color:#4CAF50;">🛡️</div>
-                      <div style="font-weight:600; color:#4CAF50; margin-top:6px;">100% Authentic</div>
-                      <div style="color:#bbb; font-size:13px;">Guaranteed genuine products</div>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <!-- Order Details -->
-            <tr>
-              <td colspan="3" style="padding:0 32px 0 32px;">
-                <div style="color:#FFD700; font-weight:700; font-size:16px; margin:18px 0 8px 0;">ORDER DETAILS</div>
-                <table width="100%" style="background:#181818; border-radius:10px;">
-                  <tr>
-                    <td style="width:70px; padding:12px;">
-                      <img src="https://i.imgur.com/0y8Ftya.jpg" alt="Product" width="56" height="56" style="border-radius:8px; object-fit:cover; border:1px solid #333;" />
-                    </td>
-                    <td style="padding:12px;">
-                      <div style="font-weight:600; color:#fff; font-size:15px;">mens formal shirts</div>
-                      <div style="color:#bbb; font-size:13px;">Size: S &nbsp; | &nbsp; Color: green</div>
-                    </td>
-                    <td align="right" style="padding:12px; font-weight:700; color:#FFD700; font-size:16px;">₹2500</td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <!-- Amount Breakdown -->
-            <tr>
-              <td colspan="3" style="padding:0 32px 0 32px;">
-                <table width="100%" style="color:#fff; font-size:15px; margin-top:8px;">
-                  <tr>
-                    <td style="color:#bbb;">Item Price</td>
-                    <td align="right">₹2500</td>
-                  </tr>
-                  <tr>
-                    <td style="color:#bbb;">Shipping Charges</td>
-                    <td align="right">₹0</td>
-                  </tr>
-                  <tr>
-                    <td style="color:#bbb;">GST (Included)</td>
-                    <td align="right">₹450</td>
-                  </tr>
-                  <tr>
-                    <td style="font-weight:700; color:#FFD700; font-size:17px; padding-top:8px;">Total Amount Paid</td>
-                    <td align="right" style="font-weight:700; color:#FFD700; font-size:18px; padding-top:8px;">₹2500 <span style="color:#4CAF50; font-size:15px; font-weight:600; margin-left:8px;">✔ PAID</span></td>
-                  </tr>
-                  <tr>
-                    <td style="color:#888; font-size:12px; padding-top:2px;">Payment Mode: COD</td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <!-- Shipping & Billing Info -->
-            <tr>
-              <td colspan="3" style="padding:24px 32px 0 32px;">
-                <table width="100%" style="border-spacing:12px;">
-                  <tr>
-                    <td style="background:#181818; border-radius:10px; padding:16px; color:#fff; width:50%; vertical-align:top;">
-                      <div style="color:#4CAF50; font-weight:700; font-size:15px; margin-bottom:4px;">SHIPPING TO</div>
-                      <div style="font-weight:600;">Afzal Hussain</div>
-                      <div style="color:#bbb; font-size:14px;">23, Street Number 23 dass garden baporla vihar<br />Delhi, New Delhi 110043<br />Phone: 8447859784</div>
-                    </td>
-                    <td style="background:#181818; border-radius:10px; padding:16px; color:#fff; width:50%; vertical-align:top;">
-                      <div style="color:#FFD700; font-weight:700; font-size:15px; margin-bottom:4px;">BILLING INFO</div>
-                      <div style="font-weight:600;">Afzal Hussain</div>
-                      <div style="color:#bbb; font-size:14px;">Email: theafzalfhussain786@gmail.com<br />Transaction ID: <span style="color:#FFD700; font-weight:700;">TXN1772884951521</span></div>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <!-- Buttons -->
-            <tr>
-              <td colspan="3" style="padding:32px 32px 0 32px; text-align:center;">
-                <a href="#" style="background:#4CAF50; color:#fff; padding:12px 32px; border-radius:8px; font-weight:700; font-size:16px; text-decoration:none; margin-right:12px; display:inline-block;">TRACK YOUR ORDER</a>
-                <a href="#" style="background:#181818; color:#fff; border:2px solid #fff; padding:12px 32px; border-radius:8px; font-weight:700; font-size:16px; text-decoration:none; margin-left:12px; display:inline-block;">VIEW RECEIPT</a>
-              </td>
-            </tr>
-            <!-- Footer -->
-            <tr>
-              <td colspan="3" style="padding:40px 32px 0 32px;">
-                <div style="background:#101010; border-radius:10px; padding:24px; text-align:center; margin-bottom:18px;">
-                  <div style="color:#FFD700; font-weight:700; font-size:15px; margin-bottom:8px;">Join our 50,000+ Luxe community</div>
-                  <div style="font-size:22px; color:#FFD700; margin-bottom:8px;">★★★★★</div>
-                  <a href="#" style="background:linear-gradient(90deg,#fd5,#f36,#f0f,#4f5dff); color:#fff; padding:10px 28px; border-radius:24px; font-weight:700; font-size:16px; text-decoration:none; display:inline-block; margin-bottom:8px;">Follow us on Instagram</a>
-                  <div style="margin-top:16px;">
-                    <a href="#" style="background:#25D366; color:#fff; padding:8px 18px; border-radius:8px; font-weight:600; font-size:15px; text-decoration:none; margin-right:10px; display:inline-block;">WhatsApp Us</a>
-                    <a href="#" style="background:#222; color:#fff; padding:8px 18px; border-radius:8px; font-weight:600; font-size:15px; text-decoration:none; border:1px solid #fff; display:inline-block;">Email Support</a>
-                  </div>
-                </div>
-                <div style="color:#bbb; font-size:12px; text-align:center; margin-bottom:8px;">
-                  © 2026 eShopper Luxe. All rights reserved.<br />Shop 3, Sahid Marg, Near Power, Lucknow – 226001, UP, India<br />GSTIN: 09XXXX1234X1ZS | CIN: U51909UP2020PTC123456
-                </div>
-                <div style="color:#888; font-size:12px; text-align:center;">
-                  <a href="#" style="color:#FFD700; text-decoration:underline; margin-right:12px;">Privacy</a>
-                  <a href="#" style="color:#FFD700; text-decoration:underline; margin-right:12px;">Terms</a>
-                  <a href="#" style="color:#FFD700; text-decoration:underline;">Unsubscribe</a>
-                </div>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
+            </td>
+        </tr>
     </table>
-  </body>
+</body>
 </html>
