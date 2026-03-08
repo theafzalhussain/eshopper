@@ -53,14 +53,14 @@
                     <tr>
                         <td style="padding: 40px 40px 30px 40px; text-align: center; background: linear-gradient(180deg, #1A1A1A 0%, #151515 100%); border-bottom: 1px solid #2A2A2A;">
                             <div style="color: #FFFFFF; font-size: 26px; font-weight: 700; margin-bottom: 18px; line-height: 1.4;">
-                                Thank You, {{CUSTOMER_NAME}}! 🙏
+                                Thank You, {{customerName}}! 🙏
                             </div>
                             <div style="color: #B8B8B8; font-size: 15px; line-height: 1.7; max-width: 500px; margin: 0 auto 25px auto;">
-                                We hope you love your luxury purchase! Your order <span style="color: #D4AF37; font-family: monospace; font-weight: 700;">{{ORDER_ID}}</span> was delivered on <span style="color: #4CAF50; font-weight: 700;">{{DELIVERED_DATE}}</span>.
+                                We hope you love your luxury purchase! Your order <span style="color: #D4AF37; font-family: monospace; font-weight: 700;">{{orderId}}</span> was delivered on <span style="color: #4CAF50; font-weight: 700;">{{deliveredDate}}</span>.
                             </div>
                             <div style="display: inline-block; background-color: #0D2E1F; border: 1px solid #4CAF50; border-radius: 10px; padding: 20px 30px;">
                                 <div style="color: #4CAF50; font-size: 14px; font-weight: 800; letter-spacing: 1px; margin-bottom: 8px;">📦 DELIVERY CONFIRMED</div>
-                                <div style="color: #81C784; font-size: 13px;">Received by: <span style="color: #FFFFFF; font-weight: 700;">{{RECEIVED_BY}}</span></div>
+                                <div style="color: #81C784; font-size: 13px;">Received by: <span style="color: #FFFFFF; font-weight: 700;">{{receivedBy}}</span></div>
                             </div>
                         </td>
                     </tr>
@@ -76,7 +76,7 @@
                                 <div style="color: #B8B8B8; font-size: 14px; margin-bottom: 25px; line-height: 1.6;">
                                     Download your official GST invoice for warranty, return, and tax purposes.
                                 </div>
-                                <a href="{{TAX_INVOICE_URL}}" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #F7DC6F 100%); color: #0A0A0A; text-decoration: none; padding: 18px 45px; border-radius: 10px; font-size: 16px; font-weight: 800; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4); text-transform: uppercase;">
+                                <a href="{{taxInvoiceUrl}}" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #F7DC6F 100%); color: #0A0A0A; text-decoration: none; padding: 18px 45px; border-radius: 10px; font-size: 16px; font-weight: 800; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4); text-transform: uppercase;">
                                     ⬇️ Download Tax Invoice
                                 </a>
                             </div>
@@ -95,7 +95,7 @@
                             
                             <!-- Star Rating (Clickable) -->
                             <div style="margin-bottom: 25px;">
-                                <a href="{{RATING_URL}}?stars=1" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>
+                                <a href="{{ratingUrl}}?stars=1" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>
                                 <a href="{{RATING_URL}}?stars=2" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>
                                 <a href="{{RATING_URL}}?stars=3" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>
                                 <a href="{{RATING_URL}}?stars=4" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>

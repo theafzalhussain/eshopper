@@ -610,12 +610,10 @@ const getEmailSubject = (status, orderId) => {
 const mapOrderToTemplateData = (order, user = null) => {
     const frontendUrl = (process.env.FRONTEND_URL || 'https://eshopperr.me').replace(/\/$/, '');
     const logoUrl = process.env.BRAND_LOGO_URL || `${frontendUrl}/logo512.png`;
-    
     // Safe access to shipping address
     const shipping = order.shippingAddress || {};
     const customerName = order.userName || user?.name || shipping.fullName || 'Valued Customer';
     const firstName = customerName.split(' ')[0];
-    
     // Safe access to products
     const products = Array.isArray(order.products) ? order.products.map(p => ({
         name: p.name || 'Product',
@@ -627,20 +625,17 @@ const mapOrderToTemplateData = (order, user = null) => {
         size: p.size || '',
         color: p.color || ''
     })) : [];
-    
     // Calculate amounts
     const totalAmount = Number(order.totalAmount || 0);
     const shippingAmount = Number(order.shippingAmount || 0);
     const finalAmount = Number(order.finalAmount || totalAmount + shippingAmount);
     const gstAmount = Math.round(finalAmount * 0.18); // Assuming 18% GST
-    
     // Format dates
     const orderDate = new Date(order.orderDate || order.createdAt || Date.now()).toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'long',
         year: 'numeric'
     });
-    
     const estimatedDelivery = order.estimatedArrival 
         ? new Date(order.estimatedArrival).toLocaleDateString('en-IN', {
             day: 'numeric',
@@ -652,85 +647,104 @@ const mapOrderToTemplateData = (order, user = null) => {
             month: 'long',
             year: 'numeric'
         });
-    
+
+    // Generate product rows HTML for strict Luxe template
+    const itemsHtml = products.map(item => `
+      <tr>
+        <td style="width:60px;padding:10px 0 10px 0;vertical-align:top;">
+          <img src="${item.image}" width="48" height="48" style="border-radius:6px;border:1px solid #333;display:block;" alt="Product"/>
+        </td>
+        <td style="padding:10px 0 10px 12px;vertical-align:top;">
+          <div style="color:#fff;font-size:15px;font-weight:600;">${item.name}</div>
+          <div style="color:#bbb;font-size:13px;">Size: ${item.size}</div>
+          <div style="color:#bbb;font-size:13px;">Color: ${item.color}</div>
+        </td>
+        <td align="right" style="padding:10px 0 10px 0;vertical-align:top;">
+          <div style="color:#fff;font-size:15px;font-weight:700;">₹${item.price}</div>
+        </td>
+      </tr>
+    `).join('');
+
+    // Map variables for strict Luxe template compatibility
     return {
         // Brand
         BRAND_LOGO_URL: logoUrl,
-        
-        // Order details
-        ORDER_ID: order.orderId,
-        ORDER_DATE: orderDate,
-        TOTAL_AMOUNT: finalAmount,
-        
+
+        // Order details (strict template expects lowercase keys)
+        orderId: order.orderId,
+        orderDate: orderDate,
+        totalAmount: finalAmount,
+
         // Customer
-        CUSTOMER_NAME: firstName,
-        CUSTOMER_EMAIL: order.userEmail || user?.email || '',
-        
+        customerName: firstName,
+        customerEmail: order.userEmail || user?.email || '',
+
         // Shipping
-        SHIPPING_NAME: shipping.fullName || customerName,
-        SHIPPING_ADDRESS: shipping.addressline1 || 'N/A',
-        SHIPPING_CITY: shipping.city || '',
-        SHIPPING_STATE: shipping.state || '',
-        SHIPPING_PIN: shipping.pin || '',
-        SHIPPING_PHONE: shipping.phone || user?.phone || '',
-        
+        shippingName: shipping.fullName || customerName,
+        shippingAddress: shipping.addressline1 || 'N/A',
+        shippingCity: shipping.city || '',
+        shippingState: shipping.state || '',
+        shippingPin: shipping.pin || '',
+        shippingPhone: shipping.phone || user?.phone || '',
+
         // Products
-        PRODUCTS: products,
-        
+        products: products,
+        items: itemsHtml,
+
         // Amounts
-        SUBTOTAL: totalAmount,
-        SHIPPING_AMOUNT: shippingAmount,
-        GST_AMOUNT: gstAmount,
-        
+        subtotal: totalAmount,
+        shippingAmount: shippingAmount,
+        gstAmount: gstAmount,
+
         // Payment
-        PAYMENT_METHOD: order.paymentMethod || 'COD',
-        PAYMENT_STATUS: order.paymentStatus || 'Pending',
-        TRANSACTION_ID: order.transactionId || `TXN${Date.now()}`,
-        
+        paymentMethod: order.paymentMethod || 'COD',
+        paymentStatus: order.paymentStatus || 'Pending',
+        transactionId: order.transactionId || `TXN${Date.now()}`,
+
         // Billing (same as shipping if not provided)
-        BILLING_NAME: shipping.fullName || customerName,
-        
+        billingName: shipping.fullName || customerName,
+
         // Delivery
-        ESTIMATED_DELIVERY_DATE: estimatedDelivery,
-        DELIVERY_TIME_SLOT: '10:00 AM - 6:00 PM',
-        
+        expectedDate: estimatedDelivery,
+        deliveryTimeSlot: '10:00 AM - 6:00 PM',
+
         // Packed info
-        PACKED_DATE: orderDate,
-        ITEMS_COUNT: products.length,
-        PACKAGE_WEIGHT: `${(products.length * 0.5).toFixed(1)} kg`,
-        
+        packedDate: orderDate,
+        itemsCount: products.length,
+        packageWeight: `${(products.length * 0.5).toFixed(1)} kg`,
+
         // Courier info (defaults)
-        COURIER_NAME: order.courierName || 'Delhivery',
-        AWB_NUMBER: order.awbNumber || `AWB${Date.now()}`,
-        SHIPPED_DATE: orderDate,
-        CARRIER_WEBSITE: order.carrierWebsite || 'https://www.delhivery.com/track',
-        
+        courierName: order.courierName || 'Delhivery',
+        awbNumber: order.awbNumber || `AWB${Date.now()}`,
+        shippedDate: orderDate,
+        carrierWebsite: order.carrierWebsite || 'https://www.delhivery.com/track',
+
         // Delivery agent
-        AGENT_NAME: order.agentName || 'Delivery Partner',
-        AGENT_PHONE: order.agentPhone || '+91 98765 43210',
-        
+        agentName: order.agentName || 'Delivery Partner',
+        agentPhone: order.agentPhone || '+91 98765 43210',
+
         // Delivered info
-        DELIVERED_DATE: orderDate,
-        RECEIVED_BY: 'Self',
-        
+        deliveredDate: orderDate,
+        receivedBy: 'Self',
+
         // Links
-        TRACKING_URL: `${frontendUrl}/order-tracking/${order.orderId}`,
-        INVOICE_URL: `${frontendUrl}/invoice/${order.orderId}`,
-        TAX_INVOICE_URL: `${frontendUrl}/invoice/tax/${order.orderId}`,
-        RATING_URL: `${frontendUrl}/rate-order/${order.orderId}`,
-        REVIEW_URL: `${frontendUrl}/review/${order.orderId}`,
-        REFERRAL_URL: `${frontendUrl}/refer`,
-        REFERRAL_CODE: `LUXE${new Date().getFullYear()}${firstName.toUpperCase()}`,
-        LIVE_MAP_URL: `${frontendUrl}/live-tracking/${order.orderId}`,
-        
+        trackingUrl: `${frontendUrl}/order-tracking/${order.orderId}`,
+        invoiceUrl: `${frontendUrl}/invoice/${order.orderId}`,
+        taxInvoiceUrl: `${frontendUrl}/invoice/tax/${order.orderId}`,
+        ratingUrl: `${frontendUrl}/rate-order/${order.orderId}`,
+        reviewUrl: `${frontendUrl}/review/${order.orderId}`,
+        referralUrl: `${frontendUrl}/refer`,
+        referralCode: `LUXE${new Date().getFullYear()}${firstName.toUpperCase()}`,
+        liveMapUrl: `${frontendUrl}/live-tracking/${order.orderId}`,
+
         // Support
-        WHATSAPP_SUPPORT_URL: 'https://wa.me/918447859784',
-        INSTAGRAM_URL: 'https://instagram.com/eshopperluxe',
-        SUPPORT_EMAIL: 'support@eshopperr.me',
-        SUPPORT_PHONE: '+91 8447859784',
-        PRIVACY_POLICY_URL: `${frontendUrl}/privacy`,
-        TERMS_URL: `${frontendUrl}/terms`,
-        RETURN_POLICY_URL: `${frontendUrl}/returns`
+        whatsappSupportUrl: 'https://wa.me/918447859784',
+        instagramUrl: 'https://instagram.com/eshopperluxe',
+        supportEmail: 'support@eshopperr.me',
+        supportPhone: '+91 8447859784',
+        privacyPolicyUrl: `${frontendUrl}/privacy`,
+        termsUrl: `${frontendUrl}/terms`,
+        returnPolicyUrl: `${frontendUrl}/returns`
     };
 };
 
