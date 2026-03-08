@@ -488,7 +488,7 @@ const executeEmailJob = async (jobType, payload) => {
         return { skipped: true, reason: 'email-notifications-disabled' };
     }
     if (jobType === 'order-placed') return sendOrderPlacedEmail(payload);
-    if (jobType === 'order-confirmed') return sendOrderConfirmationEmail(payload);
+    if (jobType === 'order-confirmed') return sendOrderConfirmedEmail(payload);
     if (jobType === 'order-status') return sendOrderStatusEmail(payload);
     throw new Error(`Unknown email job type: ${jobType}`);
 };

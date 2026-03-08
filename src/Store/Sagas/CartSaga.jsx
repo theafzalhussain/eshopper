@@ -4,6 +4,7 @@ import { ADD_CART, ADD_CART_RED, CLEAR_CART, CLEAR_CART_RED, DELETE_CART, DELETE
 
 function* createCartSaga(action) {
     try {
+        if (!action || !action.payload) return;
         let response = yield createCartAPI(action.payload)
         yield put({ type: ADD_CART_RED, data: response })
     } catch (e) { console.error("❌ Cart Add Error:", e) }
@@ -18,6 +19,7 @@ function* getCartSaga() {
 
 function* deleteCartSaga(action) {
     try {
+        if (!action || !action.payload) return;
         yield deleteCartAPI(action.payload)
         yield put({ type: DELETE_CART_RED, data: action.payload })
     } catch (e) { console.error("❌ Cart Delete Error:", e) }
@@ -25,6 +27,7 @@ function* deleteCartSaga(action) {
 
 function* updateCartSaga(action) {
     try {
+        if (!action || !action.payload) return;
         yield updateCartAPI(action.payload)
         yield put({ type: UPDATE_CART_RED, data: action.payload })
     } catch (e) { console.error("❌ Cart Update Error:", e) }

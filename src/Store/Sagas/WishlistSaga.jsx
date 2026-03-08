@@ -4,6 +4,7 @@ import { ADD_WISHLIST_RED, ADD_WISHLIST, GET_WISHLIST, GET_WISHLIST_RED, DELETE_
 
 function* createWishlistSaga(action) {
     try {
+        if (!action || !action.payload) return;
         let response = yield createWishlistAPI(action.payload)
         yield put({ type: ADD_WISHLIST_RED, data: response })
     } catch (e) { console.error("❌ Wishlist Add Error:", e) }
@@ -18,6 +19,7 @@ function* getWishlistSaga() {
 
 function* deleteWishlistSaga(action) {
     try {
+        if (!action || !action.payload) return;
         yield deleteWishlistAPI(action.payload)
         yield put({ type: DELETE_WISHLIST_RED, data: action.payload })
     } catch (e) { console.error("❌ Wishlist Delete Error:", e) }
@@ -25,6 +27,7 @@ function* deleteWishlistSaga(action) {
 
 function* updateWishlistSaga(action) {
     try {
+        if (!action || !action.payload) return;
         yield updateWishlistAPI(action.payload)
         yield put({ type: UPDATE_WISHLIST_RED, data: action.payload })
     } catch (e) { console.error("❌ Wishlist Update Error:", e) }

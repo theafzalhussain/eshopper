@@ -12,6 +12,7 @@ function* getUserSaga() {
 
 function* createUserSaga(action) {
     try {
+        if (!action || !action.payload) return;
         // यहाँ payload में अब OTP भी जाएगा जो हमने Services में सेट किया है
         let res = yield createUserAPI(action.payload);
         yield put({ type: ADD_USER_RED, data: res });
@@ -20,8 +21,9 @@ function* createUserSaga(action) {
 
 function* updateUserSaga(action) {
     try {
+        if (!action || !action.payload) return;
         let res = yield updateUserAPI(action.payload);
-        // अगर करंट यूज़र अपनी प्रोफाइल अपडेट करता है तो लोकल स्टोरेज अपडेट करें
+        // अगर करंट यूजर अपनी प्रोफाइल अपडेट करता है तो लोकल स्टोरेज अपडेट करें
         if (res.id === localStorage.getItem("userid")) {
             localStorage.setItem("name", res.name);
         }
@@ -35,6 +37,7 @@ function* updateUserSaga(action) {
 
 function* forgetSaga(action) {
     try {
+        if (!action || !action.payload) return;
         // यहाँ resetPasswordAPI का इस्तेमाल होगा जो /api/reset-password को कॉल करता है
         let res = yield resetPasswordAPI(action.payload);
         yield put({ type: UPDATE_USER_RED, data: res });
