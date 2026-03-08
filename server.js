@@ -4785,10 +4785,21 @@ app.post('/api/admin/confirm-order', async (req, res) => {
             }
         }
 
-        // Send Email #2: Order Confirmed (Ultra-Premium) via queue with Proforma attachment
+
+        // Send BOTH: Order Placed (Email #1) and Order Confirmed (Premium, Email #2)
         let emailSent = true;
         if (FEATURE_EMAIL_NOTIFICATIONS) {
             try {
+                // Email #1: Order Placed
+                await enqueueEmailJob('order-placed', {
+                    toEmail: order.userEmail,
+                    userName: order.userName,
+                    orderId: order.orderId,
+                    finalAmount: order.finalAmount,
+                    products: order.products || [],
+                    shippingAddress: order.shippingAddress
+                });
+                // Email #2: Order Confirmed (Premium)
                 await enqueueEmailJob('order-confirmed', {
                     toEmail: order.userEmail,
                     userName: order.userName,
@@ -4803,13 +4814,13 @@ app.post('/api/admin/confirm-order', async (req, res) => {
                 });
             } catch (confirmQueueErr) {
                 emailSent = false;
-                console.warn(`⚠️ Email #2 queue failed for ${orderId}:`, confirmQueueErr.message);
+                console.warn(`⚠️ Email queue failed for ${orderId}:`, confirmQueueErr.message);
                 if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
             }
         }
 
         if (!emailSent) {
-            console.warn(`⚠️ Email #2 (Confirmation) failed for ${orderId}, but updating status anyway`);
+            console.warn(`⚠️ One or more emails failed for ${orderId}, but updating status anyway`);
         }
 
         // Update order status to "Confirmed"
