@@ -37,7 +37,7 @@
         🎉 ORDER CONFIRMED!
       </p>
       <p style="margin:0;font-size:13px;color:#c8e6c9;font-family:Arial,sans-serif;">
-        Order #ESHP-2026-0038 &nbsp;|&nbsp; 7 March 2026
+        Order #{{orderNumber}} &nbsp;|&nbsp; {{orderDate}}
       </p>
     </td>
   </tr>
@@ -46,7 +46,7 @@
   <tr>
     <td style="background-color:#1c1c1c;padding:30px 30px 20px 30px;text-align:center;">
       <p style="margin:0 0 14px 0;font-size:22px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">
-        Hi Afzal! 👋
+        Hi {{customerName}}! 👋
       </p>
       <p style="margin:0;font-size:14px;color:#aaaaaa;font-family:Arial,sans-serif;line-height:1.7;max-width:420px;margin:0 auto;">
         Your order has been <span style="color:#4caf50;font-weight:bold;">confirmed</span> and is now being prepared by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.
@@ -61,8 +61,8 @@
         <tr>
           <td style="background-color:#2a2200;border:2px solid #d4af37;border-radius:12px;padding:20px;text-align:center;">
             <p style="margin:0 0 4px 0;font-size:11px;font-weight:bold;color:#d4af37;font-family:Arial,sans-serif;letter-spacing:2px;">EXPECTED ARRIVAL</p>
-            <p style="margin:0 0 6px 0;font-size:28px;font-weight:900;color:#ffffff;font-family:Arial,sans-serif;">14 March 2026</p>
-            <p style="margin:0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;">📦 3-5 Business Days</p>
+            <p style="margin:0 0 6px 0;font-size:28px;font-weight:900;color:#ffffff;font-family:Arial,sans-serif;">{{expectedArrival}}</p>
+            <p style="margin:0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;">📦 {{deliveryWindow}}</p>
           </td>
         </tr>
       </table>
@@ -110,23 +110,25 @@
           <td style="padding:10px 12px;font-size:11px;font-weight:bold;color:#aaaaaa;font-family:Arial,sans-serif;letter-spacing:1px;border-bottom:1px solid #333333;text-align:center;">QTY</td>
           <td style="padding:10px 12px;font-size:11px;font-weight:bold;color:#aaaaaa;font-family:Arial,sans-serif;letter-spacing:1px;border-bottom:1px solid #333333;text-align:right;">PRICE</td>
         </tr>
-        <!-- Item Row -->
+        <!-- Item Rows (Dynamic) -->
+        {{#each products}}
         <tr style="background-color:#222222;">
           <td style="padding:14px 12px;vertical-align:middle;">
-            <img src="https://via.placeholder.com/60x60/444444/cccccc?text=👔" width="60" height="60" alt="mens formal shirts" style="border-radius:6px;display:block;background-color:#333;"/>
+            <img src="{{this.image}}" width="60" height="60" alt="{{this.name}}" style="border-radius:6px;display:block;background-color:#333;"/>
           </td>
           <td style="padding:14px 12px;vertical-align:middle;">
-            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">mens formal shirts</p>
-            <p style="margin:0 0 2px 0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Size: S</p>
-            <p style="margin:0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Color: green</p>
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">{{this.name}}</p>
+            <p style="margin:0 0 2px 0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Size: {{this.size}}</p>
+            <p style="margin:0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Color: {{this.color}}</p>
           </td>
           <td style="padding:14px 12px;vertical-align:middle;text-align:center;">
-            <p style="margin:0;font-size:13px;color:#ffffff;font-family:Arial,sans-serif;">1</p>
+            <p style="margin:0;font-size:13px;color:#ffffff;font-family:Arial,sans-serif;">{{this.quantity}}</p>
           </td>
           <td style="padding:14px 12px;vertical-align:middle;text-align:right;">
-            <p style="margin:0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">₹2500</p>
+            <p style="margin:0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">₹{{this.price}}</p>
           </td>
         </tr>
+        {{/each}}
       </table>
     </td>
   </tr>
@@ -140,15 +142,15 @@
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;padding-bottom:8px;">Item Price</td>
-                <td style="font-size:13px;color:#ffffff;font-family:Arial,sans-serif;text-align:right;padding-bottom:8px;">₹2500</td>
+                <td style="font-size:13px;color:#ffffff;font-family:Arial,sans-serif;text-align:right;padding-bottom:8px;">₹{{amount.itemTotal}}</td>
               </tr>
               <tr>
                 <td style="font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;padding-bottom:8px;">Shipping Charges</td>
-                <td style="font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;text-align:right;padding-bottom:8px;">—</td>
+                <td style="font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;text-align:right;padding-bottom:8px;">{{amount.shipping}}</td>
               </tr>
               <tr>
                 <td style="font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;padding-bottom:12px;">GST (Included)</td>
-                <td style="font-size:13px;color:#ffffff;font-family:Arial,sans-serif;text-align:right;padding-bottom:12px;">₹450</td>
+                <td style="font-size:13px;color:#ffffff;font-family:Arial,sans-serif;text-align:right;padding-bottom:12px;">₹{{amount.gst}}</td>
               </tr>
               <tr>
                 <td colspan="2" style="border-top:1px solid #333333;padding-top:12px;padding-bottom:14px;">
@@ -156,10 +158,10 @@
                     <tr>
                       <td>
                         <p style="margin:0 0 3px 0;font-size:14px;font-weight:bold;color:#d4af37;font-family:Arial,sans-serif;">Total Amount Paid</p>
-                        <p style="margin:0;font-size:11px;color:#888888;font-family:Arial,sans-serif;">Payment Mode: COD</p>
+                        <p style="margin:0;font-size:11px;color:#888888;font-family:Arial,sans-serif;">Payment Mode: {{paymentMode}}</p>
                       </td>
                       <td style="text-align:right;vertical-align:top;">
-                        <p style="margin:0 0 3px 0;font-size:22px;font-weight:900;color:#d4af37;font-family:Arial,sans-serif;">₹2500</p>
+                        <p style="margin:0 0 3px 0;font-size:22px;font-weight:900;color:#d4af37;font-family:Arial,sans-serif;">₹{{amount.total}}</p>
                         <p style="margin:0;font-size:11px;color:#4caf50;font-family:Arial,sans-serif;text-align:right;">✓ PAID</p>
                       </td>
                     </tr>
@@ -181,20 +183,20 @@
           <!-- Shipping -->
           <td width="48%" style="background-color:#1a2a1a;border:1px solid #2a3a2a;border-radius:10px;padding:14px;vertical-align:top;">
             <p style="margin:0 0 8px 0;font-size:10px;font-weight:bold;color:#ff6b35;font-family:Arial,sans-serif;letter-spacing:1.5px;">📍 SHIPPING TO</p>
-            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">Afzal Hussain</p>
-            <p style="margin:0 0 2px 0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;line-height:1.5;">23, Street Number 23 dass garden baprola vihar</p>
-            <p style="margin:0 0 2px 0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;">Delhi, New Delhi 110043</p>
-            <p style="margin:0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;">Phone: 8447859784</p>
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">{{shipping.name}}</p>
+            <p style="margin:0 0 2px 0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;line-height:1.5;">{{shipping.address}}</p>
+            <p style="margin:0 0 2px 0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;">{{shipping.city}}, {{shipping.state}} {{shipping.zip}}</p>
+            <p style="margin:0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;">Phone: {{shipping.phone}}</p>
           </td>
           <td width="4%"></td>
           <!-- Billing -->
           <td width="48%" style="background-color:#1a1a2a;border:1px solid #2a2a3a;border-radius:10px;padding:14px;vertical-align:top;">
             <p style="margin:0 0 8px 0;font-size:10px;font-weight:bold;color:#f5a623;font-family:Arial,sans-serif;letter-spacing:1.5px;">💳 BILLING INFO</p>
-            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">Afzal Hussain</p>
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">{{billing.name}}</p>
             <p style="margin:0 0 2px 0;font-size:11px;color:#aaaaaa;font-family:Arial,sans-serif;">Email:</p>
-            <p style="margin:0 0 6px 0;font-size:11px;color:#aaaaaa;font-family:Arial,sans-serif;">theafzalhussain786@gmail.com</p>
+            <p style="margin:0 0 6px 0;font-size:11px;color:#aaaaaa;font-family:Arial,sans-serif;">{{billing.email}}</p>
             <p style="margin:0 0 2px 0;font-size:11px;color:#aaaaaa;font-family:Arial,sans-serif;">Transaction ID:</p>
-            <p style="margin:0;font-size:11px;color:#d4af37;font-family:Arial,sans-serif;font-weight:bold;">TXN1772884951521</p>
+            <p style="margin:0;font-size:11px;color:#d4af37;font-family:Arial,sans-serif;font-weight:bold;">{{billing.transactionId}}</p>
           </td>
         </tr>
       </table>
