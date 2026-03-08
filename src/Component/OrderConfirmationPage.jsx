@@ -1,17 +1,12 @@
 import React from "react";
 
-// Responsive, modern luxury confirmation page (Luxe-Gold Edition)
-// Color palette: #0D0D0D (charcoal), #D4AF37 (gold), #fff (white)
-// All product images, order details, and user info are shown
-
-
-// --- Luxe Order Confirmation (Gold/Green, Table Layout, All Sections) ---
-const ConfirmationPremium = ({
+const OrderConfirmationPage = ({
   order = {},
   user = {},
-  onViewOrder = () => {},
+  onTrackOrder = () => {},
+  onViewReceipt = () => {},
 }) => {
-  // Fallbacks for demo
+  // Demo data fallback
   const {
     items = [
       {
@@ -183,8 +178,8 @@ const ConfirmationPremium = ({
           {/* Buttons */}
           <tr>
             <td colSpan={3} style={{ padding: "32px 32px 0 32px", textAlign: "center" }}>
-              <a href="#" style={{ background: "#4CAF50", color: "#fff", padding: "12px 32px", borderRadius: 8, fontWeight: 700, fontSize: 16, textDecoration: "none", marginRight: 12, display: "inline-block" }}>TRACK YOUR ORDER</a>
-              <a href="#" style={{ background: "#181818", color: "#fff", border: "2px solid #fff", padding: "12px 32px", borderRadius: 8, fontWeight: 700, fontSize: 16, textDecoration: "none", marginLeft: 12, display: "inline-block" }}>VIEW RECEIPT</a>
+              <button onClick={onTrackOrder} style={{ background: "#4CAF50", color: "#fff", padding: "12px 32px", borderRadius: 8, fontWeight: 700, fontSize: 16, border: "none", marginRight: 12, cursor: "pointer" }}>TRACK YOUR ORDER</button>
+              <button onClick={onViewReceipt} style={{ background: "#181818", color: "#fff", border: "2px solid #fff", padding: "12px 32px", borderRadius: 8, fontWeight: 700, fontSize: 16, marginLeft: 12, cursor: "pointer" }}>VIEW RECEIPT</button>
             </td>
           </tr>
 
@@ -216,4 +211,4 @@ const ConfirmationPremium = ({
   );
 };
 
-export default ConfirmationPremium;
+export default OrderConfirmationPage;
