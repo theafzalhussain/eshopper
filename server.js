@@ -2970,173 +2970,40 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 };
 
 // ==================== EMAIL #2: ORDER CONFIRMED (ULTRA-PREMIUM) ====================
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Segoe UI',sans-serif; background:#050505; color:#fff; }
-        .wrapper { max-width:600px; margin:0 auto; background:#050505; }
-        .header { background:linear-gradient(135deg,#1a1a1a 0%,#050505 100%); padding:32px 24px; text-align:center; border-bottom:3px solid #d4af37; }
-        .logo-box { margin-bottom:16px; }
-        .logo-img { width:50px; height:50px; border:2px solid #d4af37; border-radius:12px; background:#fff; padding:6px; box-sizing:border-box; }
-        .elite-title { font-size:32px; font-weight:900; color:#d4af37; margin:12px 0 8px 0; letter-spacing:2px; font-style:italic; }
-        .verified-badge { display:inline-block; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; padding:6px 16px; border-radius:20px; font-size:11px; font-weight:900; letter-spacing:1px; margin-top:8px; }
-        .timeline-section { padding:32px 24px; background:linear-gradient(180deg, #0f0f0f 0%, #050505 100%); position:relative; }
-        .timeline-title { font-size:13px; font-weight:900; color:#d4af37; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:24px; }
-        .timeline { position:relative; padding:0 24px; }
-        .timeline-item { display:flex; margin-bottom:24px; position:relative; }
-        .timeline-item:last-child { margin-bottom:0; }
-        .timeline-item::before { content:''; position:absolute; left:8px; top:28px; width:2px; height:calc(100% + 24px); background:#d4af37; }
-        .timeline-item:last-child::before { display:none; }
-        .timeline-dot { width:20px; height:20px; background:#d4af37; border-radius:50%; position:relative; z-index:1; margin-right:16px; flex-shrink:0; }
-        .timeline-dot.completed { box-shadow:0 0 12px rgba(212,175,55,0.6); }
-        .timeline-content { padding-top:2px; }
-        .timeline-label { font-weight:900; color:#d4af37; font-size:12px; text-transform:uppercase; margin-bottom:4px; }
-        .timeline-status { font-size:13px; color:#999; }
-        .products-section { padding:32px 24px; border-top:1px solid #333; }
-        .section-title { font-size:13px; font-weight:900; color:#d4af37; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:20px; }
-        .product-item { background:#1a1a1a; border:1px solid #333; border-radius:12px; padding:16px; margin-bottom:16px; display:flex; gap:16px; }
-        .product-img { width:80px; height:80px; background:#2a2a2a; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:28px; border:1px solid #444; overflow:hidden; }
-        .product-img img { width:100%; height:100%; object-fit:cover; }
-        .product-details { flex:1; }
-        .product-name { font-weight:700; color:#fff; font-size:14px; margin-bottom:8px; }
-        .product-badge { display:inline-block; background:rgba(212,175,55,0.1); border:1px solid #d4af37; color:#d4af37; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:900; white-space:nowrap; }
-        .product-price { font-size:16px; font-weight:900; color:#d4af37; margin-top:8px; }
-        .delivery-card { background:linear-gradient(135deg, #065f46 0%, #047857 100%); padding:24px; border-radius:12px; border-left:4px solid #10b981; margin:32px 24px; }
-        .delivery-label { font-size:11px; color:#a7f3d0; font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
-        .delivery-date { font-size:24px; font-weight:900; color:#fbbf24; margin-bottom:8px; }
-        .delivery-text { font-size:13px; color:#d1fae5; }
-        .concierge-section { padding:32px 24px; background:linear-gradient(135deg, #fff9e6 0%, #fff4d6 100%); border:2px solid #d4af37; border-radius:12px; margin:32px 24px; text-align:center; }
-        .concierge-emoji { font-size:48px; margin-bottom:12px; }
-        .concierge-title { font-size:22px; font-weight:900; color:#8b6914; margin-bottom:8px; }
-        .concierge-text { font-size:13px; color:#9c6d1f; margin-bottom:20px; line-height:1.6; }
-        .concierge-buttons { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-        .btn { display:inline-block; padding:12px 20px; border-radius:8px; text-decoration:none; font-weight:900; font-size:12px; text-transform:uppercase; border:none; cursor:pointer; transition:all 0.3s; }
-        .btn-whatsapp { background:#22c55e; color:#fff; }
-        .btn-whatsapp:hover { background:#16a34a; transform:translateY(-2px); }
-        .btn-email { background:#fff; color:#8b6914; border:2px solid #d4af37; }
-        .btn-email:hover { background:#fffbf0; }
-        .amount-section { padding:32px 24px; border-top:1px solid #333; }
-        .amount-box { background:#1a1a1a; padding:20px; border-radius:12px; border:1px solid #333; }
-        .amount-row { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #333; font-size:14px; }
-        .amount-row:last-child { border-bottom:none; border-top:2px solid #d4af37; padding-top:16px; margin-top:8px; }
-        .amount-label { color:#999; }
-        .amount-value { color:#fff; font-weight:700; }
-        .total-row .amount-label { color:#d4af37; font-weight:900; text-transform:uppercase; font-size:13px; }
-        .total-row .amount-value { color:#d4af37; font-size:24px; font-weight:900; }
-        .trust-section { padding:32px 24px; background:rgba(212,175,55,0.05); border-top:1px solid #333; }
-        .trust-items { display:flex; justify-content:space-around; gap:16px; flex-wrap:wrap; }
-        .trust-item { text-align:center; flex:1; min-width:140px; }
-        .trust-icon { font-size:28px; margin-bottom:8px; }
-        .trust-text { font-size:11px; color:#999; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
-        .footer { padding:32px 24px; text-align:center; background:#0a0a0a; border-top:1px solid #333; }
-        .footer-brand { font-size:20px; font-weight:900; color:#d4af37; margin-bottom:12px; letter-spacing:1px; }
-        .footer-links { margin-bottom:16px; font-size:11px; }
-        .footer-links a { color:#d4af37; text-decoration:none; margin:0 8px; font-weight:700; }
-        .footer-text { font-size:11px; color:#666; line-height:1.8; }
-        @media (max-width:600px) {
-            .wrapper { font-size:14px; }
-            .header { padding:20px 16px; }
-            .elite-title { font-size:24px; }
-            .timeline { padding:0 16px; }
-            .products-section, .delivery-card, .concierge-section, .amount-section, .trust-section, .footer { padding:24px 16px; }
-            .product-item { flex-direction:column; }
-            .product-img { width:100%; height:100px; }
-            .concierge-buttons { flex-direction:column; }
-            .btn { width:100%; }
-            .trust-items { flex-direction:column; }
-        }
-    </style>
-</head>
-<body style="margin:0; padding:0; background:#050505;">
-        <div class="wrapper">
-            <!-- HEADER WITH LOGO -->
-            <div class="header">
-                <div class="logo-box">
-                    <img src="${BRAND_LOGO_EMAIL_URL}" alt="eShopper" class="logo-img" onerror="this.onerror=null; this.src='${BRAND_LOGO_FALLBACK_URL}';" />
-                </div>
-                <div class="elite-title">✨ YOUR ORDER IS CONFIRMED ✨</div>
-                <span class="verified-badge">✅ PAYMENT VERIFIED</span>
-            </div>
 
-            <!-- TIMELINE SECTION -->
-            <div class="timeline-section">
-                <div class="timeline-title">🚀 Order Journey</div>
-                <div class="timeline">
-                    <div class="timeline-item">
-                        <div class="timeline-dot completed"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-label">Payment Verified ✅</div>
-                            <div class="timeline-status">Order is now securing placement</div>
-                        </div>
+const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products, finalAmount, deliveryDate, invoiceBase64 }) => {
+    try {
+        const productsHtml = (Array.isArray(products) ? products : []).slice(0, 5).map((product, index) => {
+            const productName = product.title || product.name || 'Product';
+            const productPrice = product.price || 0;
+            const productImage = product.image || product.imageURL || '';
+            const quantity = product.qt || product.quantity || 1;
+            return `
+                <div class="product-item">
+                    <div class="product-img">
+                        ${productImage ? `<img src="${productImage}" alt="${productName}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';" />` : '📷'}
                     </div>
-                    <div class="timeline-item">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-label">Quality Inspection ⏳</div>
-                            <div class="timeline-status">Hand-selected & tested for perfection</div>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-label">Signature Packaging</div>
-                            <div class="timeline-status">Premium wrapping & white-glove care</div>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-label">Elite Dispatch</div>
-                            <div class="timeline-status">Shipping to your address</div>
-                        </div>
+                    <div class="product-details">
+                        <div class="product-name">${productName}</div>
+                        <div class="product-badge">Hand-inspected for quality</div>
+                        <div style="color:#999; font-size:12px; margin-top:8px;">Qty: ${quantity}</div>
+                        <div class="product-price">₹${(productPrice * quantity).toLocaleString('en-IN')}</div>
                     </div>
                 </div>
-            </div>
+            `;
+        }).join('');
 
-            <!-- ORDER INFO CARDS -->
-            <div style="padding:24px; display:flex; gap:16px;">
-                <div style="flex:1; background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding:20px; border-radius:12px; border:2px solid #a78bfa;">
-                    <div style="font-size:11px; color:#fff; font-weight:900; text-transform:uppercase; margin-bottom:8px;">Order ID</div>
-                    <div style="font-size:20px; font-weight:900; color:#fff; margin-bottom:4px;">${orderId.slice(-6)}</div>
-                    <div style="font-size:11px; color:#e0e7ff;">${orderId}</div>
-                </div>
-                <div style="flex:1; background:linear-gradient(135deg, #10b981 0%, #059669 100%); padding:20px; border-radius:12px; border:2px solid #6ee7b7;">
-                    <div style="font-size:11px; color:#fff; font-weight:900; text-transform:uppercase; margin-bottom:8px;">Est. Arrival</div>
-                    <div style="font-size:18px; font-weight:900; color:#fbbf24;">${deliveryDate}</div>
-                    <div style="font-size:11px; color:#d1fae5;">Free Premium Delivery</div>
-                </div>
-            </div>
-
-            <!-- PRODUCTS SECTION -->
+        const htmlContent = `
             <div class="products-section">
                 <div class="section-title">📦 Your Selection</div>
-                ${products.slice(0, 5).map((product, index) => {
-                    const productName = product.title || product.name || 'Product';
-                    const productPrice = product.price || 0;
-                    const productImage = product.image || product.imageURL || '';
-                    const quantity = product.qt || product.quantity || 1;
-                    return `
-                    <div class="product-item">
-                        <div class="product-img">
-                            ${productImage ? `<img src="${productImage}" alt="${productName}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';" />` : '📷'}
-                        </div>
-                        <div class="product-details">
-                            <div class="product-name">${productName}</div>
-                            <div class="product-badge">Hand-inspected for quality</div>
-                            <div style="color:#999; font-size:12px; margin-top:8px;">Qty: ${quantity}</div>
-                            <div class="product-price">₹${(productPrice * quantity).toLocaleString('en-IN')}</div>
-                        </div>
-                    </div>
-                    `;
-                }).join('')}
+                ${productsHtml}
             </div>
-
             <!-- DELIVERY INSIGHT CARD -->
             <div class="delivery-card">
                 <div class="delivery-label">🎁 Expected Arrival</div>
                 <div class="delivery-date">${deliveryDate}</div>
                 <div class="delivery-text">Your curated selection is being prepared with utmost care and will reach you soon</div>
             </div>
-
             <!-- PERSONAL CONCIERGE SECTION -->
             <div class="concierge-section">
                 <div class="concierge-emoji">👑</div>
@@ -3147,7 +3014,6 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
                     <a href="mailto:support@eshopperr.me?subject=Order%20${orderId}" class="btn btn-email">📧 Email Us</a>
                 </div>
             </div>
-
             <!-- AMOUNT BREAKDOWN -->
             <div class="amount-section">
                 <div class="section-title">💰 Amount Breakdown</div>
@@ -3160,57 +3026,8 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
                         <div class="amount-label">Shipping</div>
                         <div class="amount-value">FREE 🎁</div>
                     </div>
-                    <div class="amount-row">
-                        <div class="amount-label">Taxes</div>
-                        <div class="amount-value">₹${(finalAmount * 0.05).toLocaleString('en-IN')}</div>
-                    </div>
-                    <div class="amount-row total-row">
-                        <div class="amount-label total-label">Total Amount</div>
-                        <div class="amount-value total-value">₹${finalAmount.toLocaleString('en-IN')}</div>
-                    </div>
                 </div>
             </div>
-
-            <!-- PAYMENT INFO -->
-            <div style="padding:24px; text-align:center; background:rgba(34,197,94,0.1); border-radius:12px; margin:0 24px 24px 24px; border:1px solid #22c55e;">
-                <div style="font-size:12px; color:#22c55e; font-weight:900; text-transform:uppercase; margin-bottom:8px;">✅ Payment Method</div>
-                <div style="font-size:16px; font-weight:900; color:#fff;">${paymentMethod || 'Secure Payment'}</div>
-                <div style="font-size:12px; color:#a7f3d0; margin-top:8px;">Payment successfully processed & verified</div>
-            </div>
-
-            <!-- SHIPPING ADDRESS -->
-            <div style="padding:24px; margin:0 24px 24px 24px;">
-                <div class="section-title">📍 Shipping to</div>
-                <div style="background:#1a1a1a; padding:16px; border-radius:12px; border:1px solid #333; line-height:1.8;">
-                    <div style="font-weight:900; color:#fff; font-size:14px; margin-bottom:8px;">${shippingAddress.name || userName}</div>
-                    <div style="font-size:13px; color:#999;">
-                        <div>${shippingAddress.street || ''}</div>
-                        <div>${shippingAddress.city || ''}, ${shippingAddress.state || ''} ${shippingAddress.zip || ''}</div>
-                        <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #333; color:#999; font-size:12px;">
-                            📱 ${shippingAddress.phone || ''} 
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TRUST SECTION -->
-            <div class="trust-section">
-                <div class="trust-items">
-                    <div class="trust-item">
-                        <div class="trust-icon">🛡️</div>
-                        <div class="trust-text">Authenticity Guaranteed</div>
-                    </div>
-                    <div class="trust-item">
-                        <div class="trust-icon">↩️</div>
-                        <div class="trust-text">Easy 7-Day Returns</div>
-                    </div>
-                    <div class="trust-item">
-                        <div class="trust-icon">🚚</div>
-                        <div class="trust-text">Free Premium Shipping</div>
-                    </div>
-                </div>
-            </div>
-
             <!-- FOOTER -->
             <div class="footer">
                 <div class="footer-brand">✨ eShopper ✨</div>
