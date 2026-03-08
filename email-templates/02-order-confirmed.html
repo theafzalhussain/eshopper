@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Confirmed - eShopper Luxe</title>
+</head>
+<body style="margin:0;padding:0;background-color:#1a1a1a;font-family:'Georgia',serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#1a1a1a;padding:20px 0;">
+<tr>
+<td align="center">
+
+<!-- Main Email Container -->
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background-color:#1c1c1c;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+
+  <!-- ===== HEADER: Brand + Confirmed Badge ===== -->
+  <tr>
+    <td style="background-color:#111111;padding:18px 24px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="color:#ffffff;font-size:15px;font-weight:bold;font-family:Georgia,serif;letter-spacing:1px;">
+            🛍️ <span style="color:#ffffff;">eShopper Luxe</span>
+          </td>
+          <td align="right">
+            <span style="background-color:#2e7d32;color:#ffffff;font-size:12px;font-weight:bold;padding:6px 14px;border-radius:20px;font-family:Arial,sans-serif;letter-spacing:0.5px;">✓ CONFIRMED</span>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ===== GREEN BANNER: Order Confirmed ===== -->
+  <tr>
+    <td style="background-color:#2e7d32;padding:28px 24px;text-align:center;">
+      <p style="margin:0 0 6px 0;font-size:28px;font-weight:900;color:#ffffff;font-family:Arial,sans-serif;letter-spacing:2px;">
+        🎉 ORDER CONFIRMED!
+      </p>
+      <p style="margin:0;font-size:13px;color:#c8e6c9;font-family:Arial,sans-serif;">
+        Order #{{orderNumber}} &nbsp;|&nbsp; {{orderDate}}
+      </p>
+    </td>
+  </tr>
+
+  <!-- ===== HI AFZAL SECTION ===== -->
+  <tr>
+    <td style="background-color:#1c1c1c;padding:30px 30px 20px 30px;text-align:center;">
+      <p style="margin:0 0 14px 0;font-size:22px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">
+        Hi {{customerName}}! 👋
+      </p>
+      <p style="margin:0;font-size:14px;color:#aaaaaa;font-family:Arial,sans-serif;line-height:1.7;max-width:420px;margin:0 auto;">
+        Your order has been <span style="color:#4caf50;font-weight:bold;">confirmed</span> and is now being prepared by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.
+      </p>
+    </td>
+  </tr>
+
+  <!-- ===== EXPECTED ARRIVAL BOX ===== -->
+  <tr>
+    <td style="padding:10px 30px 30px 30px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="background-color:#2a2200;border:2px solid #d4af37;border-radius:12px;padding:20px;text-align:center;">
+            <p style="margin:0 0 4px 0;font-size:11px;font-weight:bold;color:#d4af37;font-family:Arial,sans-serif;letter-spacing:2px;">EXPECTED ARRIVAL</p>
+            <p style="margin:0 0 6px 0;font-size:28px;font-weight:900;color:#ffffff;font-family:Arial,sans-serif;">{{expectedArrival}}</p>
+            <p style="margin:0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;">📦 {{deliveryWindow}}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ===== THE LUXE PROMISE ===== -->
+  <tr>
+    <td style="background-color:#162016;padding:24px 20px;">
+      <p style="text-align:center;margin:0 0 20px 0;font-size:12px;font-weight:bold;color:#d4af37;font-family:Arial,sans-serif;letter-spacing:2px;">✨ THE LUXE PROMISE</p>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <!-- Quality Check -->
+          <td width="33%" style="text-align:center;padding:0 8px;vertical-align:top;border-right:1px solid #2a3a2a;">
+            <p style="margin:0 0 8px 0;font-size:26px;">🔍</p>
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">Quality Check</p>
+            <p style="margin:0;font-size:11px;color:#888888;font-family:Arial,sans-serif;">10-point inspection by experts</p>
+          </td>
+          <!-- Premium Packaging -->
+          <td width="34%" style="text-align:center;padding:0 8px;vertical-align:top;border-right:1px solid #2a3a2a;">
+            <p style="margin:0 0 8px 0;font-size:26px;">📦</p>
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">Premium Packaging</p>
+            <p style="margin:0;font-size:11px;color:#888888;font-family:Arial,sans-serif;">Eco-friendly luxury boxes</p>
+          </td>
+          <!-- 100% Authentic -->
+          <td width="33%" style="text-align:center;padding:0 8px;vertical-align:top;">
+            <p style="margin:0 0 8px 0;font-size:26px;">🛡️</p>
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">100% Authentic</p>
+            <p style="margin:0;font-size:11px;color:#888888;font-family:Arial,sans-serif;">Guaranteed genuine products</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ===== ORDER DETAILS TABLE ===== -->
+  <tr>
+    <td style="padding:24px 20px 0 20px;">
+      <p style="margin:0 0 14px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;letter-spacing:1px;">📋 ORDER DETAILS</p>
+      <!-- Table Header -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+        <tr style="background-color:#2a2a2a;">
+          <td style="padding:10px 12px;font-size:11px;font-weight:bold;color:#aaaaaa;font-family:Arial,sans-serif;letter-spacing:1px;border-bottom:1px solid #333333;">ITEM</td>
+          <td style="padding:10px 12px;font-size:11px;font-weight:bold;color:#aaaaaa;font-family:Arial,sans-serif;letter-spacing:1px;border-bottom:1px solid #333333;">DETAILS</td>
+          <td style="padding:10px 12px;font-size:11px;font-weight:bold;color:#aaaaaa;font-family:Arial,sans-serif;letter-spacing:1px;border-bottom:1px solid #333333;text-align:center;">QTY</td>
+          <td style="padding:10px 12px;font-size:11px;font-weight:bold;color:#aaaaaa;font-family:Arial,sans-serif;letter-spacing:1px;border-bottom:1px solid #333333;text-align:right;">PRICE</td>
+        </tr>
+        <!-- Item Rows (Dynamic) -->
+        {{#each products}}
+        <tr style="background-color:#222222;">
+          <td style="padding:14px 12px;vertical-align:middle;">
+            <img src="{{this.image}}" width="60" height="60" alt="{{this.name}}" style="border-radius:6px;display:block;background-color:#333;"/>
+          </td>
+          <td style="padding:14px 12px;vertical-align:middle;">
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">{{this.name}}</p>
+            <p style="margin:0 0 2px 0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Size: {{this.size}}</p>
+            <p style="margin:0;font-size:12px;color:#888888;font-family:Arial,sans-serif;">Color: {{this.color}}</p>
+          </td>
+          <td style="padding:14px 12px;vertical-align:middle;text-align:center;">
+            <p style="margin:0;font-size:13px;color:#ffffff;font-family:Arial,sans-serif;">{{this.quantity}}</p>
+          </td>
+          <td style="padding:14px 12px;vertical-align:middle;text-align:right;">
+            <p style="margin:0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">₹{{this.price}}</p>
+          </td>
+        </tr>
+        {{/each}}
+      </table>
+    </td>
+  </tr>
+
+  <!-- ===== AMOUNT BREAKDOWN ===== -->
+  <tr>
+    <td style="padding:16px 20px 0 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#222222;border-radius:10px;padding:0;overflow:hidden;">
+        <tr>
+          <td style="padding:14px 16px 4px 16px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;padding-bottom:8px;">Item Price</td>
+                <td style="font-size:13px;color:#ffffff;font-family:Arial,sans-serif;text-align:right;padding-bottom:8px;">₹{{amount.itemTotal}}</td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;padding-bottom:8px;">Shipping Charges</td>
+                <td style="font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;text-align:right;padding-bottom:8px;">{{amount.shipping}}</td>
+              </tr>
+              <tr>
+                <td style="font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;padding-bottom:12px;">GST (Included)</td>
+                <td style="font-size:13px;color:#ffffff;font-family:Arial,sans-serif;text-align:right;padding-bottom:12px;">₹{{amount.gst}}</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="border-top:1px solid #333333;padding-top:12px;padding-bottom:14px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td>
+                        <p style="margin:0 0 3px 0;font-size:14px;font-weight:bold;color:#d4af37;font-family:Arial,sans-serif;">Total Amount Paid</p>
+                        <p style="margin:0;font-size:11px;color:#888888;font-family:Arial,sans-serif;">Payment Mode: {{paymentMode}}</p>
+                      </td>
+                      <td style="text-align:right;vertical-align:top;">
+                        <p style="margin:0 0 3px 0;font-size:22px;font-weight:900;color:#d4af37;font-family:Arial,sans-serif;">₹{{amount.total}}</p>
+                        <p style="margin:0;font-size:11px;color:#4caf50;font-family:Arial,sans-serif;text-align:right;">✓ PAID</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ===== SHIPPING & BILLING INFO ===== -->
+  <tr>
+    <td style="padding:16px 20px 0 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <!-- Shipping -->
+          <td width="48%" style="background-color:#1a2a1a;border:1px solid #2a3a2a;border-radius:10px;padding:14px;vertical-align:top;">
+            <p style="margin:0 0 8px 0;font-size:10px;font-weight:bold;color:#ff6b35;font-family:Arial,sans-serif;letter-spacing:1.5px;">📍 SHIPPING TO</p>
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">{{shipping.name}}</p>
+            <p style="margin:0 0 2px 0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;line-height:1.5;">{{shipping.address}}</p>
+            <p style="margin:0 0 2px 0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;">{{shipping.city}}, {{shipping.state}} {{shipping.zip}}</p>
+            <p style="margin:0;font-size:12px;color:#aaaaaa;font-family:Arial,sans-serif;">Phone: {{shipping.phone}}</p>
+          </td>
+          <td width="4%"></td>
+          <!-- Billing -->
+          <td width="48%" style="background-color:#1a1a2a;border:1px solid #2a2a3a;border-radius:10px;padding:14px;vertical-align:top;">
+            <p style="margin:0 0 8px 0;font-size:10px;font-weight:bold;color:#f5a623;font-family:Arial,sans-serif;letter-spacing:1.5px;">💳 BILLING INFO</p>
+            <p style="margin:0 0 4px 0;font-size:13px;font-weight:bold;color:#ffffff;font-family:Arial,sans-serif;">{{billing.name}}</p>
+            <p style="margin:0 0 2px 0;font-size:11px;color:#aaaaaa;font-family:Arial,sans-serif;">Email:</p>
+            <p style="margin:0 0 6px 0;font-size:11px;color:#aaaaaa;font-family:Arial,sans-serif;">{{billing.email}}</p>
+            <p style="margin:0 0 2px 0;font-size:11px;color:#aaaaaa;font-family:Arial,sans-serif;">Transaction ID:</p>
+            <p style="margin:0;font-size:11px;color:#d4af37;font-family:Arial,sans-serif;font-weight:bold;">{{billing.transactionId}}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ===== BUTTONS ===== -->
+  <tr>
+    <td style="padding:20px 20px 8px 20px;">
+      <!-- Track Your Order Button -->
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-bottom:10px;">
+            <a href="#" style="display:block;background-color:#2e7d32;color:#ffffff;text-decoration:none;text-align:center;padding:15px;border-radius:8px;font-size:14px;font-weight:bold;font-family:Arial,sans-serif;letter-spacing:0.5px;">
+              🚚 TRACK YOUR ORDER
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="#" style="display:block;background-color:transparent;color:#ffffff;text-decoration:none;text-align:center;padding:13px;border-radius:8px;font-size:14px;font-weight:bold;font-family:Arial,sans-serif;letter-spacing:0.5px;border:1.5px solid #555555;">
+              📄 VIEW RECEIPT
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ===== COMMUNITY SECTION ===== -->
+  <tr>
+    <td style="background-color:#162016;padding:24px 20px;text-align:center;">
+      <p style="margin:0 0 8px 0;font-size:13px;color:#cccccc;font-family:Arial,sans-serif;">
+        Join our <span style="color:#f5a623;font-weight:bold;">50,000+</span> Luxe community
+      </p>
+      <p style="margin:0 0 16px 0;font-size:20px;">⭐⭐⭐⭐⭐</p>
+      <a href="#" style="display:inline-block;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:25px;font-size:13px;font-weight:bold;font-family:Arial,sans-serif;letter-spacing:0.5px;">
+        📷 Follow us on Instagram
+      </a>
+    </td>
+  </tr>
+
+  <!-- ===== NEED ASSISTANCE ===== -->
+  <tr>
+    <td style="background-color:#1c1c1c;padding:20px 20px 10px 20px;text-align:center;">
+      <p style="margin:0 0 14px 0;font-size:13px;color:#aaaaaa;font-family:Arial,sans-serif;">Need Assistance?</p>
+      <table align="center" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="padding-right:8px;">
+            <a href="#" style="display:inline-block;background-color:#25d366;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:bold;font-family:Arial,sans-serif;">
+              💬 WhatsApp Us
+            </a>
+          </td>
+          <td>
+            <a href="#" style="display:inline-block;background-color:#333333;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:bold;font-family:Arial,sans-serif;border:1px solid #555555;">
+              📧 Email Support
+            </a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ===== FOOTER ===== -->
+  <tr>
+    <td style="background-color:#111111;padding:20px 20px 14px 20px;text-align:center;border-top:1px solid #222222;">
+      <p style="margin:0 0 4px 0;font-size:12px;color:#666666;font-family:Arial,sans-serif;">
+        © 2026 eShopper Luxe. All rights reserved.
+      </p>
+      <p style="margin:0 0 6px 0;font-size:11px;color:#555555;font-family:Arial,sans-serif;">
+        Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India
+      </p>
+      <p style="margin:0 0 14px 0;font-size:10px;color:#555555;font-family:Arial,sans-serif;">
+        GSTIN: 09XXXXX1234X1Z5 &nbsp;|&nbsp; CIN: U51909UP2020PTC123456
+      </p>
+      <p style="margin:0;">
+        <a href="#" style="color:#888888;font-size:11px;text-decoration:none;font-family:Arial,sans-serif;">Privacy</a>
+        <span style="color:#444444;font-size:11px;font-family:Arial,sans-serif;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+        <a href="#" style="color:#888888;font-size:11px;text-decoration:none;font-family:Arial,sans-serif;">Terms</a>
+        <span style="color:#444444;font-size:11px;font-family:Arial,sans-serif;">&nbsp;&nbsp;|&nbsp;&nbsp;</span>
+        <a href="#" style="color:#888888;font-size:11px;text-decoration:none;font-family:Arial,sans-serif;">Unsubscribe</a>
+      </p>
+    </td>
+  </tr>
+
+</table>
+<!-- End Main Container -->
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
