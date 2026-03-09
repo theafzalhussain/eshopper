@@ -444,57 +444,37 @@ const sendTransactionalEmail = async ({ toEmail, toName, subject, htmlContent, t
 
 const sendAdminAlert = async ({ title, details }) => {
     const adminEmail = process.env.ADMIN_EMAIL || 'support@eshopperr.me';
-    if (!adminEmail || !adminEmail.includes('@')) return;
-
-    const safeTitle = title || 'System Alert';
-    const safeDetails = details || 'No details provided';
-    const html = `
-        <div style="font-family:Arial,sans-serif;background:#fff3cd;border:1px solid #facc15;padding:16px;border-radius:10px;max-width:640px;margin:0 auto;">
-            <h3 style="margin:0 0 8px 0;color:#7a2e0e;">⚠️ ${safeTitle}</h3>
-            <p style="margin:0 0 8px 0;color:#333;">${safeDetails}</p>
-            <p style="margin:0;color:#666;font-size:12px;">Time: ${new Date().toLocaleString('en-IN')}</p>
-        </div>
-    `;
-
+    if (!toEmail || !toEmail.includes('@')) {
+        console.error('❌ Invalid email:', toEmail);
+        throw new Error('Invalid toEmail address');
+    }
     try {
-        await sendTransactionalEmail({
-            toEmail: adminEmail,
-            toName: 'Admin',
-            subject: `⚠️ ${safeTitle}`,
-            htmlContent: html,
-            textContent: `${safeTitle}\n${safeDetails}`
+        // Load new template
+        const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        // Replace variables
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, userName || 'Valued Customer')
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'));
+        // Attachments
+        const attachments = invoiceBuffer
+            ? [{ filename: `Receipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
+            : [];
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: userName || 'Customer',
+            subject: '✨ Order Received - Thank You for Shopping with Us!',
+            htmlContent,
+            attachments
         });
-    } catch (alertErr) {
-        console.error('⚠️ Admin alert send failed:', alertErr.message);
+        console.log(`✅ Order Placed email sent via ${result.provider} to ${toEmail} for ${orderId}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Order Placed email failed:', error.message);
+        return false;
     }
 };
-
-const EMAIL_QUEUE_ENABLED = String(process.env.EMAIL_QUEUE_ENABLED || 'true').toLowerCase() !== 'false';
-const memoryEmailQueue = [];
-let memoryQueueRunning = false;
-
-let bullEmailQueue = null;
-let bullQueueMode = false;
-
-const executeEmailJob = async (jobType, payload) => {
-    if (!FEATURE_EMAIL_NOTIFICATIONS) {
-        return { skipped: true, reason: 'email-notifications-disabled' };
-    }
-    if (jobType === 'order-placed') return sendOrderPlacedEmail(payload);
-    if (jobType === 'order-confirmed') return sendOrderConfirmedEmail(payload);
-    if (jobType === 'order-status') return sendOrderStatusEmail(payload);
-    throw new Error(`Unknown email job type: ${jobType}`);
-};
-
-try {
-    const redisUrl = process.env.REDIS_URL ? process.env.REDIS_URL.trim() : '';
-    if (redisUrl) {
-        const { Queue, Worker } = require('bullmq');
-        const IORedis = require('ioredis');
-        const redisConnection = new IORedis(redisUrl, {
-            maxRetriesPerRequest: null,
-            enableReadyCheck: false
-        });
 
         bullEmailQueue = new Queue('email-dispatch', { connection: redisConnection });
         const queueConcurrency = Number(process.env.EMAIL_QUEUE_CONCURRENCY || 4);
@@ -2382,183 +2362,41 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
 
 const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, invoiceBase64, attachmentName }) => {
     if (!toEmail) return false;
-
     const displayName = userName || 'Valued Customer';
-    const firstName = displayName.split(' ')[0];
-    
-    const statusConfig = {
-        'Ordered': { emoji: '✅', color: '#16a34a', bg1: '#d1fae5', bg2: '#a7f3d0', msg: 'Order Confirmed! Payment received.', lightBg: '#ecfdf5' },
-        'Packed': { emoji: '📦', color: '#0066cc', bg1: '#dbeafe', bg2: '#bfdbfe', msg: 'Packed with premium care!', lightBg: '#f0f9ff' },
-        'Shipped': { emoji: '🚚', color: '#f59e0b', bg1: '#fef3c7', bg2: '#fde68a', msg: 'On premium delivery!', lightBg: '#fffbeb' },
-        'Out for Delivery': { emoji: '🚗', color: '#f97316', bg1: '#ffedd5', bg2: '#fed7aa', msg: 'Arriving today with care!', lightBg: '#fff7ed' },
-        'Delivered': { emoji: '🎉', color: '#16a34a', bg1: '#d1fae5', bg2: '#a7f3d0', msg: 'Successfully delivered!', lightBg: '#ecfdf5' }
-    };
-    
-    const config = statusConfig[status] || { emoji: '📦', color: '#111827', bg1: '#f9fafb', bg2: '#f3f4f6', msg: status };
-    const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-
-    const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#0A0A0A; }
-        .container { max-width:600px; margin:0 auto; background:#0A0A0A; border:2px solid #D4AF37; border-radius:12px; overflow:hidden; }
-        .header { background:linear-gradient(135deg,#1a1a1a,#0A0A0A); padding:32px 24px; text-align:center; border-bottom:3px solid #D4AF37; }
-        .brand-table { width:100%; border-collapse:collapse; table-layout:fixed; }
-        .brand-left { width:64px; text-align:left; vertical-align:middle; }
-        .brand-center { text-align:center; vertical-align:middle; }
-        .brand-spacer { width:64px; }
-        .logo-emoji { font-size:56px; line-height:1; margin:0 auto 16px; }
-        .brand-title { font-size:28px; font-weight:900; color:#D4AF37; letter-spacing:1.5px; margin:0; line-height:1.2; text-transform:uppercase; }
-        .tagline { font-size:12px; color:#888; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; margin:8px 0 0 0; }
-        .status-banner { background:linear-gradient(135deg,${config.bg1},${config.bg2}); padding:40px 24px; text-align:center; border-bottom:4px solid ${config.color}; margin:0; }
-        .emoji-large { font-size:72px; line-height:1; margin:0 0 16px 0; }
-        .status-title { font-size:28px; font-weight:800; color:${config.color}; margin:0 0 8px 0; letter-spacing:0.5px; }
-        .status-subtitle { font-size:14px; color:${config.color}; opacity:0.85; margin:0; }
-        .content { padding:32px 24px; background:#0A0A0A; }
-        .greeting { margin:0 0 24px 0; }
-        .greeting h2 { margin:0 0 12px 0; font-size:20px; color:#fff; font-weight:700; }
-        .greeting p { margin:0; color:#aaa; font-size:14px; line-height:1.6; }
-        .cards { display:flex; gap:16px; flex-wrap:wrap; margin:0 0 28px 0; }
-        .card { flex:1; min-width:200px; padding:20px; border-radius:12px; text-align:center; }
-        .card-dark { background:#1a1a1a; border:1px solid #333; }
-        .card-colored { background:linear-gradient(135deg,${config.bg1},${config.bg2}); border:2px solid ${config.color}; }
-        .card-label { font-size:11px; letter-spacing:1.5px; color:${config.color}; text-transform:uppercase; font-weight:700; margin:0 0 8px 0; }
-        .card-value { font-size:20px; font-weight:900; color:#fff; margin:0 0 4px 0; }
-        .card-sub { font-size:12px; color:#9ca3af; margin:8px 0 0 0; }
-        .card-dark .card-label { color:#d4af37; }
-        .card-dark .card-value { color:#fff; }
-        .card-dark .card-sub { color:#9ca3af; }
-        .card-colored .card-label { color:#111827; }
-        .card-colored .card-value { color:#111827; }
-        .card-colored .card-sub { color:#374151; }
-        .info-box { padding:20px; border-radius:12px; border-left:4px solid ${config.color}; background:linear-gradient(135deg,${config.bg1},${config.bg2}); margin:0 0 28px 0; }
-        .info-title { font-size:13px; font-weight:700; color:${config.color}; text-transform:uppercase; margin:0 0 8px 0; }
-        .info-text { font-size:14px; color:#333; margin:0; line-height:1.6; }
-        .button-group { margin:0 0 28px 0; }
-        .button { display:block; background:#D4AF37; color:#0A0A0A; padding:16px 32px; border-radius:8px; text-decoration:none; font-weight:900; text-align:center; font-size:15px; letter-spacing:1px; margin:0 0 12px 0; box-shadow:0 4px 12px rgba(212,175,55,0.3); transition:all 0.3s; }
-        .button:hover { transform:translateY(-2px); }
-        .support-box { background:linear-gradient(135deg,#1a1a1a,#0A0A0A); padding:28px 24px; border-radius:12px; border-left:4px solid #D4AF37; text-align:center; margin:0 0 20px 0; }
-        .support-emoji { font-size:48px; margin:0 0 12px 0; line-height:1; }
-        .support-title { font-size:22px; font-weight:900; color:#D4AF37; margin:0 0 10px 0; letter-spacing:1px; }
-        .support-text { font-size:14px; color:#aaa; margin:0 0 18px 0; line-height:1.6; }
-        .support-links { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-        .support-link { display:inline-block; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:700; font-size:13px; letter-spacing:0.5px; text-transform:uppercase; }
-        .link-email { background:#D4AF37; color:#0A0A0A; }
-        .link-whatsapp { background:#22c55e; color:#fff; }
-        .footer { background:#0A0A0A; padding:28px 24px; text-align:center; border-top:2px solid #333; }
-        .footer-logo { font-size:18px; font-weight:900; color:#D4AF37; margin:0 0 10px 0; letter-spacing:1px; }
-        .footer-text { font-size:12px; color:#666; margin:0 0 4px 0; line-height:1.6; }
-        .footer-link { color:#D4AF37; text-decoration:none; font-weight:700; }
-        @media (max-width:600px) {
-            .cards { flex-direction:column; }
-            .card { min-width:100% !important; }
-            .button { font-size:14px; padding:14px 24px; }
-            .content { padding:20px 16px; }
-            .status-banner { padding:32px 16px; }
-            .emoji-large { font-size:64px; }
-            .status-title { font-size:24px; }
-            .brand-left, .brand-spacer { width:52px; }
-            .brand-badge { width:40px; height:40px; line-height:36px; font-size:22px; border-radius:10px; }
-            .brand-title { font-size:22px; }
-            .tagline { font-size:10px; letter-spacing:1.6px; }
-            .support-box { padding:22px 14px; border-radius:20px; }
-            .support-emoji { font-size:46px; }
-            .support-title { font-size:28px; }
-            .support-text { font-size:14px; }
-            .support-links { flex-direction:column; gap:10px; }
-            .support-link { width:100%; max-width:230px; min-width:0; font-size:16px; padding:10px 14px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo-emoji">💎</div>
-            <h1 class="brand-title">eShopper</h1>
-            <p class="tagline">Boutique Luxe • Order Update</p>
-        </div>
-
-        <!-- Status Banner -->
-        <div class="status-banner">
-            <div class="emoji-large">${config.emoji}</div>
-            <div class="status-title">${status}</div>
-            <div class="status-subtitle">${config.msg}</div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="content">
-            <!-- Greeting -->
-            <div class="greeting">
-                <h2>Hi ${firstName},</h2>
-                <p>Your order <strong>${orderId}</strong> has been updated. Here's what's next:</p>
-            </div>
-
-            <!-- Order Details Cards -->
-            <div class="cards">
-                <div class="card card-dark">
-                    <p class="card-label">🆔 Order ID</p>
-                    <p class="card-value">${orderId}</p>
-                    <p class="card-sub">${new Date().toLocaleDateString('en-IN')}</p>
-                </div>
-                <div class="card card-colored">
-                    <p class="card-label">🚚 Est. Delivery</p>
-                    <p class="card-value" style="color:#111827;">${deliveryDate}</p>
-                    <p class="card-sub" style="color:#555;">Track in real-time</p>
-                </div>
-            </div>
-
-            <!-- Status Info Box -->
-            <div class="info-box">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="font-size:32px;">${config.emoji}</div>
-                    <div>
-                        <p class="info-title" style="color:${config.color};">Status: ${status}</p>
-                        <p class="info-text" style="margin:0;">${config.msg}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Amount (if provided) -->
-            ${totalAmount ? `
-            <div class="info-box" style="background:linear-gradient(135deg,#d4edda,#c3e6cb); border-left-color:#28a745;">
-                <p style="margin:0; font-size:12px; color:#28a745; font-weight:700;">💳 ORDER AMOUNT</p>
-                <p style="margin:8px 0 0 0; font-size:22px; font-weight:900; color:#28a745;">₹${Number(totalAmount).toLocaleString('en-IN')}</p>
-            </div>
-            ` : ''}
-
-            <!-- Action Button -->
-            <div class="button-group">
-                <a href="${trackingLink}" class="button">🔍 TRACK YOUR ORDER IN REAL-TIME</a>
-            </div>
-
-            <!-- Support Box -->
-            <div class="support-box">
-                <div class="support-emoji">🎧</div>
-                <div class="support-title">Need Assistance?</div>
-                <div class="support-text">Our premium support team is available 24/7 to help you with any questions or concerns</div>
-                <div class="support-links">
-                    <a href="mailto:support@eshopperr.me" class="support-link link-email">✉ Email Us</a>
-                    <a href="https://wa.me/918447859784?text=Hi%20I%20need%20help%20with%20order%20${orderId}" class="support-link link-whatsapp">💬 WhatsApp</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p class="footer-logo">✨ EShoppper</p>
-            <p class="footer-text">© ${new Date().getFullYear()} Eshopper Boutique Luxe<br>
-                <a href="https://eshopperr.me" class="footer-link">eshopperr.me</a>
-            </p>
-        </div>
-    </div>
-</body>
-</html>`;
-
+    let templateFile = null;
+    // Map status to template file
+    switch ((status || '').toLowerCase()) {
+        case 'ordered':
+        case 'order placed':
+            templateFile = '01-order-placed.html'; break;
+        case 'confirmed':
+        case 'order confirmed':
+            templateFile = '02-order-confirmed.html'; break;
+        case 'packed':
+        case 'order packed':
+            templateFile = '03-order-packed.html'; break;
+        case 'shipped':
+        case 'order shipped':
+            templateFile = '04-order-shipped.html'; break;
+        case 'out for delivery':
+            templateFile = '05-out-for-delivery.html'; break;
+        case 'delivered':
+        case 'order delivered':
+            templateFile = '06-order-delivered.html'; break;
+        default:
+            templateFile = '01-order-placed.html';
+    }
     try {
+        const templatePath = path.join(__dirname, 'email-templates', templateFile);
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, displayName)
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+            .replace(/{{trackingLink}}/g, trackingLink || '')
+            .replace(/{{status}}/g, status || '')
+            .replace(/{{estimatedDelivery}}/g, estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN') : '')
+            .replace(/{{totalAmount}}/g, totalAmount ? `₹${Number(totalAmount).toLocaleString('en-IN')}` : '');
         const attachments = [];
         if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
             attachments.push({
@@ -2567,15 +2405,13 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
                 contentType: 'application/pdf'
             });
         }
-
         const result = await sendTransactionalEmail({
             toEmail,
             toName: displayName,
-            subject: `${config.emoji} ${status} - Order ${orderId} | Eshopper Boutique`,
+            subject: `${status || 'Order Update'} - Order ${orderId} | Eshopper Boutique`,
             htmlContent,
             attachments
         });
-
         console.log(`✅ Status email sent via ${result.provider}: ${orderId} -> ${status}`);
         return true;
     } catch (error) {
@@ -2753,51 +2589,29 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 
 const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products, finalAmount, deliveryDate, invoiceBase64 }) => {
     try {
-        const productsHtml = (Array.isArray(products) ? products : []).slice(0, 5).map((product, index) => {
-            const productName = product.title || product.name || 'Product';
-            const productPrice = product.price || 0;
-            const productImage = product.image || product.imageURL || '';
-            const quantity = product.qt || product.quantity || 1;
-            return `
-                <div class="product-item">
-                    <div class="product-img">
-                        ${productImage ? `<img src="${productImage}" alt="${productName}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';" />` : '📷'}
-                    </div>
-                    <div class="product-details">
-                        <div class="product-name">${productName}</div>
-                        <div class="product-badge">Hand-inspected for quality</div>
-                        <div style="color:#999; font-size:12px; margin-top:8px;">Qty: ${quantity}</div>
-                        <div class="product-price">₹${(productPrice * quantity).toLocaleString('en-IN')}</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        const htmlContent = `
-            <div class="products-section">
-                <div class="section-title">📦 Your Selection</div>
-                ${productsHtml}
-            </div>
-            <!-- DELIVERY INSIGHT CARD -->
-            <div class="delivery-card">
-                <div class="delivery-label">🎁 Expected Arrival</div>
-                <div class="delivery-date">${deliveryDate}</div>
-                <div class="delivery-text">Your curated selection is being prepared with utmost care and will reach you soon</div>
-            </div>
-            <!-- PERSONAL CONCIERGE SECTION -->
-            <div class="concierge-section">
-                <div class="concierge-emoji">👑</div>
-                <div class="concierge-title">Personal Concierge</div>
-                <div class="concierge-text">Our dedicated team is here to assist with any questions about your order. Reach out anytime!</div>
-                <div class="concierge-buttons">
-                    <a href="https://wa.me/918447859784?text=Order%20${orderId}%20-%20I%20need%20help" class="btn btn-whatsapp">💬 WhatsApp Support</a>
-                    <a href="mailto:support@eshopperr.me?subject=Order%20${orderId}" class="btn btn-email">📧 Email Us</a>
-                </div>
-            </div>
-            <!-- AMOUNT BREAKDOWN -->
-            <div class="amount-section">
-                <div class="section-title">💰 Amount Breakdown</div>
-                <div class="amount-box">
+        const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, displayName || 'Valued Customer')
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'));
+        const attachments = [];
+        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
+            attachments.push({ filename: `Confirmation-${orderId}.pdf`, content: invoiceBase64.trim(), contentType: 'application/pdf' });
+        }
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: displayName,
+            subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
+            htmlContent,
+            attachments
+        });
+        console.log(`✅ Confirmation email sent via ${result.provider} to ${toEmail}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Confirmation email failed:', error.message);
+        return false;
+    }
                     <div class="amount-row">
                         <div class="amount-label">Subtotal</div>
                         <div class="amount-value">₹${(finalAmount * 0.95).toLocaleString('en-IN')}</div>
