@@ -1,292 +1,89 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Delivered - eShopper Luxe</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0A0A0A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0A0A0A;">
+<!--
+Order Delivered Email (The Feedback Stage) - Boutique Luxe
+Strictly <table> only, 600px max, Deep Black & Gold, fully responsive, all features as per prompt
+-->
+<table width="100%" bgcolor="#0A0A0A" cellpadding="0" cellspacing="0" style="margin:0;padding:0;width:100%;background:#0A0A0A;font-family:'Playfair Display',serif,Georgia,'Times New Roman',Times,sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#0A0A0A;border-radius:16px;overflow:hidden;">
+        <!-- Header -->
         <tr>
-            <td align="center" style="padding: 40px 20px;">
-                <!-- Main Container -->
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #1A1A1A; border-radius: 12px; box-shadow: 0 8px 38px rgba(76, 175, 80, 0.4);">
-                    <!-- ...existing code... -->
-                </table>
-            </td>
+          <td style="padding:32px 32px 0 32px;background:#0A0A0A;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="left" style="vertical-align:middle;">
+                  <img src="https://res.cloudinary.com/dluxehub/image/upload/v1700000000/luxe-logo-gold.png" alt="Boutique Luxe" style="height:48px;display:block;"/>
+                </td>
+                <td align="right" style="vertical-align:middle;">
+                  <div style="color:#D4AF37;font-size:13px;font-weight:600;letter-spacing:0.5px;">Order ID</div>
+                  <div style="color:#fff;font-size:16px;font-weight:700;">#{{orderId}}</div>
+                  <div style="color:#bbb;font-size:13px;">{{orderDate}}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
         </tr>
-    </table>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Delivered - eShopper Luxe</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0A0A0A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0A0A0A;">
+        <!-- Delivered & Celebrating -->
         <tr>
-            <td align="center" style="padding: 40px 20px;">
-                <!-- Main Container -->
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #1A1A1A; border-radius: 12px; box-shadow: 0 8px 38px rgba(76, 175, 80, 0.4);">
-                    
-                    <!-- Header with Logo -->
-                    <tr>
-                        <td style="padding: 30px 40px; background: linear-gradient(135deg, #0D2E1F 0%, #1A1A1A 100%); border-radius: 12px 12px 0 0; border-bottom: 2px solid #4CAF50;">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                    <td align="left" style="vertical-align: middle;">
-                                        <img src="{{BRAND_LOGO_URL}}" alt="eShopper Luxe" style="height: 45px; display: block;" />
-                                    </td>
-                                    <td align="right" style="vertical-align: middle;">
-                                        <div style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); color: #FFFFFF; padding: 8px 18px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; display: inline-block; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.5);">
-                                            ✓ DELIVERED
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Celebration Hero Banner -->
-                    <tr>
-                        <td style="padding: 0;">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                    <td style="background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 50%, #81C784 100%); padding: 60px 40px; text-align: center; position: relative;">
-                                        <div style="font-size: 72px; margin-bottom: 20px; animation: confetti 2s ease-in-out;">🎉</div>
-                                        <div style="color: #FFFFFF; font-size: 36px; font-weight: 900; letter-spacing: 2px; margin-bottom: 12px; text-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                                            DELIVERED!
-                                        </div>
-                                        <div style="color: #E8F5E9; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;">
-                                            Your luxury package has arrived safely ✨
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Main Thank You Message -->
-                    <tr>
-                        <td style="padding: 40px 40px 30px 40px; text-align: center; background: linear-gradient(180deg, #1A1A1A 0%, #151515 100%); border-bottom: 1px solid #2A2A2A;">
-                            <div style="color: #FFFFFF; font-size: 26px; font-weight: 700; margin-bottom: 18px; line-height: 1.4;">
-                                Thank You, {{CUSTOMER_NAME}}! 🙏
-                            </div>
-                            <div style="color: #B8B8B8; font-size: 15px; line-height: 1.7; max-width: 500px; margin: 0 auto 25px auto;">
-                                We hope you love your luxury purchase! Your order <span style="color: #D4AF37; font-family: monospace; font-weight: 700;">{{ORDER_ID}}</span> was delivered on <span style="color: #4CAF50; font-weight: 700;">{{DELIVERED_DATE}}</span>.
-                            </div>
-                            <div style="display: inline-block; background-color: #0D2E1F; border: 1px solid #4CAF50; border-radius: 10px; padding: 20px 30px;">
-                                <div style="color: #4CAF50; font-size: 14px; font-weight: 800; letter-spacing: 1px; margin-bottom: 8px;">📦 DELIVERY CONFIRMED</div>
-                                <div style="color: #81C784; font-size: 13px;">Received by: <span style="color: #FFFFFF; font-weight: 700;">{{RECEIVED_BY}}</span></div>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Download Tax Invoice CTA -->
-                    <tr>
-                        <td style="padding: 40px 40px 35px 40px; background-color: #151515; text-align: center;">
-                            <div style="background: linear-gradient(135deg, #1F1A0D 0%, #2E1A0D 100%); border: 2px solid #D4AF37; border-radius: 12px; padding: 35px;">
-                                <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
-                                <div style="color: #FFFFFF; font-size: 20px; font-weight: 800; margin-bottom: 15px;">
-                                    Your Tax Invoice is Ready
-                                </div>
-                                <div style="color: #B8B8B8; font-size: 14px; margin-bottom: 25px; line-height: 1.6;">
-                                    Download your official GST invoice for warranty, return, and tax purposes.
-                                </div>
-                                <a href="{{TAX_INVOICE_URL}}" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #F7DC6F 100%); color: #0A0A0A; text-decoration: none; padding: 18px 45px; border-radius: 10px; font-size: 16px; font-weight: 800; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4); text-transform: uppercase;">
-                                    ⬇️ Download Tax Invoice
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Rating & Review Section -->
-                    <tr>
-                        <td style="padding: 40px 40px 35px 40px; background: linear-gradient(180deg, #151515 0%, #1A1A1A 100%); border-top: 1px solid #2A2A2A; border-bottom: 1px solid #2A2A2A; text-align: center;">
-                            <div style="color: #FFFFFF; font-size: 22px; font-weight: 800; margin-bottom: 10px;">
-                                How was your experience? ⭐
-                            </div>
-                            <div style="color: #B8B8B8; font-size: 14px; margin-bottom: 25px;">
-                                Rate your order and help us serve you better
-                            </div>
-                            
-                            <!-- Star Rating (Clickable) -->
-                            <div style="margin-bottom: 25px;">
-                                <a href="{{RATING_URL}}?stars=1" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>
-                                <a href="{{RATING_URL}}?stars=2" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>
-                                <a href="{{RATING_URL}}?stars=3" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>
-                                <a href="{{RATING_URL}}?stars=4" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>
-                                <a href="{{RATING_URL}}?stars=5" style="text-decoration: none; font-size: 42px; margin: 0 8px; transition: transform 0.2s;">⭐</a>
-                            </div>
-                            
-                            <a href="{{REVIEW_URL}}" style="display: inline-block; background-color: #2A2A2A; color: #FFFFFF; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 14px; font-weight: 700; border: 1px solid #4CAF50;">
-                                📝 Write a Review
-                            </a>
-                        </td>
-                    </tr>
-
-                    <!-- Order Summary -->
-                    <tr>
-                        <td style="padding: 35px 40px;">
-                            <div style="color: #4CAF50; font-size: 14px; font-weight: 700; letter-spacing: 1px; margin-bottom: 20px; text-transform: uppercase; text-align: center;">
-                                📦 What You Received
-                            </div>
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #151515; border: 1px solid #2A2A2A; border-radius: 10px; overflow: hidden;">
-                                <tr style="background-color: #1F1F1F;">
-                                    <th style="padding: 15px; text-align: left; color: #888888; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Item</th>
-                                    <th style="padding: 15px; text-align: center; color: #888888; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Qty</th>
-                                    <th style="padding: 15px; text-align: right; color: #888888; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Price</th>
-                                </tr>
-                                {{#each PRODUCTS}}
-                                <tr style="border-top: 1px solid #2A2A2A;">
-                                    <td style="padding: 15px;">
-                                        <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                                            <tr>
-                                                <td style="vertical-align: middle; padding-right: 15px;">
-                                                    <img src="{{this.image}}" alt="{{this.name}}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #2A2A2A;" />
-                                                </td>
-                                                <td style="vertical-align: middle;">
-                                                    <div style="color: #FFFFFF; font-size: 14px; font-weight: 600; margin-bottom: 5px;">{{this.name}}</div>
-                                                    <div style="color: #888888; font-size: 12px;">{{this.category}}</div>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                    <td style="padding: 15px; text-align: center; color: #B8B8B8; font-size: 14px; font-weight: 600;">{{this.quantity}}</td>
-                                    <td style="padding: 15px; text-align: right; color: #D4AF37; font-size: 15px; font-weight: 700;">₹{{this.price}}</td>
-                                </tr>
-                                {{/each}}
-                                <tr style="border-top: 2px solid #4CAF50; background-color: #0D2E1F;">
-                                    <td colspan="2" style="padding: 15px; color: #FFFFFF; font-size: 15px; font-weight: 700;">Total Paid</td>
-                                    <td style="padding: 15px; text-align: right; color: #D4AF37; font-size: 18px; font-weight: 900;">₹{{TOTAL_AMOUNT}}</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Referral Offer -->
-                    <tr>
-                        <td style="padding: 40px 40px 35px 40px; background: linear-gradient(135deg, #2E0D1F 0%, #1F0D2E 100%); border-top: 1px solid #2A2A2A; border-bottom: 1px solid #2A2A2A; text-align: center;">
-                            <div style="font-size: 56px; margin-bottom: 20px;">🎁</div>
-                            <div style="color: #FFFFFF; font-size: 22px; font-weight: 800; margin-bottom: 12px;">
-                                Love Your Purchase? Share the Luxury!
-                            </div>
-                            <div style="color: #B8B8B8; font-size: 14px; margin-bottom: 25px; line-height: 1.7; max-width: 450px; margin-left: auto; margin-right: auto;">
-                                Refer a friend to eShopper Luxe and <span style="color: #D4AF37; font-weight: 700;">you both get 10% OFF</span> on your next luxe purchase! 💎
-                            </div>
-                            <a href="{{REFERRAL_URL}}" style="display: inline-block; background: linear-gradient(135deg, #8A5AD0 0%, #A77ED4 100%); color: #FFFFFF; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 15px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 6px 20px rgba(138, 90, 208, 0.4);">
-                                👫 Share & Earn 10% Off
-                            </a>
-                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-                                <div style="color: #888888; font-size: 12px; margin-bottom: 10px;">Your Personal Referral Code</div>
-                                <div style="display: inline-block; background-color: rgba(212, 175, 55, 0.1); border: 2px dashed #D4AF37; border-radius: 8px; padding: 12px 25px;">
-                                    <span style="color: #D4AF37; font-size: 20px; font-weight: 900; font-family: monospace; letter-spacing: 2px;">{{REFERRAL_CODE}}</span>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Return Policy Info -->
-                    <tr>
-                        <td style="padding: 35px 40px; background-color: #151515; text-align: center;">
-                            <div style="color: #FFFFFF; font-size: 16px; font-weight: 700; margin-bottom: 15px;">
-                                📋 Important Information
-                            </div>
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                    <td width="50%" style="padding: 15px;">
-                                        <div style="background-color: #1F1F1F; border: 1px solid #2A2A2A; border-radius: 8px; padding: 20px; height: 100%;">
-                                            <div style="font-size: 32px; margin-bottom: 10px;">🔄</div>
-                                            <div style="color: #FFFFFF; font-size: 14px; font-weight: 700; margin-bottom: 8px;">7-Day Returns</div>
-                                            <div style="color: #888888; font-size: 12px; line-height: 1.6;">
-                                                Easy returns within 7 days if not satisfied
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td width="50%" style="padding: 15px;">
-                                        <div style="background-color: #1F1F1F; border: 1px solid #2A2A2A; border-radius: 8px; padding: 20px; height: 100%;">
-                                            <div style="font-size: 32px; margin-bottom: 10px;">🛡️</div>
-                                            <div style="color: #FFFFFF; font-size: 14px; font-weight: 700; margin-bottom: 8px;">Warranty</div>
-                                            <div style="color: #888888; font-size: 12px; line-height: 1.6;">
-                                                Keep your tax invoice safe for warranty claims
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Social Media Follow -->
-                    <tr>
-                        <td style="padding: 35px 40px; background-color: #0A0A0A; border-top: 1px solid #2A2A2A; text-align: center;">
-                            <div style="color: #FFFFFF; font-size: 18px; font-weight: 700; margin-bottom: 12px;">
-                                Stay Connected with eShopper Luxe ✨
-                            </div>
-                            <div style="color: #888888; font-size: 13px; margin-bottom: 20px;">
-                                Follow us for exclusive deals, luxury collections, and styling tips
-                            </div>
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
-                                <tr>
-                                    <td style="padding: 0 8px;">
-                                        <a href="{{INSTAGRAM_URL}}" style="display: inline-block; background: linear-gradient(45deg, #F58529, #DD2A7B, #8134AF); color: #FFFFFF; text-decoration: none; padding: 12px 25px; border-radius: 8px; font-size: 13px; font-weight: 600;">
-                                            📸 Follow on Instagram
-                                        </a>
-                                    </td>
-                                    <td style="padding: 0 8px;">
-                                        <a href="{{WHATSAPP_SUPPORT_URL}}" style="display: inline-block; background-color: #25D366; color: #FFFFFF; text-decoration: none; padding: 12px 25px; border-radius: 8px; font-size: 13px; font-weight: 600;">
-                                            💬 Join WhatsApp
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Customer Support -->
-                    <tr>
-                        <td style="padding: 30px 40px; background-color: #0A0A0A; border-top: 1px solid #2A2A2A; text-align: center;">
-                            <div style="color: #B8B8B8; font-size: 14px; margin-bottom: 15px; font-weight: 600;">Need Help? Contact Us Anytime 💬</div>
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
-                                <tr>
-                                    <td style="padding: 8px 15px; border-right: 1px solid #2A2A2A;">
-                                        <a href="mailto:{{SUPPORT_EMAIL}}" style="color: #4CAF50; text-decoration: none; font-size: 13px; font-weight: 600;">
-                                            📧 {{SUPPORT_EMAIL}}
-                                        </a>
-                                    </td>
-                                    <td style="padding: 8px 15px;">
-                                        <a href="tel:{{SUPPORT_PHONE}}" style="color: #4CAF50; text-decoration: none; font-size: 13px; font-weight: 600;">
-                                            📞 {{SUPPORT_PHONE}}
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="padding: 25px 40px; background-color: #0A0A0A; border-radius: 0 0 12px 12px; text-align: center;">
-                            <div style="color: #666666; font-size: 12px; line-height: 1.6; margin-bottom: 10px;">
-                                © 2026 eShopper Luxe. All rights reserved.<br>
-                                Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India
-                            </div>
-                            <div style="margin-top: 10px;">
-                                <a href="{{PRIVACY_POLICY_URL}}" style="color: #D4AF37; text-decoration: none; font-size: 11px; margin: 0 10px;">Privacy Policy</a>
-                                <span style="color: #333333;">|</span>
-                                <a href="{{TERMS_URL}}" style="color: #D4AF37; text-decoration: none; font-size: 11px; margin: 0 10px;">Terms of Service</a>
-                                <span style="color: #333333;">|</span>
-                                <a href="{{RETURN_POLICY_URL}}" style="color: #D4AF37; text-decoration: none; font-size: 11px; margin: 0 10px;">Return Policy</a>
-                            </div>
-                        </td>
-                    </tr>
-
-                </table>
-            </td>
+          <td style="padding:32px 32px 0 32px;">
+            <div style="background:#181818;border-radius:10px;padding:18px 0;text-align:center;">
+              <span style="color:#D4AF37;font-size:22px;font-weight:900;letter-spacing:1px;">Delivered & Celebrating!</span>
+            </div>
+          </td>
         </tr>
-    </table>
-</body>
-</html>
+        <!-- Download Tax Invoice -->
+        <tr>
+          <td style="padding:32px 32px 0 32px;" align="center">
+            <a href="{{taxInvoiceLink}}" style="display:inline-block;padding:16px 48px;background:#D4AF37;color:#0A0A0A;font-size:18px;font-weight:800;border-radius:10px;text-decoration:none;">DOWNLOAD TAX INVOICE</a>
+          </td>
+        </tr>
+        <!-- Rating System -->
+        <tr>
+          <td style="padding:32px 32px 0 32px;" align="center">
+            <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+              <tr>
+                <td>
+                  <a href="{{rateOrderLink}}?stars=1"><img src="https://res.cloudinary.com/dluxehub/image/upload/v1700000000/star-gold.png" alt="1 Star" style="height:32px;"/></a>
+                </td>
+                <td>
+                  <a href="{{rateOrderLink}}?stars=2"><img src="https://res.cloudinary.com/dluxehub/image/upload/v1700000000/star-gold.png" alt="2 Stars" style="height:32px;"/></a>
+                </td>
+                <td>
+                  <a href="{{rateOrderLink}}?stars=3"><img src="https://res.cloudinary.com/dluxehub/image/upload/v1700000000/star-gold.png" alt="3 Stars" style="height:32px;"/></a>
+                </td>
+                <td>
+                  <a href="{{rateOrderLink}}?stars=4"><img src="https://res.cloudinary.com/dluxehub/image/upload/v1700000000/star-gold.png" alt="4 Stars" style="height:32px;"/></a>
+                </td>
+                <td>
+                  <a href="{{rateOrderLink}}?stars=5"><img src="https://res.cloudinary.com/dluxehub/image/upload/v1700000000/star-gold.png" alt="5 Stars" style="height:32px;"/></a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Referral Offer -->
+        <tr>
+          <td style="padding:32px 32px 0 32px;" align="center">
+            <div style="color:#fff;font-size:16px;font-weight:500;background:#181818;border-radius:8px;padding:18px 24px;">Refer a friend and get <span style="color:#D4AF37;font-weight:700;">10% off</span> on your next luxe purchase.</div>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="padding:32px 32px 32px 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="left" style="color:#bbb;font-size:14px;">
+                  Boutique Luxe, 123 Luxury Lane, Mumbai, India<br/>
+                  support@eshopperr.me | +91 8447859784
+                </td>
+                <td align="right">
+                  <a href="https://instagram.com/eshopperluxe" style="display:inline-block;"><img src="https://res.cloudinary.com/dluxehub/image/upload/v1700000000/insta-gold.png" alt="Instagram" style="height:28px;vertical-align:middle;"/></a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

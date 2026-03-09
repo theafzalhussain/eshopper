@@ -1,295 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Out for Delivery - eShopper Luxe</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0A0A0A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0A0A0A;">
+<!--
+Out for Delivery Email (Real-time Alert) - Boutique Luxe
+Strictly <table> only, 600px max, Deep Black & Gold, fully responsive, all features as per prompt
+-->
+<table width="100%" bgcolor="#0A0A0A" cellpadding="0" cellspacing="0" style="margin:0;padding:0;width:100%;background:#0A0A0A;font-family:'Playfair Display',serif,Georgia,'Times New Roman',Times,sans-serif;">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#0A0A0A;border-radius:16px;overflow:hidden;">
+        <!-- Header -->
         <tr>
-            <td align="center" style="padding: 40px 20px;">
-                <!-- Main Container -->
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #1A1A1A; border-radius: 12px; box-shadow: 0 8px 32px rgba(255, 193, 7, 0.18);">
-                    <!-- ...existing code... -->
-                </table>
-            </td>
+          <td style="padding:32px 32px 0 32px;background:#0A0A0A;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="left" style="vertical-align:middle;">
+                  <img src="https://res.cloudinary.com/dluxehub/image/upload/v1700000000/luxe-logo-gold.png" alt="Boutique Luxe" style="height:48px;display:block;"/>
+                </td>
+                <td align="right" style="vertical-align:middle;">
+                  <div style="color:#D4AF37;font-size:13px;font-weight:600;letter-spacing:0.5px;">Order ID</div>
+                  <div style="color:#fff;font-size:16px;font-weight:700;">#{{orderId}}</div>
+                  <div style="color:#bbb;font-size:13px;">{{orderDate}}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
         </tr>
-    </table>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Out for Delivery - eShopper Luxe</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0A0A0A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0A0A0A;">
+        <!-- Arriving Today -->
         <tr>
-            <td align="center" style="padding: 40px 20px;">
-                <!-- Main Container -->
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #1A1A1A; border-radius: 12px; box-shadow: 0 8px 38px rgba(255, 152, 0, 0.3);">
-                    
-                    <!-- Header with Logo -->
-                    <tr>
-                        <td style="padding: 30px 40px; background: linear-gradient(135deg, #2E1A0D 0%, #1A1A1A 100%); border-radius: 12px 12px 0 0; border-bottom: 2px solid #FF9800;">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                    <td align="left" style="vertical-align: middle;">
-                                        <img src="{{BRAND_LOGO_URL}}" alt="eShopper Luxe" style="height: 45px; display: block;" />
-                                    </td>
-                                    <td align="right" style="vertical-align: middle;">
-                                        <div style="background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%); color: #FFFFFF; padding: 8px 18px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; display: inline-block; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);">
-                                            🚚 OUT FOR DELIVERY
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Hero Banner -->
-                    <tr>
-                        <td style="padding: 0;">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                    <td style="background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%); padding: 50px 40px; text-align: center;">
-                                        <div style="font-size: 64px; margin-bottom: 15px; animation: bounce 1s ease-in-out infinite;">🎁</div>
-                                        <div style="color: #FFFFFF; font-size: 34px; font-weight: 900; letter-spacing: 2px; margin-bottom: 12px; text-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                                            IT'S ARRIVING TODAY!
-                                        </div>
-                                        <div style="color: #FFF3E0; font-size: 15px; font-weight: 600; letter-spacing: 0.5px;">
-                                            Your luxury package is just minutes away
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Urgent Alert Message -->
-                    <tr>
-                        <td style="padding: 35px 40px; background: linear-gradient(135deg, #1F1A0D 0%, #2E1A0D 100%); border-bottom: 2px solid #FF9800;">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                    <td style="text-align: center;">
-                                        <div style="display: inline-block; background-color: rgba(255, 152, 0, 0.1); border: 2px solid #FF9800; border-radius: 10px; padding: 20px 30px;">
-                                            <div style="color: #FF9800; font-size: 16px; font-weight: 800; margin-bottom: 10px; letter-spacing: 1px;">⏰ DELIVERY IN PROGRESS</div>
-                                            <div style="color: #FFB74D; font-size: 28px; font-weight: 900; margin-bottom: 8px;">TODAY</div>
-                                            <div style="color: #B8B8B8; font-size: 13px;">Expected by <span style="color: #FF9800; font-weight: 700;">{{DELIVERY_TIME_SLOT}}</span></div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Main Message -->
-                    <tr>
-                        <td style="padding: 40px 40px 30px 40px; text-align: center; background: linear-gradient(180deg, #1A1A1A 0%, #151515 100%); border-bottom: 1px solid #2A2A2A;">
-                            <div style="color: #FFFFFF; font-size: 24px; font-weight: 700; margin-bottom: 18px; line-height: 1.4;">
-                                Hi {{CUSTOMER_NAME}}! ✨
-                            </div>
-                            <div style="color: #B8B8B8; font-size: 15px; line-height: 1.7; max-width: 500px; margin: 0 auto;">
-                                Your luxury package is <strong style="color: #FF9800;">out for delivery</strong> and will reach you today! Our delivery partner is on the way to your doorstep.
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- OTP Security Alert -->
-                    <tr>
-                        <td style="padding: 35px 40px;">
-                            <div style="background: linear-gradient(135deg, #1F0D0D 0%, #2E0D0D 100%); border: 2px solid #F44336; border-radius: 12px; padding: 25px;">
-                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                    <tr>
-                                        <td width="50" style="vertical-align: top; text-align: center;">
-                                            <div style="font-size: 36px;">🔒</div>
-                                        </td>
-                                        <td style="vertical-align: top; padding-left: 15px;">
-                                            <div style="color: #F44336; font-size: 15px; font-weight: 800; margin-bottom: 10px; letter-spacing: 0.5px; text-transform: uppercase;">⚠️ Security First!</div>
-                                            <div style="color: #FFCDD2; font-size: 14px; line-height: 1.7; margin-bottom: 12px;">
-                                                Please share the <strong style="color: #F44336;">OTP or verification code</strong> ONLY when you receive the package in perfect condition.
-                                            </div>
-                                            <div style="color: #888888; font-size: 12px; font-style: italic;">
-                                                Never share OTP before inspecting the package
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Delivery Person Info -->
-                    <tr>
-                        <td style="padding: 0 40px 35px 40px;">
-                            <div style="background-color: #151515; border: 1px solid #2A2A2A; border-radius: 10px; padding: 25px;">
-                                <div style="color: #FF9800; font-size: 14px; font-weight: 700; letter-spacing: 1px; margin-bottom: 20px; text-transform: uppercase;">
-                                    🚗 Your Delivery Partner
-                                </div>
-                                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                    <tr>
-                                        <td style="padding: 10px 0; color: #B8B8B8; font-size: 13px;">Courier Partner</td>
-                                        <td style="padding: 10px 0; color: #FFFFFF; font-size: 14px; text-align: right; font-weight: 700;">{{COURIER_NAME}}</td>
-                                    </tr>
-                                    <tr style="border-top: 1px solid #2A2A2A;">
-                                        <td style="padding: 10px 0; color: #B8B8B8; font-size: 13px;">Tracking ID</td>
-                                        <td style="padding: 10px 0; text-align: right;">
-                                            <span style="color: #FF9800; font-size: 13px; font-weight: 700; font-family: monospace;">{{AWB_NUMBER}}</span>
-                                        </td>
-                                    </tr>
-                                    <tr style="border-top: 1px solid #2A2A2A;">
-                                        <td style="padding: 10px 0; color: #B8B8B8; font-size: 13px;">Delivery Agent</td>
-                                        <td style="padding: 10px 0; color: #FFFFFF; font-size: 14px; text-align: right; font-weight: 600;">{{AGENT_NAME}}</td>
-                                    </tr>
-                                    <tr style="border-top: 1px solid #2A2A2A;">
-                                        <td style="padding: 10px 0; color: #B8B8B8; font-size: 13px;">Agent Contact</td>
-                                        <td style="padding: 10px 0; text-align: right;">
-                                            <a href="tel:{{AGENT_PHONE}}" style="color: #FF9800; font-size: 14px; text-decoration: none; font-weight: 700;">📞 {{AGENT_PHONE}}</a>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Delivery Address -->
-                    <tr>
-                        <td style="padding: 0 40px 35px 40px;">
-                            <div style="background: linear-gradient(135deg, #0D2E1F 0%, #0D1F2E 100%); border: 1px solid #4CAF50; border-radius: 10px; padding: 25px;">
-                                <div style="color: #4CAF50; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 15px; text-transform: uppercase;">📍 Delivery Location</div>
-                                <div style="color: #FFFFFF; font-size: 15px; font-weight: 700; margin-bottom: 10px;">{{SHIPPING_NAME}}</div>
-                                <div style="color: #B8B8B8; font-size: 14px; line-height: 1.7;">
-                                    {{SHIPPING_ADDRESS}}<br>
-                                    {{SHIPPING_CITY}}, {{SHIPPING_STATE}} {{SHIPPING_PIN}}<br>
-                                    📞 {{SHIPPING_PHONE}}
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Map Placeholder -->
-                    <tr>
-                        <td style="padding: 0 40px 35px 40px;">
-                            <div style="background-color: #151515; border: 1px solid #2A2A2A; border-radius: 10px; padding: 80px 40px; text-align: center;">
-                                <div style="font-size: 48px; margin-bottom: 15px;">🗺️</div>
-                                <div style="color: #B8B8B8; font-size: 14px; margin-bottom: 10px;">Live tracking map</div>
-                                <a href="{{LIVE_MAP_URL}}" style="display: inline-block; background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%); color: #FFFFFF; text-decoration: none; padding: 12px 30px; border-radius: 8px; font-size: 13px; font-weight: 700;">
-                                    🚚 Track Live Location
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Action Buttons -->
-                    <tr>
-                        <td style="padding: 0 40px 35px 40px;">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                    <td width="48%" style="padding-right: 5px;">
-                                        <a href="{{WHATSAPP_SUPPORT_URL}}" style="display: block; background-color: #25D366; color: #FFFFFF; text-decoration: none; padding: 16px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; text-align: center; letter-spacing: 0.5px;">
-                                            💬 Change Address
-                                        </a>
-                                    </td>
-                                    <td width="4%"></td>
-                                    <td width="48%" style="padding-left: 5px;">
-                                        <a href="tel:{{SUPPORT_PHONE}}" style="display: block; background-color: #2A2A2A; color: #FF9800; text-decoration: none; padding: 16px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; text-align: center; letter-spacing: 0.5px; border: 1px solid #FF9800;">
-                                            📞 Call Support
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Inspection Checklist -->
-                    <tr>
-                        <td style="padding: 35px 40px; background-color: #0F1F0F; border-top: 1px solid #2A2A2A; border-bottom: 1px solid #2A2A2A;">
-                            <div style="text-align: center; margin-bottom: 25px;">
-                                <div style="color: #4CAF50; font-size: 16px; font-weight: 800; letter-spacing: 1px; margin-bottom: 15px;">
-                                    ✓ BEFORE ACCEPTING DELIVERY
-                                </div>
-                            </div>
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                                <tr>
-                                    <td style="padding: 10px 0; color: #B8B8B8; font-size: 14px;">
-                                        <span style="color: #4CAF50; font-weight: 700; margin-right: 10px;">✓</span>
-                                        Check package seal is intact
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px 0; color: #B8B8B8; font-size: 14px;">
-                                        <span style="color: #4CAF50; font-weight: 700; margin-right: 10px;">✓</span>
-                                        Verify Order ID matches: <span style="color: #D4AF37; font-family: monospace; font-weight: 700;">{{ORDER_ID}}</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px 0; color: #B8B8B8; font-size: 14px;">
-                                        <span style="color: #4CAF50; font-weight: 700; margin-right: 10px;">✓</span>
-                                        Open and inspect items condition
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 10px 0; color: #B8B8B8; font-size: 14px;">
-                                        <span style="color: #4CAF50; font-weight: 700; margin-right: 10px;">✓</span>
-                                        Then share OTP/verification code
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Trust Badge -->
-                    <tr>
-                        <td style="padding: 30px 40px; background-color: #151515; text-align: center;">
-                            <div style="display: inline-block; background-color: #1F1A0D; border: 1px solid #D4AF37; border-radius: 10px; padding: 20px 35px;">
-                                <div style="color: #D4AF37; font-size: 14px; font-weight: 800; letter-spacing: 1px; margin-bottom: 8px;">🛡️ 100% AUTHENTIC & INSURED</div>
-                                <div style="color: #888888; font-size: 12px;">All deliveries are fully insured during transit</div>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Support Section -->
-                    <tr>
-                        <td style="padding: 30px 40px; background-color: #0A0A0A; border-top: 1px solid #2A2A2A; text-align: center;">
-                            <div style="color: #B8B8B8; font-size: 14px; margin-bottom: 15px;">Questions? We're here to help!</div>
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center">
-                                <tr>
-                                    <td style="padding: 0 8px;">
-                                        <a href="{{WHATSAPP_SUPPORT_URL}}" style="display: inline-block; background-color: #25D366; color: #FFFFFF; text-decoration: none; padding: 12px 25px; border-radius: 8px; font-size: 13px; font-weight: 600;">
-                                            💬 WhatsApp
-                                        </a>
-                                    </td>
-                                    <td style="padding: 0 8px;">
-                                        <a href="{{INSTAGRAM_URL}}" style="display: inline-block; background: linear-gradient(45deg, #F58529, #DD2A7B, #8134AF); color: #FFFFFF; text-decoration: none; padding: 12px 25px; border-radius: 8px; font-size: 13px; font-weight: 600;">
-                                            📸 Instagram
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="padding: 25px 40px; background-color: #0A0A0A; border-radius: 0 0 12px 12px; text-align: center;">
-                            <div style="color: #666666; font-size: 12px; line-height: 1.6; margin-bottom: 10px;">
-                                © 2026 eShopper Luxe. All rights reserved.<br>
-                                Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India
-                            </div>
-                            <div style="margin-top: 10px;">
-                                <a href="{{PRIVACY_POLICY_URL}}" style="color: #D4AF37; text-decoration: none; font-size: 11px; margin: 0 10px;">Privacy</a>
-                                <span style="color: #333333;">|</span>
-                                <a href="{{TERMS_URL}}" style="color: #D4AF37; text-decoration: none; font-size: 11px; margin: 0 10px;">Terms</a>
-                            </div>
-                        </td>
-                    </tr>
-
-                </table>
-            </td>
+          <td style="padding:32px 32px 0 32px;">
+            <div style="background:#181818;border-radius:10px;padding:18px 0;text-align:center;">
+              <span style="color:#D4AF37;font-size:22px;font-weight:900;letter-spacing:1px;">It’s Arriving Today!</span>
+            </div>
+          </td>
         </tr>
-    </table>
-</body>
-</html>
+        <!-- Safety First -->
+        <tr>
+          <td style="padding:32px 32px 0 32px;">
+            <div style="color:#fff;font-size:16px;font-weight:500;background:#181818;border-radius:8px;padding:18px 24px;">Please share the OTP only when you receive the package.</div>
+          </td>
+        </tr>
+        <!-- Support Buttons -->
+        <tr>
+          <td style="padding:32px 32px 0 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center">
+                  <a href="{{deliveryPartnerContact}}" style="display:inline-block;padding:12px 32px;background:#D4AF37;color:#0A0A0A;font-size:16px;font-weight:700;border-radius:8px;text-decoration:none;margin-right:8px;">Contact Delivery Partner</a>
+                  <a href="https://wa.me/918447859784?text=Change%20Delivery%20Address%20or%20Time%20for%20Order%20{{orderId}}" style="display:inline-block;padding:12px 32px;background:#181818;color:#D4AF37;font-size:16px;font-weight:700;border-radius:8px;text-decoration:none;margin-left:8px;">Change Delivery Address/Time</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Map Graphic -->
+        <tr>
+          <td style="padding:32px 32px 0 32px;" align="center">
+            <img src="https://res.cloudinary.com/dluxehub/image/upload/v1700000000/map-placeholder-gold.png" alt="Tracking Map" style="height:80px;border-radius:8px;"/>
+          </td>
+        </tr>
+        <!-- Trust -->
+        <tr>
+          <td style="padding:32px 32px 32px 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center">
+                  <span style="color:#D4AF37;font-size:15px;font-weight:700;">100% Authentic & Insured Delivery</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

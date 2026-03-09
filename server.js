@@ -554,239 +554,12 @@ const enqueueEmailJob = async (jobType, payload) => {
     return true;
 };
 
-// ==================== 🎨 EMAIL TEMPLATE SYSTEM - PREMIUM AUTOMATION ====================
-const Handlebars = require('handlebars');
-const fsPromises = require('fs').promises;
 
-// Load and compile email template with Handlebars
-const loadEmailTemplate = async (templateName, data) => {
-    try {
-        const templatePath = path.join(__dirname, 'email-templates', templateName);
-        const templateSource = await fsPromises.readFile(templatePath, 'utf-8');
-        const template = Handlebars.compile(templateSource);
-        return template(data);
-    } catch (error) {
-        console.error(`❌ Error loading template ${templateName}:`, error.message);
-        throw error;
-    }
-};
-
-// Map order status to email template file
-const ORDER_STATUS_TEMPLATES = {
-    'order placed': '01-order-placed.html',
-    'placed': '01-order-placed.html',
-    'ordered': 'order_confirmed.html', // STRICT LUXE TEMPLATE
-    'confirmed': 'order_confirmed.html', // STRICT LUXE TEMPLATE
-    'packed': '03-order-packed.html',
-    'shipped': '04-order-shipped.html',
-    'out for delivery': '05-out-for-delivery.html',
-    'delivered': '06-order-delivered.html'
-};
-
-// Get email subject by status
-const getEmailSubject = (status, orderId) => {
-    const statusLower = String(status || '').toLowerCase();
-    const subjects = {
-        'order placed': `✓ Order Received - ${orderId} | eShopper Luxe`,
-        'placed': `✓ Order Received - ${orderId} | eShopper Luxe`,
-        'ordered': `🎉 Order Confirmed - ${orderId} | eShopper Luxe`,
-        'confirmed': `🎉 Order Confirmed - ${orderId} | eShopper Luxe`,
-        'packed': `📦 Order Packed with Care - ${orderId} | eShopper Luxe`,
-        'shipped': `🚚 Order Shipped - Track Your Package | ${orderId}`,
-        'out for delivery': `⏰ Arriving Today! - ${orderId} | eShopper Luxe`,
-        'delivered': `🎉 Delivered Successfully - ${orderId} | Rate Your Experience`
-    };
-    return subjects[statusLower] || `Order Update - ${orderId}`;
-};
-
-// Map order data to template variables
-const mapOrderToTemplateData = (order, user = null) => {
-    const frontendUrl = (process.env.FRONTEND_URL || 'https://eshopperr.me').replace(/\/$/, '');
-    const logoUrl = process.env.BRAND_LOGO_URL || `${frontendUrl}/logo512.png`;
-    // Safe access to shipping address
-    const shipping = order.shippingAddress || {};
-    const customerName = order.userName || user?.name || shipping.fullName || 'Valued Customer';
-    const firstName = customerName.split(' ')[0];
-    // Safe access to products
-    const products = Array.isArray(order.products) ? order.products.map(p => ({
-        name: p.name || 'Product',
-        image: p.pic || p.image || p.pic1 || `${frontendUrl}/placeholder.jpg`,
-        category: p.maincategory || p.category || 'Fashion',
-        quantity: p.qty || p.quantity || 1,
-        price: p.price || p.finalprice || 0,
-        total: p.total || (p.price * (p.qty || 1)) || 0,
-        size: p.size || '',
-        color: p.color || ''
-    })) : [];
-    // Calculate amounts
-    const totalAmount = Number(order.totalAmount || 0);
-    const shippingAmount = Number(order.shippingAmount || 0);
-    const finalAmount = Number(order.finalAmount || totalAmount + shippingAmount);
-    const gstAmount = Math.round(finalAmount * 0.18); // Assuming 18% GST
-    // Format dates
-    const orderDate = new Date(order.orderDate || order.createdAt || Date.now()).toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
-    const estimatedDelivery = order.estimatedArrival 
-        ? new Date(order.estimatedArrival).toLocaleDateString('en-IN', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        })
-        : new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        });
-
-    // Generate product rows HTML for strict Luxe template
-    const itemsHtml = products.map(item => `
-      <tr>
-        <td style="width:60px;padding:10px 0 10px 0;vertical-align:top;">
-          <img src="${item.image}" width="48" height="48" style="border-radius:6px;border:1px solid #333;display:block;" alt="Product"/>
-        </td>
-        <td style="padding:10px 0 10px 12px;vertical-align:top;">
-          <div style="color:#fff;font-size:15px;font-weight:600;">${item.name}</div>
-          <div style="color:#bbb;font-size:13px;">Size: ${item.size}</div>
-          <div style="color:#bbb;font-size:13px;">Color: ${item.color}</div>
-        </td>
-        <td align="right" style="padding:10px 0 10px 0;vertical-align:top;">
-          <div style="color:#fff;font-size:15px;font-weight:700;">₹${item.price}</div>
-        </td>
-      </tr>
-    `).join('');
-
-    // Map variables for strict Luxe template compatibility
-    return {
-        // Brand
-        BRAND_LOGO_URL: logoUrl,
-
-        // Order details (strict template expects lowercase keys)
-        orderId: order.orderId,
-        orderDate: orderDate,
-        totalAmount: finalAmount,
-
-        // Customer
-        customerName: firstName,
-        customerEmail: order.userEmail || user?.email || '',
-
-        // Shipping
-        shippingName: shipping.fullName || customerName,
-        shippingAddress: shipping.addressline1 || 'N/A',
-        shippingCity: shipping.city || '',
-        shippingState: shipping.state || '',
-        shippingPin: shipping.pin || '',
-        shippingPhone: shipping.phone || user?.phone || '',
-
-        // Products
-        products: products,
-        items: itemsHtml,
-
-        // Amounts
-        subtotal: totalAmount,
-        shippingAmount: shippingAmount,
-        gstAmount: gstAmount,
-
-        // Payment
-        paymentMethod: order.paymentMethod || 'COD',
-        paymentStatus: order.paymentStatus || 'Pending',
-        transactionId: order.transactionId || `TXN${Date.now()}`,
-
-        // Billing (same as shipping if not provided)
-        billingName: shipping.fullName || customerName,
-
-        // Delivery
-        expectedDate: estimatedDelivery,
-        deliveryTimeSlot: '10:00 AM - 6:00 PM',
-
-        // Packed info
-        packedDate: orderDate,
-        itemsCount: products.length,
-        packageWeight: `${(products.length * 0.5).toFixed(1)} kg`,
-
-        // Courier info (defaults)
-        courierName: order.courierName || 'Delhivery',
-        awbNumber: order.awbNumber || `AWB${Date.now()}`,
-        shippedDate: orderDate,
-        carrierWebsite: order.carrierWebsite || 'https://www.delhivery.com/track',
-
-        // Delivery agent
-        agentName: order.agentName || 'Delivery Partner',
-        agentPhone: order.agentPhone || '+91 98765 43210',
-
-        // Delivered info
-        deliveredDate: orderDate,
-        receivedBy: 'Self',
-
-        // Links
-        trackingUrl: `${frontendUrl}/order-tracking/${order.orderId}`,
-        invoiceUrl: `${frontendUrl}/invoice/${order.orderId}`,
-        taxInvoiceUrl: `${frontendUrl}/invoice/tax/${order.orderId}`,
-        ratingUrl: `${frontendUrl}/rate-order/${order.orderId}`,
-        reviewUrl: `${frontendUrl}/review/${order.orderId}`,
-        referralUrl: `${frontendUrl}/refer`,
-        referralCode: `LUXE${new Date().getFullYear()}${firstName.toUpperCase()}`,
-        liveMapUrl: `${frontendUrl}/live-tracking/${order.orderId}`,
-
-        // Support
-        whatsappSupportUrl: 'https://wa.me/918447859784',
-        instagramUrl: 'https://instagram.com/eshopperluxe',
-        supportEmail: 'support@eshopperr.me',
-        supportPhone: '+91 8447859784',
-        privacyPolicyUrl: `${frontendUrl}/privacy`,
-        termsUrl: `${frontendUrl}/terms`,
-        returnPolicyUrl: `${frontendUrl}/returns`
-    };
-};
-
-// Send order email based on status
-const sendOrderEmail = async (order, status, user = null) => {
-    try {
-        if (!FEATURE_EMAIL_NOTIFICATIONS) {
-            console.log('⏭️ Email notifications disabled');
-            return { skipped: true };
-        }
-        
-        const statusLower = String(status || order.orderStatus || '').toLowerCase();
-        const templateFile = ORDER_STATUS_TEMPLATES[statusLower];
-        
-        if (!templateFile) {
-            console.warn(`⚠️ No email template for status: ${status}`);
-            return { skipped: true };
-        }
-        
-        const customerEmail = order.userEmail || user?.email;
-        if (!customerEmail || !customerEmail.includes('@')) {
-            console.warn(`⚠️ Invalid email for order ${order.orderId}`);
-            return { skipped: true };
-        }
-        
-        // Map order data to template variables
-        const templateData = mapOrderToTemplateData(order, user);
-        
-        // Load and render template
-        const htmlContent = await loadEmailTemplate(templateFile, templateData);
-        
-        // Send email
-        await sendTransactionalEmail({
-            toEmail: customerEmail,
-            toName: templateData.CUSTOMER_NAME,
-            subject: getEmailSubject(statusLower, order.orderId),
-            htmlContent: htmlContent,
-            textContent: `Your order ${order.orderId} status: ${status}`
-        });
-        
-        console.log(`✅ Email sent for ${status}: ${order.orderId} → ${customerEmail}`);
-        return { success: true };
-        
-    } catch (error) {
-        console.error(`❌ Error sending order email:`, error.message);
-        if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(error);
-        return { error: error.message };
-    }
-};
+// ==================== EMAIL TEMPLATE SYSTEM PLACEHOLDER ====================
+// All legacy email-templates logic, Handlebars, and mappings have been removed.
+// Insert new premium HTML template integration logic here.
+// Example: Integrate 6 new premium templates and their rendering logic.
+// Ensure all new template code is robust, modular, and secure.
 
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
@@ -3630,17 +3403,7 @@ const placeOrderHandler = async (req, res) => {
         const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
         // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY
-        if (FEATURE_EMAIL_NOTIFICATIONS) {
-            setImmediate(async () => {
-                try {
-                    await sendOrderEmail(orderDoc, 'Order Placed', user);
-                    console.log(`✅ Order Placed email sent for ${orderId} → ${recipientEmail}`);
-                } catch (emailErr) {
-                    console.error(`⚠️ Order Placed email failed for ${orderId}:`, emailErr.message);
-                    if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
-                }
-            });
-        }
+        // [EMAIL PLACEHOLDER] Integrate new premium order placed email logic here.
 
         // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
@@ -4666,18 +4429,12 @@ const handleOrderStatusUpdate = async (req, res) => {
             setImmediate(() => {
                 User.findById(order.userid).lean()
                     .then(async (userDoc) => {
-                        try {
-                            await sendOrderEmail(order, normalized, userDoc);
-                        } catch (emailErr) {
-                            console.error(`⚠️ Email send error for ${order.orderId}:`, emailErr.message);
-                        }
+                        // [EMAIL PLACEHOLDER] Integrate new premium order status email logic here (with userDoc).
                     })
                     .catch(err => {
                         console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
                         // Try sending without user data
-                        sendOrderEmail(order, normalized, null).catch(e => 
-                            console.error(`⚠️ Email fallback failed:`, e.message)
-                        );
+                        // [EMAIL PLACEHOLDER] Integrate new premium order status email logic here (fallback, no userDoc).
                     });
             });
         }
