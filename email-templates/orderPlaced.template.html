@@ -1,0 +1,72 @@
+<!-- Order Placed Email Template for Boutique Luxe -->
+<!-- Strictly table-based, max-width 600px, dark theme, premium styling, all dynamic placeholders ready -->
+<html>
+  <body style="background:#0A0A0A; color:#D4AF37; margin:0; padding:0;">
+    <table align="center" width="600" cellpadding="0" cellspacing="0" style="margin:auto; max-width:600px; background:#0A0A0A; color:#D4AF37; font-family:'Segoe UI', Arial, sans-serif;">
+      <tr>
+        <td colspan="4" style="padding:24px 0; text-align:center;">
+          <img src="{{logoUrl}}" alt="Boutique Luxe Logo" style="height:48px;" />
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="font-size:24px; font-weight:bold; text-align:left;">Order Received</td>
+        <td colspan="2" style="text-align:right;">
+          <span style="font-size:14px;">Order ID: <b>{{orderId}}</b></span><br/>
+          <span style="font-size:14px;">Order Date: <b>{{orderDate}}</b></span>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="4" style="padding:16px 0; font-size:18px;">Hi <b>{{customerName}}</b>, your luxury selection is now in our queue. We are verifying your items.</td>
+      </tr>
+      <tr>
+        <td colspan="4">
+          <table width="100%" cellpadding="8" cellspacing="0" style="background:#181818; border-radius:8px;">
+            <tr style="border-bottom:1px solid #333;">
+              <th style="width:80px;">Image</th>
+              <th>Item Name/Size</th>
+              <th>Qty</th>
+              <th>Subtotal</th>
+            </tr>
+            {{#each items}}
+            <tr style="border-bottom:1px solid #222;">
+              <td style="text-align:center;"><img src="{{imageUrl}}" style="width:80px; border-radius:8px;" /></td>
+              <td>{{name}}<br/><small>{{size}}</small></td>
+              <td style="text-align:center;">{{quantity}}</td>
+              <td style="text-align:right;">₹{{subtotal}}</td>
+            </tr>
+            {{/each}}
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="4" style="padding:16px 0;">
+          <table width="100%" cellpadding="8" cellspacing="0">
+            <tr>
+              <td width="50%" valign="top" style="background:#181818; border-radius:8px;">
+                <b>Shipping Address</b><br/>
+                <span>{{shippingAddress}}</span>
+              </td>
+              <td width="50%" valign="top" style="background:#181818; border-radius:8px;">
+                <b>Payment Method</b><br/>
+                <span>{{paymentMethod}}</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="4" style="text-align:center; padding:24px 0;">
+          <a href="{{viewOrderUrl}}" style="background:#D4AF37; color:#0A0A0A; padding:12px 32px; border-radius:24px; text-decoration:none; font-weight:bold;">View Order</a>
+          <div style="margin-top:8px; font-size:12px; color:#888;">This is a receipt, not a Tax Invoice.</div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="4" style="padding:24px 0; text-align:center;">
+          <a href="{{whatsappUrl}}" style="color:#D4AF37;">WhatsApp Support</a> |
+          <a href="{{instagramUrl}}" style="color:#D4AF37;"><img src="{{instagramIconUrl}}" alt="Instagram" style="height:20px; vertical-align:middle;" /></a> |
+          <a href="{{privacyPolicyUrl}}" style="color:#D4AF37;">Privacy Policy</a>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -88,6 +88,8 @@ async function executeEmailJob(jobType, payload) {
     }
 }
 
+// All product/order-related email logic removed as per user request
+
 let firebaseAdminReady = false;
 
 try {

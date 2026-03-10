@@ -1,0 +1,47 @@
+<!-- Order Confirmed Email Template for Boutique Luxe -->
+<html>
+  <body style="background:#0A0A0A; color:#D4AF37; margin:0; padding:0;">
+    <table align="center" width="600" cellpadding="0" cellspacing="0" style="margin:auto; max-width:600px; background:#0A0A0A; color:#D4AF37; font-family:'Segoe UI', Arial, sans-serif;">
+      <tr>
+        <td colspan="2" style="text-align:center; padding:24px 0;">
+          <span style="background:#28a745; color:#fff; padding:8px 24px; border-radius:24px; font-size:18px; font-weight:bold;">
+            <img src="{{checkmarkIconUrl}}" alt="Confirmed" style="height:24px; vertical-align:middle;" /> CONFIRMED
+          </span>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align:center; font-size:22px; padding:16px 0; color:#D4AF37;">
+          Expected Arrival: <b style="font-size:28px; color:#D4AF37;">{{expectedArrival}}</b>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:8px 0; text-align:center;">
+          <span style="font-size:14px; color:#fff;">Our experts are conducting a 10-point quality check on your items.</span>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="padding:16px 0;">
+          <table width="100%" cellpadding="8" cellspacing="0" style="background:#181818; border-radius:8px;">
+            <tr>
+              <th>Item Price</th>
+              <th>Shipping Charges</th>
+              <th>Taxes (GST)</th>
+              <th>Total Paid</th>
+            </tr>
+            <tr>
+              <td>₹{{itemPrice}}</td>
+              <td>₹{{shippingCharges}}</td>
+              <td>₹{{taxes}}</td>
+              <td>₹{{totalPaid}}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="text-align:center; padding:16px 0;">
+          <span style="font-size:14px; color:#D4AF37;">Join our 50k+ Luxe community on <a href="{{instagramUrl}}" style="color:#D4AF37;">Instagram</a></span>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
