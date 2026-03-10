@@ -62,7 +62,7 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 // ===== ENV VARIABLES FOR REFERENCE =====
 // Required Railway Environment Variables:
 // - MONGODB_URI: MongoDB connection string
-// - BREVO_API_KEY: Email service API key (Brevo v4 SDK)
+//
 // - SENDER_EMAIL: Sender email address (e.g. support@eshopperr.me)
 // - CLOUD_NAME: Cloudinary cloud name
 // - CLOUD_API_KEY: Cloudinary API key

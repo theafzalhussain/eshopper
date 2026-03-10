@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { sendOtpAPI, resetPasswordAPI } from '../Store/Services'
+import { resetPasswordAPI } from '../Store/Services'
 import { motion, AnimatePresence } from 'framer-motion'
 import { KeyRound, ShieldCheck, Loader2, User, Lock, CheckCircle2, ArrowLeft, RotateCcw, AlertCircle } from 'lucide-react'
 
@@ -106,7 +106,7 @@ export default function ForgetPassword() {
 
         setLoading(true);
         try {
-            const res = await sendOtpAPI({ email: data.username, type: 'forget' })
+            // sendOtpAPI removed as part of email/OTP system cleanup
             if (res.result === "Done") {
                 setStep(2);
                 setTimer(60);

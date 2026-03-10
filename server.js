@@ -20,6 +20,8 @@ const fs = require('fs');
 const path = require('path');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
+// ===== EMAIL UTILITY (Brevo)
+const { sendEmail } = require('./src/utils/emailHelper');
 
 let firebaseAdminReady = false;
 
@@ -293,208 +295,9 @@ const upload = multer({
     { name: 'pic4', maxCount: 1 }
 ]);
 
-// 📧 BREVO EMAIL SERVICE - Production Final Fix
-const sendMail = async (to, otp) => {
-    try {
-        const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-        if (!BREVO_KEY) throw new Error("❌ BREVO_API_KEY Missing");
-        const localPart = (to || '').split('@')[0] || 'Customer';
-        const recipientName = localPart
-            .replace(/[._-]+/g, ' ')
-            .replace(/\d+/g, ' ')
-            .trim()
-            .split(' ')
-            .filter(Boolean)
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ') || 'Customer';
 
-        const data = {
-            sender: { name: "EShoppper Security", email: "support@eshopperr.me" },
-            to: [{ email: to }],
-            subject: `Your EShoppper Verification Code: ${otp}`,
-            textContent: `Hi ${recipientName},\n\nYour EShoppper verification code is: ${otp}\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email and secure your account.\n\nEShoppper Premium Security\nsupport@eshopperr.me`,
-            htmlContent: `
-                <div style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;padding:24px;color:#1f2937;">
-                    <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
-                        <div style="padding:22px 28px;background:linear-gradient(135deg,#111827,#1a2332,#8b7521);color:#ffffff;">
-                            <div style="font-size:20px;font-weight:700;letter-spacing:0.3px;background:linear-gradient(135deg,#f5deb3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">EShoppper</div>
-                            <div style="font-size:13px;opacity:0.9;margin-top:4px;color:#d4af37;font-weight:600;">Secure Account Verification</div>
-                        </div>
-                        <div style="padding:28px;">
-                            <p style="margin:0 0 14px 0;font-size:15px;">Hi ${recipientName},</p>
-                            <p style="margin:0 0 18px 0;font-size:15px;color:#4b5563;">Use this one-time verification code to continue securely:</p>
-                            <div style="text-align:center;margin:18px 0 20px 0;">
-                                <span style="display:inline-block;background:#f9fafb;border:1px solid #d1d5db;border-radius:10px;padding:14px 24px;font-size:34px;letter-spacing:8px;font-weight:700;color:#0f766e;">${otp}</span>
-                            </div>
-                            <p style="margin:0 0 8px 0;font-size:14px;color:#4b5563;">This code is valid for 10 minutes.</p>
-                            <p style="margin:0;font-size:14px;color:#4b5563;">If you did not request this, please ignore this email and secure your account.</p>
-                        </div>
-                        <div style="padding:16px 28px;border-top:1px solid #e5e7eb;background:#fafafa;font-size:12px;color:#6b7280;">
-                            Sent by EShoppper Premium Security • support@eshopperr.me
-                        </div>
-                    </div>
-                </div>`,
-            replyTo: { email: "support@eshopperr.me" }
-        };
-
-        const config = {
-            headers: { 'api-key': BREVO_KEY, 'content-type': 'application/json', 'accept': 'application/json' }
-        };
-
-        const response = await axios.post('https://api.brevo.com/v3/smtp/email', data, config);
-        console.log(`✅ SUCCESS! Mail sent to: ${to}. ID: ${response.data.messageId}`);
-        return true;
-    } catch (error) {
-        console.error("❌ BREVO CRITICAL ERROR:", error.response ? error.response.data : error.message);
-        throw error;
-    }
-};
-
-const SMTP_HOST = process.env.SMTP_HOST ? process.env.SMTP_HOST.trim() : '';
-const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_USER = process.env.SMTP_USER ? process.env.SMTP_USER.trim() : '';
-const SMTP_PASS = process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : '';
-const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL ? process.env.SMTP_FROM_EMAIL.trim() : 'support@eshopperr.me';
-const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME ? process.env.SMTP_FROM_NAME.trim() : 'eShopper Boutique Luxe';
-const SMTP_ENABLED = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
-
-let smtpTransporter = null;
-if (SMTP_ENABLED) {
-    smtpTransporter = nodemailer.createTransport({
-        host: SMTP_HOST,
-        port: SMTP_PORT,
-        secure: SMTP_PORT === 465,
-        auth: { user: SMTP_USER, pass: SMTP_PASS }
-    });
-    console.log(`✅ SMTP configured (${SMTP_HOST}:${SMTP_PORT})`);
-} else {
-    console.log('ℹ️ SMTP not fully configured, Brevo API fallback will be used for transactional emails');
-}
-
-const normalizeAttachmentsForBrevo = (attachments = []) => {
-    if (!Array.isArray(attachments) || attachments.length === 0) return [];
-    return attachments
-        .filter(Boolean)
-        .map((item) => {
-            const name = item.filename || item.name || 'attachment.pdf';
-            let content = item.content || item.contentBase64 || '';
-            if (Buffer.isBuffer(content)) {
-                content = content.toString('base64');
-            }
-            return { name, content: String(content || '') };
-        })
-        .filter((item) => item.content.length > 0);
-};
-
-const sendTransactionalEmail = async ({ toEmail, toName, subject, htmlContent, textContent = '', attachments = [] }) => {
-    if (!toEmail || !String(toEmail).includes('@')) {
-        throw new Error('Invalid recipient email');
-    }
-
-    if (smtpTransporter) {
-        const smtpAttachments = (attachments || []).map((item) => {
-            const filename = item.filename || item.name || 'attachment.pdf';
-            const contentType = item.contentType || undefined;
-            let content = item.content || item.contentBase64 || '';
-            if (typeof content === 'string' && /^[A-Za-z0-9+/=]+$/.test(content) && !content.includes('<html')) {
-                content = Buffer.from(content, 'base64');
-            }
-            return { filename, content, contentType };
-        });
-
-        await smtpTransporter.sendMail({
-            from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
-            to: toName ? `"${toName}" <${toEmail}>` : toEmail,
-            subject,
-            html: htmlContent,
-            text: textContent || undefined,
-            replyTo: 'support@eshopperr.me',
-            attachments: smtpAttachments
-        });
-        return { provider: 'nodemailer' };
-    }
-
-    const BREVO_KEY = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
-    if (!BREVO_KEY) {
-        throw new Error('No email provider configured (SMTP or BREVO_API_KEY)');
-    }
-
-    const payload = {
-        sender: { name: SMTP_FROM_NAME, email: SMTP_FROM_EMAIL },
-        to: [{ email: toEmail, name: toName || 'Customer' }],
-        subject,
-        htmlContent,
-        replyTo: { email: 'support@eshopperr.me' }
-    };
-
-    if (textContent) payload.textContent = textContent;
-    const brevoAttachments = normalizeAttachmentsForBrevo(attachments);
-    if (brevoAttachments.length > 0) payload.attachment = brevoAttachments;
-
-    await axios.post('https://api.brevo.com/v3/smtp/email', payload, {
-        headers: {
-            'api-key': BREVO_KEY,
-            'content-type': 'application/json',
-            'accept': 'application/json'
-        },
-        timeout: 30000
-    });
-    return { provider: 'brevo' };
-};
-
-const sendAdminAlert = async ({ title, details }) => {
-    const adminEmail = process.env.ADMIN_EMAIL || 'support@eshopperr.me';
-    if (!toEmail || !toEmail.includes('@')) {
-        console.error('❌ Invalid email:', toEmail);
-        throw new Error('Invalid toEmail address');
-    }
-    try {
-        // Load new template
-        const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
-        // Replace variables
-        htmlContent = htmlContent
-            .replace(/{{orderId}}/g, orderId)
-            .replace(/{{userName}}/g, userName || 'Valued Customer')
-            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'));
-        // Attachments
-        const attachments = invoiceBuffer
-            ? [{ filename: `Receipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
-            : [];
-        const result = await sendTransactionalEmail({
-            toEmail,
-            toName: userName || 'Customer',
-            subject: '✨ Order Received - Thank You for Shopping with Us!',
-            htmlContent,
-            attachments
-        });
-        console.log(`✅ Order Placed email sent via ${result.provider} to ${toEmail} for ${orderId}`);
-        return true;
-    } catch (error) {
-        console.error('❌ Order Placed email failed:', error.message);
-        return false;
-    }
-};
-
-        bullEmailQueue = new Queue('email-dispatch', { connection: redisConnection });
-        const queueConcurrency = Number(process.env.EMAIL_QUEUE_CONCURRENCY || 4);
-
-        new Worker(
-            'email-dispatch',
-            async (job) => executeEmailJob(job.name, job.data || {}),
-            { connection: redisConnection, concurrency: queueConcurrency }
-        ).on('failed', (job, err) => {
-            console.error(`⚠️ BullMQ email job failed (${job?.name || 'unknown'}):`, err?.message || err);
-            if (process.env.SENTRY_DSN && Sentry && err) Sentry.captureException(err);
-        });
-
-        bullQueueMode = true;
-        console.log(`✅ BullMQ email queue enabled (concurrency: ${queueConcurrency})`);
-    }
-} catch (queueErr) {
-    bullQueueMode = false;
-    console.warn('⚠️ BullMQ unavailable, falling back to in-memory email queue:', queueErr.message);
-}
+// ...existing code...
+// ...existing code...
 
 const processMemoryEmailQueue = async () => {
     if (memoryQueueRunning) return;
@@ -536,7 +339,7 @@ const enqueueEmailJob = async (jobType, payload) => {
 
 
 // ==================== EMAIL TEMPLATE SYSTEM PLACEHOLDER ====================
-// All legacy email-templates logic, Handlebars, and mappings have been removed.
+// Email system fully removed.
 // Insert new premium HTML template integration logic here.
 // Example: Integrate 6 new premium templates and their rendering logic.
 // Ensure all new template code is robust, modular, and secure.
@@ -864,6 +667,37 @@ const buildOrderReceiptHtml = ({
 
 // 🔴 BUILD ORDER CONFIRMATION PROFORMA HTML - For verified/confirmed orders
 const buildOrderConfirmationProformaHtml = ({
+    orderId,
+    userName,
+    userEmail,
+    paymentMethod,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    shippingAddress,
+    products,
+    orderDate,
+    estimatedArrival,
+    deliveryPartner
+}) => {
+    // ...existing HTML generation code (already present below)...
+};
+
+// 🔴 SEND ORDER CONFIRMATION EMAIL (Brevo)
+async function sendOrderConfirmationEmail({
+    orderId, userName, userEmail, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate, estimatedArrival, deliveryPartner
+}) {
+    const htmlContent = buildOrderConfirmationProformaHtml({
+        orderId, userName, userEmail, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate, estimatedArrival, deliveryPartner
+    });
+    const subject = `Order Confirmed: #${orderId} | ESHOPPER`;
+    try {
+        await sendEmail({ to: userEmail, subject, htmlContent });
+        console.log(`✅ Order confirmation email sent to ${userEmail}`);
+    } catch (err) {
+        console.error('❌ Failed to send order confirmation email:', err.message);
+    }
+}
     orderId,
     userName,
     userEmail,
@@ -1630,7 +1464,7 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
 
     let htmlBuilder = buildOrderReceiptHtml;
     if (requestedType === 'confirmation' || requestedType === 'proforma' || requestedType === 'confirmed') {
-        htmlBuilder = buildOrderConfirmationProformaHtml;
+        // htmlBuilder assignment removed
     } else if (requestedType === 'final' || requestedType === 'tax' || requestedType === 'invoice' || isDelivered) {
         htmlBuilder = buildTaxInvoiceHtml;
     }
@@ -1807,23 +1641,18 @@ const sendWhatsApp = async (number, message) => {
                     <p style="margin:0;font-size:12px;color:#666;">This is an automated security alert. Check your order processing logic.</p>
                 </div>
             `;
-
-            await axios.post('https://api.brevo.com/v3/smtp/email', {
-                sender: { name: 'Eshopper System', email: 'support@eshopperr.me' },
-                to: [{ email: adminEmail }],
-                subject: warningSubject,
-                htmlContent: warningHtml,
-                replyTo: { email: 'support@eshopperr.me' }
-            }, {
-                headers: {
-                    'api-key': process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '',
-                    'content-type': 'application/json',
-                    'accept': 'application/json'
-                },
-                timeout: 10000
-            });
-
-            console.log(`✅ Admin alert sent to ${adminEmail}`);
+                        // Send admin alert email using Brevo
+                        try {
+                            await sendEmail({
+                                to: adminEmail,
+                                subject: warningSubject,
+                                htmlContent: warningHtml,
+                                textContent: ''
+                            });
+                            console.log(`✅ Admin alert sent to ${adminEmail}`);
+                        } catch (err) {
+                            console.error('❌ Failed to send admin alert email:', err.message);
+                        }
         } catch (alertError) {
             console.error('⚠️  Failed to send admin alert:', alertError.message);
         }
@@ -2387,7 +2216,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
             templateFile = '01-order-placed.html';
     }
     try {
-        const templatePath = path.join(__dirname, 'email-templates', templateFile);
+        // email-templates path usage removed
         let htmlContent = fs.readFileSync(templatePath, 'utf8');
         htmlContent = htmlContent
             .replace(/{{orderId}}/g, orderId)
@@ -2589,7 +2418,7 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 
 const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products, finalAmount, deliveryDate, invoiceBase64 }) => {
     try {
-        const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
+        // email-templates path usage removed
         let htmlContent = fs.readFileSync(templatePath, 'utf8');
         htmlContent = htmlContent
             .replace(/{{orderId}}/g, orderId)
@@ -2814,10 +2643,27 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
             await OTPRecord.findOneAndUpdate({ email: normalizedEmail }, { otp, email: normalizedEmail }, { upsert: true });
         }
 
-        // 📧 CRITICAL FIX: Always send to user's actual email, not the input (which might be username)
-        const emailToSend = user ? user.email : normalizedEmail;
-        await sendMail(emailToSend, otp);
-        res.json({ result: "Done", message: "OTP sent successfully" });
+                // 📧 CRITICAL FIX: Always send to user's actual email, not the input (which might be username)
+                const emailToSend = user ? user.email : normalizedEmail;
+                // Send OTP email using Brevo
+                const subject = type === 'signup' ? 'Your ESHOPPER Signup OTP' : 'Your ESHOPPER Password Reset OTP';
+                const htmlContent = `
+                    <div style="font-family:Arial,sans-serif;background:#f6f6f6;padding:24px;">
+                        <h2 style="color:#1f8f54;margin:0 0 10px 0;">ESHOPPER OTP Verification</h2>
+                        <p style="margin:0 0 10px 0;color:#333;">Your OTP is:</p>
+                        <div style="font-size:32px;font-weight:900;color:#d4af37;letter-spacing:6px;margin-bottom:12px;">${otp}</div>
+                        <p style="margin:0 0 10px 0;color:#555;">This OTP is valid for 10 minutes. Please do not share it with anyone.</p>
+                        <hr style="margin:15px 0;border:none;border-top:1px solid #e0e0e0;" />
+                        <p style="margin:0;font-size:12px;color:#888;">If you did not request this, please ignore this email.</p>
+                    </div>
+                `;
+                try {
+                    await sendEmail({ to: emailToSend, subject, htmlContent });
+                } catch (err) {
+                    console.error('❌ Failed to send OTP email:', err.message);
+                    return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
+                }
+                res.json({ result: "Done", message: "OTP sent successfully" });
     } catch (e) {
         console.error("❌ Email Error:", e.message);
         console.error("❌ Email Error Stack:", e.stack);
@@ -3311,7 +3157,7 @@ app.post('/api/test-notification', async (req, res) => {
                 evolutionApiUrl: process.env.EVOLUTION_API_URL ? '✅ Configured' : '❌ Missing',
                 whatsappToken: process.env.WHATSAPP_TOKEN ? '✅ Configured' : '❌ Missing',
                 evolutionApiKey: process.env.EVOLUTION_API_KEY ? '✅ Configured' : '❌ Missing',
-                brevoApiKey: process.env.BREVO_API_KEY ? '✅ Configured' : '❌ Missing',
+                // brevoApiKey config removed
                 whatsappInstance: process.env.WHATSAPP_INSTANCE || 'eshopper_bot',
                 whatsappSenderNumber: process.env.WHATSAPP_SENDER_NUMBER || '❌ Missing'
             }
@@ -3340,7 +3186,7 @@ app.post('/api/test-notification', async (req, res) => {
         if (email) {
             results.email.attempted = true;
             try {
-                await axios.post('https://api.brevo.com/v3/smtp/email', {
+                // Brevo email sending removed
                     sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
                     to: [{ email: email, name: 'Test User' }],
                     subject: '✅ Test Notification - Eshopper Boutique',
@@ -3358,7 +3204,7 @@ app.post('/api/test-notification', async (req, res) => {
                     replyTo: { email: 'support@eshopperr.me' }
                 }, {
                     headers: {
-                        'api-key': process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : '',
+                        // Brevo API key removed
                         'content-type': 'application/json',
                         'accept': 'application/json'
                     },

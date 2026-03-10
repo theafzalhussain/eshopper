@@ -1,0 +1,119 @@
+<!-- Order Confirmed Email | Boutique Luxe | Ultra-Premium Responsive | Strict Table Layout -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmed - Boutique Luxe</title>
+</head>
+<body style="margin:0;padding:0;background:#0A0A0A;color:#fff;">
+  <table width="100%" bgcolor="#0A0A0A" cellpadding="0" cellspacing="0" style="min-height:100vh;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#181818;border-radius:16px;overflow:hidden;margin:32px 0;max-width:600px;">
+          <!-- Header -->
+          <tr>
+            <td colspan="2" style="padding:32px 24px 12px 24px;text-align:left;background:#0A0A0A;">
+              <img src="{{brandLogo}}" alt="Boutique Luxe Logo" width="120" style="display:block;margin-bottom:12px;">
+              <div style="font-family:serif;font-size:28px;font-weight:900;color:#D4AF37;letter-spacing:2px;">ORDER CONFIRMED</div>
+            </td>
+            <td style="padding:32px 24px 12px 0;text-align:right;background:#0A0A0A;vertical-align:top;">
+              <span style="display:inline-block;padding:6px 18px;background:#1f8f54;color:#fff;font-weight:900;border-radius:16px;font-size:13px;">✔ CONFIRMED</span>
+              <div style="font-size:13px;color:#fff;margin-top:8px;">Order ID:<br><span style="color:#D4AF37;font-weight:700;">#{{orderId}}</span></div>
+            </td>
+          </tr>
+          <!-- Estimated Delivery -->
+          <tr>
+            <td colspan="3" style="padding:0 24px 18px 24px;">
+              <div style="font-size:22px;font-weight:900;color:#D4AF37;margin-bottom:8px;">Expected Arrival: <span style="color:#fff;">{{expectedArrival}}</span></div>
+              <div style="font-size:15px;color:#D4AF37;">Our experts are conducting a 10-point quality check on your items.</div>
+            </td>
+          </tr>
+          <!-- Luxe Promise -->
+          <tr>
+            <td colspan="3" style="padding:0 24px 0 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0 0;">
+                <tr>
+                  <td style="width:33%;text-align:center;padding:12px 0;">
+                    <div style="font-size:15px;color:#D4AF37;font-weight:700;">Quality Check</div>
+                    <div style="font-size:12px;color:#fff;">10-point inspection</div>
+                  </td>
+                  <td style="width:33%;text-align:center;padding:12px 0;">
+                    <div style="font-size:15px;color:#D4AF37;font-weight:700;">Premium Packaging</div>
+                    <div style="font-size:12px;color:#fff;">Eco-friendly luxe box</div>
+                  </td>
+                  <td style="width:33%;text-align:center;padding:12px 0;">
+                    <div style="font-size:15px;color:#D4AF37;font-weight:700;">100% Authentic</div>
+                    <div style="font-size:12px;color:#fff;">Guaranteed genuine</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Order Summary -->
+          <tr>
+            <td colspan="3" style="padding:0 24px 0 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0 0;">
+                <tr style="background:#181818;color:#D4AF37;font-size:14px;font-family:sans-serif;">
+                  <th align="left" style="padding:8px 0;">Item</th>
+                  <th align="center" style="padding:8px 0;">Qty</th>
+                  <th align="right" style="padding:8px 0;">Price</th>
+                </tr>
+                {{#each items}}
+                <tr style="border-bottom:1px solid #222;">
+                  <td style="padding:10px 0;">
+                    <div style="font-weight:700;color:#fff;">{{name}}</div>
+                    <div style="font-size:12px;color:#D4AF37;">Size: {{size}}</div>
+                  </td>
+                  <td align="center" style="padding:10px 0;color:#fff;font-weight:700;">{{qty}}</td>
+                  <td align="right" style="padding:10px 0;color:#D4AF37;font-weight:900;">₹{{price}}</td>
+                </tr>
+                {{/each}}
+              </table>
+            </td>
+          </tr>
+          <!-- Pricing Breakdown -->
+          <tr>
+            <td colspan="3" style="padding:24px 24px 0 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-size:14px;color:#fff;">Subtotal:</td>
+                  <td align="right" style="font-size:14px;color:#fff;">₹{{subtotal}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:14px;color:#fff;">Shipping Charges:</td>
+                  <td align="right" style="font-size:14px;color:#D4AF37;">Free</td>
+                </tr>
+                <tr>
+                  <td style="font-size:14px;color:#fff;">GST (Tax):</td>
+                  <td align="right" style="font-size:14px;color:#fff;">₹{{tax}}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:16px;font-weight:900;color:#D4AF37;">Total Paid:</td>
+                  <td align="right" style="font-size:16px;font-weight:900;color:#D4AF37;">₹{{total}}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Social Proof -->
+          <tr>
+            <td colspan="3" style="padding:24px 24px 0 24px;text-align:center;">
+              <div style="font-size:13px;color:#D4AF37;margin-top:8px;">Join our 50k+ Luxe community on <a href="https://instagram.com/eshopperr.me" style="color:#D4AF37;text-decoration:underline;">Instagram</a></div>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td colspan="3" style="padding:32px 24px 24px 24px;text-align:center;background:#181818;">
+              <a href="https://eshopperr.me" style="color:#D4AF37;text-decoration:none;font-size:14px;font-weight:700;">eshopperr.me</a>
+              <span style="margin:0 12px;color:#D4AF37;">|</span>
+              <a href="https://instagram.com/eshopperr.me" style="color:#D4AF37;text-decoration:none;font-size:14px;"><img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" width="18" style="vertical-align:middle;"> Instagram</a>
+              <span style="margin:0 12px;color:#D4AF37;">|</span>
+              <a href="{{privacyUrl}}" style="color:#D4AF37;text-decoration:none;font-size:14px;">Privacy Policy</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

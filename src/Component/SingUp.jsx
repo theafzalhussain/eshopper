@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { sendOtpAPI, createUserAPI } from '../Store/Services'
+import { createUserAPI } from '../Store/Services'
 import { BASE_URL } from '../constants'
 import { ShieldCheck, User, Mail, Lock, Loader2, ArrowRight, UserPlus, Eye, EyeOff, CheckCircle, AlertCircle, Chrome } from 'lucide-react'
 import { signInWithPopup } from 'firebase/auth'
@@ -113,7 +113,7 @@ export default function SingUp() {
         setGeneralError("")
         setResendTimer(60)
         try {
-            const res = await sendOtpAPI({ email: data.email, type: 'signup' })
+            // sendOtpAPI removed as part of email/OTP system cleanup
             if (res.result === "Done") {
                 alert("OTP resent successfully!")
             }
@@ -246,7 +246,7 @@ export default function SingUp() {
 
         setLoading(true);
         try {
-            const res = await sendOtpAPI({ email: data.email, type: 'signup' })
+            // sendOtpAPI removed as part of email/OTP system cleanup
             if (res.result === "Done") {
                 setMasterStep('email_otp');
                 setResendTimer(60) // Start 60 second timer

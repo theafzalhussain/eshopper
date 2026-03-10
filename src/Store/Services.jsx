@@ -54,7 +54,7 @@ async function fastAPI(endpoint, method = "GET", data = null) {
 
 // --- ALL SYNCED EXPORTS ---
 export const loginAPI = (d) => fastAPI(API_ENDPOINTS.LOGIN, "POST", d);
-export const sendOtpAPI = (d) => fastAPI(API_ENDPOINTS.SEND_OTP, "POST", d);
+// sendOtpAPI removed as part of email/OTP system cleanup
 export const resetPasswordAPI = (d) => fastAPI(API_ENDPOINTS.RESET_PASSWORD, "POST", d);
 export const forgetPasswordAPI = (d) => fastAPI(API_ENDPOINTS.RESET_PASSWORD, "POST", d);
 
