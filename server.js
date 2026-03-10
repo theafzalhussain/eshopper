@@ -34,7 +34,7 @@ const { sendEmail } = require('./src/utils/emailHelper');
  */
 async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
     if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
-    // Brevo/Sendinblue supports attachments as base64
+    // Always map toEmail to to for sendEmail
     const emailOpts = {
         to: toEmail,
         subject,
@@ -47,6 +47,8 @@ async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, a
         // For now, ignore or log
         console.warn('Attachments provided, but not sent (implement if needed)');
     }
+    // Debug: print emailOpts before sending
+    // console.log('[DEBUG] Sending email with:', emailOpts);
     const result = await sendEmail(emailOpts);
     return { provider: 'Brevo', result };
 }
@@ -72,6 +74,10 @@ async function executeEmailJob(jobType, payload) {
             'order-delivered'
         ];
         if (allowedTypes.includes((jobType || '').toLowerCase())) {
+            // Debug: print payload before sending
+            if (!payload || !payload.to || !payload.subject || !payload.htmlContent) {
+                console.error('❌ [DEBUG] Missing email parameter in jobType:', jobType, '| payload:', payload);
+            }
             return await sendEmail(payload);
         } else {
             throw new Error('Unknown email job type: ' + jobType);
