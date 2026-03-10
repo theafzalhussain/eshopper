@@ -33,7 +33,7 @@ try {
         console.log('📱 Loading Firebase Admin from Railway environment variable...');
         firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
         console.log(`✅ Firebase config parsed successfully for project: ${firebaseCredentials.project_id}`);
-    } 
+    }
     // LOCAL DEVELOPMENT: Check for firebase-admin.json file
     else {
         const localPath = path.join(__dirname, 'firebase-admin.json');
@@ -250,9 +250,9 @@ if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     process.exit(1);
 }
 
-cloudinary.config({ 
-    cloud_name: CLOUDINARY_CLOUD_NAME, 
-    api_key: CLOUDINARY_API_KEY, 
+cloudinary.config({
+    cloud_name: CLOUDINARY_CLOUD_NAME,
+    api_key: CLOUDINARY_API_KEY,
     api_secret: CLOUDINARY_API_SECRET
 });
 
@@ -270,16 +270,16 @@ const sanitizeCloudinaryUrl = (url) => {
     return url;
 };
 
-const storage = new CloudinaryStorage({ 
-    cloudinary: cloudinary, 
-    params: { 
-        folder: 'eshoper_master', 
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'eshoper_master',
         allowedFormats: ['jpg', 'png', 'jpeg'],
         resource_type: 'auto'
-    } 
+    }
 });
-const upload = multer({ 
-    storage, 
+const upload = multer({
+    storage,
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg'];
@@ -348,25 +348,25 @@ const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) 
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
 const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
-const User = mongoose.model('User', new mongoose.Schema({ 
-    name: String, 
-    username: { type: String, unique: true, sparse: true }, 
-    email: { type: String, unique: true, sparse: true }, 
-    phone: String, 
+const User = mongoose.model('User', new mongoose.Schema({
+    name: String,
+    username: { type: String, unique: true, sparse: true },
+    email: { type: String, unique: true, sparse: true },
+    phone: String,
     password: { type: String },
     uid: { type: String, unique: true, sparse: true, index: true }, // Firebase UID
     provider: { type: String, enum: ['email', 'google', 'phone'], default: 'email' }, // Auth provider
-    role: { type: String, default: "User" }, 
-    pic: String, 
-    addressline1: String, 
-    city: String, 
-    state: String, 
-    pin: String, 
-    otp: String, 
-    otpExpires: Date, 
+    role: { type: String, default: "User" },
+    pic: String,
+    addressline1: String,
+    city: String,
+    state: String,
+    pin: String,
+    otp: String,
+    otpExpires: Date,
     lastLogin: { type: Date, default: Date.now }, // Track last login
-    failedAttempts: { type: Number, default: 0 }, 
-    lockUntil: Date 
+    failedAttempts: { type: Number, default: 0 },
+    lockUntil: Date
 }, opts));
 const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String, rating: { type: Number, default: 4.5, min: 0, max: 5 }, reviews: { type: Number, default: 0 } }, opts));
 const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
@@ -404,7 +404,7 @@ const Order = mongoose.model('Order', new mongoose.Schema({
     }],
     orderDate: { type: Date, default: Date.now }
 }, opts));
-const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
+const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" } }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
 const generateOrderId = async () => {
@@ -666,22 +666,7 @@ const buildOrderReceiptHtml = ({
 };
 
 // 🔴 BUILD ORDER CONFIRMATION PROFORMA HTML - For verified/confirmed orders
-const buildOrderConfirmationProformaHtml = ({
-    orderId,
-    userName,
-    userEmail,
-    paymentMethod,
-    finalAmount,
-    totalAmount,
-    shippingAmount,
-    shippingAddress,
-    products,
-    orderDate,
-    estimatedArrival,
-    deliveryPartner
-}) => {
-    // ...existing HTML generation code (already present below)...
-};
+// (Already defined below, duplicate removed)
 
 // 🔴 SEND ORDER CONFIRMATION EMAIL (Brevo)
 async function sendOrderConfirmationEmail({
@@ -698,166 +683,6 @@ async function sendOrderConfirmationEmail({
         console.error('❌ Failed to send order confirmation email:', err.message);
     }
 }
-    orderId,
-    userName,
-    userEmail,
-    paymentMethod,
-    finalAmount,
-    totalAmount,
-    shippingAmount,
-    shippingAddress,
-    products,
-    orderDate,
-    estimatedArrival,
-    deliveryPartner
-}) => {
-    const displayName = userName || 'Valued Customer';
-    const safeProducts = Array.isArray(products) ? products : [];
-    const orderDateObj = new Date(orderDate || Date.now());
-    const orderDateText = orderDateObj.toLocaleString('en-IN', {
-        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
-    const expectedDate = new Date(estimatedArrival || (Date.now() + 6 * 24 * 60 * 60 * 1000));
-    const expectedDateText = expectedDate.toLocaleDateString('en-IN', {
-        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-    });
-
-    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
-    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
-    const payable = Number(finalAmount || (subtotal + shipping));
-
-    const partner = deliveryPartner || 'Delhivery';
-    const trackingLink = `${BRAND_SITE_URL}/order-tracking/${encodeURIComponent(orderId || '')}`;
-    const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(trackingLink)}`;
-
-    const rows = safeProducts.map((item, idx) => {
-        const qty = Number(item.qty || 1);
-        const price = Number(item.price || 0);
-        const line = Number(item.total || (qty * price));
-        const itemDesc = item.name ? `${item.name}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}` : 'Product';
-        return `
-            <tr>
-                <td style="width:8%; text-align:center;">${String(idx + 1).padStart(2, '0')}</td>
-                <td style="width:52%;"><strong>${itemDesc}</strong><br/><span style="font-size:10px;color:#555;">Quality Inspected: Yes</span></td>
-                <td style="width:10%; text-align:center; font-weight:700;">${qty}</td>
-                <td style="width:15%; text-align:right; font-weight:700;">₹${price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                <td style="width:15%; text-align:right; font-weight:800; color:#1f8f54;">₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-            </tr>
-        `;
-    }).join('');
-
-    return `
-        <!doctype html>
-        <html>
-        <head>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <style>
-                @page { size: A4 portrait; margin: 12mm; }
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                body { background:#f6f6f4; color:#1a1a1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
-                .wrap { max-width: 900px; margin: 0 auto; padding: 6px; position: relative; }
-                .card { background:#fff; border:2px solid #d4af37; border-radius:12px; overflow:hidden; position:relative; }
-                .watermark { position:absolute; top:110px; left:50%; transform:translateX(-50%) rotate(-18deg); color:rgba(31,143,84,0.10); font-size:52px; font-weight:900; letter-spacing:2px; white-space:nowrap; }
-                .head { padding:18px 20px; background:#faf8f2; border-bottom:1px solid #eadfbf; }
-                .brand { display:flex; align-items:center; gap:10px; }
-                .brand img { width:42px; height:42px; border-radius:8px; border:1px solid #d4af37; background:#fff; object-fit:contain; }
-                .brand-title { font-size:22px; font-weight:900; color:#8b7521; }
-                .title { margin-top:10px; font-size:15px; letter-spacing:1.5px; text-transform:uppercase; font-weight:800; color:#2a2a2a; }
-                .badge { display:inline-block; margin-top:10px; background:linear-gradient(135deg,#1f8f54,#16a34a); color:#fff; font-size:11px; font-weight:900; padding:7px 12px; border-radius:14px; }
-                .body { padding:20px; }
-                .delivery { border:1px solid #d4af37; border-radius:10px; padding:14px; background:#fffaf0; margin-bottom:16px; }
-                .delivery .k { font-size:10px; letter-spacing:1px; color:#8b7521; font-weight:800; text-transform:uppercase; }
-                .delivery .v { margin-top:7px; font-size:18px; color:#111; font-weight:900; }
-                .delivery .sub { margin-top:4px; font-size:12px; color:#555; }
-                .meta { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
-                .box { border:1px solid #e6dcc4; border-radius:8px; padding:10px; background:#fcfbf8; }
-                .box .k { font-size:10px; color:#7c6b3a; text-transform:uppercase; letter-spacing:1px; font-weight:800; }
-                .box .v { margin-top:6px; font-size:12px; font-weight:700; color:#222; }
-                table { width:100%; border-collapse:collapse; }
-                th { background:#1a1a1a; color:#d4af37; text-transform:uppercase; font-size:10px; letter-spacing:1px; font-weight:800; padding:10px 8px; text-align:left; }
-                td { border:1px solid #ececec; padding:10px 8px; font-size:12px; }
-                tbody tr:nth-child(odd) { background:#ffffff; }
-                tbody tr:nth-child(even) { background:#f3f3f3; }
-                .summary { margin-top:14px; margin-left:auto; width:280px; border:1px solid #dadada; border-radius:8px; padding:10px 12px; }
-                .row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; font-size:12px; }
-                .row:last-child { border-bottom:none; }
-                .grand { font-weight:900; font-size:15px; color:#0f0f0f; }
-                .footer { display:flex; justify-content:space-between; gap:14px; margin-top:18px; }
-                .terms { flex:1; border-left:3px solid #d4af37; background:#faf8f2; padding:10px 12px; font-size:10.5px; color:#555; line-height:1.6; }
-                .qr { width:120px; text-align:center; }
-                .qr img { width:90px; height:90px; border:1px solid #d4af37; border-radius:6px; background:#fff; }
-                .qr p { font-size:10px; color:#666; margin-top:6px; }
-                @media (max-width:700px) {
-                    .meta { grid-template-columns:1fr; }
-                    .footer { flex-direction:column; }
-                    .summary { width:100%; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="wrap">
-                <div class="card">
-                    <div class="watermark">Verified & Confirmed</div>
-                    <div class="head">
-                        <div class="brand">
-                            <div style="font-size:48px; font-weight:900; color:#d4af37; margin-bottom:8px;">💎</div>
-                            <div class="brand-title">eShopper Boutique Luxe</div>
-                        </div>
-                        <div class="title">Order Confirmation Proforma Invoice</div>
-                        <span class="badge">Verified & Confirmed</span>
-                    </div>
-
-                    <div class="body">
-                        <div class="delivery">
-                            <div class="k">Expected Delivery</div>
-                            <div class="v">${expectedDateText}</div>
-                            <div class="sub">Delivery Partner: ${partner}</div>
-                        </div>
-
-                        <div class="meta">
-                            <div class="box"><div class="k">Order ID</div><div class="v">${orderId || '-'}</div></div>
-                            <div class="box"><div class="k">Date</div><div class="v">${orderDateText}</div></div>
-                            <div class="box"><div class="k">Payment</div><div class="v">${paymentMethod || 'COD'} | ₹${payable.toLocaleString('en-IN')}</div></div>
-                        </div>
-
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width:8%">#</th>
-                                    <th style="width:52%">Itemized Detail</th>
-                                    <th style="width:10%">Qty</th>
-                                    <th style="width:15%">Unit</th>
-                                    <th style="width:15%">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rows || '<tr><td colspan="5" style="text-align:center">No items found</td></tr>'}</tbody>
-                        </table>
-
-                        <div class="summary">
-                            <div class="row"><span>Subtotal</span><span>₹${subtotal.toLocaleString('en-IN')}</span></div>
-                            <div class="row"><span>Shipping</span><span>${shipping <= 0 ? 'Free' : `₹${shipping.toLocaleString('en-IN')}`}</span></div>
-                            <div class="row grand"><span>Grand Total</span><span>₹${payable.toLocaleString('en-IN')}</span></div>
-                        </div>
-
-                        <div class="footer">
-                            <div class="terms">
-                                <strong>Cancellation & Return Policy (Summary):</strong><br/>
-                                Orders can be cancelled before dispatch. Return requests are accepted as per policy window for eligible items in original condition with tags and packaging intact.
-                            </div>
-                            <div class="qr">
-                                <img src="${qrSrc}" alt="Support QR"/>
-                                <p>Scan to open Order Tracking</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
-};
 
 // 🔴 BUILD TAX INVOICE HTML - For download after delivery with legal compliance
 const buildTaxInvoiceHtml = ({
@@ -1468,7 +1293,7 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
     } else if (requestedType === 'final' || requestedType === 'tax' || requestedType === 'invoice' || isDelivered) {
         htmlBuilder = buildTaxInvoiceHtml;
     }
-    
+
     const html = htmlBuilder(orderPayload);
     let browser;
     try {
@@ -1486,14 +1311,14 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
         });
 
         const page = await browser.newPage();
-        
+
         // Set viewport
         await page.setViewport({ width: 1200, height: 1600 });
-        
+
         // Set content with longer timeout
-        await page.setContent(html, { 
+        await page.setContent(html, {
             waitUntil: ['networkidle0', 'domcontentloaded'],
-            timeout: 90000 
+            timeout: 90000
         });
 
         // Wait for web fonts/styles to settle (safe across Puppeteer versions)
@@ -1501,13 +1326,13 @@ const generateInvoicePdfBuffer = async (orderPayload) => {
             if (document.fonts && document.fonts.ready) {
                 try {
                     await document.fonts.ready;
-                } catch (_) {}
+                } catch (_) { }
             }
         });
-        
+
         // Wait for any animations/fonts to load
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         // Generate PDF
         const pdfRaw = await page.pdf({
             format: 'A4',
@@ -1641,18 +1466,18 @@ const sendWhatsApp = async (number, message) => {
                     <p style="margin:0;font-size:12px;color:#666;">This is an automated security alert. Check your order processing logic.</p>
                 </div>
             `;
-                        // Send admin alert email using Brevo
-                        try {
-                            await sendEmail({
-                                to: adminEmail,
-                                subject: warningSubject,
-                                htmlContent: warningHtml,
-                                textContent: ''
-                            });
-                            console.log(`✅ Admin alert sent to ${adminEmail}`);
-                        } catch (err) {
-                            console.error('❌ Failed to send admin alert email:', err.message);
-                        }
+            // Send admin alert email using Brevo
+            try {
+                await sendEmail({
+                    to: adminEmail,
+                    subject: warningSubject,
+                    htmlContent: warningHtml,
+                    textContent: ''
+                });
+                console.log(`✅ Admin alert sent to ${adminEmail}`);
+            } catch (err) {
+                console.error('❌ Failed to send admin alert email:', err.message);
+            }
         } catch (alertError) {
             console.error('⚠️  Failed to send admin alert:', alertError.message);
         }
@@ -1665,7 +1490,7 @@ const sendWhatsApp = async (number, message) => {
 
     try {
         const endpoint = `${apiUrl}/message/sendText/${instance}`;
-        
+
         // Use only the strict normalized format
         const payloadFormats = [
             // Format 1: Standard (number with 91 prefix)
@@ -1695,9 +1520,9 @@ const sendWhatsApp = async (number, message) => {
         for (let i = 0; i < payloadFormats.length; i++) {
             try {
                 const payload = payloadFormats[i];
-                const displayPayload = { 
-                    ...payload, 
-                    text: payload.text?.substring(0, 30) + '...' || payload.message?.substring(0, 30) + '...' 
+                const displayPayload = {
+                    ...payload,
+                    text: payload.text?.substring(0, 30) + '...' || payload.message?.substring(0, 30) + '...'
                 };
                 console.log(`   Attempt ${i + 1} with payload:`, displayPayload);
 
@@ -1849,12 +1674,12 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
     try {
         const endpoint = `${apiUrl}/message/sendMedia/${instance}`;
         const mediaCaption = String(caption).trim();
-        
+
         // 🔴 VALIDATE MEDIA URL WITH BETTER ERROR HANDLING
         let mediaUrlValid = true;
         try {
             console.log(`🔍 Validating media URL: ${mediaUrl}`);
-            const urlCheck = await axios.head(mediaUrl, { 
+            const urlCheck = await axios.head(mediaUrl, {
                 timeout: 8000,
                 maxRedirects: 5,
                 headers: { 'User-Agent': 'Eshopper-WhatsApp-Client/1.0' }
@@ -2005,7 +1830,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
         if (status === 'Packed') {
             // 📦 PACKED: WhatsApp + Email (Parallel)
             const whatsappMsg = `📦 YOUR ORDER IS BEAUTIFULLY PACKED! ✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is now expertly packed!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Packed & Ready to Ship\n💎 Quality Check: Completed\n🎁 Premium Packaging: Applied\n\n📅 NEXT STEPS:\n→ Your order will ship out within 24 hours\n→ You'll receive a tracking update shortly\n→ Expected delivery by: ${estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Soon'}\n\n🔗 TRACK NOW: ${trackingLink}\n\n💬 Questions? Reply to this message\n📞 Call: 8447859784\n\n🙏 Thank you for choosing Eshopper Boutique! 💎`;
-            
+
             // Send both WhatsApp and Email in parallel
             const packedResults = await Promise.allSettled([
                 sendWhatsApp(phone, whatsappMsg).then(() => {
@@ -2259,7 +2084,7 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
     try {
         const firstName = (userName || 'Valued Customer').split(' ')[0];
         const safeProducts = Array.isArray(products) ? products : [];
-        
+
         const productRows = safeProducts.slice(0, 3).map(p => `
             <tr>
                 <td style="padding:14px; border-bottom:1px solid #222; vertical-align:middle;">
@@ -2441,47 +2266,7 @@ const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products
         console.error('❌ Confirmation email failed:', error.message);
         return false;
     }
-                    <div class="amount-row">
-                        <div class="amount-label">Subtotal</div>
-                        <div class="amount-value">₹${(finalAmount * 0.95).toLocaleString('en-IN')}</div>
-                    </div>
-                    <div class="amount-row">
-                        <div class="amount-label">Shipping</div>
-                        <div class="amount-value">FREE 🎁</div>
-                    </div>
-                </div>
-            </div>
-            <!-- FOOTER -->
-            <div class="footer">
-                <div class="footer-brand">✨ eShopper ✨</div>
-                <div class="footer-text">
-                    Thank you for choosing eShopper. We're committed to delivering excellence.<br><br>
-                    <strong>Need help?</strong> Reach us at <a href="mailto:support@eshopperr.me" style="color:#d4af37; text-decoration:none; font-weight:900;">support@eshopperr.me</a> or via WhatsApp
-                </div>
-            </div>
-        </div>
-    </body>
-</html>`;
-
-        const attachments = [];
-        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
-            attachments.push({ filename: `Confirmation-${orderId}.pdf`, content: invoiceBase64.trim(), contentType: 'application/pdf' });
-        }
-
-        const result = await sendTransactionalEmail({
-            toEmail,
-            toName: displayName,
-            subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
-            htmlContent,
-            attachments
-        });
-
-        console.log(`✅ Confirmation email sent via ${result.provider} to ${toEmail}`);
-        return true;
-    } catch (error) {
-        console.error('❌ Confirmation email failed:', error.message);
-        return false;
-    }
+// (Removed invalid HTML/JSX and misplaced template code. Email templates should be in separate HTML files, not inline in server.js)
 };
 
 // ============ FIREBASE AUTH SYNC ROUTE ============
@@ -2514,7 +2299,7 @@ app.post('/api/auth-sync', async (req, res) => {
         let decodedToken;
         try {
             decodedToken = await admin.auth().verifyIdToken(idToken);
-            console.log(`✅ Firebase token verified for UID: ${decodedToken.uid}`);
+            console.log(`✅ Firebase token verified for UID: ${ decodedToken.uid } `);
         } catch (err) {
             console.error("❌ Firebase token verification failed:", err.message);
             return res.status(401).json({ message: "Invalid or expired token" });
@@ -2522,7 +2307,7 @@ app.post('/api/auth-sync', async (req, res) => {
 
         // Ensure UID matches
         if (decodedToken.uid !== uid) {
-            console.warn(`⚠️  UID mismatch: ${decodedToken.uid} !== ${uid}`);
+            console.warn(`⚠️  UID mismatch: ${ decodedToken.uid } !== ${ uid } `);
             return res.status(401).json({ message: "UID mismatch" });
         }
 
@@ -2533,7 +2318,7 @@ app.post('/api/auth-sync', async (req, res) => {
 
         if (user) {
             // ✅ USER EXISTS - UPDATE LOGIN TIMESTAMP & PROVIDER INFO
-            console.log(`📝 Updating existing user: ${user.email}`);
+            console.log(`📝 Updating existing user: ${ user.email } `);
             user.lastLogin = new Date();
             
             // Update additional info if provided
@@ -2543,7 +2328,7 @@ app.post('/api/auth-sync', async (req, res) => {
             if (email && !user.email) user.email = email;
             
             await user.save();
-            console.log(`✅ User updated successfully: ${user.email}`);
+            console.log(`✅ User updated successfully: ${ user.email } `);
         } else {
             // 🔗 LINK EXISTING ACCOUNT BY EMAIL/PHONE (prevents duplicate key errors)
             if (normalizedEmail) {
@@ -2555,7 +2340,7 @@ app.post('/api/auth-sync', async (req, res) => {
             }
 
             if (user) {
-                console.log(`🔗 Linking existing account to Firebase UID: ${user.email || user.phone}`);
+                console.log(`🔗 Linking existing account to Firebase UID: ${ user.email || user.phone } `);
                 user.uid = uid;
                 user.provider = provider;
                 user.lastLogin = new Date();
@@ -2564,10 +2349,10 @@ app.post('/api/auth-sync', async (req, res) => {
                 if (normalizedPhone && !user.phone) user.phone = normalizedPhone;
                 if (normalizedEmail && !user.email) user.email = normalizedEmail;
                 await user.save();
-                console.log(`✅ Existing account linked successfully: ${user.email || user.phone}`);
+                console.log(`✅ Existing account linked successfully: ${ user.email || user.phone } `);
             } else {
                 // 🆕 NEW USER - CREATE ACCOUNT
-                console.log(`🆕 Creating new user with UID: ${uid}`);
+                console.log(`🆕 Creating new user with UID: ${ uid } `);
 
                 // Generate unique username from email or name
                 let generatedUsername = null;
@@ -2582,7 +2367,7 @@ app.post('/api/auth-sync', async (req, res) => {
                     let counter = 1;
                     let baseUsername = generatedUsername;
                     while (await User.findOne({ username: generatedUsername })) {
-                        generatedUsername = `${baseUsername}${counter}`;
+                        generatedUsername = `${ baseUsername }${ counter } `;
                         counter++;
                     }
                 }
@@ -2607,7 +2392,7 @@ app.post('/api/auth-sync', async (req, res) => {
                 }
 
                 await user.save();
-                console.log(`✅ New user created: ${user.email || user.phone}`);
+                console.log(`✅ New user created: ${ user.email || user.phone } `);
             }
         }
 
@@ -2648,15 +2433,15 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
                 // Send OTP email using Brevo
                 const subject = type === 'signup' ? 'Your ESHOPPER Signup OTP' : 'Your ESHOPPER Password Reset OTP';
                 const htmlContent = `
-                    <div style="font-family:Arial,sans-serif;background:#f6f6f6;padding:24px;">
+    < div style = "font-family:Arial,sans-serif;background:#f6f6f6;padding:24px;" >
                         <h2 style="color:#1f8f54;margin:0 0 10px 0;">ESHOPPER OTP Verification</h2>
                         <p style="margin:0 0 10px 0;color:#333;">Your OTP is:</p>
                         <div style="font-size:32px;font-weight:900;color:#d4af37;letter-spacing:6px;margin-bottom:12px;">${otp}</div>
                         <p style="margin:0 0 10px 0;color:#555;">This OTP is valid for 10 minutes. Please do not share it with anyone.</p>
                         <hr style="margin:15px 0;border:none;border-top:1px solid #e0e0e0;" />
                         <p style="margin:0;font-size:12px;color:#888;">If you did not request this, please ignore this email.</p>
-                    </div>
-                `;
+                    </div >
+    `;
                 try {
                     await sendEmail({ to: emailToSend, subject, htmlContent });
                 } catch (err) {
@@ -2726,7 +2511,7 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
         
         await user.save();
         
-        console.log(`✅ Password reset successful for user: ${user.username}`);
+        console.log(`✅ Password reset successful for user: ${ user.username } `);
         res.json({ result: "Done", message: "Password updated successfully!" });
         
     } catch (e) {
@@ -2760,7 +2545,7 @@ app.post('/login', authLimiter, async (req, res) => {
         if (user && user.lockUntil && Date.now() < user.lockUntil) {
             const minutesRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
             return res.status(403).json({ 
-                message: `Account temporarily locked due to multiple failed login attempts. Try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.`,
+                message: `Account temporarily locked due to multiple failed login attempts.Try again in ${ minutesRemaining } minute${ minutesRemaining > 1 ? 's' : '' }.`,
                 remainingMinutes: minutesRemaining
             });
         }
@@ -2773,10 +2558,10 @@ app.post('/login', authLimiter, async (req, res) => {
                                   user.provider === 'phone' ? 'Phone Login' :
                                   'your authentication provider';
                 
-                console.warn(`⚠️ Login attempt by ${user.provider} user via manual login: ${user.email || user.username}`);
+                console.warn(`⚠️ Login attempt by ${ user.provider } user via manual login: ${ user.email || user.username } `);
                 
                 return res.status(403).json({ 
-                    message: `This account uses ${authMethod}. Use ${authMethod} to sign in or set a password using Forgot Password.`,
+                    message: `This account uses ${ authMethod }. Use ${ authMethod } to sign in or set a password using Forgot Password.`,
                     provider: user.provider,
                     requiresFirebaseAuth: true
                 });
@@ -2790,7 +2575,7 @@ app.post('/login', authLimiter, async (req, res) => {
                 user.lastLogin = new Date();
                 await user.save();
                 
-                console.log(`✅ Login successful: ${user.email || user.username}`);
+                console.log(`✅ Login successful: ${ user.email || user.username } `);
                 const { password: _pw, otp: _otp, otpExpires: _exp, failedAttempts: _fa, lockUntil: _lu, ...safeUser } = user.toJSON();
                 return res.json(safeUser);
             }
@@ -2804,7 +2589,7 @@ app.post('/login', authLimiter, async (req, res) => {
             if (user.failedAttempts >= 5) {
                 user.lockUntil = new Date(Date.now() + 15 * 60000); // 15 minutes
                 await user.save();
-                console.warn(`🔒 Account locked: ${user.email || user.username} - Too many failed attempts`);
+                console.warn(`🔒 Account locked: ${ user.email || user.username } - Too many failed attempts`);
                 return res.status(403).json({ 
                     message: "Too many failed login attempts. Account locked for 15 minutes.",
                     remainingMinutes: 15
@@ -2812,9 +2597,9 @@ app.post('/login', authLimiter, async (req, res) => {
             }
             
             await user.save();
-            console.warn(`⚠️ Failed login attempt #${user.failedAttempts}: ${user.email || user.username}`);
+            console.warn(`⚠️ Failed login attempt #${ user.failedAttempts }: ${ user.email || user.username } `);
         } else {
-            console.warn(`⚠️ Login attempt for non-existent user: ${searchTerm}`);
+            console.warn(`⚠️ Login attempt for non - existent user: ${ searchTerm } `);
         }
 
         return res.status(401).json({ message: "Invalid Credentials" });
@@ -2832,119 +2617,119 @@ const handle = (path, Model, useUpload = false) => {
             
             // If Product model, return image URLs as-is from Cloudinary
             if (path === '/product') {
-                console.log(`📦 Fetching ${data.length} products...`);
+                console.log(`📦 Fetching ${ data.length } products...`);
                 data.forEach((product, idx) => {
                     if (product.pic1) product.pic1 = sanitizeCloudinaryUrl(product.pic1);
                     if (product.pic2) product.pic2 = sanitizeCloudinaryUrl(product.pic2);
                     if (product.pic3) product.pic3 = sanitizeCloudinaryUrl(product.pic3);
                     if (product.pic4) product.pic4 = sanitizeCloudinaryUrl(product.pic4);
                     if (idx === 0 && product.pic1) {
-                        console.log(`✅ Sample Product pic1: ${product.pic1.substring(0, 60)}...`);
+                        console.log(`✅ Sample Product pic1: ${ product.pic1.substring(0, 60) }...`);
                     }
                 });
             }
             
             res.json(data);
         } catch (e) { 
-            console.error(`❌ Error fetching ${path}:`, e.message);
+            console.error(`❌ Error fetching ${ path }: `, e.message);
             res.status(500).json({ error: "Failed to fetch data." }); 
         }
     });
-    app.get(`${path}/:id`, async (req, res) => {
-        try {
-            const data = await Model.findById(req.params.id);
-            if (!data) return res.status(404).json({ error: "Not found." });
-            
-            // Return image URLs as-is from Cloudinary for single product
-            if (path === '/product') {
-                if (data.pic1) data.pic1 = sanitizeCloudinaryUrl(data.pic1);
-                if (data.pic2) data.pic2 = sanitizeCloudinaryUrl(data.pic2);
-                if (data.pic3) data.pic3 = sanitizeCloudinaryUrl(data.pic3);
-                if (data.pic4) data.pic4 = sanitizeCloudinaryUrl(data.pic4);
-            }
-            
-            res.json(data);
-        } catch (e) { res.status(500).json({ error: "Failed to fetch item." }); }
+    app.get(`${ path }/:id`, async (req, res) => {
+try {
+    const data = await Model.findById(req.params.id);
+    if (!data) return res.status(404).json({ error: "Not found." });
+
+    // Return image URLs as-is from Cloudinary for single product
+    if (path === '/product') {
+        if (data.pic1) data.pic1 = sanitizeCloudinaryUrl(data.pic1);
+        if (data.pic2) data.pic2 = sanitizeCloudinaryUrl(data.pic2);
+        if (data.pic3) data.pic3 = sanitizeCloudinaryUrl(data.pic3);
+        if (data.pic4) data.pic4 = sanitizeCloudinaryUrl(data.pic4);
+    }
+
+    res.json(data);
+} catch (e) { res.status(500).json({ error: "Failed to fetch item." }); }
     });
-    app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
-        try {
-            if (path === '/user' && req.body.otp) {
-                const normalizedEmail = req.body.email.toLowerCase().trim();
-                const record = await OTPRecord.findOne({ email: normalizedEmail, otp: req.body.otp });
-                if (!record) return res.status(400).json({ message: "Invalid OTP" });
-                await OTPRecord.deleteOne({ email: normalizedEmail });
-                req.body.email = normalizedEmail;
-                req.body.username = req.body.username.toLowerCase().trim();
-            }
-            if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
-            let d = new Model(req.body);
-            if (req.files) {
-                if (req.files.pic) d.pic = req.files.pic[0].path;
-                if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
-                if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
-                if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
-                if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
-                
-                console.log(`📤 Files uploaded for ${path}:`, {
-                    pic1: d.pic1 ? '✅' : '❌',
-                    pic2: d.pic2 ? '✅' : '❌',
-                    pic3: d.pic3 ? '✅' : '❌',
-                    pic4: d.pic4 ? '✅' : '❌'
-                });
-            }
-            await d.save(); res.status(201).json(d);
-        } catch (e) { 
-            console.error(`❌ Error creating ${path}:`, e.message);
-            res.status(400).json(e); 
+app.post(path, useUpload ? upload : (req, res, next) => next(), async (req, res) => {
+    try {
+        if (path === '/user' && req.body.otp) {
+            const normalizedEmail = req.body.email.toLowerCase().trim();
+            const record = await OTPRecord.findOne({ email: normalizedEmail, otp: req.body.otp });
+            if (!record) return res.status(400).json({ message: "Invalid OTP" });
+            await OTPRecord.deleteOne({ email: normalizedEmail });
+            req.body.email = normalizedEmail;
+            req.body.username = req.body.username.toLowerCase().trim();
         }
-    });
-    app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
-        try {
-            let upData = { ...req.body };
-            if (req.files) { 
-                if (req.files.pic) upData.pic = req.files.pic[0].path; 
-                if (req.files.pic1) upData.pic1 = req.files.pic1[0].path;
-                if (req.files.pic2) upData.pic2 = req.files.pic2[0].path;
-                if (req.files.pic3) upData.pic3 = req.files.pic3[0].path;
-                if (req.files.pic4) upData.pic4 = req.files.pic4[0].path;
-                
-                console.log(`📤 Files updated for ${path}:`, {
-                    pic1: upData.pic1 ? '✅' : '❌',
-                    pic2: upData.pic2 ? '✅' : '❌',
-                    pic3: upData.pic3 ? '✅' : '❌',
-                    pic4: upData.pic4 ? '✅' : '❌'
-                });
-            }
-            
-            if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
-                const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
-            } else if (path === '/user') { delete upData.password; }
-            const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); 
-            res.json(d);
-        } catch (e) { 
-            console.error(`❌ Error updating ${path}:`, e.message);
-            res.status(500).json({ error: e.message }); 
+        if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
+        let d = new Model(req.body);
+        if (req.files) {
+            if (req.files.pic) d.pic = req.files.pic[0].path;
+            if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
+            if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
+            if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
+            if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
+
+            console.log(`📤 Files uploaded for ${path}:`, {
+                pic1: d.pic1 ? '✅' : '❌',
+                pic2: d.pic2 ? '✅' : '❌',
+                pic3: d.pic3 ? '✅' : '❌',
+                pic4: d.pic4 ? '✅' : '❌'
+            });
         }
-    });
-    app.delete(`${path}/:id`, async (req, res) => {
-        try {
-            await Model.findByIdAndDelete(req.params.id);
-            res.json({ result: "Done" });
-        } catch (e) { 
-            console.error(`❌ Error deleting from ${path}:`, e.message);
-            res.status(500).json({ error: "Failed to delete." }); 
+        await d.save(); res.status(201).json(d);
+    } catch (e) {
+        console.error(`❌ Error creating ${path}:`, e.message);
+        res.status(400).json(e);
+    }
+});
+app.put(`${path}/:id`, useUpload ? upload : (req, res, next) => next(), async (req, res) => {
+    try {
+        let upData = { ...req.body };
+        if (req.files) {
+            if (req.files.pic) upData.pic = req.files.pic[0].path;
+            if (req.files.pic1) upData.pic1 = req.files.pic1[0].path;
+            if (req.files.pic2) upData.pic2 = req.files.pic2[0].path;
+            if (req.files.pic3) upData.pic3 = req.files.pic3[0].path;
+            if (req.files.pic4) upData.pic4 = req.files.pic4[0].path;
+
+            console.log(`📤 Files updated for ${path}:`, {
+                pic1: upData.pic1 ? '✅' : '❌',
+                pic2: upData.pic2 ? '✅' : '❌',
+                pic3: upData.pic3 ? '✅' : '❌',
+                pic4: upData.pic4 ? '✅' : '❌'
+            });
         }
-    });
+
+        if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
+            const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
+        } else if (path === '/user') { delete upData.password; }
+        const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true });
+        res.json(d);
+    } catch (e) {
+        console.error(`❌ Error updating ${path}:`, e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+app.delete(`${path}/:id`, async (req, res) => {
+    try {
+        await Model.findByIdAndDelete(req.params.id);
+        res.json({ result: "Done" });
+    } catch (e) {
+        console.error(`❌ Error deleting from ${path}:`, e.message);
+        res.status(500).json({ error: "Failed to delete." });
+    }
+});
 };
 
-handle('/user', User, true); 
-handle('/product', Product, true); 
+handle('/user', User, true);
+handle('/product', Product, true);
 handle('/maincategory', Maincategory);
-handle('/subcategory', Subcategory); 
-handle('/brand', Brand); 
+handle('/subcategory', Subcategory);
+handle('/brand', Brand);
 handle('/cart', Cart);
-handle('/wishlist', Wishlist); 
-handle('/checkout', Checkout); 
+handle('/wishlist', Wishlist);
+handle('/checkout', Checkout);
 handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
@@ -3067,54 +2852,54 @@ const placeOrderHandler = async (req, res) => {
 
         // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
-        try {
-            const phoneNumber = addressPayload?.phone || user.phone;
-            
-            console.log(`\n🔔 WhatsApp Notification Debug for Order ${orderId}:`);
-            console.log(`   User: ${user.name} (${userId})`);
-            console.log(`   Email: ${user.email}`);
-            console.log(`   Phone from profile: "${user.phone || 'NOT SET'}"`);
-            console.log(`   Phone from address: "${addressPayload?.phone || 'NOT PROVIDED'}"`);
-            console.log(`   Final phone: "${phoneNumber || 'MISSING'}"\n`);
-            
-            if (!phoneNumber) {
-                console.log(`ℹ️  WhatsApp SKIPPED - No phone number in profile. User should update profile at: https://eshopperr.me/profile\n`);
-            } else {
-                const itemSummary = cleanProducts
-                    .slice(0, 5)
-                    .map((item, idx) => `   ${idx + 1}. ${item.name}\n      Qty: ${item.qty} | Rate: ₹${Number(item.price || 0).toLocaleString('en-IN')} | Subtotal: ₹${Number(item.total || 0).toLocaleString('en-IN')}`)
-                    .join('\n');
+            try {
+                const phoneNumber = addressPayload?.phone || user.phone;
 
-                const savedAmount = total - payable;
-                const discountInfo = savedAmount > 0 ? `\n💰 Total Savings: ₹${Number(savedAmount).toLocaleString('en-IN')}` : '';
-                const estimatedDays = 5; // Default 5 days delivery
-                const deliveryDate = new Date();
-                deliveryDate.setDate(deliveryDate.getDate() + estimatedDays);
-                const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                console.log(`\n🔔 WhatsApp Notification Debug for Order ${orderId}:`);
+                console.log(`   User: ${user.name} (${userId})`);
+                console.log(`   Email: ${user.email}`);
+                console.log(`   Phone from profile: "${user.phone || 'NOT SET'}"`);
+                console.log(`   Phone from address: "${addressPayload?.phone || 'NOT PROVIDED'}"`);
+                console.log(`   Final phone: "${phoneNumber || 'MISSING'}"\n`);
 
-                const whatsappMsg = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')}\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT: ${paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod || 'Card'}\n\n📅 ESTIMATED DELIVERY: ${formattedDeliveryDate}\n\n🎯 NEXT STEPS:\n✓ We're preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery\n\n🔗 TRACK: https://eshopperr.me/order-tracking/${orderId}\n\n🙏 Thank you for your business!\nEshopper Boutique Luxe`;
+                if (!phoneNumber) {
+                    console.log(`ℹ️  WhatsApp SKIPPED - No phone number in profile. User should update profile at: https://eshopperr.me/profile\n`);
+                } else {
+                    const itemSummary = cleanProducts
+                        .slice(0, 5)
+                        .map((item, idx) => `   ${idx + 1}. ${item.name}\n      Qty: ${item.qty} | Rate: ₹${Number(item.price || 0).toLocaleString('en-IN')} | Subtotal: ₹${Number(item.total || 0).toLocaleString('en-IN')}`)
+                        .join('\n');
 
-                try {
-                    console.log(`📤 Sending WhatsApp to ${phoneNumber} for order ${orderId}`);
-                    await sendWhatsApp(phoneNumber, whatsappMsg);
-                    console.log(`✅ WhatsApp sent for order ${orderId}`);
-                } catch (waErr) {
-                    if (isExpectedWhatsAppError(waErr)) {
-                        console.log(`ℹ️  WhatsApp skipped for ${orderId}:`, waErr.message);
-                    } else {
-                        console.error(`⚠️  WhatsApp failed for ${orderId}:`, waErr.message);
-                        if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                    const savedAmount = total - payable;
+                    const discountInfo = savedAmount > 0 ? `\n💰 Total Savings: ₹${Number(savedAmount).toLocaleString('en-IN')}` : '';
+                    const estimatedDays = 5; // Default 5 days delivery
+                    const deliveryDate = new Date();
+                    deliveryDate.setDate(deliveryDate.getDate() + estimatedDays);
+                    const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                    const whatsappMsg = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')}\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT: ${paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod || 'Card'}\n\n📅 ESTIMATED DELIVERY: ${formattedDeliveryDate}\n\n🎯 NEXT STEPS:\n✓ We're preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery\n\n🔗 TRACK: https://eshopperr.me/order-tracking/${orderId}\n\n🙏 Thank you for your business!\nEshopper Boutique Luxe`;
+
+                    try {
+                        console.log(`📤 Sending WhatsApp to ${phoneNumber} for order ${orderId}`);
+                        await sendWhatsApp(phoneNumber, whatsappMsg);
+                        console.log(`✅ WhatsApp sent for order ${orderId}`);
+                    } catch (waErr) {
+                        if (isExpectedWhatsAppError(waErr)) {
+                            console.log(`ℹ️  WhatsApp skipped for ${orderId}:`, waErr.message);
+                        } else {
+                            console.error(`⚠️  WhatsApp failed for ${orderId}:`, waErr.message);
+                            if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                        }
                     }
                 }
+            } catch (waError) {
+                if (isExpectedWhatsAppError(waError)) {
+                    console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waError.message);
+                } else {
+                    console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
+                    if (process.env.SENTRY_DSN) Sentry.captureException(waError);
+                }
             }
-        } catch (waError) {
-            if (isExpectedWhatsAppError(waError)) {
-                console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waError.message);
-            } else {
-                console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(waError);
-            }
-        }
         }
 
         return res.status(201).json({
@@ -3144,9 +2929,9 @@ app.post('/api/test-notification', async (req, res) => {
         const { phone, email, testType } = req.body;
 
         if (!phone && !email) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Phone or email is required' 
+            return res.status(400).json({
+                success: false,
+                message: 'Phone or email is required'
             });
         }
 
@@ -3168,7 +2953,7 @@ app.post('/api/test-notification', async (req, res) => {
             results.whatsapp.attempted = true;
             try {
                 const testCaption = `✨ TEST NOTIFICATION 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello! This is a test message from Eshopper.\n\n✅ WhatsApp Integration: WORKING\nTimestamp: ${new Date().toLocaleString('en-IN')}\n\nIf you receive this, your WhatsApp notifications are configured correctly! 🎉\n\n🎯 You'll receive order confirmations, shipment updates, and delivery notifications on WhatsApp.\n\n🔗 Need Help?\nWhatsApp: wa.me/918447859784\nEmail: support@eshopperr.me\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-                
+
                 await sendWhatsApp(phone, testCaption);
                 results.whatsapp.success = true;
                 results.whatsapp.message = 'WhatsApp notification sent successfully';
@@ -3187,10 +2972,10 @@ app.post('/api/test-notification', async (req, res) => {
             results.email.attempted = true;
             try {
                 // Brevo email sending removed
-                    sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
-                    to: [{ email: email, name: 'Test User' }],
+                sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
+                to: [{ email: email, name: 'Test User' }],
                     subject: '✅ Test Notification - Eshopper Boutique',
-                    htmlContent: `
+                        htmlContent: `
                         <div style="font-family:Arial,sans-serif;padding:20px;background:#f8f8f8;">
                             <h2 style="color:#111;">✨ Test Email Notification</h2>
                             <p>This is a test email from your Eshopper notification system.</p>
@@ -3201,46 +2986,46 @@ app.post('/api/test-notification', async (req, res) => {
                             <p style="font-size:12px;color:#666;">This is an automated test message from Eshopper Boutique Luxe</p>
                         </div>
                     `,
-                    replyTo: { email: 'support@eshopperr.me' }
-                }, {
-                    headers: {
-                        // Brevo API key removed
-                        'content-type': 'application/json',
+                            replyTo: { email: 'support@eshopperr.me' }
+            }, {
+                headers: {
+                    // Brevo API key removed
+                    'content-type': 'application/json',
                         'accept': 'application/json'
-                    },
-                    timeout: 15000
-                });
-                results.email.success = true;
-                results.email.message = 'Email notification sent successfully';
+                },
+                timeout: 15000
+            });
+results.email.success = true;
+results.email.message = 'Email notification sent successfully';
             } catch (emailError) {
-                results.email.success = false;
-                results.email.error = emailError.message;
-                results.email.details = {
-                    status: emailError.response?.status,
-                    data: emailError.response?.data
-                };
-            }
+    results.email.success = false;
+    results.email.error = emailError.message;
+    results.email.details = {
+        status: emailError.response?.status,
+        data: emailError.response?.data
+    };
+}
         }
 
-        const allSuccess = 
-            (!results.email.attempted || results.email.success) && 
-            (!results.whatsapp.attempted || results.whatsapp.success);
+const allSuccess =
+    (!results.email.attempted || results.email.success) &&
+    (!results.whatsapp.attempted || results.whatsapp.success);
 
-        return res.status(allSuccess ? 200 : 207).json({
-            success: allSuccess,
-            message: allSuccess ? 'All notifications sent successfully' : 'Some notifications failed',
-            results
-        });
+return res.status(allSuccess ? 200 : 207).json({
+    success: allSuccess,
+    message: allSuccess ? 'All notifications sent successfully' : 'Some notifications failed',
+    results
+});
 
     } catch (e) {
-        console.error('❌ Test Notification Error:', e.message);
-        if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ 
-            success: false, 
-            message: 'Failed to test notifications',
-            error: e.message 
-        });
-    }
+    console.error('❌ Test Notification Error:', e.message);
+    if (process.env.SENTRY_DSN) Sentry.captureException(e);
+    return res.status(500).json({
+        success: false,
+        message: 'Failed to test notifications',
+        error: e.message
+    });
+}
 });
 
 // ==================== WHATSAPP DIAGNOSTIC ENDPOINT ====================
@@ -3254,7 +3039,7 @@ app.get('/api/check-whatsapp-status/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         const user = await User.findById(userId).lean();
-        
+
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -3296,7 +3081,7 @@ app.get('/api/check-whatsapp-status/:userId', async (req, res) => {
             },
             whatsappStatus: {
                 configured: hasPhone && isValidFormat ? '✅ READY' : '❌ NOT CONFIGURED',
-                action: hasPhone && isValidFormat 
+                action: hasPhone && isValidFormat
                     ? 'User will receive WhatsApp notifications'
                     : 'User needs to add phone number to profile',
                 updateLink: 'https://eshopperr.me/profile'
@@ -3388,1054 +3173,1054 @@ async function startServer() {
             retryWrites: true,
             w: 'majority'
         });
-        
+
         console.log("✅ MongoDB connected successfully");
         console.log(`📊 Database: ${mongoose.connection.name}`);
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
-        
-          // 🔴 Trimming to ensure no space/newline error
-              // --- server.js AI REFACTOR START ---
-     const geminiApiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
-     const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
-     let cachedGenerateModels = [];
-     let cachedAt = 0;
-     const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
-    const modelCooldownUntil = new Map();
 
-     const isDev = process.env.NODE_ENV === 'development';
-     const devLog = (msg) => { if (isDev) console.log(`[DEV] ${msg}`); };
-     const devWarn = (msg) => { if (isDev) console.warn(`[DEV] ${msg}`); };
+        // 🔴 Trimming to ensure no space/newline error
+        // --- server.js AI REFACTOR START ---
+        const geminiApiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
+        const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
+        let cachedGenerateModels = [];
+        let cachedAt = 0;
+        const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
+        const modelCooldownUntil = new Map();
 
-     const getAvailableGeminiModels = async () => {
-        const now = Date.now();
-        if (cachedGenerateModels.length > 0 && (now - cachedAt) < MODEL_CACHE_TTL_MS) {
-            return cachedGenerateModels;
-        }
+        const isDev = process.env.NODE_ENV === 'development';
+        const devLog = (msg) => { if (isDev) console.log(`[DEV] ${msg}`); };
+        const devWarn = (msg) => { if (isDev) console.warn(`[DEV] ${msg}`); };
 
-        try {
-            const response = await axios.get('https://generativelanguage.googleapis.com/v1beta/models', {
+        const getAvailableGeminiModels = async () => {
+            const now = Date.now();
+            if (cachedGenerateModels.length > 0 && (now - cachedAt) < MODEL_CACHE_TTL_MS) {
+                return cachedGenerateModels;
+            }
+
+            try {
+                const response = await axios.get('https://generativelanguage.googleapis.com/v1beta/models', {
+                    headers: {
+                        'x-goog-api-key': geminiApiKey
+                    }
+                });
+                const models = (response.data?.models || [])
+                    .filter((model) => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
+                    .map((model) => String(model.name || '').replace(/^models\//, '').trim())
+                    .filter(Boolean);
+
+                if (models.length > 0) {
+                    cachedGenerateModels = models;
+                    cachedAt = now;
+                    console.log(`✅ Gemini models discovered: ${models.slice(0, 5).join(', ')}${models.length > 5 ? '...' : ''}`);
+                }
+
+                return models;
+            } catch (modelListError) {
+                devWarn(`Could not fetch Gemini model list: ${modelListError.message}`);
+                return [];
+            }
+        };
+
+        const extractGeminiText = (data) => {
+            const candidates = data?.candidates || [];
+            const first = candidates[0];
+            const parts = first?.content?.parts || [];
+            const text = parts.map((part) => part?.text || '').join('').trim();
+            return text;
+        };
+
+        const isQuotaError = (error) => {
+            const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`.toLowerCase();
+            return error?.response?.status === 429 || combined.includes('quota exceeded') || combined.includes('too many requests');
+        };
+
+        const extractRetryDelayMs = (error) => {
+            const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`;
+            const match = combined.match(/retry in\s+([\d.]+)s/i);
+            if (!match) return 60000;
+            const sec = Number(match[1]);
+            if (!Number.isFinite(sec) || sec <= 0) return 60000;
+            return Math.ceil(sec * 1000);
+        };
+
+        const isModelCoolingDown = (modelName) => {
+            const until = modelCooldownUntil.get(modelName);
+            if (!until) return false;
+            if (Date.now() >= until) {
+                modelCooldownUntil.delete(modelName);
+                return false;
+            }
+            return true;
+        };
+
+        const setModelCooldown = (modelName, error) => {
+            const retryMs = extractRetryDelayMs(error);
+            modelCooldownUntil.set(modelName, Date.now() + retryMs);
+            devLog(`Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
+        };
+
+        const generateWithRest = async (modelName, fullPrompt) => {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+            const payload = {
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [{ text: fullPrompt }]
+                    }
+                ],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 300
+                }
+            };
+
+            const response = await axios.post(url, payload, {
                 headers: {
+                    'Content-Type': 'application/json',
                     'x-goog-api-key': geminiApiKey
                 }
             });
-            const models = (response.data?.models || [])
-                .filter((model) => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
-                .map((model) => String(model.name || '').replace(/^models\//, '').trim())
-                .filter(Boolean);
 
-            if (models.length > 0) {
-                cachedGenerateModels = models;
-                cachedAt = now;
-                console.log(`✅ Gemini models discovered: ${models.slice(0, 5).join(', ')}${models.length > 5 ? '...' : ''}`);
-            }
-
-            return models;
-        } catch (modelListError) {
-            devWarn(`Could not fetch Gemini model list: ${modelListError.message}`);
-            return [];
-        }
-     };
-
-     const extractGeminiText = (data) => {
-        const candidates = data?.candidates || [];
-        const first = candidates[0];
-        const parts = first?.content?.parts || [];
-        const text = parts.map((part) => part?.text || '').join('').trim();
-        return text;
-     };
-
-      const isQuotaError = (error) => {
-          const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`.toLowerCase();
-          return error?.response?.status === 429 || combined.includes('quota exceeded') || combined.includes('too many requests');
-      };
-
-      const extractRetryDelayMs = (error) => {
-          const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`;
-          const match = combined.match(/retry in\s+([\d.]+)s/i);
-          if (!match) return 60000;
-          const sec = Number(match[1]);
-          if (!Number.isFinite(sec) || sec <= 0) return 60000;
-          return Math.ceil(sec * 1000);
-      };
-
-      const isModelCoolingDown = (modelName) => {
-          const until = modelCooldownUntil.get(modelName);
-          if (!until) return false;
-          if (Date.now() >= until) {
-                modelCooldownUntil.delete(modelName);
-                return false;
-          }
-          return true;
-      };
-
-      const setModelCooldown = (modelName, error) => {
-          const retryMs = extractRetryDelayMs(error);
-          modelCooldownUntil.set(modelName, Date.now() + retryMs);
-          devLog(`Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
-      };
-
-     const generateWithRest = async (modelName, fullPrompt) => {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-        const payload = {
-            contents: [
-                {
-                    role: 'user',
-                    parts: [{ text: fullPrompt }]
-                }
-            ],
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 300
-            }
+            return extractGeminiText(response.data);
         };
 
-        const response = await axios.post(url, payload, {
-            headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': geminiApiKey
-            }
-        });
-
-        return extractGeminiText(response.data);
-     };
-
-// 🔴 REAL-TIME ORDER TRACKING - Get single order
-app.get('/api/orders/:userId', async (req, res) => {
-    try {
-        const userId = String(req.params.userId || '').trim();
-
-        if (!userId) {
-            return res.status(400).json({ message: 'userId is required' });
-        }
-
-        // 🔴 FETCH FROM ORDER COLLECTION (primary source)
-        const orders = await Order.find({ userid: userId })
-            .sort({ updatedAt: -1, createdAt: -1 })
-            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
-            .lean();
-
-        // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
-        if (orders.length === 0) {
-            const checkoutOrders = await Checkout.find({ userid: userId })
-                .sort({ updatedAt: -1, createdAt: -1 })
-                .lean();
-            
-            return res.json({
-                success: true,
-                orders: checkoutOrders.map((item) => ({
-                    orderId: item.orderId || `CHECKOUT-${item._id}`,
-                    orderStatus: item.orderstatus || 'Order Placed',
-                    finalAmount: Number(item.finalAmount || 0),
-                    paymentStatus: item.paymentstatus || 'Pending',
-                    paymentMethod: item.paymentmode || 'COD',
-                    updatedAt: item.updatedAt || new Date()
-                }))
-            });
-        }
-
-        return res.json({
-            success: true,
-            orders: orders.map((item) => ({
-                orderId: item.orderId,
-                orderStatus: item.orderStatus || 'Order Placed',
-                finalAmount: Number(item.finalAmount || 0),
-                paymentStatus: item.paymentStatus || 'Pending',
-                paymentMethod: item.paymentMethod || 'COD',
-                updatedAt: item.updatedAt || item.createdAt || new Date()
-            }))
-        });
-    } catch (e) {
-        console.error('❌ Orders list fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch orders' });
-    }
-});
-
-app.get('/api/orders/recent/:userId', async (req, res) => {
-    try {
-        const userId = String(req.params.userId || '').trim();
-        const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
-
-        if (!userId) {
-            return res.status(400).json({ message: 'userId is required' });
-        }
-
-        const orders = await Order.find({ userid: userId })
-            .sort({ updatedAt: -1, createdAt: -1 })
-            .limit(limit)
-            .select('orderId orderStatus finalAmount updatedAt createdAt')
-            .lean();
-
-        return res.json({
-            success: true,
-            orders: orders.map((item) => ({
-                orderId: item.orderId,
-                orderStatus: item.orderStatus || 'Order Placed',
-                finalAmount: Number(item.finalAmount || 0),
-                updatedAt: item.updatedAt || item.createdAt || new Date()
-            }))
-        });
-    } catch (e) {
-        console.error('❌ Recent orders fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch recent orders' });
-    }
-});
-
-app.get('/api/order/:orderId', async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const userId = req.query.userId;
-
-        if (!orderId || !userId) {
-            return res.status(400).json({ message: 'orderId and userId are required' });
-        }
-
-        const order = await Order.findOne({
-            orderId,
-            userid: userId
-        }).lean();
-
-        if (!order) return res.status(404).json({ message: 'Order not found' });
-
-        // 📦 Build comprehensive order response
-        const statusHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [
-            { status: 'Ordered', timestamp: order.orderDate || order.createdAt || new Date() }
-        ];
-
-        return res.json({
-            orderId: order.orderId,
-            userid: order.userid,
-            orderStatus: order.orderStatus || 'Ordered',
-            userName: order.userName || '',
-            userEmail: order.userEmail || '',
-            paymentMethod: order.paymentMethod || 'COD',
-            paymentStatus: order.paymentStatus || 'Pending',
-            totalAmount: Number(order.totalAmount || 0),
-            shippingAmount: Number(order.shippingAmount || 0),
-            finalAmount: order.finalAmount || 0,
-            shippingAddress: order.shippingAddress || {},
-            products: Array.isArray(order.products) ? order.products : [],
-            estimatedDelivery: order.estimatedArrival || null,
-            estimatedArrival: order.estimatedArrival || null,
-            statusHistory: statusHistory,
-            createdAt: order.orderDate || order.createdAt || new Date(),
-            orderDate: order.orderDate || order.createdAt,
-            updatedAt: order.updatedAt || order.createdAt || new Date()
-        });
-    } catch (e) {
-        console.error('❌ Order fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch order' });
-    }
-});
-
-app.get('/api/order/:orderId/invoice', async (req, res) => {
-    if (!FEATURE_INVOICE_SYSTEM) {
-        return res.status(410).json({ message: 'Invoice system is currently disabled' });
-    }
-    try {
-        const { orderId } = req.params;
-        const userId = String(req.query.userId || '').trim();
-        const disposition = String(req.query.disposition || 'attachment').toLowerCase() === 'inline' ? 'inline' : 'attachment';
-
-        if (!orderId || !userId) {
-            return res.status(400).json({ message: 'orderId and userId are required' });
-        }
-
-        const order = await Order.findOne({ orderId, userid: userId }).lean();
-        if (!order) return res.status(404).json({ message: 'Order not found' });
-
-        // Generate invoice with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
-
-        try {
-            // Map status -> PDF variant
-            const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-            const isDelivered = orderStatus === 'delivered';
-            const isConfirmed = orderStatus === 'confirmed' || orderStatus === 'ordered';
-            const pdfType = isDelivered ? 'final' : (isConfirmed ? 'confirmation' : 'receipt');
-            
-            const pdfBuffer = await generateInvoicePdfBuffer({
-                orderId: order.orderId,
-                userName: order.userName,
-                userEmail: order.userEmail,
-                paymentMethod: order.paymentMethod,
-                paymentStatus: order.paymentStatus,
-                finalAmount: Number(order.finalAmount || 0),
-                totalAmount: Number(order.totalAmount || 0),
-                shippingAmount: Number(order.shippingAmount || 0),
-                shippingAddress: order.shippingAddress || {},
-                products: Array.isArray(order.products) ? order.products : [],
-                orderDate: order.orderDate || order.createdAt,
-                orderStatus: order.orderStatus || order.status || 'Ordered',
-                pdfType,
-                isDelivered: isDelivered  // Auto-detect: Receipt or Tax Invoice
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!pdfBuffer || pdfBuffer.length < 500) {
-                return res.status(500).json({ message: 'Invoice generation failed - empty PDF' });
-            }
-
-            const fileName = isDelivered
-                ? `TaxInvoice-${order.orderId}.pdf`
-                : (isConfirmed ? `Confirmation-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`);
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
-            res.setHeader('Content-Length', String(pdfBuffer.length));
-            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-            res.setHeader('Pragma', 'no-cache');
-            res.setHeader('Expires', '0');
-            
-            return res.send(pdfBuffer);
-        } catch (pdfErr) {
-            clearTimeout(timeoutId);
-            console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
-            if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
-            return res.status(500).json({ message: 'Failed to generate invoice - please try again' });
-        }
-    } catch (e) {
-        console.error('❌ Invoice endpoint error:', e.message, e.stack);
-        if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ message: 'Invoice generation error' });
-    }
-});
-
-// 🔴 SMART DOWNLOAD ENDPOINT - Returns Receipt or Tax Invoice based on Delivery Status
-app.get('/api/orders/:orderId/download', async (req, res) => {
-    if (!FEATURE_INVOICE_SYSTEM) {
-        return res.status(410).json({ message: 'Invoice system is currently disabled' });
-    }
-    try {
-        const { orderId } = req.params;
-        const userId = String(req.query.userId || '').trim();
-        const pdfType = String(req.query.type || 'receipt').toLowerCase();
-
-        if (!orderId || !userId) {
-            return res.status(400).json({ message: 'orderId and userId are required' });
-        }
-
-        if (!['receipt', 'confirmation', 'final'].includes(pdfType)) {
-            return res.status(400).json({ message: 'Invalid PDF type. Use "receipt", "confirmation", or "final"' });
-        }
-
-        // Fetch order
-        const order = await Order.findOne({ orderId, userid: userId }).lean();
-        if (!order) {
-            return res.status(404).json({ message: 'Order not found' });
-        }
-
-        // Check order status
-        const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-        const isDelivered = orderStatus === 'delivered';
-
-        // Determine filename based on requested type
-        const fileName = pdfType === 'final'
-            ? `TaxInvoice-${orderId}.pdf`
-            : (pdfType === 'confirmation' ? `Confirmation-${orderId}.pdf` : `Receipt-${orderId}.pdf`);
-
-        console.log(`📥 Download Request: Order ${orderId} | Type: ${pdfType} | Status: ${orderStatus} | Delivered: ${isDelivered}`);
-
-        // Generate PDF with timeout
-        const timeoutId = setTimeout(() => {}, 120000);
-
-        try {
-            const pdfBuffer = await generateInvoicePdfBuffer({
-                orderId: order.orderId,
-                userName: order.userName,
-                userEmail: order.userEmail,
-                paymentMethod: order.paymentMethod,
-                paymentStatus: order.paymentStatus,
-                finalAmount: Number(order.finalAmount || 0),
-                totalAmount: Number(order.totalAmount || 0),
-                shippingAmount: Number(order.shippingAmount || 0),
-                shippingAddress: order.shippingAddress || {},
-                products: Array.isArray(order.products) ? order.products : [],
-                orderDate: order.orderDate || order.createdAt,
-                orderStatus: order.orderStatus || order.status || 'Ordered',
-                isDelivered: isDelivered,  // Pass delivery status for footer customization
-                pdfType: pdfType // 'receipt' | 'confirmation' | 'final'
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!pdfBuffer || pdfBuffer.length < 500) {
-                return res.status(500).json({ message: 'PDF generation failed - invalid buffer' });
-            }
-
-            // Set response headers
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-            res.setHeader('Content-Length', String(pdfBuffer.length));
-            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-            res.setHeader('Pragma', 'no-cache');
-            res.setHeader('Expires', '0');
-
-            console.log(`✅ PDF generated successfully: ${fileName}`);
-            return res.send(pdfBuffer);
-        } catch (pdfErr) {
-            clearTimeout(timeoutId);
-            console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
-            if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
-            return res.status(500).json({ message: 'Failed to generate PDF - please try again' });
-        }
-    } catch (e) {
-        console.error('❌ Download endpoint error:', e.message, e.stack);
-        if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ message: 'Download error' });
-    }
-});
-
-// 🔴 DYNAMIC INVOICE DOWNLOADER - Auto-detects PDF type based on order status
-app.get('/api/orders/:id/download-invoice', async (req, res) => {
-    if (!FEATURE_INVOICE_SYSTEM) {
-        return res.status(410).json({
-            success: false,
-            message: 'Invoice system is currently disabled'
-        });
-    }
-    try {
-        const orderId = String(req.params.id || '').trim();
-        const userId = String(req.query.userId || '').trim();
-
-        // Validation
-        if (!orderId || !userId) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'orderId and userId are required' 
-            });
-        }
-
-        // Fetch order with authentication check
-        const order = await Order.findOne({ orderId, userid: userId }).lean();
-        if (!order) {
-            return res.status(404).json({ 
-                success: false,
-                message: 'Order not found or you do not have access to this order' 
-            });
-        }
-
-        // Determine PDF type based on order status
-        const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-        
-        let pdfType = 'receipt'; // Default for 'Pending'/'Ordered'
-        let fileName = `Receipt-${orderId}.pdf`;
-        
-        if (orderStatus === 'delivered') {
-            // Delivered → Final Tax Invoice
-            pdfType = 'final';
-            fileName = `TaxInvoice-${orderId}.pdf`;
-        } else if (
-            orderStatus === 'confirmed' || 
-            orderStatus === 'packed' || 
-            orderStatus === 'shipped' || 
-            orderStatus === 'out for delivery'
-        ) {
-            // Confirmed to Out for Delivery → Proforma Confirmation
-            pdfType = 'confirmation';
-            fileName = `Confirmation-${orderId}.pdf`;
-        }
-
-        console.log(`📥 Dynamic Invoice Download: ${orderId} | Status: ${orderStatus} → PDF Type: ${pdfType}`);
-
-        // Generate PDF with timeout protection
-        const timeoutId = setTimeout(() => {}, 120000);
-
-        try {
-            const pdfBuffer = await generateInvoicePdfBuffer({
-                orderId: order.orderId,
-                userName: order.userName,
-                userEmail: order.userEmail,
-                paymentMethod: order.paymentMethod,
-                paymentStatus: order.paymentStatus,
-                finalAmount: Number(order.finalAmount || 0),
-                totalAmount: Number(order.totalAmount || 0),
-                shippingAmount: Number(order.shippingAmount || 0),
-                shippingAddress: order.shippingAddress || {},
-                products: Array.isArray(order.products) ? order.products : [],
-                orderDate: order.orderDate || order.createdAt,
-                orderStatus: order.orderStatus || order.status || 'Ordered',
-                isDelivered: orderStatus === 'delivered',
-                pdfType: pdfType
-            });
-
-            clearTimeout(timeoutId);
-
-            // Validate PDF buffer
-            if (!pdfBuffer || pdfBuffer.length < 500) {
-                throw new Error('Generated PDF buffer is invalid or too small');
-            }
-
-            // Stream PDF to frontend with proper headers
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-            res.setHeader('Content-Length', String(pdfBuffer.length));
-            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-            res.setHeader('Pragma', 'no-cache');
-            res.setHeader('Expires', '0');
-
-            console.log(`✅ Dynamic invoice generated: ${fileName} (${pdfBuffer.length} bytes)`);
-            return res.send(pdfBuffer);
-
-        } catch (pdfErr) {
-            clearTimeout(timeoutId);
-            console.error(`❌ PDF generation failed for ${orderId}:`, pdfErr.message);
-            if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(pdfErr);
-            return res.status(500).json({ 
-                success: false,
-                message: 'Failed to generate invoice. Please try again later.' 
-            });
-        }
-
-    } catch (err) {
-        console.error('❌ Dynamic invoice download error:', err.message, err.stack);
-        if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(err);
-        return res.status(500).json({ 
-            success: false,
-            message: 'Unable to process invoice download request' 
-        });
-    }
-});
-
-// 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
-app.get('/api/admin/orders', async (req, res) => {
-    try {
-        const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
-        const search = String(req.query.search || '').trim();
-        const statusFilter = String(req.query.status || '').trim();
-
-        let query = {};
-
-        // Search by orderId, userName, or userEmail
-        if (search) {
-            query.$or = [
-                { orderId: { $regex: search, $options: 'i' } },
-                { userName: { $regex: search, $options: 'i' } },
-                { userEmail: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        // Filter by status
-        if (statusFilter && ALLOWED_ORDER_STATUS.includes(statusFilter)) {
-            query.orderStatus = statusFilter;
-        }
-
-        const skip = (page - 1) * limit;
-        const totalOrders = await Order.countDocuments(query);
-        const orders = await Order.find(query)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products')
-            .lean();
-
-        return res.json({
-            success: true,
-            total: totalOrders,
-            page,
-            limit,
-            pages: Math.ceil(totalOrders / limit),
-            orders: orders.map((item) => ({
-                orderId: item.orderId,
-                userId: item.userid,
-                userName: item.userName || 'N/A',
-                userEmail: item.userEmail || 'N/A',
-                orderStatus: item.orderStatus || 'Order Placed',
-                paymentStatus: item.paymentStatus || 'Pending',
-                finalAmount: Number(item.finalAmount || 0),
-                productCount: Array.isArray(item.products) ? item.products.length : 0,
-                updatedAt: item.updatedAt || item.createdAt || new Date()
-            }))
-        });
-    } catch (e) {
-        console.error('❌ Admin orders fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch orders' });
-    }
-});
-
-// 🔴 ADMIN - GET DETAILED ORDER
-app.get('/api/admin/order/:orderId', async (req, res) => {
-    try {
-        const { orderId } = req.params;
-
-        if (!orderId) {
-            return res.status(400).json({ message: 'orderId is required' });
-        }
-
-        const order = await Order.findOne({ orderId }).lean();
-
-        if (!order) return res.status(404).json({ message: 'Order not found' });
-
-        return res.json({
-            success: true,
-            orderId: order.orderId,
-            userid: order.userid,
-            userName: order.userName || 'N/A',
-            userEmail: order.userEmail || 'N/A',
-            orderStatus: order.orderStatus || 'Ordered',
-            paymentMethod: order.paymentMethod || 'COD',
-            paymentStatus: order.paymentStatus || 'Pending',
-            totalAmount: Number(order.totalAmount || 0),
-            shippingAmount: Number(order.shippingAmount || 0),
-            finalAmount: Number(order.finalAmount || 0),
-            shippingAddress: order.shippingAddress || {},
-            products: Array.isArray(order.products) ? order.products : [],
-            estimatedArrival: order.estimatedArrival || null,
-            orderDate: order.orderDate || order.createdAt,
-            createdAt: order.createdAt,
-            updatedAt: order.updatedAt
-        });
-    } catch (e) {
-        console.error('❌ Admin order fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch order' });
-    }
-});
-
-// 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
-const handleOrderStatusUpdate = async (req, res) => {
-    try {
-        const { orderId, status } = req.body;
-        const normalized = normalizeOrderStatus(status);
-
-        if (!orderId || !normalized) {
-            return res.status(400).json({
-                message: `orderId and valid status are required (${ALLOWED_ORDER_STATUS.join(', ')})`
-            });
-        }
-
-        // 🔴 FIRST: Try to find by orderId (from Order collection)
-        let order = await Order.findOne({ orderId });
-        
-        // 🔴 SECOND: If not found, try by MongoDB _id (from Checkout collection)
-        if (!order && orderId.length === 24) {
+        // 🔴 REAL-TIME ORDER TRACKING - Get single order
+        app.get('/api/orders/:userId', async (req, res) => {
             try {
-                order = await Order.findById(orderId);
-            } catch (idErr) {
-                // Not a valid MongoDB ID, continue
-            }
-        }
+                const userId = String(req.params.userId || '').trim();
 
-        if (!order) {
-            // Final attempt: Search in Checkout and use userid + order data
-            const checkout = await Checkout.findById(orderId).lean();
-            if (!checkout) {
-                return res.status(404).json({ message: 'Order not found in any collection' });
-            }
-            
-            // Create order record from checkout data
-            const newOrder = await Order.create({
-                orderId: orderId,
-                userid: checkout.userid,
-                userName: 'Customer',
-                userEmail: '',
-                paymentMethod: checkout.paymentmode || 'COD',
-                paymentStatus: checkout.paymentstatus || 'Pending',
-                orderStatus: normalized,
-                totalAmount: checkout.totalAmount,
-                shippingAmount: checkout.shippingAmount,
-                finalAmount: checkout.finalAmount,
-                products: checkout.products || [],
-                statusHistory: [{
-                    status: normalized,
-                    timestamp: new Date(),
-                    message: `Order status changed to ${normalized}`
-                }]
-            });
-            order = newOrder;
-        } else {
-            // Update existing order
-            order.orderStatus = normalized;
-            const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
-            order.statusHistory = [
-                ...existingTimeline,
-                {
-                    status: normalized,
-                    timestamp: new Date(),
-                    message: `Order status changed to ${normalized}`
+                if (!userId) {
+                    return res.status(400).json({ message: 'userId is required' });
                 }
-            ];
-            await order.save();
-        }
 
-        if (!Array.isArray(order.statusHistory) || order.statusHistory.length === 0) {
-            order.statusHistory = [{
-                status: normalized,
-                timestamp: new Date(),
-                message: `Order status changed to ${normalized}`
-            }];
-            await order.save();
-        }
+                // 🔴 FETCH FROM ORDER COLLECTION (primary source)
+                const orders = await Order.find({ userid: userId })
+                    .sort({ updatedAt: -1, createdAt: -1 })
+                    .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
+                    .lean();
 
-        // 🔴 SYNC STATUS TO CHECKOUT COLLECTION (prevent data mismatch)
-        await Checkout.updateMany(
-            { userid: order.userid, totalAmount: order.totalAmount, finalAmount: order.finalAmount },
-            { orderstatus: normalized, updatedAt: new Date() }
-        ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
+                // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
+                if (orders.length === 0) {
+                    const checkoutOrders = await Checkout.find({ userid: userId })
+                        .sort({ updatedAt: -1, createdAt: -1 })
+                        .lean();
 
-        const payload = {
-            orderId: order.orderId,
-            userId: order.userid,
-            status: order.orderStatus,
-            updatedAt: new Date().toISOString()
+                    return res.json({
+                        success: true,
+                        orders: checkoutOrders.map((item) => ({
+                            orderId: item.orderId || `CHECKOUT-${item._id}`,
+                            orderStatus: item.orderstatus || 'Order Placed',
+                            finalAmount: Number(item.finalAmount || 0),
+                            paymentStatus: item.paymentstatus || 'Pending',
+                            paymentMethod: item.paymentmode || 'COD',
+                            updatedAt: item.updatedAt || new Date()
+                        }))
+                    });
+                }
+
+                return res.json({
+                    success: true,
+                    orders: orders.map((item) => ({
+                        orderId: item.orderId,
+                        orderStatus: item.orderStatus || 'Order Placed',
+                        finalAmount: Number(item.finalAmount || 0),
+                        paymentStatus: item.paymentStatus || 'Pending',
+                        paymentMethod: item.paymentMethod || 'COD',
+                        updatedAt: item.updatedAt || item.createdAt || new Date()
+                    }))
+                });
+            } catch (e) {
+                console.error('❌ Orders list fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch orders' });
+            }
+        });
+
+        app.get('/api/orders/recent/:userId', async (req, res) => {
+            try {
+                const userId = String(req.params.userId || '').trim();
+                const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
+
+                if (!userId) {
+                    return res.status(400).json({ message: 'userId is required' });
+                }
+
+                const orders = await Order.find({ userid: userId })
+                    .sort({ updatedAt: -1, createdAt: -1 })
+                    .limit(limit)
+                    .select('orderId orderStatus finalAmount updatedAt createdAt')
+                    .lean();
+
+                return res.json({
+                    success: true,
+                    orders: orders.map((item) => ({
+                        orderId: item.orderId,
+                        orderStatus: item.orderStatus || 'Order Placed',
+                        finalAmount: Number(item.finalAmount || 0),
+                        updatedAt: item.updatedAt || item.createdAt || new Date()
+                    }))
+                });
+            } catch (e) {
+                console.error('❌ Recent orders fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch recent orders' });
+            }
+        });
+
+        app.get('/api/order/:orderId', async (req, res) => {
+            try {
+                const { orderId } = req.params;
+                const userId = req.query.userId;
+
+                if (!orderId || !userId) {
+                    return res.status(400).json({ message: 'orderId and userId are required' });
+                }
+
+                const order = await Order.findOne({
+                    orderId,
+                    userid: userId
+                }).lean();
+
+                if (!order) return res.status(404).json({ message: 'Order not found' });
+
+                // 📦 Build comprehensive order response
+                const statusHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [
+                    { status: 'Ordered', timestamp: order.orderDate || order.createdAt || new Date() }
+                ];
+
+                return res.json({
+                    orderId: order.orderId,
+                    userid: order.userid,
+                    orderStatus: order.orderStatus || 'Ordered',
+                    userName: order.userName || '',
+                    userEmail: order.userEmail || '',
+                    paymentMethod: order.paymentMethod || 'COD',
+                    paymentStatus: order.paymentStatus || 'Pending',
+                    totalAmount: Number(order.totalAmount || 0),
+                    shippingAmount: Number(order.shippingAmount || 0),
+                    finalAmount: order.finalAmount || 0,
+                    shippingAddress: order.shippingAddress || {},
+                    products: Array.isArray(order.products) ? order.products : [],
+                    estimatedDelivery: order.estimatedArrival || null,
+                    estimatedArrival: order.estimatedArrival || null,
+                    statusHistory: statusHistory,
+                    createdAt: order.orderDate || order.createdAt || new Date(),
+                    orderDate: order.orderDate || order.createdAt,
+                    updatedAt: order.updatedAt || order.createdAt || new Date()
+                });
+            } catch (e) {
+                console.error('❌ Order fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch order' });
+            }
+        });
+
+        app.get('/api/order/:orderId/invoice', async (req, res) => {
+            if (!FEATURE_INVOICE_SYSTEM) {
+                return res.status(410).json({ message: 'Invoice system is currently disabled' });
+            }
+            try {
+                const { orderId } = req.params;
+                const userId = String(req.query.userId || '').trim();
+                const disposition = String(req.query.disposition || 'attachment').toLowerCase() === 'inline' ? 'inline' : 'attachment';
+
+                if (!orderId || !userId) {
+                    return res.status(400).json({ message: 'orderId and userId are required' });
+                }
+
+                const order = await Order.findOne({ orderId, userid: userId }).lean();
+                if (!order) return res.status(404).json({ message: 'Order not found' });
+
+                // Generate invoice with timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+                try {
+                    // Map status -> PDF variant
+                    const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+                    const isDelivered = orderStatus === 'delivered';
+                    const isConfirmed = orderStatus === 'confirmed' || orderStatus === 'ordered';
+                    const pdfType = isDelivered ? 'final' : (isConfirmed ? 'confirmation' : 'receipt');
+
+                    const pdfBuffer = await generateInvoicePdfBuffer({
+                        orderId: order.orderId,
+                        userName: order.userName,
+                        userEmail: order.userEmail,
+                        paymentMethod: order.paymentMethod,
+                        paymentStatus: order.paymentStatus,
+                        finalAmount: Number(order.finalAmount || 0),
+                        totalAmount: Number(order.totalAmount || 0),
+                        shippingAmount: Number(order.shippingAmount || 0),
+                        shippingAddress: order.shippingAddress || {},
+                        products: Array.isArray(order.products) ? order.products : [],
+                        orderDate: order.orderDate || order.createdAt,
+                        orderStatus: order.orderStatus || order.status || 'Ordered',
+                        pdfType,
+                        isDelivered: isDelivered  // Auto-detect: Receipt or Tax Invoice
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (!pdfBuffer || pdfBuffer.length < 500) {
+                        return res.status(500).json({ message: 'Invoice generation failed - empty PDF' });
+                    }
+
+                    const fileName = isDelivered
+                        ? `TaxInvoice-${order.orderId}.pdf`
+                        : (isConfirmed ? `Confirmation-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`);
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
+                    res.setHeader('Content-Length', String(pdfBuffer.length));
+                    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+                    res.setHeader('Pragma', 'no-cache');
+                    res.setHeader('Expires', '0');
+
+                    return res.send(pdfBuffer);
+                } catch (pdfErr) {
+                    clearTimeout(timeoutId);
+                    console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
+                    if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
+                    return res.status(500).json({ message: 'Failed to generate invoice - please try again' });
+                }
+            } catch (e) {
+                console.error('❌ Invoice endpoint error:', e.message, e.stack);
+                if (process.env.SENTRY_DSN) Sentry.captureException(e);
+                return res.status(500).json({ message: 'Invoice generation error' });
+            }
+        });
+
+        // 🔴 SMART DOWNLOAD ENDPOINT - Returns Receipt or Tax Invoice based on Delivery Status
+        app.get('/api/orders/:orderId/download', async (req, res) => {
+            if (!FEATURE_INVOICE_SYSTEM) {
+                return res.status(410).json({ message: 'Invoice system is currently disabled' });
+            }
+            try {
+                const { orderId } = req.params;
+                const userId = String(req.query.userId || '').trim();
+                const pdfType = String(req.query.type || 'receipt').toLowerCase();
+
+                if (!orderId || !userId) {
+                    return res.status(400).json({ message: 'orderId and userId are required' });
+                }
+
+                if (!['receipt', 'confirmation', 'final'].includes(pdfType)) {
+                    return res.status(400).json({ message: 'Invalid PDF type. Use "receipt", "confirmation", or "final"' });
+                }
+
+                // Fetch order
+                const order = await Order.findOne({ orderId, userid: userId }).lean();
+                if (!order) {
+                    return res.status(404).json({ message: 'Order not found' });
+                }
+
+                // Check order status
+                const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+                const isDelivered = orderStatus === 'delivered';
+
+                // Determine filename based on requested type
+                const fileName = pdfType === 'final'
+                    ? `TaxInvoice-${orderId}.pdf`
+                    : (pdfType === 'confirmation' ? `Confirmation-${orderId}.pdf` : `Receipt-${orderId}.pdf`);
+
+                console.log(`📥 Download Request: Order ${orderId} | Type: ${pdfType} | Status: ${orderStatus} | Delivered: ${isDelivered}`);
+
+                // Generate PDF with timeout
+                const timeoutId = setTimeout(() => { }, 120000);
+
+                try {
+                    const pdfBuffer = await generateInvoicePdfBuffer({
+                        orderId: order.orderId,
+                        userName: order.userName,
+                        userEmail: order.userEmail,
+                        paymentMethod: order.paymentMethod,
+                        paymentStatus: order.paymentStatus,
+                        finalAmount: Number(order.finalAmount || 0),
+                        totalAmount: Number(order.totalAmount || 0),
+                        shippingAmount: Number(order.shippingAmount || 0),
+                        shippingAddress: order.shippingAddress || {},
+                        products: Array.isArray(order.products) ? order.products : [],
+                        orderDate: order.orderDate || order.createdAt,
+                        orderStatus: order.orderStatus || order.status || 'Ordered',
+                        isDelivered: isDelivered,  // Pass delivery status for footer customization
+                        pdfType: pdfType // 'receipt' | 'confirmation' | 'final'
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (!pdfBuffer || pdfBuffer.length < 500) {
+                        return res.status(500).json({ message: 'PDF generation failed - invalid buffer' });
+                    }
+
+                    // Set response headers
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+                    res.setHeader('Content-Length', String(pdfBuffer.length));
+                    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+                    res.setHeader('Pragma', 'no-cache');
+                    res.setHeader('Expires', '0');
+
+                    console.log(`✅ PDF generated successfully: ${fileName}`);
+                    return res.send(pdfBuffer);
+                } catch (pdfErr) {
+                    clearTimeout(timeoutId);
+                    console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
+                    if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
+                    return res.status(500).json({ message: 'Failed to generate PDF - please try again' });
+                }
+            } catch (e) {
+                console.error('❌ Download endpoint error:', e.message, e.stack);
+                if (process.env.SENTRY_DSN) Sentry.captureException(e);
+                return res.status(500).json({ message: 'Download error' });
+            }
+        });
+
+        // 🔴 DYNAMIC INVOICE DOWNLOADER - Auto-detects PDF type based on order status
+        app.get('/api/orders/:id/download-invoice', async (req, res) => {
+            if (!FEATURE_INVOICE_SYSTEM) {
+                return res.status(410).json({
+                    success: false,
+                    message: 'Invoice system is currently disabled'
+                });
+            }
+            try {
+                const orderId = String(req.params.id || '').trim();
+                const userId = String(req.query.userId || '').trim();
+
+                // Validation
+                if (!orderId || !userId) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'orderId and userId are required'
+                    });
+                }
+
+                // Fetch order with authentication check
+                const order = await Order.findOne({ orderId, userid: userId }).lean();
+                if (!order) {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Order not found or you do not have access to this order'
+                    });
+                }
+
+                // Determine PDF type based on order status
+                const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+
+                let pdfType = 'receipt'; // Default for 'Pending'/'Ordered'
+                let fileName = `Receipt-${orderId}.pdf`;
+
+                if (orderStatus === 'delivered') {
+                    // Delivered → Final Tax Invoice
+                    pdfType = 'final';
+                    fileName = `TaxInvoice-${orderId}.pdf`;
+                } else if (
+                    orderStatus === 'confirmed' ||
+                    orderStatus === 'packed' ||
+                    orderStatus === 'shipped' ||
+                    orderStatus === 'out for delivery'
+                ) {
+                    // Confirmed to Out for Delivery → Proforma Confirmation
+                    pdfType = 'confirmation';
+                    fileName = `Confirmation-${orderId}.pdf`;
+                }
+
+                console.log(`📥 Dynamic Invoice Download: ${orderId} | Status: ${orderStatus} → PDF Type: ${pdfType}`);
+
+                // Generate PDF with timeout protection
+                const timeoutId = setTimeout(() => { }, 120000);
+
+                try {
+                    const pdfBuffer = await generateInvoicePdfBuffer({
+                        orderId: order.orderId,
+                        userName: order.userName,
+                        userEmail: order.userEmail,
+                        paymentMethod: order.paymentMethod,
+                        paymentStatus: order.paymentStatus,
+                        finalAmount: Number(order.finalAmount || 0),
+                        totalAmount: Number(order.totalAmount || 0),
+                        shippingAmount: Number(order.shippingAmount || 0),
+                        shippingAddress: order.shippingAddress || {},
+                        products: Array.isArray(order.products) ? order.products : [],
+                        orderDate: order.orderDate || order.createdAt,
+                        orderStatus: order.orderStatus || order.status || 'Ordered',
+                        isDelivered: orderStatus === 'delivered',
+                        pdfType: pdfType
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    // Validate PDF buffer
+                    if (!pdfBuffer || pdfBuffer.length < 500) {
+                        throw new Error('Generated PDF buffer is invalid or too small');
+                    }
+
+                    // Stream PDF to frontend with proper headers
+                    res.setHeader('Content-Type', 'application/pdf');
+                    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+                    res.setHeader('Content-Length', String(pdfBuffer.length));
+                    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+                    res.setHeader('Pragma', 'no-cache');
+                    res.setHeader('Expires', '0');
+
+                    console.log(`✅ Dynamic invoice generated: ${fileName} (${pdfBuffer.length} bytes)`);
+                    return res.send(pdfBuffer);
+
+                } catch (pdfErr) {
+                    clearTimeout(timeoutId);
+                    console.error(`❌ PDF generation failed for ${orderId}:`, pdfErr.message);
+                    if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(pdfErr);
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to generate invoice. Please try again later.'
+                    });
+                }
+
+            } catch (err) {
+                console.error('❌ Dynamic invoice download error:', err.message, err.stack);
+                if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Unable to process invoice download request'
+                });
+            }
+        });
+
+        // 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
+        app.get('/api/admin/orders', async (req, res) => {
+            try {
+                const page = Math.max(1, Number(req.query.page) || 1);
+                const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
+                const search = String(req.query.search || '').trim();
+                const statusFilter = String(req.query.status || '').trim();
+
+                let query = {};
+
+                // Search by orderId, userName, or userEmail
+                if (search) {
+                    query.$or = [
+                        { orderId: { $regex: search, $options: 'i' } },
+                        { userName: { $regex: search, $options: 'i' } },
+                        { userEmail: { $regex: search, $options: 'i' } }
+                    ];
+                }
+
+                // Filter by status
+                if (statusFilter && ALLOWED_ORDER_STATUS.includes(statusFilter)) {
+                    query.orderStatus = statusFilter;
+                }
+
+                const skip = (page - 1) * limit;
+                const totalOrders = await Order.countDocuments(query);
+                const orders = await Order.find(query)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products')
+                    .lean();
+
+                return res.json({
+                    success: true,
+                    total: totalOrders,
+                    page,
+                    limit,
+                    pages: Math.ceil(totalOrders / limit),
+                    orders: orders.map((item) => ({
+                        orderId: item.orderId,
+                        userId: item.userid,
+                        userName: item.userName || 'N/A',
+                        userEmail: item.userEmail || 'N/A',
+                        orderStatus: item.orderStatus || 'Order Placed',
+                        paymentStatus: item.paymentStatus || 'Pending',
+                        finalAmount: Number(item.finalAmount || 0),
+                        productCount: Array.isArray(item.products) ? item.products.length : 0,
+                        updatedAt: item.updatedAt || item.createdAt || new Date()
+                    }))
+                });
+            } catch (e) {
+                console.error('❌ Admin orders fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch orders' });
+            }
+        });
+
+        // 🔴 ADMIN - GET DETAILED ORDER
+        app.get('/api/admin/order/:orderId', async (req, res) => {
+            try {
+                const { orderId } = req.params;
+
+                if (!orderId) {
+                    return res.status(400).json({ message: 'orderId is required' });
+                }
+
+                const order = await Order.findOne({ orderId }).lean();
+
+                if (!order) return res.status(404).json({ message: 'Order not found' });
+
+                return res.json({
+                    success: true,
+                    orderId: order.orderId,
+                    userid: order.userid,
+                    userName: order.userName || 'N/A',
+                    userEmail: order.userEmail || 'N/A',
+                    orderStatus: order.orderStatus || 'Ordered',
+                    paymentMethod: order.paymentMethod || 'COD',
+                    paymentStatus: order.paymentStatus || 'Pending',
+                    totalAmount: Number(order.totalAmount || 0),
+                    shippingAmount: Number(order.shippingAmount || 0),
+                    finalAmount: Number(order.finalAmount || 0),
+                    shippingAddress: order.shippingAddress || {},
+                    products: Array.isArray(order.products) ? order.products : [],
+                    estimatedArrival: order.estimatedArrival || null,
+                    orderDate: order.orderDate || order.createdAt,
+                    createdAt: order.createdAt,
+                    updatedAt: order.updatedAt
+                });
+            } catch (e) {
+                console.error('❌ Admin order fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch order' });
+            }
+        });
+
+        // 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
+        const handleOrderStatusUpdate = async (req, res) => {
+            try {
+                const { orderId, status } = req.body;
+                const normalized = normalizeOrderStatus(status);
+
+                if (!orderId || !normalized) {
+                    return res.status(400).json({
+                        message: `orderId and valid status are required (${ALLOWED_ORDER_STATUS.join(', ')})`
+                    });
+                }
+
+                // 🔴 FIRST: Try to find by orderId (from Order collection)
+                let order = await Order.findOne({ orderId });
+
+                // 🔴 SECOND: If not found, try by MongoDB _id (from Checkout collection)
+                if (!order && orderId.length === 24) {
+                    try {
+                        order = await Order.findById(orderId);
+                    } catch (idErr) {
+                        // Not a valid MongoDB ID, continue
+                    }
+                }
+
+                if (!order) {
+                    // Final attempt: Search in Checkout and use userid + order data
+                    const checkout = await Checkout.findById(orderId).lean();
+                    if (!checkout) {
+                        return res.status(404).json({ message: 'Order not found in any collection' });
+                    }
+
+                    // Create order record from checkout data
+                    const newOrder = await Order.create({
+                        orderId: orderId,
+                        userid: checkout.userid,
+                        userName: 'Customer',
+                        userEmail: '',
+                        paymentMethod: checkout.paymentmode || 'COD',
+                        paymentStatus: checkout.paymentstatus || 'Pending',
+                        orderStatus: normalized,
+                        totalAmount: checkout.totalAmount,
+                        shippingAmount: checkout.shippingAmount,
+                        finalAmount: checkout.finalAmount,
+                        products: checkout.products || [],
+                        statusHistory: [{
+                            status: normalized,
+                            timestamp: new Date(),
+                            message: `Order status changed to ${normalized}`
+                        }]
+                    });
+                    order = newOrder;
+                } else {
+                    // Update existing order
+                    order.orderStatus = normalized;
+                    const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+                    order.statusHistory = [
+                        ...existingTimeline,
+                        {
+                            status: normalized,
+                            timestamp: new Date(),
+                            message: `Order status changed to ${normalized}`
+                        }
+                    ];
+                    await order.save();
+                }
+
+                if (!Array.isArray(order.statusHistory) || order.statusHistory.length === 0) {
+                    order.statusHistory = [{
+                        status: normalized,
+                        timestamp: new Date(),
+                        message: `Order status changed to ${normalized}`
+                    }];
+                    await order.save();
+                }
+
+                // 🔴 SYNC STATUS TO CHECKOUT COLLECTION (prevent data mismatch)
+                await Checkout.updateMany(
+                    { userid: order.userid, totalAmount: order.totalAmount, finalAmount: order.finalAmount },
+                    { orderstatus: normalized, updatedAt: new Date() }
+                ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
+
+                const payload = {
+                    orderId: order.orderId,
+                    userId: order.userid,
+                    status: order.orderStatus,
+                    updatedAt: new Date().toISOString()
+                };
+
+                // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
+                io.to(`user:${order.userid}`).emit('statusUpdate', payload);
+                console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
+
+                // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
+                if (FEATURE_EMAIL_NOTIFICATIONS) {
+                    setImmediate(() => {
+                        User.findById(order.userid).lean()
+                            .then(async (userDoc) => {
+                                // [EMAIL PLACEHOLDER] Integrate new premium order status email logic here (with userDoc).
+                            })
+                            .catch(err => {
+                                console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
+                                // Try sending without user data
+                                // [EMAIL PLACEHOLDER] Integrate new premium order status email logic here (fallback, no userDoc).
+                            });
+                    });
+                }
+
+                // 🔴 TRIGGER LUXURY NOTIFICATIONS (WhatsApp - disabled unless explicitly enabled)
+                if (FEATURE_WHATSAPP_NOTIFICATIONS) {
+                    setImmediate(() => {
+                        User.findById(order.userid).lean()
+                            .then((userDoc) => {
+                                const resolvedPhone = order.shippingAddress?.phone || userDoc?.phone || order.userPhone;
+                                const resolvedEmail = order.userEmail || userDoc?.email || '';
+                                const resolvedName = order.userName || userDoc?.name || 'Customer';
+
+                                return sendLuxeStatusNotification({
+                                    orderId: order.orderId,
+                                    status: normalized,
+                                    phone: resolvedPhone,
+                                    customerName: resolvedName,
+                                    email: resolvedEmail,
+                                    estimatedDelivery: order.estimatedArrival,
+                                    finalAmount: order.finalAmount,
+                                    totalAmount: order.totalAmount,
+                                    shippingAmount: order.shippingAmount,
+                                    paymentMethod: order.paymentMethod,
+                                    paymentStatus: order.paymentStatus,
+                                    shippingAddress: order.shippingAddress,
+                                    products: order.products
+                                });
+                            })
+                            .catch(err => {
+                                console.error(`⚠️  Background notification error: ${err.message}`);
+                            });
+                    });
+                }
+
+                return res.json({
+                    success: true,
+                    message: `Order status updated to ${normalized}`,
+                    order: payload
+                });
+            } catch (e) {
+                console.error('❌ Order update error:', e.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(e);
+                return res.status(500).json({ message: 'Failed to update order status' });
+            }
         };
 
-        // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
-        io.to(`user:${order.userid}`).emit('statusUpdate', payload);
-        console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
+        app.post('/api/update-order-status', handleOrderStatusUpdate);
+        app.post('/update-order-status', handleOrderStatusUpdate);
+        // ==================== ADMIN: CONFIRM ORDER (Send Email #2) ====================
+        app.post('/api/admin/confirm-order', async (req, res) => {
+            try {
+                const { orderId } = req.body;
 
-        // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
-        if (FEATURE_EMAIL_NOTIFICATIONS) {
-            setImmediate(() => {
-                User.findById(order.userid).lean()
-                    .then(async (userDoc) => {
-                        // [EMAIL PLACEHOLDER] Integrate new premium order status email logic here (with userDoc).
-                    })
-                    .catch(err => {
-                        console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
-                        // Try sending without user data
-                        // [EMAIL PLACEHOLDER] Integrate new premium order status email logic here (fallback, no userDoc).
+                // 🔒 SECURITY: Verify admin role
+                const adminSecret = req.headers['x-admin-secret'] || req.body.adminSecret;
+                if (adminSecret !== process.env.ADMIN_SECRET && process.env.ADMIN_SECRET) {
+                    return res.status(403).json({
+                        message: 'Unauthorized - Admin access required',
+                        success: false
                     });
-            });
-        }
+                }
 
-        // 🔴 TRIGGER LUXURY NOTIFICATIONS (WhatsApp - disabled unless explicitly enabled)
-        if (FEATURE_WHATSAPP_NOTIFICATIONS) {
-            setImmediate(() => {
-                User.findById(order.userid).lean()
-                    .then((userDoc) => {
-                        const resolvedPhone = order.shippingAddress?.phone || userDoc?.phone || order.userPhone;
-                        const resolvedEmail = order.userEmail || userDoc?.email || '';
-                        const resolvedName = order.userName || userDoc?.name || 'Customer';
+                if (!orderId) {
+                    return res.status(400).json({ message: 'orderId is required' });
+                }
 
-                        return sendLuxeStatusNotification({
+                // Find order
+                let order = await Order.findOne({ orderId });
+                if (!order) {
+                    try {
+                        order = await Order.findById(orderId);
+                    } catch (err) {
+                        // Try checkout collection
+                        const checkout = await Checkout.findById(orderId).lean();
+                        if (checkout) {
+                            order = await Order.findOne({ userid: checkout.userid, finalAmount: checkout.finalAmount }).lean();
+                        }
+                    }
+                }
+
+                if (!order) {
+                    return res.status(404).json({ message: 'Order not found' });
+                }
+
+                // Generate Proforma PDF for Email #2 (Confirmed)
+                let invoiceBase64 = null;
+                if (FEATURE_INVOICE_SYSTEM) {
+                    try {
+                        const invoiceBuffer = await generateInvoicePdfBuffer({
                             orderId: order.orderId,
-                            status: normalized,
-                            phone: resolvedPhone,
-                            customerName: resolvedName,
-                            email: resolvedEmail,
-                            estimatedDelivery: order.estimatedArrival,
+                            userName: order.userName,
+                            userEmail: order.userEmail,
+                            paymentMethod: order.paymentMethod || 'COD',
+                            paymentStatus: 'Verified',
                             finalAmount: order.finalAmount,
                             totalAmount: order.totalAmount,
                             shippingAmount: order.shippingAmount,
-                            paymentMethod: order.paymentMethod,
-                            paymentStatus: order.paymentStatus,
                             shippingAddress: order.shippingAddress,
-                            products: order.products
+                            products: order.products || [],
+                            orderDate: order.orderDate || new Date(),
+                            estimatedArrival: order.estimatedArrival,
+                            deliveryPartner: order.deliveryPartner,
+                            orderStatus: 'Confirmed',
+                            pdfType: 'confirmation'
                         });
-                    })
-                    .catch(err => {
-                        console.error(`⚠️  Background notification error: ${err.message}`);
+                        if (invoiceBuffer) {
+                            invoiceBase64 = invoiceBuffer.toString('base64');
+                        }
+                    } catch (pdfError) {
+                        console.error('❌ PDF generation for Email #2 failed:', pdfError.message);
+                    }
+                }
+
+
+                // Send BOTH: Order Placed (Email #1) and Order Confirmed (Premium, Email #2)
+                let emailSent = true;
+                if (FEATURE_EMAIL_NOTIFICATIONS) {
+                    try {
+                        // Email #1: Order Placed
+                        await enqueueEmailJob('order-placed', {
+                            toEmail: order.userEmail,
+                            userName: order.userName,
+                            orderId: order.orderId,
+                            finalAmount: order.finalAmount,
+                            products: order.products || [],
+                            shippingAddress: order.shippingAddress
+                        });
+                        // Email #2: Order Confirmed (Premium)
+                        await enqueueEmailJob('order-confirmed', {
+                            toEmail: order.userEmail,
+                            userName: order.userName,
+                            orderId: order.orderId,
+                            paymentMethod: order.paymentMethod || 'COD',
+                            finalAmount: order.finalAmount,
+                            shippingAddress: order.shippingAddress,
+                            products: order.products || [],
+                            estimatedArrival: order.estimatedArrival,
+                            invoiceBase64: invoiceBase64,
+                            orderStatus: 'Confirmed'
+                        });
+                    } catch (confirmQueueErr) {
+                        emailSent = false;
+                        console.warn(`⚠️ Email queue failed for ${orderId}:`, confirmQueueErr.message);
+                        if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
+                    }
+                }
+
+                if (!emailSent) {
+                    console.warn(`⚠️ One or more emails failed for ${orderId}, but updating status anyway`);
+                }
+
+                // Update order status to "Confirmed"
+                order.orderStatus = 'Confirmed';
+                order.confirmationEmailSent = true;
+                order.confirmationEmailSentAt = new Date();
+                const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+                order.statusHistory = [
+                    ...existingTimeline,
+                    {
+                        status: 'Confirmed',
+                        timestamp: new Date(),
+                        message: 'Order confirmed by admin - Confirmation email sent'
+                    }
+                ];
+                await order.save();
+
+                // Sync to checkout collection
+                await Checkout.updateMany(
+                    { userid: order.userid, finalAmount: order.finalAmount },
+                    { orderstatus: 'Confirmed', updatedAt: new Date() }
+                ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
+
+                // Real-time update via Socket.IO
+                io.to(`user:${order.userid}`).emit('statusUpdate', {
+                    orderId: order.orderId,
+                    status: 'Confirmed',
+                    message: 'Your order has been confirmed! Check your email for full details.',
+                    emailSent: emailSent
+                });
+
+                res.json({
+                    success: true,
+                    message: 'Order confirmed successfully',
+                    orderId: order.orderId,
+                    emailSent: emailSent,
+                    order: {
+                        orderId: order.orderId,
+                        status: order.orderStatus,
+                        userEmail: order.userEmail,
+                        confirmationEmailSentAt: order.confirmationEmailSentAt
+                    }
+                });
+            } catch (error) {
+                console.error('❌ Admin Confirm Order Error:', error.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Failed to confirm order',
+                    error: error.message
+                });
+            }
+        });
+
+        app.post('/api/admin/update-order-status', handleOrderStatusUpdate);
+
+        app.post('/api/chat', async (req, res) => {
+            try {
+                const prompt = (req.body?.prompt || req.body?.message || '').trim();
+                const history = req.body?.history || req.body?.conversationHistory || [];
+
+                if (!prompt) {
+                    console.error("⚠️ No prompt received from frontend");
+                    return res.status(400).json({ error: "Prompt is required" });
+                }
+
+                if (!genAI) {
+                    console.error("⚠️ GEMINI_API_KEY missing or invalid");
+                    return res.json({
+                        text: "I’m here to help with fashion recommendations. Our AI service is refreshing right now—please try again in a moment.",
+                        fallback: true
                     });
-            });
-        }
-
-        return res.json({
-            success: true,
-            message: `Order status updated to ${normalized}`,
-            order: payload
-        });
-    } catch (e) {
-        console.error('❌ Order update error:', e.message);
-        if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ message: 'Failed to update order status' });
-    }
-};
-
-app.post('/api/update-order-status', handleOrderStatusUpdate);
-app.post('/update-order-status', handleOrderStatusUpdate);
-// ==================== ADMIN: CONFIRM ORDER (Send Email #2) ====================
-app.post('/api/admin/confirm-order', async (req, res) => {
-    try {
-        const { orderId } = req.body;
-        
-        // 🔒 SECURITY: Verify admin role
-        const adminSecret = req.headers['x-admin-secret'] || req.body.adminSecret;
-        if (adminSecret !== process.env.ADMIN_SECRET && process.env.ADMIN_SECRET) {
-            return res.status(403).json({ 
-                message: 'Unauthorized - Admin access required',
-                success: false 
-            });
-        }
-
-        if (!orderId) {
-            return res.status(400).json({ message: 'orderId is required' });
-        }
-
-        // Find order
-        let order = await Order.findOne({ orderId });
-        if (!order) {
-            try {
-                order = await Order.findById(orderId);
-            } catch (err) {
-                // Try checkout collection
-                const checkout = await Checkout.findById(orderId).lean();
-                if (checkout) {
-                    order = await Order.findOne({ userid: checkout.userid, finalAmount: checkout.finalAmount }).lean();
                 }
-            }
-        }
 
-        if (!order) {
-            return res.status(404).json({ message: 'Order not found' });
-        }
+                console.log(`💬 AI Context check for: ${prompt.substring(0, 30)}...`);
 
-        // Generate Proforma PDF for Email #2 (Confirmed)
-        let invoiceBase64 = null;
-        if (FEATURE_INVOICE_SYSTEM) {
-            try {
-                const invoiceBuffer = await generateInvoicePdfBuffer({
-                    orderId: order.orderId,
-                    userName: order.userName,
-                    userEmail: order.userEmail,
-                    paymentMethod: order.paymentMethod || 'COD',
-                    paymentStatus: 'Verified',
-                    finalAmount: order.finalAmount,
-                    totalAmount: order.totalAmount,
-                    shippingAmount: order.shippingAmount,
-                    shippingAddress: order.shippingAddress,
-                    products: order.products || [],
-                    orderDate: order.orderDate || new Date(),
-                    estimatedArrival: order.estimatedArrival,
-                    deliveryPartner: order.deliveryPartner,
-                    orderStatus: 'Confirmed',
-                    pdfType: 'confirmation'
-                });
-                if (invoiceBuffer) {
-                    invoiceBase64 = invoiceBuffer.toString('base64');
-                }
-            } catch (pdfError) {
-                console.error('❌ PDF generation for Email #2 failed:', pdfError.message);
-            }
-        }
+                // 📊 DATABASE SYNC: Products की लिस्ट निकाल रहे हैं
+                const allProducts = await Product.find({}, 'name baseprice maincategory');
+                const productDataSummary = allProducts.map(p => `- ${p.name} (Rs.${p.baseprice})`).slice(0, 15).join("\n");
 
-
-        // Send BOTH: Order Placed (Email #1) and Order Confirmed (Premium, Email #2)
-        let emailSent = true;
-        if (FEATURE_EMAIL_NOTIFICATIONS) {
-            try {
-                // Email #1: Order Placed
-                await enqueueEmailJob('order-placed', {
-                    toEmail: order.userEmail,
-                    userName: order.userName,
-                    orderId: order.orderId,
-                    finalAmount: order.finalAmount,
-                    products: order.products || [],
-                    shippingAddress: order.shippingAddress
-                });
-                // Email #2: Order Confirmed (Premium)
-                await enqueueEmailJob('order-confirmed', {
-                    toEmail: order.userEmail,
-                    userName: order.userName,
-                    orderId: order.orderId,
-                    paymentMethod: order.paymentMethod || 'COD',
-                    finalAmount: order.finalAmount,
-                    shippingAddress: order.shippingAddress,
-                    products: order.products || [],
-                    estimatedArrival: order.estimatedArrival,
-                    invoiceBase64: invoiceBase64,
-                    orderStatus: 'Confirmed'
-                });
-            } catch (confirmQueueErr) {
-                emailSent = false;
-                console.warn(`⚠️ Email queue failed for ${orderId}:`, confirmQueueErr.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
-            }
-        }
-
-        if (!emailSent) {
-            console.warn(`⚠️ One or more emails failed for ${orderId}, but updating status anyway`);
-        }
-
-        // Update order status to "Confirmed"
-        order.orderStatus = 'Confirmed';
-        order.confirmationEmailSent = true;
-        order.confirmationEmailSentAt = new Date();
-        const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
-        order.statusHistory = [
-            ...existingTimeline,
-            {
-                status: 'Confirmed',
-                timestamp: new Date(),
-                message: 'Order confirmed by admin - Confirmation email sent'
-            }
-        ];
-        await order.save();
-
-        // Sync to checkout collection
-        await Checkout.updateMany(
-            { userid: order.userid, finalAmount: order.finalAmount },
-            { orderstatus: 'Confirmed', updatedAt: new Date() }
-        ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
-
-        // Real-time update via Socket.IO
-        io.to(`user:${order.userid}`).emit('statusUpdate', {
-            orderId: order.orderId,
-            status: 'Confirmed',
-            message: 'Your order has been confirmed! Check your email for full details.',
-            emailSent: emailSent
-        });
-
-        res.json({
-            success: true,
-            message: 'Order confirmed successfully',
-            orderId: order.orderId,
-            emailSent: emailSent,
-            order: {
-                orderId: order.orderId,
-                status: order.orderStatus,
-                userEmail: order.userEmail,
-                confirmationEmailSentAt: order.confirmationEmailSentAt
-            }
-        });
-    } catch (error) {
-        console.error('❌ Admin Confirm Order Error:', error.message);
-        if (process.env.SENTRY_DSN) Sentry.captureException(error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to confirm order',
-            error: error.message
-        });
-    }
-});
-
-app.post('/api/admin/update-order-status', handleOrderStatusUpdate);
-
-app.post('/api/chat', async (req, res) => {
-    try {
-        const prompt = (req.body?.prompt || req.body?.message || '').trim();
-        const history = req.body?.history || req.body?.conversationHistory || [];
-
-        if (!prompt) {
-            console.error("⚠️ No prompt received from frontend");
-            return res.status(400).json({ error: "Prompt is required" });
-        }
-
-        if (!genAI) {
-            console.error("⚠️ GEMINI_API_KEY missing or invalid");
-            return res.json({
-                text: "I’m here to help with fashion recommendations. Our AI service is refreshing right now—please try again in a moment.",
-                fallback: true
-            });
-        }
-
-        console.log(`💬 AI Context check for: ${prompt.substring(0, 30)}...`);
-
-        // 📊 DATABASE SYNC: Products की लिस्ट निकाल रहे हैं
-        const allProducts = await Product.find({}, 'name baseprice maincategory');
-        const productDataSummary = allProducts.map(p => `- ${p.name} (Rs.${p.baseprice})`).slice(0, 15).join("\n");
-
-        const systemInstruction = `You are the Expert Fashion Stylist for 'eShopper Boutique Luxe'. 
+                const systemInstruction = `You are the Expert Fashion Stylist for 'eShopper Boutique Luxe'. 
             Your only goal is to suggest clothes from this inventory:\n${productDataSummary}\n
             Rules: 
             1. Suggest real items from the list above.
             2. Be extremely polite and stylish.
             3. Keep answers under 3 lines.`;
 
-        // 🛠️ ROLE FIX: Roles normalized for stable prompt composition
-        let cleanHistory = (history || []).map(m => ({
-            role: (m.role === 'ai' || m.role === 'model' || m.role === 'bot' || m.sender === 'ai' || m.sender === 'model' || m.sender === 'bot') ? 'model' : 'user',
-            parts: [{ text: m.text || m.parts?.[0]?.text || "" }]
-        }));
+                // 🛠️ ROLE FIX: Roles normalized for stable prompt composition
+                let cleanHistory = (history || []).map(m => ({
+                    role: (m.role === 'ai' || m.role === 'model' || m.role === 'bot' || m.sender === 'ai' || m.sender === 'model' || m.sender === 'bot') ? 'model' : 'user',
+                    parts: [{ text: m.text || m.parts?.[0]?.text || "" }]
+                }));
 
-        const discoveredModels = await getAvailableGeminiModels();
-        const preferredOrder = [
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-lite",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro",
-            "gemini-pro"
-        ];
+                const discoveredModels = await getAvailableGeminiModels();
+                const preferredOrder = [
+                    "gemini-2.5-flash",
+                    "gemini-2.0-flash",
+                    "gemini-2.0-flash-lite",
+                    "gemini-1.5-flash",
+                    "gemini-1.5-pro",
+                    "gemini-pro"
+                ];
 
-        let candidateModels = [];
-        if (discoveredModels.length > 0) {
-            const preferredAvailable = preferredOrder.filter((name) => discoveredModels.includes(name));
-            const remaining = discoveredModels.filter((name) => !preferredAvailable.includes(name));
-            candidateModels = [...preferredAvailable, ...remaining];
-        } else {
-            candidateModels = preferredOrder;
-        }
+                let candidateModels = [];
+                if (discoveredModels.length > 0) {
+                    const preferredAvailable = preferredOrder.filter((name) => discoveredModels.includes(name));
+                    const remaining = discoveredModels.filter((name) => !preferredAvailable.includes(name));
+                    candidateModels = [...preferredAvailable, ...remaining];
+                } else {
+                    candidateModels = preferredOrder;
+                }
 
-        const historyText = cleanHistory
-            .map((item) => {
-                const roleLabel = item.role === 'model' ? 'Assistant' : 'User';
-                const text = String(item.parts?.[0]?.text || '').trim();
-                return text ? `${roleLabel}: ${text}` : '';
-            })
-            .filter(Boolean)
-            .slice(-12)
-            .join('\n');
+                const historyText = cleanHistory
+                    .map((item) => {
+                        const roleLabel = item.role === 'model' ? 'Assistant' : 'User';
+                        const text = String(item.parts?.[0]?.text || '').trim();
+                        return text ? `${roleLabel}: ${text}` : '';
+                    })
+                    .filter(Boolean)
+                    .slice(-12)
+                    .join('\n');
 
-        const fullPrompt = `${systemInstruction}\n\nConversation So Far:\n${historyText || 'No previous conversation.'}\n\nCurrent User Query: ${prompt}`;
+                const fullPrompt = `${systemInstruction}\n\nConversation So Far:\n${historyText || 'No previous conversation.'}\n\nCurrent User Query: ${prompt}`;
 
-        let textResponse = "";
-        let lastModelError = null;
+                let textResponse = "";
+                let lastModelError = null;
 
-        for (const modelName of candidateModels) {
-            if (isModelCoolingDown(modelName)) {
-                continue;
-            }
+                for (const modelName of candidateModels) {
+                    if (isModelCoolingDown(modelName)) {
+                        continue;
+                    }
 
-            try {
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    systemInstruction
+                    try {
+                        const model = genAI.getGenerativeModel({
+                            model: modelName,
+                            systemInstruction
+                        });
+
+                        const result = await model.generateContent(fullPrompt);
+                        const response = await result.response;
+                        textResponse = response.text();
+
+                        if (textResponse && textResponse.trim()) {
+                            console.log(`✅ AI responded successfully using model: ${modelName}`);
+                            break;
+                        }
+
+                        throw new Error(`Empty response from model: ${modelName}`);
+                    } catch (modelError) {
+                        if (isQuotaError(modelError)) {
+                            setModelCooldown(modelName, modelError);
+                            lastModelError = modelError;
+                            devWarn(`Quota hit for ${modelName}, cooling down`);
+                            continue;
+                        }
+
+                        devWarn(`Gemini SDK failed (${modelName}): ${modelError.message}`);
+
+                        try {
+                            const restText = await generateWithRest(modelName, fullPrompt);
+                            if (restText && restText.trim()) {
+                                textResponse = restText;
+                                devLog(`AI responded via REST fallback using model: ${modelName}`);
+                                break;
+                            }
+                            throw new Error(`Empty REST response from model: ${modelName}`);
+                        } catch (restError) {
+                            if (isQuotaError(restError)) {
+                                setModelCooldown(modelName, restError);
+                            }
+                            lastModelError = restError;
+                            devWarn(`Gemini REST failed (${modelName}): ${restError.message}`);
+                        }
+                    }
+                }
+
+                if (!textResponse || !textResponse.trim()) {
+                    throw lastModelError || new Error("No Gemini model returned a valid response");
+                }
+
+                res.json({ text: textResponse });
+
+            } catch (error) {
+                console.error("❌ Chat API Error:", error.message);
+                res.json({
+                    text: "I’m having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
+                    fallback: true
                 });
-
-                const result = await model.generateContent(fullPrompt);
-                const response = await result.response;
-                textResponse = response.text();
-
-                if (textResponse && textResponse.trim()) {
-                    console.log(`✅ AI responded successfully using model: ${modelName}`);
-                    break;
-                }
-
-                throw new Error(`Empty response from model: ${modelName}`);
-            } catch (modelError) {
-                if (isQuotaError(modelError)) {
-                    setModelCooldown(modelName, modelError);
-                    lastModelError = modelError;
-                    devWarn(`Quota hit for ${modelName}, cooling down`);
-                    continue;
-                }
-
-                devWarn(`Gemini SDK failed (${modelName}): ${modelError.message}`);
-
-                try {
-                    const restText = await generateWithRest(modelName, fullPrompt);
-                    if (restText && restText.trim()) {
-                        textResponse = restText;
-                        devLog(`AI responded via REST fallback using model: ${modelName}`);
-                        break;
-                    }
-                    throw new Error(`Empty REST response from model: ${modelName}`);
-                } catch (restError) {
-                    if (isQuotaError(restError)) {
-                        setModelCooldown(modelName, restError);
-                    }
-                    lastModelError = restError;
-                    devWarn(`Gemini REST failed (${modelName}): ${restError.message}`);
-                }
             }
-        }
-
-        if (!textResponse || !textResponse.trim()) {
-            throw lastModelError || new Error("No Gemini model returned a valid response");
-        }
-        
-        res.json({ text: textResponse });
-
-    } catch (error) {
-        console.error("❌ Chat API Error:", error.message);
-        res.json({ 
-            text: "I’m having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
-            fallback: true
         });
-    }
-});
-// --- server.js AI REFACTOR END ---
+        // --- server.js AI REFACTOR END ---
 
         const server = httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`🚀 Master Server Live on ${PORT}`);
