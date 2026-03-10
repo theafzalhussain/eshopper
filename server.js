@@ -2823,10 +2823,33 @@ const placeOrderHandler = async (req, res) => {
             }
         }
 
-        const recipientEmail = String(user.email || addressPayload?.email || '').trim();
+        // Robustly determine recipient email for order placed email
+        let recipientEmail = '';
+        if (user.email && user.email.includes('@')) {
+            recipientEmail = user.email.trim();
+        } else if (addressPayload && addressPayload.email && addressPayload.email.includes('@')) {
+            recipientEmail = addressPayload.email.trim();
+        }
 
-        // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY
-        // [EMAIL PLACEHOLDER] Integrate new premium order placed email logic here.
+        // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY (always attempt if email found)
+        if (recipientEmail) {
+            try {
+                await sendOrderPlacedEmail({
+                    toEmail: recipientEmail,
+                    userName: user.name || addressPayload?.fullName || 'Valued Customer',
+                    orderId,
+                    finalAmount: payable,
+                    products: cleanProducts,
+                    shippingAddress: addressPayload,
+                    invoiceBuffer
+                });
+            } catch (emailErr) {
+                console.error('❌ Order Placed email failed:', emailErr.message);
+                if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(emailErr);
+            }
+        } else {
+            console.warn(`⚠️  No valid recipient email found for order ${orderId}. Order Placed email not sent.`);
+        }
 
         // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
