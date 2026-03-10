@@ -21,7 +21,7 @@ const path = require('path');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
 // ===== EMAIL UTILITY (Brevo)
-const { sendEmail } = require('./src/utils/emailHelper');
+// ...existing code...
 /**
  * Universal transactional email sender for ESHOPPER (Brevo/Sendinblue)
  * @param {Object} opts
