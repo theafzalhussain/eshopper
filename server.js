@@ -2142,162 +2142,33 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
 };
 
 // ==================== EMAIL #1: ORDER PLACED (IMMEDIATE NOTIFICATION) ====================
+
 const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, products, shippingAddress, invoiceBuffer }) => {
     if (!toEmail || !toEmail.includes('@')) {
         console.error('❌ Invalid email:', toEmail);
         throw new Error('Invalid toEmail address');
     }
-
     try {
-        const firstName = (userName || 'Valued Customer').split(' ')[0];
-        const safeProducts = Array.isArray(products) ? products : [];
-
-        const productRows = safeProducts.slice(0, 3).map(p => `
-            <tr>
-                <td style="padding:14px; border-bottom:1px solid #222; vertical-align:middle;">
-                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                        <tr>
-                            <td style="width:80px; padding-right:14px; vertical-align:middle;">
-                                ${p.pic ? `<img src="${p.pic}" alt="${p.name}" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid #D4AF37; display:block;" />` : `<div style="width:80px; height:80px; background:#1a1a1a; border-radius:8px; border:2px solid #D4AF37; display:table-cell; text-align:center; vertical-align:middle; font-size:32px;">📦</div>`}
-                            </td>
-                            <td style="vertical-align:middle;">
-                                <div style="font-weight:700; color:#fff; font-size:15px; margin:0 0 6px 0;">${p.name}</div>
-                                <div style="font-size:13px; color:#aaa;">Quantity: <strong style="color:#D4AF37;">${p.qty || 1}</strong></div>
-                                <div style="font-size:13px; color:#aaa; margin-top:4px;">Price: <strong style="color:#D4AF37;">₹${Number(p.price || 0).toLocaleString('en-IN')}</strong></div>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        `).join('');
-
-        const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        * { box-sizing:border-box; margin:0; padding:0; }
-        body { font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#0A0A0A; color:#fff; line-height:1.6; }
-        .email-wrapper { width:100%; background:#0A0A0A; padding:20px 0; }
-        .container { max-width:600px; margin:0 auto; background:#0A0A0A; border:2px solid #D4AF37; border-radius:12px; overflow:hidden; }
-        .header { padding:40px 30px; text-align:center; background:linear-gradient(180deg, #1a1a1a 0%, #0A0A0A 100%); border-bottom:3px solid #D4AF37; }
-        .logo-emoji { font-size:56px; margin:0 auto 18px; width:70px; height:70px; line-height:70px; }
-        .brand-name { font-size:32px; font-weight:900; color:#D4AF37; margin:0 0 8px 0; letter-spacing:1.5px; text-transform:uppercase; }
-        .tagline { font-size:13px; color:#888; margin:0; letter-spacing:1.2px; text-transform:uppercase; }
-        .status-badge { display:inline-block; background:#D4AF37; color:#0A0A0A; padding:10px 24px; border-radius:25px; font-size:12px; font-weight:900; margin-top:16px; letter-spacing:1px; }
-        .content { padding:40px 30px; }
-        .greeting-box { background:#1a1a1a; padding:24px; border-radius:10px; border-left:4px solid #D4AF37; margin-bottom:30px; }
-        .greeting { font-size:16px; color:#e5e5e5; line-height:1.7; margin:0; }
-        .greeting strong { color:#D4AF37; font-weight:700; }
-        .section-title { font-size:14px; font-weight:900; color:#D4AF37; margin:0 0 18px 0; text-transform:uppercase; letter-spacing:1.2px; }
-        .order-id-box { background:#1a1a1a; padding:24px; border-radius:10px; border:2px solid #D4AF37; margin-bottom:30px; text-align:center; }
-        .order-id-label { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:1.5px; margin:0 0 10px 0; }
-        .order-id { font-size:26px; font-weight:900; color:#D4AF37; margin:0; letter-spacing:1.2px; font-family:monospace; }
-        .order-date { font-size:13px; color:#666; margin:14px 0 0 0; }
-        .info-table { width:100%; border-collapse:collapse; background:#1a1a1a; border-radius:10px; overflow:hidden; margin-bottom:30px; border:1px solid #333; }
-        .info-table td { padding:14px; color:#e5e5e5; font-size:14px; border-bottom:1px solid #222; }
-        .info-table tr:last-child td { border-bottom:none; }
-        .amount-box { background:#1a1a1a; padding:24px; border-radius:10px; border:1px solid #333; margin-bottom:30px; }
-        .amount-row { display:table; width:100%; padding:12px 0; border-bottom:1px solid #333; font-size:15px; }
-        .amount-row:last-child { border-bottom:none; border-top:2px solid #D4AF37; padding-top:16px; margin-top:10px; }
-        .amount-label { display:table-cell; color:#aaa; }
-        .amount-value { display:table-cell; color:#fff; font-weight:700; text-align:right; }
-        .total-value { color:#D4AF37; font-size:22px; font-weight:900; }
-        .track-button { display:block; background:#D4AF37; color:#0A0A0A; padding:16px 32px; border-radius:8px; text-decoration:none; font-weight:900; text-align:center; font-size:15px; margin:30px 0; transition:all 0.3s; letter-spacing:0.5px; }
-        .track-button:hover { background:#ffd700; transform:translateY(-2px); }
-        .info-note { font-size:13px; color:#666; text-align:center; margin-top:28px; line-height:1.6; }
-        .footer { padding:32px 30px; text-align:center; border-top:2px solid #333; background:#0A0A0A; }
-        .footer-brand { font-size:18px; font-weight:900; color:#D4AF37; margin:0 0 6px 0; letter-spacing:1px; }
-        .footer-text { font-size:12px; color:#666; margin:6px 0; }
-        .footer-link { color:#D4AF37; text-decoration:none; font-weight:700; }
-        .footer-link:hover { color:#ffd700; }
-        @media (max-width:600px) {
-            .header { padding:30px 20px; }
-            .content { padding:30px 20px; }
-            .footer { padding:24px 20px; }
-            .brand-name { font-size:26px; }
-            .logo-emoji { font-size:48px; width:60px; height:60px; line-height:60px; }
-            .greeting-box { padding:18px; }
-            .info-table td { padding:12px 10px; font-size:13px; }
-            .track-button { padding:14px 28px; font-size:14px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="email-wrapper">
-        <div class="container">
-            <div class="header">
-                <div class="logo-emoji">💎</div>
-                <h1 class="brand-name">eShopper</h1>
-                <p class="tagline">Boutique Luxe</p>
-                <span class="status-badge">📦 ORDER RECEIVED</span>
-            </div>
-            
-            <div class="content">
-                <div class="greeting-box">
-                    <p class="greeting">Hello <strong>${firstName}</strong>,</p>
-                    <p class="greeting" style="margin-top:10px;">Thank you for choosing eShopper! We've successfully received your order and our team is now reviewing your request. You'll receive a detailed confirmation email shortly with all order information.</p>
-                </div>
-                
-                <p class="section-title">📋 Order Summary</p>
-                <div class="order-id-box">
-                    <p class="order-id-label">Order ID</p>
-                    <p class="order-id">${orderId}</p>
-                    <p class="order-date">Placed on ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                </div>
-                
-                ${safeProducts.length > 0 ? `
-                <p class="section-title">🛍️ Items Ordered</p>
-                <table class="info-table">
-                    <tbody>${productRows}</tbody>
-                </table>
-                ${safeProducts.length > 3 ? `<p style="font-size:13px; color:#888; margin:-20px 0 25px 0; text-align:center;">+ ${safeProducts.length - 3} more item(s) in your order</p>` : ''}
-                ` : ''}
-                
-                <p class="section-title">💰 Payment Details</p>
-                <div class="amount-box">
-                    <div class="amount-row">
-                        <span class="amount-label">Order Total</span>
-                        <span class="amount-value total-value">₹ ${Number(finalAmount || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                </div>
-                
-                <a href="https://eshopperr.me/order-tracking/${orderId}" class="track-button">TRACK YOUR ORDER</a>
-                
-                <p class="info-note">
-                    📧 You'll receive a confirmation email with complete order details and invoice shortly.<br>
-                    <span style="display:block; margin-top:8px; font-size:12px; color:#555;">Our team is processing your request...</span>
-                </p>
-            </div>
-            
-            <div class="footer">
-                <p class="footer-brand">eShopper Boutique Luxe</p>
-                <p class="footer-text">Premium Fashion & Lifestyle Destination</p>
-                <p class="footer-text" style="margin-top:16px;">
-                    <a href="mailto:support@eshopperr.me" class="footer-link">📧 support@eshopperr.me</a>
-                </p>
-                <p class="footer-text" style="margin-top:10px; font-size:11px; color:#555;">
-                    This is an automated notification. Please do not reply to this email.
-                </p>
-            </div>
-        </div>
-    </div>
-</body>
-</html>`;
-
+        const displayName = userName || 'Valued Customer';
+        const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, displayName)
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+            .replace(/{{totalAmount}}/g, finalAmount ? `₹${Number(finalAmount).toLocaleString('en-IN')}` : '')
+            // Add more replacements as needed
+        ;
         const attachments = invoiceBuffer
             ? [{ filename: `Receipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
             : [];
-
         const result = await sendTransactionalEmail({
             toEmail,
-            toName: userName || 'Customer',
+            toName: displayName,
             subject: "✨ Order Received - Thank You for Shopping with Us!",
             htmlContent,
             attachments
         });
-
         console.log(`✅ Order Placed email sent via ${result.provider} to ${toEmail} for ${orderId}`);
         return true;
     } catch (error) {
@@ -2308,21 +2179,25 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 
 // ==================== EMAIL #2: ORDER CONFIRMED (ULTRA-PREMIUM) ====================
 
+
 const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products, finalAmount, deliveryDate, invoiceBase64 }) => {
     try {
-        // email-templates path usage removed
+        const name = displayName || 'Valued Customer';
+        const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
         let htmlContent = fs.readFileSync(templatePath, 'utf8');
         htmlContent = htmlContent
             .replace(/{{orderId}}/g, orderId)
-            .replace(/{{userName}}/g, displayName || 'Valued Customer')
-            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'));
+            .replace(/{{userName}}/g, name)
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+            // Add more replacements as needed
+        ;
         const attachments = [];
         if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
             attachments.push({ filename: `Confirmation-${orderId}.pdf`, content: invoiceBase64.trim(), contentType: 'application/pdf' });
         }
         const result = await sendTransactionalEmail({
             toEmail,
-            toName: displayName,
+            toName: name,
             subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
             htmlContent,
             attachments
@@ -2333,7 +2208,6 @@ const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products
         console.error('❌ Confirmation email failed:', error.message);
         return false;
     }
-// (Removed invalid HTML/JSX and misplaced template code. Email templates should be in separate HTML files, not inline in server.js)
 };
 
 // ============ FIREBASE AUTH SYNC ROUTE ============
