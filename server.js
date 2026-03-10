@@ -98,11 +98,27 @@ async function executeEmailJob(jobType, payload) {
             'order-delivered'
         ];
         if (allowedTypes.includes((jobType || '').toLowerCase())) {
-            // Debug: print payload before sending
-            if (!payload || !payload.to || !payload.subject || !payload.htmlContent) {
-                console.error('❌ [DEBUG] Missing email parameter in jobType:', jobType, '| payload:', payload);
+            // Normalize payload for all order status emails
+            let fixedPayload = { ...payload };
+            // Accept both toEmail and to (legacy)
+            if (!fixedPayload.toEmail && fixedPayload.to) fixedPayload.toEmail = fixedPayload.to;
+            if (!fixedPayload.to && fixedPayload.toEmail) fixedPayload.to = fixedPayload.toEmail;
+            // Always require toEmail
+            if (!fixedPayload.toEmail || typeof fixedPayload.toEmail !== 'string' || !fixedPayload.toEmail.includes('@')) {
+                console.error('❌ [DEBUG] Missing or invalid toEmail in jobType:', jobType, '| payload:', payload);
+                throw new Error('Missing or invalid toEmail in email payload');
             }
-            return await sendTransactionalEmail(payload);
+            // Always require subject
+            if (!fixedPayload.subject || typeof fixedPayload.subject !== 'string' || !fixedPayload.subject.trim()) {
+                fixedPayload.subject = `${jobType.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} - Order Update | Eshopper Boutique`;
+            }
+            // Always require htmlContent
+            if (!fixedPayload.htmlContent || typeof fixedPayload.htmlContent !== 'string' || !fixedPayload.htmlContent.trim()) {
+                fixedPayload.htmlContent = `<div style='font-family:Arial,sans-serif;padding:32px;'><h2>Order Update: ${jobType}</h2><p>Your order status has changed. Please check your account for details.</p></div>`;
+            }
+            // Remove legacy to field
+            delete fixedPayload.to;
+            return await sendTransactionalEmail(fixedPayload);
         } else {
             throw new Error('Unknown email job type: ' + jobType);
         }
