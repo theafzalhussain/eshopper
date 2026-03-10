@@ -3975,27 +3975,39 @@ async function startServer() {
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
                         // Email #1: Order Placed
-                        await enqueueEmailJob('order-placed', {
-                            toEmail: order.userEmail,
-                            userName: order.userName,
-                            orderId: order.orderId,
-                            finalAmount: order.finalAmount,
-                            products: order.products || [],
-                            shippingAddress: order.shippingAddress
-                        });
-                        // Email #2: Order Confirmed (Premium)
-                        await enqueueEmailJob('order-confirmed', {
-                            toEmail: order.userEmail,
-                            userName: order.userName,
-                            orderId: order.orderId,
-                            paymentMethod: order.paymentMethod || 'COD',
-                            finalAmount: order.finalAmount,
-                            shippingAddress: order.shippingAddress,
-                            products: order.products || [],
-                            estimatedArrival: order.estimatedArrival,
-                            invoiceBase64: invoiceBase64,
-                            orderStatus: 'Confirmed'
-                        });
+                        // Render placed email
+                        const placedEmail = await (async () => {
+                            let displayName = order.userName || 'Valued Customer';
+                            const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+                            let htmlContent = fs.readFileSync(templatePath, 'utf8');
+                            htmlContent = htmlContent
+                                .replace(/{{orderId}}/g, order.orderId)
+                                .replace(/{{userName}}/g, displayName)
+                                .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+                                .replace(/{{totalAmount}}/g, order.finalAmount ? `₹${Number(order.finalAmount).toLocaleString('en-IN')}` : '');
+                            return {
+                                toEmail: order.userEmail,
+                                subject: "✨ Order Received - Thank You for Shopping with Us!",
+                                htmlContent
+                            };
+                        })();
+                        await enqueueEmailJob('order-placed', placedEmail);
+                        // Render confirmed email
+                        const confirmedEmail = await (async () => {
+                            let displayName = order.userName || 'Valued Customer';
+                            const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
+                            let htmlContent = fs.readFileSync(templatePath, 'utf8');
+                            htmlContent = htmlContent
+                                .replace(/{{orderId}}/g, order.orderId)
+                                .replace(/{{userName}}/g, displayName)
+                                .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'));
+                            return {
+                                toEmail: order.userEmail,
+                                subject: `✅ Order Confirmed - ${order.orderId} | Eshopper Boutique`,
+                                htmlContent
+                            };
+                        })();
+                        await enqueueEmailJob('order-confirmed', confirmedEmail);
                     } catch (confirmQueueErr) {
                         emailSent = false;
                         console.warn(`⚠️ Email queue failed for ${orderId}:`, confirmQueueErr.message);
