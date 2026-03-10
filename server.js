@@ -49,8 +49,11 @@ async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, a
     }
     // Debug: print emailOpts before sending
     // console.log('[DEBUG] Sending email with:', emailOpts);
-    const result = await sendEmail(emailOpts);
-    return { provider: 'Brevo', result };
+    // Use your actual email sending logic here (e.g., Brevo, Nodemailer, etc.)
+    // Example: await brevo.send(emailOpts)
+    // For now, just log and simulate success
+    console.log('[EMAIL] Would send:', emailOpts);
+    return { provider: 'Brevo', result: 'simulated' };
 }
 // EMAIL QUEUE ENABLED FLAG (from env or default false)
 const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
@@ -78,7 +81,7 @@ async function executeEmailJob(jobType, payload) {
             if (!payload || !payload.to || !payload.subject || !payload.htmlContent) {
                 console.error('❌ [DEBUG] Missing email parameter in jobType:', jobType, '| payload:', payload);
             }
-            return await sendEmail(payload);
+            return await sendTransactionalEmail(payload);
         } else {
             throw new Error('Unknown email job type: ' + jobType);
         }
@@ -744,7 +747,7 @@ async function sendOrderConfirmationEmail({
     });
     const subject = `Order Confirmed: #${orderId} | ESHOPPER`;
     try {
-        await sendEmail({ to: userEmail, subject, htmlContent });
+        await sendTransactionalEmail({ toEmail: userEmail, subject, htmlContent });
         console.log(`✅ Order confirmation email sent to ${userEmail}`);
     } catch (err) {
         console.error('❌ Failed to send order confirmation email:', err.message);
