@@ -11,7 +11,7 @@ const getAuthToken = () => {
 };
 
 // With timeout and better error handling
-async function fastAPI(endpoint, method = "GET", data = null) {
+export async function fastAPI(endpoint, method = "GET", data = null) {
     const isFD = data instanceof FormData;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
