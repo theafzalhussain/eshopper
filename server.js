@@ -2971,11 +2971,10 @@ app.post('/api/test-notification', async (req, res) => {
         if (email) {
             results.email.attempted = true;
             try {
-                // Brevo email sending removed
-                sender: { name: 'Eshopper', email: 'support@eshopperr.me' },
-                to: [{ email: email, name: 'Test User' }],
+                await sendEmail({
+                    to: email,
                     subject: '✅ Test Notification - Eshopper Boutique',
-                        htmlContent: `
+                    htmlContent: `
                         <div style="font-family:Arial,sans-serif;padding:20px;background:#f8f8f8;">
                             <h2 style="color:#111;">✨ Test Email Notification</h2>
                             <p>This is a test email from your Eshopper notification system.</p>
@@ -2985,26 +2984,18 @@ app.post('/api/test-notification', async (req, res) => {
                             <hr style="border:1px solid #ddd;margin:20px 0;" />
                             <p style="font-size:12px;color:#666;">This is an automated test message from Eshopper Boutique Luxe</p>
                         </div>
-                    `,
-                            replyTo: { email: 'support@eshopperr.me' }
-            }, {
-                headers: {
-                    // Brevo API key removed
-                    'content-type': 'application/json',
-                        'accept': 'application/json'
-                },
-                timeout: 15000
-            });
-results.email.success = true;
-results.email.message = 'Email notification sent successfully';
+                    `
+                });
+                results.email.success = true;
+                results.email.message = 'Email notification sent successfully';
             } catch (emailError) {
-    results.email.success = false;
-    results.email.error = emailError.message;
-    results.email.details = {
-        status: emailError.response?.status,
-        data: emailError.response?.data
-    };
-}
+                results.email.success = false;
+                results.email.error = emailError.message;
+                results.email.details = {
+                    status: emailError.response?.status,
+                    data: emailError.response?.data
+                };
+            }
         }
 
 const allSuccess =
