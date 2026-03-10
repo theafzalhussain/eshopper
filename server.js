@@ -2428,27 +2428,59 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
             await OTPRecord.findOneAndUpdate({ email: normalizedEmail }, { otp, email: normalizedEmail }, { upsert: true });
         }
 
-                // 📧 CRITICAL FIX: Always send to user's actual email, not the input (which might be username)
-                const emailToSend = user ? user.email : normalizedEmail;
-                // Send OTP email using Brevo
-                const subject = type === 'signup' ? 'Your ESHOPPER Signup OTP' : 'Your ESHOPPER Password Reset OTP';
-                const htmlContent = `
-    < div style = "font-family:Arial,sans-serif;background:#f6f6f6;padding:24px;" >
-                        <h2 style="color:#1f8f54;margin:0 0 10px 0;">ESHOPPER OTP Verification</h2>
-                        <p style="margin:0 0 10px 0;color:#333;">Your OTP is:</p>
-                        <div style="font-size:32px;font-weight:900;color:#d4af37;letter-spacing:6px;margin-bottom:12px;">${otp}</div>
-                        <p style="margin:0 0 10px 0;color:#555;">This OTP is valid for 10 minutes. Please do not share it with anyone.</p>
-                        <hr style="margin:15px 0;border:none;border-top:1px solid #e0e0e0;" />
-                        <p style="margin:0;font-size:12px;color:#888;">If you did not request this, please ignore this email.</p>
-                    </div >
-    `;
-                try {
-                    await sendEmail({ to: emailToSend, subject, htmlContent });
-                } catch (err) {
-                    console.error('❌ Failed to send OTP email:', err.message);
-                    return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
-                }
-                res.json({ result: "Done", message: "OTP sent successfully" });
+                                // 📧 CRITICAL FIX: Always send to user's actual email, not the input (which might be username)
+                                const emailToSend = user ? user.email : normalizedEmail;
+                                // Send OTP email using Brevo
+                                const subject = type === 'signup' ? 'Your ESHOPPER Signup OTP' : 'Your ESHOPPER Password Reset OTP';
+                                const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESHOPPER OTP Verification</title>
+    <style>
+        body { background: #f6f6f6; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        .lux-card { max-width: 420px; margin: 32px auto; background: #fff; border-radius: 24px; box-shadow: 0 8px 32px rgba(212,175,55,0.10), 0 1.5px 8px #d4af37; padding: 0; overflow: hidden; border: 2px solid #d4af37; }
+        .lux-header { background: linear-gradient(90deg, #0a0a0a 60%, #d4af37 100%); padding: 32px 24px 18px 24px; text-align: center; }
+        .lux-logo { font-size: 44px; color: #d4af37; font-weight: 900; letter-spacing: 2px; margin-bottom: 8px; }
+        .lux-title { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0 0 6px 0; }
+        .lux-subtitle { font-size: 13px; color: #d4af37; font-weight: 700; letter-spacing: 1px; margin-bottom: 0; }
+        .lux-content { padding: 32px 24px 24px 24px; text-align: center; }
+        .otp-label { font-size: 15px; color: #222; font-weight: 700; margin-bottom: 10px; letter-spacing: 1px; }
+        .otp-box { font-size: 38px; font-weight: 900; color: #d4af37; letter-spacing: 12px; background: #f9f7f4; border-radius: 12px; padding: 18px 0; margin: 0 auto 18px auto; width: 80%; border: 2px solid #d4af37; }
+        .otp-valid { font-size: 13px; color: #888; margin-bottom: 18px; }
+        .lux-footer { font-size: 12px; color: #888; background: #f6f6f6; padding: 18px 24px; border-top: 1px solid #eee; border-radius: 0 0 24px 24px; text-align: center; }
+        @media (max-width: 600px) { .lux-card { max-width: 98vw; } .lux-header, .lux-content, .lux-footer { padding-left: 8vw; padding-right: 8vw; } }
+    </style>
+</head>
+<body>
+    <div class="lux-card">
+        <div class="lux-header">
+            <div class="lux-logo">💎</div>
+            <div class="lux-title">ESHOPPER OTP Verification</div>
+            <div class="lux-subtitle">Boutique Luxe Security</div>
+        </div>
+        <div class="lux-content">
+            <div class="otp-label">Your One-Time Password (OTP) is:</div>
+            <div class="otp-box">${otp}</div>
+            <div class="otp-valid">This OTP is valid for <b>10 minutes</b>. Please do not share it with anyone.</div>
+        </div>
+        <div class="lux-footer">
+            If you did not request this, please ignore this email.<br>
+            <span style="color:#d4af37;font-weight:700;">eShopper Boutique Luxe</span>
+        </div>
+    </div>
+</body>
+</html>
+`;
+                                try {
+                                        await sendEmail({ to: emailToSend, subject, htmlContent });
+                                } catch (err) {
+                                        console.error('❌ Failed to send OTP email:', err.message);
+                                        return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
+                                }
+                                res.json({ result: "Done", message: "OTP sent successfully" });
     } catch (e) {
         console.error("❌ Email Error:", e.message);
         console.error("❌ Email Error Stack:", e.stack);
