@@ -3894,50 +3894,61 @@ async function startServer() {
 
                 // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
-                    setImmediate(() => {
-                        User.findById(order.userid).lean()
-                            .then(async (userDoc) => {
-                                // [EMAIL PLACEHOLDER] Integrate new premium order status email logic here (with userDoc).
-                            })
-                            .catch(err => {
-                                console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
-                                // Try sending without user data
-                                // [EMAIL PLACEHOLDER] Integrate new premium order status email logic here (fallback, no userDoc).
-                            });
-                    });
-                }
-
-                // 🔴 TRIGGER LUXURY NOTIFICATIONS (WhatsApp - disabled unless explicitly enabled)
-                if (FEATURE_WHATSAPP_NOTIFICATIONS) {
-                    setImmediate(() => {
-                        User.findById(order.userid).lean()
-                            .then((userDoc) => {
-                                const resolvedPhone = order.shippingAddress?.phone || userDoc?.phone || order.userPhone;
-                                const resolvedEmail = order.userEmail || userDoc?.email || '';
-                                const resolvedName = order.userName || userDoc?.name || 'Customer';
-
-                                return sendLuxeStatusNotification({
+                    try {
+                        const userDoc = await User.findById(order.userid).lean();
+                        if (userDoc && userDoc.email) {
+                            try {
+                                await sendOrderStatusEmail({
+                                    toEmail: userDoc.email,
+                                    userName: userDoc.name || 'Valued Customer',
                                     orderId: order.orderId,
                                     status: normalized,
-                                    phone: resolvedPhone,
-                                    customerName: resolvedName,
-                                    email: resolvedEmail,
+                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
                                     estimatedDelivery: order.estimatedArrival,
-                                    finalAmount: order.finalAmount,
-                                    totalAmount: order.totalAmount,
-                                    shippingAmount: order.shippingAmount,
-                                    paymentMethod: order.paymentMethod,
-                                    paymentStatus: order.paymentStatus,
-                                    shippingAddress: order.shippingAddress,
-                                    products: order.products
+                                    totalAmount: order.finalAmount
                                 });
-                            })
-                            .catch(err => {
-                                console.error(`⚠️  Background notification error: ${err.message}`);
-                            });
-                    });
+                            } catch (emailErr) {
+                                console.error('❌ Order Status email error:', emailErr.message);
+                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                            }
+                        } else if (order.userEmail) {
+                            // Fallback: try sending to order.userEmail if userDoc not found
+                            try {
+                                await sendOrderStatusEmail({
+                                    toEmail: order.userEmail,
+                                    userName: order.userName || 'Valued Customer',
+                                    orderId: order.orderId,
+                                    status: normalized,
+                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
+                                    estimatedDelivery: order.estimatedArrival,
+                                    totalAmount: order.finalAmount
+                                });
+                            } catch (emailErr) {
+                                console.error('❌ Order Status email error (fallback):', emailErr.message);
+                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                            }
+                        }
+                    } catch (err) {
+                        console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
+                        // Try sending without user data
+                        if (order.userEmail) {
+                            try {
+                                await sendOrderStatusEmail({
+                                    toEmail: order.userEmail,
+                                    userName: order.userName || 'Valued Customer',
+                                    orderId: order.orderId,
+                                    status: normalized,
+                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
+                                    estimatedDelivery: order.estimatedArrival,
+                                    totalAmount: order.finalAmount
+                                });
+                            } catch (emailErr) {
+                                console.error('❌ Order Status email error (fallback):', emailErr.message);
+                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                            }
+                        }
+                    }
                 }
-
                 return res.json({
                     success: true,
                     message: `Order status updated to ${normalized}`,
@@ -3947,8 +3958,8 @@ async function startServer() {
                 console.error('❌ Order update error:', e.message);
                 if (process.env.SENTRY_DSN) Sentry.captureException(e);
                 return res.status(500).json({ message: 'Failed to update order status' });
-            }
-        };
+    }
+};
 
         app.post('/api/update-order-status', handleOrderStatusUpdate);
         app.post('/update-order-status', handleOrderStatusUpdate);
@@ -4311,3 +4322,18 @@ mongoose.connection.on('disconnected', () => {
 });
 
 startServer();
+        // Send Order Placed Email (Luxury)
+        try {
+            await sendOrderPlacedEmail({
+                toEmail: recipientEmail,
+                userName: user.name,
+                orderId,
+                finalAmount: payable,
+                products: cleanProducts,
+                shippingAddress: addressPayload,
+                invoiceBuffer
+            });
+        } catch (emailErr) {
+            console.error('❌ Order Placed email error:', emailErr.message);
+            if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+        }
