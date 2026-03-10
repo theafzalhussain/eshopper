@@ -34,26 +34,47 @@ const puppeteer = require('puppeteer');
  */
 async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
     if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
-    // Always map toEmail to to for sendEmail
-    const emailOpts = {
-        to: toEmail,
+    // Use Brevo (Sendinblue) transactional email API
+    const apiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
+    if (!apiKey) throw new Error('Brevo/Sendinblue API key missing in environment');
+
+    const senderEmail = process.env.SENDER_EMAIL || 'support@eshopperr.me';
+    const senderName = process.env.SENDER_NAME || 'Eshopper Boutique';
+
+    const payload = {
+        sender: { email: senderEmail, name: senderName },
+        to: [{ email: toEmail, name: toName || toEmail }],
         subject,
         htmlContent,
-        // Optionally add textContent or attachments if needed
     };
-    // Attachments (Brevo expects array of {content, name, type})
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-        // Not all Brevo SDKs support attachments directly; if needed, add here
-        // For now, ignore or log
-        console.warn('Attachments provided, but not sent (implement if needed)');
+        // Brevo expects attachments as [{ content, name, type }]
+        payload.attachment = attachments.map(att => ({
+            content: att.content,
+            name: att.filename || att.name,
+            type: att.contentType || 'application/octet-stream'
+        }));
     }
-    // Debug: print emailOpts before sending
-    // console.log('[DEBUG] Sending email with:', emailOpts);
-    // Use your actual email sending logic here (e.g., Brevo, Nodemailer, etc.)
-    // Example: await brevo.send(emailOpts)
-    // For now, just log and simulate success
-    console.log('[EMAIL] Would send:', emailOpts);
-    return { provider: 'Brevo', result: 'simulated' };
+
+    try {
+        const response = await axios.post(
+            'https://api.brevo.com/v3/smtp/email',
+            payload,
+            {
+                headers: {
+                    'api-key': apiKey,
+                    'Content-Type': 'application/json',
+                    'accept': 'application/json'
+                },
+                timeout: 20000
+            }
+        );
+        console.log('[EMAIL] Sent via Brevo:', toEmail, subject);
+        return { provider: 'Brevo', result: response.data };
+    } catch (err) {
+        console.error('❌ Brevo email send failed:', err.response?.data || err.message);
+        throw new Error('Brevo email send failed: ' + (err.response?.data?.message || err.message));
+    }
 }
 // EMAIL QUEUE ENABLED FLAG (from env or default false)
 const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
