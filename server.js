@@ -25,6 +25,28 @@ const { sendEmail } = require('./src/utils/emailHelper');
 // EMAIL QUEUE ENABLED FLAG (from env or default false)
 const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
 
+// Basic executeEmailJob implementation
+/**
+ * Handles email jobs for the queue system
+ * @param {string} jobType - Type of email job (e.g., 'order-status', 'otp', etc.)
+ * @param {object} payload - Email data
+ */
+async function executeEmailJob(jobType, payload) {
+    try {
+        if (jobType === 'order-status') {
+            // Example: expects payload to have to, subject, htmlContent
+            return await sendEmail(payload);
+        }
+        // Add more job types as needed
+        else {
+            throw new Error('Unknown email job type: ' + jobType);
+        }
+    } catch (err) {
+        console.error('executeEmailJob error:', err.message);
+        throw err;
+    }
+}
+
 let firebaseAdminReady = false;
 
 try {
