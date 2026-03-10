@@ -1,2 +1,60 @@
-<!-- Order Placed Email Template -->
-<!-- Copy of src/notifications/templates/01_Placed.html -->
+<!-- Order Placed Email | Boutique Luxe | Ultra-Premium Responsive | Strict Table Layout -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Order Placed - Boutique Luxe</title>
+</head>
+<body style="margin:0;padding:0;background:#0A0A0A;color:#fff;">
+	<table width="100%" bgcolor="#0A0A0A" cellpadding="0" cellspacing="0" style="min-height:100vh;">
+		<tr>
+			<td align="center">
+				<table width="600" cellpadding="0" cellspacing="0" style="background:#181818;border-radius:16px;overflow:hidden;margin:32px 0;max-width:600px;">
+					<!-- Header -->
+					<tr>
+						<td colspan="2" style="padding:32px 24px 12px 24px;text-align:left;background:#0A0A0A;">
+							<img src="{{brandLogo}}" alt="Boutique Luxe Logo" width="120" style="display:block;margin-bottom:12px;">
+							<div style="font-family:serif;font-size:28px;font-weight:900;color:#D4AF37;letter-spacing:2px;">ORDER RECEIVED</div>
+						</td>
+						<td style="padding:32px 24px 12px 0;text-align:right;background:#0A0A0A;vertical-align:top;">
+							<div style="font-size:13px;color:#fff;">Order ID:<br><span style="color:#D4AF37;font-weight:700;">#{{orderId}}</span></div>
+							<div style="font-size:13px;color:#fff;margin-top:8px;">Order Date:<br><span style="color:#D4AF37;font-weight:700;">{{orderDate}}</span></div>
+						</td>
+					</tr>
+					<!-- Hero Message -->
+					<tr>
+						<td colspan="3" style="padding:0 24px 18px 24px;">
+							<div style="font-family:serif;font-size:20px;font-weight:700;color:#fff;margin-bottom:8px;">Hi {{userName}}, your luxury selection is now in our queue.</div>
+							<div style="font-size:15px;color:#D4AF37;">We are verifying your items for quality and authenticity.</div>
+						</td>
+					</tr>
+					<!-- Item Table -->
+					<tr>
+						<td colspan="3" style="padding:0 24px 0 24px;">
+							<table width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 0 0;">
+								<tr style="background:#181818;color:#D4AF37;font-size:14px;font-family:sans-serif;">
+									<th align="left" style="padding:8px 0;">Item</th>
+									<th align="left" style="padding:8px 0;">Details</th>
+									<th align="center" style="padding:8px 0;">Qty</th>
+									<th align="right" style="padding:8px 0;">Subtotal</th>
+								</tr>
+								{{#each items}}
+								<tr style="border-bottom:1px solid #222;">
+									<td style="padding:10px 0;width:80px;"><img src="{{image}}" width="80" style="border-radius:8px;box-shadow:0 2px 8px #000;" alt="Product"></td>
+									<td style="padding:10px 0;">
+										<div style="font-weight:700;color:#fff;">{{name}}</div>
+										<div style="font-size:12px;color:#D4AF37;">Size: {{size}}</div>
+									</td>
+									<td align="center" style="padding:10px 0;color:#fff;font-weight:700;">{{qty}}</td>
+									<td align="right" style="padding:10px 0;color:#D4AF37;font-weight:900;">₹{{subtotal}}</td>
+								</tr>
+								{{/each}}
+							</table>
+						</td>
+					</tr>
+					<!-- Billing Summary -->
+					<tr>
+						<td colspan="3" style="padding:24px 24px 0 24px;">
+							<table width="100%" cellpadding="0" cellspacing="0">
+								<tr>

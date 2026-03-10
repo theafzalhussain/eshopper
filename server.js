@@ -61,12 +61,19 @@ const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
  */
 async function executeEmailJob(jobType, payload) {
     try {
-        if (jobType === 'order-status') {
-            // Example: expects payload to have to, subject, htmlContent
+        // Accept all order-related job types
+        const allowedTypes = [
+            'order-status',
+            'order-placed',
+            'order-confirmed',
+            'order-packed',
+            'order-shipped',
+            'out-for-delivery',
+            'order-delivered'
+        ];
+        if (allowedTypes.includes((jobType || '').toLowerCase())) {
             return await sendEmail(payload);
-        }
-        // Add more job types as needed
-        else {
+        } else {
             throw new Error('Unknown email job type: ' + jobType);
         }
     } catch (err) {
