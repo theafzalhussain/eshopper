@@ -4322,18 +4322,3 @@ mongoose.connection.on('disconnected', () => {
 });
 
 startServer();
-        // Send Order Placed Email (Luxury)
-        try {
-            await sendOrderPlacedEmail({
-                toEmail: recipientEmail,
-                userName: user.name,
-                orderId,
-                finalAmount: payable,
-                products: cleanProducts,
-                shippingAddress: addressPayload,
-                invoiceBuffer
-            });
-        } catch (emailErr) {
-            console.error('❌ Order Placed email error:', emailErr.message);
-            if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
-        }
