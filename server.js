@@ -22,6 +22,8 @@ const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
 // ===== EMAIL UTILITY (Brevo)
 const { sendEmail } = require('./src/utils/emailHelper');
+// EMAIL QUEUE ENABLED FLAG (from env or default false)
+const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
 
 let firebaseAdminReady = false;
 
@@ -2040,6 +2042,8 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
         default:
             templateFile = '01-order-placed.html';
     }
+    // FIX: Define templatePath
+    const templatePath = path.join(__dirname, 'email-templates', templateFile);
     try {
         // email-templates path usage removed
         let htmlContent = fs.readFileSync(templatePath, 'utf8');
