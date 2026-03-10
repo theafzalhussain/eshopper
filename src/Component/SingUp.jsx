@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createUserAPI } from '../Store/Services'
+import { fastAPI } from '../Store/Services.jsx';
 import { BASE_URL } from '../constants'
 import { ShieldCheck, User, Mail, Lock, Loader2, ArrowRight, UserPlus, Eye, EyeOff, CheckCircle, AlertCircle, Chrome } from 'lucide-react'
 import { signInWithPopup } from 'firebase/auth'
@@ -224,39 +225,39 @@ export default function SingUp() {
     // --- STEP 1: SEND OTP ---
     async function handleSendOTP(e) {
         e.preventDefault();
-        setGeneralError("")
-        
+        setGeneralError("");
         if (!termsAccepted) {
-            setGeneralError("Please accept Terms & Conditions to continue")
-            return
+            setGeneralError("Please accept Terms & Conditions to continue");
+            return;
         }
-        
         // Validate all fields
-        const nameError = !data.name ? "Name is required" : ""
-        const emailError = validateEmail(data.email)
-        const usernameError = !data.username ? "Username is required" : (usernameStatus === 'taken' ? "Username already taken" : "")
-        const passwordError = validatePassword(data.password)
+        const nameError = !data.name ? "Name is required" : "";
+        const emailError = validateEmail(data.email);
+        const usernameError = !data.username ? "Username is required" : (usernameStatus === 'taken' ? "Username already taken" : "");
+        const passwordError = validatePassword(data.password);
 
-        setErrors({ name: nameError, email: emailError, username: usernameError, password: passwordError })
+        setErrors({ name: nameError, email: emailError, username: usernameError, password: passwordError });
 
         if (nameError || emailError || usernameError || passwordError || usernameStatus !== 'available') {
-            setGeneralError("Please fix all errors before proceeding")
-            return
+            setGeneralError("Please fix all errors before proceeding");
+            return;
         }
 
         setLoading(true);
         try {
-            // sendOtpAPI removed as part of email/OTP system cleanup
+            const res = await fastAPI('/api/send-otp', 'POST', { email: data.email, type: 'signup' });
             if (res.result === "Done") {
                 setMasterStep('email_otp');
-                setResendTimer(60) // Start 60 second timer
-                setGeneralError("")
+                setResendTimer(60); // Start 60 second timer
+                setGeneralError("");
                 alert("Verification code sent! Check your email.");
+            } else {
+                setGeneralError(res.message || "Failed to send OTP. Please try again.");
             }
         } catch (err) {
-            const errorMsg = err.response?.data?.message || err.message || "Failed to send OTP. Please try again."
-            setGeneralError(errorMsg)
-            console.error("Send OTP Error:", err)
+            const errorMsg = err.response?.data?.message || err.message || "Failed to send OTP. Please try again.";
+            setGeneralError(errorMsg);
+            console.error("Send OTP Error:", err);
         }
         setLoading(false);
     }

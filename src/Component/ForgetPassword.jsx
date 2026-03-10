@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { resetPasswordAPI } from '../Store/Services'
+import { fastAPI } from '../Store/Services.jsx';
 import { motion, AnimatePresence } from 'framer-motion'
 import { KeyRound, ShieldCheck, Loader2, User, Lock, CheckCircle2, ArrowLeft, RotateCcw, AlertCircle } from 'lucide-react'
 
@@ -94,26 +95,23 @@ export default function ForgetPassword() {
     // --- STEP 1: REQUEST OTP ---
     async function handleRequestOTP(e) {
         if(e) e.preventDefault();
-        
-        // Clear previous errors
         setErrors({});
-        
-        // Check max resend attempts
         if (resendAttempts >= maxAttempts) {
             setErrors({ username: `Maximum resend attempts (${maxAttempts}) reached. Please try again later.` });
             return;
         }
-
         setLoading(true);
         try {
-            // sendOtpAPI removed as part of email/OTP system cleanup
+            const res = await fastAPI('/api/send-otp', 'POST', { email: data.username, type: 'forget' });
             if (res.result === "Done") {
                 setStep(2);
                 setTimer(60);
                 setResendAttempts(prev => prev + 1);
+            } else {
+                setErrors({ username: res.message || "No account found with this username/email. Please verify." });
             }
         } catch (err) {
-            setErrors({ username: "No account found with this username/email. Please verify." });
+            setErrors({ username: err.message || "No account found with this username/email. Please verify." });
         }
         setLoading(false);
     }
