@@ -22,6 +22,34 @@ const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
 // ===== EMAIL UTILITY (Brevo)
 const { sendEmail } = require('./src/utils/emailHelper');
+/**
+ * Universal transactional email sender for ESHOPPER (Brevo/Sendinblue)
+ * @param {Object} opts
+ * @param {string} opts.toEmail - Recipient email
+ * @param {string} opts.toName - Recipient name (optional)
+ * @param {string} opts.subject - Email subject
+ * @param {string} opts.htmlContent - HTML content
+ * @param {Array} [opts.attachments] - Attachments (optional)
+ * @returns {Promise<{provider: string, result: any}>}
+ */
+async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
+    if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
+    // Brevo/Sendinblue supports attachments as base64
+    const emailOpts = {
+        to: toEmail,
+        subject,
+        htmlContent,
+        // Optionally add textContent or attachments if needed
+    };
+    // Attachments (Brevo expects array of {content, name, type})
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+        // Not all Brevo SDKs support attachments directly; if needed, add here
+        // For now, ignore or log
+        console.warn('Attachments provided, but not sent (implement if needed)');
+    }
+    const result = await sendEmail(emailOpts);
+    return { provider: 'Brevo', result };
+}
 // EMAIL QUEUE ENABLED FLAG (from env or default false)
 const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
 
