@@ -2121,136 +2121,14 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
     }
 };
 
-const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, invoiceBase64, attachmentName }) => {
-    if (!toEmail) return false;
-    const displayName = userName || 'Valued Customer';
-    let templateFile = null;
-    // Map status to template file
-    switch ((status || '').toLowerCase()) {
-        case 'ordered':
-        case 'order placed':
-            templateFile = '01-order-placed.html'; break;
-        case 'confirmed':
-        case 'order confirmed':
-            templateFile = '02-order-confirmed.html'; break;
-        case 'packed':
-        case 'order packed':
-            templateFile = '03-order-packed.html'; break;
-        case 'shipped':
-        case 'order shipped':
-            templateFile = '04-order-shipped.html'; break;
-        case 'out for delivery':
-            templateFile = '05-out-for-delivery.html'; break;
-        case 'delivered':
-        case 'order delivered':
-            templateFile = '06-order-delivered.html'; break;
-        default:
-            templateFile = '01-order-placed.html';
-    }
-    // FIX: Define templatePath
-    const templatePath = path.join(__dirname, 'email-templates', templateFile);
-    try {
-        // email-templates path usage removed
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
-        htmlContent = htmlContent
-            .replace(/{{orderId}}/g, orderId)
-            .replace(/{{userName}}/g, displayName)
-            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
-            .replace(/{{trackingLink}}/g, trackingLink || '')
-            .replace(/{{status}}/g, status || '')
-            .replace(/{{estimatedDelivery}}/g, estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN') : '')
-            .replace(/{{totalAmount}}/g, totalAmount ? `₹${Number(totalAmount).toLocaleString('en-IN')}` : '');
-        const attachments = [];
-        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
-            attachments.push({
-                filename: attachmentName || `Invoice-${orderId}.pdf`,
-                content: invoiceBase64.trim(),
-                contentType: 'application/pdf'
-            });
-        }
-        const result = await sendTransactionalEmail({
-            toEmail,
-            toName: displayName,
-            subject: `${status || 'Order Update'} - Order ${orderId} | Eshopper Boutique`,
-            htmlContent,
-            attachments
-        });
-        console.log(`✅ Status email sent via ${result.provider}: ${orderId} -> ${status}`);
-        return true;
-    } catch (error) {
-        console.error('❌ Status email failed:', error.message);
-        return false;
-    }
-};
 
-// ==================== EMAIL #1: ORDER PLACED (IMMEDIATE NOTIFICATION) ====================
-
-const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, products, shippingAddress, invoiceBuffer }) => {
-    if (!toEmail || !toEmail.includes('@')) {
-        console.error('❌ Invalid email:', toEmail);
-        throw new Error('Invalid toEmail address');
-    }
-    try {
-        const displayName = userName || 'Valued Customer';
-        const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
-        htmlContent = htmlContent
-            .replace(/{{orderId}}/g, orderId)
-            .replace(/{{userName}}/g, displayName)
-            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
-            .replace(/{{totalAmount}}/g, finalAmount ? `₹${Number(finalAmount).toLocaleString('en-IN')}` : '')
-            // Add more replacements as needed
-        ;
-        const attachments = invoiceBuffer
-            ? [{ filename: `Receipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
-            : [];
-        const result = await sendTransactionalEmail({
-            toEmail,
-            toName: displayName,
-            subject: "✨ Order Received - Thank You for Shopping with Us!",
-            htmlContent,
-            attachments
-        });
-        console.log(`✅ Order Placed email sent via ${result.provider} to ${toEmail} for ${orderId}`);
-        return true;
-    } catch (error) {
-        console.error('❌ Order Placed email failed:', error.message);
-        return false;
-    }
-};
-
-// ==================== EMAIL #2: ORDER CONFIRMED (ULTRA-PREMIUM) ====================
+// Legacy sendOrderStatusEmail removed. All transactional emails now handled by mailController.js and .hbs templates.
 
 
-const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products, finalAmount, deliveryDate, invoiceBase64 }) => {
-    try {
-        const name = displayName || 'Valued Customer';
-        const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
-        htmlContent = htmlContent
-            .replace(/{{orderId}}/g, orderId)
-            .replace(/{{userName}}/g, name)
-            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
-            // Add more replacements as needed
-        ;
-        const attachments = [];
-        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
-            attachments.push({ filename: `Confirmation-${orderId}.pdf`, content: invoiceBase64.trim(), contentType: 'application/pdf' });
-        }
-        const result = await sendTransactionalEmail({
-            toEmail,
-            toName: name,
-            subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
-            htmlContent,
-            attachments
-        });
-        console.log(`✅ Confirmation email sent via ${result.provider} to ${toEmail}`);
-        return true;
-    } catch (error) {
-        console.error('❌ Confirmation email failed:', error.message);
-        return false;
-    }
-};
+// Legacy sendOrderPlacedEmail removed. All order placed emails now handled by mailController.js and .hbs templates.
+
+
+// Legacy sendOrderConfirmedEmail removed. All order confirmed emails now handled by mailController.js and .hbs templates.
 
 // ============ FIREBASE AUTH SYNC ROUTE ============
 app.post('/api/auth-sync', async (req, res) => {
@@ -2871,7 +2749,9 @@ const placeOrderHandler = async (req, res) => {
         // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY (always attempt if email found)
         if (recipientEmail) {
             try {
-                await sendOrderPlacedEmail({
+                // Use new mailController.js logic for order placed email
+                const mailController = require('./src/Component/ActionCreator/mailController');
+                await mailController.sendOrderPlaced({
                     toEmail: recipientEmail,
                     userName: user.name || addressPayload?.fullName || 'Valued Customer',
                     orderId,
@@ -3901,12 +3781,15 @@ async function startServer() {
                 // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
+                        const mailController = require('./src/Component/ActionCreator/mailController');
                         const userDoc = await User.findById(order.userid).lean();
-                        if (userDoc && userDoc.email) {
+                        const toEmail = userDoc && userDoc.email ? userDoc.email : order.userEmail;
+                        const userName = userDoc && userDoc.name ? userDoc.name : (order.userName || 'Valued Customer');
+                        if (toEmail) {
                             try {
-                                await sendOrderStatusEmail({
-                                    toEmail: userDoc.email,
-                                    userName: userDoc.name || 'Valued Customer',
+                                await mailController.sendOrderStatus({
+                                    toEmail,
+                                    userName,
                                     orderId: order.orderId,
                                     status: normalized,
                                     trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
@@ -3917,42 +3800,9 @@ async function startServer() {
                                 console.error('❌ Order Status email error:', emailErr.message);
                                 if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
                             }
-                        } else if (order.userEmail) {
-                            // Fallback: try sending to order.userEmail if userDoc not found
-                            try {
-                                await sendOrderStatusEmail({
-                                    toEmail: order.userEmail,
-                                    userName: order.userName || 'Valued Customer',
-                                    orderId: order.orderId,
-                                    status: normalized,
-                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
-                                    estimatedDelivery: order.estimatedArrival,
-                                    totalAmount: order.finalAmount
-                                });
-                            } catch (emailErr) {
-                                console.error('❌ Order Status email error (fallback):', emailErr.message);
-                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
-                            }
                         }
                     } catch (err) {
                         console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
-                        // Try sending without user data
-                        if (order.userEmail) {
-                            try {
-                                await sendOrderStatusEmail({
-                                    toEmail: order.userEmail,
-                                    userName: order.userName || 'Valued Customer',
-                                    orderId: order.orderId,
-                                    status: normalized,
-                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
-                                    estimatedDelivery: order.estimatedArrival,
-                                    totalAmount: order.finalAmount
-                                });
-                            } catch (emailErr) {
-                                console.error('❌ Order Status email error (fallback):', emailErr.message);
-                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
-                            }
-                        }
                     }
                 }
                 return res.json({
