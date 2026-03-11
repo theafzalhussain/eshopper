@@ -4149,4 +4149,7 @@ mongoose.connection.on('disconnected', () => {
     }, 5000);
 });
 
+// Start the server
+startServer();
+
     
