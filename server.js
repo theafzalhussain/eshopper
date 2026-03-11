@@ -3789,7 +3789,7 @@ async function startServer() {
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
                         const mailController = require('./mailController');
-                        const { sendTransactionalEmail } = require('./server.js'); // If sendTransactionalEmail is not exported, move it to a utils/email.js and import from there
+                        const { sendTransactionalEmail } = require('./src/utils/email');
                         const userDoc = await User.findById(order.userid).lean();
                         const toEmail = userDoc && userDoc.email ? userDoc.email : order.userEmail;
                         const userName = userDoc && userDoc.name ? userDoc.name : (order.userName || 'Valued Customer');
@@ -3965,7 +3965,7 @@ async function startServer() {
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
                         const mailController = require('./mailController');
-                        const { sendTransactionalEmail } = require('./server.js'); // If not exported, move to utils/email.js
+                        const { sendTransactionalEmail } = require('./src/utils/email');
                         const toEmail = order.userEmail;
                         const userName = order.userName || 'Valued Customer';
                         // Log attempt
