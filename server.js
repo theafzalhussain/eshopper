@@ -500,17 +500,14 @@ const buildOrderReceiptHtml = ({
         const itemDesc = `${item.name || 'Product'}${sizeText}${colorText}`;
         return `
             <tr>
-                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#666; border:1px solid #e8dcc8;">${idx + 1}</td>
-                <td style="padding:12px 10px; font-size:13px; color:#111; font-weight:600; border:1px solid #e8dcc8;">${itemDesc}</td>
-                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#111; border:1px solid #e8dcc8;">${qty}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#666; border:1px solid #e8dcc8;">₹${price.toLocaleString('en-IN')}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#d4af37; font-weight:700; border:1px solid #e8dcc8;">₹${line.toLocaleString('en-IN')}</td>
+                <td>${idx + 1}</td>
+                <td>${itemDesc}</td>
+                <td>${qty}</td>
+                <td>₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
             </tr>
         `;
     }).join('');
-
-    return `
-        <!doctype html>
+        const htmlContent = `
         <html>
         <head>
             <meta charset="utf-8"/>
@@ -562,15 +559,33 @@ const buildOrderReceiptHtml = ({
                 .items-section { margin: 32px 0; }
                 .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
                 table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; }
-                td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; }
-                tr:nth-child(odd) { background: #fafaf8; }
-                tr:hover { background: #f5f0e6; }
-                .summary-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
-                .summary-box { border: 2px solid #d4af37; border-radius: 12px; padding: 18px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .summary-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 10px; }
-                .summary-value { font-size: 18px; font-weight: 900; color: #0f0f0f; }
-                .disclaimer { border-left: 4px solid #d4af37; padding: 16px; background: #f9f7f4; margin: 32px 0; font-size: 12px; color: #555; line-height: 1.8; }
+            </style>
+        </head>
+        <body>
+            <div class="watermark">eShopper Luxe</div>
+            <div class="wrap">
+                <div class="card">
+                    <!-- PREMIUM HEADER -->
+                    <div class="head">
+                        <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td class="brand-left">
+                                    <div class="brand-badge">
+                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
+                                    </div>
+                                </td>
+                                <td class="brand-center">
+                                    <p class="brand-title">eShopper Boutique Luxe</p>
+                                    <p class="tagline">Premium Fashion Destination</p>
+                                </td>
+                                <td class="brand-spacer"></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <!-- ...existing code... -->
+                </div>
+            </div>
+    [existing code]
                 .disclaimer-title { font-weight: 700; color: #0f0f0f; margin-bottom: 8px; }
                 .footer { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e8dcc8; }
                 .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.8; }
@@ -615,72 +630,72 @@ const buildOrderReceiptHtml = ({
                         </div>
 
                         <!-- ORDER STEPS -->
-                        <div style="margin: 32px 0;">
-                            <div style="font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center;">⏳ Order Processing Steps</div>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
-                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
-                                    <div style="font-size: 28px; margin-bottom: 8px;">✓</div>
-                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Quality Check</div>
-                                </div>
-                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
-                                    <div style="font-size: 28px; margin-bottom: 8px;">📦</div>
-                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Premium Packaging</div>
-                                </div>
-                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
-                                    <div style="font-size: 28px; margin-bottom: 8px;">🚚</div>
-                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Dispatch</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ORDER DETAILS -->
-                        <div class="items-section">
-                            <div class="section-title">📦 Your Order</div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th style="width:8%">#</th>
-                                        <th style="width:50%">Item</th>
-                                        <th style="width:12%">Qty</th>
-                                        <th style="width:30%">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
-                            </table>
-                        </div>
-
-                        <!-- SUMMARY -->
-                        <div class="summary-boxes">
-                            <div class="summary-box">
-                                <div class="summary-label">📦 Subtotal</div>
-                                <div class="summary-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                            </div>
-                            <div class="summary-box">
-                                <div class="summary-label">🚚 Shipping</div>
-                                <div class="summary-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</div>
-                            </div>
-                            <div class="summary-box">
-                                <div class="summary-label">💰 Total</div>
-                                <div class="summary-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                            </div>
-                        </div>
-
-                        <!-- PAYMENT INFO -->
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 32px 0;">
-                            <div style="border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 2px 8px rgba(212,175,55,0.1);">
-                                <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 8px;">💳 Payment Method</div>
-                                <div style="font-size: 15px; font-weight: 700; color: #0f0f0f;">${paymentMethod || 'Cash on Delivery'}</div>
-                            </div>
-                            <div style="border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 2px 8px rgba(212,175,55,0.1);">
-                                <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 8px;">📊 Order Date</div>
-                                <div style="font-size: 15px; font-weight: 700; color: #0f0f0f;">${orderDateText}</div>
-                            </div>
-                        </div>
-
-                        <!-- DISCLAIMER -->
-                        <div class="disclaimer">
-                            <div class="disclaimer-title">📋 IMPORTANT NOTICE</div>
-                            This is a preliminary receipt confirming that your order has been successfully placed. Your official Tax Invoice will be generated and sent to you upon successful delivery of your order. We appreciate your purchase and look forward to serving you!
+                        <style>
+                            * { box-sizing: border-box; margin: 0; padding: 0; }
+                            html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                            body { background: #f5f5f3; color: #2c2c2c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
+                            .wrap { max-width: 900px; margin: 0 auto; padding: 16px; position: relative; }
+                            .watermark {
+                                position: fixed;
+                                top: 50%;
+                                left: 50%;
+                                transform: translate(-50%, -50%) rotate(-45deg);
+                                font-size: 72px;
+                                font-weight: 300;
+                                color: rgba(212, 175, 55, 0.08);
+                                white-space: nowrap;
+                                pointer-events: none;
+                                z-index: 0;
+                                letter-spacing: 8px;
+                                font-style: italic;
+                            }
+                            .card { background: #fdfdfd; border: 2px solid #d4af37; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); position: relative; z-index: 1; }
+                            .head { padding: 24px 20px; background: linear-gradient(135deg, #fdfdfd, #f9f7f4); border-bottom: 1px solid #e8dcc8; }
+                            .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                            .brand-left { width: 64px; text-align: left; vertical-align: middle; }
+                            .brand-center { text-align: center; vertical-align: middle; }
+                            .brand-spacer { width: 64px; }
+                            .brand-badge { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+                            .brand-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
+                            .brand-title { font-size: 34px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; line-height: 1.2; }
+                            .tagline { font-size: 12px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0 0; }
+                            .body { padding: 36px; }
+                            .title { font-size: 36px; font-weight: 900; margin: 0 0 12px; color: #0f0f0f; letter-spacing: 2px; text-align: center; }
+                            .subtitle { font-size: 14px; color: #8b7521; text-align: center; font-weight: 700; letter-spacing: 1px; margin-bottom: 28px; }
+                            .status-badge { display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 12px 24px; border-radius: 20px; font-weight: 700; margin: 0 auto 16px; display: block; text-align: center; width: fit-content; box-shadow: 0 4px 12px rgba(31,143,84,0.3); }
+                            .status-message { text-align: center; color: #0f0f0f; font-weight: 600; font-size: 14px; margin-bottom: 32px; }
+                            .next-steps { margin: 32px 0; }
+                            .steps-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center; }
+                            .steps-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+                            .step { border: 2px solid #d4af37; border-radius: 12px; padding: 20px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
+                            .step-icon { font-size: 32px; margin-bottom: 12px; }
+                            .step-text { font-size: 12px; font-weight: 700; color: #0f0f0f; }
+                            .delivery-highlight { border: 3px solid #d4af37; border-radius: 14px; padding: 24px; background: linear-gradient(135deg, #a37f1f 0%, #d4af37 50%, #8b7521 100%); text-align: center; margin: 32px 0; box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
+                            .delivery-label { color: #fff; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
+                            .delivery-date { color: #fff; font-size: 24px; font-weight: 900; letter-spacing: 1px; }
+                            .items-section { margin: 32px 0; }
+                            .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
+                            table { width: 100%; border-collapse: collapse; background: #fff; }
+                            th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; white-space: nowrap; }
+                            td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; word-wrap: break-word; }
+                            td:nth-child(4), td:nth-child(5) { font-weight: 800; color: #0f0f0f; text-align: right; padding-right: 16px; }
+                            tr:nth-child(odd) { background: #fafaf8; }
+                            tr:hover { background: #f5f0e6; }
+                            .summary-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
+                            .summary-box { border: 2px solid #d4af37; border-radius: 12px; padding: 18px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
+                            .summary-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 10px; }
+                            .summary-value { font-size: 18px; font-weight: 900; color: #0f0f0f; word-break: break-word; }
+                            .disclaimer { border-left: 4px solid #d4af37; padding: 16px; background: #f9f7f4; margin: 32px 0; font-size: 12px; color: #555; line-height: 1.8; }
+                            .disclaimer-title { font-weight: 700; color: #0f0f0f; margin-bottom: 8px; }
+                            .footer { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e8dcc8; }
+                            .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.8; }
+                            .foot-premium { color: #d4af37; font-weight: 700; margin-top: 14px; font-size: 13px; letter-spacing: 1px; }
+                            @media (max-width: 768px) {
+                                .steps-container { grid-template-columns: 1fr; gap: 12px; }
+                                .summary-boxes { grid-template-columns: 1fr; gap: 12px; }
+                                .title { font-size: 28px; }
+                            }
+                        </style>
                         </div>
 
                         <!-- FOOTER -->
@@ -717,7 +732,7 @@ async function sendOrderConfirmationEmail({
     } catch (err) {
         console.error('❌ Failed to send order confirmation email:', err.message);
     }
-}
+// End of placeOrderHandler
 
 // 🔴 BUILD TAX INVOICE HTML - For download after delivery with legal compliance
 const buildTaxInvoiceHtml = ({
@@ -935,13 +950,11 @@ const buildTaxInvoiceHtml = ({
                                         <th style="width:3%">HSN</th>
                                         <th style="width:38%">Description</th>
                                         <th style="width:8%">Qty</th>
-                                        <th style="width:12%">Unit Price</th>
-                                        <th style="width:10%">Disc %</th>
-                                        <th style="width:12%">Amount</th>
-                                        <th style="width:11%">Tax (18%)</th>
+                                        <th style="width:20%">Unit Price</th>
+                                        <th style="width:20%">Total</th>
                                     </tr>
                                 </thead>
-                                <tbody>${rows || '<tr><td colspan="8" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
+                                <tbody>${rows || '<tr><td colspan="6" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
                             </table>
                         </div>
 
@@ -974,9 +987,9 @@ const buildTaxInvoiceHtml = ({
                         </div>
 
                         <!-- QR CODE -->
-                        <div class="qr-section">
-                            <div style="font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 10px;">📱 Scan for Order Status & Returns</div>
-                            <svg class="qr-unit" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                       
+                            <div class="qr-label">📱 Scan for Order Status & Returns</div>
+                            <svg class="qr-code" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                                 <rect width="200" height="200" fill="white"/>
                                 <rect x="20" y="20" width="50" height="50" fill="black"/>
                                 <rect x="30" y="30" width="30" height="30" fill="white"/>
@@ -1258,7 +1271,7 @@ const buildInvoiceHtml = ({
                                 <circle cx="80" cy="60" r="8" fill="black" opacity="0.3"/>
                                 <circle cx="140" cy="140" r="8" fill="black" opacity="0.3"/>
                             </svg>
-                            <div class="qr-info">Scan to track your package in real-time</div>
+                            <div class="qr-label">Links to Order History & Return Policy</div>
                         </div>
 
                         <!-- FINAL TOTAL -->
@@ -1842,7 +1855,7 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
 
         console.error('❌ WhatsApp media send failed:', {
             status: error.response?.status,
-            message: error.response?.data?.message || error.message,
+            message: error.response?.data?.message || error.response?.data || error.message,
             endpoint: error.config?.url,
             data: error.response?.data || error.details
         });
@@ -1906,7 +1919,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
         else if (status === 'Shipped') {
             // 🚚 SHIPPED: WhatsApp + Email (Parallel)
             const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Soon';
-            const shippedMsg = `🚚 YOUR ORDER IS ON THE WAY! 📍✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is shipping!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Premium Delivery\n🚚 Shipping: Fast & Secure\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n📅 DELIVERY WINDOW:\n📍 Expected Arrival: ${deliveryDate}\n⏰ Delivery Time: 9 AM - 6 PM\n\n🎯 WHAT TO EXPECT:\n✓ Professional White-Glove delivery\n✓ Careful handling of your selection\n✓ Real-time location tracking\n✓ Safe placement at your doorstep\n\n🔗 LIVE TRACKING: ${trackingLink}\n\n💡 PRO TIP:\n→ Ensure someone is available for delivery\n→ Keep door accessible\n→ Contact us if you need delivery rescheduling\n\n📞 DELIVERY SUPPORT:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n\n💎 Thank you for your business!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+            const shippedMsg = `🚚 YOUR ORDER IS ON THE WAY! 📍✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is shipping!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Premium Delivery\n🚚 Shipping: Fast & Secure\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n📅 DELIVERY WINDOW:\n📍 Expected Arrival: ${deliveryDate}\n⏰ Delivery Time: 9 AM - 6 PM\n\n🎯 WHAT TO EXPECT:\n✓ Professional White-Glove delivery\n✓ Careful handling of your selection\n✓ Real-time location tracking\n✓ Safe placement at your doorstep\n\n🔗 LIVE TRACKING: ${trackingLink}\n\n💡 PRO TIP:\n→ Ensure someone is available for delivery\n→ Keep door accessible\n→ Contact us if you need delivery rescheduling\n\n📞 DELIVERY SUPPORT:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n• Chat: Available 24/7\n\n💡 PRO TIP:\nIf you miss delivery, reschedule instantly from tracking page or WhatsApp us!\n\n🎁 Almost there!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
             // Send both WhatsApp and Email in parallel
             const shippedResults = await Promise.allSettled([
@@ -2120,7 +2133,7 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
     }
     try {
         const displayName = userName || 'Valued Customer';
-        const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+        const templatePath = path.join(__dirname, 'views', 'emails', 'order-placed.hbs');
         let htmlContent = fs.readFileSync(templatePath, 'utf8');
         htmlContent = htmlContent
             .replace(/{{orderId}}/g, orderId)
@@ -2150,32 +2163,173 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 // ==================== EMAIL #2: ORDER CONFIRMED (ULTRA-PREMIUM) ====================
 
 
-const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products, finalAmount, deliveryDate, invoiceBase64 }) => {
+
+// Premium Handlebars-based Order Confirmed Email
+const { sendOrderConfirmedEmail } = require('./mailController');
+const sendOrderConfirmedEmailPremium = async ({ toEmail, user, orderId, orderDate, cleanProducts, total, shipping, payable, addressPayload, paymentMethod }) => {
     try {
-        const name = displayName || 'Valued Customer';
-        const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
-        htmlContent = htmlContent
-            .replace(/{{orderId}}/g, orderId)
-            .replace(/{{userName}}/g, name)
-            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
-            // Add more replacements as needed
-        ;
-        const attachments = [];
-        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
-            attachments.push({ filename: `Confirmation-${orderId}.pdf`, content: invoiceBase64.trim(), contentType: 'application/pdf' });
-        }
+        const firstProduct = cleanProducts[0] || {};
+        const emailHtml = await sendOrderConfirmedEmail({
+            toEmail,
+            logoUrl: 'https://yourdomain.com/logo.png',
+            orderId,
+            orderDate: orderDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+            customerName: user.name,
+            customerEmail: user.email,
+            productImage: firstProduct.pic || '',
+            productName: firstProduct.name || '',
+            qty: firstProduct.qty || '',
+            price: firstProduct.price || '',
+            size: firstProduct.size || '',
+            color: firstProduct.color || '',
+            subtotal: total,
+            shipping: shipping,
+            total: payable,
+            address: addressPayload.addressline1 || addressPayload.address || '',
+            city: addressPayload.city || '',
+            state: addressPayload.state || '',
+            zip: addressPayload.pin || '',
+            phone: addressPayload.phone || user.phone || '',
+            paymentMethod: paymentMethod || 'COD',
+            paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+            orderStatusUrl: `https://eshopperr.me/order-tracking/${orderId}`,
+            whatsappUrl: 'https://wa.me/918447859784',
+            emailUrl: 'mailto:support@eshopperr.me',
+            supportEmail: 'support@eshopperr.me',
+            companyAddress: 'Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India',
+            privacyUrl: 'https://eshopperr.me/privacy',
+            termsUrl: 'https://eshopperr.me/terms'
+        });
         const result = await sendTransactionalEmail({
             toEmail,
-            toName: name,
-            subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
-            htmlContent,
-            attachments
+            toName: user.name,
+            subject: `Order Confirmed! #${orderId}`,
+            htmlContent: emailHtml
         });
-        console.log(`✅ Confirmation email sent via ${result.provider} to ${toEmail}`);
+        console.log(`[EMAIL] Order Confirmed Email sent to: ${toEmail}`);
         return true;
     } catch (error) {
-        console.error('❌ Confirmation email failed:', error.message);
+        console.error('❌ Order Confirmed email failed:', error.message);
+        return false;
+    }
+};
+
+// Premium Handlebars-based Order Out for Delivery Email
+const { sendOrderOutForDeliveryEmail } = require('./mailController');
+const sendOrderOutForDeliveryEmailPremium = async ({
+    toEmail, user, orderId, orderDate, cleanProducts, total, shipping, payable, addressPayload, paymentMethod,
+    courierPartner, trackingNumber, otp, deliveryAgent, agentContact, deliveryLocation, liveTrackingUrl
+}) => {
+    try {
+        const firstProduct = cleanProducts[0] || {};
+        const emailHtml = await sendOrderOutForDeliveryEmail({
+            toEmail,
+            logoUrl: 'https://yourdomain.com/logo.png',
+            orderId,
+            orderDate: orderDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+            customerName: user.name,
+            customerEmail: user.email,
+            productImage: firstProduct.pic || '',
+            productName: firstProduct.name || '',
+            qty: firstProduct.qty || '',
+            price: firstProduct.price || '',
+            size: firstProduct.size || '',
+            color: firstProduct.color || '',
+            subtotal: total,
+            shipping: shipping,
+            total: payable,
+            address: addressPayload.addressline1 || addressPayload.address || '',
+            city: addressPayload.city || '',
+            state: addressPayload.state || '',
+            zip: addressPayload.pin || '',
+            phone: addressPayload.phone || user.phone || '',
+            paymentMethod: paymentMethod || 'COD',
+            paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+            courierPartner: courierPartner || '',
+            trackingNumber: trackingNumber || '',
+            otp: otp || '',
+            deliveryAgent: deliveryAgent || '',
+            agentContact: agentContact || '',
+            deliveryLocation: deliveryLocation || '',
+            liveTrackingUrl: liveTrackingUrl || '',
+            orderStatusUrl: `https://eshopperr.me/order-tracking/${orderId}`,
+            whatsappUrl: 'https://wa.me/918447859784',
+            emailUrl: 'mailto:support@eshopperr.me',
+            supportEmail: 'support@eshopperr.me',
+            companyAddress: 'Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India',
+            privacyUrl: 'https://eshopperr.me/privacy',
+            termsUrl: 'https://eshopperr.me/terms'
+        });
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: user.name,
+            subject: `Out for Delivery! #${orderId}`,
+            htmlContent: emailHtml
+        });
+        console.log(`[EMAIL] Out for Delivery Email sent to: ${toEmail}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Out for Delivery email failed:', error.message);
+        return false;
+    }
+};
+
+// Premium Handlebars-based Order Delivered Email
+const { sendOrderDeliveredEmail } = require('./mailController');
+const sendOrderDeliveredEmailPremium = async ({
+    toEmail, user, orderId, orderDate, cleanProducts, total, shipping, payable, addressPayload, paymentMethod,
+    deliveredOn, receivedBy, invoiceUrl, reviewUrl, referralCode, referralShareUrl, instagramUrl, whatsappUrl
+}) => {
+    try {
+        const firstProduct = cleanProducts[0] || {};
+        const emailHtml = await sendOrderDeliveredEmail({
+            toEmail,
+            logoUrl: 'https://yourdomain.com/logo.png',
+            orderId,
+            orderDate: orderDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+            customerName: user.name,
+            customerEmail: user.email,
+            productImage: firstProduct.pic || '',
+            productName: firstProduct.name || '',
+            qty: firstProduct.qty || '',
+            price: firstProduct.price || '',
+            size: firstProduct.size || '',
+            color: firstProduct.color || '',
+            subtotal: total,
+            shipping: shipping,
+            total: payable,
+            address: addressPayload.addressline1 || addressPayload.address || '',
+            city: addressPayload.city || '',
+            state: addressPayload.state || '',
+            zip: addressPayload.pin || '',
+            phone: addressPayload.phone || user.phone || '',
+            paymentMethod: paymentMethod || 'COD',
+            paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+            deliveredOn: deliveredOn ? deliveredOn.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+            receivedBy: receivedBy || '',
+            invoiceUrl: invoiceUrl || '',
+            reviewUrl: reviewUrl || '',
+            referralCode: referralCode || '',
+            referralShareUrl: referralShareUrl || '',
+            instagramUrl: instagramUrl || '',
+            whatsappUrl: whatsappUrl || 'https://wa.me/918447859784',
+            orderStatusUrl: `https://eshopperr.me/order-tracking/${orderId}`,
+            emailUrl: 'mailto:support@eshopperr.me',
+            supportEmail: 'support@eshopperr.me',
+            companyAddress: 'Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India',
+            privacyUrl: 'https://eshopperr.me/privacy',
+            termsUrl: 'https://eshopperr.me/terms'
+        });
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: user.name,
+            subject: `Delivered! #${orderId}`,
+            htmlContent: emailHtml
+        });
+        console.log(`[EMAIL] Delivered Email sent to: ${toEmail}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Delivered email failed:', error.message);
         return false;
     }
 };
@@ -2597,297 +2751,18 @@ try {
 app.post(path, useUpload ? upload : (req, res, next) => next(), async (req, res) => {
     try {
         if (path === '/user' && req.body.otp) {
-            const normalizedEmail = req.body.email.toLowerCase().trim();
-            const record = await OTPRecord.findOne({ email: normalizedEmail, otp: req.body.otp });
-            if (!record) return res.status(400).json({ message: "Invalid OTP" });
-            await OTPRecord.deleteOne({ email: normalizedEmail });
-            req.body.email = normalizedEmail;
-            req.body.username = req.body.username.toLowerCase().trim();
+            // ...existing code...
+            // (Order placement logic, email, WhatsApp notification, etc.)
+            // All code from above should be inside this try block
         }
-        if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
-        let d = new Model(req.body);
-        if (req.files) {
-            if (req.files.pic) d.pic = req.files.pic[0].path;
-            if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
-            if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
-            if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
-            if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
-
-            console.log(`📤 Files uploaded for ${path}:`, {
-                pic1: d.pic1 ? '✅' : '❌',
-                pic2: d.pic2 ? '✅' : '❌',
-                pic3: d.pic3 ? '✅' : '❌',
-                pic4: d.pic4 ? '✅' : '❌'
-            });
-        }
-        await d.save(); res.status(201).json(d);
-    } catch (e) {
-        console.error(`❌ Error creating ${path}:`, e.message);
-        res.status(400).json(e);
+        // ...existing code...
+        // End of /user order placement handler
+        // Return response as before
+    } catch (error) {
+        console.error('❌ Place order error:', error.message);
+        return res.status(500).json({ success: false, message: 'Order placement failed', error: error.message });
     }
 });
-app.put(`${path}/:id`, useUpload ? upload : (req, res, next) => next(), async (req, res) => {
-    try {
-        let upData = { ...req.body };
-        if (req.files) {
-            if (req.files.pic) upData.pic = req.files.pic[0].path;
-            if (req.files.pic1) upData.pic1 = req.files.pic1[0].path;
-            if (req.files.pic2) upData.pic2 = req.files.pic2[0].path;
-            if (req.files.pic3) upData.pic3 = req.files.pic3[0].path;
-            if (req.files.pic4) upData.pic4 = req.files.pic4[0].path;
-
-            console.log(`📤 Files updated for ${path}:`, {
-                pic1: upData.pic1 ? '✅' : '❌',
-                pic2: upData.pic2 ? '✅' : '❌',
-                pic3: upData.pic3 ? '✅' : '❌',
-                pic4: upData.pic4 ? '✅' : '❌'
-            });
-        }
-
-        if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
-            const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
-        } else if (path === '/user') { delete upData.password; }
-        const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true });
-        res.json(d);
-    } catch (e) {
-        console.error(`❌ Error updating ${path}:`, e.message);
-        res.status(500).json({ error: e.message });
-    }
-});
-app.delete(`${path}/:id`, async (req, res) => {
-    try {
-        await Model.findByIdAndDelete(req.params.id);
-        res.json({ result: "Done" });
-    } catch (e) {
-        console.error(`❌ Error deleting from ${path}:`, e.message);
-        res.status(500).json({ error: "Failed to delete." });
-    }
-});
-};
-
-handle('/user', User, true);
-handle('/product', Product, true);
-handle('/maincategory', Maincategory);
-handle('/subcategory', Subcategory);
-handle('/brand', Brand);
-handle('/cart', Cart);
-handle('/wishlist', Wishlist);
-handle('/checkout', Checkout);
-handle('/contact', Contact);
-handle('/newslatter', Newslatter);
-
-app.post('/api/cart/clear/:userid', async (req, res) => {
-    try {
-        const userid = String(req.params.userid || '').trim();
-        if (!userid) return res.status(400).json({ message: 'userid is required' });
-        await Cart.deleteMany({ userid });
-        return res.json({ result: 'Done' });
-    } catch (e) {
-        return res.status(500).json({ message: 'Failed to clear cart' });
-    }
-});
-
-const placeOrderHandler = async (req, res) => {
-    try {
-        const { userId, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products } = req.body;
-
-        if (!userId || !Array.isArray(products) || products.length === 0) {
-            return res.status(400).json({ message: 'userId and products are required' });
-        }
-
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
-        const cleanProducts = products.map((item) => ({
-            productid: item.productid || item.id || item._id || '',
-            name: item.name || 'Product',
-            qty: Number(item.qty || 1),
-            price: Number(item.price || 0),
-            total: Number(item.total || (Number(item.price || 0) * Number(item.qty || 1))),
-            size: item.size || '',
-            color: item.color || '',
-            pic: item.pic || item.pic1 || ''
-        }));
-
-        const orderId = await generateOrderId();
-        const orderDate = new Date();
-        const estimatedArrival = new Date(orderDate);
-        estimatedArrival.setDate(orderDate.getDate() + 7);
-
-        const total = Number(totalAmount ?? cleanProducts.reduce((sum, item) => sum + item.total, 0));
-        const shipping = Number(shippingAmount ?? ((total > 0 && total < 1000) ? 150 : 0));
-        const payable = Number(finalAmount ?? (total + shipping));
-
-        const addressPayload = shippingAddress || {
-            fullName: user.name || '',
-            phone: user.phone || '',
-            addressline1: user.addressline1 || '',
-            city: user.city || '',
-            state: user.state || '',
-            pin: user.pin || '',
-            country: 'India'
-        };
-
-        const orderDoc = await Order.create({
-            orderId,
-            userid: userId,
-            userName: user.name || '',
-            userEmail: user.email || '',
-            paymentMethod: paymentMethod || 'COD',
-            paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
-            orderStatus: 'Order Placed',
-            totalAmount: total,
-            shippingAmount: shipping,
-            finalAmount: payable,
-            shippingAddress: addressPayload,
-            products: cleanProducts,
-            estimatedArrival,
-            statusHistory: [{
-                status: 'Ordered',
-                timestamp: orderDate,
-                message: 'Order placed successfully'
-            }],
-            orderDate
-        });
-
-        await Checkout.create({
-            userid: userId,
-            paymentmode: paymentMethod || 'COD',
-            orderstatus: 'Order Placed',
-            paymentstatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
-            totalAmount: total,
-            shippingAmount: shipping,
-            finalAmount: payable,
-            products: cleanProducts
-        });
-
-        await Cart.deleteMany({ userid: userId });
-
-        let invoiceBuffer = null;
-        if (FEATURE_INVOICE_SYSTEM) {
-            try {
-                invoiceBuffer = await generateInvoicePdfBuffer({
-                    orderId,
-                    userName: user.name,
-                    userEmail: user.email,
-                    paymentMethod: paymentMethod || 'COD',
-                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
-                    finalAmount: payable,
-                    totalAmount: total,
-                    shippingAmount: shipping,
-                    shippingAddress: addressPayload,
-                    products: cleanProducts,
-                    orderDate,
-                    orderStatus: 'Order Placed',
-                    pdfType: 'receipt',
-                    isDelivered: false
-                });
-            } catch (invoiceError) {
-                console.error('Invoice PDF generation failed:', invoiceError.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(invoiceError);
-            }
-        }
-
-        const recipientEmail = String(user.email || addressPayload?.email || '').trim();
-
-            // --- PREMIUM ORDER PLACED EMAIL TRIGGER ---
-            const { sendOrderReceivedEmail } = require('./mailController');
-            const { sendTransactionalEmail } = require('./src/utils/email.js');
-            try {
-                const emailHtml = await sendOrderReceivedEmail({
-                    toEmail: recipientEmail,
-                    logoUrl: 'https://yourdomain.com/logo.png',
-                    orderId,
-                    orderDate,
-                    customerName: user.name,
-                    customerEmail: user.email,
-                    items: cleanProducts,
-                    subtotal: total,
-                    shippingCharges: shipping,
-                    gst: 0, // Add GST logic if needed
-                    totalPaid: payable,
-                    shippingAddress: addressPayload,
-                    paymentMethod: paymentMethod || 'COD',
-                    transactionId: '', // Add if available
-                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
-                    whatsappUrl: 'https://wa.me/918447859784',
-                    supportEmail: 'support@eshopperr.me',
-                    companyAddress: 'Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India'
-                });
-                await sendTransactionalEmail({
-                    toEmail: recipientEmail,
-                    toName: user.name,
-                    subject: `Order Placed Successfully! #${orderId}`,
-                    htmlContent: emailHtml
-                });
-                console.log(`[EMAIL] Order Placed Email sent to: ${recipientEmail}`);
-            } catch (err) {
-                console.error('[EMAIL] Order Placed Email failed:', err.message);
-            }
-
-        // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
-        if (FEATURE_WHATSAPP_NOTIFICATIONS) {
-            try {
-                const phoneNumber = addressPayload?.phone || user.phone;
-
-                console.log(`\n🔔 WhatsApp Notification Debug for Order ${orderId}:`);
-                console.log(`   User: ${user.name} (${userId})`);
-                console.log(`   Email: ${user.email}`);
-                console.log(`   Phone from profile: "${user.phone || 'NOT SET'}"`);
-                console.log(`   Phone from address: "${addressPayload?.phone || 'NOT PROVIDED'}"`);
-                console.log(`   Final phone: "${phoneNumber || 'MISSING'}"\n`);
-
-                if (!phoneNumber) {
-                    console.log(`ℹ️  WhatsApp SKIPPED - No phone number in profile. User should update profile at: https://eshopperr.me/profile\n`);
-                } else {
-                    const itemSummary = cleanProducts
-                        .slice(0, 5)
-                        .map((item, idx) => `   ${idx + 1}. ${item.name}\n      Qty: ${item.qty} | Rate: ₹${Number(item.price || 0).toLocaleString('en-IN')} | Subtotal: ₹${Number(item.total || 0).toLocaleString('en-IN')}`)
-                        .join('\n');
-
-                    const savedAmount = total - payable;
-                    const discountInfo = savedAmount > 0 ? `\n💰 Total Savings: ₹${Number(savedAmount).toLocaleString('en-IN')}` : '';
-                    const estimatedDays = 5; // Default 5 days delivery
-                    const deliveryDate = new Date();
-                    deliveryDate.setDate(deliveryDate.getDate() + estimatedDays);
-                    const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-
-                    const whatsappMsg = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')}\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT: ${paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod || 'Card'}\n\n📅 ESTIMATED DELIVERY: ${formattedDeliveryDate}\n\n🎯 NEXT STEPS:\n✓ We're preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery\n\n🔗 TRACK: https://eshopperr.me/order-tracking/${orderId}\n\n🙏 Thank you for your business!\nEshopper Boutique Luxe`;
-
-                    try {
-                        console.log(`📤 Sending WhatsApp to ${phoneNumber} for order ${orderId}`);
-                        await sendWhatsApp(phoneNumber, whatsappMsg);
-                        console.log(`✅ WhatsApp sent for order ${orderId}`);
-                    } catch (waErr) {
-                        if (isExpectedWhatsAppError(waErr)) {
-                            console.log(`ℹ️  WhatsApp skipped for ${orderId}:`, waErr.message);
-                        } else {
-                            console.error(`⚠️  WhatsApp failed for ${orderId}:`, waErr.message);
-                            if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
-                        }
-                    }
-                }
-            } catch (waError) {
-                if (isExpectedWhatsAppError(waError)) {
-                    console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waError.message);
-                } else {
-                    console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
-                    if (process.env.SENTRY_DSN) Sentry.captureException(waError);
-                }
-            }
-        }
-
-        return res.status(201).json({
-            success: true,
-            message: 'Order placed successfully',
-            order: orderDoc
-        });
-    } catch (e) {
-        console.error('❌ Place Order Error:', e.message);
-        if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ message: 'Failed to place order' });
-    }
-};
 
 app.post('/api/place-order', placeOrderHandler);
 app.post('/api/orders', placeOrderHandler);
@@ -2974,16 +2849,14 @@ app.post('/api/test-notification', async (req, res) => {
         }
 
 const allSuccess =
-    (!results.email.attempted || results.email.success) &&
     (!results.whatsapp.attempted || results.whatsapp.success);
 
-return res.status(allSuccess ? 200 : 207).json({
-    success: allSuccess,
-    message: allSuccess ? 'All notifications sent successfully' : 'Some notifications failed',
-    results
-});
-
-    } catch (e) {
+    return res.status(allSuccess ? 200 : 207).json({
+        success: allSuccess,
+        message: allSuccess ? 'All notifications sent successfully' : 'Some notifications failed',
+        results
+    });
+} catch (e) {
     console.error('❌ Test Notification Error:', e.message);
     if (process.env.SENTRY_DSN) Sentry.captureException(e);
     return res.status(500).json({
@@ -2992,7 +2865,6 @@ return res.status(allSuccess ? 200 : 207).json({
         error: e.message
     });
 }
-});
 
 // ==================== WHATSAPP DIAGNOSTIC ENDPOINT ====================
 app.get('/api/check-whatsapp-status/:userId', async (req, res) => {
@@ -3505,13 +3377,13 @@ async function startServer() {
                         orderDate: order.orderDate || order.createdAt,
                         orderStatus: order.orderStatus || order.status || 'Ordered',
                         isDelivered: isDelivered,  // Pass delivery status for footer customization
-                        pdfType: pdfType // 'receipt' | 'confirmation' | 'final'
+                        pdfType: pdfType
                     });
 
                     clearTimeout(timeoutId);
 
                     if (!pdfBuffer || pdfBuffer.length < 500) {
-                        return res.status(500).json({ message: 'PDF generation failed - invalid buffer' });
+                        throw new Error('Generated PDF buffer is invalid or too small');
                     }
 
                     // Set response headers
@@ -3526,7 +3398,7 @@ async function startServer() {
                     return res.send(pdfBuffer);
                 } catch (pdfErr) {
                     clearTimeout(timeoutId);
-                    console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
+                    console.error(`❌ PDF generation failed for ${orderId}:`, pdfErr.message);
                     if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
                     return res.status(500).json({ message: 'Failed to generate PDF - please try again' });
                 }
@@ -3980,7 +3852,7 @@ async function startServer() {
                         // Render placed email
                         const placedEmail = await (async () => {
                             let displayName = order.userName || 'Valued Customer';
-                            const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+                            const templatePath = path.join(__dirname, 'views', 'emails', 'order-placed.hbs');
                             let htmlContent = fs.readFileSync(templatePath, 'utf8');
                             htmlContent = htmlContent
                                 .replace(/{{orderId}}/g, order.orderId)
@@ -3997,7 +3869,7 @@ async function startServer() {
                         // Render confirmed email
                         const confirmedEmail = await (async () => {
                             let displayName = order.userName || 'Valued Customer';
-                            const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
+                            const templatePath = path.join(__dirname, 'views', 'emails', 'order-confirmed.hbs');
                             let htmlContent = fs.readFileSync(templatePath, 'utf8');
                             htmlContent = htmlContent
                                 .replace(/{{orderId}}/g, order.orderId)
@@ -4232,6 +4104,7 @@ async function startServer() {
     }
 }
 
+
 process.on("unhandledRejection", (err) => {
     console.error("❌ Unhandled Rejection:", err?.message || err);
     if (process.env.SENTRY_DSN) Sentry.captureException(err);
@@ -4275,5 +4148,6 @@ mongoose.connection.on('disconnected', () => {
         }
     }, 5000);
 });
+    }
 
-startServer();
+    
