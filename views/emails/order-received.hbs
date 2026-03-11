@@ -1,0 +1,314 @@
+<!--
+Ultra-Premium Luxe Email: Order Received
+Exact Gold/Black theme, pixel-perfect to reference
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Received - eShopper Luxe</title>
+    <style>
+        body {
+            background: #0A0A0A;
+            color: #D4AF37;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #181818;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 4px 32px #0002;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #0A0A0A 60%, #D4AF37 100%);
+            padding: 32px 0 18px 0;
+            text-align: center;
+        }
+
+        .logo {
+            height: 40px;
+            margin-bottom: 12px;
+        }
+
+        .order-title {
+            font-size: 26px;
+            font-weight: 900;
+            color: #FFD700;
+            letter-spacing: 1.5px;
+            margin: 0;
+        }
+
+        .order-id {
+            font-size: 15px;
+            color: #FFD700;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        .order-date {
+            font-size: 13px;
+            color: #fff;
+            margin-top: 2px;
+        }
+
+        .banner {
+            background: #FFD700;
+            color: #0A0A0A;
+            font-size: 20px;
+            font-weight: 900;
+            padding: 16px 0;
+            border-radius: 8px;
+            margin: 24px 0 0 0;
+            letter-spacing: 1px;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #fff;
+            margin: 24px 0 0 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #1ec773;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 16px;
+            padding: 6px 18px;
+            margin: 18px 0 0 0;
+        }
+
+        .summary-title {
+            font-size: 18px;
+            color: #FFD700;
+            font-weight: 700;
+            margin: 32px 0 8px 0;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #222;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .summary-table th,
+        .summary-table td {
+            padding: 12px 8px;
+            text-align: left;
+        }
+
+        .summary-table th {
+            background: #181818;
+            color: #FFD700;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .summary-table td {
+            color: #fff;
+            font-size: 14px;
+            border-bottom: 1px solid #333;
+        }
+
+        .summary-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .product-img {
+            width: 60px;
+            border-radius: 8px;
+        }
+
+        .card-row {
+            display: flex;
+            gap: 16px;
+            margin: 24px 0 0 0;
+        }
+
+        .card {
+            flex: 1;
+            background: #181818;
+            border-radius: 12px;
+            padding: 16px;
+            color: #FFD700;
+            font-size: 14px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            color: #FFD700;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .card-content {
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .total-row {
+            font-size: 16px;
+            color: #FFD700;
+            font-weight: 900;
+        }
+
+        .footer {
+            background: #181818;
+            color: #FFD700;
+            text-align: center;
+            padding: 32px 0 0 0;
+            border-radius: 0 0 18px 18px;
+        }
+
+        .concierge {
+            background: #222;
+            border-radius: 12px;
+            margin: 24px auto 0 auto;
+            padding: 18px 0 12px 0;
+            max-width: 90%;
+        }
+
+        .concierge-title {
+            font-size: 18px;
+            color: #FFD700;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .concierge-desc {
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .btn-row {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            border-radius: 24px;
+            font-weight: 700;
+            font-size: 15px;
+            text-decoration: none;
+        }
+
+        .btn-whatsapp {
+            background: #25D366;
+            color: #181818;
+        }
+
+        .btn-email {
+            background: #222;
+            color: #FFD700;
+            border: 2px solid #FFD700;
+        }
+
+        .address {
+            color: #fff;
+            font-size: 13px;
+            margin: 18px 0 0 0;
+        }
+
+        .footer-note {
+            color: #888;
+            font-size: 12px;
+            margin: 18px 0 0 0;
+        }
+
+        @media (max-width: 650px) {
+            .container {
+                max-width: 98vw;
+            }
+
+            .card-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .btn-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <img class="logo" src="{{logoUrl}}" alt="eShopper Luxe Logo" />
+            <div class="order-title">ORDER RECEIVED</div>
+            <div class="order-id">Order ID: {{orderId}}</div>
+            <div class="order-date">{{orderDate}}</div>
+        </div>
+        <div class="banner">ORDER RECEIVED</div>
+        <div class="greeting">Hi {{customerName}},<br>Your luxury selection is now in our queue. We are verifying your
+            items and preparing them for dispatch.</div>
+        <div class="badge">Payment Received &amp; Verified</div>
+        <div class="summary-title">ORDER SUMMARY</div>
+        <table class="summary-table">
+            <tr>
+                <th>ITEM</th>
+                <th>DETAILS</th>
+                <th>QTY</th>
+                <th>PRICE</th>
+            </tr>
+            {{#each items}}
+            <tr>
+                <td><img class="product-img" src="{{imageUrl}}" alt="{{name}}" /></td>
+                <td>{{name}}<br><span style="color:#FFD700; font-size:12px;">Size: {{size}}</span><br><span
+                        style="color:#fff; font-size:12px;">Color: {{color}}</span></td>
+                <td>{{quantity}}</td>
+                <td>&#8377;{{subtotal}}</td>
+            </tr>
+            {{/each}}
+            <tr class="total-row">
+                <td colspan="3" style="text-align:right;">Total Amount</td>
+                <td>&#8377;{{totalAmount}}</td>
+            </tr>
+        </table>
+        <div class="card-row">
+            <div class="card">
+                <div class="card-title">SHIPPING TO</div>
+                <div class="card-content">{{shippingName}}<br>{{shippingAddress}}<br>{{shippingPhone}}</div>
+            </div>
+            <div class="card">
+                <div class="card-title">PAYMENT METHOD</div>
+                <div class="card-content">{{paymentMethod}}<br>Status: <span
+                        style="color:#1ec773;">{{paymentStatus}}</span></div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="concierge">
+                <div class="concierge-title">&#x1F451; Personal Concierge</div>
+                <div class="concierge-desc">Our dedicated team is here to assist with any questions about your order.
+                    Reach out anytime!</div>
+                <div class="btn-row">
+                    <a class="btn btn-whatsapp" href="{{whatsappUrl}}">&#x1F4AC; WHATSAPP SUPPORT</a>
+                    <a class="btn btn-email" href="mailto:{{supportEmail}}">&#x2709;&#xFE0F; EMAIL US</a>
+                </div>
+            </div>
+            <div class="address">{{companyAddress}}</div>
+            <div class="footer-note">* This is an order receipt, not a Tax Invoice. Tax Invoice will be provided upon
+                delivery.</div>
+        </div>
+    </div>
+</body>
+
+</html>

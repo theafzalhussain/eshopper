@@ -1,0 +1,85 @@
+<!--
+Ultra-Premium Luxe Email: Order Shipped
+Exact Blue Banner, Rocket Icon, Shipment Info, Progress Bar, and Buttons
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Shipped - eShopper Luxe</title>
+  <style>
+    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
+    .header { background: linear-gradient(90deg, #0A0A0A 60%, #3498db 100%); padding: 32px 0 18px 0; text-align: center; }
+    .logo { height: 40px; margin-bottom: 12px; }
+    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
+    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
+    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
+    .banner { background: #3498db; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .banner-icon { font-size: 26px; }
+    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
+    .shipment-title { font-size: 18px; color: #FFD700; font-weight: 700; margin: 32px 0 8px 0; }
+    .shipment-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 0 0 24px 0; color: #FFD700; }
+    .shipment-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .shipment-label { color: #FFD700; font-size: 14px; font-weight: 700; }
+    .shipment-value { color: #fff; font-size: 14px; }
+    .progress-bar { background: #222; border-radius: 8px; padding: 18px 0 12px 0; margin: 32px 0 0 0; text-align: center; }
+    .progress-icons { display: flex; justify-content: space-between; align-items: center; max-width: 90%; margin: 0 auto; }
+    .progress-step { flex: 1; text-align: center; }
+    .progress-tick { color: #1ec773; font-size: 22px; font-weight: 900; }
+    .progress-label { color: #FFD700; font-size: 12px; font-weight: 700; margin-top: 2px; }
+    .progress-dot { width: 12px; height: 12px; border-radius: 50%; background: #1ec773; display: inline-block; margin: 0 2px; }
+    .progress-dot.inactive { background: #888; }
+    .progress-tick.inactive { color: #888; }
+    .btn-row { display: flex; justify-content: center; gap: 16px; margin: 32px 0 0 0; }
+    .btn { display: inline-block; padding: 14px 32px; border-radius: 24px; font-weight: 900; font-size: 15px; text-decoration: none; letter-spacing: 1px; }
+    .btn-live { background: #3498db; color: #fff; }
+    .btn-carrier { background: #222; color: #3498db; border: 2px solid #3498db; }
+    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
+    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
+    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
+    @media (max-width: 650px) {
+      .container { max-width: 98vw; }
+      .btn-row { flex-direction: column; gap: 10px; }
+      .progress-icons { flex-direction: column; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img class="logo" src="{{logoUrl}}" alt="eShopper Luxe Logo" />
+      <div class="order-title">ORDER SHIPPED</div>
+      <div class="order-id">Order ID: {{orderId}}</div>
+      <div class="order-date">{{orderDate}}</div>
+    </div>
+    <div class="banner"><span class="banner-icon">🚀</span>YOUR ORDER IS SHIPPED!</div>
+    <div class="greeting">Hi {{customerName}},<br>Your luxury package has left our warehouse and is now en route to you. Track your delivery in real-time using the details below.</div>
+    <div class="shipment-title">SHIPMENT INFORMATION</div>
+    <div class="shipment-box">
+      <div class="shipment-row"><span class="shipment-label">Courier Partner</span><span class="shipment-value">{{courierPartner}}</span></div>
+      <div class="shipment-row"><span class="shipment-label">AWB Tracking Number</span><span class="shipment-value">{{trackingNumber}}</span></div>
+      <div class="shipment-row"><span class="shipment-label">Shipped On</span><span class="shipment-value">{{shippedOn}}</span></div>
+      <div class="shipment-row"><span class="shipment-label">Expected Delivery</span><span class="shipment-value">{{expectedDelivery}}</span></div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-icons">
+        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Placed</div></div>
+        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Confirmed</div></div>
+        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Packed</div></div>
+        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Shipped</div></div>
+        <div class="progress-step"><span class="progress-tick inactive">⬜</span><div class="progress-label" style="color:#888;">Delivered</div></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <a class="btn btn-live" href="{{liveTrackingUrl}}">LIVE TRACKING</a>
+      <a class="btn btn-carrier" href="{{carrierWebsiteUrl}}">CARRIER WEBSITE</a>
+    </div>
+    <div class="footer">
+      <div class="address">{{companyAddress}}</div>
+      <div class="footer-note">* This is a shipment update, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
+    </div>
+  </div>
+</body>
+</html>

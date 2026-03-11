@@ -1,0 +1,89 @@
+<!--
+Ultra-Premium Luxe Email: Arriving Today / Out for Delivery
+Exact Orange Banner, Security Box, Rider Info, Checklist, and layout as per reference
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arriving Today - eShopper Luxe</title>
+  <style>
+    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
+    .header { background: linear-gradient(90deg, #0A0A0A 60%, #FF9800 100%); padding: 32px 0 18px 0; text-align: center; }
+    .logo { height: 40px; margin-bottom: 12px; }
+    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
+    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
+    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
+    .banner { background: #FF9800; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .banner-icon { font-size: 26px; }
+    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
+    .delivery-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; text-align: center; }
+    .delivery-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
+    .delivery-time { font-size: 18px; color: #fff; font-weight: 900; margin-bottom: 2px; }
+    .security-box { background: #fff3f3; border: 2px solid #e53935; border-radius: 10px; color: #e53935; padding: 16px; margin: 24px 0 0 0; font-size: 15px; font-weight: 700; }
+    .security-title { font-size: 15px; font-weight: 900; margin-bottom: 6px; }
+    .security-otp { font-size: 18px; color: #e53935; font-weight: 900; letter-spacing: 2px; background: #fff; border-radius: 6px; padding: 4px 12px; display: inline-block; margin: 8px 0; }
+    .rider-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; }
+    .rider-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
+    .rider-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .rider-label { color: #FFD700; font-size: 14px; font-weight: 700; }
+    .rider-value { color: #fff; font-size: 14px; }
+    .track-btn { display: block; width: 80%; margin: 24px auto 0 auto; background: #FF9800; color: #fff; font-size: 16px; font-weight: 900; padding: 14px 0; border-radius: 24px; text-align: center; text-decoration: none; letter-spacing: 1px; }
+    .checklist { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; }
+    .checklist-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
+    .checklist-list { color: #fff; font-size: 14px; margin: 0; padding-left: 18px; }
+    .checklist-list li { margin-bottom: 6px; }
+    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
+    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
+    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
+    @media (max-width: 650px) {
+      .container { max-width: 98vw; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img class="logo" src="{{logoUrl}}" alt="eShopper Luxe Logo" />
+      <div class="order-title">OUT FOR DELIVERY</div>
+      <div class="order-id">Order ID: {{orderId}}</div>
+      <div class="order-date">{{orderDate}}</div>
+    </div>
+    <div class="banner"><span class="banner-icon">🎁</span>IT'S ARRIVING TODAY!</div>
+    <div class="greeting">Hi {{customerName}},<br>Your luxury package is <span style="color:#FF9800;font-weight:700;">out for delivery</span> and will reach you today! Our delivery partner is on the way to your doorstep.</div>
+    <div class="delivery-box">
+      <div class="delivery-title">DELIVERY IN PROGRESS</div>
+      <div class="delivery-time">{{deliveryDate}}<br><span style="font-size:14px; color:#FFD700;">Expected by {{deliveryTimeSlot}}</span></div>
+    </div>
+    <div class="security-box">
+      <div class="security-title">⚠️ SECURITY FIRST!</div>
+      Please share the OTP or verification code <span class="security-otp">{{otp}}</span> ONLY when you receive the package in perfect condition.<br>Never share OTP before inspecting the package.
+    </div>
+    <div class="rider-box">
+      <div class="rider-title">YOUR DELIVERY PARTNER</div>
+      <div class="rider-row"><span class="rider-label">Courier Partner</span><span class="rider-value">{{courierPartner}}</span></div>
+      <div class="rider-row"><span class="rider-label">Tracking ID</span><span class="rider-value">{{trackingNumber}}</span></div>
+      <div class="rider-row"><span class="rider-label">Delivery Agent</span><span class="rider-value">{{deliveryAgent}}</span></div>
+      <div class="rider-row"><span class="rider-label">Agent Contact</span><span class="rider-value">{{agentContact}}</span></div>
+      <div class="rider-row"><span class="rider-label">Delivery Location</span><span class="rider-value">{{deliveryLocation}}</span></div>
+    </div>
+    <a class="track-btn" href="{{liveTrackingUrl}}">🚗 Track Live Location</a>
+    <div class="checklist">
+      <div class="checklist-title">BEFORE ACCEPTING DELIVERY</div>
+      <ul class="checklist-list">
+        <li>✔️ Check package seal is intact</li>
+        <li>✔️ Verify Order ID matches: <span style="color:#FFD700;">{{orderId}}</span></li>
+        <li>✔️ Open and inspect items condition</li>
+        <li>✔️ Then share OTP/verification code</li>
+      </ul>
+      <div style="color:#FFD700; font-size:13px; margin-top:8px;">All deliveries are fully insured during transit.</div>
+    </div>
+    <div class="footer">
+      <div class="address">{{companyAddress}}</div>
+      <div class="footer-note">* This is a delivery update, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
+    </div>
+  </div>
+</body>
+</html>

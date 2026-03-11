@@ -1,0 +1,106 @@
+<!--
+Ultra-Premium Luxe Email: Order Packed
+Exact Purple Banner, Quality Inspected badge, Package Summary, Eco-Luxe icons, and progress bar
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Packed - eShopper Luxe</title>
+  <style>
+    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
+    .header { background: linear-gradient(90deg, #0A0A0A 60%, #9B59B6 100%); padding: 32px 0 18px 0; text-align: center; }
+    .logo { height: 40px; margin-bottom: 12px; }
+    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
+    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
+    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
+    .banner { background: #9B59B6; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; }
+    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
+    .badge { display: inline-block; background: #1ec773; color: #fff; font-size: 13px; font-weight: 700; border-radius: 16px; padding: 6px 18px; margin: 18px 0 0 0; }
+    .summary-title { font-size: 18px; color: #FFD700; font-weight: 700; margin: 32px 0 8px 0; }
+    .summary-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 0 0 24px 0; color: #FFD700; }
+    .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .summary-label { color: #FFD700; font-size: 14px; font-weight: 700; }
+    .summary-value { color: #fff; font-size: 14px; }
+    .eco-row { display: flex; justify-content: space-between; gap: 8px; margin: 18px 0 0 0; }
+    .eco { flex: 1; background: #222; border-radius: 12px; padding: 12px 6px; text-align: center; color: #FFD700; }
+    .eco-icon { font-size: 24px; margin-bottom: 4px; display: block; }
+    .eco-title { font-size: 13px; font-weight: 700; color: #FFD700; margin-bottom: 2px; }
+    .eco-desc { color: #fff; font-size: 12px; }
+    .progress-bar { background: #222; border-radius: 8px; padding: 18px 0 12px 0; margin: 32px 0 0 0; text-align: center; }
+    .progress-icons { display: flex; justify-content: space-between; align-items: center; max-width: 90%; margin: 0 auto; }
+    .progress-step { flex: 1; text-align: center; }
+    .progress-tick { color: #1ec773; font-size: 22px; font-weight: 900; }
+    .progress-label { color: #FFD700; font-size: 12px; font-weight: 700; margin-top: 2px; }
+    .progress-dot { width: 12px; height: 12px; border-radius: 50%; background: #1ec773; display: inline-block; margin: 0 2px; }
+    .progress-dot.inactive { background: #888; }
+    .track-btn { display: block; width: 80%; margin: 32px auto 0 auto; background: #9B59B6; color: #fff; font-size: 16px; font-weight: 900; padding: 14px 0; border-radius: 24px; text-align: center; text-decoration: none; letter-spacing: 1px; }
+    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
+    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
+    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
+    @media (max-width: 650px) {
+      .container { max-width: 98vw; }
+      .eco-row { flex-direction: column; gap: 10px; }
+      .progress-icons { flex-direction: column; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img class="logo" src="{{logoUrl}}" alt="eShopper Luxe Logo" />
+      <div class="order-title">ORDER PACKED</div>
+      <div class="order-id">Order ID: {{orderId}}</div>
+      <div class="order-date">{{orderDate}}</div>
+    </div>
+    <div class="banner">WRAPPED WITH CARE</div>
+    <div class="greeting">Hi {{customerName}},<br>Your order has been <span style="color:#1ec773;font-weight:700;">sanitized</span>, <span style="color:#1ec773;font-weight:700;">quality-checked</span>, and carefully packed in our signature <span style="color:#FFD700;">eco-friendly luxe box</span>. Your premium items are protected and ready for their journey!</div>
+    <div class="badge">QUALITY INSPECTED</div>
+    <div class="summary-title">PACKAGE SUMMARY</div>
+    <div class="summary-box">
+      <div class="summary-row"><span class="summary-label">Order ID</span><span class="summary-value">{{orderId}}</span></div>
+      <div class="summary-row"><span class="summary-label">Total Items</span><span class="summary-value">{{totalItems}}</span></div>
+      <div class="summary-row"><span class="summary-label">Packed On</span><span class="summary-value">{{packedOn}}</span></div>
+      <div class="summary-row"><span class="summary-label">Package Weight</span><span class="summary-value">{{packageWeight}}</span></div>
+    </div>
+    <div class="eco-row">
+      <div class="eco">
+        <span class="eco-icon">♻️</span>
+        <div class="eco-title">100% Recyclable</div>
+        <div class="eco-desc">Eco-friendly materials</div>
+      </div>
+      <div class="eco">
+        <span class="eco-icon">🛡️</span>
+        <div class="eco-title">Bubble Wrapped</div>
+        <div class="eco-desc">Safe & secure packaging</div>
+      </div>
+      <div class="eco">
+        <span class="eco-icon">🧴</span>
+        <div class="eco-title">Sanitized</div>
+        <div class="eco-desc">Hygienic handling</div>
+      </div>
+      <div class="eco">
+        <span class="eco-icon">💎</span>
+        <div class="eco-title">Premium Sealant</div>
+        <div class="eco-desc">Tamper-proof</div>
+      </div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-icons">
+        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Placed</div></div>
+        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Confirmed</div></div>
+        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Packed</div></div>
+        <div class="progress-step"><span class="progress-tick" style="color:#888;">⬜</span><div class="progress-label" style="color:#888;">Shipped</div></div>
+        <div class="progress-step"><span class="progress-tick" style="color:#888;">⬜</span><div class="progress-label" style="color:#888;">Delivered</div></div>
+      </div>
+    </div>
+    <a class="track-btn" href="{{trackingUrl}}">TRACK PACKAGE</a>
+    <div class="footer">
+      <div class="address">{{companyAddress}}</div>
+      <div class="footer-note">* This is a package update, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
+    </div>
+  </div>
+</body>
+</html>

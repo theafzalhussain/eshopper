@@ -1,0 +1,79 @@
+<!--
+Ultra-Premium Luxe Email: Delivered Successfully
+Exact Green Celebration Banner, Tax Invoice Card, Feedback, Referral, and Footer as per reference
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivered Successfully - eShopper Luxe</title>
+  <style>
+    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
+    .header { background: linear-gradient(90deg, #0A0A0A 60%, #43e97b 100%); padding: 32px 0 18px 0; text-align: center; }
+    .logo { height: 40px; margin-bottom: 12px; }
+    .banner { background: #43e97b; color: #fff; font-size: 22px; font-weight: 900; padding: 18px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .banner-icon { font-size: 26px; }
+    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
+    .delivered-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; text-align: center; }
+    .delivered-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
+    .delivered-status { font-size: 18px; color: #43e97b; font-weight: 900; margin-bottom: 2px; }
+    .invoice-card { background: #fff; border-radius: 12px; color: #181818; padding: 18px 18px; margin: 24px 0 0 0; text-align: center; }
+    .invoice-title { font-size: 16px; color: #FFD700; font-weight: 900; margin-bottom: 8px; }
+    .invoice-btn { display: inline-block; background: #FFD700; color: #181818; font-size: 15px; font-weight: 900; padding: 12px 32px; border-radius: 24px; text-decoration: none; margin-top: 10px; }
+    .feedback-card { background: #222; border-radius: 12px; color: #FFD700; padding: 18px 18px; margin: 24px 0 0 0; text-align: center; }
+    .feedback-title { font-size: 16px; color: #FFD700; font-weight: 900; margin-bottom: 8px; }
+    .stars { font-size: 24px; color: #FFD700; letter-spacing: 2px; }
+    .review-btn { display: inline-block; background: #fff; color: #181818; font-size: 15px; font-weight: 900; padding: 10px 28px; border-radius: 24px; text-decoration: none; margin-top: 10px; }
+    .referral-card { background: linear-gradient(90deg, #8f5cff 60%, #ff6a00 100%); border-radius: 12px; color: #fff; padding: 18px 18px; margin: 24px 0 0 0; text-align: center; }
+    .referral-title { font-size: 16px; color: #fff; font-weight: 900; margin-bottom: 8px; }
+    .referral-code { font-size: 18px; color: #FFD700; font-weight: 900; background: #222; border-radius: 8px; padding: 6px 18px; margin: 10px 0; display: inline-block; }
+    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
+    .social-row { display: flex; justify-content: center; gap: 18px; margin: 18px 0 0 0; }
+    .social-icon { width: 36px; height: 36px; border-radius: 50%; display: inline-block; }
+    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
+    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
+    @media (max-width: 650px) {
+      .container { max-width: 98vw; }
+      .social-row { flex-direction: column; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img class="logo" src="{{logoUrl}}" alt="eShopper Luxe Logo" />
+    </div>
+    <div class="banner"><span class="banner-icon">🎉</span>DELIVERED!<span class="banner-icon">🎉</span></div>
+    <div class="greeting">Thank You, {{customerName}} <span style="font-size:18px;">🙏</span><br>We hope you love your luxury purchase! Your order <span style="color:#43e97b;">{{orderId}}</span> was delivered on <span style="color:#FFD700;">{{deliveredOn}}</span>.</div>
+    <div class="delivered-box">
+      <div class="delivered-title">DELIVERY CONFIRMED</div>
+      <div class="delivered-status">Received by: {{receivedBy}}</div>
+    </div>
+    <div class="invoice-card">
+      <div class="invoice-title">Your Tax Invoice is Ready</div>
+      <a class="invoice-btn" href="{{taxInvoiceUrl}}">📄 DOWNLOAD TAX INVOICE</a>
+    </div>
+    <div class="feedback-card">
+      <div class="feedback-title">How was your experience?<br><span style="font-size:14px; color:#FFD700;">Rate your order and help us serve you better</span></div>
+      <div class="stars">★ ★ ★ ★ ★</div>
+      <a class="review-btn" href="{{reviewUrl}}">Write a Review</a>
+    </div>
+    <div class="referral-card">
+      <div class="referral-title">Love Your Purchase? Share the Luxury!</div>
+      <div style="font-size:14px; color:#fff;">Refer a friend to eShopper Luxe and you both get 10% OFF on your next luxe purchase!</div>
+      <div class="referral-code">{{referralCode}}</div>
+      <a class="review-btn" href="{{referralShareUrl}}">Share & Earn 10% Off</a>
+    </div>
+    <div class="footer">
+      <div class="social-row">
+        <a href="{{instagramUrl}}"><img class="social-icon" src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg" alt="Instagram" /></a>
+        <a href="{{whatsappUrl}}"><img class="social-icon" src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.svg" alt="WhatsApp" /></a>
+      </div>
+      <div class="address">{{companyAddress}}</div>
+      <div class="footer-note">* This is a delivery confirmation, not a Tax Invoice. Tax Invoice is attached above.</div>
+    </div>
+  </div>
+</body>
+</html>
