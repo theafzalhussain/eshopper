@@ -21,7 +21,7 @@ const path = require('path');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
 // ===== EMAIL UTILITY (Brevo)
-const { sendEmail } = require('./src/utils/emailHelper');
+const { sendTransactionalEmail } = require('./src/utils/email.js');
 /**
  * Universal transactional email sender for ESHOPPER (Brevo/Sendinblue)
  * @param {Object} opts
@@ -2820,8 +2820,40 @@ const placeOrderHandler = async (req, res) => {
 
         const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
-        // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY
-        // [EMAIL PLACEHOLDER] Integrate new premium order placed email logic here.
+            // --- PREMIUM ORDER PLACED EMAIL TRIGGER ---
+            const { sendOrderReceivedEmail } = require('./mailController');
+            const { sendTransactionalEmail } = require('./src/utils/email.js');
+            try {
+                const emailHtml = await sendOrderReceivedEmail({
+                    toEmail: recipientEmail,
+                    logoUrl: 'https://yourdomain.com/logo.png',
+                    orderId,
+                    orderDate,
+                    customerName: user.name,
+                    customerEmail: user.email,
+                    items: cleanProducts,
+                    subtotal: total,
+                    shippingCharges: shipping,
+                    gst: 0, // Add GST logic if needed
+                    totalPaid: payable,
+                    shippingAddress: addressPayload,
+                    paymentMethod: paymentMethod || 'COD',
+                    transactionId: '', // Add if available
+                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+                    whatsappUrl: 'https://wa.me/918447859784',
+                    supportEmail: 'support@eshopperr.me',
+                    companyAddress: 'Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India'
+                });
+                await sendTransactionalEmail({
+                    toEmail: recipientEmail,
+                    toName: user.name,
+                    subject: `Order Placed Successfully! #${orderId}`,
+                    htmlContent: emailHtml
+                });
+                console.log(`[EMAIL] Order Placed Email sent to: ${recipientEmail}`);
+            } catch (err) {
+                console.error('[EMAIL] Order Placed Email failed:', err.message);
+            }
 
         // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
