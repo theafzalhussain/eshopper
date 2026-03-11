@@ -63,6 +63,31 @@ async function sendOrderDeliveredEmail({
     return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, deliveredOn, receivedBy, invoiceUrl, reviewUrl, referralCode, referralShareUrl, instagramUrl, whatsappUrl, companyAddress });
 }
 
+
+// Generic status router
+async function sendOrderStatus({ status, ...rest }) {
+    const s = String(status || '').toLowerCase();
+    if (s === 'ordered' || s === 'order placed' || s === 'order received') {
+        return sendOrderReceivedEmail(rest);
+    }
+    if (s === 'confirmed' || s === 'order confirmed') {
+        return sendOrderConfirmedEmail(rest);
+    }
+    if (s === 'packed' || s === 'order packed') {
+        return sendOrderPackedEmail(rest);
+    }
+    if (s === 'shipped' || s === 'order shipped') {
+        return sendOrderShippedEmail(rest);
+    }
+    if (s === 'out for delivery') {
+        return sendOrderOutForDeliveryEmail(rest);
+    }
+    if (s === 'delivered' || s === 'order delivered') {
+        return sendOrderDeliveredEmail(rest);
+    }
+    throw new Error('Unknown order status: ' + status);
+}
+
 module.exports = {
     sendOrderReceivedEmail,
     sendOrderConfirmedEmail,
@@ -70,4 +95,5 @@ module.exports = {
     sendOrderShippedEmail,
     sendOrderOutForDeliveryEmail,
     sendOrderDeliveredEmail,
+    sendOrderStatus,
 };
