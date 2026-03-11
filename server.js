@@ -33,14 +33,12 @@ const puppeteer = require('puppeteer');
  * @returns {Promise<{provider: string, result: any}>}
  */
 async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
+    console.log('[DEBUG] sendTransactionalEmail called:', { toEmail, toName, subject });
     if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
-    // Use Brevo (Sendinblue) transactional email API
     const apiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
     if (!apiKey) throw new Error('Brevo/Sendinblue API key missing in environment');
-
     const senderEmail = process.env.SENDER_EMAIL || 'support@eshopperr.me';
     const senderName = process.env.SENDER_NAME || 'Eshopper Boutique';
-
     const payload = {
         sender: { email: senderEmail, name: senderName },
         to: [{ email: toEmail, name: toName || toEmail }],
@@ -48,14 +46,12 @@ async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, a
         htmlContent,
     };
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-        // Brevo expects attachments as [{ content, name, type }]
         payload.attachment = attachments.map(att => ({
             content: att.content,
             name: att.filename || att.name,
             type: att.contentType || 'application/octet-stream'
         }));
     }
-
     try {
         const response = await axios.post(
             'https://api.brevo.com/v3/smtp/email',
@@ -87,7 +83,7 @@ const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
  */
 async function executeEmailJob(jobType, payload) {
     try {
-        // Accept all order-related job types
+        console.log('[DEBUG] executeEmailJob called:', jobType, payload);
         const allowedTypes = [
             'order-status',
             'order-placed',
@@ -98,32 +94,27 @@ async function executeEmailJob(jobType, payload) {
             'order-delivered'
         ];
         if (allowedTypes.includes((jobType || '').toLowerCase())) {
-            // Normalize payload for all order status emails
             let fixedPayload = { ...payload };
-            // Accept both toEmail and to (legacy)
             if (!fixedPayload.toEmail && fixedPayload.to) fixedPayload.toEmail = fixedPayload.to;
             if (!fixedPayload.to && fixedPayload.toEmail) fixedPayload.to = fixedPayload.toEmail;
-            // Always require toEmail
             if (!fixedPayload.toEmail || typeof fixedPayload.toEmail !== 'string' || !fixedPayload.toEmail.includes('@')) {
                 console.error('❌ [DEBUG] Missing or invalid toEmail in jobType:', jobType, '| payload:', payload);
                 throw new Error('Missing or invalid toEmail in email payload');
             }
-            // Always require subject
             if (!fixedPayload.subject || typeof fixedPayload.subject !== 'string' || !fixedPayload.subject.trim()) {
                 fixedPayload.subject = `${jobType.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} - Order Update | Eshopper Boutique`;
             }
-            // Always require htmlContent
             if (!fixedPayload.htmlContent || typeof fixedPayload.htmlContent !== 'string' || !fixedPayload.htmlContent.trim()) {
                 fixedPayload.htmlContent = `<div style='font-family:Arial,sans-serif;padding:32px;'><h2>Order Update: ${jobType}</h2><p>Your order status has changed. Please check your account for details.</p></div>`;
             }
-            // Remove legacy to field
             delete fixedPayload.to;
+            console.log('[DEBUG] sendTransactionalEmail about to be called:', fixedPayload);
             return await sendTransactionalEmail(fixedPayload);
         } else {
             throw new Error('Unknown email job type: ' + jobType);
         }
     } catch (err) {
-        console.error('executeEmailJob error:', err.message);
+        console.error('❌ Email job failed:', err.message);
         throw err;
     }
 }
@@ -422,6 +413,7 @@ const processMemoryEmailQueue = async () => {
 };
 
 const enqueueEmailJob = async (jobType, payload) => {
+    console.log('[DEBUG] enqueueEmailJob called:', jobType, payload);
     if (!FEATURE_EMAIL_NOTIFICATIONS) {
         return { skipped: true, reason: 'email-notifications-disabled' };
     }
@@ -441,6 +433,7 @@ const enqueueEmailJob = async (jobType, payload) => {
 
     memoryEmailQueue.push({ jobType, payload });
     setImmediate(processMemoryEmailQueue);
+    console.log('[DEBUG] memoryEmailQueue updated:', memoryEmailQueue);
     return true;
 };
 
@@ -634,7 +627,7 @@ const buildOrderReceiptHtml = ({
                 .items-section { margin: 32px 0; }
                 .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
                 table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; }
+                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; white-space: nowrap; }
                 td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; }
                 tr:nth-child(odd) { background: #fafaf8; }
                 tr:hover { background: #f5f0e6; }
@@ -1047,8 +1040,8 @@ const buildTaxInvoiceHtml = ({
 
                         <!-- QR CODE -->
                         <div class="qr-section">
-                            <div style="font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 10px;">📱 Scan for Order Status & Returns</div>
-                            <svg class="qr-unit" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                            <div class="qr-label">📱 Track Your Order</div>
+                            <svg class="qr-code" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                                 <rect width="200" height="200" fill="white"/>
                                 <rect x="20" y="20" width="50" height="50" fill="black"/>
                                 <rect x="30" y="30" width="30" height="30" fill="white"/>
@@ -1056,9 +1049,11 @@ const buildTaxInvoiceHtml = ({
                                 <rect x="140" y="30" width="30" height="30" fill="white"/>
                                 <rect x="20" y="130" width="50" height="50" fill="black"/>
                                 <rect x="30" y="140" width="30" height="30" fill="white"/>
-                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.4"/>
+                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.3"/>
+                                <circle cx="80" cy="60" r="8" fill="black" opacity="0.3"/>
+                                <circle cx="140" cy="140" r="8" fill="black" opacity="0.3"/>
                             </svg>
-                            <div class="qr-label">Links to Order History & Return Policy</div>
+                            <div class="qr-info">Scan to track your package in real-time</div>
                         </div>
 
                         <!-- SIGNATURE BLOCK -->
@@ -2929,7 +2924,7 @@ app.post('/api/test-notification', async (req, res) => {
 
 const allSuccess =
     (!results.email.attempted || results.email.success) &&
-    (!results.whatsapp.attempted || results.whatsapp.success);
+    (!results.whatsapp.attempted || results.whatsapp.success) ;
 
 return res.status(allSuccess ? 200 : 207).json({
     success: allSuccess,
@@ -3459,13 +3454,14 @@ async function startServer() {
                         orderDate: order.orderDate || order.createdAt,
                         orderStatus: order.orderStatus || order.status || 'Ordered',
                         isDelivered: isDelivered,  // Pass delivery status for footer customization
-                        pdfType: pdfType // 'receipt' | 'confirmation' | 'final'
+                        pdfType: pdfType
                     });
 
                     clearTimeout(timeoutId);
 
+                    // Validate PDF buffer
                     if (!pdfBuffer || pdfBuffer.length < 500) {
-                        return res.status(500).json({ message: 'PDF generation failed - invalid buffer' });
+                        throw new Error('Generated PDF buffer is invalid or too small');
                     }
 
                     // Set response headers
@@ -3480,7 +3476,7 @@ async function startServer() {
                     return res.send(pdfBuffer);
                 } catch (pdfErr) {
                     clearTimeout(timeoutId);
-                    console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
+                    console.error(`❌ PDF generation failed for ${orderId}:`, pdfErr.message);
                     if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
                     return res.status(500).json({ message: 'Failed to generate PDF - please try again' });
                 }
