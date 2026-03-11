@@ -3,72 +3,24 @@ const path = require('path');
 const fs = require('fs');
 const handlebars = require('handlebars');
 
-// Order Received (updated for new .hbs design)
+// Order Received
 async function sendOrderReceivedEmail({
-    toEmail,
-    userName,
-    orderId,
-    orderDate,
-    items,
-    subtotal,
-    shippingCharges,
-    totalPaid,
-    shippingAddress,
-    paymentMethod,
-    paymentStatus
+    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, paymentStatus, whatsappUrl, supportEmail, companyAddress
 }) {
     const templatePath = path.join(__dirname, 'views', 'emails', 'order-received.hbs');
     const source = fs.readFileSync(templatePath, 'utf8');
     const template = handlebars.compile(source);
-    return template({
-        orderId,
-        orderDate,
-        customerName: userName,
-        items,
-        subtotal,
-        shippingCharges,
-        totalPaid,
-        shippingAddress,
-        paymentMethod,
-        paymentStatus
-    });
+    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, paymentStatus, whatsappUrl, supportEmail, companyAddress });
 }
 
-// Order Confirmed (updated for new .hbs design)
+// Order Confirmed
 async function sendOrderConfirmedEmail({
-    toEmail,
-    userName,
-    orderId,
-    orderDate,
-    expectedArrival,
-    items,
-    subtotal,
-    shippingCharges,
-    gst,
-    totalPaid,
-    shippingAddress,
-    billingInfo,
-    trackingUrl,
-    receiptUrl
+    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedArrival, companyAddress
 }) {
     const templatePath = path.join(__dirname, 'views', 'emails', 'order-confirmed.hbs');
     const source = fs.readFileSync(templatePath, 'utf8');
     const template = handlebars.compile(source);
-    return template({
-        orderId,
-        orderDate,
-        customerName: userName,
-        expectedArrival,
-        items,
-        subtotal,
-        shippingCharges,
-        gst,
-        totalPaid,
-        shippingAddress,
-        billingInfo,
-        trackingUrl,
-        receiptUrl
-    });
+    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedArrival, companyAddress });
 }
 
 // Order Packed

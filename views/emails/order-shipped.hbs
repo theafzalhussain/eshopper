@@ -1,85 +1,186 @@
-<!--
-Ultra-Premium Luxe Email: Order Shipped
-Exact Blue Banner, Rocket Icon, Shipment Info, Progress Bar, and Buttons
--->
+<!-- Order Shipped Email Template (Table-based, Responsive) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Shipped - Eshopper Boutique Luxe</title>
-  <style>
-    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
-    .header { background: linear-gradient(90deg, #0A0A0A 60%, #3498db 100%); padding: 32px 0 18px 0; text-align: center; }
-    .logo { height: 40px; margin-bottom: 12px; }
-    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
-    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
-    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
-    .banner { background: #3498db; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .banner-icon { font-size: 26px; }
-    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
-    .shipment-title { font-size: 18px; color: #FFD700; font-weight: 700; margin: 32px 0 8px 0; }
-    .shipment-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 0 0 24px 0; color: #FFD700; }
-    .shipment-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .shipment-label { color: #FFD700; font-size: 14px; font-weight: 700; }
-    .shipment-value { color: #fff; font-size: 14px; }
-    .progress-bar { background: #222; border-radius: 8px; padding: 18px 0 12px 0; margin: 32px 0 0 0; text-align: center; }
-    .progress-icons { display: flex; justify-content: space-between; align-items: center; max-width: 90%; margin: 0 auto; }
-    .progress-step { flex: 1; text-align: center; }
-    .progress-tick { color: #1ec773; font-size: 22px; font-weight: 900; }
-    .progress-label { color: #FFD700; font-size: 12px; font-weight: 700; margin-top: 2px; }
-    .progress-dot { width: 12px; height: 12px; border-radius: 50%; background: #1ec773; display: inline-block; margin: 0 2px; }
-    .progress-dot.inactive { background: #888; }
-    .progress-tick.inactive { color: #888; }
-    .btn-row { display: flex; justify-content: center; gap: 16px; margin: 32px 0 0 0; }
-    .btn { display: inline-block; padding: 14px 32px; border-radius: 24px; font-weight: 900; font-size: 15px; text-decoration: none; letter-spacing: 1px; }
-    .btn-live { background: #3498db; color: #fff; }
-    .btn-carrier { background: #222; color: #3498db; border: 2px solid #3498db; }
-    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
-    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
-    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
-    @media (max-width: 650px) {
-      .container { max-width: 98vw; }
-      .btn-row { flex-direction: column; gap: 10px; }
-      .progress-icons { flex-direction: column; gap: 8px; }
-    }
-  </style>
+  <title>Order Shipped - eShopper Luxe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
-      <div class="order-title">ORDER SHIPPED</div>
-      <div class="order-id">Order ID: {{orderId}}</div>
-      <div class="order-date">{{orderDate}}</div>
-    </div>
-    <div class="banner"><span class="banner-icon">🚀</span>YOUR ORDER IS SHIPPED!</div>
-    <div class="greeting">Hi {{customerName}},<br>Your luxury package has left our warehouse and is now en route to you. Track your delivery in real-time using the details below.</div>
-    <div class="shipment-title">SHIPMENT INFORMATION</div>
-    <div class="shipment-box">
-      <div class="shipment-row"><span class="shipment-label">Courier Partner</span><span class="shipment-value">{{courierPartner}}</span></div>
-      <div class="shipment-row"><span class="shipment-label">AWB Tracking Number</span><span class="shipment-value">{{trackingNumber}}</span></div>
-      <div class="shipment-row"><span class="shipment-label">Shipped On</span><span class="shipment-value">{{shippedOn}}</span></div>
-      <div class="shipment-row"><span class="shipment-label">Expected Delivery</span><span class="shipment-value">{{expectedDelivery}}</span></div>
-    </div>
-    <div class="progress-bar">
-      <div class="progress-icons">
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Placed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Confirmed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Packed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Shipped</div></div>
-        <div class="progress-step"><span class="progress-tick inactive">⬜</span><div class="progress-label" style="color:#888;">Delivered</div></div>
-      </div>
-    </div>
-    <div class="btn-row">
-      <a class="btn btn-live" href="{{liveTrackingUrl}}">LIVE TRACKING</a>
-      <a class="btn btn-carrier" href="{{carrierWebsiteUrl}}">CARRIER WEBSITE</a>
-    </div>
-    <div class="footer">
-      <div class="address">{{companyAddress}}</div>
-      <div class="footer-note">* This is a shipment update, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
-    </div>
-  </div>
+<body style="margin:0; padding:0; background:#181818; color:#fff; font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" bgcolor="#181818" cellpadding="0" cellspacing="0" style="padding:0; margin:0;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0" style="background:#232323; border-radius:12px; margin:32px 0; box-shadow:0 2px 16px #00000033;">
+          <!-- Header -->
+          <tr>
+            <td style="padding:24px 32px 8px 32px; text-align:left;">
+              <img src="https://yourdomain.com/logo.png" alt="eShopper Luxe" style="height:28px; margin-bottom:12px;">
+              <div style="font-size:13px; color:#fff; text-align:right; float:right;">
+                <span style="background:#2196f3; color:#fff; font-size:13px; padding:4px 12px; border-radius:6px; font-weight:600;">🚚 ON THE WAY</span>
+              </div>
+            </td>
+          </tr>
+          <!-- Shipped Banner -->
+          <tr>
+            <td style="background:#2196f3; color:#fff; text-align:center; font-size:22px; font-weight:600; padding:18px 0 10px 0; letter-spacing:1px;">
+              <span style="font-size:22px;">🚀</span> YOUR ORDER IS SHIPPED!
+              <div style="font-size:13px; color:#eaefff; font-weight:400; margin-top:2px;">
+                Track your luxury package in real-time
+              </div>
+            </td>
+          </tr>
+          <!-- Greeting -->
+          <tr>
+            <td style="padding:24px 32px 0 32px; text-align:left;">
+              <div style="font-size:18px; font-weight:600; margin-bottom:6px;">Exciting News, {{customerName}} <span style="font-size:18px;">🧑‍🚀</span></div>
+              <div style="font-size:14px; color:#ccc;">
+                Your luxury package has left our warehouse and is now en route to you. Track your delivery in real-time using the details below.
+              </div>
+            </td>
+          </tr>
+          <!-- Track Package Button -->
+          <tr>
+            <td style="padding:24px 32px 0 32px; text-align:center;">
+              <a href="{{trackPackageUrl}}" style="background:#2196f3; color:#fff; font-size:16px; font-weight:600; text-decoration:none; padding:12px 32px; border-radius:8px; display:inline-block; margin-bottom:8px;">🔍 TRACK PACKAGE NOW</a>
+            </td>
+          </tr>
+          <!-- Shipment Information -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#181818; border-radius:8px; border:2px solid #2196f3;">
+                <tr>
+                  <td colspan="2" style="color:#ffcc80; font-size:15px; font-weight:600; padding:12px 0 0 0;">
+                    <span style="font-size:18px;">📦</span> SHIPMENT INFORMATION
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color:#b6b6b6; font-size:14px; padding:8px 0;">Courier Partner</td>
+                  <td align="right" style="color:#fff; font-size:14px; padding:8px 0;">{{courierPartner}}</td>
+                </tr>
+                <tr>
+                  <td style="color:#b6b6b6; font-size:14px; padding:8px 0;">AWB Tracking Number</td>
+                  <td align="right" style="color:#2196f3; font-size:14px; padding:8px 0; text-decoration:underline;">
+                    <a href="{{awbTrackingUrl}}" style="color:#2196f3; text-decoration:underline;">{{awbNumber}}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color:#b6b6b6; font-size:14px; padding:8px 0;">Shipped On</td>
+                  <td align="right" style="color:#fff; font-size:14px; padding:8px 0;">{{shippedOn}}</td>
+                </tr>
+                <tr>
+                  <td style="color:#b6b6b6; font-size:14px; padding:8px 0;">Expected Delivery</td>
+                  <td align="right" style="color:#00e676; font-size:14px; padding:8px 0;">{{expectedDelivery}}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Delivery Progress -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <div style="color:#ffcc80; font-size:15px; font-weight:600; margin-bottom:8px;">📍 DELIVERY PROGRESS</div>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+                <tr>
+                  <td align="center" style="color:#25d366; font-size:32px;">&#10003;</td>
+                  <td align="center" style="color:#25d366; font-size:32px;">&#10003;</td>
+                  <td align="center" style="color:#b983ff; font-size:32px;">&#128230;</td>
+                  <td align="center" style="color:#2196f3; font-size:32px;">🚚</td>
+                  <td align="center" style="color:#ffd700; font-size:32px;">🎁</td>
+                </tr>
+                <tr>
+                  <td align="center" style="color:#fff; font-size:13px;">PLACED</td>
+                  <td align="center" style="color:#fff; font-size:13px;">CONFIRMED</td>
+                  <td align="center" style="color:#fff; font-size:13px;">PACKED</td>
+                  <td align="center" style="color:#fff; font-size:13px;">SHIPPED</td>
+                  <td align="center" style="color:#fff; font-size:13px;">DELIVERED</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- What's in Your Package -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <div style="color:#ffcc80; font-size:15px; font-weight:600; margin-bottom:8px;">🧳 WHAT'S IN YOUR PACKAGE</div>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#232323; border-radius:8px;">
+                <tr>
+                  <td style="padding:8px 0;">
+                    <img src="{{productImage}}" alt="Product" style="width:48px; border-radius:6px;">
+                  </td>
+                  <td style="padding:8px 0;">
+                    <div style="font-weight:600; color:#fff;">{{productName}}</div>
+                    <div style="font-size:12px; color:#ccc;">Qty: {{qty}}</div>
+                  </td>
+                  <td align="right" style="padding:8px 0; color:#fff;">₹{{price}}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Delivering To -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d223a; border-radius:8px;">
+                <tr>
+                  <td style="color:#ffd700; font-size:13px; font-weight:600; padding:8px 0 0 0;">&#128205; DELIVERING TO</td>
+                </tr>
+                <tr>
+                  <td style="color:#fff; font-size:14px; font-weight:600;">{{customerName}}</td>
+                </tr>
+                <tr>
+                  <td style="color:#b6b6b6; font-size:13px;">
+                    {{address}}<br>
+                    {{city}}, {{state}} {{zip}}<br>
+                    <span style="color:#ffd700;">&#128222;</span> {{phone}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Delivery Tips -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#2a230e; border-radius:8px;">
+                <tr>
+                  <td style="color:#ffd700; font-size:15px; font-weight:600; padding:8px 0 0 0;">
+                    💡 IMPORTANT DELIVERY TIPS
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color:#fff; font-size:13px; padding:8px 0;">
+                    <ul style="margin:8px 0 0 16px; padding:0;">
+                      <li>Keep your phone accessible for delivery updates</li>
+                      <li>Ensure someone is available at the delivery address</li>
+                      <li>Check package condition before accepting delivery</li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Tracking Buttons -->
+          <tr>
+            <td style="padding:24px 32px 0 32px; text-align:center;">
+              <a href="{{liveTrackingUrl}}" style="background:#2196f3; color:#fff; font-size:16px; font-weight:600; text-decoration:none; padding:12px 32px; border-radius:8px; display:inline-block; margin-right:8px;">🔵 LIVE TRACKING</a>
+              <a href="{{carrierWebsiteUrl}}" style="background:#232323; color:#ffd700; font-size:16px; font-weight:600; text-decoration:none; padding:12px 32px; border-radius:8px; border:1px solid #ffd700; display:inline-block;">🟠 CARRIER WEBSITE</a>
+            </td>
+          </tr>
+          <!-- Need Help -->
+          <tr>
+            <td style="padding:24px 32px 0 32px; text-align:center;">
+              <div style="color:#b6b6b6; font-size:14px; margin-bottom:8px;">Need Help with Your Delivery?</div>
+              <a href="{{whatsappUrl}}" style="background:#25d366; color:#232323; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; margin-right:8px; display:inline-block;">💬 Chat-Support</a>
+              <a href="{{callUrl}}" style="background:#232323; color:#fff; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; border:1px solid #fff; display:inline-block;">📞 Call us</a>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 0 0 0; text-align:center; color:#b6b6b6; font-size:12px;">
+              © 2026 eShopper Luxe. All rights reserved.<br>
+              Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India<br>
+              <a href="{{privacyUrl}}" style="color:#ffd700; text-decoration:none;">Privacy</a> | <a href="{{termsUrl}}" style="color:#ffd700; text-decoration:none;">Terms</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

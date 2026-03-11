@@ -1,106 +1,176 @@
-<!--
-Ultra-Premium Luxe Email: Order Packed
-Exact Purple Banner, Quality Inspected badge, Package Summary, Eco-Luxe icons, and progress bar
--->
+<!-- Order Packed Email Template (Table-based, Responsive) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Packed - Eshopper Boutique Luxe</title>
-  <style>
-    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
-    .header { background: linear-gradient(90deg, #0A0A0A 60%, #9B59B6 100%); padding: 32px 0 18px 0; text-align: center; }
-    .logo { height: 40px; margin-bottom: 12px; }
-    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
-    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
-    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
-    .banner { background: #9B59B6; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; }
-    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
-    .badge { display: inline-block; background: #1ec773; color: #fff; font-size: 13px; font-weight: 700; border-radius: 16px; padding: 6px 18px; margin: 18px 0 0 0; }
-    .summary-title { font-size: 18px; color: #FFD700; font-weight: 700; margin: 32px 0 8px 0; }
-    .summary-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 0 0 24px 0; color: #FFD700; }
-    .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .summary-label { color: #FFD700; font-size: 14px; font-weight: 700; }
-    .summary-value { color: #fff; font-size: 14px; }
-    .eco-row { display: flex; justify-content: space-between; gap: 8px; margin: 18px 0 0 0; }
-    .eco { flex: 1; background: #222; border-radius: 12px; padding: 12px 6px; text-align: center; color: #FFD700; }
-    .eco-icon { font-size: 24px; margin-bottom: 4px; display: block; }
-    <!--
-    .eco-title { font-size: 13px; font-weight: 700; color: #FFD700; margin-bottom: 2px; }
-    .eco-desc { color: #fff; font-size: 12px; }
-    .progress-bar { background: #222; border-radius: 8px; padding: 18px 0 12px 0; margin: 32px 0 0 0; text-align: center; }
-    .progress-step { flex: 1; text-align: center; }
-    .progress-tick { color: #1ec773; font-size: 22px; font-weight: 900; }
-    .progress-label { color: #FFD700; font-size: 12px; font-weight: 700; margin-top: 2px; }
-    .progress-dot { width: 12px; height: 12px; border-radius: 50%; background: #1ec773; display: inline-block; margin: 0 2px; }
-    .progress-dot.inactive { background: #888; }
-    .track-btn { display: block; width: 80%; margin: 32px auto 0 auto; background: #9B59B6; color: #fff; font-size: 16px; font-weight: 900; padding: 14px 0; border-radius: 24px; text-align: center; text-decoration: none; letter-spacing: 1px; }
-    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
-    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
-    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
-    @media (max-width: 650px) {
-      .container { max-width: 98vw; }
-      .eco-row { flex-direction: column; gap: 10px; }
-      .progress-icons { flex-direction: column; gap: 8px; }
-    }
-  </style>
+  <title>Order Packed - eShopper Luxe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
-      <div class="order-title">ORDER PACKED</div>
-      <div class="order-id">Order ID: {{orderId}}</div>
-      <div class="order-date">{{orderDate}}</div>
-    </div>
-    <div class="banner">WRAPPED WITH CARE</div>
-    <div class="greeting">Hi {{customerName}},<br>Your order has been <span style="color:#1ec773;font-weight:700;">sanitized</span>, <span style="color:#1ec773;font-weight:700;">quality-checked</span>, and carefully packed in our signature <span style="color:#FFD700;">eco-friendly luxe box</span>. Your premium items are protected and ready for their journey!</div>
-    <div class="badge">QUALITY INSPECTED</div>
-    <div class="summary-title">PACKAGE SUMMARY</div>
-    <div class="summary-box">
-      <div class="summary-row"><span class="summary-label">Order ID</span><span class="summary-value">{{orderId}}</span></div>
-      <div class="summary-row"><span class="summary-label">Total Items</span><span class="summary-value">{{totalItems}}</span></div>
-      <div class="summary-row"><span class="summary-label">Packed On</span><span class="summary-value">{{packedOn}}</span></div>
-      <div class="summary-row"><span class="summary-label">Package Weight</span><span class="summary-value">{{packageWeight}}</span></div>
-    </div>
-    <div class="eco-row">
-      <div class="eco">
-        <span class="eco-icon">♻️</span>
-        <div class="eco-title">100% Recyclable</div>
-        <div class="eco-desc">Eco-friendly materials</div>
-      </div>
-      <div class="eco">
-        <span class="eco-icon">🛡️</span>
-        <div class="eco-title">Bubble Wrapped</div>
-        <div class="eco-desc">Safe & secure packaging</div>
-      </div>
-      <div class="eco">
-        <span class="eco-icon">🧴</span>
-        <div class="eco-title">Sanitized</div>
-        <div class="eco-desc">Hygienic handling</div>
-      </div>
-      <div class="eco">
-        <span class="eco-icon">💎</span>
-        <div class="eco-title">Premium Sealant</div>
-        <div class="eco-desc">Tamper-proof</div>
-      </div>
-    </div>
-    <div class="progress-bar">
-      <div class="progress-icons">
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Placed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Confirmed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Packed</div></div>
-        <div class="progress-step"><span class="progress-tick" style="color:#888;">⬜</span><div class="progress-label" style="color:#888;">Shipped</div></div>
-        <div class="progress-step"><span class="progress-tick" style="color:#888;">⬜</span><div class="progress-label" style="color:#888;">Delivered</div></div>
-      </div>
-    </div>
-    <a class="track-btn" href="{{trackingUrl}}">TRACK PACKAGE</a>
-    <div class="footer">
-      <div class="address">{{companyAddress}}</div>
-      <div class="footer-note">* This is a package update, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
-    </div>
-  </div>
+<body style="margin:0; padding:0; background:#181818; color:#fff; font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" bgcolor="#181818" cellpadding="0" cellspacing="0" style="padding:0; margin:0;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0" style="background:#232323; border-radius:12px; margin:32px 0; box-shadow:0 2px 16px #00000033;">
+          <!-- Header -->
+          <tr>
+            <td style="padding:24px 32px 8px 32px; text-align:left;">
+              <img src="https://yourdomain.com/logo.png" alt="eShopper Luxe" style="height:28px; margin-bottom:12px;">
+              <div style="font-size:13px; color:#fff; text-align:right; float:right;">
+                <span style="background:#a259e6; color:#fff; font-size:13px; padding:4px 12px; border-radius:6px; font-weight:600;">&#128230; PACKED</span>
+              </div>
+            </td>
+          </tr>
+          <!-- Packed Banner -->
+          <tr>
+            <td style="background:#a259e6; color:#fff; text-align:center; font-size:22px; font-weight:600; padding:18px 0 10px 0; letter-spacing:1px;">
+              <span style="font-size:22px;">📦</span> WRAPPED WITH CARE
+              <div style="font-size:13px; color:#eae2fa; font-weight:400; margin-top:2px;">
+                Your luxe package is ready!
+              </div>
+            </td>
+          </tr>
+          <!-- Greeting -->
+          <tr>
+            <td style="padding:24px 32px 0 32px; text-align:left;">
+              <div style="font-size:18px; font-weight:600; margin-bottom:6px;">Hi {{customerName}} <span style="font-size:18px;">🎉</span></div>
+              <div style="font-size:14px; color:#ccc;">
+                Great news! Your order has been <span style="color:#a259e6; font-weight:600;">sanitized</span>, <span style="color:#a259e6; font-weight:600;">quality-checked</span>, and carefully packed in our signature <span style="color:#ffd700; font-weight:600;">eco-friendly luxe box</span>. Your premium items are protected and ready for their journey!
+              </div>
+            </td>
+          </tr>
+          <!-- Quality Inspected -->
+          <tr>
+            <td style="padding:24px 32px 0 32px; text-align:center;">
+              <div style="background:#232323; border-radius:50%; width:80px; height:80px; margin:0 auto;">
+                <div style="background:#1bbf4c; color:#fff; font-size:15px; font-weight:700; border-radius:50%; width:80px; height:80px; display:flex; align-items:center; justify-content:center; margin:0 auto;">
+                  QUALITY<br>INSPECTED
+                </div>
+              </div>
+            </td>
+          </tr>
+          <!-- Package Summary -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <div style="color:#b983ff; font-size:15px; font-weight:600; margin-bottom:8px;">PACKAGE SUMMARY</div>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#232323; border-radius:8px;">
+                <tr>
+                  <td style="color:#fff; font-size:14px; padding:8px 0;">Order ID</td>
+                  <td align="right" style="color:#fff; font-size:14px; padding:8px 0;">{{orderId}}</td>
+                </tr>
+                <tr>
+                  <td style="color:#fff; font-size:14px; padding:8px 0;">Total Items</td>
+                  <td align="right" style="color:#fff; font-size:14px; padding:8px 0;">{{totalItems}}</td>
+                </tr>
+                <tr>
+                  <td style="color:#fff; font-size:14px; padding:8px 0;">Packed On</td>
+                  <td align="right" style="color:#fff; font-size:14px; padding:8px 0;">{{packedOn}}</td>
+                </tr>
+                <tr>
+                  <td style="color:#fff; font-size:14px; padding:8px 0;">Package Weight</td>
+                  <td align="right" style="color:#b983ff; font-size:14px; padding:8px 0;">{{packageWeight}}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Eco-Luxe Packaging -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#143d1a; border-radius:8px;">
+                <tr>
+                  <td colspan="4" style="color:#b6ffb6; font-size:15px; font-weight:600; text-align:center; padding:12px 0 0 0;">
+                    🌿 ECO-LUXE PACKAGING
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding:16px 0;">
+                    <img src="https://img.icons8.com/ios-filled/50/25d366/recycle.png" width="32" style="display:block; margin:0 auto 6px auto;">
+                    <div style="color:#fff; font-size:13px; font-weight:600;">100% Recyclable</div>
+                  </td>
+                  <td align="center" style="padding:16px 0;">
+                    <img src="https://img.icons8.com/ios-filled/50/25d366/shield.png" width="32" style="display:block; margin:0 auto 6px auto;">
+                    <div style="color:#fff; font-size:13px; font-weight:600;">Bubble Wrapped</div>
+                  </td>
+                  <td align="center" style="padding:16px 0;">
+                    <img src="https://img.icons8.com/ios-filled/50/25d366/soap.png" width="32" style="display:block; margin:0 auto 6px auto;">
+                    <div style="color:#fff; font-size:13px; font-weight:600;">Sanitized Packaging</div>
+                  </td>
+                  <td align="center" style="padding:16px 0;">
+                    <img src="https://img.icons8.com/ios-filled/50/25d366/diamond.png" width="32" style="display:block; margin:0 auto 6px auto;">
+                    <div style="color:#fff; font-size:13px; font-weight:600;">Premium Sealant</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- What's Next -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <div style="color:#ffd700; font-size:15px; font-weight:600; margin-bottom:8px;">📍 WHAT'S NEXT?</div>
+              <div style="color:#fff; font-size:14px;">
+                Your package will leave our warehouse within <span style="font-weight:700;">24-48 hours</span>. You'll receive a <span style="color:#b983ff; text-decoration:underline;">tracking link via email &amp; SMS</span> as soon as it's dispatched.
+              </div>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px;">
+                <tr>
+                  <td align="center" style="color:#25d366; font-size:32px;">&#10003;</td>
+                  <td align="center" style="color:#25d366; font-size:32px;">&#10003;</td>
+                  <td align="center" style="color:#b983ff; font-size:32px;">&#128230;</td>
+                  <td align="center" style="color:#ffd700; font-size:32px;">&#128230;</td>
+                </tr>
+                <tr>
+                  <td align="center" style="color:#fff; font-size:13px;">PLACED</td>
+                  <td align="center" style="color:#fff; font-size:13px;">CONFIRMED</td>
+                  <td align="center" style="color:#fff; font-size:13px;">PACKED</td>
+                  <td align="center" style="color:#fff; font-size:13px;">SHIPPED</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Shipping Address -->
+          <tr>
+            <td style="padding:24px 32px 0 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#232323; border-radius:8px;">
+                <tr>
+                  <td style="color:#ffd700; font-size:13px; font-weight:600; padding:8px 0 0 0;">&#128205; SHIPPING ADDRESS</td>
+                </tr>
+                <tr>
+                  <td style="color:#fff; font-size:14px; font-weight:600;">{{customerName}}</td>
+                </tr>
+                <tr>
+                  <td style="color:#b6b6b6; font-size:13px;">
+                    {{address}}<br>
+                    {{city}}, {{state}} {{zip}}<br>
+                    Phone: {{phone}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Track Package Button -->
+          <tr>
+            <td style="padding:24px 32px 0 32px; text-align:center;">
+              <a href="{{trackPackageUrl}}" style="background:#b983ff; color:#232323; font-size:16px; font-weight:600; text-decoration:none; padding:12px 32px; border-radius:8px; display:inline-block; margin-bottom:8px;">🔍 TRACK PACKAGE</a>
+              <div style="color:#ffd700; font-size:12px; margin-top:8px;">💡 Pro Tip: Enable notifications to get real-time updates!</div>
+            </td>
+          </tr>
+          <!-- Need Help -->
+          <tr>
+            <td style="padding:24px 32px 0 32px; text-align:center;">
+              <div style="color:#b6b6b6; font-size:14px; margin-bottom:8px;">Have Questions?</div>
+              <a href="{{whatsappUrl}}" style="background:#25d366; color:#232323; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; margin-right:8px; display:inline-block;">WhatsApp Support</a>
+              <a href="{{instagramUrl}}" style="background:#ff2d55; color:#fff; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; display:inline-block;">Instagram</a>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 0 0 0; text-align:center; color:#b6b6b6; font-size:12px;">
+              © 2026 eShopper Luxe. All rights reserved.<br>
+              Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India<br>
+              <a href="{{privacyUrl}}" style="color:#ffd700; text-decoration:none;">Privacy</a> | <a href="{{termsUrl}}" style="color:#ffd700; text-decoration:none;">Terms</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

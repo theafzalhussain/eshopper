@@ -21,7 +21,7 @@ const path = require('path');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
 // ===== EMAIL UTILITY (Brevo)
-// ...existing code...
+const { sendEmail } = require('./src/utils/emailHelper');
 /**
  * Universal transactional email sender for ESHOPPER (Brevo/Sendinblue)
  * @param {Object} opts
@@ -33,44 +33,24 @@ const puppeteer = require('puppeteer');
  * @returns {Promise<{provider: string, result: any}>}
  */
 async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
-    console.log('[DEBUG] sendTransactionalEmail called:', { toEmail, toName, subject });
     if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
-    const apiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
-    if (!apiKey) throw new Error('Brevo/Sendinblue API key missing in environment');
-    const senderEmail = process.env.SENDER_EMAIL || 'support@eshopperr.me';
-    const senderName = process.env.SENDER_NAME || 'Eshopper Boutique';
-    const payload = {
-        sender: { email: senderEmail, name: senderName },
-        to: [{ email: toEmail, name: toName || toEmail }],
+    // Always map toEmail to to for sendEmail
+    const emailOpts = {
+        to: toEmail,
         subject,
         htmlContent,
+        // Optionally add textContent or attachments if needed
     };
+    // Attachments (Brevo expects array of {content, name, type})
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-        payload.attachment = attachments.map(att => ({
-            content: att.content,
-            name: att.filename || att.name,
-            type: att.contentType || 'application/octet-stream'
-        }));
+        // Not all Brevo SDKs support attachments directly; if needed, add here
+        // For now, ignore or log
+        console.warn('Attachments provided, but not sent (implement if needed)');
     }
-    try {
-        const response = await axios.post(
-            'https://api.brevo.com/v3/smtp/email',
-            payload,
-            {
-                headers: {
-                    'api-key': apiKey,
-                    'Content-Type': 'application/json',
-                    'accept': 'application/json'
-                },
-                timeout: 20000
-            }
-        );
-        console.log('[EMAIL] Sent via Brevo:', toEmail, subject);
-        return { provider: 'Brevo', result: response.data };
-    } catch (err) {
-        console.error('❌ Brevo email send failed:', err.response?.data || err.message);
-        throw new Error('Brevo email send failed: ' + (err.response?.data?.message || err.message));
-    }
+    // Debug: print emailOpts before sending
+    // console.log('[DEBUG] Sending email with:', emailOpts);
+    const result = await sendEmail(emailOpts);
+    return { provider: 'Brevo', result };
 }
 // EMAIL QUEUE ENABLED FLAG (from env or default false)
 const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
@@ -83,7 +63,7 @@ const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
  */
 async function executeEmailJob(jobType, payload) {
     try {
-        console.log('[DEBUG] executeEmailJob called:', jobType, payload);
+        // Accept all order-related job types
         const allowedTypes = [
             'order-status',
             'order-placed',
@@ -94,32 +74,19 @@ async function executeEmailJob(jobType, payload) {
             'order-delivered'
         ];
         if (allowedTypes.includes((jobType || '').toLowerCase())) {
-            let fixedPayload = { ...payload };
-            if (!fixedPayload.toEmail && fixedPayload.to) fixedPayload.toEmail = fixedPayload.to;
-            if (!fixedPayload.to && fixedPayload.toEmail) fixedPayload.to = fixedPayload.toEmail;
-            if (!fixedPayload.toEmail || typeof fixedPayload.toEmail !== 'string' || !fixedPayload.toEmail.includes('@')) {
-                console.error('❌ [DEBUG] Missing or invalid toEmail in jobType:', jobType, '| payload:', payload);
-                throw new Error('Missing or invalid toEmail in email payload');
+            // Debug: print payload before sending
+            if (!payload || !payload.to || !payload.subject || !payload.htmlContent) {
+                console.error('❌ [DEBUG] Missing email parameter in jobType:', jobType, '| payload:', payload);
             }
-            if (!fixedPayload.subject || typeof fixedPayload.subject !== 'string' || !fixedPayload.subject.trim()) {
-                fixedPayload.subject = `${jobType.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} - Order Update | Eshopper Boutique`;
-            }
-            if (!fixedPayload.htmlContent || typeof fixedPayload.htmlContent !== 'string' || !fixedPayload.htmlContent.trim()) {
-                fixedPayload.htmlContent = `<div style='font-family:Arial,sans-serif;padding:32px;'><h2>Order Update: ${jobType}</h2><p>Your order status has changed. Please check your account for details.</p></div>`;
-            }
-            delete fixedPayload.to;
-            console.log('[DEBUG] sendTransactionalEmail about to be called:', fixedPayload);
-            return await sendTransactionalEmail(fixedPayload);
+            return await sendEmail(payload);
         } else {
             throw new Error('Unknown email job type: ' + jobType);
         }
     } catch (err) {
-        console.error('❌ Email job failed:', err.message);
+        console.error('executeEmailJob error:', err.message);
         throw err;
     }
 }
-
-// All product/order-related email logic removed as per user request
 
 let firebaseAdminReady = false;
 
@@ -413,7 +380,6 @@ const processMemoryEmailQueue = async () => {
 };
 
 const enqueueEmailJob = async (jobType, payload) => {
-    console.log('[DEBUG] enqueueEmailJob called:', jobType, payload);
     if (!FEATURE_EMAIL_NOTIFICATIONS) {
         return { skipped: true, reason: 'email-notifications-disabled' };
     }
@@ -433,7 +399,6 @@ const enqueueEmailJob = async (jobType, payload) => {
 
     memoryEmailQueue.push({ jobType, payload });
     setImmediate(processMemoryEmailQueue);
-    console.log('[DEBUG] memoryEmailQueue updated:', memoryEmailQueue);
     return true;
 };
 
@@ -627,7 +592,7 @@ const buildOrderReceiptHtml = ({
                 .items-section { margin: 32px 0; }
                 .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
                 table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; white-space: nowrap; }
+                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; }
                 td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; }
                 tr:nth-child(odd) { background: #fafaf8; }
                 tr:hover { background: #f5f0e6; }
@@ -777,7 +742,7 @@ async function sendOrderConfirmationEmail({
     });
     const subject = `Order Confirmed: #${orderId} | ESHOPPER`;
     try {
-        await sendTransactionalEmail({ toEmail: userEmail, subject, htmlContent });
+        await sendEmail({ to: userEmail, subject, htmlContent });
         console.log(`✅ Order confirmation email sent to ${userEmail}`);
     } catch (err) {
         console.error('❌ Failed to send order confirmation email:', err.message);
@@ -1040,8 +1005,8 @@ const buildTaxInvoiceHtml = ({
 
                         <!-- QR CODE -->
                         <div class="qr-section">
-                            <div class="qr-label">📱 Track Your Order</div>
-                            <svg class="qr-code" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                            <div style="font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 10px;">📱 Scan for Order Status & Returns</div>
+                            <svg class="qr-unit" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                                 <rect width="200" height="200" fill="white"/>
                                 <rect x="20" y="20" width="50" height="50" fill="black"/>
                                 <rect x="30" y="30" width="30" height="30" fill="white"/>
@@ -1049,11 +1014,9 @@ const buildTaxInvoiceHtml = ({
                                 <rect x="140" y="30" width="30" height="30" fill="white"/>
                                 <rect x="20" y="130" width="50" height="50" fill="black"/>
                                 <rect x="30" y="140" width="30" height="30" fill="white"/>
-                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.3"/>
-                                <circle cx="80" cy="60" r="8" fill="black" opacity="0.3"/>
-                                <circle cx="140" cy="140" r="8" fill="black" opacity="0.3"/>
+                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.4"/>
                             </svg>
-                            <div class="qr-info">Scan to track your package in real-time</div>
+                            <div class="qr-label">Links to Order History & Return Policy</div>
                         </div>
 
                         <!-- SIGNATURE BLOCK -->
@@ -2116,14 +2079,136 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
     }
 };
 
+const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, invoiceBase64, attachmentName }) => {
+    if (!toEmail) return false;
+    const displayName = userName || 'Valued Customer';
+    let templateFile = null;
+    // Map status to template file
+    switch ((status || '').toLowerCase()) {
+        case 'ordered':
+        case 'order placed':
+            templateFile = '01-order-placed.html'; break;
+        case 'confirmed':
+        case 'order confirmed':
+            templateFile = '02-order-confirmed.html'; break;
+        case 'packed':
+        case 'order packed':
+            templateFile = '03-order-packed.html'; break;
+        case 'shipped':
+        case 'order shipped':
+            templateFile = '04-order-shipped.html'; break;
+        case 'out for delivery':
+            templateFile = '05-out-for-delivery.html'; break;
+        case 'delivered':
+        case 'order delivered':
+            templateFile = '06-order-delivered.html'; break;
+        default:
+            templateFile = '01-order-placed.html';
+    }
+    // FIX: Define templatePath
+    const templatePath = path.join(__dirname, 'email-templates', templateFile);
+    try {
+        // email-templates path usage removed
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, displayName)
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+            .replace(/{{trackingLink}}/g, trackingLink || '')
+            .replace(/{{status}}/g, status || '')
+            .replace(/{{estimatedDelivery}}/g, estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN') : '')
+            .replace(/{{totalAmount}}/g, totalAmount ? `₹${Number(totalAmount).toLocaleString('en-IN')}` : '');
+        const attachments = [];
+        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
+            attachments.push({
+                filename: attachmentName || `Invoice-${orderId}.pdf`,
+                content: invoiceBase64.trim(),
+                contentType: 'application/pdf'
+            });
+        }
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: displayName,
+            subject: `${status || 'Order Update'} - Order ${orderId} | Eshopper Boutique`,
+            htmlContent,
+            attachments
+        });
+        console.log(`✅ Status email sent via ${result.provider}: ${orderId} -> ${status}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Status email failed:', error.message);
+        return false;
+    }
+};
 
-// Legacy sendOrderStatusEmail removed. All transactional emails now handled by mailController.js and .hbs templates.
+// ==================== EMAIL #1: ORDER PLACED (IMMEDIATE NOTIFICATION) ====================
+
+const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, products, shippingAddress, invoiceBuffer }) => {
+    if (!toEmail || !toEmail.includes('@')) {
+        console.error('❌ Invalid email:', toEmail);
+        throw new Error('Invalid toEmail address');
+    }
+    try {
+        const displayName = userName || 'Valued Customer';
+        const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, displayName)
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+            .replace(/{{totalAmount}}/g, finalAmount ? `₹${Number(finalAmount).toLocaleString('en-IN')}` : '')
+            // Add more replacements as needed
+        ;
+        const attachments = invoiceBuffer
+            ? [{ filename: `Receipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
+            : [];
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: displayName,
+            subject: "✨ Order Received - Thank You for Shopping with Us!",
+            htmlContent,
+            attachments
+        });
+        console.log(`✅ Order Placed email sent via ${result.provider} to ${toEmail} for ${orderId}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Order Placed email failed:', error.message);
+        return false;
+    }
+};
+
+// ==================== EMAIL #2: ORDER CONFIRMED (ULTRA-PREMIUM) ====================
 
 
-// Legacy sendOrderPlacedEmail removed. All order placed emails now handled by mailController.js and .hbs templates.
-
-
-// Legacy sendOrderConfirmedEmail removed. All order confirmed emails now handled by mailController.js and .hbs templates.
+const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products, finalAmount, deliveryDate, invoiceBase64 }) => {
+    try {
+        const name = displayName || 'Valued Customer';
+        const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, name)
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+            // Add more replacements as needed
+        ;
+        const attachments = [];
+        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
+            attachments.push({ filename: `Confirmation-${orderId}.pdf`, content: invoiceBase64.trim(), contentType: 'application/pdf' });
+        }
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: name,
+            subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
+            htmlContent,
+            attachments
+        });
+        console.log(`✅ Confirmation email sent via ${result.provider} to ${toEmail}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Confirmation email failed:', error.message);
+        return false;
+    }
+};
 
 // ============ FIREBASE AUTH SYNC ROUTE ============
 app.post('/api/auth-sync', async (req, res) => {
@@ -2733,46 +2818,10 @@ const placeOrderHandler = async (req, res) => {
             }
         }
 
-        // Robustly determine recipient email for order placed email
-        let recipientEmail = '';
-        if (user.email && user.email.includes('@')) {
-            recipientEmail = user.email.trim();
-        } else if (addressPayload && addressPayload.email && addressPayload.email.includes('@')) {
-            recipientEmail = addressPayload.email.trim();
-        }
+        const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
-        // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY (always attempt if email found)
-        if (recipientEmail) {
-            try {
-                // Use new mailController.js logic for order placed email
-                const mailController = require('./mailController');
-                await mailController.sendOrderReceivedEmail({
-                    toEmail: recipientEmail,
-                    customerName: user.name || addressPayload?.fullName || 'Valued Customer',
-                    customerEmail: recipientEmail,
-                    orderId,
-                    orderDate,
-                    items: cleanProducts,
-                    subtotal: total,
-                    shippingCharges: shipping,
-                    gst: 0,
-                    totalPaid: payable,
-                    shippingAddress: addressPayload,
-                    paymentMethod: paymentMethod || 'COD',
-                    transactionId: '',
-                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
-                    whatsappUrl: '',
-                    supportEmail: '',
-                    companyAddress: '',
-                    invoiceBuffer
-                });
-            } catch (emailErr) {
-                console.error('❌ Order Placed email failed:', emailErr.message);
-                if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(emailErr);
-            }
-        } else {
-            console.warn(`⚠️  No valid recipient email found for order ${orderId}. Order Placed email not sent.`);
-        }
+        // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY
+        // [EMAIL PLACEHOLDER] Integrate new premium order placed email logic here.
 
         // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
@@ -2924,7 +2973,7 @@ app.post('/api/test-notification', async (req, res) => {
 
 const allSuccess =
     (!results.email.attempted || results.email.success) &&
-    (!results.whatsapp.attempted || results.whatsapp.success) ;
+    (!results.whatsapp.attempted || results.whatsapp.success);
 
 return res.status(allSuccess ? 200 : 207).json({
     success: allSuccess,
@@ -3454,14 +3503,13 @@ async function startServer() {
                         orderDate: order.orderDate || order.createdAt,
                         orderStatus: order.orderStatus || order.status || 'Ordered',
                         isDelivered: isDelivered,  // Pass delivery status for footer customization
-                        pdfType: pdfType
+                        pdfType: pdfType // 'receipt' | 'confirmation' | 'final'
                     });
 
                     clearTimeout(timeoutId);
 
-                    // Validate PDF buffer
                     if (!pdfBuffer || pdfBuffer.length < 500) {
-                        throw new Error('Generated PDF buffer is invalid or too small');
+                        return res.status(500).json({ message: 'PDF generation failed - invalid buffer' });
                     }
 
                     // Set response headers
@@ -3476,7 +3524,7 @@ async function startServer() {
                     return res.send(pdfBuffer);
                 } catch (pdfErr) {
                     clearTimeout(timeoutId);
-                    console.error(`❌ PDF generation failed for ${orderId}:`, pdfErr.message);
+                    console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
                     if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
                     return res.status(500).json({ message: 'Failed to generate PDF - please try again' });
                 }
@@ -3785,97 +3833,61 @@ async function startServer() {
                 io.to(`user:${order.userid}`).emit('statusUpdate', payload);
                 console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
 
-                // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE (Direct template trigger)
+                // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
-                        const mailController = require('./mailController');
-                        const { sendTransactionalEmail } = require('./src/utils/email');
                         const userDoc = await User.findById(order.userid).lean();
-                        const toEmail = userDoc && userDoc.email ? userDoc.email : order.userEmail;
-                        const userName = userDoc && userDoc.name ? userDoc.name : (order.userName || 'Valued Customer');
-                        if (toEmail) {
-                            let emailFn = null;
-                            let emailType = '';
-                            let subject = '';
-                            if (normalized === 'Packed') {
-                                emailFn = mailController.sendOrderPackedEmail;
-                                emailType = 'Packed';
-                                subject = `Your Order #${order.orderId} is Packed!`;
-                            } else if (normalized === 'Shipped') {
-                                emailFn = mailController.sendOrderShippedEmail;
-                                emailType = 'Shipped';
-                                subject = `Your Order #${order.orderId} is Shipped!`;
-                            } else if (normalized === 'Out for Delivery') {
-                                emailFn = mailController.sendOrderOutForDeliveryEmail;
-                                emailType = 'Out for Delivery';
-                                subject = `Your Order #${order.orderId} is Out for Delivery!`;
-                            } else if (normalized === 'Delivered') {
-                                emailFn = mailController.sendOrderDeliveredEmail;
-                                emailType = 'Delivered';
-                                subject = `Your Order #${order.orderId} is Delivered!`;
+                        if (userDoc && userDoc.email) {
+                            try {
+                                await sendOrderStatusEmail({
+                                    toEmail: userDoc.email,
+                                    userName: userDoc.name || 'Valued Customer',
+                                    orderId: order.orderId,
+                                    status: normalized,
+                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
+                                    estimatedDelivery: order.estimatedArrival,
+                                    totalAmount: order.finalAmount
+                                });
+                            } catch (emailErr) {
+                                console.error('❌ Order Status email error:', emailErr.message);
+                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
                             }
-                            if (emailFn) {
-                                try {
-                                    const htmlContent = await emailFn({
-                                        toEmail,
-                                        userName,
-                                        orderId: order.orderId,
-                                        orderDate: order.orderDate || order.createdAt,
-                                        customerName: userName,
-                                        customerEmail: toEmail,
-                                        items: order.products || [],
-                                        subtotal: order.totalAmount || 0,
-                                        shippingCharges: order.shippingAmount || 0,
-                                        gst: 0,
-                                        totalPaid: order.finalAmount || 0,
-                                        shippingAddress: order.shippingAddress || {},
-                                        paymentMethod: order.paymentMethod || 'COD',
-                                        transactionId: '',
-                                        paymentStatus: order.paymentStatus || '',
-                                        whatsappUrl: '',
-                                        supportEmail: 'support@eshopperr.me',
-                                        companyAddress: '',
-                                        expectedArrival: order.estimatedArrival || '',
-                                        courierPartner: order.deliveryPartner || '',
-                                        trackingNumber: order.trackingNumber || '',
-                                        packedOn: order.packedOn || '',
-                                        totalItems: Array.isArray(order.products) ? order.products.length : 0,
-                                        packageWeight: order.packageWeight || '',
-                                        trackingUrl: `https://eshopperr.me/order-tracking/${order.orderId}`,
-                                        deliveredOn: order.deliveredOn || '',
-                                        receivedBy: order.receivedBy || '',
-                                        invoiceUrl: '',
-                                        reviewUrl: '',
-                                        referralCode: '',
-                                        referralShareUrl: '',
-                                        instagramUrl: '',
-                                        liveTrackingUrl: '',
-                                        carrierWebsiteUrl: '',
-                                        otp: order.otp || '',
-                                        deliveryAgent: order.deliveryAgent || '',
-                                        agentContact: order.agentContact || '',
-                                        deliveryLocation: order.deliveryLocation || ''
-                                    });
-                                    // Actually send the email
-                                    await sendTransactionalEmail({
-                                        toEmail,
-                                        toName: userName,
-                                        subject,
-                                        htmlContent
-                                    });
-                                } catch (emailErr) {
-                                    // Log Brevo error code/message to Sentry
-                                    const brevoCode = emailErr?.response?.data?.code || emailErr?.code || 'UNKNOWN';
-                                    const brevoMsg = emailErr?.response?.data?.message || emailErr?.message || 'Unknown error';
-                                    console.error(`❌ ${emailType} email error:`, brevoCode, brevoMsg);
-                                    if (process.env.SENTRY_DSN && Sentry) {
-                                        Sentry.captureException(new Error(`[EMAIL][${emailType}] Brevo error: ${brevoCode} - ${brevoMsg}`));
-                                    }
-                                }
+                        } else if (order.userEmail) {
+                            // Fallback: try sending to order.userEmail if userDoc not found
+                            try {
+                                await sendOrderStatusEmail({
+                                    toEmail: order.userEmail,
+                                    userName: order.userName || 'Valued Customer',
+                                    orderId: order.orderId,
+                                    status: normalized,
+                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
+                                    estimatedDelivery: order.estimatedArrival,
+                                    totalAmount: order.finalAmount
+                                });
+                            } catch (emailErr) {
+                                console.error('❌ Order Status email error (fallback):', emailErr.message);
+                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
                             }
                         }
                     } catch (err) {
                         console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
+                        // Try sending without user data
+                        if (order.userEmail) {
+                            try {
+                                await sendOrderStatusEmail({
+                                    toEmail: order.userEmail,
+                                    userName: order.userName || 'Valued Customer',
+                                    orderId: order.orderId,
+                                    status: normalized,
+                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
+                                    estimatedDelivery: order.estimatedArrival,
+                                    totalAmount: order.finalAmount
+                                });
+                            } catch (emailErr) {
+                                console.error('❌ Order Status email error (fallback):', emailErr.message);
+                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                            }
+                        }
                     }
                 }
                 return res.json({
@@ -3890,7 +3902,6 @@ async function startServer() {
     }
 };
 
-        // ⚡ For frontend: Use protocol-less wss URL for sockets, e.g. //api.eshopperr.me
         app.post('/api/update-order-status', handleOrderStatusUpdate);
         app.post('/update-order-status', handleOrderStatusUpdate);
         // ==================== ADMIN: CONFIRM ORDER (Send Email #2) ====================
@@ -3959,49 +3970,47 @@ async function startServer() {
                 }
 
 
-
                 // Send BOTH: Order Placed (Email #1) and Order Confirmed (Premium, Email #2)
                 let emailSent = true;
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
-                        const mailController = require('./mailController');
-                        const { sendTransactionalEmail } = require('./src/utils/email');
-                        const toEmail = order.userEmail;
-                        const userName = order.userName || 'Valued Customer';
-                        // Log attempt
-                        console.log("📨 ATTEMPTING EMAIL SEND TO:", toEmail);
-                        // Email #1: Order Placed (optional, if needed)
-                        // const htmlPlaced = await mailController.sendOrderReceivedEmail({ ... });
-                        // await sendTransactionalEmail({ toEmail, toName: userName, subject: `Order Placed: #${order.orderId}`, htmlContent: htmlPlaced });
-
-                        // Email #2: Order Confirmed
-                        const htmlConfirmed = await mailController.sendOrderConfirmedEmail({
-                            toEmail,
-                            userName,
-                            orderId: order.orderId,
-                            orderDate: order.orderDate || order.createdAt,
-                            customerName: userName,
-                            customerEmail: toEmail,
-                            items: order.products || [],
-                            subtotal: order.totalAmount || 0,
-                            shippingCharges: order.shippingAmount || 0,
-                            gst: 0,
-                            totalPaid: order.finalAmount || 0,
-                            shippingAddress: order.shippingAddress || {},
-                            paymentMethod: order.paymentMethod || 'COD',
-                            transactionId: '',
-                            expectedArrival: order.estimatedArrival || '',
-                            companyAddress: ''
-                        });
-                        await sendTransactionalEmail({
-                            toEmail,
-                            toName: userName,
-                            subject: `Your Order #${order.orderId} is Confirmed!`,
-                            htmlContent: htmlConfirmed
-                        });
+                        // Email #1: Order Placed
+                        // Render placed email
+                        const placedEmail = await (async () => {
+                            let displayName = order.userName || 'Valued Customer';
+                            const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+                            let htmlContent = fs.readFileSync(templatePath, 'utf8');
+                            htmlContent = htmlContent
+                                .replace(/{{orderId}}/g, order.orderId)
+                                .replace(/{{userName}}/g, displayName)
+                                .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+                                .replace(/{{totalAmount}}/g, order.finalAmount ? `₹${Number(order.finalAmount).toLocaleString('en-IN')}` : '');
+                            return {
+                                toEmail: order.userEmail,
+                                subject: "✨ Order Received - Thank You for Shopping with Us!",
+                                htmlContent
+                            };
+                        })();
+                        await enqueueEmailJob('order-placed', placedEmail);
+                        // Render confirmed email
+                        const confirmedEmail = await (async () => {
+                            let displayName = order.userName || 'Valued Customer';
+                            const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
+                            let htmlContent = fs.readFileSync(templatePath, 'utf8');
+                            htmlContent = htmlContent
+                                .replace(/{{orderId}}/g, order.orderId)
+                                .replace(/{{userName}}/g, displayName)
+                                .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'));
+                            return {
+                                toEmail: order.userEmail,
+                                subject: `✅ Order Confirmed - ${order.orderId} | Eshopper Boutique`,
+                                htmlContent
+                            };
+                        })();
+                        await enqueueEmailJob('order-confirmed', confirmedEmail);
                     } catch (confirmQueueErr) {
                         emailSent = false;
-                        console.warn(`⚠️ Email send failed for ${orderId}:`, confirmQueueErr.message);
+                        console.warn(`⚠️ Email queue failed for ${orderId}:`, confirmQueueErr.message);
                         if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
                     }
                 }
