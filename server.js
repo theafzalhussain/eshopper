@@ -4148,7 +4148,5 @@ mongoose.connection.on('disconnected', () => {
         }
     }, 5000);
 });
-    }
-    }
 
     
