@@ -3785,7 +3785,7 @@ async function startServer() {
                 io.to(`user:${order.userid}`).emit('statusUpdate', payload);
                 console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
 
-                // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
+                // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE (Direct template trigger)
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
                         const mailController = require('./mailController');
@@ -3793,19 +3793,72 @@ async function startServer() {
                         const toEmail = userDoc && userDoc.email ? userDoc.email : order.userEmail;
                         const userName = userDoc && userDoc.name ? userDoc.name : (order.userName || 'Valued Customer');
                         if (toEmail) {
-                            try {
-                                await mailController.sendOrderStatus({
-                                    toEmail,
-                                    userName,
-                                    orderId: order.orderId,
-                                    status: normalized,
-                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
-                                    estimatedDelivery: order.estimatedArrival,
-                                    totalAmount: order.finalAmount
-                                });
-                            } catch (emailErr) {
-                                console.error('❌ Order Status email error:', emailErr.message);
-                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                            let emailFn = null;
+                            let emailType = '';
+                            if (normalized === 'Packed') {
+                                emailFn = mailController.sendOrderPackedEmail;
+                                emailType = 'Packed';
+                            } else if (normalized === 'Shipped') {
+                                emailFn = mailController.sendOrderShippedEmail;
+                                emailType = 'Shipped';
+                            } else if (normalized === 'Out for Delivery') {
+                                emailFn = mailController.sendOrderOutForDeliveryEmail;
+                                emailType = 'Out for Delivery';
+                            } else if (normalized === 'Delivered') {
+                                emailFn = mailController.sendOrderDeliveredEmail;
+                                emailType = 'Delivered';
+                            }
+                            if (emailFn) {
+                                try {
+                                    await emailFn({
+                                        toEmail,
+                                        userName,
+                                        orderId: order.orderId,
+                                        orderDate: order.orderDate || order.createdAt,
+                                        customerName: userName,
+                                        customerEmail: toEmail,
+                                        items: order.products || [],
+                                        subtotal: order.totalAmount || 0,
+                                        shippingCharges: order.shippingAmount || 0,
+                                        gst: 0,
+                                        totalPaid: order.finalAmount || 0,
+                                        shippingAddress: order.shippingAddress || {},
+                                        paymentMethod: order.paymentMethod || 'COD',
+                                        transactionId: '',
+                                        paymentStatus: order.paymentStatus || '',
+                                        whatsappUrl: '',
+                                        supportEmail: 'support@eshopperr.me',
+                                        companyAddress: '',
+                                        expectedArrival: order.estimatedArrival || '',
+                                        courierPartner: order.deliveryPartner || '',
+                                        trackingNumber: order.trackingNumber || '',
+                                        packedOn: order.packedOn || '',
+                                        totalItems: Array.isArray(order.products) ? order.products.length : 0,
+                                        packageWeight: order.packageWeight || '',
+                                        trackingUrl: `https://eshopperr.me/order-tracking/${order.orderId}`,
+                                        deliveredOn: order.deliveredOn || '',
+                                        receivedBy: order.receivedBy || '',
+                                        invoiceUrl: '',
+                                        reviewUrl: '',
+                                        referralCode: '',
+                                        referralShareUrl: '',
+                                        instagramUrl: '',
+                                        liveTrackingUrl: '',
+                                        carrierWebsiteUrl: '',
+                                        otp: order.otp || '',
+                                        deliveryAgent: order.deliveryAgent || '',
+                                        agentContact: order.agentContact || '',
+                                        deliveryLocation: order.deliveryLocation || ''
+                                    });
+                                } catch (emailErr) {
+                                    // Log Brevo error code/message to Sentry
+                                    const brevoCode = emailErr?.response?.data?.code || emailErr?.code || 'UNKNOWN';
+                                    const brevoMsg = emailErr?.response?.data?.message || emailErr?.message || 'Unknown error';
+                                    console.error(`❌ ${emailType} email error:`, brevoCode, brevoMsg);
+                                    if (process.env.SENTRY_DSN && Sentry) {
+                                        Sentry.captureException(new Error(`[EMAIL][${emailType}] Brevo error: ${brevoCode} - ${brevoMsg}`));
+                                    }
+                                }
                             }
                         }
                     } catch (err) {
@@ -3824,6 +3877,7 @@ async function startServer() {
     }
 };
 
+        // ⚡ For frontend: Use protocol-less wss URL for sockets, e.g. //api.eshopperr.me
         app.post('/api/update-order-status', handleOrderStatusUpdate);
         app.post('/update-order-status', handleOrderStatusUpdate);
         // ==================== ADMIN: CONFIRM ORDER (Send Email #2) ====================
