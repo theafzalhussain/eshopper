@@ -2750,7 +2750,7 @@ const placeOrderHandler = async (req, res) => {
         if (recipientEmail) {
             try {
                 // Use new mailController.js logic for order placed email
-                const mailController = require('./src/Component/ActionCreator/mailController');
+                const mailController = require('./mailController');
                 await mailController.sendOrderPlaced({
                     toEmail: recipientEmail,
                     userName: user.name || addressPayload?.fullName || 'Valued Customer',
@@ -3781,7 +3781,7 @@ async function startServer() {
                 // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
-                        const mailController = require('./src/Component/ActionCreator/mailController');
+                        const mailController = require('./mailController');
                         const userDoc = await User.findById(order.userid).lean();
                         const toEmail = userDoc && userDoc.email ? userDoc.email : order.userEmail;
                         const userName = userDoc && userDoc.name ? userDoc.name : (order.userName || 'Valued Customer');
