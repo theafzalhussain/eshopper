@@ -3959,14 +3959,49 @@ async function startServer() {
                 }
 
 
+
                 // Send BOTH: Order Placed (Email #1) and Order Confirmed (Premium, Email #2)
                 let emailSent = true;
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
-                        // All legacy HTML email-templates logic removed. All order placed/confirmed emails now handled by mailController.js and .hbs templates only.
+                        const mailController = require('./mailController');
+                        const { sendTransactionalEmail } = require('./server.js'); // If not exported, move to utils/email.js
+                        const toEmail = order.userEmail;
+                        const userName = order.userName || 'Valued Customer';
+                        // Log attempt
+                        console.log("📨 ATTEMPTING EMAIL SEND TO:", toEmail);
+                        // Email #1: Order Placed (optional, if needed)
+                        // const htmlPlaced = await mailController.sendOrderReceivedEmail({ ... });
+                        // await sendTransactionalEmail({ toEmail, toName: userName, subject: `Order Placed: #${order.orderId}`, htmlContent: htmlPlaced });
+
+                        // Email #2: Order Confirmed
+                        const htmlConfirmed = await mailController.sendOrderConfirmedEmail({
+                            toEmail,
+                            userName,
+                            orderId: order.orderId,
+                            orderDate: order.orderDate || order.createdAt,
+                            customerName: userName,
+                            customerEmail: toEmail,
+                            items: order.products || [],
+                            subtotal: order.totalAmount || 0,
+                            shippingCharges: order.shippingAmount || 0,
+                            gst: 0,
+                            totalPaid: order.finalAmount || 0,
+                            shippingAddress: order.shippingAddress || {},
+                            paymentMethod: order.paymentMethod || 'COD',
+                            transactionId: '',
+                            expectedArrival: order.estimatedArrival || '',
+                            companyAddress: ''
+                        });
+                        await sendTransactionalEmail({
+                            toEmail,
+                            toName: userName,
+                            subject: `Your Order #${order.orderId} is Confirmed!`,
+                            htmlContent: htmlConfirmed
+                        });
                     } catch (confirmQueueErr) {
                         emailSent = false;
-                        console.warn(`⚠️ Email queue failed for ${orderId}:`, confirmQueueErr.message);
+                        console.warn(`⚠️ Email send failed for ${orderId}:`, confirmQueueErr.message);
                         if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
                     }
                 }
