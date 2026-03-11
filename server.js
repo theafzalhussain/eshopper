@@ -2092,7 +2092,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
     const templatePath = path.join(__dirname, 'email-templates', templateFile);
     try {
         // email-templates path usage removed
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        // Removed old HTML template read, now using Handlebars .hbs templates only
         htmlContent = htmlContent
             .replace(/{{orderId}}/g, orderId)
             .replace(/{{userName}}/g, displayName)
@@ -4148,5 +4148,7 @@ mongoose.connection.on('disconnected', () => {
         }
     }, 5000);
 });
+    }
+    }
 
     
