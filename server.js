@@ -2751,13 +2751,24 @@ const placeOrderHandler = async (req, res) => {
             try {
                 // Use new mailController.js logic for order placed email
                 const mailController = require('./mailController');
-                await mailController.sendOrderPlaced({
+                await mailController.sendOrderReceivedEmail({
                     toEmail: recipientEmail,
-                    userName: user.name || addressPayload?.fullName || 'Valued Customer',
+                    customerName: user.name || addressPayload?.fullName || 'Valued Customer',
+                    customerEmail: recipientEmail,
                     orderId,
-                    finalAmount: payable,
-                    products: cleanProducts,
+                    orderDate,
+                    items: cleanProducts,
+                    subtotal: total,
+                    shippingCharges: shipping,
+                    gst: 0,
+                    totalPaid: payable,
                     shippingAddress: addressPayload,
+                    paymentMethod: paymentMethod || 'COD',
+                    transactionId: '',
+                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+                    whatsappUrl: '',
+                    supportEmail: '',
+                    companyAddress: '',
                     invoiceBuffer
                 });
             } catch (emailErr) {
