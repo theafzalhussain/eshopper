@@ -34,14 +34,41 @@ async function sendOrderReceivedEmail({
     });
 }
 
-// Order Confirmed
+// Order Confirmed (updated for new .hbs design)
 async function sendOrderConfirmedEmail({
-    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedArrival, companyAddress
+    toEmail,
+    userName,
+    orderId,
+    orderDate,
+    expectedArrival,
+    items,
+    subtotal,
+    shippingCharges,
+    gst,
+    totalPaid,
+    shippingAddress,
+    billingInfo,
+    trackingUrl,
+    receiptUrl
 }) {
     const templatePath = path.join(__dirname, 'views', 'emails', 'order-confirmed.hbs');
     const source = fs.readFileSync(templatePath, 'utf8');
     const template = handlebars.compile(source);
-    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedArrival, companyAddress });
+    return template({
+        orderId,
+        orderDate,
+        customerName: userName,
+        expectedArrival,
+        items,
+        subtotal,
+        shippingCharges,
+        gst,
+        totalPaid,
+        shippingAddress,
+        billingInfo,
+        trackingUrl,
+        receiptUrl
+    });
 }
 
 // Order Packed
