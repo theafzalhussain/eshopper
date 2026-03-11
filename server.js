@@ -4147,8 +4147,6 @@ mongoose.connection.on('disconnected', () => {
             console.error('❌ MongoDB reconnect failed:', e.message);
         }
     }, 5000);
-});
-
 // Start the server
 startServer();
 
