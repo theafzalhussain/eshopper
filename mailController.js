@@ -3,14 +3,35 @@ const path = require('path');
 const fs = require('fs');
 const handlebars = require('handlebars');
 
-// Order Received
+// Order Received (updated for new .hbs design)
 async function sendOrderReceivedEmail({
-    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, paymentStatus, whatsappUrl, supportEmail, companyAddress
+    toEmail,
+    userName,
+    orderId,
+    orderDate,
+    items,
+    subtotal,
+    shippingCharges,
+    totalPaid,
+    shippingAddress,
+    paymentMethod,
+    paymentStatus
 }) {
     const templatePath = path.join(__dirname, 'views', 'emails', 'order-received.hbs');
     const source = fs.readFileSync(templatePath, 'utf8');
     const template = handlebars.compile(source);
-    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, paymentStatus, whatsappUrl, supportEmail, companyAddress });
+    return template({
+        orderId,
+        orderDate,
+        customerName: userName,
+        items,
+        subtotal,
+        shippingCharges,
+        totalPaid,
+        shippingAddress,
+        paymentMethod,
+        paymentStatus
+    });
 }
 
 // Order Confirmed
