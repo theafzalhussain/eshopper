@@ -3889,40 +3889,7 @@ async function startServer() {
                 let emailSent = true;
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
-                        // Email #1: Order Placed
-                        // Render placed email
-                        const placedEmail = await (async () => {
-                            let displayName = order.userName || 'Valued Customer';
-                            const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
-                            let htmlContent = fs.readFileSync(templatePath, 'utf8');
-                            htmlContent = htmlContent
-                                .replace(/{{orderId}}/g, order.orderId)
-                                .replace(/{{userName}}/g, displayName)
-                                .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
-                                .replace(/{{totalAmount}}/g, order.finalAmount ? `₹${Number(order.finalAmount).toLocaleString('en-IN')}` : '');
-                            return {
-                                toEmail: order.userEmail,
-                                subject: "✨ Order Received - Thank You for Shopping with Us!",
-                                htmlContent
-                            };
-                        })();
-                        await enqueueEmailJob('order-placed', placedEmail);
-                        // Render confirmed email
-                        const confirmedEmail = await (async () => {
-                            let displayName = order.userName || 'Valued Customer';
-                            const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
-                            let htmlContent = fs.readFileSync(templatePath, 'utf8');
-                            htmlContent = htmlContent
-                                .replace(/{{orderId}}/g, order.orderId)
-                                .replace(/{{userName}}/g, displayName)
-                                .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'));
-                            return {
-                                toEmail: order.userEmail,
-                                subject: `✅ Order Confirmed - ${order.orderId} | Eshopper Boutique`,
-                                htmlContent
-                            };
-                        })();
-                        await enqueueEmailJob('order-confirmed', confirmedEmail);
+                        // All legacy HTML email-templates logic removed. All order placed/confirmed emails now handled by mailController.js and .hbs templates only.
                     } catch (confirmQueueErr) {
                         emailSent = false;
                         console.warn(`⚠️ Email queue failed for ${orderId}:`, confirmQueueErr.message);
