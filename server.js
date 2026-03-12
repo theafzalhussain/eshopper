@@ -507,7 +507,7 @@ const buildOrderReceiptHtml = ({
             </tr>
         `;
     }).join('');
-        const htmlContent = `
+    return `
         <html>
         <head>
             <meta charset="utf-8"/>
@@ -531,7 +531,6 @@ const buildOrderReceiptHtml = ({
                     letter-spacing: 8px;
                     font-style: italic;
                 }
-                
                 .card { background: #fdfdfd; border: 2px solid #d4af37; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); position: relative; z-index: 1; }
                 .head { padding: 24px 20px; background: linear-gradient(135deg, #fdfdfd, #f9f7f4); border-bottom: 1px solid #e8dcc8; }
                 .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -585,134 +584,10 @@ const buildOrderReceiptHtml = ({
                     <!-- ...existing code... -->
                 </div>
             </div>
-    [existing code]
-                .disclaimer-title { font-weight: 700; color: #0f0f0f; margin-bottom: 8px; }
-                .footer { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e8dcc8; }
-                .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.8; }
-                .foot-premium { color: #d4af37; font-weight: 700; margin-top: 14px; font-size: 13px; letter-spacing: 1px; }
-                @media (max-width: 768px) {
-                    .steps-container { grid-template-columns: 1fr; gap: 12px; }
-                    .summary-boxes { grid-template-columns: 1fr; gap: 12px; }
-                    .title { font-size: 28px; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="watermark">eShopper Luxe</div>
-            <div class="wrap">
-                <div class="card">
-                    <!-- PREMIUM HEADER -->
-                    <div class="head">
-                        <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td class="brand-left">
-                                    <div class="brand-badge">
-                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-                                    </div>
-                                </td>
-                                <td class="brand-center">
-                                    <p class="brand-title">eShopper Boutique Luxe</p>
-                                    <p class="tagline">Premium Fashion Destination</p>
-                                </td>
-                                <td class="brand-spacer"></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <!-- MAIN CONTENT -->
-                    <div class="body">
-                        <h1 class="title">ORDER RECEIPT</h1>
-                        <p class="subtitle">Thank you for your premium order</p>
-                        
-                        <!-- STATUS BADGE -->
-                        <div style="text-align: center; margin-bottom: 28px;">
-                            <div style="display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 10px 24px; border-radius: 20px; font-weight: 900; font-size: 12px; letter-spacing: 1px;">✓ ORDER RECEIVED</div>
-                        </div>
-
-                        <!-- ORDER STEPS -->
-                        <style>
-                            * { box-sizing: border-box; margin: 0; padding: 0; }
-                            html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                            body { background: #f5f5f3; color: #2c2c2c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
-                            .wrap { max-width: 900px; margin: 0 auto; padding: 16px; position: relative; }
-                            .watermark {
-                                position: fixed;
-                                top: 50%;
-                                left: 50%;
-                                transform: translate(-50%, -50%) rotate(-45deg);
-                                font-size: 72px;
-                                font-weight: 300;
-                                color: rgba(212, 175, 55, 0.08);
-                                white-space: nowrap;
-                                pointer-events: none;
-                                z-index: 0;
-                                letter-spacing: 8px;
-                                font-style: italic;
-                            }
-                            .card { background: #fdfdfd; border: 2px solid #d4af37; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); position: relative; z-index: 1; }
-                            .head { padding: 24px 20px; background: linear-gradient(135deg, #fdfdfd, #f9f7f4); border-bottom: 1px solid #e8dcc8; }
-                            .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                            .brand-left { width: 64px; text-align: left; vertical-align: middle; }
-                            .brand-center { text-align: center; vertical-align: middle; }
-                            .brand-spacer { width: 64px; }
-                            .brand-badge { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-                            .brand-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
-                            .brand-title { font-size: 34px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; line-height: 1.2; }
-                            .tagline { font-size: 12px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0 0; }
-                            .body { padding: 36px; }
-                            .title { font-size: 36px; font-weight: 900; margin: 0 0 12px; color: #0f0f0f; letter-spacing: 2px; text-align: center; }
-                            .subtitle { font-size: 14px; color: #8b7521; text-align: center; font-weight: 700; letter-spacing: 1px; margin-bottom: 28px; }
-                            .status-badge { display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 12px 24px; border-radius: 20px; font-weight: 700; margin: 0 auto 16px; display: block; text-align: center; width: fit-content; box-shadow: 0 4px 12px rgba(31,143,84,0.3); }
-                            .status-message { text-align: center; color: #0f0f0f; font-weight: 600; font-size: 14px; margin-bottom: 32px; }
-                            .next-steps { margin: 32px 0; }
-                            .steps-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center; }
-                            .steps-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
-                            .step { border: 2px solid #d4af37; border-radius: 12px; padding: 20px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                            .step-icon { font-size: 32px; margin-bottom: 12px; }
-                            .step-text { font-size: 12px; font-weight: 700; color: #0f0f0f; }
-                            .delivery-highlight { border: 3px solid #d4af37; border-radius: 14px; padding: 24px; background: linear-gradient(135deg, #a37f1f 0%, #d4af37 50%, #8b7521 100%); text-align: center; margin: 32px 0; box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
-                            .delivery-label { color: #fff; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
-                            .delivery-date { color: #fff; font-size: 24px; font-weight: 900; letter-spacing: 1px; }
-                            .items-section { margin: 32px 0; }
-                            .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
-                            table { width: 100%; border-collapse: collapse; background: #fff; }
-                            th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; white-space: nowrap; }
-                            td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; word-wrap: break-word; }
-                            td:nth-child(4), td:nth-child(5) { font-weight: 800; color: #0f0f0f; text-align: right; padding-right: 16px; }
-                            tr:nth-child(odd) { background: #fafaf8; }
-                            tr:hover { background: #f5f0e6; }
-                            .summary-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
-                            .summary-box { border: 2px solid #d4af37; border-radius: 12px; padding: 18px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                            .summary-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 10px; }
-                            .summary-value { font-size: 18px; font-weight: 900; color: #0f0f0f; word-break: break-word; }
-                            .disclaimer { border-left: 4px solid #d4af37; padding: 16px; background: #f9f7f4; margin: 32px 0; font-size: 12px; color: #555; line-height: 1.8; }
-                            .disclaimer-title { font-weight: 700; color: #0f0f0f; margin-bottom: 8px; }
-                            .footer { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e8dcc8; }
-                            .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.8; }
-                            .foot-premium { color: #d4af37; font-weight: 700; margin-top: 14px; font-size: 13px; letter-spacing: 1px; }
-                            @media (max-width: 768px) {
-                                .steps-container { grid-template-columns: 1fr; gap: 12px; }
-                                .summary-boxes { grid-template-columns: 1fr; gap: 12px; }
-                                .title { font-size: 28px; }
-                            }
-                        </style>
-                        </div>
-
-                        <!-- FOOTER -->
-                        <div class="footer">
-                            <div class="foot">
-                                <strong>For support:</strong> support@eshopperr.me<br/>
-                                <strong>Website:</strong> eshopperr.me<br/>
-                                <strong>Order ID:</strong> ${orderId}
-                            </div>
-                            <div class="foot-premium">💎 eShopper Boutique Luxe • Premium Edition • Authenticity Guaranteed 💎</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </body>
         </html>
     `;
+};
 };
 
 // 🔴 BUILD ORDER CONFIRMATION PROFORMA HTML - For verified/confirmed orders
