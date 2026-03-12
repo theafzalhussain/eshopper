@@ -1,168 +1,79 @@
-<!-- Order Delivered Email Template (Table-based, Responsive) -->
+<!--
+Ultra-Premium Luxe Email: Delivered Successfully
+Exact Green Celebration Banner, Tax Invoice Card, Feedback, Referral, and Footer as per reference
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Order Delivered - eShopper Luxe</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivered Successfully - Eshopper Boutique Luxe</title>
+  <style>
+    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
+    .header { background: linear-gradient(90deg, #0A0A0A 60%, #43e97b 100%); padding: 32px 0 18px 0; text-align: center; }
+    .logo { height: 40px; margin-bottom: 12px; }
+    .banner { background: #43e97b; color: #fff; font-size: 22px; font-weight: 900; padding: 18px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .banner-icon { font-size: 26px; }
+    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
+    .delivered-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; text-align: center; }
+    .delivered-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
+    .delivered-status { font-size: 18px; color: #43e97b; font-weight: 900; margin-bottom: 2px; }
+    .invoice-card { background: #fff; border-radius: 12px; color: #181818; padding: 18px 18px; margin: 24px 0 0 0; text-align: center; }
+    .invoice-title { font-size: 16px; color: #FFD700; font-weight: 900; margin-bottom: 8px; }
+    .invoice-btn { display: inline-block; background: #FFD700; color: #181818; font-size: 15px; font-weight: 900; padding: 12px 32px; border-radius: 24px; text-decoration: none; margin-top: 10px; }
+    .feedback-card { background: #222; border-radius: 12px; color: #FFD700; padding: 18px 18px; margin: 24px 0 0 0; text-align: center; }
+    .feedback-title { font-size: 16px; color: #FFD700; font-weight: 900; margin-bottom: 8px; }
+    .stars { font-size: 24px; color: #FFD700; letter-spacing: 2px; }
+    .review-btn { display: inline-block; background: #fff; color: #181818; font-size: 15px; font-weight: 900; padding: 10px 28px; border-radius: 24px; text-decoration: none; margin-top: 10px; }
+    .referral-card { background: linear-gradient(90deg, #8f5cff 60%, #ff6a00 100%); border-radius: 12px; color: #fff; padding: 18px 18px; margin: 24px 0 0 0; text-align: center; }
+    .referral-title { font-size: 16px; color: #fff; font-weight: 900; margin-bottom: 8px; }
+    .referral-code { font-size: 18px; color: #FFD700; font-weight: 900; background: #222; border-radius: 8px; padding: 6px 18px; margin: 10px 0; display: inline-block; }
+    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
+    .social-row { display: flex; justify-content: center; gap: 18px; margin: 18px 0 0 0; }
+    .social-icon { width: 36px; height: 36px; border-radius: 50%; display: inline-block; }
+    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
+    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
+    @media (max-width: 650px) {
+      .container { max-width: 98vw; }
+      .social-row { flex-direction: column; gap: 10px; }
+    }
+  </style>
 </head>
-<body style="margin:0; padding:0; background:#181818; color:#fff; font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" bgcolor="#181818" cellpadding="0" cellspacing="0" style="padding:0; margin:0;">
-    <tr>
-      <td align="center">
-        <table width="480" cellpadding="0" cellspacing="0" style="background:#232323; border-radius:12px; margin:32px 0; box-shadow:0 2px 16px #00000033;">
-          <!-- Header -->
-          <tr>
-            <td style="padding:24px 32px 8px 32px; text-align:left;">
-              <img src="https://yourdomain.com/logo.png" alt="eShopper Luxe" style="height:28px; margin-bottom:12px;">
-              <div style="font-size:13px; color:#fff; text-align:right; float:right;">
-                <span style="background:#1bbf4c; color:#fff; font-size:13px; padding:4px 12px; border-radius:6px; font-weight:600;">✔️ DELIVERED</span>
-              </div>
-            </td>
-          </tr>
-          <!-- Delivered Banner -->
-          <tr>
-            <td style="background:#1bbf4c; color:#fff; text-align:center; font-size:22px; font-weight:600; padding:18px 0 10px 0; letter-spacing:1px;">
-              <span style="font-size:22px;">🎉</span> DELIVERED!
-              <div style="font-size:13px; color:#eaffea; font-weight:400; margin-top:2px;">
-                Your luxury package has arrived safely ✨
-              </div>
-            </td>
-          </tr>
-          <!-- Thank You -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:center;">
-              <div style="font-size:20px; font-weight:600; margin-bottom:6px;">Thank You, {{customerName}} 🙏</div>
-              <div style="font-size:14px; color:#ccc;">
-                We hope you love your luxury purchase! Your order <span style="color:#ffd700;">{{orderId}}</span> was delivered on <span style="color:#ffd700;">{{deliveredDate}}</span>.
-              </div>
-              <div style="margin:16px 0 0 0;">
-                <span style="background:#1a3d1a; color:#b6ffb6; font-size:13px; padding:4px 12px; border-radius:6px; display:inline-block;">✔️ DELIVERY CONFIRMED<br><span style="color:#fff;">Received by: {{receivedBy}}</span></span>
-              </div>
-            </td>
-          </tr>
-          <!-- Tax Invoice -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:center;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#232323; border:2px solid #ffd700; border-radius:8px;">
-                <tr>
-                  <td style="padding:16px 0;">
-                    <img src="https://img.icons8.com/ios-filled/50/ffd700/document--v1.png" width="40" style="display:block; margin:0 auto 8px auto;">
-                    <div style="color:#fff; font-size:18px; font-weight:600;">Your Tax Invoice is Ready</div>
-                    <div style="color:#b6b6b6; font-size:13px; margin:8px 0 16px 0;">
-                      Download your official GST invoice for warranty, return, and tax purposes.
-                    </div>
-                    <a href="{{taxInvoiceUrl}}" style="background:#ffd700; color:#232323; font-size:16px; font-weight:600; text-decoration:none; padding:12px 32px; border-radius:8px; display:inline-block;">📄 DOWNLOAD TAX INVOICE</a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Experience Rating -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:center;">
-              <div style="color:#ffd700; font-size:18px; font-weight:600; margin-bottom:8px;">How was your experience? <span style="font-size:18px;">⭐</span></div>
-              <div style="font-size:28px; color:#ffd700; margin-bottom:8px;">
-                ★★★★★
-              </div>
-              <a href="{{reviewUrl}}" style="background:#232323; color:#ffd700; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; border:1px solid #ffd700; display:inline-block;">✍️ Write a Review</a>
-            </td>
-          </tr>
-          <!-- What You Received -->
-          <tr>
-            <td style="padding:24px 32px 0 32px;">
-              <div style="color:#ffcc80; font-size:15px; font-weight:600; margin-bottom:8px;">🧾 WHAT YOU RECEIVED</div>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#232323; border-radius:8px;">
-                <tr style="color:#b6b6b6; font-size:13px;">
-                  <th align="left" style="padding:8px 0;">ITEM</th>
-                  <th align="center" style="padding:8px 0;">QTY</th>
-                  <th align="right" style="padding:8px 0;">PRICE</th>
-                </tr>
-                <tr>
-                  <td style="padding:8px 0;">
-                    <div style="font-weight:600; color:#fff;">{{productName}}</div>
-                    <div style="font-size:12px; color:#ccc;">{{productCategory}}</div>
-                  </td>
-                  <td align="center" style="padding:8px 0; color:#fff;">{{qty}}</td>
-                  <td align="right" style="padding:8px 0; color:#ffd700;">₹{{price}}</td>
-                </tr>
-                <tr>
-                  <td colspan="2" style="color:#fff; font-size:14px; font-weight:600; padding:8px 0;">Total Paid</td>
-                  <td align="right" style="color:#1bbf4c; font-size:14px; font-weight:600; padding:8px 0;">₹{{totalPaid}}</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Referral Section -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:center;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(90deg,#4e0066 0%,#a259e6 100%); border-radius:12px;">
-                <tr>
-                  <td style="padding:24px 0;">
-                    <div style="color:#ffd700; font-size:18px; font-weight:600; margin-bottom:8px;">
-                      <span style="font-size:22px;">🎁</span> Love Your Purchase? Share the Luxury!
-                    </div>
-                    <div style="color:#fff; font-size:14px; margin-bottom:12px;">
-                      Refer a friend to eShopper Luxe and <b>you both get 10% OFF</b> on your next luxe purchase!
-                    </div>
-                    <a href="{{referralUrl}}" style="background:#a259e6; color:#fff; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; display:inline-block;">🎁 Share &amp; Earn 10% Off</a>
-                    <div style="color:#ffd700; font-size:15px; font-weight:600; margin:16px 0 0 0;">
-                      Your Personal Referral Code
-                    </div>
-                    <div style="background:#232323; color:#ffd700; font-size:16px; font-weight:700; border-radius:6px; padding:8px 0; margin:8px 32px;">
-                      {{referralCode}}
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Important Information -->
-          <tr>
-            <td style="padding:24px 32px 0 32px;">
-              <div style="color:#ffd700; font-size:15px; font-weight:600; margin-bottom:8px;">⚠️ Important Information</div>
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="background:#232323; border-radius:8px; padding:16px 0; color:#fff; font-size:14px; font-weight:600;">
-                    <img src="https://img.icons8.com/ios-filled/50/ffd700/return.png" width="28" style="vertical-align:middle; margin-right:8px;">
-                    7-Day Returns<br>
-                    <span style="color:#b6b6b6; font-size:12px; font-weight:400;">Easy returns within 7 days if not satisfied</span>
-                  </td>
-                  <td width="16"></td>
-                  <td align="center" style="background:#232323; border-radius:8px; padding:16px 0; color:#fff; font-size:14px; font-weight:600;">
-                    <img src="https://img.icons8.com/ios-filled/50/ffd700/guarantee.png" width="28" style="vertical-align:middle; margin-right:8px;">
-                    Warranty<br>
-                    <span style="color:#b6b6b6; font-size:12px; font-weight:400;">Keep invoice safe for warranty claims</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Stay Connected -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:center;">
-              <div style="color:#ffd700; font-size:15px; font-weight:600; margin-bottom:8px;">Stay Connected with eShopper Luxe ✨</div>
-              <div style="margin-bottom:12px;">
-                <a href="{{instagramUrl}}" style="background:#ff2d55; color:#fff; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; margin-right:8px; display:inline-block;">Follow on Instagram</a>
-                <a href="{{whatsappUrl}}" style="background:#25d366; color:#232323; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; display:inline-block;">Join WhatsApp</a>
-              </div>
-              <div style="color:#b6b6b6; font-size:13px; margin-bottom:8px;">
-                Need Help? Contact Us Anytime<br>
-                <a href="mailto:support@eshopper.me" style="color:#ffd700; text-decoration:none;">support@eshopper.me</a> | <a href="tel:+918447859784" style="color:#ffd700; text-decoration:none;">+91 8447859784</a>
-              </div>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:24px 0 0 0; text-align:center; color:#b6b6b6; font-size:12px;">
-              © 2026 eShopper Luxe. All rights reserved.<br>
-              Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India<br>
-              <a href="{{privacyUrl}}" style="color:#ffd700; text-decoration:none;">Privacy Policy</a> | <a href="{{termsUrl}}" style="color:#ffd700; text-decoration:none;">Terms of Service</a> | <a href="{{returnPolicyUrl}}" style="color:#ffd700; text-decoration:none;">Return Policy</a>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+<body>
+  <div class="container">
+    <div class="header">
+      <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
+    </div>
+    <div class="banner"><span class="banner-icon">🎉</span>DELIVERED!<span class="banner-icon">🎉</span></div>
+    <div class="greeting">Thank You, {{customerName}} <span style="font-size:18px;">🙏</span><br>We hope you love your luxury purchase! Your order <span style="color:#43e97b;">{{orderId}}</span> was delivered on <span style="color:#FFD700;">{{deliveredOn}}</span>.</div>
+    <div class="delivered-box">
+      <div class="delivered-title">DELIVERY CONFIRMED</div>
+      <div class="delivered-status">Received by: {{receivedBy}}</div>
+    </div>
+    <div class="invoice-card">
+      <div class="invoice-title">Your Tax Invoice is Ready</div>
+      <a class="invoice-btn" href="{{taxInvoiceUrl}}">📄 DOWNLOAD TAX INVOICE</a>
+    </div>
+    <div class="feedback-card">
+      <div class="feedback-title">How was your experience?<br><span style="font-size:14px; color:#FFD700;">Rate your order and help us serve you better</span></div>
+      <div class="stars">★ ★ ★ ★ ★</div>
+      <a class="review-btn" href="{{reviewUrl}}">Write a Review</a>
+    </div>
+    <div class="referral-card">
+      <div class="referral-title">Love Your Purchase? Share the Luxury!</div>
+      <div style="font-size:14px; color:#fff;">Refer a friend to Eshopper Boutique Luxe and you both get 10% OFF on your next luxe purchase!</div>
+      <div class="referral-code">{{referralCode}}</div>
+      <a class="review-btn" href="{{referralShareUrl}}">Share & Earn 10% Off</a>
+    </div>
+    <div class="footer">
+      <div class="social-row">
+        <a href="{{instagramUrl}}"><img class="social-icon" src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg" alt="Instagram" /></a>
+        <a href="{{whatsappUrl}}"><img class="social-icon" src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.svg" alt="WhatsApp" /></a>
+      </div>
+      <div class="address">{{companyAddress}}</div>
+      <div class="footer-note">* This is a delivery confirmation, not a Tax Invoice. Tax Invoice is attached above.</div>
+    </div>
+  </div>
 </body>
 </html>
