@@ -31,32 +31,7 @@ const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
  * @param {string} jobType - Type of email job (e.g., 'order-status', 'otp', etc.)
  * @param {object} payload - Email data
  */
-async function executeEmailJob(jobType, payload) {
-    try {
-        // Accept all order-related job types
-        const allowedTypes = [
-            'order-status',
-            'order-placed',
-            'order-confirmed',
-            'order-packed',
-            'order-shipped',
-            'out-for-delivery',
-            'order-delivered'
-        ];
-        if (allowedTypes.includes((jobType || '').toLowerCase())) {
-            // Debug: print payload before sending
-            if (!payload || !payload.to || !payload.subject || !payload.htmlContent) {
-                console.error('❌ [DEBUG] Missing email parameter in jobType:', jobType, '| payload:', payload);
-            }
-            return await sendEmail(payload);
-        } else {
-            throw new Error('Unknown email job type: ' + jobType);
-        }
-    } catch (err) {
-        console.error('executeEmailJob error:', err.message);
-        throw err;
-    }
-}
+// async function executeEmailJob removed as duplicate/cleanup
 
 let firebaseAdminReady = false;
 
@@ -587,7 +562,6 @@ const buildOrderReceiptHtml = ({
         </body>
         </html>
     `;
-};
 };
 
 // 🔴 BUILD ORDER CONFIRMATION PROFORMA HTML - For verified/confirmed orders
@@ -3963,14 +3937,14 @@ async function startServer() {
         });
 
         server.on('error', (err) => {
-            if (err.code === 'EADDRINUSE') {
-                console.error(`\n❌ Port ${PORT} already in use!`);
-                console.error(`   Run this command to fix it:`);
-                console.error(`   Windows: netstat -ano | findstr :${PORT}  →  taskkill /PID <number> /F`);
-                process.exit(1);
-            }
-            throw err;
-        });
+		if (err.code === 'EADDRINUSE') {
+			console.error(`\n❌ Port ${PORT} already in use!`);
+			console.error(`   Run this command to fix it:`);
+			console.error(`   Windows: netstat -ano | findstr :${PORT}  →  taskkill /PID <number> /F`);
+			process.exit(1);
+		}
+		throw err;
+	});
     } catch (e) {
         console.error("❌ MongoDB Connection Failed:", e.message);
         console.error("   Details:", e.code || e.codeName);
@@ -4026,6 +4000,3 @@ mongoose.connection.on('disconnected', () => {
 
 // Start the server
 startServer();
-
-
-    
