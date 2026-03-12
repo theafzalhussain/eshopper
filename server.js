@@ -3789,34 +3789,28 @@ async function startServer() {
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
                         const mailController = require('./mailController');
-                        const { sendTransactionalEmail } = require('./server.js'); // If sendTransactionalEmail is not exported, move it to a utils/email.js and import from there
                         const userDoc = await User.findById(order.userid).lean();
                         const toEmail = userDoc && userDoc.email ? userDoc.email : order.userEmail;
                         const userName = userDoc && userDoc.name ? userDoc.name : (order.userName || 'Valued Customer');
                         if (toEmail) {
                             let emailFn = null;
                             let emailType = '';
-                            let subject = '';
                             if (normalized === 'Packed') {
                                 emailFn = mailController.sendOrderPackedEmail;
                                 emailType = 'Packed';
-                                subject = `Your Order #${order.orderId} is Packed!`;
                             } else if (normalized === 'Shipped') {
                                 emailFn = mailController.sendOrderShippedEmail;
                                 emailType = 'Shipped';
-                                subject = `Your Order #${order.orderId} is Shipped!`;
                             } else if (normalized === 'Out for Delivery') {
                                 emailFn = mailController.sendOrderOutForDeliveryEmail;
                                 emailType = 'Out for Delivery';
-                                subject = `Your Order #${order.orderId} is Out for Delivery!`;
                             } else if (normalized === 'Delivered') {
                                 emailFn = mailController.sendOrderDeliveredEmail;
                                 emailType = 'Delivered';
-                                subject = `Your Order #${order.orderId} is Delivered!`;
                             }
                             if (emailFn) {
                                 try {
-                                    const htmlContent = await emailFn({
+                                    await emailFn({
                                         toEmail,
                                         userName,
                                         orderId: order.orderId,
@@ -3855,13 +3849,6 @@ async function startServer() {
                                         deliveryAgent: order.deliveryAgent || '',
                                         agentContact: order.agentContact || '',
                                         deliveryLocation: order.deliveryLocation || ''
-                                    });
-                                    // Actually send the email
-                                    await sendTransactionalEmail({
-                                        toEmail,
-                                        toName: userName,
-                                        subject,
-                                        htmlContent
                                     });
                                 } catch (emailErr) {
                                     // Log Brevo error code/message to Sentry
