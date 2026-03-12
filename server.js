@@ -1,9 +1,15 @@
 // 🔴 LOAD ENV VARIABLES FIRST
 require('dotenv').config();
-
 // NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS
 const express = require('express');
+// (Moved process.on handler below requires for correct block structure)
 const http = require('http');
+// Properly handle unhandled promise rejections
+process.on("unhandledRejection", (err) => {
+    console.error("❌ Unhandled Rejection (startup):", err?.message || err);
+    if (process.env.SENTRY_DSN) Sentry.captureException(err);
+    process.exit(1);
+});
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -31,14 +37,11 @@ async function sendEmail({ to, subject, htmlContent, textContent, attachments })
         htmlContent,
         textContent,
         attachments
-    });
+	});
 }
-
-// EMAIL QUEUE ENABLED FLAG (from env or default false)
-const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
-
 // Basic executeEmailJob implementation
 /**
+process.on("SIGINT", async () => {
  * Handles email jobs for the queue system
  * @param {string} jobType - Type of email job (e.g., 'order-status', 'otp', etc.)
  * @param {object} payload - Email data
@@ -139,13 +142,15 @@ const corsOptions = {
     preflightContinue: false,
     optionsSuccessStatus: 204
 };
-// Health check endpoint for uptime monitoring and debugging
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        time: new Date().toISOString(),
-        message: 'API is running',
-    });
+
+process.on("SIGINT", async () => {
+    try {
+        await mongoose.connection.close(false);
+        console.log("✅ MongoDB connection closed");
+    } catch (e) {
+        console.error("❌ Error closing MongoDB:", e?.message || e);
+    }
+    process.exit(0);
 });
 
 // Apply CORS before any routes or middleware
@@ -579,21 +584,7 @@ const buildOrderReceiptHtml = ({
 // 🔴 BUILD ORDER CONFIRMATION PROFORMA HTML - For verified/confirmed orders
 // (Already defined below, duplicate removed)
 
-// 🔴 SEND ORDER CONFIRMATION EMAIL (Brevo)
-async function sendOrderConfirmationEmail({
-    orderId, userName, userEmail, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate, estimatedArrival, deliveryPartner
-}) {
-    const htmlContent = buildOrderConfirmationProformaHtml({
-        orderId, userName, userEmail, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate, estimatedArrival, deliveryPartner
-    });
-    const subject = `Order Confirmed: #${orderId} | ESHOPPER`;
-    try {
-        await sendEmail({ to: userEmail, subject, htmlContent });
-        console.log(`✅ Order confirmation email sent to ${userEmail}`);
-    } catch (err) {
-        console.error('❌ Failed to send order confirmation email:', err.message);
-    }
-// End of placeOrderHandler
+
 
 // 🔴 BUILD TAX INVOICE HTML - For download after delivery with legal compliance
 const buildTaxInvoiceHtml = ({
@@ -2724,8 +2715,7 @@ const allSuccess =
         success: false,
         message: 'Failed to test notifications',
         error: e.message
-    });
-}
+	});
 
 // ==================== WHATSAPP DIAGNOSTIC ENDPOINT ====================
 app.get('/api/check-whatsapp-status/:userId', async (req, res) => {
@@ -3270,6 +3260,7 @@ async function startServer() {
             }
         });
 
+
         // 🔴 DYNAMIC INVOICE DOWNLOADER - Auto-detects PDF type based on order status
         app.get('/api/orders/:id/download-invoice', async (req, res) => {
             if (!FEATURE_INVOICE_SYSTEM) {
@@ -3380,6 +3371,15 @@ async function startServer() {
                 });
             }
         });
+
+        // All Express routes and logic above this line
+    } catch (err) {
+        console.error('❌ Server startup error:', err.message);
+        process.exit(1);
+    }
+}
+
+startServer();
 
         // 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
         app.get('/api/admin/orders', async (req, res) => {
@@ -3940,37 +3940,26 @@ async function startServer() {
                     text: "I’m having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
                     fallback: true
                 });
-            }
-        });
-        // --- server.js AI REFACTOR END ---
-
-        const server = httpServer.listen(PORT, '0.0.0.0', () => {
-            console.log(`🚀 Master Server Live on ${PORT}`);
-        });
-
-        server.on('error', (err) => {
-		if (err.code === 'EADDRINUSE') {
-			console.error(`\n❌ Port ${PORT} already in use!`);
-			console.error(`   Run this command to fix it:`);
-			console.error(`   Windows: netstat -ano | findstr :${PORT}  →  taskkill /PID <number> /F`);
-			process.exit(1);
 		}
-		throw err;
-	});
-    } catch (e) {
-        console.error("❌ MongoDB Connection Failed:", e.message);
-        console.error("   Details:", e.code || e.codeName);
-        console.error("   URI (masked):", MONGO_URI.replace(/mongodb\+srv:\/\/(.+)@/, 'mongodb+srv://***@'));
-        process.exit(1);
-    }
+        });
+    // --- server.js AI REFACTOR END ---
+
+const server = httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Master Server Live on ${PORT}`);
+});
+
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`\n❌ Port ${PORT} already in use!`);
+            console.error(`   Run this command to fix it:`);
+            console.error(`   Windows: netstat -ano | findstr :${PORT}  →  taskkill /PID <number> /F`);
+            process.exit(1);
+        }
+        throw err;
+    });
 }
 
 
-process.on("unhandledRejection", (err) => {
-    console.error("❌ Unhandled Rejection:", err?.message || err);
-    if (process.env.SENTRY_DSN) Sentry.captureException(err);
-    process.exit(1);
-});
 
 process.on("SIGINT", async () => {
     console.log("\n🛑 Shutting down gracefully...");
