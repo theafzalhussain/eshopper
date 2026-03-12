@@ -10,406 +10,49 @@ process.on("unhandledRejection", (err) => {
     if (process.env.SENTRY_DSN) Sentry.captureException(err);
     process.exit(1);
 });
-const { Server } = require('socket.io');
 const mongoose = require('mongoose');
-const cors = require('cors');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-io.use(async (socket, next) => {
+// Fixed: Wrap in Express route handler
+app.post('/api/chat', async (req, res) => {
     try {
-        const userId = socket.handshake.auth?.userId || socket.handshake.query?.userId;
-        if (!userId) return next(new Error('Unauthorized: userId missing'));
-        const userExists = await User.exists({ _id: String(userId) });
-        if (!userExists) return next(new Error('Unauthorized: invalid user'));
-        socket.data.userId = String(userId);
-        return next();
-    } catch (e) {
-        return next(new Error('Unauthorized'));
-    }
-});
+        const prompt = (req.body?.prompt || req.body?.message || '').trim();
+        const history = req.body?.history || req.body?.conversationHistory || [];
 
-// 🔴 SOCKET.IO CONNECTION & ROOM SETUP
-io.on('connection', (socket) => {
-    const userRoom = `user:${socket.data.userId}`;
-    socket.join(userRoom);
-    socket.emit('connected', { ok: true, room: userRoom });
-    console.log(`✅ User ${socket.data.userId} connected to room ${userRoom}`);
-
-    socket.on('disconnect', () => {
-        console.log(`❌ User ${socket.data.userId} disconnected`);
-    });
-});
-
-
-
-app.use(express.json());
-
-// 🔒 SECURITY HEADERS
-app.use(helmet({ contentSecurityPolicy: false }));
-
-// 🔒 RATE LIMITERS
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
-app.use(globalLimiter);
-
-
-// 📊 REQUEST LOGGING MIDDLEWARE (with CORS origin info)
-app.use((req, res, next) => {
-    const origin = req.headers.origin || 'NO-ORIGIN';
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} | Origin: ${origin}`);
-    next();
-});
-
-// 🛡️ GLOBAL ERROR HANDLER FOR MALFORMED REQUESTS & CORS
-app.use((err, req, res, next) => {
-    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-        console.warn('⚠️ Malformed JSON request detected');
-        return res.status(400).json({ message: 'Invalid request format. Please check your input.' });
-    }
-    if (err.message && err.message.includes('CORS')) {
-        console.warn('⚠️ CORS error:', err.message);
-        return res.status(403).json({ message: 'CORS error: Unauthorized origin' });
-    }
-    next(err);
-});
-
-// 🖼️ BRAND LOGO SOURCES (robust for invoice/email rendering)
-const BRAND_SITE_URL = (process.env.BRAND_SITE_URL || process.env.FRONTEND_URL || 'https://eshopperr.me').trim().replace(/\/$/, '');
-const BRAND_LOGO_PRIMARY_URL = process.env.BRAND_LOGO_URL || `${BRAND_SITE_URL}/logo512.png`;
-const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_SITE_URL}/logo192.png`;
-const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_PRIMARY_URL;
-const BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
-
-// 🔧 DATABASE CONNECTION SETUP
-const MONGO_URI = process.env.MONGODB_URI;
-
-if (!MONGO_URI) {
-    console.error("❌ CRITICAL: Missing MONGODB_URI in environment variables");
-    console.error("   Please set MONGODB_URI in your Railway environment");
-    process.exit(1);
-}
-
-console.log("🔍 Attempting MongoDB connection...");
-
-// 🔧 CLOUDINARY CONFIGURATION SETUP
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUD_NAME;
-const CLOUDINARY_API_KEY = process.env.CLOUD_API_KEY;
-const CLOUDINARY_API_SECRET = process.env.CLOUD_API_SECRET;
-
-if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
-    console.error("❌ CRITICAL: Missing Cloudinary credentials in environment variables");
-    console.error("   Please set CLOUD_NAME, CLOUD_API_KEY, and CLOUD_API_SECRET in Railway");
-    process.exit(1);
-}
-
-cloudinary.config({
-    cloud_name: CLOUDINARY_CLOUD_NAME,
-    api_key: CLOUDINARY_API_KEY,
-    api_secret: CLOUDINARY_API_SECRET
-});
-
-console.log("✅ Cloudinary configured successfully");
-console.log(`📸 Cloud Name: ${CLOUDINARY_CLOUD_NAME}`);
-
-// 📝 HELPER FUNCTION TO RETURN CLOUDINARY URLS (for GET requests)
-const sanitizeCloudinaryUrl = (url) => {
-    if (!url) return null;
-    // If it's already a Cloudinary URL, return as-is (already uploaded)
-    if (url.includes('res.cloudinary.com')) {
-        return url;
-    }
-    // Path format from multer-storage-cloudinary, return as-is
-    return url;
-};
-
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'eshoper_master',
-        allowedFormats: ['jpg', 'png', 'jpeg'],
-        resource_type: 'auto'
-    }
-});
-const upload = multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg'];
-        if (allowedMimes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error(`Invalid file type: ${file.mimetype}`));
+        if (!prompt) {
+            console.error("⚠️ No prompt received from frontend");
+            return res.status(400).json({ error: "Prompt is required" });
         }
-    }
-}).fields([
-    { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 },
-    { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 },
-    { name: 'pic4', maxCount: 1 }
-]);
 
-
-// ...existing code...
-// ...existing code...
-
-const processMemoryEmailQueue = async () => {
-    if (memoryQueueRunning) return;
-    memoryQueueRunning = true;
-    while (memoryEmailQueue.length > 0) {
-        const job = memoryEmailQueue.shift();
-        try {
-            await executeEmailJob(job.jobType, job.payload);
-        } catch (queueErr) {
-            console.error(`⚠️ Email queue job failed (${job.jobType}):`, queueErr.message);
-            if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(queueErr);
+        if (!genAI) {
+            return res.status(500).json({ error: "GEMINI_API_KEY missing or invalid" });
         }
-    }
-    memoryQueueRunning = false;
-};
 
-const enqueueEmailJob = async (jobType, payload) => {
-    if (!FEATURE_EMAIL_NOTIFICATIONS) {
-        return { skipped: true, reason: 'email-notifications-disabled' };
-    }
-    if (!EMAIL_QUEUE_ENABLED) {
-        return executeEmailJob(jobType, payload);
-    }
+        // Try all models
+        let textResponse = "";
+        let lastModelError = null;
 
-    if (bullQueueMode && bullEmailQueue) {
-        await bullEmailQueue.add(jobType, payload || {}, {
-            removeOnComplete: 100,
-            removeOnFail: 200,
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 2000 }
-        });
-        return true;
-    }
-
-    memoryEmailQueue.push({ jobType, payload });
-    setImmediate(processMemoryEmailQueue);
-    return true;
-};
-
-
-// ==================== EMAIL TEMPLATE SYSTEM PLACEHOLDER ====================
-// Email system fully removed.
-// Insert new premium HTML template integration logic here.
-// Example: Integrate 6 new premium templates and their rendering logic.
-// Ensure all new template code is robust, modular, and secure.
-
-const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
-const opts = { toJSON: toJSONCustom, timestamps: true };
-
-const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
-const User = mongoose.model('User', new mongoose.Schema({
-    name: String,
-    username: { type: String, unique: true, sparse: true },
-    email: { type: String, unique: true, sparse: true },
-    phone: String,
-    password: { type: String },
-    uid: { type: String, unique: true, sparse: true, index: true }, // Firebase UID
-    provider: { type: String, enum: ['email', 'google', 'phone'], default: 'email' }, // Auth provider
-    role: { type: String, default: "User" },
-    pic: String,
-    addressline1: String,
-    city: String,
-    state: String,
-    pin: String,
-    otp: String,
-    otpExpires: Date,
-    lastLogin: { type: Date, default: Date.now }, // Track last login
-    failedAttempts: { type: Number, default: 0 },
-    lockUntil: Date
-}, opts));
-const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String, rating: { type: Number, default: 4.5, min: 0, max: 5 }, reviews: { type: Number, default: 0 } }, opts));
-const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
-const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
-const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
-const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
-const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
-const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
-const Order = mongoose.model('Order', new mongoose.Schema({
-    orderId: { type: String, unique: true, required: true, index: true },
-    userid: { type: String, required: true, index: true },
-    userName: String,
-    userEmail: String,
-    paymentMethod: String,
-    paymentStatus: { type: String, default: 'Pending' },
-    orderStatus: { type: String, default: 'Order Placed' },
-    totalAmount: Number,
-    shippingAmount: Number,
-    finalAmount: Number,
-    shippingAddress: {
-        fullName: String,
-        phone: String,
-        addressline1: String,
-        city: String,
-        state: String,
-        pin: String,
-        country: { type: String, default: 'India' }
-    },
-    products: Array,
-    estimatedArrival: Date,
-    statusHistory: [{
-        status: String,
-        timestamp: { type: Date, default: Date.now },
-        message: String
-    }],
-    orderDate: { type: Date, default: Date.now }
-}, opts));
-const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" } }, opts));
-const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
-
-const generateOrderId = async () => {
-    const year = new Date().getFullYear();
-    const prefix = `ESHP-${year}-`;
-    const latestOrder = await Order.findOne({ orderId: new RegExp(`^${prefix}`) }).sort({ createdAt: -1 });
-    const latestNumber = latestOrder?.orderId ? Number(String(latestOrder.orderId).split('-').pop()) || 0 : 0;
-    const nextNumber = latestNumber + 1;
-    return `${prefix}${String(nextNumber).padStart(4, '0')}`;
-};
-
-const normalizePhoneForWhatsApp = (phone = '') => {
-    const digits = String(phone || '').replace(/\D/g, '');
-    if (!digits) return '';
-    if (digits.length === 10) return `91${digits}`;
-    if (digits.startsWith('0') && digits.length === 11) return `91${digits.slice(1)}`;
-    return digits;
-};
-
-const getTrackingLink = (orderId) => {
-    const frontend = String(process.env.FRONTEND_URL || 'https://eshopperr.me').replace(/\/$/, '');
-    return `${frontend}/order-tracking/${encodeURIComponent(orderId)}`;
-};
-
-// 🔴 BUILD ORDER RECEIPT HTML - Luxury design with 💎 emoji logo
-const buildOrderReceiptHtml = ({
-    orderId,
-    userName,
-    userEmail,
-    paymentMethod,
-    paymentStatus,
-    finalAmount,
-    totalAmount,
-    shippingAmount,
-    shippingAddress,
-    products,
-    orderDate
-}) => {
-    const displayName = userName || 'Valued Customer';
-    const safeProducts = Array.isArray(products) ? products : [];
-    const orderDateObj = new Date(orderDate || Date.now());
-    const orderDateText = orderDateObj.toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
-
-    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
-    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
-    const payable = Number(finalAmount || (subtotal + shipping));
-
-    const rows = safeProducts.map((item, idx) => {
-        const qty = Number(item.qty || 1);
-        const price = Number(item.price || 0);
-        const line = Number(item.total || (qty * price));
-        const sizeText = item.size ? ` (Size: ${item.size})` : '';
-        const colorText = item.color ? `, ${item.color}` : '';
-        const itemDesc = `${item.name || 'Product'}${sizeText}${colorText}`;
-        return `
-            <tr>
-                <td>${idx + 1}</td>
-                <td>${itemDesc}</td>
-                <td>${qty}</td>
-                <td>₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-            </tr>
-        `;
-    }).join('');
-    return `
-        <html>
-        <head>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                body { background: #f5f5f3; color: #2c2c2c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
-                .wrap { max-width: 900px; margin: 0 auto; padding: 16px; position: relative; }
-                .watermark {
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%) rotate(-45deg);
-                    font-size: 72px;
-                    font-weight: 300;
-                    color: rgba(212, 175, 55, 0.08);
-                    white-space: nowrap;
-                    pointer-events: none;
-                    z-index: 0;
-                    letter-spacing: 8px;
-                    font-style: italic;
-                }
-                .card { background: #fdfdfd; border: 2px solid #d4af37; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); position: relative; z-index: 1; }
-                .head { padding: 24px 20px; background: linear-gradient(135deg, #fdfdfd, #f9f7f4); border-bottom: 1px solid #e8dcc8; }
-                .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
-                .brand-center { text-align: center; vertical-align: middle; }
-                .brand-spacer { width: 64px; }
-                .brand-badge { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-                .brand-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
-                .brand-title { font-size: 34px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; line-height: 1.2; }
-                .tagline { font-size: 12px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0 0; }
-                .body { padding: 36px; }
-                .title { font-size: 36px; font-weight: 900; margin: 0 0 12px; color: #0f0f0f; letter-spacing: 2px; text-align: center; }
-                .subtitle { font-size: 14px; color: #8b7521; text-align: center; font-weight: 700; letter-spacing: 1px; margin-bottom: 28px; }
-                .status-badge { display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 12px 24px; border-radius: 20px; font-weight: 700; margin: 0 auto 16px; display: block; text-align: center; width: fit-content; box-shadow: 0 4px 12px rgba(31,143,84,0.3); }
-                .status-message { text-align: center; color: #0f0f0f; font-weight: 600; font-size: 14px; margin-bottom: 32px; }
-                .next-steps { margin: 32px 0; }
-                .steps-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center; }
-                .steps-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
-                .step { border: 2px solid #d4af37; border-radius: 12px; padding: 20px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .step-icon { font-size: 32px; margin-bottom: 12px; }
-                .step-text { font-size: 12px; font-weight: 700; color: #0f0f0f; }
-                .delivery-highlight { border: 3px solid #d4af37; border-radius: 14px; padding: 24px; background: linear-gradient(135deg, #a37f1f 0%, #d4af37 50%, #8b7521 100%); text-align: center; margin: 32px 0; box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
-                .delivery-label { color: #fff; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
-                .delivery-date { color: #fff; font-size: 24px; font-weight: 900; letter-spacing: 1px; }
-                .items-section { margin: 32px 0; }
-                .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
-                table { width: 100%; border-collapse: collapse; background: #fff; }
-            </style>
-        </head>
-        <body>
-            <div class="watermark">eShopper Luxe</div>
-            <div class="wrap">
-                <div class="card">
-                    <!-- PREMIUM HEADER -->
-                    <div class="head">
-                        <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td class="brand-left">
-                                    <div class="brand-badge">
-                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-                                    </div>
-                                </td>
-                                <td class="brand-center">
-                                    <p class="brand-title">eShopper Boutique Luxe</p>
-                                    <p class="tagline">Premium Fashion Destination</p>
-                                </td>
-                                <td class="brand-spacer"></td>
-                            </tr>
-                        </table>
-                    </div>
-                    <!-- ...existing code... -->
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
-};
+    //     <td>${itemDesc}</td>
+    //     <td>${qty}</td>
+    //     <td>₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+    //   </tr>
+    //   `;
+    // }).join('');
+    // FIX: Ensure map returns template string and remove stray closing brace
+    // Example:
+    // items.map((item, idx) => {
+    //   const itemDesc = ...;
+    //   const qty = ...;
+    //   const line = ...;
+    //   return `
+    //     <td>${idx + 1}</td>
+    //     <td>${itemDesc}</td>
+    //     <td>${qty}</td>
+    //     <td>₹${line.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
 
 // 🔴 BUILD ORDER CONFIRMATION PROFORMA HTML - For verified/confirmed orders
 // (Already defined below, duplicate removed)
@@ -2157,82 +1800,57 @@ app.post('/api/auth-sync', async (req, res) => {
     }
 });
 
-app.post('/api/send-otp', authLimiter, async (req, res) => {
-    try {
-        const { email, type } = req.body;
-        if (!email || !type) return res.status(400).json({ message: "Email and type are required." });
+app.post('/api/chat', async (req, res) => {
+    const prompt = (req.body?.prompt || req.body?.message || '').trim();
+    const history = req.body?.history || req.body?.conversationHistory || [];
 
-        const normalizedEmail = email.toLowerCase().trim();
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const user = await User.findOne({ $or: [{ email: normalizedEmail }, { username: email.toLowerCase() }] });
-
-        if (type === 'forget' && !user) return res.json({ result: "Done", message: "If account exists, check your email for reset code." });
-        if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
-
-        if (user) {
-            user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
-        } else {
-            await OTPRecord.findOneAndUpdate({ email: normalizedEmail }, { otp, email: normalizedEmail }, { upsert: true });
-        }
-
-                                // 📧 CRITICAL FIX: Always send to user's actual email, not the input (which might be username)
-                                const emailToSend = user ? user.email : normalizedEmail;
-                                // Send OTP email using Brevo
-                                const subject = type === 'signup' ? 'Your ESHOPPER Signup OTP' : 'Your ESHOPPER Password Reset OTP';
-                                const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESHOPPER OTP Verification</title>
-    <style>
-        body { background: #f6f6f6; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-        .lux-card { max-width: 420px; margin: 32px auto; background: #fff; border-radius: 24px; box-shadow: 0 8px 32px rgba(212,175,55,0.10), 0 1.5px 8px #d4af37; padding: 0; overflow: hidden; border: 2px solid #d4af37; }
-        .lux-header { background: linear-gradient(90deg, #0a0a0a 60%, #d4af37 100%); padding: 32px 24px 18px 24px; text-align: center; }
-        .lux-logo { font-size: 44px; color: #d4af37; font-weight: 900; letter-spacing: 2px; margin-bottom: 8px; }
-        .lux-title { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0 0 6px 0; }
-        .lux-subtitle { font-size: 13px; color: #d4af37; font-weight: 700; letter-spacing: 1px; margin-bottom: 0; }
-        .lux-content { padding: 32px 24px 24px 24px; text-align: center; }
-        .otp-label { font-size: 15px; color: #222; font-weight: 700; margin-bottom: 10px; letter-spacing: 1px; }
-        .otp-box { font-size: 38px; font-weight: 900; color: #d4af37; letter-spacing: 12px; background: #f9f7f4; border-radius: 12px; padding: 18px 0; margin: 0 auto 18px auto; width: 80%; border: 2px solid #d4af37; }
-        .otp-valid { font-size: 13px; color: #888; margin-bottom: 18px; }
-        .lux-footer { font-size: 12px; color: #888; background: #f6f6f6; padding: 18px 24px; border-top: 1px solid #eee; border-radius: 0 0 24px 24px; text-align: center; }
-        @media (max-width: 600px) { .lux-card { max-width: 98vw; } .lux-header, .lux-content, .lux-footer { padding-left: 8vw; padding-right: 8vw; } }
-    </style>
-</head>
-<body>
-    <div class="lux-card">
-        <div class="lux-header">
-            <div class="lux-logo">💎</div>
-            <div class="lux-title">ESHOPPER OTP Verification</div>
-            <div class="lux-subtitle">Boutique Luxe Security</div>
-        </div>
-        <div class="lux-content">
-            <div class="otp-label">Your One-Time Password (OTP) is:</div>
-            <div class="otp-box">${otp}</div>
-            <div class="otp-valid">This OTP is valid for <b>10 minutes</b>. Please do not share it with anyone.</div>
-        </div>
-        <div class="lux-footer">
-            If you did not request this, please ignore this email.<br>
-            <span style="color:#d4af37;font-weight:700;">eShopper Boutique Luxe</span>
-        </div>
-    </div>
-</body>
-</html>
-`;
-                                try {
-                                        await sendEmail({ to: emailToSend, subject, htmlContent });
-                                } catch (err) {
-                                        console.error('❌ Failed to send OTP email:', err.message);
-                                        return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
-                                }
-                                res.json({ result: "Done", message: "OTP sent successfully" });
-    } catch (e) {
-        console.error("❌ Email Error:", e.message);
-        console.error("❌ Email Error Stack:", e.stack);
-        res.status(500).json({ error: "Failed to send OTP. Please try again." });
+    if (!prompt) {
+        console.error("⚠️ No prompt received from frontend");
+        return res.status(400).json({ error: "Prompt is required" });
     }
+
+    if (!genAI) {
+        return res.status(500).json({ error: "GEMINI_API_KEY missing or invalid" });
+    }
+
+    // Try all models
+    let textResponse = "";
+    let lastModelError = null;
+    for (const modelName of candidateModels) {
+        if (isModelCoolingDown(modelName)) continue;
+        const model = genAI.getGenerativeModel({ model: modelName, systemInstruction });
+        let result, response;
+        let modelError = null;
+        // Try model
+        result = await model.generateContent(fullPrompt).catch(err => { modelError = err; });
+        if (!modelError && result) {
+            response = await result.response;
+            textResponse = response.text();
+            if (textResponse && textResponse.trim()) {
+                console.log(`✅ AI responded successfully using model: ${modelName}`);
+                break;
+            }
+            modelError = new Error(`Empty response from model: ${modelName}`);
+        }
+        if (modelError && isQuotaError(modelError)) {
+            setModelCooldown(modelName, modelError);
+            lastModelError = modelError;
+            continue;
+        }
+        // Try REST fallback
+        let restError = null;
+        const restText = await generateWithRest(modelName, fullPrompt).catch(err => { restError = err; });
+        if (!restError && restText && restText.trim()) {
+            textResponse = restText;
+            break;
+        }
+        if (restError && isQuotaError(restError)) setModelCooldown(modelName, restError);
+        lastModelError = restError || modelError;
+    }
+    if (!textResponse || !textResponse.trim()) {
+        throw lastModelError || new Error("No Gemini model returned a valid response");
+    }
+    res.json({ text: textResponse });
 });
 
 app.post('/api/reset-password', authLimiter, async (req, res) => {
@@ -2250,103 +1868,6 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
         if (!/[A-Z]/.test(newPassword)) {
             return res.status(400).json({ message: "Password must contain at least one uppercase letter." });
         }
-
-        // Check for special character
-        if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
-            return res.status(400).json({ message: "Password must contain at least one special character." });
-        }
-
-        const user = await User.findOne({ $or: [{ email: searchTerm }, { username: searchTerm }] });
-        
-        if (!user) {
-            return res.status(404).json({ message: "User not found." });
-        }
-
-        // ⏰ CHECK OTP VALIDITY (Exactly 10 minutes)
-        if (!user.otp || !user.otpExpires) {
-            return res.status(400).json({ message: "No OTP found. Please request a new code." });
-        }
-
-        if (Date.now() > user.otpExpires) {
-            // Clean expired OTP
-            user.otp = undefined;
-            user.otpExpires = undefined;
-            await user.save();
-            return res.status(400).json({ message: "OTP has expired. Please request a new code." });
-        }
-
-        // ✅ VERIFY OTP
-        if (user.otp !== otp) {
-            return res.status(400).json({ message: "Invalid OTP code. Please check and try again." });
-        }
-
-        // 🔐 HASH NEW PASSWORD
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
-        
-        // 🧹 CLEANUP: Remove OTP and expiration after successful reset
-        user.otp = undefined;
-        user.otpExpires = undefined;
-        
-        await user.save();
-        
-        console.log(`✅ Password reset successful for user: ${ user.username } `);
-        res.json({ result: "Done", message: "Password updated successfully!" });
-        
-    } catch (e) {
-        console.error("❌ Password Reset Error:", e.message);
-        res.status(500).json({ message: "Something went wrong. Please try again." });
-    }
-});
-
-// CHECK USERNAME AVAILABILITY - For signup validation
-app.post('/api/check-username', async (req, res) => {
-    try {
-        const { username } = req.body;
-        if (!username || username.length < 3) {
-            return res.status(400).json({ message: "Username must be at least 3 characters" });
-        }
-        const normalizedUsername = username.toLowerCase().trim();
-        const existingUser = await User.findOne({ username: normalizedUsername });
-        res.json({ available: !existingUser });
-    } catch (e) {
-        console.error("❌ Username Check Error:", e.message);
-        res.status(500).json({ error: "Failed to check username" });
-    }
-});
-
-app.post('/login', authLimiter, async (req, res) => {
-    try {
-        const searchTerm = req.body.username.toLowerCase().trim();
-        const user = await User.findOne({ $or: [{ username: searchTerm }, { email: searchTerm }] });
-
-        // 🔒 CHECK IF ACCOUNT IS LOCKED
-        if (user && user.lockUntil && Date.now() < user.lockUntil) {
-            const minutesRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
-            return res.status(403).json({ 
-                message: `Account temporarily locked due to multiple failed login attempts.Try again in ${ minutesRemaining } minute${ minutesRemaining > 1 ? 's' : '' }.`,
-                remainingMinutes: minutesRemaining
-            });
-        }
-
-        // 🔐 CHECK IF USER EXISTS AND HAS PASSWORD
-        if (user) {
-            // ❌ BLOCK LOGIN IF NO PASSWORD (Google/Phone auth user)
-            if (!user.password) {
-                const authMethod = user.provider === 'google' ? 'Google Login' : 
-                                  user.provider === 'phone' ? 'Phone Login' :
-                                  'your authentication provider';
-                
-                console.warn(`⚠️ Login attempt by ${ user.provider } user via manual login: ${ user.email || user.username } `);
-                
-                return res.status(403).json({ 
-                    message: `This account uses ${ authMethod }. Use ${ authMethod } to sign in or set a password using Forgot Password.`,
-                    provider: user.provider,
-                    requiresFirebaseAuth: true
-                });
-            }
-
-            // ✅ PASSWORD EXISTS - COMPARE PASSWORDS
             if (await bcrypt.compare(req.body.password, user.password)) {
                 // ✅ LOGIN SUCCESS - RESET FAILED ATTEMPTS
                 user.failedAttempts = 0;
@@ -3029,49 +2550,7 @@ async function startServer() {
                     return res.status(404).json({ message: 'Order not found' });
                 }
 
-                // Check order status
-                const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-                const isDelivered = orderStatus === 'delivered';
 
-                // Determine filename based on requested type
-                const fileName = pdfType === 'final'
-                    ? `TaxInvoice-${orderId}.pdf`
-                    : (pdfType === 'confirmation' ? `Confirmation-${orderId}.pdf` : `Receipt-${orderId}.pdf`);
-
-                console.log(`📥 Download Request: Order ${orderId} | Type: ${pdfType} | Status: ${orderStatus} | Delivered: ${isDelivered}`);
-
-                // Generate PDF with timeout
-                const timeoutId = setTimeout(() => { }, 120000);
-
-                try {
-                    const pdfBuffer = await generateInvoicePdfBuffer({
-                        orderId: order.orderId,
-                        userName: order.userName,
-                        userEmail: order.userEmail,
-                        paymentMethod: order.paymentMethod,
-                        paymentStatus: order.paymentStatus,
-                        finalAmount: Number(order.finalAmount || 0),
-                        totalAmount: Number(order.totalAmount || 0),
-                        shippingAmount: Number(order.shippingAmount || 0),
-                        shippingAddress: order.shippingAddress || {},
-                        products: Array.isArray(order.products) ? order.products : [],
-                        orderDate: order.orderDate || order.createdAt,
-                        orderStatus: order.orderStatus || order.status || 'Ordered',
-                        isDelivered: isDelivered,  // Pass delivery status for footer customization
-                        pdfType: pdfType
-                    });
-
-                    clearTimeout(timeoutId);
-
-                    if (!pdfBuffer || pdfBuffer.length < 500) {
-                        throw new Error('Generated PDF buffer is invalid or too small');
-                    }
-
-                    // Set response headers
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-                    res.setHeader('Content-Length', String(pdfBuffer.length));
-                    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
                     res.setHeader('Pragma', 'no-cache');
                     res.setHeader('Expires', '0');
 
@@ -3329,7 +2808,6 @@ async function startServer() {
                 }
 
                 res.json({ text: textResponse });
-
             } catch (error) {
                 console.error("❌ Chat API Error:", error.message);
                 res.json({
@@ -3340,22 +2818,20 @@ async function startServer() {
         });
     // --- server.js AI REFACTOR END ---
 
+// --- SERVER STARTUP & MONGOOSE EVENTS ---
 const server = httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Master Server Live on ${PORT}`);
 });
 
-    server.on('error', (err) => {
-        if (err.code === 'EADDRINUSE') {
-            console.error(`\n❌ Port ${PORT} already in use!`);
-            console.error(`   Run this command to fix it:`);
-            console.error(`   Windows: netstat -ano | findstr :${PORT}  →  taskkill /PID <number> /F`);
-            process.exit(1);
-        }
-        throw err;
-    });
-}
-
-
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`\n❌ Port ${PORT} already in use!`);
+        console.error(`   Run this command to fix it:`);
+        console.error(`   Windows: netstat -ano | findstr :${PORT}  →  taskkill /PID <number> /F`);
+        process.exit(1);
+    }
+    throw err;
+});
 
 process.on("SIGINT", async () => {
     console.log("\n🛑 Shutting down gracefully...");
@@ -3393,7 +2869,3 @@ mongoose.connection.on('disconnected', () => {
             console.error('❌ MongoDB reconnect failed:', e.message);
         }
     }, 5000);
-});
-
-// Start the server
-startServer();
