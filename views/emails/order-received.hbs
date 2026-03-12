@@ -1,148 +1,314 @@
+<!--
+Ultra-Premium Luxe Email: Order Received
+Exact Gold/Black theme, pixel-perfect to reference
+-->
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Order Received - {{orderId}} | eShopper Luxe</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <style>
-    body { background: #181818; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
-    .container { max-width: 480px; margin: 0 auto; background: #222; border-radius: 12px; overflow: hidden; }
-    .header { background: linear-gradient(90deg, #FFD700 0%, #222 100%); padding: 32px 0 16px 0; text-align: center; }
-    .header img { max-width: 120px; margin-bottom: 12px; }
-    .order-id { color: #FFD700; font-size: 16px; font-weight: bold; letter-spacing: 1px; }
-    .order-title { color: #fff; font-size: 22px; font-weight: bold; margin: 12px 0 0 0; }
-    .date { color: #fff; font-size: 13px; margin-bottom: 8px; }
-    .badge { display: inline-block; background: #1e7e34; color: #fff; font-size: 13px; border-radius: 6px; padding: 4px 14px; margin: 10px 0 0 0; }
-    .section { padding: 24px 24px 0 24px; }
-    .greeting { font-size: 18px; font-weight: 600; margin: 0 0 8px 0; }
-    .desc { color: #ccc; font-size: 15px; margin-bottom: 12px; }
-    .summary-title { color: #FFD700; font-size: 15px; font-weight: bold; margin: 24px 0 8px 0; letter-spacing: 1px; }
-    .order-table { width: 100%; border-collapse: collapse; background: #181818; margin-bottom: 18px; }
-    .order-table th, .order-table td { border: none; padding: 10px 8px; text-align: left; font-size: 14px; }
-    .order-table th { color: #FFD700; font-weight: 600; border-bottom: 1px solid #333; }
-    .order-table td { color: #fff; border-bottom: 1px solid #222; }
-    .order-table img { width: 48px; border-radius: 8px; }
-    .cards-row { width: 100%; margin: 18px 0 0 0; }
-    .card { background: #191919; border: 1px solid #FFD700; border-radius: 8px; padding: 12px 14px; color: #FFD700; font-size: 14px; }
-    .card-title { color: #FFD700; font-size: 13px; font-weight: bold; margin-bottom: 4px; }
-    .card-content { color: #fff; font-size: 13px; }
-    .card2 { background: #191919; border: 1px solid #444; border-radius: 8px; padding: 12px 14px; color: #fff; font-size: 14px; }
-    .card2 .card-title { color: #fff; }
-    .totals { margin: 18px 0 0 0; }
-    .totals-row td { padding: 6px 0; }
-    .totals-label { color: #fff; font-size: 14px; }
-    .totals-value { color: #FFD700; font-size: 15px; font-weight: bold; }
-    .cta-btn { display: block; width: 100%; background: #FFD700; color: #181818; font-weight: bold; font-size: 16px; border-radius: 8px; text-align: center; text-decoration: none; padding: 14px 0; margin: 24px 0 0 0; letter-spacing: 1px; }
-    .note { color: #aaa; font-size: 12px; margin: 12px 0 0 0; text-align: center; }
-    .footer { background: #191919; padding: 24px 24px 0 24px; border-top: 2px solid #FFD700; }
-    .concierge-title { color: #FFD700; font-size: 18px; font-weight: bold; margin: 0 0 8px 0; }
-    .concierge-desc { color: #fff; font-size: 14px; margin-bottom: 18px; }
-    .footer-btns { text-align: center; margin-bottom: 18px; }
-    .footer-btn { display: inline-block; margin: 0 8px; padding: 10px 22px; border-radius: 6px; font-size: 15px; font-weight: bold; text-decoration: none; }
-    .whatsapp { background: #25D366; color: #181818; }
-    .email { background: #222; color: #FFD700; border: 1px solid #FFD700; }
-    .footer-address { color: #aaa; font-size: 12px; text-align: center; margin-bottom: 8px; }
-    .footer-links { color: #FFD700; font-size: 12px; text-align: center; margin-bottom: 18px; }
-    @media only screen and (max-width: 600px) {
-      .container, .section, .footer { padding: 8px !important; }
-      .header { padding: 18px 0 8px 0; }
-      .order-table th, .order-table td { font-size: 12px; padding: 6px 4px; }
-      .card, .card2 { padding: 8px 6px; font-size: 12px; }
-      .cta-btn { font-size: 14px; padding: 10px 0; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Received - Eshopper Boutique Luxe</title>
+    <style>
+        body {
+            background: #0A0A0A;
+            color: #D4AF37;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #181818;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 4px 32px #0002;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #0A0A0A 60%, #D4AF37 100%);
+            padding: 32px 0 18px 0;
+            text-align: center;
+        }
+
+        .logo {
+            height: 40px;
+            margin-bottom: 12px;
+        }
+
+        .order-title {
+            font-size: 26px;
+            font-weight: 900;
+            color: #FFD700;
+            letter-spacing: 1.5px;
+            margin: 0;
+        }
+
+        .order-id {
+            font-size: 15px;
+            color: #FFD700;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+        .order-date {
+            font-size: 13px;
+            color: #fff;
+            margin-top: 2px;
+        }
+
+        .banner {
+            background: #FFD700;
+            color: #0A0A0A;
+            font-size: 20px;
+            font-weight: 900;
+            padding: 16px 0;
+            border-radius: 8px;
+            margin: 24px 0 0 0;
+            letter-spacing: 1px;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #fff;
+            margin: 24px 0 0 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #1ec773;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 16px;
+            padding: 6px 18px;
+            margin: 18px 0 0 0;
+        }
+
+        .summary-title {
+            font-size: 18px;
+            color: #FFD700;
+            font-weight: 700;
+            margin: 32px 0 8px 0;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #222;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .summary-table th,
+        .summary-table td {
+            padding: 12px 8px;
+            text-align: left;
+        }
+
+        .summary-table th {
+            background: #181818;
+            color: #FFD700;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .summary-table td {
+            color: #fff;
+            font-size: 14px;
+            border-bottom: 1px solid #333;
+        }
+
+        .summary-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .product-img {
+            width: 60px;
+            border-radius: 8px;
+        }
+
+        .card-row {
+            display: flex;
+            gap: 16px;
+            margin: 24px 0 0 0;
+        }
+
+        .card {
+            flex: 1;
+            background: #181818;
+            border-radius: 12px;
+            padding: 16px;
+            color: #FFD700;
+            font-size: 14px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            color: #FFD700;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .card-content {
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .total-row {
+            font-size: 16px;
+            color: #FFD700;
+            font-weight: 900;
+        }
+
+        .footer {
+            background: #181818;
+            color: #FFD700;
+            text-align: center;
+            padding: 32px 0 0 0;
+            border-radius: 0 0 18px 18px;
+        }
+
+        .concierge {
+            background: #222;
+            border-radius: 12px;
+            margin: 24px auto 0 auto;
+            padding: 18px 0 12px 0;
+            max-width: 90%;
+        }
+
+        .concierge-title {
+            font-size: 18px;
+            color: #FFD700;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .concierge-desc {
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .btn-row {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            border-radius: 24px;
+            font-weight: 700;
+            font-size: 15px;
+            text-decoration: none;
+        }
+
+        .btn-whatsapp {
+            background: #25D366;
+            color: #181818;
+        }
+
+        .btn-email {
+            background: #222;
+            color: #FFD700;
+            border: 2px solid #FFD700;
+        }
+
+        .address {
+            color: #fff;
+            font-size: 13px;
+            margin: 18px 0 0 0;
+        }
+
+        .footer-note {
+            color: #888;
+            font-size: 12px;
+            margin: 18px 0 0 0;
+        }
+
+        @media (max-width: 650px) {
+            .container {
+                max-width: 98vw;
+            }
+
+            .card-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .btn-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
 </head>
+
 <body>
-  <div class="container">
-    <div class="header">
-      <img src="https://eshopperr.me/assets/logo-dark.png" alt="eShopper Luxe" />
-      <div class="order-id">ORDER ID {{orderId}}</div>
-      <div class="order-title">✔ ORDER RECEIVED</div>
-      <div class="date">{{orderDate}}</div>
-      <div class="badge">Payment Received &amp; Verified</div>
-    </div>
-    <div class="section">
-      <div class="greeting">Hi {{customerName}},</div>
-      <div class="desc">Your luxury selection is now in our queue. We are verifying your items and preparing them for dispatch.</div>
-      <div class="summary-title">ORDER SUMMARY</div>
-      <table class="order-table">
-        <tr>
-          <th>ITEM</th>
-          <th>DETAILS</th>
-          <th>QTY</th>
-          <th>PRICE</th>
-        </tr>
-        {{#each items}}
-        <tr>
-          <td><img src="{{this.imageUrl}}" alt="{{this.name}}" /></td>
-          <td>
-            <div style="font-weight:600;">{{this.name}}</div>
-            <div style="color:#FFD700;">Size: {{this.size}}</div>
-            <div style="color:#fff;">Color: {{this.color}}</div>
-          </td>
-          <td>{{this.qty}}</td>
-          <td>₹{{this.price}}</td>
-        </tr>
-        {{/each}}
-      </table>
-      <table class="cards-row" width="100%">
-        <tr>
-          <td width="50%" valign="top">
+    <div class="container">
+        <div class="header">
+            <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
+            <div class="order-title">ORDER RECEIVED</div>
+            <div class="order-id">Order ID: {{orderId}}</div>
+            <div class="order-date">{{orderDate}}</div>
+        </div>
+        <div class="banner">ORDER RECEIVED</div>
+        <div class="greeting">Hi {{customerName}},<br>Your luxury selection is now in our queue. We are verifying your
+            items and preparing them for dispatch.</div>
+        <div class="badge">Payment Received &amp; Verified</div>
+        <div class="summary-title">ORDER SUMMARY</div>
+        <table class="summary-table">
+            <tr>
+                <th>ITEM</th>
+                <th>DETAILS</th>
+                <th>QTY</th>
+                <th>PRICE</th>
+            </tr>
+            {{#each items}}
+            <tr>
+                <td><img class="product-img" src="{{imageUrl}}" alt="{{name}}" /></td>
+                <td>{{name}}<br><span style="color:#FFD700; font-size:12px;">Size: {{size}}</span><br><span
+                        style="color:#fff; font-size:12px;">Color: {{color}}</span></td>
+                <td>{{quantity}}</td>
+                <td>&#8377;{{subtotal}}</td>
+            </tr>
+            {{/each}}
+            <tr class="total-row">
+                <td colspan="3" style="text-align:right;">Total Amount</td>
+                <td>&#8377;{{totalAmount}}</td>
+            </tr>
+        </table>
+        <div class="card-row">
             <div class="card">
-              <div class="card-title">📍 SHIPPING TO</div>
-              <div class="card-content">
-                {{shippingAddress.name}}<br/>
-                {{shippingAddress.address}}<br/>
-                {{shippingAddress.city}}, {{shippingAddress.state}} {{shippingAddress.pincode}}<br/>
-                {{shippingAddress.phone}}
-              </div>
+                <div class="card-title">SHIPPING TO</div>
+                <div class="card-content">{{shippingName}}<br>{{shippingAddress}}<br>{{shippingPhone}}</div>
             </div>
-          </td>
-          <td width="50%" valign="top">
-            <div class="card2">
-              <div class="card-title">💳 PAYMENT METHOD</div>
-              <div class="card-content">
-                {{paymentMethod}}<br/>
-                Status: <span style="color:#25D366;">{{paymentStatus}}</span>
-              </div>
+            <div class="card">
+                <div class="card-title">PAYMENT METHOD</div>
+                <div class="card-content">{{paymentMethod}}<br>Status: <span
+                        style="color:#1ec773;">{{paymentStatus}}</span></div>
             </div>
-          </td>
-        </tr>
-      </table>
-      <table class="totals" width="100%">
-        <tr class="totals-row">
-          <td class="totals-label">Subtotal</td>
-          <td align="right" class="totals-label">₹{{subtotal}}</td>
-        </tr>
-        <tr class="totals-row">
-          <td class="totals-label">Shipping</td>
-          <td align="right" class="totals-label">{{shippingCharges}}</td>
-        </tr>
-        <tr class="totals-row">
-          <td class="totals-label" style="font-weight:bold;">Total Amount</td>
-          <td align="right" class="totals-value">₹{{totalPaid}}</td>
-        </tr>
-      </table>
-      <a href="{{trackingUrl}}" class="cta-btn">VIEW ORDER STATUS</a>
-      <div class="note">* This is an order receipt, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
+        </div>
+        <div class="footer">
+            <div class="concierge">
+                <div class="concierge-title">&#x1F451; Personal Concierge</div>
+                <div class="concierge-desc">Our dedicated team is here to assist with any questions about your order.
+                    Reach out anytime!</div>
+                <div class="btn-row">
+                    <a class="btn btn-whatsapp" href="{{whatsappUrl}}">&#x1F4AC; WHATSAPP SUPPORT</a>
+                    <a class="btn btn-email" href="mailto:{{supportEmail}}">&#x2709;&#xFE0F; EMAIL US</a>
+                </div>
+            </div>
+            <div class="address">{{companyAddress}}</div>
+            <div class="footer-note">* This is an order receipt, not a Tax Invoice. Tax Invoice will be provided upon
+                delivery.</div>
+        </div>
     </div>
-    <div class="footer">
-      <div style="text-align:center; font-size:32px; margin-bottom:8px;">👑</div>
-      <div class="concierge-title">Personal Concierge</div>
-      <div class="concierge-desc">Our dedicated team is here to assist with any questions about your order. Reach out anytime!</div>
-      <div class="footer-btns">
-        <a href="https://wa.me/918447859784" class="footer-btn whatsapp">💬 WHATSAPP SUPPORT</a>
-        <a href="mailto:info@eshopperr.me" class="footer-btn email">✉️ EMAIL US</a>
-      </div>
-      <div class="footer-address">
-        © 2026 eShopper Luxe. All rights reserved.<br/>
-        Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India
-      </div>
-      <div class="footer-links">
-        <a href="https://eshopperr.me/privacy" style="color:#FFD700;text-decoration:none;">Privacy Policy</a> | 
-        <a href="https://eshopperr.me/terms" style="color:#FFD700;text-decoration:none;">Terms of Service</a>
-      </div>
-    </div>
-  </div>
 </body>
+
 </html>
