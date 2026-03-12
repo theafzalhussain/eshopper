@@ -1,183 +1,89 @@
-<!-- Order Out for Delivery / Arriving Today Email Template (Table-based, Responsive) -->
+<!--
+Ultra-Premium Luxe Email: Arriving Today / Out for Delivery
+Exact Orange Banner, Security Box, Rider Info, Checklist, and layout as per reference
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Arriving Today - eShopper Luxe</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arriving Today - Eshopper Boutique Luxe</title>
+  <style>
+    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
+    .header { background: linear-gradient(90deg, #0A0A0A 60%, #FF9800 100%); padding: 32px 0 18px 0; text-align: center; }
+    .logo { height: 40px; margin-bottom: 12px; }
+    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
+    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
+    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
+    .banner { background: #FF9800; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .banner-icon { font-size: 26px; }
+    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
+    .delivery-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; text-align: center; }
+    .delivery-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
+    .delivery-time { font-size: 18px; color: #fff; font-weight: 900; margin-bottom: 2px; }
+    .security-box { background: #fff3f3; border: 2px solid #e53935; border-radius: 10px; color: #e53935; padding: 16px; margin: 24px 0 0 0; font-size: 15px; font-weight: 700; }
+    .security-title { font-size: 15px; font-weight: 900; margin-bottom: 6px; }
+    .security-otp { font-size: 18px; color: #e53935; font-weight: 900; letter-spacing: 2px; background: #fff; border-radius: 6px; padding: 4px 12px; display: inline-block; margin: 8px 0; }
+    .rider-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; }
+    .rider-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
+    .rider-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .rider-label { color: #FFD700; font-size: 14px; font-weight: 700; }
+    .rider-value { color: #fff; font-size: 14px; }
+    .track-btn { display: block; width: 80%; margin: 24px auto 0 auto; background: #FF9800; color: #fff; font-size: 16px; font-weight: 900; padding: 14px 0; border-radius: 24px; text-align: center; text-decoration: none; letter-spacing: 1px; }
+    .checklist { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; }
+    .checklist-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
+    .checklist-list { color: #fff; font-size: 14px; margin: 0; padding-left: 18px; }
+    .checklist-list li { margin-bottom: 6px; }
+    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
+    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
+    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
+    @media (max-width: 650px) {
+      .container { max-width: 98vw; }
+    }
+  </style>
 </head>
-<body style="margin:0; padding:0; background:#181818; color:#fff; font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" bgcolor="#181818" cellpadding="0" cellspacing="0" style="padding:0; margin:0;">
-    <tr>
-      <td align="center">
-        <table width="480" cellpadding="0" cellspacing="0" style="background:#232323; border-radius:12px; margin:32px 0; box-shadow:0 2px 16px #00000033;">
-          <!-- Header -->
-          <tr>
-            <td style="padding:24px 32px 8px 32px; text-align:left;">
-              <img src="https://yourdomain.com/logo.png" alt="eShopper Luxe" style="height:28px; margin-bottom:12px;">
-              <div style="font-size:13px; color:#fff; text-align:right; float:right;">
-                <span style="background:#ff9800; color:#fff; font-size:13px; padding:4px 12px; border-radius:6px; font-weight:600;">🚚 OUT FOR DELIVERY</span>
-              </div>
-            </td>
-          </tr>
-          <!-- Arriving Today Banner -->
-          <tr>
-            <td style="background:#ff9800; color:#fff; text-align:center; font-size:22px; font-weight:600; padding:18px 0 10px 0; letter-spacing:1px;">
-              <span style="font-size:22px;">🎁</span> IT'S ARRIVING TODAY!
-              <div style="font-size:13px; color:#fffde7; font-weight:400; margin-top:2px;">
-                Your luxury package is just minutes away
-              </div>
-            </td>
-          </tr>
-          <!-- Delivery in Progress -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:center;">
-              <div style="background:#232323; border:2px solid #ff9800; border-radius:8px; padding:12px 0;">
-                <span style="background:#ff9800; color:#232323; font-size:13px; font-weight:600; border-radius:6px; padding:4px 12px;">⏰ DELIVERY IN PROGRESS</span>
-                <div style="color:#fff; font-size:22px; font-weight:700; margin:8px 0 0 0;">TODAY</div>
-                <div style="color:#ffd700; font-size:13px; margin-top:2px;">Expected by {{expectedTime}}</div>
-              </div>
-            </td>
-          </tr>
-          <!-- Greeting -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:left;">
-              <div style="font-size:18px; font-weight:600; margin-bottom:6px;">Hi {{customerName}} <span style="font-size:18px;">✨</span></div>
-              <div style="font-size:14px; color:#ccc;">
-                Your luxury package is <span style="color:#ff9800; font-weight:600;">out for delivery</span> and will reach you today!<br>
-                Our delivery partner is on the way to your doorstep.
-              </div>
-            </td>
-          </tr>
-          <!-- Security Alert -->
-          <tr>
-            <td style="padding:24px 32px 0 32px;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#b71c1c; border-radius:8px;">
-                <tr>
-                  <td style="color:#ffd700; font-size:15px; font-weight:600; padding:8px 0 0 0;">
-                    <span style="font-size:18px;">&#9888;</span> SECURITY FIRST!
-                  </td>
-                </tr>
-                <tr>
-                  <td style="color:#fff; font-size:13px; padding:8px 0;">
-                    Please share the <b>OTP or verification code ONLY</b> when you receive the package in perfect condition.<br>
-                    <span style="color:#ffd700;">Never share OTP before inspecting the package</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Delivery Partner Info -->
-          <tr>
-            <td style="padding:24px 32px 0 32px;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#232323; border-radius:8px; border:2px solid #ff9800;">
-                <tr>
-                  <td style="color:#ff9800; font-size:15px; font-weight:600; padding:8px 0 0 0;">
-                    <span style="font-size:18px;">🚚</span> YOUR DELIVERY PARTNER
-                  </td>
-                </tr>
-                <tr>
-                  <td style="color:#b6b6b6; font-size:14px; padding:8px 0;">Courier Partner: <span style="color:#fff;">{{courierPartner}}</span></td>
-                </tr>
-                <tr>
-                  <td style="color:#b6b6b6; font-size:14px; padding:8px 0;">Tracking ID: <span style="color:#ffd700;">{{trackingId}}</span></td>
-                </tr>
-                <tr>
-                  <td style="color:#b6b6b6; font-size:14px; padding:8px 0;">Delivery Agent: <span style="color:#fff;">{{deliveryAgent}}</span></td>
-                </tr>
-                <tr>
-                  <td style="color:#b6b6b6; font-size:14px; padding:8px 0;">Agent Contact: <span style="color:#ffd700;">{{agentContact}}</span></td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Delivery Location -->
-          <tr>
-            <td style="padding:24px 32px 0 32px;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d3d2a; border-radius:8px;">
-                <tr>
-                  <td style="color:#ffd700; font-size:13px; font-weight:600; padding:8px 0 0 0;">&#128205; DELIVERY LOCATION</td>
-                </tr>
-                <tr>
-                  <td style="color:#fff; font-size:14px; font-weight:600;">{{customerName}}</td>
-                </tr>
-                <tr>
-                  <td style="color:#b6b6b6; font-size:13px;">
-                    {{address}}<br>
-                    {{city}}, {{state}} {{zip}}<br>
-                    <span style="color:#ffd700;">&#128222;</span> {{phone}}
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Live Tracking Map -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:center;">
-              <div style="background:#232323; border-radius:8px; padding:16px 0;">
-                <img src="https://img.icons8.com/ios-filled/50/ff9800/map.png" width="40" style="display:block; margin:0 auto 8px auto;">
-                <div style="color:#fff; font-size:14px;">Live tracking map</div>
-                <a href="{{liveTrackingUrl}}" style="background:#ff9800; color:#232323; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; display:inline-block; margin-top:8px;">🗺️ Track Live Location</a>
-              </div>
-            </td>
-          </tr>
-          <!-- Change Address & Call Support -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:center;">
-              <a href="{{changeAddressUrl}}" style="background:#25d366; color:#232323; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; margin-right:8px; display:inline-block;">Change Address</a>
-              <a href="{{callSupportUrl}}" style="background:#232323; color:#ffd700; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; border:1px solid #ffd700; display:inline-block;">Call Support</a>
-            </td>
-          </tr>
-          <!-- Before Accepting Delivery -->
-          <tr>
-            <td style="padding:24px 32px 0 32px;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#143d1a; border-radius:8px;">
-                <tr>
-                  <td style="color:#ffd700; font-size:15px; font-weight:600; padding:8px 0 0 0;">
-                    ✔️ BEFORE ACCEPTING DELIVERY
-                  </td>
-                </tr>
-                <tr>
-                  <td style="color:#fff; font-size:13px; padding:8px 0;">
-                    <ul style="margin:8px 0 0 16px; padding:0;">
-                      <li>Check package seal is intact</li>
-                      <li>Verify Order ID matches: <span style="color:#ffd700;">{{orderId}}</span></li>
-                      <li>Open and inspect items condition</li>
-                      <li>Then share OTP/verification code</li>
-                    </ul>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <!-- Authentic & Insured -->
-          <tr>
-            <td style="padding:24px 32px 0 32px;">
-              <div style="background:#232323; border-radius:8px; padding:12px 0; text-align:center;">
-                <span style="background:#143d1a; color:#ffd700; font-size:15px; font-weight:600; border-radius:6px; padding:4px 12px;">🛡️ 100% AUTHENTIC & INSURED</span>
-                <div style="color:#fff; font-size:13px; margin-top:4px;">All deliveries are fully insured during transit</div>
-              </div>
-            </td>
-          </tr>
-          <!-- Need Help -->
-          <tr>
-            <td style="padding:24px 32px 0 32px; text-align:center;">
-              <div style="color:#b6b6b6; font-size:14px; margin-bottom:8px;">Questions? We're here to help!</div>
-              <a href="{{whatsappUrl}}" style="background:#25d366; color:#232323; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; margin-right:8px; display:inline-block;">WhatsApp</a>
-              <a href="{{instagramUrl}}" style="background:#ff2d55; color:#fff; font-size:15px; font-weight:600; text-decoration:none; padding:10px 24px; border-radius:6px; display:inline-block;">Instagram</a>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:24px 0 0 0; text-align:center; color:#b6b6b6; font-size:12px;">
-              © 2026 eShopper Luxe. All rights reserved.<br>
-              Shop 3, Sahid Marg, Near Power, Lucknow - 226001, UP, India<br>
-              <a href="{{privacyUrl}}" style="color:#ffd700; text-decoration:none;">Privacy</a> | <a href="{{termsUrl}}" style="color:#ffd700; text-decoration:none;">Terms</a>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+<body>
+  <div class="container">
+    <div class="header">
+      <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
+      <div class="order-title">OUT FOR DELIVERY</div>
+      <div class="order-id">Order ID: {{orderId}}</div>
+      <div class="order-date">{{orderDate}}</div>
+    </div>
+    <div class="banner"><span class="banner-icon">🎁</span>IT'S ARRIVING TODAY!</div>
+    <div class="greeting">Hi {{customerName}},<br>Your luxury package is <span style="color:#FF9800;font-weight:700;">out for delivery</span> and will reach you today! Our delivery partner is on the way to your doorstep.</div>
+    <div class="delivery-box">
+      <div class="delivery-title">DELIVERY IN PROGRESS</div>
+      <div class="delivery-time">{{deliveryDate}}<br><span style="font-size:14px; color:#FFD700;">Expected by {{deliveryTimeSlot}}</span></div>
+    </div>
+    <div class="security-box">
+      <div class="security-title">⚠️ SECURITY FIRST!</div>
+      Please share the OTP or verification code <span class="security-otp">{{otp}}</span> ONLY when you receive the package in perfect condition.<br>Never share OTP before inspecting the package.
+    </div>
+    <div class="rider-box">
+      <div class="rider-title">YOUR DELIVERY PARTNER</div>
+      <div class="rider-row"><span class="rider-label">Courier Partner</span><span class="rider-value">{{courierPartner}}</span></div>
+      <div class="rider-row"><span class="rider-label">Tracking ID</span><span class="rider-value">{{trackingNumber}}</span></div>
+      <div class="rider-row"><span class="rider-label">Delivery Agent</span><span class="rider-value">{{deliveryAgent}}</span></div>
+      <div class="rider-row"><span class="rider-label">Agent Contact</span><span class="rider-value">{{agentContact}}</span></div>
+      <div class="rider-row"><span class="rider-label">Delivery Location</span><span class="rider-value">{{deliveryLocation}}</span></div>
+    </div>
+    <a class="track-btn" href="{{liveTrackingUrl}}">🚗 Track Live Location</a>
+    <div class="checklist">
+      <div class="checklist-title">BEFORE ACCEPTING DELIVERY</div>
+      <ul class="checklist-list">
+        <li>✔️ Check package seal is intact</li>
+        <li>✔️ Verify Order ID matches: <span style="color:#FFD700;">{{orderId}}</span></li>
+        <li>✔️ Open and inspect items condition</li>
+        <li>✔️ Then share OTP/verification code</li>
+      </ul>
+      <div style="color:#FFD700; font-size:13px; margin-top:8px;">All deliveries are fully insured during transit.</div>
+    </div>
+    <div class="footer">
+      <div class="address">{{companyAddress}}</div>
+      <div class="footer-note">* This is a delivery update, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
+    </div>
+  </div>
 </body>
 </html>
