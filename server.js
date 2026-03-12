@@ -125,12 +125,21 @@ let firebaseAdminReady = false;
 
 try {
     let firebaseCredentials;
+    // Log if env var is detected
+    console.log('Firebase Env Detected:', !!process.env.FIREBASE_CONFIG_JSON);
 
     // PRODUCTION (Railway): Use environment variable JSON string
     if (process.env.FIREBASE_CONFIG_JSON) {
         console.log('📱 Loading Firebase Admin from Railway environment variable...');
-        firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
-        console.log(`✅ Firebase config parsed successfully for project: ${firebaseCredentials.project_id}`);
+        let trimmedEnv = process.env.FIREBASE_CONFIG_JSON.trim();
+        try {
+            firebaseCredentials = JSON.parse(trimmedEnv);
+            console.log(`✅ Firebase config parsed successfully for project: ${firebaseCredentials.project_id}`);
+        } catch (parseErr) {
+            console.error('❌ Failed to parse FIREBASE_CONFIG_JSON. Please ensure it is valid JSON.');
+            console.error('   Error:', parseErr.message);
+            firebaseCredentials = null;
+        }
     }
     // LOCAL DEVELOPMENT: Check for firebase-admin.json file
     else {
@@ -140,40 +149,45 @@ try {
             firebaseCredentials = require('./firebase-admin.json');
             console.log(`✅ Firebase config loaded from file for project: ${firebaseCredentials.project_id}`);
         } else {
-            throw new Error('Firebase credentials not found. Set FIREBASE_CONFIG_JSON environment variable or add firebase-admin.json locally.');
+            console.error('Firebase credentials not found. Set FIREBASE_CONFIG_JSON environment variable or add firebase-admin.json locally.');
+            firebaseCredentials = null;
         }
     }
 
     // Validate required fields
-    if (!firebaseCredentials.project_id || !firebaseCredentials.private_key || !firebaseCredentials.client_email) {
-        throw new Error('Invalid Firebase credentials: Missing required fields (project_id, private_key, client_email)');
+    if (
+        firebaseCredentials &&
+        firebaseCredentials.project_id &&
+        firebaseCredentials.private_key &&
+        firebaseCredentials.client_email
+    ) {
+        // Initialize Firebase Admin SDK
+        admin.initializeApp({
+            credential: admin.credential.cert(firebaseCredentials),
+            projectId: firebaseCredentials.project_id,
+        });
+        firebaseAdminReady = true;
+
+        console.log('✅ Firebase Admin SDK initialized successfully');
+        console.log(`🔐 Project ID: ${firebaseCredentials.project_id}`);
+        console.log(`📧 Service Account: ${firebaseCredentials.client_email}`);
+    } else {
+        if (firebaseCredentials) {
+            console.error('❌ Invalid Firebase credentials: Missing required fields (project_id, private_key, client_email)');
+        }
+        console.error('⚠️ Continuing without Firebase Admin. Firebase auth-sync route will be unavailable until credentials are fixed.');
     }
-
-    // Initialize Firebase Admin SDK
-    admin.initializeApp({
-        credential: admin.credential.cert(firebaseCredentials),
-        projectId: firebaseCredentials.project_id,
-    });
-    firebaseAdminReady = true;
-
-    console.log('✅ Firebase Admin SDK initialized successfully');
-    console.log(`🔐 Project ID: ${firebaseCredentials.project_id}`);
-    console.log(`📧 Service Account: ${firebaseCredentials.client_email}`);
-
 } catch (err) {
     console.error('❌ Firebase Admin SDK initialization failed');
     console.error('   Error:', err.message);
-    console.error('');
     console.error('📋 Setup Instructions:');
     console.error('   PRODUCTION (Railway):');
     console.error('   1. Go to Railway Dashboard → Your Project → Variables');
     console.error('   2. Add: FIREBASE_CONFIG_JSON');
     console.error('   3. Value: Paste the entire firebase-admin.json content as a single-line JSON string');
-    console.error('');
     console.error('   LOCAL DEVELOPMENT:');
     console.error('   1. Place firebase-admin.json in project root');
     console.error('   2. Ensure it is in .gitignore');
-    console.error('');
     console.error('⚠️ Continuing without Firebase Admin. Firebase auth-sync route will be unavailable until credentials are fixed.');
 }
 
