@@ -22,6 +22,18 @@ const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
 // ===== EMAIL UTILITY (Brevo)
 const { sendTransactionalEmail } = require('./src/utils/email.js');
+
+// Minimal sendEmail utility for compatibility
+async function sendEmail({ to, subject, htmlContent, textContent, attachments }) {
+    return sendTransactionalEmail({
+        toEmail: to,
+        subject,
+        htmlContent,
+        textContent,
+        attachments
+    });
+}
+
 // EMAIL QUEUE ENABLED FLAG (from env or default false)
 const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
 
