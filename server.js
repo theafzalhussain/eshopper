@@ -3193,7 +3193,6 @@ async function startServer() {
                     .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
                     .lean();
 
-
                 // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
                 if (orders.length === 0) {
                     const checkoutOrders = await Checkout.find({ userid: userId })
