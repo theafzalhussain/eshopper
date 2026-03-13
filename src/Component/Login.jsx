@@ -29,7 +29,7 @@ export default function Login() {
                 const user = JSON.parse(savedUser)
                 if (user.id && user.username) {
                     // Auto-login: restore user session
-                    localStorage.setItem("login", true)
+                    localStorage.setItem("login", "true")
                     localStorage.setItem("name", user.name)
                     localStorage.setItem("userid", user.id)
                     localStorage.setItem("role", user.role)
@@ -77,7 +77,7 @@ export default function Login() {
             
             if (user.username) {
                 // --- STANDARD LOGIN SETUP ---
-                localStorage.setItem("login", true);
+                localStorage.setItem("login", "true");
                 localStorage.setItem("name", user.name);
                 localStorage.setItem("userid", user.id);
                 localStorage.setItem("role", user.role);
@@ -400,10 +400,17 @@ export default function Login() {
                     transition: 0.4s;
                 }
 
-                .master-login-btn:hover {
+                .master-login-btn:hover:not(:disabled) {
                     background: #17a2b8;
                     transform: translateY(-3px);
                     box-shadow: 0 15px 30px rgba(23,162,184,0.3);
+                }
+
+                .master-login-btn:disabled {
+                    opacity: 0.7;
+                    cursor: not-allowed;
+                    transform: none;
+                    box-shadow: none;
                 }
 
                 .premium-error-alert {
