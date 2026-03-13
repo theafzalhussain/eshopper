@@ -26,7 +26,6 @@ if (process.env.SENTRY_DSN) {
 }
 
 // 4. FIREBASE ADMIN INIT (with \n fix)
-let firebaseAdminReady = false;
 try {
     let firebaseCredentials;
     if (process.env.FIREBASE_CONFIG_JSON) {
@@ -54,7 +53,6 @@ try {
 }
 
 // 5. EXPRESS APP SETUP
-const app = express();
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -82,8 +80,7 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // 7. RATE LIMITING
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
-app.use(globalLimiter);
+// ...globalLimiter already declared above...
 
 // 8. MONGOOSE CONNECTION
 const MONGO_URI = process.env.MONGODB_URI;
@@ -424,51 +421,7 @@ if (process.env.SENTRY_DSN) {
 // 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
 app.set('trust proxy', 1);
 
-// 🔒 CORS - Robust production config
-const allowedOrigins = [
-    'https://eshopperr.me',
-    'https://www.eshopperr.me',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    process.env.FRONTEND_URL,
-    process.env.FRONTEND_URL?.replace('www.', ''),
-];
-const corsOptions = {
-    origin: '*',
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-};
-// Health check endpoint for uptime monitoring and debugging
-app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        time: new Date().toISOString(),
-        message: 'API is running',
-    });
-});
-
-// Apply CORS before any routes or middleware
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-
-// 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
-const httpServer = http.createServer(app);
-const io = new Server(httpServer, {
-    cors: {
-        origin: [
-            'https://eshopperr.me',
-            'https://www.eshopperr.me',
-            'http://localhost:3000',
-            'http://127.0.0.1:3000',
-            process.env.FRONTEND_URL
-        ].filter(Boolean),
-        credentials: true
-    },
-    transports: ['websocket', 'polling']
-});
+// ...duplicate CORS and server/socket.io setup removed...
 
 const ALLOWED_ORDER_STATUS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed'];
 const normalizeOrderStatus = (s = '') => {
@@ -520,9 +473,7 @@ app.use(express.json());
 app.use(helmet({ contentSecurityPolicy: false }));
 
 // 🔒 RATE LIMITERS
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
-app.use(globalLimiter);
+// ...duplicate globalLimiter and authLimiter removed...
 
 
 // 📊 REQUEST LOGGING MIDDLEWARE (with CORS origin info)
@@ -553,15 +504,7 @@ const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_PRIM
 const BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
 
 // 🔧 DATABASE CONNECTION SETUP
-const MONGO_URI = process.env.MONGODB_URI;
-
-if (!MONGO_URI) {
-    console.error("❌ CRITICAL: Missing MONGODB_URI in environment variables");
-    console.error("   Please set MONGODB_URI in your Railway environment");
-    process.exit(1);
-}
-
-console.log("🔍 Attempting MongoDB connection...");
+// ...duplicate MONGO_URI and connection removed...
 
 // 🔧 CLOUDINARY CONFIGURATION SETUP
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUD_NAME;
@@ -673,33 +616,7 @@ const enqueueEmailJob = async (jobType, payload) => {
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
-const User = mongoose.model('User', new mongoose.Schema({
-    name: String,
-    username: { type: String, unique: true, sparse: true },
-    email: { type: String, unique: true, sparse: true },
-    phone: String,
-    password: { type: String },
-    uid: { type: String, unique: true, sparse: true, index: true }, // Firebase UID
-    provider: { type: String, enum: ['email', 'google', 'phone'], default: 'email' }, // Auth provider
-    role: { type: String, default: "User" },
-    pic: String,
-    addressline1: String,
-    city: String,
-    state: String,
-    pin: String,
-    otp: String,
-    otpExpires: Date,
-    lastLogin: { type: Date, default: Date.now }, // Track last login
-    failedAttempts: { type: Number, default: 0 },
-    lockUntil: Date
-}, opts));
-const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String, rating: { type: Number, default: 4.5, min: 0, max: 5 }, reviews: { type: Number, default: 0 } }, opts));
-const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
-const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
-const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
-const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
-const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
+// ...duplicate Mongoose models removed...
 const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
 const Order = mongoose.model('Order', new mongoose.Schema({
     orderId: { type: String, unique: true, required: true, index: true },
@@ -3302,7 +3219,7 @@ app.get('/api/products', async (req, res) => {
 
 
 
-const PORT = process.env.PORT || 5000;
+// ...duplicate PORT removed...
 
 async function startServer() {
     try {
