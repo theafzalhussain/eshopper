@@ -16,6 +16,29 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const admin = require('firebase-admin');
+
+// --- Firebase Admin Initialization Fix ---
+let firebaseAdminReady = false;
+try {
+    // Prefer FIREBASE_CONFIG_JSON from env, fallback to firebase-admin.json file
+    let firebaseConfig = null;
+    if (process.env.FIREBASE_CONFIG_JSON) {
+        firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
+    } else if (fs.existsSync(path.join(__dirname, 'firebase-admin.json'))) {
+        firebaseConfig = require(path.join(__dirname, 'firebase-admin.json'));
+    }
+    if (firebaseConfig && !admin.apps.length) {
+        admin.initializeApp({
+            credential: admin.credential.cert(firebaseConfig),
+        });
+        firebaseAdminReady = true;
+        console.log('✅ Firebase Admin initialized');
+    } else if (!firebaseConfig) {
+        console.warn('⚠️  Firebase Admin config not found. Google sign-in will not work.');
+    }
+} catch (err) {
+    console.error('❌ Firebase Admin initialization failed:', err.message);
+}
 const fs = require('fs');
 const path = require('path');
 const Sentry = require('@sentry/node');
@@ -2233,29 +2256,36 @@ app.post('/api/auth-sync', async (req, res) => {
     }
 });
 
+
 app.post('/api/send-otp', authLimiter, async (req, res) => {
     try {
         const { email, type } = req.body;
         if (!email || !type) return res.status(400).json({ message: "Email and type are required." });
 
-        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedEmail = String(email).toLowerCase().trim();
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const user = await User.findOne({ $or: [{ email: normalizedEmail }, { username: email.toLowerCase() }] });
+        const user = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedEmail }] });
 
         if (type === 'forget' && !user) return res.json({ result: "Done", message: "If account exists, check your email for reset code." });
         if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
 
         if (user) {
-            user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
+            user.otp = otp;
+            user.otpExpires = new Date(Date.now() + 10 * 60000);
+            await user.save();
         } else {
             await OTPRecord.findOneAndUpdate({ email: normalizedEmail }, { otp, email: normalizedEmail }, { upsert: true });
         }
 
-                                // 📧 CRITICAL FIX: Always send to user's actual email, not the input (which might be username)
-                                const emailToSend = user ? user.email : normalizedEmail;
-                                // Send OTP email using Brevo
-                                const subject = type === 'signup' ? 'Your ESHOPPER Signup OTP' : 'Your ESHOPPER Password Reset OTP';
-                                const htmlContent = `
+        // Always send to a valid email
+        let emailToSend = user && user.email ? user.email : normalizedEmail;
+        if (!emailToSend || !emailToSend.includes('@')) {
+            console.error('❌ No valid email to send OTP:', emailToSend);
+            return res.status(400).json({ error: 'No valid email to send OTP.' });
+        }
+
+        const subject = type === 'signup' ? 'Your ESHOPPER Signup OTP' : 'Your ESHOPPER Password Reset OTP';
+        const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2297,13 +2327,13 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
 </body>
 </html>
 `;
-                                try {
-                                        await sendEmail({ to: emailToSend, subject, htmlContent });
-                                } catch (err) {
-                                        console.error('❌ Failed to send OTP email:', err.message);
-                                        return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
-                                }
-                                res.json({ result: "Done", message: "OTP sent successfully" });
+        try {
+            await sendEmail({ to: emailToSend, subject, htmlContent });
+        } catch (err) {
+            console.error('❌ Failed to send OTP email:', err.message);
+            return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
+        }
+        res.json({ result: "Done", message: "OTP sent successfully" });
     } catch (e) {
         console.error("❌ Email Error:", e.message);
         console.error("❌ Email Error Stack:", e.stack);
@@ -3132,40 +3162,27 @@ async function startServer() {
 
 
 
-        app.get('/api/orders/recent/:userId', async (req, res) => {
-            try {
-                const userId = String(req.params.userId || '').trim();
-                const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
+app.get('/api/orders/recent/:userId', async (req, res) => {
+    try {
+        const userId = String(req.params.userId || '').trim();
+        const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
+        if (!userId) {
+            return res.status(400).json({ message: 'userId is required' });
+        }
+        const orders = await Order.find({ userid: userId })
+            .sort({ updatedAt: -1, createdAt: -1 })
+            .limit(limit)
+            .select('orderId orderStatus finalAmount updatedAt createdAt')
+            .lean();
+        return res.json({
+            success: true,
+            orders: orders.map((item) => ({
+// --- End of /api/orders/recent/:userId ---
 
-                if (!userId) {
-                    return res.status(400).json({ message: 'userId is required' });
-                }
-
-                const orders = await Order.find({ userid: userId })
-                    .sort({ updatedAt: -1, createdAt: -1 })
-                    .limit(limit)
-                    .select('orderId orderStatus finalAmount updatedAt createdAt')
-                    .lean();
-
-                return res.json({
-                    success: true,
-                    orders: orders.map((item) => ({
-                        orderId: item.orderId,
-                        orderStatus: item.orderStatus || 'Order Placed',
-                        finalAmount: Number(item.finalAmount || 0),
-                        updatedAt: item.updatedAt || item.createdAt || new Date()
-                    }))
-                });
-            } catch (e) {
-                console.error('❌ Recent orders fetch error:', e.message);
-                return res.status(500).json({ message: 'Failed to fetch recent orders' });
-            }
-        });
-
-        app.get('/api/order/:orderId', async (req, res) => {
-            try {
-                const { orderId } = req.params;
-                const userId = req.query.userId;
+app.get('/api/order/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const userId = req.query.userId;
 
                 if (!orderId || !userId) {
                     return res.status(400).json({ message: 'orderId and userId are required' });
