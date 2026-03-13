@@ -1,127 +1,27 @@
-// 1. GLOBAL SETUP: ENV, SENTRY, FIREBASE
-
-// 1. Dotenv must be first
-
+// 🔴 LOAD ENV VARIABLES FIRST
 require('dotenv').config();
+
+// NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
-
-// 2. Sentry initialization
-let firebaseAdminReady = false;
+const cors = require('cors');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const multer = require('multer');
+const bcrypt = require('bcryptjs');
+const axios = require('axios');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const admin = require('firebase-admin');
+const fs = require('fs');
 const path = require('path');
-const MONGO_URI = process.env.MONGODB_URI;
-if (!MONGO_URI) {
-    console.error('❌ Missing MONGODB_URI');
-    process.exit(1);
-}
-mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('✅ MongoDB connected'))
-    .catch((err) => { console.error('❌ MongoDB connection error:', err.message); process.exit(1); });
-
-// 9. MODELS (User, Product, Order)
-const userSchema = new mongoose.Schema({
-    name: String,
-    email: { type: String, unique: true },
-    password: String,
-    uid: { type: String, unique: true },
-    role: { type: String, default: 'User' },
-}, { timestamps: true });
-const User = mongoose.model('User', userSchema);
-
-const productSchema = new mongoose.Schema({
-    name: String,
-    price: Number,
-    stock: Number,
-    description: String,
-    image: String,
-}, { timestamps: true });
-const Product = mongoose.model('Product', productSchema);
-
-const orderSchema = new mongoose.Schema({
-    orderId: { type: String, unique: true, required: true, index: true },
-
-        // ...existing code...
-            });
-    // ...existing code...
-            if (process.env.FIREBASE_CONFIG_JSON) {
-                    // रेलवे के लिए फिक्स: डबल बैकस्लैश हटाना
-                    firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON.trim().replace(/\\n/g, '\n'));
-            } else {
-                    firebaseCredentials = require('./firebase-admin.json');
-                // ...existing code...
-    const rateLimit = require('express-rate-limit');
-
-    const app = express();
-
-    // 🔒 4. NETWORKING & SECURITY SETUP (Crucial for Cloudflare/Railway)
-    app.set('trust proxy', 1);
-    app.use(express.json());
-    app.use(helmet({ contentSecurityPolicy: false }));
-
-    // 🛡️ 5. DEFINE RATE LIMITERS (Fिक्स: ReferenceError)
-    const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true });
-    // Ye raha authLimiter jo error de raha tha
-    const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts." } });
-    app.use(globalLimiter);
-
-    // 🔒 6. PRODUCTION CORS FIX
-    app.use(cors({
-            origin: ["https://eshopperr.me", "https://www.eshopperr.me"],
-            credentials: true,
-            methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    }));
-    app.options('*', cors());
-
-    // 📸 7. MEDIA STORAGE CONFIG
-    cloudinary.config({ cloud_name: process.env.CLOUD_NAME, api_key: process.env.CLOUD_API_KEY, api_secret: process.env.CLOUD_API_SECRET });
-    const storage = new CloudinaryStorage({ cloudinary, params: { folder: 'eshoper_master' } });
-    const upload = multer({ storage }).fields([{ name: 'pic1', maxCount: 1 }, { name: 'pic', maxCount: 1 }]);
-
-    // 🔧 8. DATABASE & MODELS
-    const toJSONCustom = { virtuals: true, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
-    const opts = { toJSON: toJSONCustom, timestamps: true };
-
-    const User = mongoose.model('User', new mongoose.Schema({ name: String, email: String, uid: String, provider: String, lastLogin: Date }, opts));
-    const Product = mongoose.model('Product', new mongoose.Schema({ name: String, baseprice: Number, pic1: String }, opts));
-
-    // 📧 9. BREVO EMAIL (Final REST Fix)
-    const sendMail = async (to, otp) => {
-            try {
-                    const BREVO_KEY = process.env.BREVO_API_KEY?.trim();
-                    await axios.post('https://api.brevo.com/v3/smtp/email', {
-                            sender: { name: "Eshopper Luxe", email: "support@eshopperr.me" },
-                            to: [{ email: to }],
-                            subject: "Verification Code - Eshopper",
-                            htmlContent: `<h2>Your code: ${otp}</h2>`
-                    }, { headers: { 'api-key': BREVO_KEY } });
-                    return true;
-            } catch (e) { console.error("❌ Email Error"); return false; }
-    };
-
-    // 🤖 10. AI FASHION ASSISTANT
-    app.post('/api/chat', async (req, res) => {
-            try {
-                    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                    const result = await model.generateContent(`Role: Fashion Stylist. User asked: ${req.body.prompt}`);
-                    res.json({ text: result.response.text() });
-            } catch (e) { res.status(500).json({ error: "AI Busy" }); }
-    });
-
-    // 📝 11. ROUTES
-    app.post('/api/send-otp', authLimiter, async (req, res) => {
-            const otp = Math.floor(100000 + Math.random() * 900000).toString();
-            await sendMail(req.body.email, otp);
-            res.json({ result: "Done" });
-    });
-
-    app.get('/product', async (req, res) => res.json(await Product.find().sort({_id: -1})));
-
-    // 🏁 12. BOOTUP SERVER
-    const PORT = process.env.PORT || 5000;
-    mongoose.connect(process.env.MONGODB_URI, { dbName: 'eshoper' }).then(() => {
-            console.log("✅ DB Connected");
-            app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Site: https://eshopperr.me`));
-    });
+const Sentry = require('@sentry/node');
+const puppeteer = require('puppeteer');
+// ===== EMAIL UTILITY (Brevo)
+// ...existing code...
 /**
  * Universal transactional email sender for ESHOPPER (Brevo/Sendinblue)
  * @param {Object} opts
@@ -133,44 +33,24 @@ const orderSchema = new mongoose.Schema({
  * @returns {Promise<{provider: string, result: any}>}
  */
 async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
-    console.log('[DEBUG] sendTransactionalEmail called:', { toEmail, toName, subject });
     if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
-    const apiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
-    if (!apiKey) throw new Error('Brevo/Sendinblue API key missing in environment');
-    const senderEmail = process.env.SENDER_EMAIL || 'support@eshopperr.me';
-    const senderName = process.env.SENDER_NAME || 'Eshopper Boutique';
-    const payload = {
-        sender: { email: senderEmail, name: senderName },
-        to: [{ email: toEmail, name: toName || toEmail }],
+    // Always map toEmail to to for sendEmail
+    const emailOpts = {
+        to: toEmail,
         subject,
         htmlContent,
+        // Optionally add textContent or attachments if needed
     };
+    // Attachments (Brevo expects array of {content, name, type})
     if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-        payload.attachment = attachments.map(att => ({
-            content: att.content,
-            name: att.filename || att.name,
-            type: att.contentType || 'application/octet-stream'
-        }));
+        // Not all Brevo SDKs support attachments directly; if needed, add here
+        // For now, ignore or log
+        console.warn('Attachments provided, but not sent (implement if needed)');
     }
-    try {
-        const response = await axios.post(
-            'https://api.brevo.com/v3/smtp/email',
-            payload,
-            {
-                headers: {
-                    'api-key': apiKey,
-                    'Content-Type': 'application/json',
-                    'accept': 'application/json'
-                },
-                timeout: 20000
-            }
-        );
-        console.log('[EMAIL] Sent via Brevo:', toEmail, subject);
-        return { provider: 'Brevo', result: response.data };
-    } catch (err) {
-        console.error('❌ Brevo email send failed:', err.response?.data || err.message);
-        throw new Error('Brevo email send failed: ' + (err.response?.data?.message || err.message));
-    }
+    // Debug: print emailOpts before sending
+    // console.log('[DEBUG] Sending email with:', emailOpts);
+    const result = await sendEmail(emailOpts);
+    return { provider: 'Brevo', result };
 }
 // EMAIL QUEUE ENABLED FLAG (from env or default false)
 const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
@@ -183,7 +63,7 @@ const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
  */
 async function executeEmailJob(jobType, payload) {
     try {
-        console.log('[DEBUG] executeEmailJob called:', jobType, payload);
+        // Accept all order-related job types
         const allowedTypes = [
             'order-status',
             'order-placed',
@@ -194,52 +74,32 @@ async function executeEmailJob(jobType, payload) {
             'order-delivered'
         ];
         if (allowedTypes.includes((jobType || '').toLowerCase())) {
-            let fixedPayload = { ...payload };
-            if (!fixedPayload.toEmail && fixedPayload.to) fixedPayload.toEmail = fixedPayload.to;
-            if (!fixedPayload.to && fixedPayload.toEmail) fixedPayload.to = fixedPayload.toEmail;
-            if (!fixedPayload.toEmail || typeof fixedPayload.toEmail !== 'string' || !fixedPayload.toEmail.includes('@')) {
-                console.error('❌ [DEBUG] Missing or invalid toEmail in jobType:', jobType, '| payload:', payload);
-                throw new Error('Missing or invalid toEmail in email payload');
+            // Debug: print payload before sending
+            if (!payload || !payload.to || !payload.subject || !payload.htmlContent) {
+                console.error('❌ [DEBUG] Missing email parameter in jobType:', jobType, '| payload:', payload);
             }
-            if (!fixedPayload.subject || typeof fixedPayload.subject !== 'string' || !fixedPayload.subject.trim()) {
-                fixedPayload.subject = `${jobType.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} - Order Update | Eshopper Boutique`;
-            }
-            if (!fixedPayload.htmlContent || typeof fixedPayload.htmlContent !== 'string' || !fixedPayload.htmlContent.trim()) {
-                fixedPayload.htmlContent = `<div style='font-family:Arial,sans-serif;padding:32px;'><h2>Order Update: ${jobType}</h2><p>Your order status has changed. Please check your account for details.</p></div>`;
-            }
-            delete fixedPayload.to;
-            console.log('[DEBUG] sendTransactionalEmail about to be called:', fixedPayload);
-            return await sendTransactionalEmail(fixedPayload);
+            return await sendEmail(payload);
         } else {
             throw new Error('Unknown email job type: ' + jobType);
         }
     } catch (err) {
-        console.error('❌ Email job failed:', err.message);
+        console.error('executeEmailJob error:', err.message);
         throw err;
     }
 }
 
 // All product/order-related email logic removed as per user request
 
-// ...duplicate firebaseAdminReady removed...
+let firebaseAdminReady = false;
 
 try {
     let firebaseCredentials;
-    // Log if env var is detected
-    console.log('Firebase Env Detected:', !!process.env.FIREBASE_CONFIG_JSON);
 
     // PRODUCTION (Railway): Use environment variable JSON string
     if (process.env.FIREBASE_CONFIG_JSON) {
         console.log('📱 Loading Firebase Admin from Railway environment variable...');
-        let trimmedEnv = process.env.FIREBASE_CONFIG_JSON.trim();
-        try {
-            firebaseCredentials = JSON.parse(trimmedEnv);
-            console.log(`✅ Firebase config parsed successfully for project: ${firebaseCredentials.project_id}`);
-        } catch (parseErr) {
-            console.error('❌ Failed to parse FIREBASE_CONFIG_JSON. Please ensure it is valid JSON.');
-            console.error('   Error:', parseErr.message);
-            firebaseCredentials = null;
-        }
+        firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
+        console.log(`✅ Firebase config parsed successfully for project: ${firebaseCredentials.project_id}`);
     }
     // LOCAL DEVELOPMENT: Check for firebase-admin.json file
     else {
@@ -249,49 +109,44 @@ try {
             firebaseCredentials = require('./firebase-admin.json');
             console.log(`✅ Firebase config loaded from file for project: ${firebaseCredentials.project_id}`);
         } else {
-            console.error('Firebase credentials not found. Set FIREBASE_CONFIG_JSON environment variable or add firebase-admin.json locally.');
-            firebaseCredentials = null;
+            throw new Error('Firebase credentials not found. Set FIREBASE_CONFIG_JSON environment variable or add firebase-admin.json locally.');
         }
     }
 
     // Validate required fields
-    if (
-        firebaseCredentials &&
-        firebaseCredentials.project_id &&
-        firebaseCredentials.private_key &&
-        firebaseCredentials.client_email
-    ) {
-        // Initialize Firebase Admin SDK
-        admin.initializeApp({
-            credential: admin.credential.cert(firebaseCredentials),
-            projectId: firebaseCredentials.project_id,
-        });
-        firebaseAdminReady = true;
-
-        console.log('✅ Firebase Admin SDK initialized successfully');
-        console.log(`🔐 Project ID: ${firebaseCredentials.project_id}`);
-        console.log(`📧 Service Account: ${firebaseCredentials.client_email}`);
-    } else {
-        if (firebaseCredentials) {
-            console.error('❌ Invalid Firebase credentials: Missing required fields (project_id, private_key, client_email)');
-        }
-        console.error('⚠️ Continuing without Firebase Admin. Firebase auth-sync route will be unavailable until credentials are fixed.');
+    if (!firebaseCredentials.project_id || !firebaseCredentials.private_key || !firebaseCredentials.client_email) {
+        throw new Error('Invalid Firebase credentials: Missing required fields (project_id, private_key, client_email)');
     }
+
+    // Initialize Firebase Admin SDK
+    admin.initializeApp({
+        credential: admin.credential.cert(firebaseCredentials),
+        projectId: firebaseCredentials.project_id,
+    });
+    firebaseAdminReady = true;
+
+    console.log('✅ Firebase Admin SDK initialized successfully');
+    console.log(`🔐 Project ID: ${firebaseCredentials.project_id}`);
+    console.log(`📧 Service Account: ${firebaseCredentials.client_email}`);
+
 } catch (err) {
     console.error('❌ Firebase Admin SDK initialization failed');
     console.error('   Error:', err.message);
+    console.error('');
     console.error('📋 Setup Instructions:');
     console.error('   PRODUCTION (Railway):');
     console.error('   1. Go to Railway Dashboard → Your Project → Variables');
     console.error('   2. Add: FIREBASE_CONFIG_JSON');
     console.error('   3. Value: Paste the entire firebase-admin.json content as a single-line JSON string');
+    console.error('');
     console.error('   LOCAL DEVELOPMENT:');
     console.error('   1. Place firebase-admin.json in project root');
     console.error('   2. Ensure it is in .gitignore');
+    console.error('');
     console.error('⚠️ Continuing without Firebase Admin. Firebase auth-sync route will be unavailable until credentials are fixed.');
 }
 
-// ...duplicate app removed...
+const app = express();
 
 // � INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
 if (process.env.SENTRY_DSN) {
@@ -312,7 +167,51 @@ if (process.env.SENTRY_DSN) {
 // 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
 app.set('trust proxy', 1);
 
-// ...duplicate CORS and server/socket.io setup removed...
+// 🔒 CORS - Robust production config
+const allowedOrigins = [
+    'https://eshopperr.me',
+    'https://www.eshopperr.me',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL?.replace('www.', ''),
+];
+const corsOptions = {
+    origin: '*',
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+// Health check endpoint for uptime monitoring and debugging
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'ok',
+        time: new Date().toISOString(),
+        message: 'API is running',
+    });
+});
+
+// Apply CORS before any routes or middleware
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: [
+            'https://eshopperr.me',
+            'https://www.eshopperr.me',
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            process.env.FRONTEND_URL
+        ].filter(Boolean),
+        credentials: true
+    },
+    transports: ['websocket', 'polling']
+});
 
 const ALLOWED_ORDER_STATUS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed'];
 const normalizeOrderStatus = (s = '') => {
@@ -364,7 +263,9 @@ app.use(express.json());
 app.use(helmet({ contentSecurityPolicy: false }));
 
 // 🔒 RATE LIMITERS
-// ...duplicate globalLimiter and authLimiter removed...
+const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
+app.use(globalLimiter);
 
 
 // 📊 REQUEST LOGGING MIDDLEWARE (with CORS origin info)
@@ -395,7 +296,15 @@ const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_PRIM
 const BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
 
 // 🔧 DATABASE CONNECTION SETUP
-// ...duplicate MONGO_URI and connection removed...
+const MONGO_URI = process.env.MONGODB_URI;
+
+if (!MONGO_URI) {
+    console.error("❌ CRITICAL: Missing MONGODB_URI in environment variables");
+    console.error("   Please set MONGODB_URI in your Railway environment");
+    process.exit(1);
+}
+
+console.log("🔍 Attempting MongoDB connection...");
 
 // 🔧 CLOUDINARY CONFIGURATION SETUP
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUD_NAME;
@@ -428,6 +337,30 @@ const sanitizeCloudinaryUrl = (url) => {
     return url;
 };
 
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'eshoper_master',
+        allowedFormats: ['jpg', 'png', 'jpeg'],
+        resource_type: 'auto'
+    }
+});
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg'];
+        if (allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Invalid file type: ${file.mimetype}`));
+        }
+    }
+}).fields([
+    { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 },
+    { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 },
+    { name: 'pic4', maxCount: 1 }
+]);
 
 
 // ...existing code...
@@ -449,7 +382,6 @@ const processMemoryEmailQueue = async () => {
 };
 
 const enqueueEmailJob = async (jobType, payload) => {
-    console.log('[DEBUG] enqueueEmailJob called:', jobType, payload);
     if (!FEATURE_EMAIL_NOTIFICATIONS) {
         return { skipped: true, reason: 'email-notifications-disabled' };
     }
@@ -469,7 +401,6 @@ const enqueueEmailJob = async (jobType, payload) => {
 
     memoryEmailQueue.push({ jobType, payload });
     setImmediate(processMemoryEmailQueue);
-    console.log('[DEBUG] memoryEmailQueue updated:', memoryEmailQueue);
     return true;
 };
 
@@ -480,8 +411,68 @@ const enqueueEmailJob = async (jobType, payload) => {
 // Example: Integrate 6 new premium templates and their rendering logic.
 // Ensure all new template code is robust, modular, and secure.
 
+const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
+const opts = { toJSON: toJSONCustom, timestamps: true };
 
-
+const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
+const User = mongoose.model('User', new mongoose.Schema({
+    name: String,
+    username: { type: String, unique: true, sparse: true },
+    email: { type: String, unique: true, sparse: true },
+    phone: String,
+    password: { type: String },
+    uid: { type: String, unique: true, sparse: true, index: true }, // Firebase UID
+    provider: { type: String, enum: ['email', 'google', 'phone'], default: 'email' }, // Auth provider
+    role: { type: String, default: "User" },
+    pic: String,
+    addressline1: String,
+    city: String,
+    state: String,
+    pin: String,
+    otp: String,
+    otpExpires: Date,
+    lastLogin: { type: Date, default: Date.now }, // Track last login
+    failedAttempts: { type: Number, default: 0 },
+    lockUntil: Date
+}, opts));
+const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String, rating: { type: Number, default: 4.5, min: 0, max: 5 }, reviews: { type: Number, default: 0 } }, opts));
+const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
+const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
+const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
+const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
+const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
+const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
+const Order = mongoose.model('Order', new mongoose.Schema({
+    orderId: { type: String, unique: true, required: true, index: true },
+    userid: { type: String, required: true, index: true },
+    userName: String,
+    userEmail: String,
+    paymentMethod: String,
+    paymentStatus: { type: String, default: 'Pending' },
+    orderStatus: { type: String, default: 'Order Placed' },
+    totalAmount: Number,
+    shippingAmount: Number,
+    finalAmount: Number,
+    shippingAddress: {
+        fullName: String,
+        phone: String,
+        addressline1: String,
+        city: String,
+        state: String,
+        pin: String,
+        country: { type: String, default: 'India' }
+    },
+    products: Array,
+    estimatedArrival: Date,
+    statusHistory: [{
+        status: String,
+        timestamp: { type: Date, default: Date.now },
+        message: String
+    }],
+    orderDate: { type: Date, default: Date.now }
+}, opts));
+const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" } }, opts));
+const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 
 const generateOrderId = async () => {
     const year = new Date().getFullYear();
@@ -603,7 +594,7 @@ const buildOrderReceiptHtml = ({
                 .items-section { margin: 32px 0; }
                 .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
                 table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; white-space: nowrap; }
+                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; }
                 td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; }
                 tr:nth-child(odd) { background: #fafaf8; }
                 tr:hover { background: #f5f0e6; }
@@ -753,7 +744,7 @@ async function sendOrderConfirmationEmail({
     });
     const subject = `Order Confirmed: #${orderId} | ESHOPPER`;
     try {
-        await sendTransactionalEmail({ toEmail: userEmail, subject, htmlContent });
+        await sendEmail({ to: userEmail, subject, htmlContent });
         console.log(`✅ Order confirmation email sent to ${userEmail}`);
     } catch (err) {
         console.error('❌ Failed to send order confirmation email:', err.message);
@@ -1016,8 +1007,8 @@ const buildTaxInvoiceHtml = ({
 
                         <!-- QR CODE -->
                         <div class="qr-section">
-                            <div class="qr-label">📱 Track Your Order</div>
-                            <svg class="qr-code" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                            <div style="font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 10px;">📱 Scan for Order Status & Returns</div>
+                            <svg class="qr-unit" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                                 <rect width="200" height="200" fill="white"/>
                                 <rect x="20" y="20" width="50" height="50" fill="black"/>
                                 <rect x="30" y="30" width="30" height="30" fill="white"/>
@@ -1025,11 +1016,9 @@ const buildTaxInvoiceHtml = ({
                                 <rect x="140" y="30" width="30" height="30" fill="white"/>
                                 <rect x="20" y="130" width="50" height="50" fill="black"/>
                                 <rect x="30" y="140" width="30" height="30" fill="white"/>
-                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.3"/>
-                                <circle cx="80" cy="60" r="8" fill="black" opacity="0.3"/>
-                                <circle cx="140" cy="140" r="8" fill="black" opacity="0.3"/>
+                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.4"/>
                             </svg>
-                            <div class="qr-info">Scan to track your package in real-time</div>
+                            <div class="qr-label">Links to Order History & Return Policy</div>
                         </div>
 
                         <!-- SIGNATURE BLOCK -->
@@ -2092,14 +2081,136 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
     }
 };
 
+const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, invoiceBase64, attachmentName }) => {
+    if (!toEmail) return false;
+    const displayName = userName || 'Valued Customer';
+    let templateFile = null;
+    // Map status to template file
+    switch ((status || '').toLowerCase()) {
+        case 'ordered':
+        case 'order placed':
+            templateFile = '01-order-placed.html'; break;
+        case 'confirmed':
+        case 'order confirmed':
+            templateFile = '02-order-confirmed.html'; break;
+        case 'packed':
+        case 'order packed':
+            templateFile = '03-order-packed.html'; break;
+        case 'shipped':
+        case 'order shipped':
+            templateFile = '04-order-shipped.html'; break;
+        case 'out for delivery':
+            templateFile = '05-out-for-delivery.html'; break;
+        case 'delivered':
+        case 'order delivered':
+            templateFile = '06-order-delivered.html'; break;
+        default:
+            templateFile = '01-order-placed.html';
+    }
+    // FIX: Define templatePath
+    const templatePath = path.join(__dirname, 'email-templates', templateFile);
+    try {
+        // email-templates path usage removed
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, displayName)
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+            .replace(/{{trackingLink}}/g, trackingLink || '')
+            .replace(/{{status}}/g, status || '')
+            .replace(/{{estimatedDelivery}}/g, estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN') : '')
+            .replace(/{{totalAmount}}/g, totalAmount ? `₹${Number(totalAmount).toLocaleString('en-IN')}` : '');
+        const attachments = [];
+        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
+            attachments.push({
+                filename: attachmentName || `Invoice-${orderId}.pdf`,
+                content: invoiceBase64.trim(),
+                contentType: 'application/pdf'
+            });
+        }
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: displayName,
+            subject: `${status || 'Order Update'} - Order ${orderId} | Eshopper Boutique`,
+            htmlContent,
+            attachments
+        });
+        console.log(`✅ Status email sent via ${result.provider}: ${orderId} -> ${status}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Status email failed:', error.message);
+        return false;
+    }
+};
 
-// Legacy sendOrderStatusEmail removed. All transactional emails now handled by mailController.js and .hbs templates.
+// ==================== EMAIL #1: ORDER PLACED (IMMEDIATE NOTIFICATION) ====================
+
+const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, products, shippingAddress, invoiceBuffer }) => {
+    if (!toEmail || !toEmail.includes('@')) {
+        console.error('❌ Invalid email:', toEmail);
+        throw new Error('Invalid toEmail address');
+    }
+    try {
+        const displayName = userName || 'Valued Customer';
+        const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, displayName)
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+            .replace(/{{totalAmount}}/g, finalAmount ? `₹${Number(finalAmount).toLocaleString('en-IN')}` : '')
+            // Add more replacements as needed
+        ;
+        const attachments = invoiceBuffer
+            ? [{ filename: `Receipt-${orderId}.pdf`, content: invoiceBuffer, contentType: 'application/pdf' }]
+            : [];
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: displayName,
+            subject: "✨ Order Received - Thank You for Shopping with Us!",
+            htmlContent,
+            attachments
+        });
+        console.log(`✅ Order Placed email sent via ${result.provider} to ${toEmail} for ${orderId}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Order Placed email failed:', error.message);
+        return false;
+    }
+};
+
+// ==================== EMAIL #2: ORDER CONFIRMED (ULTRA-PREMIUM) ====================
 
 
-// Legacy sendOrderPlacedEmail removed. All order placed emails now handled by mailController.js and .hbs templates.
-
-
-// Legacy sendOrderConfirmedEmail removed. All order confirmed emails now handled by mailController.js and .hbs templates.
+const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products, finalAmount, deliveryDate, invoiceBase64 }) => {
+    try {
+        const name = displayName || 'Valued Customer';
+        const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
+        htmlContent = htmlContent
+            .replace(/{{orderId}}/g, orderId)
+            .replace(/{{userName}}/g, name)
+            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+            // Add more replacements as needed
+        ;
+        const attachments = [];
+        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
+            attachments.push({ filename: `Confirmation-${orderId}.pdf`, content: invoiceBase64.trim(), contentType: 'application/pdf' });
+        }
+        const result = await sendTransactionalEmail({
+            toEmail,
+            toName: name,
+            subject: `✅ Order Confirmed - ${orderId} | Eshopper Boutique`,
+            htmlContent,
+            attachments
+        });
+        console.log(`✅ Confirmation email sent via ${result.provider} to ${toEmail}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Confirmation email failed:', error.message);
+        return false;
+    }
+};
 
 // ============ FIREBASE AUTH SYNC ROUTE ============
 app.post('/api/auth-sync', async (req, res) => {
@@ -2709,46 +2820,10 @@ const placeOrderHandler = async (req, res) => {
             }
         }
 
-        // Robustly determine recipient email for order placed email
-        let recipientEmail = '';
-        if (user.email && user.email.includes('@')) {
-            recipientEmail = user.email.trim();
-        } else if (addressPayload && addressPayload.email && addressPayload.email.includes('@')) {
-            recipientEmail = addressPayload.email.trim();
-        }
+        const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
-        // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY (always attempt if email found)
-        if (recipientEmail) {
-            try {
-                // Use new mailController.js logic for order placed email
-                const mailController = require('./mailController');
-                await mailController.sendOrderReceivedEmail({
-                    toEmail: recipientEmail,
-                    customerName: user.name || addressPayload?.fullName || 'Valued Customer',
-                    customerEmail: recipientEmail,
-                    orderId,
-                    orderDate,
-                    items: cleanProducts,
-                    subtotal: total,
-                    shippingCharges: shipping,
-                    gst: 0,
-                    totalPaid: payable,
-                    shippingAddress: addressPayload,
-                    paymentMethod: paymentMethod || 'COD',
-                    transactionId: '',
-                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
-                    whatsappUrl: '',
-                    supportEmail: '',
-                    companyAddress: '',
-                    invoiceBuffer
-                });
-            } catch (emailErr) {
-                console.error('❌ Order Placed email failed:', emailErr.message);
-                if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(emailErr);
-            }
-        } else {
-            console.warn(`⚠️  No valid recipient email found for order ${orderId}. Order Placed email not sent.`);
-        }
+        // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY
+        // [EMAIL PLACEHOLDER] Integrate new premium order placed email logic here.
 
         // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
@@ -2900,7 +2975,7 @@ app.post('/api/test-notification', async (req, res) => {
 
 const allSuccess =
     (!results.email.attempted || results.email.success) &&
-    (!results.whatsapp.attempted || results.whatsapp.success) ;
+    (!results.whatsapp.attempted || results.whatsapp.success);
 
 return res.status(allSuccess ? 200 : 207).json({
     success: allSuccess,
@@ -3052,8 +3127,8 @@ app.get('/api/products', async (req, res) => {
 
 
 
+const PORT = process.env.PORT || 5000;
 
-// --- Moved to top level ---
 async function startServer() {
     try {
         await mongoose.connect(MONGO_URI, {
@@ -3110,10 +3185,7 @@ async function startServer() {
                 devWarn(`Could not fetch Gemini model list: ${modelListError.message}`);
                 return [];
             }
-
         };
-    // removed extra closing brace here
-    startServer();
 
         const extractGeminiText = (data) => {
             const candidates = data?.candidates || [];
@@ -3182,23 +3254,31 @@ async function startServer() {
         app.get('/api/orders/:userId', async (req, res) => {
             try {
                 const userId = String(req.params.userId || '').trim();
-
                 if (!userId) {
                     return res.status(400).json({ message: 'userId is required' });
                 }
 
                 // 🔴 FETCH FROM ORDER COLLECTION (primary source)
-                const orders = await Order.find({ userid: userId })
-                    .sort({ updatedAt: -1, createdAt: -1 })
-                    .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
-                    .lean();
+                let orders = [];
+                try {
+                    orders = await Order.find({ userid: userId })
+                        .sort({ updatedAt: -1, createdAt: -1 })
+                        .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
+                        .lean();
+                } catch (err) {
+                    console.error('❌ Error fetching orders from Order collection:', err.message);
+                }
 
                 // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
-                if (orders.length === 0) {
-                    const checkoutOrders = await Checkout.find({ userid: userId })
-                        .sort({ updatedAt: -1, createdAt: -1 })
-                        .lean();
-
+                if (!orders || orders.length === 0) {
+                    let checkoutOrders = [];
+                    try {
+                        checkoutOrders = await Checkout.find({ userid: userId })
+                            .sort({ updatedAt: -1, createdAt: -1 })
+                            .lean();
+                    } catch (err) {
+                        console.error('❌ Error fetching orders from Checkout collection:', err.message);
+                    }
                     return res.json({
                         success: true,
                         orders: checkoutOrders.map((item) => ({
@@ -3433,14 +3513,13 @@ async function startServer() {
                         orderDate: order.orderDate || order.createdAt,
                         orderStatus: order.orderStatus || order.status || 'Ordered',
                         isDelivered: isDelivered,  // Pass delivery status for footer customization
-                        pdfType: pdfType
+                        pdfType: pdfType // 'receipt' | 'confirmation' | 'final'
                     });
 
                     clearTimeout(timeoutId);
 
-                    // Validate PDF buffer
                     if (!pdfBuffer || pdfBuffer.length < 500) {
-                        throw new Error('Generated PDF buffer is invalid or too small');
+                        return res.status(500).json({ message: 'PDF generation failed - invalid buffer' });
                     }
 
                     // Set response headers
@@ -3455,7 +3534,7 @@ async function startServer() {
                     return res.send(pdfBuffer);
                 } catch (pdfErr) {
                     clearTimeout(timeoutId);
-                    console.error(`❌ PDF generation failed for ${orderId}:`, pdfErr.message);
+                    console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
                     if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
                     return res.status(500).json({ message: 'Failed to generate PDF - please try again' });
                 }
@@ -3767,15 +3846,12 @@ async function startServer() {
                 // 🔴 SEND AUTOMATIC EMAIL ON STATUS CHANGE
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
-                        const mailController = require('./mailController');
                         const userDoc = await User.findById(order.userid).lean();
-                        const toEmail = userDoc && userDoc.email ? userDoc.email : order.userEmail;
-                        const userName = userDoc && userDoc.name ? userDoc.name : (order.userName || 'Valued Customer');
-                        if (toEmail) {
+                        if (userDoc && userDoc.email) {
                             try {
-                                await mailController.sendOrderStatus({
-                                    toEmail,
-                                    userName,
+                                await sendOrderStatusEmail({
+                                    toEmail: userDoc.email,
+                                    userName: userDoc.name || 'Valued Customer',
                                     orderId: order.orderId,
                                     status: normalized,
                                     trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
@@ -3786,9 +3862,42 @@ async function startServer() {
                                 console.error('❌ Order Status email error:', emailErr.message);
                                 if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
                             }
+                        } else if (order.userEmail) {
+                            // Fallback: try sending to order.userEmail if userDoc not found
+                            try {
+                                await sendOrderStatusEmail({
+                                    toEmail: order.userEmail,
+                                    userName: order.userName || 'Valued Customer',
+                                    orderId: order.orderId,
+                                    status: normalized,
+                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
+                                    estimatedDelivery: order.estimatedArrival,
+                                    totalAmount: order.finalAmount
+                                });
+                            } catch (emailErr) {
+                                console.error('❌ Order Status email error (fallback):', emailErr.message);
+                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                            }
                         }
                     } catch (err) {
                         console.warn(`⚠️ User lookup failed for ${order.orderId}:`, err.message);
+                        // Try sending without user data
+                        if (order.userEmail) {
+                            try {
+                                await sendOrderStatusEmail({
+                                    toEmail: order.userEmail,
+                                    userName: order.userName || 'Valued Customer',
+                                    orderId: order.orderId,
+                                    status: normalized,
+                                    trackingLink: `https://eshopperr.me/order-tracking/${order.orderId}`,
+                                    estimatedDelivery: order.estimatedArrival,
+                                    totalAmount: order.finalAmount
+                                });
+                            } catch (emailErr) {
+                                console.error('❌ Order Status email error (fallback):', emailErr.message);
+                                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                            }
+                        }
                     }
                 }
                 return res.json({
@@ -3875,7 +3984,40 @@ async function startServer() {
                 let emailSent = true;
                 if (FEATURE_EMAIL_NOTIFICATIONS) {
                     try {
-                        // All legacy HTML email-templates logic removed. All order placed/confirmed emails now handled by mailController.js and .hbs templates only.
+                        // Email #1: Order Placed
+                        // Render placed email
+                        const placedEmail = await (async () => {
+                            let displayName = order.userName || 'Valued Customer';
+                            const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+                            let htmlContent = fs.readFileSync(templatePath, 'utf8');
+                            htmlContent = htmlContent
+                                .replace(/{{orderId}}/g, order.orderId)
+                                .replace(/{{userName}}/g, displayName)
+                                .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
+                                .replace(/{{totalAmount}}/g, order.finalAmount ? `₹${Number(order.finalAmount).toLocaleString('en-IN')}` : '');
+                            return {
+                                toEmail: order.userEmail,
+                                subject: "✨ Order Received - Thank You for Shopping with Us!",
+                                htmlContent
+                            };
+                        })();
+                        await enqueueEmailJob('order-placed', placedEmail);
+                        // Render confirmed email
+                        const confirmedEmail = await (async () => {
+                            let displayName = order.userName || 'Valued Customer';
+                            const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
+                            let htmlContent = fs.readFileSync(templatePath, 'utf8');
+                            htmlContent = htmlContent
+                                .replace(/{{orderId}}/g, order.orderId)
+                                .replace(/{{userName}}/g, displayName)
+                                .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'));
+                            return {
+                                toEmail: order.userEmail,
+                                subject: `✅ Order Confirmed - ${order.orderId} | Eshopper Boutique`,
+                                htmlContent
+                            };
+                        })();
+                        await enqueueEmailJob('order-confirmed', confirmedEmail);
                     } catch (confirmQueueErr) {
                         emailSent = false;
                         console.warn(`⚠️ Email queue failed for ${orderId}:`, confirmQueueErr.message);
@@ -4124,7 +4266,6 @@ mongoose.connection.on('error', (err) => {
     console.error('❌ Mongoose connection error:', err.message);
 });
 
-
 mongoose.connection.on('disconnected', () => {
     console.warn('⚠️  Mongoose disconnected. Attempting reconnect in 5s...');
     setTimeout(async () => {
@@ -4142,6 +4283,5 @@ mongoose.connection.on('disconnected', () => {
         }
     }, 5000);
 });
-}
 
-
+startServer();
