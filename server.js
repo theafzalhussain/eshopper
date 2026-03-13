@@ -1,27 +1,239 @@
-// 🔴 LOAD ENV VARIABLES FIRST
+// 1. GLOBAL SETUP: ENV, SENTRY, FIREBASE
 require('dotenv').config();
 
-// NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS
+// 2. IMPORTS (all at top, clean)
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer = require('multer');
-const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
 const Sentry = require('@sentry/node');
-const puppeteer = require('puppeteer');
-// ===== EMAIL UTILITY (Brevo)
-// ...existing code...
+const admin = require('firebase-admin');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// 3. SENTRY v10 INIT (early)
+if (process.env.SENTRY_DSN) {
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV || 'production',
+        tracesSampleRate: 0.1,
+        integrations: [new Sentry.Integrations.Http({ tracing: true })],
+    });
+    console.log('✅ Sentry initialized');
+}
+
+// 4. FIREBASE ADMIN INIT (with \n fix)
+let firebaseAdminReady = false;
+try {
+    let firebaseCredentials;
+    if (process.env.FIREBASE_CONFIG_JSON) {
+        firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON.replace(/\\n/g, '\n'));
+        if (
+            firebaseCredentials &&
+            firebaseCredentials.project_id &&
+            firebaseCredentials.private_key &&
+            firebaseCredentials.client_email
+        ) {
+            admin.initializeApp({
+                credential: admin.credential.cert(firebaseCredentials),
+                projectId: firebaseCredentials.project_id,
+            });
+            firebaseAdminReady = true;
+            console.log('✅ Firebase Admin initialized:', firebaseCredentials.project_id);
+        } else {
+            console.error('❌ Invalid Firebase credentials: Missing required fields');
+        }
+    } else {
+        console.warn('⚠️ FIREBASE_CONFIG_JSON not set. Firebase features disabled.');
+    }
+} catch (err) {
+    console.error('❌ Firebase Admin SDK initialization failed:', err.message);
+}
+
+// 5. EXPRESS APP SETUP
+const app = express();
+app.set('trust proxy', 1);
+app.use(express.json());
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// 6. BULLETPROOF CORS
+const allowedOrigins = [
+    'https://eshopperr.me',
+    'https://www.eshopperr.me',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    process.env.FRONTEND_URL,
+].filter(Boolean);
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// 7. RATE LIMITING
+const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
+app.use(globalLimiter);
+
+// 8. MONGOOSE CONNECTION
+const MONGO_URI = process.env.MONGODB_URI;
+if (!MONGO_URI) {
+    console.error('❌ Missing MONGODB_URI');
+    process.exit(1);
+}
+mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('✅ MongoDB connected'))
+    .catch((err) => { console.error('❌ MongoDB connection error:', err.message); process.exit(1); });
+
+// 9. SOCKET.IO SETUP
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+    cors: { origin: allowedOrigins, credentials: true },
+    transports: ['websocket', 'polling'],
+});
+io.on('connection', (socket) => {
+    socket.emit('connected', { ok: true });
+});
+
+// 10. MODELS (minimal for product/cart/auth)
+const userSchema = new mongoose.Schema({
+    name: String,
+    email: { type: String, unique: true },
+    password: String,
+    uid: { type: String, unique: true },
+    role: { type: String, default: 'User' },
+}, { timestamps: true });
+const User = mongoose.model('User', userSchema);
+
+const productSchema = new mongoose.Schema({
+    name: String,
+    price: Number,
+    stock: Number,
+    description: String,
+    image: String,
+}, { timestamps: true });
+const Product = mongoose.model('Product', productSchema);
+
+const cartSchema = new mongoose.Schema({
+    userId: String,
+    productId: String,
+    qty: Number,
+}, { timestamps: true });
+const Cart = mongoose.model('Cart', cartSchema);
+
+// 11. BREVO EMAIL SENDER (Axios only)
+async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
+    if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) throw new Error('Brevo API key missing');
+    const senderEmail = 'support@eshopperr.me';
+    const senderName = 'Eshopper Boutique';
+    const payload = {
+        sender: { email: senderEmail, name: senderName },
+        to: [{ email: toEmail, name: toName || toEmail }],
+        subject,
+        htmlContent,
+    };
+    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+        payload.attachment = attachments.map(att => ({
+            content: att.content,
+            name: att.filename || att.name,
+            type: att.contentType || 'application/octet-stream',
+        }));
+    }
+    try {
+        const response = await axios.post(
+            'https://api.brevo.com/v3/smtp/email',
+            payload,
+            {
+                headers: {
+                    'api-key': apiKey,
+                    'Content-Type': 'application/json',
+                    'accept': 'application/json',
+                },
+                timeout: 20000,
+            }
+        );
+        return { provider: 'Brevo', result: response.data };
+    } catch (err) {
+        throw new Error('Brevo email send failed: ' + (err.response?.data?.message || err.message));
+    }
+}
+
+// 12. GEMINI AI (1.5-flash, sync 10 products)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+async function getGeminiProductSummary() {
+    const products = await Product.find().limit(10);
+    const prompt = `Summarize these products for a chatbot:\n${products.map(p => `${p.name}: ${p.description}`).join('\n')}`;
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+}
+
+// 13. ROUTES
+// Health check
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// Auth sync (Firebase)
+app.post('/api/auth-sync', async (req, res) => {
+    if (!firebaseAdminReady) return res.status(503).json({ message: 'Firebase Admin not ready' });
+    const { uid, email, name } = req.body;
+    if (!uid || !email) return res.status(400).json({ message: 'Missing uid or email' });
+    let user = await User.findOne({ uid });
+    if (!user) user = await User.create({ uid, email, name });
+    res.json({ success: true, user });
+});
+
+// Chat (Gemini)
+app.post('/api/chat', async (req, res) => {
+    try {
+        const summary = await getGeminiProductSummary();
+        res.json({ summary });
+    } catch (err) {
+        if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(err);
+        res.status(500).json({ message: 'AI error', error: err.message });
+    }
+});
+
+// Product logic
+app.get('/api/products', async (req, res) => {
+    const products = await Product.find().limit(50);
+    res.json(products);
+});
+
+// Cart logic
+app.post('/api/cart', async (req, res) => {
+    const { userId, productId, qty } = req.body;
+    if (!userId || !productId || !qty) return res.status(400).json({ message: 'Missing params' });
+    let cart = await Cart.findOne({ userId, productId });
+    if (cart) { cart.qty = qty; await cart.save(); }
+    else { cart = await Cart.create({ userId, productId, qty }); }
+    res.json({ success: true, cart });
+});
+
+// 14. ERROR HANDLER
+app.use((err, req, res, next) => {
+    if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+});
+
+// 15. START SERVER
+const PORT = process.env.PORT || 5000;
+httpServer.listen(PORT, () => {
+    console.log(`🚀 Server running on ${PORT}`);
+});
 /**
  * Universal transactional email sender for ESHOPPER (Brevo/Sendinblue)
  * @param {Object} opts
