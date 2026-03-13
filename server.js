@@ -20,6 +20,9 @@ const fs = require('fs');
 const path = require('path');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
+// Email utility import/fix
+const { sendTransactionalEmail } = require('./src/utils/email');
+const sendEmail = sendTransactionalEmail;
 // ===== EMAIL UTILITY (Brevo)
 // ...existing code...
 /**
