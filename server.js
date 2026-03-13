@@ -1,7 +1,9 @@
 // 1. GLOBAL SETUP: ENV, SENTRY, FIREBASE
 
 // 1. Dotenv must be first
+
 require('dotenv').config();
+const mongoose = require('mongoose');
 
 // 2. Sentry initialization
 let firebaseAdminReady = false;
@@ -3050,8 +3052,8 @@ app.get('/api/products', async (req, res) => {
 
 
 
-// ...duplicate PORT removed...
 
+// --- Moved to top level ---
 async function startServer() {
     try {
         await mongoose.connect(MONGO_URI, {
@@ -3108,7 +3110,10 @@ async function startServer() {
                 devWarn(`Could not fetch Gemini model list: ${modelListError.message}`);
                 return [];
             }
+
         };
+    // removed extra closing brace here
+    startServer();
 
         const extractGeminiText = (data) => {
             const candidates = data?.candidates || [];
@@ -3185,19 +3190,9 @@ async function startServer() {
                 // 🔴 FETCH FROM ORDER COLLECTION (primary source)
                 const orders = await Order.find({ userid: userId })
                     .sort({ updatedAt: -1, createdAt: -1 })
-                // ...existing code...
-            } catch (e) {
-                // ...existing code...
-            }
-        });
-                // ...existing code...
-            } catch (e) {
-                // ...existing code...
-            }
-        }
-        startServer();
                     .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
                     .lean();
+
 
                 // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
                 if (orders.length === 0) {
@@ -4130,6 +4125,7 @@ mongoose.connection.on('error', (err) => {
     console.error('❌ Mongoose connection error:', err.message);
 });
 
+
 mongoose.connection.on('disconnected', () => {
     console.warn('⚠️  Mongoose disconnected. Attempting reconnect in 5s...');
     setTimeout(async () => {
@@ -4147,5 +4143,6 @@ mongoose.connection.on('disconnected', () => {
         }
     }, 5000);
 });
+}
 
-startServer();
+
