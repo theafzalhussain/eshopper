@@ -1,6 +1,7 @@
 // 1. GLOBAL SETUP: ENV, SENTRY, FIREBASE
 require('dotenv').config();
 
+
 // 2. IMPORTS (all at top, clean)
 const express = require('express');
 const http = require('http');
@@ -14,6 +15,9 @@ const Sentry = require('@sentry/node');
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
+// GLOBAL: Firebase admin ready flag
+// ...duplicate firebaseAdminReady removed...
+
 // 3. SENTRY v10 INIT (early)
 if (process.env.SENTRY_DSN) {
     Sentry.init({
@@ -25,26 +29,20 @@ if (process.env.SENTRY_DSN) {
     console.log('✅ Sentry initialized');
 }
 
-// 4. FIREBASE ADMIN INIT (with \n fix)
+// 4. FIREBASE ADMIN INIT (MAGIC FIX)
 try {
-    let firebaseCredentials;
-    if (process.env.FIREBASE_CONFIG_JSON) {
-        firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON.replace(/\\n/g, '\n'));
-        if (
-            firebaseCredentials &&
-            firebaseCredentials.project_id &&
-            firebaseCredentials.private_key &&
-            firebaseCredentials.client_email
-        ) {
-            admin.initializeApp({
-                credential: admin.credential.cert(firebaseCredentials),
-                projectId: firebaseCredentials.project_id,
-            });
-            firebaseAdminReady = true;
-            console.log('✅ Firebase Admin initialized:', firebaseCredentials.project_id);
-        } else {
-            console.error('❌ Invalid Firebase credentials: Missing required fields');
+    const firebaseJSON = process.env.FIREBASE_CONFIG_JSON;
+    if (firebaseJSON) {
+        const credentials = JSON.parse(firebaseJSON);
+        // 💡 MAGIC FIX: Replacing double backslashes with single newlines
+        if (credentials.private_key) {
+            credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
         }
+        admin.initializeApp({
+            credential: admin.credential.cert(credentials)
+        });
+        firebaseAdminReady = true;
+        console.log('✅ Firebase Admin Sync: 100% Active');
     } else {
         console.warn('⚠️ FIREBASE_CONFIG_JSON not set. Firebase features disabled.');
     }
@@ -53,7 +51,7 @@ try {
 }
 
 // 5. EXPRESS APP SETUP
-// ...duplicate app = express() removed...
+// ...duplicate app removed...
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -331,7 +329,7 @@ async function executeEmailJob(jobType, payload) {
 
 // All product/order-related email logic removed as per user request
 
-let firebaseAdminReady = false;
+// ...duplicate firebaseAdminReady removed...
 
 try {
     let firebaseCredentials;
@@ -401,7 +399,7 @@ try {
     console.error('⚠️ Continuing without Firebase Admin. Firebase auth-sync route will be unavailable until credentials are fixed.');
 }
 
-const app = express();
+// ...duplicate app removed...
 
 // � INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
 if (process.env.SENTRY_DSN) {
