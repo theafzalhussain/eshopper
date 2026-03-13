@@ -1,24 +1,10 @@
 // 1. GLOBAL SETUP: ENV, SENTRY, FIREBASE
+
+// 1. Dotenv must be first
 require('dotenv').config();
 
-
-// 2. IMPORTS (all at top, clean)
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const axios = require('axios');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+// 2. Sentry initialization
 const Sentry = require('@sentry/node');
-const admin = require('firebase-admin');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-// GLOBAL: Firebase admin ready flag
-// ...duplicate firebaseAdminReady removed...
-
-// 3. SENTRY v10 INIT (early)
 if (process.env.SENTRY_DSN) {
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
@@ -29,57 +15,67 @@ if (process.env.SENTRY_DSN) {
     console.log('✅ Sentry initialized');
 }
 
-// 4. FIREBASE ADMIN INIT (MAGIC FIX)
+// 3. Firebase Admin initialization (with \n fix, no local JSON require)
+const admin = require('firebase-admin');
+let firebaseAdminReady = false;
 try {
-    const firebaseJSON = process.env.FIREBASE_CONFIG_JSON;
-    if (firebaseJSON) {
-        const credentials = JSON.parse(firebaseJSON);
-        // 💡 MAGIC FIX: Replacing double backslashes with single newlines
-        if (credentials.private_key) {
-            credentials.private_key = credentials.private_key.replace(/\\n/g, '\n');
+    const rawJson = process.env.FIREBASE_CONFIG_JSON;
+    if (rawJson) {
+        const firebaseCredentials = JSON.parse(rawJson.replace(/\\n/g, '\n'));
+        if (!admin.apps.length && firebaseCredentials.project_id) {
+            admin.initializeApp({
+                credential: admin.credential.cert(firebaseCredentials)
+            });
+            firebaseAdminReady = true;
+            console.log('✅ Firebase Admin SDK Initialized Successfully');
+        } else {
+            throw new Error('Missing project_id in FIREBASE_CONFIG_JSON');
         }
-        admin.initializeApp({
-            credential: admin.credential.cert(credentials)
-        });
-        firebaseAdminReady = true;
-        console.log('✅ Firebase Admin Sync: 100% Active');
     } else {
         console.warn('⚠️ FIREBASE_CONFIG_JSON not set. Firebase features disabled.');
     }
-} catch (err) {
-    console.error('❌ Firebase Admin SDK initialization failed:', err.message);
+} catch (e) {
+    console.error('❌ Firebase Auth Disabled due to:', e.message);
 }
 
-// 5. EXPRESS APP SETUP
+// 4. Imports (all at top, after Sentry/Firebase)
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const axios = require('axios');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const multer = require('multer');
+const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// 5. Cloudinary config (immediately after imports)
+cloudinary.config({
+    cloud_name: process.env.CLOUD_NAME,
+    api_key: process.env.CLOUD_API_KEY,
+    api_secret: process.env.CLOUD_API_SECRET
+});
+
+// 6. Define App
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json());
-app.use(helmet({ contentSecurityPolicy: false }));
 
-// 6. BULLETPROOF CORS
-const allowedOrigins = [
-    'https://eshopperr.me',
-    'https://www.eshopperr.me',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    process.env.FRONTEND_URL,
-].filter(Boolean);
+// 7. CORS (allow only eshopperr.me)
+const allowedOrigins = ['https://eshopperr.me'];
 const corsOptions = {
     origin: function (origin, callback) {
         if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-
-// 7. RATE LIMITING
-// ...globalLimiter already declared above...
 
 // 8. MONGOOSE CONNECTION
 const MONGO_URI = process.env.MONGODB_URI;
@@ -91,17 +87,7 @@ mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('✅ MongoDB connected'))
     .catch((err) => { console.error('❌ MongoDB connection error:', err.message); process.exit(1); });
 
-// 9. SOCKET.IO SETUP
-const httpServer = http.createServer(app);
-const io = new Server(httpServer, {
-    cors: { origin: allowedOrigins, credentials: true },
-    transports: ['websocket', 'polling'],
-});
-io.on('connection', (socket) => {
-    socket.emit('connected', { ok: true });
-});
-
-// 10. MODELS (minimal for product/cart/auth)
+// 9. MODELS (User, Product, Order)
 const userSchema = new mongoose.Schema({
     name: String,
     email: { type: String, unique: true },
@@ -120,12 +106,49 @@ const productSchema = new mongoose.Schema({
 }, { timestamps: true });
 const Product = mongoose.model('Product', productSchema);
 
-const cartSchema = new mongoose.Schema({
-    userId: String,
-    productId: String,
-    qty: Number,
+const orderSchema = new mongoose.Schema({
+    orderId: { type: String, unique: true, required: true, index: true },
+    userid: { type: String, required: true, index: true },
+    userName: String,
+    userEmail: String,
+    paymentMethod: String,
+    paymentStatus: { type: String, default: 'Pending' },
+    orderStatus: { type: String, default: 'Order Placed' },
+    totalAmount: Number,
+    shippingAmount: Number,
+    finalAmount: Number,
+    shippingAddress: Object,
+    products: Array,
+    estimatedArrival: Date,
+    statusHistory: [
+        {
+            status: String,
+            timestamp: { type: Date, default: Date.now },
+            message: String
+        }
+    ],
+    orderDate: { type: Date, default: Date.now }
 }, { timestamps: true });
-const Cart = mongoose.model('Cart', cartSchema);
+const Order = mongoose.model('Order', orderSchema);
+
+// 10. BASIC ROUTES (example health check)
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+
+
+// 9. SOCKET.IO SETUP
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+    cors: { origin: allowedOrigins, credentials: true },
+    transports: ['websocket', 'polling'],
+});
+io.on('connection', (socket) => {
+    socket.emit('connected', { ok: true });
+});
+
+
 
 // 11. BREVO EMAIL SENDER (Axios only)
 async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
@@ -615,39 +638,7 @@ const enqueueEmailJob = async (jobType, payload) => {
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-// ...duplicate Mongoose models removed...
-const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
-const Order = mongoose.model('Order', new mongoose.Schema({
-    orderId: { type: String, unique: true, required: true, index: true },
-    userid: { type: String, required: true, index: true },
-    userName: String,
-    userEmail: String,
-    paymentMethod: String,
-    paymentStatus: { type: String, default: 'Pending' },
-    orderStatus: { type: String, default: 'Order Placed' },
-    totalAmount: Number,
-    shippingAmount: Number,
-    finalAmount: Number,
-    shippingAddress: {
-        fullName: String,
-        phone: String,
-        addressline1: String,
-        city: String,
-        state: String,
-        pin: String,
-        country: { type: String, default: 'India' }
-    },
-    products: Array,
-    estimatedArrival: Date,
-    statusHistory: [{
-        status: String,
-        timestamp: { type: Date, default: Date.now },
-        message: String
-    }],
-    orderDate: { type: Date, default: Date.now }
-}, opts));
-const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" } }, opts));
-const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+
 
 const generateOrderId = async () => {
     const year = new Date().getFullYear();
