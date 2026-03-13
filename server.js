@@ -33,51 +33,53 @@ const puppeteer = require('puppeteer');
  * @returns {Promise<{provider: string, result: any}>}
  */
 async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
-    if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
-    // Always map toEmail to to for sendEmail
-    let firebaseCredentials;
+    try {
+        if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
+        // Always map toEmail to to for sendEmail
+        let firebaseCredentials;
 
-    // PRODUCTION (Railway): Use environment variable JSON string
-    if (process.env.FIREBASE_CONFIG_JSON) {
-        console.log('📱 Loading Firebase Admin from Railway environment variable...');
-        firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
-        console.log(`✅ Firebase config parsed successfully for project: ${firebaseCredentials.project_id}`);
-    }
-    // LOCAL DEVELOPMENT: Check for firebase-admin.json file
-    else {
-        const localPath = path.join(__dirname, 'firebase-admin.json');
-        if (fs.existsSync(localPath)) {
-            console.log('📂 Loading Firebase Admin from local file...');
-            firebaseCredentials = require('./firebase-admin.json');
-            console.log(`✅ Firebase config loaded from file for project: ${firebaseCredentials.project_id}`);
-        } else {
-            throw new Error('Firebase credentials not found. Set FIREBASE_CONFIG_JSON environment variable or add firebase-admin.json locally.');
+        // PRODUCTION (Railway): Use environment variable JSON string
+        if (process.env.FIREBASE_CONFIG_JSON) {
+            console.log('📱 Loading Firebase Admin from Railway environment variable...');
+            firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
+            console.log(`✅ Firebase config parsed successfully for project: ${firebaseCredentials.project_id}`);
         }
+        // LOCAL DEVELOPMENT: Check for firebase-admin.json file
+        else {
+            const localPath = path.join(__dirname, 'firebase-admin.json');
+            if (fs.existsSync(localPath)) {
+                console.log('📂 Loading Firebase Admin from local file...');
+                firebaseCredentials = require('./firebase-admin.json');
+                console.log(`✅ Firebase config loaded from file for project: ${firebaseCredentials.project_id}`);
+            } else {
+                throw new Error('Firebase credentials not found. Set FIREBASE_CONFIG_JSON environment variable or add firebase-admin.json locally.');
+            }
+        }
+
+        // Validate required fields
+        if (!firebaseCredentials.project_id || !firebaseCredentials.private_key || !firebaseCredentials.client_email) {
+            throw new Error('Invalid Firebase credentials: Missing required fields (project_id, private_key, client_email)');
+        }
+
+        // Initialize Firebase Admin SDK
+        admin.initializeApp({
+            credential: admin.credential.cert(firebaseCredentials),
+            projectId: firebaseCredentials.project_id,
+        });
+        firebaseAdminReady = true;
+
+        console.log('✅ Firebase Admin SDK initialized successfully');
+        console.log(`🔐 Project ID: ${firebaseCredentials.project_id}`);
+        console.log(`📧 Service Account: ${firebaseCredentials.client_email}`);
+
+    } catch (err) {
+        console.error('❌ Firebase Admin SDK initialization failed');
+        console.error('   Error:', err.message);
+        console.error('');
+        console.error('📋 Setup Instructions:');
+        console.error('   PRODUCTION (Railway):');
+        console.error('   1. Go to Railway Dashboard → Your Project → Variables');
     }
-
-    // Validate required fields
-    if (!firebaseCredentials.project_id || !firebaseCredentials.private_key || !firebaseCredentials.client_email) {
-        throw new Error('Invalid Firebase credentials: Missing required fields (project_id, private_key, client_email)');
-    }
-
-    // Initialize Firebase Admin SDK
-    admin.initializeApp({
-        credential: admin.credential.cert(firebaseCredentials),
-        projectId: firebaseCredentials.project_id,
-    });
-    firebaseAdminReady = true;
-
-    console.log('✅ Firebase Admin SDK initialized successfully');
-    console.log(`🔐 Project ID: ${firebaseCredentials.project_id}`);
-    console.log(`📧 Service Account: ${firebaseCredentials.client_email}`);
-
-} catch (err) {
-    console.error('❌ Firebase Admin SDK initialization failed');
-    console.error('   Error:', err.message);
-    console.error('');
-    console.error('📋 Setup Instructions:');
-    console.error('   PRODUCTION (Railway):');
-    console.error('   1. Go to Railway Dashboard → Your Project → Variables');
     console.error('   2. Add: FIREBASE_CONFIG_JSON');
     console.error('   3. Value: Paste the entire firebase-admin.json content as a single-line JSON string');
     console.error('');
