@@ -3185,6 +3185,17 @@ async function startServer() {
                 // 🔴 FETCH FROM ORDER COLLECTION (primary source)
                 const orders = await Order.find({ userid: userId })
                     .sort({ updatedAt: -1, createdAt: -1 })
+                // ...existing code...
+            } catch (e) {
+                // ...existing code...
+            }
+        });
+                // ...existing code...
+            } catch (e) {
+                // ...existing code...
+            }
+        }
+        startServer();
                     .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
                     .lean();
 
