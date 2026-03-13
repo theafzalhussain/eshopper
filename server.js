@@ -18,25 +18,6 @@ if (process.env.SENTRY_DSN) {
 // 3. Firebase Admin initialization (with \n fix, no local JSON require)
 const admin = require('firebase-admin');
 let firebaseAdminReady = false;
-try {
-    const rawJson = process.env.FIREBASE_CONFIG_JSON;
-    if (rawJson) {
-        const firebaseCredentials = JSON.parse(rawJson.replace(/\\n/g, '\n'));
-        if (!admin.apps.length && firebaseCredentials.project_id) {
-            admin.initializeApp({
-                credential: admin.credential.cert(firebaseCredentials)
-            });
-            firebaseAdminReady = true;
-            console.log('✅ Firebase Admin SDK Initialized Successfully');
-        } else {
-            throw new Error('Missing project_id in FIREBASE_CONFIG_JSON');
-        }
-    } else {
-        console.warn('⚠️ FIREBASE_CONFIG_JSON not set. Firebase features disabled.');
-    }
-} catch (e) {
-    console.error('❌ Firebase Auth Disabled due to:', e.message);
-}
 
 // 4. Imports (all at top, after Sentry/Firebase)
 const express = require('express');
@@ -108,151 +89,90 @@ const Product = mongoose.model('Product', productSchema);
 
 const orderSchema = new mongoose.Schema({
     orderId: { type: String, unique: true, required: true, index: true },
-    userid: { type: String, required: true, index: true },
-    userName: String,
-    userEmail: String,
-    paymentMethod: String,
-    paymentStatus: { type: String, default: 'Pending' },
-    orderStatus: { type: String, default: 'Order Placed' },
-    totalAmount: Number,
-    shippingAmount: Number,
-    finalAmount: Number,
-    shippingAddress: Object,
-    products: Array,
-    estimatedArrival: Date,
-    statusHistory: [
-        {
-            status: String,
-            timestamp: { type: Date, default: Date.now },
-            message: String
-        }
-    ],
-    orderDate: { type: Date, default: Date.now }
-}, { timestamps: true });
-const Order = mongoose.model('Order', orderSchema);
 
-// 10. BASIC ROUTES (example health check)
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString() });
-});
+        // ...existing code...
+            });
+    // ...existing code...
+            if (process.env.FIREBASE_CONFIG_JSON) {
+                    // रेलवे के लिए फिक्स: डबल बैकस्लैश हटाना
+                    firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON.trim().replace(/\\n/g, '\n'));
+            } else {
+                    firebaseCredentials = require('./firebase-admin.json');
+                // ...existing code...
+    const rateLimit = require('express-rate-limit');
 
+    const app = express();
 
+    // 🔒 4. NETWORKING & SECURITY SETUP (Crucial for Cloudflare/Railway)
+    app.set('trust proxy', 1);
+    app.use(express.json());
+    app.use(helmet({ contentSecurityPolicy: false }));
 
-// 9. SOCKET.IO SETUP
-const httpServer = http.createServer(app);
-const io = new Server(httpServer, {
-    cors: { origin: allowedOrigins, credentials: true },
-    transports: ['websocket', 'polling'],
-});
-io.on('connection', (socket) => {
-    socket.emit('connected', { ok: true });
-});
+    // 🛡️ 5. DEFINE RATE LIMITERS (Fिक्स: ReferenceError)
+    const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true });
+    // Ye raha authLimiter jo error de raha tha
+    const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts." } });
+    app.use(globalLimiter);
 
+    // 🔒 6. PRODUCTION CORS FIX
+    app.use(cors({
+            origin: ["https://eshopperr.me", "https://www.eshopperr.me"],
+            credentials: true,
+            methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    }));
+    app.options('*', cors());
 
+    // 📸 7. MEDIA STORAGE CONFIG
+    cloudinary.config({ cloud_name: process.env.CLOUD_NAME, api_key: process.env.CLOUD_API_KEY, api_secret: process.env.CLOUD_API_SECRET });
+    const storage = new CloudinaryStorage({ cloudinary, params: { folder: 'eshoper_master' } });
+    const upload = multer({ storage }).fields([{ name: 'pic1', maxCount: 1 }, { name: 'pic', maxCount: 1 }]);
 
-// 11. BREVO EMAIL SENDER (Axios only)
-async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
-    if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
-    const apiKey = process.env.BREVO_API_KEY;
-    if (!apiKey) throw new Error('Brevo API key missing');
-    const senderEmail = 'support@eshopperr.me';
-    const senderName = 'Eshopper Boutique';
-    const payload = {
-        sender: { email: senderEmail, name: senderName },
-        to: [{ email: toEmail, name: toName || toEmail }],
-        subject,
-        htmlContent,
+    // 🔧 8. DATABASE & MODELS
+    const toJSONCustom = { virtuals: true, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
+    const opts = { toJSON: toJSONCustom, timestamps: true };
+
+    const User = mongoose.model('User', new mongoose.Schema({ name: String, email: String, uid: String, provider: String, lastLogin: Date }, opts));
+    const Product = mongoose.model('Product', new mongoose.Schema({ name: String, baseprice: Number, pic1: String }, opts));
+
+    // 📧 9. BREVO EMAIL (Final REST Fix)
+    const sendMail = async (to, otp) => {
+            try {
+                    const BREVO_KEY = process.env.BREVO_API_KEY?.trim();
+                    await axios.post('https://api.brevo.com/v3/smtp/email', {
+                            sender: { name: "Eshopper Luxe", email: "support@eshopperr.me" },
+                            to: [{ email: to }],
+                            subject: "Verification Code - Eshopper",
+                            htmlContent: `<h2>Your code: ${otp}</h2>`
+                    }, { headers: { 'api-key': BREVO_KEY } });
+                    return true;
+            } catch (e) { console.error("❌ Email Error"); return false; }
     };
-    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-        payload.attachment = attachments.map(att => ({
-            content: att.content,
-            name: att.filename || att.name,
-            type: att.contentType || 'application/octet-stream',
-        }));
-    }
-    try {
-        const response = await axios.post(
-            'https://api.brevo.com/v3/smtp/email',
-            payload,
-            {
-                headers: {
-                    'api-key': apiKey,
-                    'Content-Type': 'application/json',
-                    'accept': 'application/json',
-                },
-                timeout: 20000,
-            }
-        );
-        return { provider: 'Brevo', result: response.data };
-    } catch (err) {
-        throw new Error('Brevo email send failed: ' + (err.response?.data?.message || err.message));
-    }
-}
 
-// 12. GEMINI AI (1.5-flash, sync 10 products)
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-async function getGeminiProductSummary() {
-    const products = await Product.find().limit(10);
-    const prompt = `Summarize these products for a chatbot:\n${products.map(p => `${p.name}: ${p.description}`).join('\n')}`;
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-}
+    // 🤖 10. AI FASHION ASSISTANT
+    app.post('/api/chat', async (req, res) => {
+            try {
+                    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
+                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                    const result = await model.generateContent(`Role: Fashion Stylist. User asked: ${req.body.prompt}`);
+                    res.json({ text: result.response.text() });
+            } catch (e) { res.status(500).json({ error: "AI Busy" }); }
+    });
 
-// 13. ROUTES
-// Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString() });
-});
+    // 📝 11. ROUTES
+    app.post('/api/send-otp', authLimiter, async (req, res) => {
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            await sendMail(req.body.email, otp);
+            res.json({ result: "Done" });
+    });
 
-// Auth sync (Firebase)
-app.post('/api/auth-sync', async (req, res) => {
-    if (!firebaseAdminReady) return res.status(503).json({ message: 'Firebase Admin not ready' });
-    const { uid, email, name } = req.body;
-    if (!uid || !email) return res.status(400).json({ message: 'Missing uid or email' });
-    let user = await User.findOne({ uid });
-    if (!user) user = await User.create({ uid, email, name });
-    res.json({ success: true, user });
-});
+    app.get('/product', async (req, res) => res.json(await Product.find().sort({_id: -1})));
 
-// Chat (Gemini)
-app.post('/api/chat', async (req, res) => {
-    try {
-        const summary = await getGeminiProductSummary();
-        res.json({ summary });
-    } catch (err) {
-        if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(err);
-        res.status(500).json({ message: 'AI error', error: err.message });
-    }
-});
-
-// Product logic
-app.get('/api/products', async (req, res) => {
-    const products = await Product.find().limit(50);
-    res.json(products);
-});
-
-// Cart logic
-app.post('/api/cart', async (req, res) => {
-    const { userId, productId, qty } = req.body;
-    if (!userId || !productId || !qty) return res.status(400).json({ message: 'Missing params' });
-    let cart = await Cart.findOne({ userId, productId });
-    if (cart) { cart.qty = qty; await cart.save(); }
-    else { cart = await Cart.create({ userId, productId, qty }); }
-    res.json({ success: true, cart });
-});
-
-// 14. ERROR HANDLER
-app.use((err, req, res, next) => {
-    if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(err);
-    res.status(500).json({ message: 'Server error', error: err.message });
-});
-
-// 15. START SERVER
-const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-    console.log(`🚀 Server running on ${PORT}`);
-});
+    // 🏁 12. BOOTUP SERVER
+    const PORT = process.env.PORT || 5000;
+    mongoose.connect(process.env.MONGODB_URI, { dbName: 'eshoper' }).then(() => {
+            console.log("✅ DB Connected");
+            app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Site: https://eshopperr.me`));
+    });
 /**
  * Universal transactional email sender for ESHOPPER (Brevo/Sendinblue)
  * @param {Object} opts
@@ -559,30 +479,6 @@ const sanitizeCloudinaryUrl = (url) => {
     return url;
 };
 
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'eshoper_master',
-        allowedFormats: ['jpg', 'png', 'jpeg'],
-        resource_type: 'auto'
-    }
-});
-const upload = multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg'];
-        if (allowedMimes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error(`Invalid file type: ${file.mimetype}`));
-        }
-    }
-}).fields([
-    { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 },
-    { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 },
-    { name: 'pic4', maxCount: 1 }
-]);
 
 
 // ...existing code...
@@ -635,8 +531,6 @@ const enqueueEmailJob = async (jobType, payload) => {
 // Example: Integrate 6 new premium templates and their rendering logic.
 // Ensure all new template code is robust, modular, and secure.
 
-const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
-const opts = { toJSON: toJSONCustom, timestamps: true };
 
 
 
