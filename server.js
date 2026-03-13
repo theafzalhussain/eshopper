@@ -35,64 +35,6 @@ const puppeteer = require('puppeteer');
 async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, attachments }) {
     if (!toEmail || !subject || !htmlContent) throw new Error('Missing required email parameters');
     // Always map toEmail to to for sendEmail
-    const emailOpts = {
-        to: toEmail,
-        subject,
-        htmlContent,
-        // Optionally add textContent or attachments if needed
-    };
-    // Attachments (Brevo expects array of {content, name, type})
-    if (attachments && Array.isArray(attachments) && attachments.length > 0) {
-        // Not all Brevo SDKs support attachments directly; if needed, add here
-        // For now, ignore or log
-        console.warn('Attachments provided, but not sent (implement if needed)');
-    }
-    // Debug: print emailOpts before sending
-    // console.log('[DEBUG] Sending email with:', emailOpts);
-    const result = await sendEmail(emailOpts);
-    return { provider: 'Brevo', result };
-}
-// EMAIL QUEUE ENABLED FLAG (from env or default false)
-const EMAIL_QUEUE_ENABLED = process.env.EMAIL_QUEUE_ENABLED === 'true';
-
-// Basic executeEmailJob implementation
-/**
- * Handles email jobs for the queue system
- * @param {string} jobType - Type of email job (e.g., 'order-status', 'otp', etc.)
- * @param {object} payload - Email data
- */
-async function executeEmailJob(jobType, payload) {
-    try {
-        // Accept all order-related job types
-        const allowedTypes = [
-            'order-status',
-            'order-placed',
-            'order-confirmed',
-            'order-packed',
-            'order-shipped',
-            'out-for-delivery',
-            'order-delivered'
-        ];
-        if (allowedTypes.includes((jobType || '').toLowerCase())) {
-            // Debug: print payload before sending
-            if (!payload || !payload.to || !payload.subject || !payload.htmlContent) {
-                console.error('❌ [DEBUG] Missing email parameter in jobType:', jobType, '| payload:', payload);
-            }
-            return await sendEmail(payload);
-        } else {
-            throw new Error('Unknown email job type: ' + jobType);
-        }
-    } catch (err) {
-        console.error('executeEmailJob error:', err.message);
-        throw err;
-    }
-}
-
-// All product/order-related email logic removed as per user request
-
-let firebaseAdminReady = false;
-
-try {
     let firebaseCredentials;
 
     // PRODUCTION (Railway): Use environment variable JSON string
@@ -3250,64 +3192,7 @@ async function startServer() {
             return extractGeminiText(response.data);
         };
 
-        // 🔴 REAL-TIME ORDER TRACKING - Get single order
-        app.get('/api/orders/:userId', async (req, res) => {
-            try {
-                const userId = String(req.params.userId || '').trim();
-                if (!userId) {
-                    return res.status(400).json({ message: 'userId is required' });
-                }
 
-                // 🔴 FETCH FROM ORDER COLLECTION (primary source)
-                let orders = [];
-                try {
-                    orders = await Order.find({ userid: userId })
-                        .sort({ updatedAt: -1, createdAt: -1 })
-                        .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
-                        .lean();
-                } catch (err) {
-                    console.error('❌ Error fetching orders from Order collection:', err.message);
-                }
-
-                // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
-                if (!orders || orders.length === 0) {
-                    let checkoutOrders = [];
-                    try {
-                        checkoutOrders = await Checkout.find({ userid: userId })
-                            .sort({ updatedAt: -1, createdAt: -1 })
-                            .lean();
-                    } catch (err) {
-                        console.error('❌ Error fetching orders from Checkout collection:', err.message);
-                    }
-                    return res.json({
-                        success: true,
-                        orders: checkoutOrders.map((item) => ({
-                            orderId: item.orderId || `CHECKOUT-${item._id}`,
-                            orderStatus: item.orderstatus || 'Order Placed',
-                            finalAmount: Number(item.finalAmount || 0),
-                            paymentStatus: item.paymentstatus || 'Pending',
-                            paymentMethod: item.paymentmode || 'COD',
-                            updatedAt: item.updatedAt || new Date()
-                        }))
-                    });
-                }
-
-                return res.json({
-                    success: true,
-                    orders: orders.map((item) => ({
-                        orderId: item.orderId,
-                        orderStatus: item.orderStatus || 'Order Placed',
-                        finalAmount: Number(item.finalAmount || 0),
-                        paymentStatus: item.paymentStatus || 'Pending',
-                        paymentMethod: item.paymentMethod || 'COD',
-                        updatedAt: item.updatedAt || item.createdAt || new Date()
-                    }))
-                });
-            } catch (e) {
-                console.error('❌ Orders list fetch error:', e.message);
-                return res.status(500).json({ message: 'Failed to fetch orders' });
-            }
-        });
 
         app.get('/api/orders/recent/:userId', async (req, res) => {
             try {
