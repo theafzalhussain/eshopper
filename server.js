@@ -1,114 +1,125 @@
+// 1. GLOBAL SETUP: ENV, SENTRY, FIREBASE
 
-// ...imports...
-
-
-// 1. ENVIRONMENT & MONITORING & CORE IMPORTS
+// 1. Dotenv must be first
 require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer = require('multer');
-const bcrypt = require('bcryptjs');
-const axios = require('axios');
-const http = require('http');
-const { Server } = require('socket.io');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const Sentry = require('@sentry/node');
-const admin = require('firebase-admin');
 
+// 2. Sentry initialization
+let firebaseAdminReady = false;
+const path = require('path');
+const MONGO_URI = process.env.MONGODB_URI;
+if (!MONGO_URI) {
+    console.error('❌ Missing MONGODB_URI');
+    process.exit(1);
+}
+mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('✅ MongoDB connected'))
+    .catch((err) => { console.error('❌ MongoDB connection error:', err.message); process.exit(1); });
 
-const app = express();
+// 9. MODELS (User, Product, Order)
+const userSchema = new mongoose.Schema({
+    name: String,
+    email: { type: String, unique: true },
+    password: String,
+    uid: { type: String, unique: true },
+    role: { type: String, default: 'User' },
+}, { timestamps: true });
+const User = mongoose.model('User', userSchema);
 
-// 🛡️ 5. DEFINE RATE LIMITERS (fix ReferenceError)
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts." } });
+const productSchema = new mongoose.Schema({
+    name: String,
+    price: Number,
+    stock: Number,
+    description: String,
+    image: String,
+}, { timestamps: true });
+const Product = mongoose.model('Product', productSchema);
 
-app.use(globalLimiter);
+const orderSchema = new mongoose.Schema({
+    orderId: { type: String, unique: true, required: true, index: true },
 
-if (process.env.SENTRY_DSN) {
-    Sentry.init({
-        dsn: process.env.SENTRY_DSN,
-        environment: process.env.NODE_ENV || 'production',
-        tracesSampleRate: 1.0,
+        // ...existing code...
+            });
+    // ...existing code...
+            if (process.env.FIREBASE_CONFIG_JSON) {
+                    // रेलवे के लिए फिक्स: डबल बैकस्लैश हटाना
+                    firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON.trim().replace(/\\n/g, '\n'));
+            } else {
+                    firebaseCredentials = require('./firebase-admin.json');
+                // ...existing code...
+    const rateLimit = require('express-rate-limit');
+
+    const app = express();
+
+    // 🔒 4. NETWORKING & SECURITY SETUP (Crucial for Cloudflare/Railway)
+    app.set('trust proxy', 1);
+    app.use(express.json());
+    app.use(helmet({ contentSecurityPolicy: false }));
+
+    // 🛡️ 5. DEFINE RATE LIMITERS (Fिक्स: ReferenceError)
+    const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true });
+    // Ye raha authLimiter jo error de raha tha
+    const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts." } });
+    app.use(globalLimiter);
+
+    // 🔒 6. PRODUCTION CORS FIX
+    app.use(cors({
+            origin: ["https://eshopperr.me", "https://www.eshopperr.me"],
+            credentials: true,
+            methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    }));
+    app.options('*', cors());
+
+    // 📸 7. MEDIA STORAGE CONFIG
+    cloudinary.config({ cloud_name: process.env.CLOUD_NAME, api_key: process.env.CLOUD_API_KEY, api_secret: process.env.CLOUD_API_SECRET });
+    const storage = new CloudinaryStorage({ cloudinary, params: { folder: 'eshoper_master' } });
+    const upload = multer({ storage }).fields([{ name: 'pic1', maxCount: 1 }, { name: 'pic', maxCount: 1 }]);
+
+    // 🔧 8. DATABASE & MODELS
+    const toJSONCustom = { virtuals: true, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
+    const opts = { toJSON: toJSONCustom, timestamps: true };
+
+    const User = mongoose.model('User', new mongoose.Schema({ name: String, email: String, uid: String, provider: String, lastLogin: Date }, opts));
+    const Product = mongoose.model('Product', new mongoose.Schema({ name: String, baseprice: Number, pic1: String }, opts));
+
+    // 📧 9. BREVO EMAIL (Final REST Fix)
+    const sendMail = async (to, otp) => {
+            try {
+                    const BREVO_KEY = process.env.BREVO_API_KEY?.trim();
+                    await axios.post('https://api.brevo.com/v3/smtp/email', {
+                            sender: { name: "Eshopper Luxe", email: "support@eshopperr.me" },
+                            to: [{ email: to }],
+                            subject: "Verification Code - Eshopper",
+                            htmlContent: `<h2>Your code: ${otp}</h2>`
+                    }, { headers: { 'api-key': BREVO_KEY } });
+                    return true;
+            } catch (e) { console.error("❌ Email Error"); return false; }
+    };
+
+    // 🤖 10. AI FASHION ASSISTANT
+    app.post('/api/chat', async (req, res) => {
+            try {
+                    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
+                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                    const result = await model.generateContent(`Role: Fashion Stylist. User asked: ${req.body.prompt}`);
+                    res.json({ text: result.response.text() });
+            } catch (e) { res.status(500).json({ error: "AI Busy" }); }
     });
-}
 
-// 2. FIREBASE ADMIN INITIALIZATION (with trim/replace for private_key)
-try {
-    let firebaseCredentials;
-    if (process.env.FIREBASE_CONFIG_JSON) {
-        firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON.trim().replace(/\n/g, '\n'));
-    } else {
-        firebaseCredentials = require('./firebase-admin.json');
-    }
-    if (!admin.apps.length) {
-        admin.initializeApp({ credential: admin.credential.cert(firebaseCredentials) });
-        console.log(`✅ Firebase Admin Active for: ${firebaseCredentials.project_id}`);
-    }
-} catch (e) {
-    console.error("⚠️ Firebase Login skip (Security only):", e.message);
-}
+    // 📝 11. ROUTES
+    app.post('/api/send-otp', authLimiter, async (req, res) => {
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            await sendMail(req.body.email, otp);
+            res.json({ result: "Done" });
+    });
 
-// 9. EMAIL (BREVO)
-const sendMail = async (to, otp) => {
-    try {
-        const BREVO_KEY = process.env.BREVO_API_KEY?.trim();
-        await axios.post('https://api.brevo.com/v3/smtp/email', {
-            sender: { name: "Eshopper Luxe", email: "support@eshopperr.me" },
-            to: [{ email: to }],
-            subject: "Verification Code - Eshopper",
-            htmlContent: `<h2>Your code: ${otp}</h2>`
-        }, { headers: { 'api-key': BREVO_KEY } });
-        return true;
-    } catch (e) { console.error("❌ Email Error"); return false; }
-};
+    app.get('/product', async (req, res) => res.json(await Product.find().sort({_id: -1})));
 
-// 10. ROUTES
-app.post('/api/send-otp', authLimiter, async (req, res) => {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    await sendMail(req.body.email, otp);
-    res.json({ result: "Done" });
-});
-
-app.get('/product', async (req, res) => res.json(await Product.find().sort({_id: -1})));
-
-// 11. SERVER & SOCKET.IO START
-const server = http.createServer(app);
-const io = new Server(server, { /* options */ });
-
-mongoose.connect(process.env.MONGODB_URI, { dbName: 'eshoper' }).then(() => {
-    console.log("✅ DB Connected");
-    server.listen(PORT, '0.0.0.0', () => console.log(`🚀 Site: https://eshopperr.me`));
-});
-
-// 🤖 10. AI FASHION ASSISTANT
-app.post('/api/chat', async (req, res) => {
-    try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY.trim());
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(`Role: Fashion Stylist. User asked: ${req.body.prompt}`);
-        res.json({ text: result.response.text() });
-    } catch (e) { res.status(500).json({ error: "AI Busy" }); }
-});
-
-// 📝 11. ROUTES
-app.post('/api/send-otp', authLimiter, async (req, res) => {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    await sendMail(req.body.email, otp);
-    res.json({ result: "Done" });
-});
-
-app.get('/product', async (req, res) => res.json(await Product.find().sort({_id: -1})));
-
-// 🏁 12. BOOTUP SERVER
-const PORT = process.env.PORT || 5000;
-mongoose.connect(process.env.MONGODB_URI, { dbName: 'eshoper' }).then(() => {
-    console.log("✅ DB Connected");
-    app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Site: https://eshopperr.me`));
-});
+    // 🏁 12. BOOTUP SERVER
+    const PORT = process.env.PORT || 5000;
+    mongoose.connect(process.env.MONGODB_URI, { dbName: 'eshoper' }).then(() => {
+            console.log("✅ DB Connected");
+            app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Site: https://eshopperr.me`));
+    });
 /**
  * Universal transactional email sender for ESHOPPER (Brevo/Sendinblue)
  * @param {Object} opts
@@ -2573,6 +2584,16 @@ app.delete(`${path}/:id`, async (req, res) => {
 });
 };
 
+handle('/user', User, true);
+handle('/product', Product, true);
+handle('/maincategory', Maincategory);
+handle('/subcategory', Subcategory);
+handle('/brand', Brand);
+handle('/cart', Cart);
+handle('/wishlist', Wishlist);
+handle('/checkout', Checkout);
+handle('/contact', Contact);
+handle('/newslatter', Newslatter);
 
 app.post('/api/cart/clear/:userid', async (req, res) => {
     try {
