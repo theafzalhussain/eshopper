@@ -53,6 +53,7 @@ try {
 }
 
 // 5. EXPRESS APP SETUP
+// ...duplicate app = express() removed...
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(helmet({ contentSecurityPolicy: false }));
