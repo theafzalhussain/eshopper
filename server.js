@@ -3173,25 +3173,19 @@ mongoose.connection.on('error', (err) => {
 mongoose.connection.on('disconnected', () => {
     console.warn('⚠️  Mongoose disconnected. Attempting reconnect in 5s...');
     setTimeout(async () => {
-        try {
-            await mongoose.connect(MONGO_URI, {
-                dbName: process.env.DB_NAME || 'eshoper',
-                serverSelectionTimeoutMS: 10000,
-                socketTimeoutMS: 45000,
-                retryWrites: true,
-                w: 'majority'
-            });
-            console.log('✅ MongoDB reconnected successfully');
-        } catch (e) {
-            console.error('❌ MongoDB reconnect failed:', e.message);
-        }
+            try {
+                await mongoose.connect(MONGO_URI, {
+                    dbName: process.env.DB_NAME || 'eshoper',
+                    serverSelectionTimeoutMS: 10000,
+                    socketTimeoutMS: 45000,
+                    retryWrites: true,
+                    w: 'majority'
+                });
+                console.log('✅ MongoDB reconnected successfully');
+            } catch (e) {
+                console.error('❌ MongoDB reconnect failed:', e.message);
+            }
     }, 5000);
 });
-try {
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-        console.log(`🚀 Server is running on port ${PORT}`);
-    });
-} catch (error) {
-    console.error("❌ Server initialization error:", error);
-}
+    }
+    startServer();
