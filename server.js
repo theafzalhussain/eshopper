@@ -1,4 +1,5 @@
 // ...existing code...
+// ...existing code...
 // 🔑 AUTH SYNC ROUTE (Google/Phone Login)
 app.post('/api/auth-sync', async (req, res) => {
     const { idToken } = req.body;
@@ -19,31 +20,17 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { admin, firebaseAdminReady } = require('./config/firebase');
-
-// --- Firebase Admin Initialization Fix ---
-// Firebase Admin initialization now handled in config/firebase.js
-if (firebaseAdminReady) {
-    console.log('✅ Firebase Admin initialized');
-} else {
-    console.warn('⚠️  Firebase Admin config not found. Google sign-in will not work.');
 // ...existing code...
 // ...existing code...
 const path = require('path');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
 // Email utility import/fix
-const { sendTransactionalEmail } = require('./src/utils/email');
-const sendEmail = sendTransactionalEmail;
-// ===== EMAIL UTILITY (Brevo)
 require('./models/OTPRecord');
 const User = require('./models/User');
 const Product = require('./models/Product');
@@ -99,8 +86,7 @@ app.get('/api/health', (req, res) => {
         time: new Date().toISOString(),
         message: 'API is running',
     });
-});
-}
+    });
 // ...existing code...
 
 // Apply CORS before any routes or middleware
@@ -200,77 +186,14 @@ app.use((err, req, res, next) => {
 
 // 🖼️ BRAND LOGO SOURCES (robust for invoice/email rendering)
 const BRAND_SITE_URL = (process.env.BRAND_SITE_URL || process.env.FRONTEND_URL || 'https://eshopperr.me').trim().replace(/\/$/, '');
-const BRAND_LOGO_PRIMARY_URL = process.env.BRAND_LOGO_URL || `${BRAND_SITE_URL}/logo512.png`;
-const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_SITE_URL}/logo192.png`;
-const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_PRIMARY_URL;
 const BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
 
-// 🔧 DATABASE CONNECTION SETUP
-const MONGO_URI = process.env.MONGODB_URI;
-
-if (!MONGO_URI) {
-    console.error("❌ CRITICAL: Missing MONGODB_URI in environment variables");
-    console.error("   Please set MONGODB_URI in your Railway environment");
-    process.exit(1);
-}
 
 console.log("🔍 Attempting MongoDB connection...");
 
 // 🔧 CLOUDINARY CONFIGURATION SETUP
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUD_NAME;
-const CLOUDINARY_API_KEY = process.env.CLOUD_API_KEY;
-const CLOUDINARY_API_SECRET = process.env.CLOUD_API_SECRET;
-
-if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
-    console.error("❌ CRITICAL: Missing Cloudinary credentials in environment variables");
-    console.error("   Please set CLOUD_NAME, CLOUD_API_KEY, and CLOUD_API_SECRET in Railway");
-    process.exit(1);
-}
-
-cloudinary.config({
-    cloud_name: CLOUDINARY_CLOUD_NAME,
-    api_key: CLOUDINARY_API_KEY,
-    api_secret: CLOUDINARY_API_SECRET
-});
-
-console.log("✅ Cloudinary configured successfully");
-console.log(`📸 Cloud Name: ${CLOUDINARY_CLOUD_NAME}`);
-
-// 📝 HELPER FUNCTION TO RETURN CLOUDINARY URLS (for GET requests)
-const sanitizeCloudinaryUrl = (url) => {
-    if (!url) return null;
-    // If it's already a Cloudinary URL, return as-is (already uploaded)
-    if (url.includes('res.cloudinary.com')) {
-        return url;
-    }
-    // Path format from multer-storage-cloudinary, return as-is
-    return url;
-};
-
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'eshoper_master',
-        allowedFormats: ['jpg', 'png', 'jpeg'],
-        resource_type: 'auto'
-    }
-});
-const upload = multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg'];
-        if (allowedMimes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error(`Invalid file type: ${file.mimetype}`));
-        }
-    }
-}).fields([
-    { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 },
-    { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 },
-    { name: 'pic4', maxCount: 1 }
-]);
+const { cloudinary, upload } = require('./middleware/upload');
+const { sanitizeCloudinaryUrl } = require('./src/utils/cloudinary');
 
 
 const hbs = require('handlebars');
@@ -454,344 +377,6 @@ const buildInvoiceHtml = ({
                 body { background: #f5f5f3; color: #121212; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
                 .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
                 .card { background: #fff; border: 3px solid #d4af37; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
-                .head { padding: 24px 20px; background: #f5f5f3; }
-                .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
-                .brand-center { text-align: center; vertical-align: middle; }
-                .brand-spacer { width: 64px; }
-                .brand-badge { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-                .brand-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
-                .brand-title { font-size: 34px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; line-height: 1.2; }
-                .tagline { font-size: 12px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0 0; }
-                .logo-section { margin-bottom: 16px; }
-                .logo-icon { font-size: 64px; line-height: 1; margin: 0 0 12px 0; display: inline-block; }
-                .brand-name { font-size: 56px; font-weight: 700; letter-spacing: 4px; margin: 0 0 4px 0; background: linear-gradient(90deg, #fff9e6, #d4af37, #fff9e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-                .brand-tagline { font-size: 13px; letter-spacing: 3px; text-transform: uppercase; color: #ffd700; font-weight: 700; margin-top: 8px; }
-                .tag-badge { font-size: 11px; letter-spacing: 2px; margin-top: 14px; text-transform: uppercase; color: #fff9e6; font-weight: 700; display: inline-block; border: 1px solid #ffd700; padding: 6px 16px; border-radius: 20px; }
-                .body { padding: 36px; }
-                .title { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 700; margin: 0 0 28px; color: #0f0f0f; letter-spacing: 1px; text-align: center; }
-                .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
-                .box { border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .box:hover { border-color: #ff9d00; box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
-                .k { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; }
-                .v { font-size: 15px; font-weight: 700; margin-top: 8px; color: #0f0f0f; word-break: break-word; }
-                .items-section { margin: 32px 0; }
-                .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
-                table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; white-space: nowrap; }
-                td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; word-wrap: break-word; }
-                td:nth-child(4), td:nth-child(5) { font-weight: 800; color: #0f0f0f; text-align: right; padding-right: 16px; }
-                tr:nth-child(odd) { background: #fafaf8; }
-                tr:hover { background: #f5f0e6; }
-                .totals-section { margin: 32px 0; }
-                .summary-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
-                .summary-box { border: 2px solid #d4af37; border-radius: 12px; padding: 18px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .summary-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 10px; }
-                .summary-value { font-size: 18px; font-weight: 900; color: #0f0f0f; word-break: break-word; }
-                .qr-section { border: 2px solid #d4af37; border-radius: 12px; padding: 20px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .qr-label { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 14px; }
-                .qr-code { display: inline-block; width: 160px; height: 160px; }
-                .qr-info { font-size: 12px; color: #666; margin-top: 12px; }
-                .totals { border: 3px solid #d4af37; border-radius: 14px; padding: 24px 28px; background: linear-gradient(135deg, #a37f1f 0%, #d4af37 50%, #8b7521 100%); box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
-                .final-row { display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center; padding: 20px 0; border: none !important; }
-                .final-label { font-weight: 800; font-size: 18px; color: #fff; letter-spacing: 0.5px; }
-                .final-value { text-align: right; font-size: 32px; font-weight: 900; letter-spacing: 1px; color: #fff; }
-                .address-section { margin: 32px 0; }
-                .ship { border: 2px solid #d4af37; border-radius: 12px; padding: 20px 24px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); font-size: 13px; line-height: 1.8; color: #2c2c2c; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .ship-title { font-weight: 700; color: #0f0f0f; margin-bottom: 14px; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; }
-                .ship-addr { font-size: 13px; color: #0f0f0f; line-height: 1.8; }
-                .footer { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e8dcc8; }
-                .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.8; }
-                .foot-premium { color: #d4af37; font-weight: 700; margin-top: 14px; font-size: 13px; letter-spacing: 1px; }
-                @media (max-width: 768px) {
-                    .wrap { padding: 12px; }
-                    .head { padding: 18px 16px; }
-                    .body { padding: 24px; }
-                    .brand-left, .brand-spacer { width: 52px; }
-                    .brand-badge { width: 40px; height: 40px; border-radius: 10px; }
-                    .brand-title { font-size: 22px; }
-                    .tagline { font-size: 10px; } 
-                    .brand-name { font-size: 40px; letter-spacing: 2px; }
-                    .logo-icon { font-size: 48px; }
-                    .title { font-size: 24px; }
-                    .meta { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-                    .box { padding: 12px 14px; }
-                    .k { font-size: 9px; }
-                    .v { font-size: 13px; }
-                    th, td { padding: 10px 8px; font-size: 12px; }
-                    .summary-boxes { grid-template-columns: repeat(3, 1fr); gap: 12px; }
-                    .summary-box { padding: 14px 12px; }
-                    .summary-label { font-size: 10px; }
-                    .summary-value { font-size: 16px; }
-                    .qr-code { width: 140px; height: 140px; }
-                    .final-value { font-size: 26px; }
-                }
-                @media (max-width: 480px) {
-                    .wrap { padding: 8px; }
-                    .head { padding: 20px 16px; }
-                    .body { padding: 16px; }
-                    .brand-name { font-size: 28px; letter-spacing: 1px; }
-                    .brand-tagline { font-size: 11px; letter-spacing: 1px; }
-                    .logo-icon { font-size: 40px; }
-                    .title { font-size: 18px; margin-bottom: 16px; }
-                    .meta { grid-template-columns: 1fr; gap: 10px; }
-                    table { font-size: 11px; }
-                    th, td { padding: 8px 6px; }
-                    .summary-boxes { grid-template-columns: 1fr; gap: 10px; margin-bottom: 16px; }
-                    .summary-box { padding: 12px 10px; }
-                    .summary-label { font-size: 9px; margin-bottom: 8px; }
-                    .summary-value { font-size: 14px; }
-                    .qr-section { padding: 16px; margin-bottom: 16px; }
-                    .qr-label { font-size: 11px; margin-bottom: 10px; }
-                    .qr-code { width: 120px; height: 120px; }
-                    .qr-info { font-size: 11px; }
-                    .totals { padding: 16px 14px; }
-                    .final-label { font-size: 14px; }
-                    .final-value { font-size: 20px; }
-                    .final-row { gap: 10px; padding: 14px 0; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="wrap">
-                <div class="card">
-                    <!-- PREMIUM HEADER -->
-                    <div class="head">
-                        <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td class="brand-left">
-                                    <div class="brand-badge">
-                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-                                    </div>
-                                </td>
-                                <td class="brand-center">
-                                    <p class="brand-title">eShopper Boutique Luxe</p>
-                                    <p class="tagline">Premium Fashion Destination</p>
-                                </td>
-                                <td class="brand-spacer"></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <!-- MAIN CONTENT -->
-                    <div class="body">
-                        <h2 class="title">TAX INVOICE</h2>
-                        
-                        <!-- ORDER DETAILS -->
-                        <div class="meta">
-                            <div class="box"><div class="k">🆔 Order ID</div><div class="v">${orderId}</div></div>
-                            <div class="box"><div class="k">📅 Date</div><div class="v">${orderDateText}</div></div>
-                            <div class="box"><div class="k">👤 Customer</div><div class="v">${displayName.split(' ')[0]}</div></div>
-                        </div>
-
-                        <!-- ITEMS TABLE -->
-                        <div class="items-section">
-                            <div class="section-title">📦 Order Items</div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th style="width:8%">#</th>
-                                        <th style="width:40%">Description</th>
-                                        <th style="width:12%">Qty</th>
-                                        <th style="width:20%">Unit Price</th>
-                                        <th style="width:20%">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
-                            </table>
-                        </div>
-
-                        <!-- SUMMARY BOXES -->
-                        <div class="totals-section">
-                            <div class="summary-boxes">
-                                <div class="summary-box">
-                                    <div class="summary-label">📦 Subtotal</div>
-                                    <div class="summary-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                                </div>
-                                <div class="summary-box">
-                                    <div class="summary-label">🚚 Shipping</div>
-                                    <div class="summary-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</div>
-                                </div>
-                                <div class="summary-box">
-                                    <div class="summary-label">📊 Taxes</div>
-                                    <div class="summary-value">Included</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- QR CODE SECTION -->
-                        <div class="qr-section">
-                            <div class="qr-label">📱 Track Your Order</div>
-                            <svg class="qr-code" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="200" height="200" fill="white"/>
-                                <rect x="20" y="20" width="50" height="50" fill="black"/>
-                                <rect x="30" y="30" width="30" height="30" fill="white"/>
-                                <rect x="130" y="20" width="50" height="50" fill="black"/>
-                                <rect x="140" y="30" width="30" height="30" fill="white"/>
-                                <rect x="20" y="130" width="50" height="50" fill="black"/>
-                                <rect x="30" y="140" width="30" height="30" fill="white"/>
-                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.3"/>
-                                <circle cx="80" cy="60" r="8" fill="black" opacity="0.3"/>
-                                <circle cx="140" cy="140" r="8" fill="black" opacity="0.3"/>
-                            </svg>
-                            <div class="qr-info">Scan to track your package in real-time</div>
-                        </div>
-
-                        <!-- FINAL TOTAL -->
-                        <div class="totals">
-                            <div class="final-row">
-                                <span class="final-label">💰 TOTAL PAYABLE</span>
-                                <span></span>
-                                <span class="final-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
-                            </div>
-                        </div>
-
-                        <!-- PAYMENT & ORDER INFO -->
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 28px 0;">
-                            <div class="box">
-                                <div class="k">💳 Payment Method</div>
-                                <div class="v">${paymentMethod || 'Cash on Delivery'}</div>
-                            </div>
-                            <div class="box">
-                                <div class="k">📊 Payment Status</div>
-                                <div class="v">${paymentStatus || 'Pending'}</div>
-                            </div>
-                        </div>
-
-                        <!-- DELIVERY ADDRESS -->
-                        <div class="address-section">
-                            <div class="section-title">📍 Delivery Address</div>
-                            <div class="ship">
-                                <div class="ship-title">Recipient</div>
-                                <div class="ship-addr">
-                                    <strong>${shippingAddress?.fullName || 'Customer'}</strong><br/>
-                                    ${shippingAddress?.addressline1 || 'Address Line'}<br/>
-                                    ${shippingAddress?.city || 'City'}, ${shippingAddress?.state || 'State'} - ${shippingAddress?.pin || 'PIN'}<br/>
-                                    ${shippingAddress?.country || 'India'}<br/>
-                                    <strong style="color:#d4af37;">📱 Phone:</strong> ${shippingAddress?.phone || 'N/A'}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FOOTER -->
-                        <div class="footer">
-                            <div class="foot">
-                                This is a computer-generated invoice and does not require a physical signature.<br/>
-                                <strong>For support:</strong> support@eshopperr.me | <strong>Website:</strong> eshopperr.me
-                            </div>
-                            <div class="foot-premium">💎 eShopper Boutique Luxe • Premium Edition • Authenticity Guaranteed 💎</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
-};
-
-const generateInvoicePdfBuffer = async (orderPayload) => {
-    if (!FEATURE_INVOICE_SYSTEM) {
-        throw new Error('Invoice system disabled');
-    }
-    // Determine which HTML builder to use based on explicit type + status fallback
-    const requestedType = String(orderPayload?.pdfType || '').trim().toLowerCase();
-    const normalizedStatus = String(orderPayload?.orderStatus || '').trim().toLowerCase();
-    const isDelivered = orderPayload?.isDelivered || normalizedStatus === 'delivered';
-
-    let htmlBuilder = buildOrderReceiptHtml;
-    if (requestedType === 'confirmation' || requestedType === 'proforma' || requestedType === 'confirmed') {
-        // htmlBuilder assignment removed
-    } else if (requestedType === 'final' || requestedType === 'tax' || requestedType === 'invoice' || isDelivered) {
-        htmlBuilder = buildTaxInvoiceHtml;
-    }
-
-    const html = htmlBuilder(orderPayload);
-    let browser;
-    try {
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--single-process',
-                '--disable-web-security',
-                '--disable-features=IsolateOrigins,site-per-process'
-            ]
-        });
-
-        const page = await browser.newPage();
-
-        // Set viewport
-        await page.setViewport({ width: 1200, height: 1600 });
-
-        // Set content with longer timeout
-        await page.setContent(html, {
-            waitUntil: ['networkidle0', 'domcontentloaded'],
-            timeout: 90000
-        });
-
-        // Wait for web fonts/styles to settle (safe across Puppeteer versions)
-        await page.evaluate(async () => {
-            if (document.fonts && document.fonts.ready) {
-                try {
-                    await document.fonts.ready;
-                } catch (_) { }
-            }
-        });
-
-        // Wait for any animations/fonts to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Generate PDF
-        const pdfRaw = await page.pdf({
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '16mm', right: '12mm', bottom: '16mm', left: '12mm' },
-            timeout: 60000
-        });
-
-        // Puppeteer can return Uint8Array in some versions; normalize to Buffer
-        const pdf = Buffer.isBuffer(pdfRaw)
-            ? pdfRaw
-            : (pdfRaw ? Buffer.from(pdfRaw) : Buffer.alloc(0));
-
-        // Validate PDF
-        if (!pdf || pdf.length < 200) {
-            console.error('❌ PDF validation failed: invalid buffer');
-            throw new Error('Generated invoice buffer is not valid');
-        }
-
-        // Check for PDF magic bytes
-        const pdfSignature = pdf.subarray(0, 4).toString('latin1');
-        if (!pdfSignature.startsWith('%PDF')) {
-            console.error('❌ PDF signature check failed:', pdfSignature);
-            throw new Error('Invalid PDF signature');
-        }
-
-        return pdf;
-    } catch (e) {
-        console.error('❌ PDF generation failed:', e.message, e.stack);
-        throw e;
-    } finally {
-        if (browser) {
-            try {
-                await browser.close();
-            } catch (closeErr) {
-                console.error('⚠️ Error closing browser:', closeErr.message);
-            }
-        }
-    }
-};
-
-const sendWhatsApp = async (number, message) => {
-    if (!FEATURE_WHATSAPP_NOTIFICATIONS) {
-        return { skipped: true, reason: 'whatsapp-notifications-disabled' };
-    }
-    const apiUrl = process.env.EVOLUTION_API_URL ? process.env.EVOLUTION_API_URL.trim().replace(/\/$/, '') : '';
-    const token = process.env.WHATSAPP_TOKEN ? process.env.WHATSAPP_TOKEN.trim() : '';
-    const apiKey = process.env.EVOLUTION_API_KEY ? process.env.EVOLUTION_API_KEY.trim() : '';
     const instance = process.env.WHATSAPP_INSTANCE || 'eshopper_bot';
     const senderNumber = process.env.WHATSAPP_SENDER_NUMBER ? process.env.WHATSAPP_SENDER_NUMBER.trim() : '';
     const adminEmail = process.env.ADMIN_EMAIL || 'theafzalhussain786@gmail.com';
@@ -1659,8 +1244,7 @@ app.put(`${path}/:id`, useUpload ? upload : (req, res, next) => next(), async (r
         res.status(500).json({ error: e.message });
     }
 });
-app.delete(`${path}/:id`, async (req, res) => {
-    try {
+    });
         await Model.findByIdAndDelete(req.params.id);
         res.json({ result: "Done" });
     } catch (e) {
