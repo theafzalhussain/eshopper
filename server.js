@@ -35,6 +35,7 @@ const { sendTransactionalEmail } = require('./src/utils/email');
 const sendEmail = sendTransactionalEmail;
 // ===== EMAIL UTILITY (Brevo)
 require('./models/OTPRecord');
+require('./models/User');
 const authRoutes = require('./routes/authRoutes');
 // ...existing code...
 // ...existing code...
