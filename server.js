@@ -1,3 +1,4 @@
+const Subcategory = require('./models/Subcategory');
 const Maincategory = require('./models/Maincategory');
 const Product = require('./models/Product');
 // Firebase Admin initialization (for Google Login crash fix)
