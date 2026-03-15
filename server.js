@@ -385,7 +385,7 @@ const buildTaxInvoiceHtml = ({
         const template = hbs.compile(templateSource);
         return template({ orderId, userName, userEmail, paymentMethod, paymentStatus, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate });
     };
-    // ...existing code...
+// ...existing code...
 
 const buildInvoiceHtml = ({
     orderId,
