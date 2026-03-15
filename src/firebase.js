@@ -1,23 +1,21 @@
 const admin = require('firebase-admin');
 
 try {
-    const firebaseVar = process.env.FIREBASE_CONFIG_JSON;
+    const configData = process.env.FIREBASE_CONFIG_JSON;
     
-    if (!firebaseVar) {
-        console.error("⚠️ Railway variable FIREBASE_CONFIG_JSON nahi mila!");
-    } else {
-        // Variable ko JSON mein convert kar rahe hain
-        const serviceAccount = JSON.parse(firebaseVar);
-
+    if (configData) {
+        const serviceAccount = JSON.parse(configData);
         if (!admin.apps.length) {
             admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount)
             });
-            console.log("✅ Firebase Admin Initialized Successfully!");
+            console.log("✅ Firebase Admin Connected!");
         }
+    } else {
+        console.error("⚠️ Error: FIREBASE_CONFIG_JSON variable not found in Railway!");
     }
-} catch (error) {
-    console.error("❌ Firebase Backend Error:", error.message);
+} catch (err) {
+    console.error("❌ Firebase Secret Error:", err.message);
 }
 
 module.exports = admin;
