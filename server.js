@@ -3187,7 +3187,3 @@ mongoose.connection.on('disconnected', () => {
 });
 
 startServer();
-// --- END OF FILE ---
-// Fix for missing closing brace
-// If any module/async function was left open, close it here
-// (No open function detected, so just add a closing brace if needed)
