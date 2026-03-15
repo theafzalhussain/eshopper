@@ -4,7 +4,7 @@ app.post('/api/auth-sync', async (req, res) => {
     const { idToken } = req.body;
     if (!idToken) return res.status(400).json({ message: 'idToken required.' });
     try {
-        const { admin } = require('./config/firebase');
+        // 'admin' already imported above
         const decoded = await admin.auth().verifyIdToken(idToken);
         const email = decoded.email || '';
         // ...existing code...
