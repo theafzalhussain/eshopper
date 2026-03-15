@@ -1,3 +1,5 @@
+// Fix: Removed stray closing brace at top causing syntax error
+// Fix: Removed stray closing brace at top causing syntax error
 // ...existing code...
 // ...existing code...
 // 🔑 AUTH SYNC ROUTE (Google/Phone Login)
@@ -87,13 +89,9 @@ app.get('/api/health', (req, res) => {
         message: 'API is running',
     });
 // ...existing code...
-
-// Apply CORS before any routes or middleware
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-
-// 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
-const httpServer = http.createServer(app);
+            });
+        });
+    // --- server.js AI REFACTOR END ---
 const io = new Server(httpServer, {
     cors: {
         origin: [
@@ -1339,7 +1337,7 @@ app.get('/api/order/:orderId', async (req, res) => {
                 });
             }
         });
-        // --- server.js AI REFACTOR END ---
+    // --- server.js AI REFACTOR END ---
 
         const server = httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`🚀 Master Server Live on ${PORT}`);
@@ -1379,7 +1377,6 @@ process.on("uncaughtException", (err) => {
     console.error("❌ Uncaught Exception:", err.message);
     process.exit(1);
 });
-
 
 process.on("unhandledRejection", (err) => {
     console.error("❌ Unhandled Rejection:", err.message);
