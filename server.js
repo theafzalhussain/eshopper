@@ -1,3 +1,4 @@
+const Wishlist = require('./models/Wishlist');
 const Cart = require('./models/Cart');
 const Brand = require('./models/Brand');
 const Subcategory = require('./models/Subcategory');
