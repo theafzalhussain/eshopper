@@ -3112,12 +3112,6 @@ app.get('/api/order/:orderId', async (req, res) => {
 
 
 
-process.on("unhandledRejection", (err) => {
-    console.error("❌ Unhandled Rejection:", err?.message || err);
-    if (process.env.SENTRY_DSN) Sentry.captureException(err);
-    process.exit(1);
-});
-
 // --- SERVER START LOGIC (FIXED) ---
 const startServer = async () => {
     try {
@@ -3150,6 +3144,7 @@ process.on("uncaughtException", (err) => {
     console.error("❌ Uncaught Exception:", err.message);
     process.exit(1);
 });
+
 
 process.on("unhandledRejection", (err) => {
     console.error("❌ Unhandled Rejection:", err.message);
