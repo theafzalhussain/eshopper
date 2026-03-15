@@ -1,3 +1,4 @@
+const Product = require('./models/Product');
 // Firebase Admin initialization (for Google Login crash fix)
 // Firebase Admin initialization now handled in config/firebase.js
 // 🔴 LOAD ENV VARIABLES FIRST
