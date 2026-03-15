@@ -35,7 +35,7 @@ if (firebaseAdminReady) {
     console.log('✅ Firebase Admin initialized');
 } else {
     console.warn('⚠️  Firebase Admin config not found. Google sign-in will not work.');
-}
+// ...existing code...
 // ...existing code...
 const path = require('path');
 const Sentry = require('@sentry/node');
@@ -97,6 +97,7 @@ app.get('/api/health', (req, res) => {
         message: 'API is running',
     });
 });
+// ...existing code...
 
 // Apply CORS before any routes or middleware
 app.use(cors(corsOptions));
@@ -3185,5 +3186,15 @@ mongoose.connection.on('disconnected', () => {
         }
     }, 5000);
 });
+try {
+    try {
+        const PORT = process.env.PORT || 5000;
+        app.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error("❌ Server start hone mein error:", error);
+    }
+} catch (error) {
+    console.error("Server start hone mein dikkat hai:", error);
 }
-startServer();

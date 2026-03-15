@@ -4,7 +4,7 @@ const Sentry = require('@sentry/node');
 const { sendTransactionalEmail } = require('../src/utils/email');
 const sendEmail = sendTransactionalEmail;
 const mongoose = require('mongoose');
-const OTPRecord = mongoose.model('OTPRecord');
+const OTPRecord = require('../models/OTPRecord');
 const User = mongoose.model('User');
 
 // FIREBASE AUTH SYNC
