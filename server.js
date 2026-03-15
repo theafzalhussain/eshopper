@@ -421,7 +421,7 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
             .replace(/{{trackingLink}}/g, trackingLink || '')
             .replace(/{{status}}/g, status || '')
             .replace(/{{estimatedDelivery}}/g, estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN') : '')
-            .replace(/{{totalAmount}}/g, totalAmount ? `₹${Number(totalAmount).toLocaleString('en-IN')}` : '');
+                .replace(/{{totalAmount}}/g, totalAmount ? `₹${Number(totalAmount).toLocaleString('en-IN')}` : '');
         const attachments = [];
         if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
             attachments.push({
