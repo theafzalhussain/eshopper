@@ -381,33 +381,6 @@ const buildInvoiceHtml = ({
     const senderNumber = process.env.WHATSAPP_SENDER_NUMBER ? process.env.WHATSAPP_SENDER_NUMBER.trim() : '';
     const adminEmail = process.env.ADMIN_EMAIL || 'theafzalhussain786@gmail.com';
 
-    // 🔴 STRICT PHONE FORMAT CONVERSION (91 + 10 digits)
-    const normalizePhoneStrict = (phone = '') => {
-        let digits = String(phone || '').replace(/\D/g, '');
-        if (!digits) return '';
-
-        if (digits.length === 11 && digits.startsWith('0')) {
-            digits = digits.slice(1);
-        }
-
-        if (digits.length === 12 && digits.startsWith('91')) {
-            return digits;
-        }
-
-        if (digits.length > 10 && digits.startsWith('91')) {
-            digits = digits.slice(-10);
-        }
-
-        if (digits.length === 10) {
-            return `91${digits}`;
-        }
-
-        if (digits.length > 10) {
-            return `91${digits.slice(-10)}`;
-        }
-
-        return '';
-    };
 
     const contactNumber = normalizePhoneStrict(number);
     const normalizedSender = normalizePhoneStrict(senderNumber);
