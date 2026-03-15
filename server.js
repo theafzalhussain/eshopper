@@ -1,3 +1,5 @@
+// Firebase Admin initialization (for Google Login crash fix)
+// Firebase Admin initialization now handled in config/firebase.js
 // 🔴 LOAD ENV VARIABLES FIRST
 require('dotenv').config();
 
@@ -15,29 +17,14 @@ const axios = require('axios');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const admin = require('firebase-admin');
+const { admin, firebaseAdminReady } = require('./config/firebase');
 
 // --- Firebase Admin Initialization Fix ---
-let firebaseAdminReady = false;
-try {
-    // Prefer FIREBASE_CONFIG_JSON from env, fallback to firebase-admin.json file
-    let firebaseConfig = null;
-    if (process.env.FIREBASE_CONFIG_JSON) {
-        firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
-    } else if (fs.existsSync(path.join(__dirname, 'firebase-admin.json'))) {
-        firebaseConfig = require(path.join(__dirname, 'firebase-admin.json'));
-    }
-    if (firebaseConfig && !admin.apps.length) {
-        admin.initializeApp({
-            credential: admin.credential.cert(firebaseConfig),
-        });
-        firebaseAdminReady = true;
-        console.log('✅ Firebase Admin initialized');
-    } else if (!firebaseConfig) {
-        console.warn('⚠️  Firebase Admin config not found. Google sign-in will not work.');
-    }
-} catch (err) {
-    console.error('❌ Firebase Admin initialization failed:', err.message);
+// Firebase Admin initialization now handled in config/firebase.js
+if (firebaseAdminReady) {
+    console.log('✅ Firebase Admin initialized');
+} else {
+    console.warn('⚠️  Firebase Admin config not found. Google sign-in will not work.');
 }
 const fs = require('fs');
 const path = require('path');
@@ -313,330 +300,10 @@ const enqueueEmailJob = async (jobType, payload) => {
 // Insert new premium HTML template integration logic here.
 // Example: Integrate 6 new premium templates and their rendering logic.
 // Ensure all new template code is robust, modular, and secure.
-
-const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
-const opts = { toJSON: toJSONCustom, timestamps: true };
-
-const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
-const User = mongoose.model('User', new mongoose.Schema({
-    name: String,
-    username: { type: String, unique: true, sparse: true },
-    email: { type: String, unique: true, sparse: true },
-    phone: String,
-    password: { type: String },
-    uid: { type: String, unique: true, sparse: true, index: true }, // Firebase UID
-    provider: { type: String, enum: ['email', 'google', 'phone'], default: 'email' }, // Auth provider
-    role: { type: String, default: "User" },
-    pic: String,
-    addressline1: String,
-    city: String,
-    state: String,
-    pin: String,
-    otp: String,
-    otpExpires: Date,
-    lastLogin: { type: Date, default: Date.now }, // Track last login
-    failedAttempts: { type: Number, default: 0 },
-    lockUntil: Date
-}, opts));
-const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String, rating: { type: Number, default: 4.5, min: 0, max: 5 }, reviews: { type: Number, default: 0 } }, opts));
-const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
-const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
-const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
-const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
-const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
-const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
-const Order = mongoose.model('Order', new mongoose.Schema({
-    orderId: { type: String, unique: true, required: true, index: true },
-    userid: { type: String, required: true, index: true },
-    userName: String,
-    userEmail: String,
-    paymentMethod: String,
-    paymentStatus: { type: String, default: 'Pending' },
-    orderStatus: { type: String, default: 'Order Placed' },
-    totalAmount: Number,
-    shippingAmount: Number,
-    finalAmount: Number,
-    shippingAddress: {
-        fullName: String,
-        phone: String,
-        addressline1: String,
-        city: String,
-        state: String,
-        pin: String,
-        country: { type: String, default: 'India' }
-    },
-    products: Array,
-    estimatedArrival: Date,
-    statusHistory: [{
-        status: String,
-        timestamp: { type: Date, default: Date.now },
-        message: String
-    }],
-    orderDate: { type: Date, default: Date.now }
-}, opts));
-const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" } }, opts));
-const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
-
-const generateOrderId = async () => {
-    const year = new Date().getFullYear();
-    const prefix = `ESHP-${year}-`;
-    const latestOrder = await Order.findOne({ orderId: new RegExp(`^${prefix}`) }).sort({ createdAt: -1 });
-    const latestNumber = latestOrder?.orderId ? Number(String(latestOrder.orderId).split('-').pop()) || 0 : 0;
-    const nextNumber = latestNumber + 1;
-    return `${prefix}${String(nextNumber).padStart(4, '0')}`;
-};
-
-const normalizePhoneForWhatsApp = (phone = '') => {
-    const digits = String(phone || '').replace(/\D/g, '');
-    if (!digits) return '';
-    if (digits.length === 10) return `91${digits}`;
-    if (digits.startsWith('0') && digits.length === 11) return `91${digits.slice(1)}`;
-    return digits;
-};
-
-const getTrackingLink = (orderId) => {
-    const frontend = String(process.env.FRONTEND_URL || 'https://eshopperr.me').replace(/\/$/, '');
-    return `${frontend}/order-tracking/${encodeURIComponent(orderId)}`;
-};
-
-// 🔴 BUILD ORDER RECEIPT HTML - Luxury design with 💎 emoji logo
-const buildOrderReceiptHtml = ({
-    orderId,
-    userName,
-    userEmail,
-    paymentMethod,
-    paymentStatus,
-    finalAmount,
-    totalAmount,
-    shippingAmount,
-    shippingAddress,
-    products,
-    orderDate
-}) => {
-    const displayName = userName || 'Valued Customer';
-    const safeProducts = Array.isArray(products) ? products : [];
-    const orderDateObj = new Date(orderDate || Date.now());
-    const orderDateText = orderDateObj.toLocaleDateString('en-IN', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
-
-    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
-    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
-    const payable = Number(finalAmount || (subtotal + shipping));
-
-    const rows = safeProducts.map((item, idx) => {
-        const qty = Number(item.qty || 1);
-        const price = Number(item.price || 0);
-        const line = Number(item.total || (qty * price));
-        const sizeText = item.size ? ` (Size: ${item.size})` : '';
-        const colorText = item.color ? `, ${item.color}` : '';
-        const itemDesc = `${item.name || 'Product'}${sizeText}${colorText}`;
-        return `
-            <tr>
-                <td style="padding:12px 10px; text-align:center; font-size:12px; color:#666; border:1px solid #e8dcc8;">${idx + 1}</td>
-                <td style="padding:12px 10px; font-size:13px; color:#111; font-weight:600; border:1px solid #e8dcc8;">${itemDesc}</td>
-                <td style="padding:12px 10px; text-align:center; font-size:13px; color:#111; border:1px solid #e8dcc8;">${qty}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:13px; color:#666; border:1px solid #e8dcc8;">₹${price.toLocaleString('en-IN')}</td>
-                <td style="padding:12px 10px; text-align:right; font-size:14px; color:#d4af37; font-weight:700; border:1px solid #e8dcc8;">₹${line.toLocaleString('en-IN')}</td>
-            </tr>
-        `;
-    }).join('');
-
-    return `
-        <!doctype html>
-        <html>
-        <head>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                body { background: #f5f5f3; color: #2c2c2c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; }
-                .wrap { max-width: 900px; margin: 0 auto; padding: 16px; position: relative; }
-                .watermark {
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%) rotate(-45deg);
-                    font-size: 72px;
-                    font-weight: 300;
-                    color: rgba(212, 175, 55, 0.08);
-                    white-space: nowrap;
-                    pointer-events: none;
-                    z-index: 0;
-                    letter-spacing: 8px;
-                    font-style: italic;
-                }
-                
-                .card { background: #fdfdfd; border: 2px solid #d4af37; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); position: relative; z-index: 1; }
-                .head { padding: 24px 20px; background: linear-gradient(135deg, #fdfdfd, #f9f7f4); border-bottom: 1px solid #e8dcc8; }
-                .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
-                .brand-center { text-align: center; vertical-align: middle; }
-                .brand-spacer { width: 64px; }
-                .brand-badge { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; text-align: center; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-                .brand-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
-                .brand-title { font-size: 34px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; line-height: 1.2; }
-                .tagline { font-size: 12px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 6px 0 0 0; }
-                .body { padding: 36px; }
-                .title { font-size: 36px; font-weight: 900; margin: 0 0 12px; color: #0f0f0f; letter-spacing: 2px; text-align: center; }
-                .subtitle { font-size: 14px; color: #8b7521; text-align: center; font-weight: 700; letter-spacing: 1px; margin-bottom: 28px; }
-                .status-badge { display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 12px 24px; border-radius: 20px; font-weight: 700; margin: 0 auto 16px; display: block; text-align: center; width: fit-content; box-shadow: 0 4px 12px rgba(31,143,84,0.3); }
-                .status-message { text-align: center; color: #0f0f0f; font-weight: 600; font-size: 14px; margin-bottom: 32px; }
-                .next-steps { margin: 32px 0; }
-                .steps-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center; }
-                .steps-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
-                .step { border: 2px solid #d4af37; border-radius: 12px; padding: 20px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .step-icon { font-size: 32px; margin-bottom: 12px; }
-                .step-text { font-size: 12px; font-weight: 700; color: #0f0f0f; }
-                .delivery-highlight { border: 3px solid #d4af37; border-radius: 14px; padding: 24px; background: linear-gradient(135deg, #a37f1f 0%, #d4af37 50%, #8b7521 100%); text-align: center; margin: 32px 0; box-shadow: 0 4px 16px rgba(212,175,55,0.2); }
-                .delivery-label { color: #fff; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; }
-                .delivery-date { color: #fff; font-size: 24px; font-weight: 900; letter-spacing: 1px; }
-                .items-section { margin: 32px 0; }
-                .section-title { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #d4af37; }
-                table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 11px; letter-spacing: 1.2px; padding: 14px 12px; text-transform: uppercase; font-weight: 700; text-align: left; border: 2px solid #d4af37; }
-                td { border: 1px solid #e8dcc8; padding: 13px 12px; font-size: 13px; color: #2c2c2c; }
-                tr:nth-child(odd) { background: #fafaf8; }
-                tr:hover { background: #f5f0e6; }
-                .summary-boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
-                .summary-box { border: 2px solid #d4af37; border-radius: 12px; padding: 18px 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center; box-shadow: 0 2px 8px rgba(212,175,55,0.1); }
-                .summary-label { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 10px; }
-                .summary-value { font-size: 18px; font-weight: 900; color: #0f0f0f; }
-                .disclaimer { border-left: 4px solid #d4af37; padding: 16px; background: #f9f7f4; margin: 32px 0; font-size: 12px; color: #555; line-height: 1.8; }
-                .disclaimer-title { font-weight: 700; color: #0f0f0f; margin-bottom: 8px; }
-                .footer { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e8dcc8; }
-                .foot { font-size: 12px; color: #666; text-align: center; line-height: 1.8; }
-                .foot-premium { color: #d4af37; font-weight: 700; margin-top: 14px; font-size: 13px; letter-spacing: 1px; }
-                @media (max-width: 768px) {
-                    .steps-container { grid-template-columns: 1fr; gap: 12px; }
-                    .summary-boxes { grid-template-columns: 1fr; gap: 12px; }
-                    .title { font-size: 28px; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="watermark">eShopper Luxe</div>
-            <div class="wrap">
-                <div class="card">
-                    <!-- PREMIUM HEADER -->
-                    <div class="head">
-                        <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td class="brand-left">
-                                    <div class="brand-badge">
-                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-                                    </div>
-                                </td>
-                                <td class="brand-center">
-                                    <p class="brand-title">eShopper Boutique Luxe</p>
-                                    <p class="tagline">Premium Fashion Destination</p>
-                                </td>
-                                <td class="brand-spacer"></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <!-- MAIN CONTENT -->
-                    <div class="body">
-                        <h1 class="title">ORDER RECEIPT</h1>
-                        <p class="subtitle">Thank you for your premium order</p>
-                        
-                        <!-- STATUS BADGE -->
-                        <div style="text-align: center; margin-bottom: 28px;">
-                            <div style="display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 10px 24px; border-radius: 20px; font-weight: 900; font-size: 12px; letter-spacing: 1px;">✓ ORDER RECEIVED</div>
-                        </div>
-
-                        <!-- ORDER STEPS -->
-                        <div style="margin: 32px 0;">
-                            <div style="font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #0f0f0f; font-weight: 700; margin-bottom: 20px; text-align: center;">⏳ Order Processing Steps</div>
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
-                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
-                                    <div style="font-size: 28px; margin-bottom: 8px;">✓</div>
-                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Quality Check</div>
-                                </div>
-                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
-                                    <div style="font-size: 28px; margin-bottom: 8px;">📦</div>
-                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Premium Packaging</div>
-                                </div>
-                                <div style="border: 2px solid #D4AF37; border-radius: 10px; padding: 16px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); text-align: center;">
-                                    <div style="font-size: 28px; margin-bottom: 8px;">🚚</div>
-                                    <div style="font-size: 12px; font-weight: 700; color: #8b7521;">Dispatch</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ORDER DETAILS -->
-                        <div class="items-section">
-                            <div class="section-title">📦 Your Order</div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th style="width:8%">#</th>
-                                        <th style="width:50%">Item</th>
-                                        <th style="width:12%">Qty</th>
-                                        <th style="width:30%">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
-                            </table>
-                        </div>
-
-                        <!-- SUMMARY -->
-                        <div class="summary-boxes">
-                            <div class="summary-box">
-                                <div class="summary-label">📦 Subtotal</div>
-                                <div class="summary-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                            </div>
-                            <div class="summary-box">
-                                <div class="summary-label">🚚 Shipping</div>
-                                <div class="summary-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</div>
-                            </div>
-                            <div class="summary-box">
-                                <div class="summary-label">💰 Total</div>
-                                <div class="summary-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                            </div>
-                        </div>
-
-                        <!-- PAYMENT INFO -->
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 32px 0;">
-                            <div style="border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 2px 8px rgba(212,175,55,0.1);">
-                                <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 8px;">💳 Payment Method</div>
-                                <div style="font-size: 15px; font-weight: 700; color: #0f0f0f;">${paymentMethod || 'Cash on Delivery'}</div>
-                            </div>
-                            <div style="border: 2px solid #d4af37; border-radius: 12px; padding: 16px 18px; background: linear-gradient(135deg, #fffef8 0%, #fff9e6 100%); box-shadow: 0 2px 8px rgba(212,175,55,0.1);">
-                                <div style="font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #8b7521; font-weight: 700; margin-bottom: 8px;">📊 Order Date</div>
-                                <div style="font-size: 15px; font-weight: 700; color: #0f0f0f;">${orderDateText}</div>
-                            </div>
-                        </div>
-
-                        <!-- DISCLAIMER -->
-                        <div class="disclaimer">
-                            <div class="disclaimer-title">📋 IMPORTANT NOTICE</div>
-                            This is a preliminary receipt confirming that your order has been successfully placed. Your official Tax Invoice will be generated and sent to you upon successful delivery of your order. We appreciate your purchase and look forward to serving you!
-                        </div>
-
-                        <!-- FOOTER -->
-                        <div class="footer">
-                            <div class="foot">
-                                <strong>For support:</strong> support@eshopperr.me<br/>
-                                <strong>Website:</strong> eshopperr.me<br/>
-                                <strong>Order ID:</strong> ${orderId}
-                            </div>
-                            <div class="foot-premium">💎 eShopper Boutique Luxe • Premium Edition • Authenticity Guaranteed 💎</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
-};
-
-// 🔴 BUILD ORDER CONFIRMATION PROFORMA HTML - For verified/confirmed orders
-// (Already defined below, duplicate removed)
+// ...existing code...
+// Clean route imports
+const orderController = require('./controllers/orderController');
+// Use modular routes
 
 // 🔴 SEND ORDER CONFIRMATION EMAIL (Brevo)
 async function sendOrderConfirmationEmail({
@@ -2010,10 +1677,9 @@ const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, tracki
         default:
             templateFile = '01-order-placed.html';
     }
-    // FIX: Define templatePath
-    const templatePath = path.join(__dirname, 'email-templates', templateFile);
+    // FIX: Define templatePath for Railway production
+    const templatePath = path.join(__dirname, 'views', 'emails', templateFile);
     try {
-        // email-templates path usage removed
         let htmlContent = fs.readFileSync(templatePath, 'utf8');
         htmlContent = htmlContent
             .replace(/{{orderId}}/g, orderId)
@@ -2055,7 +1721,7 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
     }
     try {
         const displayName = userName || 'Valued Customer';
-        const templatePath = path.join(__dirname, 'email-templates', '01-order-placed.html');
+        const templatePath = path.join(__dirname, 'views', 'emails', '01-order-placed.html');
         let htmlContent = fs.readFileSync(templatePath, 'utf8');
         htmlContent = htmlContent
             .replace(/{{orderId}}/g, orderId)
@@ -2088,7 +1754,7 @@ const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, p
 const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products, finalAmount, deliveryDate, invoiceBase64 }) => {
     try {
         const name = displayName || 'Valued Customer';
-        const templatePath = path.join(__dirname, 'email-templates', '02-order-confirmed.html');
+        const templatePath = path.join(__dirname, 'views', 'emails', '02-order-confirmed.html');
         let htmlContent = fs.readFileSync(templatePath, 'utf8');
         htmlContent = htmlContent
             .replace(/{{orderId}}/g, orderId)
@@ -2115,385 +1781,8 @@ const sendOrderConfirmedEmail = async ({ toEmail, displayName, orderId, products
     }
 };
 
-// ============ FIREBASE AUTH SYNC ROUTE ============
-app.post('/api/auth-sync', async (req, res) => {
-    try {
-        if (!firebaseAdminReady) {
-            return res.status(503).json({
-                message: 'Firebase authentication service is temporarily unavailable. Please try again shortly.'
-            });
-        }
-
-        const { idToken, uid, email, phone, name, pic, provider } = req.body;
-        const normalizedEmail = email ? email.toLowerCase().trim() : null;
-        const normalizedPhone = phone ? phone.trim() : null;
-
-        // Improved validation with better logging
-        if (!idToken || !uid || !provider) {
-            console.warn('⚠️ Auth sync called with incomplete data:', { hasToken: !!idToken, hasUid: !!uid, hasProvider: !!provider });
-            return res.status(400).json({ 
-                message: "Authentication incomplete. Please try signing in again.",
-                missingFields: {
-                    idToken: !idToken,
-                    uid: !uid,
-                    provider: !provider
-                }
-            });
-        }
-
-        // 🔐 VERIFY FIREBASE ID TOKEN
-        let decodedToken;
-        try {
-            decodedToken = await admin.auth().verifyIdToken(idToken);
-            console.log(`✅ Firebase token verified for UID: ${ decodedToken.uid } `);
-        } catch (err) {
-            console.error("❌ Firebase token verification failed:", err.message);
-            return res.status(401).json({ message: "Invalid or expired token" });
-        }
-
-        // Ensure UID matches
-        if (decodedToken.uid !== uid) {
-            console.warn(`⚠️  UID mismatch: ${ decodedToken.uid } !== ${ uid } `);
-            return res.status(401).json({ message: "UID mismatch" });
-        }
-
-        let user = null;
-
-        // 🔍 CHECK IF USER EXISTS BY UID
-        user = await User.findOne({ uid: uid });
-
-        if (user) {
-            // ✅ USER EXISTS - UPDATE LOGIN TIMESTAMP & PROVIDER INFO
-            console.log(`📝 Updating existing user: ${ user.email } `);
-            user.lastLogin = new Date();
-            
-            // Update additional info if provided
-            if (name && !user.name) user.name = name;
-            if (pic && !user.pic) user.pic = pic;
-            if (phone && !user.phone) user.phone = phone;
-            if (email && !user.email) user.email = email;
-            
-            await user.save();
-            console.log(`✅ User updated successfully: ${ user.email } `);
-        } else {
-            // 🔗 LINK EXISTING ACCOUNT BY EMAIL/PHONE (prevents duplicate key errors)
-            if (normalizedEmail) {
-                user = await User.findOne({ email: normalizedEmail });
-            }
-
-            if (!user && normalizedPhone) {
-                user = await User.findOne({ phone: normalizedPhone });
-            }
-
-            if (user) {
-                console.log(`🔗 Linking existing account to Firebase UID: ${ user.email || user.phone } `);
-                user.uid = uid;
-                user.provider = provider;
-                user.lastLogin = new Date();
-                if (name && !user.name) user.name = name;
-                if (pic && !user.pic) user.pic = pic;
-                if (normalizedPhone && !user.phone) user.phone = normalizedPhone;
-                if (normalizedEmail && !user.email) user.email = normalizedEmail;
-                await user.save();
-                console.log(`✅ Existing account linked successfully: ${ user.email || user.phone } `);
-            } else {
-                // 🆕 NEW USER - CREATE ACCOUNT
-                console.log(`🆕 Creating new user with UID: ${ uid } `);
-
-                // Generate unique username from email or name
-                let generatedUsername = null;
-                if (normalizedEmail) {
-                    generatedUsername = normalizedEmail.split('@')[0].toLowerCase();
-                } else if (name) {
-                    generatedUsername = name.split(' ')[0].toLowerCase();
-                }
-
-                // Ensure unique username
-                if (generatedUsername) {
-                    let counter = 1;
-                    let baseUsername = generatedUsername;
-                    while (await User.findOne({ username: generatedUsername })) {
-                        generatedUsername = `${ baseUsername }${ counter } `;
-                        counter++;
-                    }
-                }
-
-                user = new User({
-                    uid: uid,
-                    name: name || "User",
-                    email: normalizedEmail || null,
-                    phone: normalizedPhone || null,
-                    pic: pic || null,
-                    provider: provider,
-                    username: generatedUsername,
-                    role: "User",
-                    lastLogin: new Date()
-                });
-
-                // For phone auth, generate a random password
-                if (provider === 'phone' && !user.password) {
-                    const randomPass = Math.random().toString(36).slice(-12);
-                    const salt = await bcrypt.genSalt(10);
-                    user.password = await bcrypt.hash(randomPass, salt);
-                }
-
-                await user.save();
-                console.log(`✅ New user created: ${ user.email || user.phone } `);
-            }
-        }
-
-        // Return user data (without sensitive info)
-        const { password, otp, otpExpires, failedAttempts, lockUntil, ...safeUser } = user.toJSON();
-        
-        res.json(safeUser);
-    } catch (err) {
-        console.error("❌ Auth Sync Error:", err.message);
-        if (err.code === 11000) {
-            return res.status(409).json({ message: "Account already exists. Please login with your existing account." });
-        }
-        if (process.env.SENTRY_DSN) Sentry.captureException(err);
-        res.status(500).json({ message: "Authentication sync failed. Please try again." });
-    }
-});
-
-
-app.post('/api/send-otp', authLimiter, async (req, res) => {
-    try {
-        const { email, type } = req.body;
-        if (!email || !type) return res.status(400).json({ message: "Email and type are required." });
-
-        const normalizedEmail = String(email).toLowerCase().trim();
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const user = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedEmail }] });
-
-        if (type === 'forget' && !user) return res.json({ result: "Done", message: "If account exists, check your email for reset code." });
-        if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
-
-        if (user) {
-            user.otp = otp;
-            user.otpExpires = new Date(Date.now() + 10 * 60000);
-            await user.save();
-        } else {
-            await OTPRecord.findOneAndUpdate({ email: normalizedEmail }, { otp, email: normalizedEmail }, { upsert: true });
-        }
-
-        // Always send to a valid email
-        let emailToSend = user && user.email ? user.email : normalizedEmail;
-        if (!emailToSend || !emailToSend.includes('@')) {
-            console.error('❌ No valid email to send OTP:', emailToSend);
-            return res.status(400).json({ error: 'No valid email to send OTP.' });
-        }
-
-        const subject = type === 'signup' ? 'Your ESHOPPER Signup OTP' : 'Your ESHOPPER Password Reset OTP';
-        const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESHOPPER OTP Verification</title>
-    <style>
-        body { background: #f6f6f6; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-        .lux-card { max-width: 420px; margin: 32px auto; background: #fff; border-radius: 24px; box-shadow: 0 8px 32px rgba(212,175,55,0.10), 0 1.5px 8px #d4af37; padding: 0; overflow: hidden; border: 2px solid #d4af37; }
-        .lux-header { background: linear-gradient(90deg, #0a0a0a 60%, #d4af37 100%); padding: 32px 24px 18px 24px; text-align: center; }
-        .lux-logo { font-size: 44px; color: #d4af37; font-weight: 900; letter-spacing: 2px; margin-bottom: 8px; }
-        .lux-title { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0 0 6px 0; }
-        .lux-subtitle { font-size: 13px; color: #d4af37; font-weight: 700; letter-spacing: 1px; margin-bottom: 0; }
-        .lux-content { padding: 32px 24px 24px 24px; text-align: center; }
-        .otp-label { font-size: 15px; color: #222; font-weight: 700; margin-bottom: 10px; letter-spacing: 1px; }
-        .otp-box { font-size: 38px; font-weight: 900; color: #d4af37; letter-spacing: 12px; background: #f9f7f4; border-radius: 12px; padding: 18px 0; margin: 0 auto 18px auto; width: 80%; border: 2px solid #d4af37; }
-        .otp-valid { font-size: 13px; color: #888; margin-bottom: 18px; }
-        .lux-footer { font-size: 12px; color: #888; background: #f6f6f6; padding: 18px 24px; border-top: 1px solid #eee; border-radius: 0 0 24px 24px; text-align: center; }
-        @media (max-width: 600px) { .lux-card { max-width: 98vw; } .lux-header, .lux-content, .lux-footer { padding-left: 8vw; padding-right: 8vw; } }
-    </style>
-</head>
-<body>
-    <div class="lux-card">
-        <div class="lux-header">
-            <div class="lux-logo">💎</div>
-            <div class="lux-title">ESHOPPER OTP Verification</div>
-            <div class="lux-subtitle">Boutique Luxe Security</div>
-        </div>
-        <div class="lux-content">
-            <div class="otp-label">Your One-Time Password (OTP) is:</div>
-            <div class="otp-box">${otp}</div>
-            <div class="otp-valid">This OTP is valid for <b>10 minutes</b>. Please do not share it with anyone.</div>
-        </div>
-        <div class="lux-footer">
-            If you did not request this, please ignore this email.<br>
-            <span style="color:#d4af37;font-weight:700;">eShopper Boutique Luxe</span>
-        </div>
-    </div>
-</body>
-</html>
-`;
-        try {
-            await sendEmail({ to: emailToSend, subject, htmlContent });
-        } catch (err) {
-            console.error('❌ Failed to send OTP email:', err.message);
-            return res.status(500).json({ error: 'Failed to send OTP email. Please try again.' });
-        }
-        res.json({ result: "Done", message: "OTP sent successfully" });
-    } catch (e) {
-        console.error("❌ Email Error:", e.message);
-        console.error("❌ Email Error Stack:", e.stack);
-        res.status(500).json({ error: "Failed to send OTP. Please try again." });
-    }
-});
-
-app.post('/api/reset-password', authLimiter, async (req, res) => {
-    try {
-        const searchTerm = req.body.username.toLowerCase().trim();
-        const newPassword = req.body.password;
-        const otp = req.body.otp;
-
-        // 🔒 BACKEND PASSWORD VALIDATION
-        if (!newPassword || newPassword.length < 8) {
-            return res.status(400).json({ message: "Password must be at least 8 characters long." });
-        }
-
-        // Check for uppercase letter
-        if (!/[A-Z]/.test(newPassword)) {
-            return res.status(400).json({ message: "Password must contain at least one uppercase letter." });
-        }
-
-        // Check for special character
-        if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
-            return res.status(400).json({ message: "Password must contain at least one special character." });
-        }
-
-        const user = await User.findOne({ $or: [{ email: searchTerm }, { username: searchTerm }] });
-        
-        if (!user) {
-            return res.status(404).json({ message: "User not found." });
-        }
-
-        // ⏰ CHECK OTP VALIDITY (Exactly 10 minutes)
-        if (!user.otp || !user.otpExpires) {
-            return res.status(400).json({ message: "No OTP found. Please request a new code." });
-        }
-
-        if (Date.now() > user.otpExpires) {
-            // Clean expired OTP
-            user.otp = undefined;
-            user.otpExpires = undefined;
-            await user.save();
-            return res.status(400).json({ message: "OTP has expired. Please request a new code." });
-        }
-
-        // ✅ VERIFY OTP
-        if (user.otp !== otp) {
-            return res.status(400).json({ message: "Invalid OTP code. Please check and try again." });
-        }
-
-        // 🔐 HASH NEW PASSWORD
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
-        
-        // 🧹 CLEANUP: Remove OTP and expiration after successful reset
-        user.otp = undefined;
-        user.otpExpires = undefined;
-        
-        await user.save();
-        
-        console.log(`✅ Password reset successful for user: ${ user.username } `);
-        res.json({ result: "Done", message: "Password updated successfully!" });
-        
-    } catch (e) {
-        console.error("❌ Password Reset Error:", e.message);
-        res.status(500).json({ message: "Something went wrong. Please try again." });
-    }
-});
-
-// CHECK USERNAME AVAILABILITY - For signup validation
-app.post('/api/check-username', async (req, res) => {
-    try {
-        const { username } = req.body;
-        if (!username || username.length < 3) {
-            return res.status(400).json({ message: "Username must be at least 3 characters" });
-        }
-        const normalizedUsername = username.toLowerCase().trim();
-        const existingUser = await User.findOne({ username: normalizedUsername });
-        res.json({ available: !existingUser });
-    } catch (e) {
-        console.error("❌ Username Check Error:", e.message);
-        res.status(500).json({ error: "Failed to check username" });
-    }
-});
-
-app.post('/login', authLimiter, async (req, res) => {
-    try {
-        const searchTerm = req.body.username.toLowerCase().trim();
-        const user = await User.findOne({ $or: [{ username: searchTerm }, { email: searchTerm }] });
-
-        // 🔒 CHECK IF ACCOUNT IS LOCKED
-        if (user && user.lockUntil && Date.now() < user.lockUntil) {
-            const minutesRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
-            return res.status(403).json({ 
-                message: `Account temporarily locked due to multiple failed login attempts.Try again in ${ minutesRemaining } minute${ minutesRemaining > 1 ? 's' : '' }.`,
-                remainingMinutes: minutesRemaining
-            });
-        }
-
-        // 🔐 CHECK IF USER EXISTS AND HAS PASSWORD
-        if (user) {
-            // ❌ BLOCK LOGIN IF NO PASSWORD (Google/Phone auth user)
-            if (!user.password) {
-                const authMethod = user.provider === 'google' ? 'Google Login' : 
-                                  user.provider === 'phone' ? 'Phone Login' :
-                                  'your authentication provider';
-                
-                console.warn(`⚠️ Login attempt by ${ user.provider } user via manual login: ${ user.email || user.username } `);
-                
-                return res.status(403).json({ 
-                    message: `This account uses ${ authMethod }. Use ${ authMethod } to sign in or set a password using Forgot Password.`,
-                    provider: user.provider,
-                    requiresFirebaseAuth: true
-                });
-            }
-
-            // ✅ PASSWORD EXISTS - COMPARE PASSWORDS
-            if (await bcrypt.compare(req.body.password, user.password)) {
-                // ✅ LOGIN SUCCESS - RESET FAILED ATTEMPTS
-                user.failedAttempts = 0;
-                user.lockUntil = undefined;
-                user.lastLogin = new Date();
-                await user.save();
-                
-                console.log(`✅ Login successful: ${ user.email || user.username } `);
-                const { password: _pw, otp: _otp, otpExpires: _exp, failedAttempts: _fa, lockUntil: _lu, ...safeUser } = user.toJSON();
-                return res.json(safeUser);
-            }
-        }
-
-        // ❌ LOGIN FAILED - INCREMENT FAILED ATTEMPTS
-        if (user) {
-            user.failedAttempts = (user.failedAttempts || 0) + 1;
-            
-            // LOCK ACCOUNT AFTER 5 FAILED ATTEMPTS
-            if (user.failedAttempts >= 5) {
-                user.lockUntil = new Date(Date.now() + 15 * 60000); // 15 minutes
-                await user.save();
-                console.warn(`🔒 Account locked: ${ user.email || user.username } - Too many failed attempts`);
-                return res.status(403).json({ 
-                    message: "Too many failed login attempts. Account locked for 15 minutes.",
-                    remainingMinutes: 15
-                });
-            }
-            
-            await user.save();
-            console.warn(`⚠️ Failed login attempt #${ user.failedAttempts }: ${ user.email || user.username } `);
-        } else {
-            console.warn(`⚠️ Login attempt for non - existent user: ${ searchTerm } `);
-        }
-
-        return res.status(401).json({ message: "Invalid Credentials" });
-        
-    } catch (e) { 
-        console.error("❌ Login Error:", e.message);
-        res.status(500).json({ message: "Something went wrong." }); 
-    }
-});
+const authController = require('./controllers/authController');
+app.post('/api/auth-sync', authController.authSync);
 
 const handle = (path, Model, useUpload = false) => {
     app.get(path, async (req, res) => {
@@ -3167,22 +2456,26 @@ app.get('/api/orders/recent/:userId', async (req, res) => {
         const userId = String(req.params.userId || '').trim();
         const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
         if (!userId) {
-        return res.status(400).json({ message: 'userId is required' });
+            return res.status(400).json({ message: 'userId is required' });
+        }
+        const orders = await Order.find({ userid: userId })
+            .sort({ updatedAt: -1, createdAt: -1 })
+            .limit(limit)
+            .lean();
+        return res.json({
+            success: true,
+            orders: orders.map((item) => ({
+                orderId: item.orderId,
+                orderStatus: item.orderStatus,
+                finalAmount: item.finalAmount,
+                updatedAt: item.updatedAt,
+                createdAt: item.createdAt
+            }))
+        });
+    } catch (err) {
+        console.error('❌ Error fetching recent orders:', err.message);
+        return res.status(500).json({ message: 'Failed to fetch recent orders' });
     }
-    const orders = await Order.find({ userid: userId })
-        .sort({ updatedAt: -1, createdAt: -1 })
-        .limit(limit)
-        .lean();
-    return res.json({
-        success: true,
-        orders: orders.map((item) => ({
-            orderId: item.orderId,
-            orderStatus: item.orderStatus,
-            finalAmount: item.finalAmount,
-            updatedAt: item.updatedAt,
-            createdAt: item.createdAt
-        }))
-    });
 });
 
 app.get('/api/order/:orderId', async (req, res) => {
