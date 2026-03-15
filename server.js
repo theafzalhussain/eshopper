@@ -34,6 +34,7 @@ const puppeteer = require('puppeteer');
 const { sendTransactionalEmail } = require('./src/utils/email');
 const sendEmail = sendTransactionalEmail;
 // ===== EMAIL UTILITY (Brevo)
+require('./models/OTPRecord');
 const authRoutes = require('./routes/authRoutes');
 // ...existing code...
 // ...existing code...
