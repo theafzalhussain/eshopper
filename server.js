@@ -1,3 +1,4 @@
+const Newslatter = require('./models/Newslatter');
 const Contact = require('./models/Contact');
 const Checkout = require('./models/Checkout');
 const Wishlist = require('./models/Wishlist');
