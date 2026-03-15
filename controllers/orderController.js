@@ -8,31 +8,31 @@ exports.sendOrderConfirmation = async (req, res) => {
         const path = require('path');
         const templatePath = path.join(__dirname, '..', 'views', 'emails', 'order-confirmed.hbs');
     try {
+
         const { orderId } = req.body;
         if (!orderId) return res.status(400).json({ message: 'Order ID required.' });
-        const orderData = await Order.findOne({ orderId });
+        // Use populate to fetch product details
+        const orderData = await Order.findOne({ orderId }).populate('products.productid');
         if (!orderData) return res.status(404).json({ message: 'Order not found.' });
 
-        // Populate product details for each item
-        const populatedProducts = await Promise.all(
-            (orderData.products || []).map(async item => {
-                // If item already has name/price/image, use as-is
-                if (item.name && item.price && item.pic1) return item;
-                // Otherwise, fetch from Product collection
-                const product = await Product.findById(item.productid);
-                if (!product) return item;
+        // Map variables for Handlebars/email template
+        const populatedProducts = (orderData.products || []).map(item => {
+            // If productid is populated, use its fields
+            if (item.productid && typeof item.productid === 'object') {
                 return {
                     ...item,
-                    name: product.name,
-                    price: product.finalprice,
-                    pic1: product.pic1,
-                    brand: product.brand,
-                    color: item.color || product.color,
-                    size: item.size || product.size,
-                    description: product.description,
+                    name: item.productid.name,
+                    price: item.productid.finalprice,
+                    pic1: item.productid.pic1,
+                    brand: item.productid.brand,
+                    color: item.color || item.productid.color,
+                    size: item.size || item.productid.size,
+                    description: item.productid.description,
                 };
-            })
-        );
+            }
+            // Fallback to original item
+            return item;
+        });
 
         // Map variables for Handlebars/email template
         const emailVars = {

@@ -312,12 +312,14 @@ const enqueueEmailJob = async (jobType, payload) => {
 // Example: Integrate 6 new premium templates and their rendering logic.
 // Ensure all new template code is robust, modular, and secure.
 // ...existing code...
-// Clean route imports
-const orderController = require('./controllers/orderController');
-// Use modular routes
+
 const orderRoutes = require('./routes/orderRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const productRoutes = require('./routes/productRoutes');
+
 app.use('/api/orders', orderRoutes);
-// ...existing code...
+app.use('/api/admin', adminRoutes);
+app.use('/api/products', productRoutes);
 
 // 🔴 SEND ORDER CONFIRMATION EMAIL (Brevo)
 async function sendOrderConfirmationEmail({
