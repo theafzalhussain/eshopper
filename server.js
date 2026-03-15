@@ -8,9 +8,9 @@ if (process.env.SENTRY_DSN) {
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
         environment: process.env.NODE_ENV || 'production',
-        integrations: [Sentry.expressIntegration()],
         tracesSampleRate: 1.0,
     });
+    // Express handlers will be added to the app below
     console.log('✅ Sentry Security Guard: Active');
 }
 
@@ -51,6 +51,13 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 const httpServer = http.createServer(app);
+
+// ========================================================
+// SENTRY EXPRESS MIDDLEWARE (Request & Error Handlers)
+// ========================================================
+if (process.env.SENTRY_DSN) {
+    app.use(Sentry.Handlers.requestHandler());
+}
 
 // ========================================================
 // 4. SECURITY & NETWORKING CONFIG
@@ -204,14 +211,24 @@ app.post('/api/chat', async (req, res) => {
 
 // Generic Handle Helper (as per project history)
 const handleRoute = (path, Model, allowUpload = false) => {
-    app.get(path, async (req, res) => res.json(await Model.find().sort({_id: -1})));
-    app.post(path, allowUpload ? upload : (req, res, next) => next(), async (req, res) => {
-        try {
-            const doc = new Model(req.body);
-            if (req.files) { Object.keys(req.files).forEach(k => { doc[k] = req.files[k][0].path; }); }
-            await doc.save(); res.status(201).json(doc);
-        } catch (e) { res.status(400).json(e); }
-    });
+    app.get(path, async (req, res) => res.json(await Model.find().sort({_id: -1}))); 
+    if (allowUpload) {
+        // Accept single file named 'pic' (common for user/product)
+        app.post(path, upload.single('pic'), async (req, res) => {
+            try {
+                const doc = new Model(req.body);
+                if (req.file) { doc.pic = req.file.path; }
+                await doc.save(); res.status(201).json(doc);
+            } catch (e) { res.status(400).json(e); }
+        });
+    } else {
+        app.post(path, async (req, res) => {
+            try {
+                const doc = new Model(req.body);
+                await doc.save(); res.status(201).json(doc);
+            } catch (e) { res.status(400).json(e); }
+        });
+    }
     app.delete(`${path}/:id`, async (req, res) => { await Model.findByIdAndDelete(req.params.id); res.json({ result: "Done" }); });
 };
 
@@ -244,7 +261,11 @@ app.patch('/api/update-order-status/:id', async (req, res) => {
 // ========================================================
 // 8. FINAL SYSTEM BOOT
 // ========================================================
-if (process.env.SENTRY_DSN) Sentry.setupExpressErrorHandler(app);
+
+// Sentry error handler should be after all routes
+if (process.env.SENTRY_DSN) {
+    app.use(Sentry.Handlers.errorHandler());
+}
 
 // Simple logging at start
 app.use((req, res, next) => { console.log(`🌍 Request: ${req.method} ${req.path}`); next(); });
