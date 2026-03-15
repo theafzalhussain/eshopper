@@ -35,10 +35,11 @@ const { sendTransactionalEmail } = require('./src/utils/email');
 const sendEmail = sendTransactionalEmail;
 // ===== EMAIL UTILITY (Brevo)
 const authRoutes = require('./routes/authRoutes');
-app.use('/api/auth', authRoutes);
+// ...existing code...
 // ...existing code...
 
 const app = express();
+app.use('/api/auth', authRoutes);
 
 // � INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
 if (process.env.SENTRY_DSN) {
@@ -371,20 +372,14 @@ const buildTaxInvoiceHtml = ({
     const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
     const payable = Number(finalAmount || (subtotal + shipping));
 
-    const rows = safeProducts.map((item, idx) => {
-        const qty = Number(item.qty || 1);
-        const price = Number(item.price || 0);
-        const line = Number(item.total || (qty * price));
-        const itemDesc = item.name ? `${item.name}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}` : 'Product';
-        const hsn = item.hsn || '6204';
-        // Render tax-invoice.handlebars template
-        const hbs = require('handlebars');
-        const fs = require('fs');
-        const templatePath = path.join(__dirname, 'views', 'emails', 'tax-invoice.handlebars');
-        const templateSource = fs.readFileSync(templatePath, 'utf8');
-        const template = hbs.compile(templateSource);
-        return template({ orderId, userName, userEmail, paymentMethod, paymentStatus, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate });
-    };
+    // Render tax-invoice.handlebars template
+    const hbs = require('handlebars');
+    const fs = require('fs');
+    const templatePath = path.join(__dirname, 'views', 'emails', 'tax-invoice.handlebars');
+    const templateSource = fs.readFileSync(templatePath, 'utf8');
+    const template = hbs.compile(templateSource);
+    return template({ orderId, userName, userEmail, paymentMethod, paymentStatus, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate });
+};
 // ...existing code...
 
 const buildInvoiceHtml = ({
