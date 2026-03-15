@@ -17,21 +17,30 @@ if (process.env.SENTRY_DSN) {
 // ========================================================
 // 2. FIREBASE ADMIN SDK (Secured with Environment Variable)
 // ========================================================
+// 🔐 FIREBASE ADMIN INITIALIZATION
+// 🔐 FIREBASE ADMIN INITIALIZATION
 const admin = require('firebase-admin');
 try {
     const rawJson = process.env.FIREBASE_CONFIG_JSON;
     if (rawJson && !admin.apps.length) {
-        // Fix for Railway multiline JSON string issues
-        const fbCreds = JSON.parse(rawJson.trim().replace(/\\n/g, '\n'));
-        admin.initializeApp({ credential: admin.credential.cert(fbCreds) });
-        console.log(`✅ Firebase Auth: Active for ${fbCreds.project_id}`);
-    } else if (!admin.apps.length) {
-        admin.initializeApp({ credential: admin.credential.cert(require('./firebase-admin.json')) });
+            let fbCreds;
+            try {
+                fbCreds = JSON.parse(rawJson.trim().replace(/\n/g, '\n'));
+                console.log('Firebase parsed credentials:', fbCreds);
+            } catch (parseErr) {
+                console.error('❌ Firebase JSON parse error:', parseErr.message);
+            }
+            try {
+                admin.initializeApp({ credential: admin.credential.cert(fbCreds) });
+                console.log(`✅ Firebase Auth: Active for ${fbCreds.project_id}`);
+            } catch (initErr) {
+                console.error('❌ Firebase initializeApp error:', initErr.message);
+            }
     }
-} catch (e) { 
-    console.warn('⚠️ Firebase Admin disabled:', e.message); 
+} catch (e) {
+    console.error('❌ Firebase Error:', e.message);
+        console.warn('⚠️ Firebase Admin disabled:', e.message); 
 }
-
 // ========================================================
 // 3. CORE FRAMEWORK IMPORTS
 // ========================================================
