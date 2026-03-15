@@ -1,3 +1,28 @@
+// ...existing code...
+// 🔑 AUTH SYNC ROUTE (Google/Phone Login)
+app.post('/api/auth-sync', async (req, res) => {
+    const { idToken } = req.body;
+    if (!idToken) return res.status(400).json({ message: 'idToken required.' });
+    try {
+        const { admin } = require('./config/firebase');
+        const decoded = await admin.auth().verifyIdToken(idToken);
+        const email = decoded.email || '';
+        const uid = decoded.uid;
+        const name = decoded.name || '';
+        // Check if user exists
+        let user = await User.findOne({ email });
+        if (!user) {
+            user = await User.create({ email, name, password: '', phone: decoded.phone_number || '' });
+            console.log('✅ New user registered:', email);
+        } else {
+            console.log('✅ Existing user login:', email);
+        }
+        res.json({ ok: true, user });
+    } catch (err) {
+        console.error('❌ Auth sync error:', err.message);
+        res.status(401).json({ error: 'Invalid token or user sync failed.' });
+    }
+});
 const Newslatter = require('./models/Newslatter');
 const Contact = require('./models/Contact');
 const Checkout = require('./models/Checkout');
