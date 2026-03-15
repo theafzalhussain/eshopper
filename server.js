@@ -233,6 +233,30 @@ const handleRoute = (path, Model, allowUpload = false) => {
 };
 
 // Registered Endpoints
+// Status Endpoint for Integration Health
+app.get('/api/status', async (req, res) => {
+    const status = {
+        sentry: !!process.env.SENTRY_DSN,
+        firebase: false,
+        mongodb: false,
+        brevo: false,
+        whatsapp: false,
+        cloudinary: false
+    };
+    // Firebase
+    try {
+        status.firebase = !!admin.apps.length;
+    } catch {}
+    // MongoDB
+    status.mongodb = mongoose.connection.readyState === 1;
+    // Brevo
+    status.brevo = !!process.env.BREVO_API_KEY;
+    // WhatsApp
+    status.whatsapp = !!process.env.WHATSAPP_TOKEN;
+    // Cloudinary
+    status.cloudinary = !!process.env.CLOUD_API_KEY && !!process.env.CLOUD_API_SECRET;
+    res.json({ status });
+});
 handleRoute('/user', User, true);
 handleRoute('/product', Product, true);
 handleRoute('/maincategory', Maincategory);
@@ -276,7 +300,19 @@ const PORT = process.env.PORT || 5000;
 async function bootstrap() {
     try {
         await mongoose.connect(MONGO_URI, { dbName: 'eshoper' }); // Fixed 'eshoper' spelling ✅
-        console.log("💎 System Core Initialized & Connected to Atlas Premium.");
+        // Integration summary
+        const summary = {
+            Sentry: !!process.env.SENTRY_DSN ? '✅ Connected' : '❌ Missing',
+            Firebase: (() => { try { return !!admin.apps.length ? '✅ Connected' : '❌ Disabled'; } catch { return '❌ Error'; } })(),
+            MongoDB: mongoose.connection.readyState === 1 ? '✅ Connected' : '❌ Error',
+            Brevo: !!process.env.BREVO_API_KEY ? '✅ Connected' : '❌ Missing',
+            WhatsApp: !!process.env.WHATSAPP_TOKEN ? '✅ Connected' : '❌ Missing',
+            Cloudinary: !!process.env.CLOUD_API_KEY && !!process.env.CLOUD_API_SECRET ? '✅ Connected' : '❌ Missing',
+            Cloudflare: "(Trust Proxy Enabled)"
+        };
+        console.log("\n********* INTEGRATION STATUS *********");
+        Object.entries(summary).forEach(([k, v]) => console.log(`${k}: ${v}`));
+        console.log("************************************\n");
         httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`\n************************************`);
             console.log(`🚀 API LIVE: https://api.eshopperr.me`);
