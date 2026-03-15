@@ -26,7 +26,7 @@ if (firebaseAdminReady) {
 } else {
     console.warn('⚠️  Firebase Admin config not found. Google sign-in will not work.');
 }
-const fs = require('fs');
+// ...existing code...
 const path = require('path');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
@@ -34,6 +34,8 @@ const puppeteer = require('puppeteer');
 const { sendTransactionalEmail } = require('./src/utils/email');
 const sendEmail = sendTransactionalEmail;
 // ===== EMAIL UTILITY (Brevo)
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
 // ...existing code...
 
 const app = express();
@@ -382,164 +384,8 @@ const buildTaxInvoiceHtml = ({
         const templateSource = fs.readFileSync(templatePath, 'utf8');
         const template = hbs.compile(templateSource);
         return template({ orderId, userName, userEmail, paymentMethod, paymentStatus, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate });
-                        <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td class="brand-left">
-                                    <div class="brand-badge">
-                                        <img src="${BRAND_LOGO_PDF_SRC}" alt="Logo" onerror="this.onerror=null;this.src='${BRAND_LOGO_FALLBACK_URL}'" />
-                                    </div>
-                                </td>
-                                <td class="brand-center">
-                                    <p class="brand-title">eShopper Boutique Luxe</p>
-                                    <p class="tagline">Premium Fashion Destination</p>
-                                </td>
-                                <td class="brand-spacer"></td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <!-- MAIN CONTENT -->
-                    <div class="body">
-                        <!-- SELLER INFO -->
-                        <div class="seller-section">
-                            <div class="seller-box">
-                                <div class="seller-title">📋 Seller Details</div>
-                                <div class="seller-text">
-                                    <strong>eShopper Boutique Luxe</strong><br/>
-                                    Premium Fashion Destination<br/><br/>
-                                    <strong>GSTIN:</strong> 07AADCR5055K1Z1<br/>
-                                    <strong>PAN:</strong> AADCR5055K<br/>
-                                    <strong>Registered Office:</strong><br/>
-                                    Plot No. 101, Tech Park,<br/>
-                                    New Delhi - 110001, India
-                                </div>
-                            </div>
-                            <div class="seller-box">
-                                <div class="seller-title">🛍️ Bill To / Ship To</div>
-                                <div class="seller-text">
-                                    <strong>${shippingAddress?.fullName || 'Customer'}</strong><br/>
-                                    ${shippingAddress?.addressline1 || 'Address Line'}<br/>
-                                    ${shippingAddress?.city || 'City'}, ${shippingAddress?.state || 'State'} - ${shippingAddress?.pin || 'PIN'}<br/>
-                                    ${shippingAddress?.country || 'India'}<br/>
-                                    <strong>Phone:</strong> ${shippingAddress?.phone || 'N/A'}<br/>
-                                    <strong>Email:</strong> ${userEmail || 'N/A'}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- ORDER META -->
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
-                            <div style="border: 1px solid #d4af37; padding: 10px; background: #f9f7f4; border-radius: 6px;">
-                                <div style="font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 4px;">🆔 Invoice #</div>
-                                <div style="font-size: 13px; font-weight: 800; color: #0f0f0f;">${orderId}</div>
-                            </div>
-                            <div style="border: 1px solid #d4af37; padding: 10px; background: #f9f7f4; border-radius: 6px;">
-                                <div style="font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 4px;">📅 Invoice Date</div>
-                                <div style="font-size: 13px; font-weight: 800; color: #0f0f0f;">Today</div>
-                            </div>
-                            <div style="border: 1px solid #d4af37; padding: 10px; background: #f9f7f4; border-radius: 6px;">
-                                <div style="font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 4px;">📦 Order Date</div>
-                                <div style="font-size: 13px; font-weight: 800; color: #0f0f0f;">${orderDateText}</div>
-                            </div>
-                        </div>
-
-                        <!-- ITEMS TABLE WITH HSN & TAX -->
-                        <div class="items-section">
-                            <div class="section-title">📦 Itemized Breakdown</div>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th style="width:6%">#</th>
-                                        <th style="width:3%">HSN</th>
-                                        <th style="width:38%">Description</th>
-                                        <th style="width:8%">Qty</th>
-                                        <th style="width:12%">Unit Price</th>
-                                        <th style="width:10%">Disc %</th>
-                                        <th style="width:12%">Amount</th>
-                                        <th style="width:11%">Tax (18%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${rows || '<tr><td colspan="8" style="text-align:center;padding:16px;">No items found</td></tr>'}</tbody>
-                            </table>
-                        </div>
-
-                        <!-- SUMMARY -->
-                        <div class="summary-grid">
-                            <div class="summary-box">
-                                <div class="summary-label">🛍️ Subtotal</div>
-                                <div class="summary-value">₹${subtotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                            </div>
-                            <div class="summary-box">
-                                <div class="summary-label">🚚 Shipping</div>
-                                <div class="summary-value">${shipping <= 0 ? '🎁 FREE' : `₹${shipping.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}</div>
-                            </div>
-                            <div class="summary-box">
-                                <div class="summary-label">💰 Total Amount</div>
-                                <div class="summary-value">₹${payable.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
-                            </div>
-                            <div class="summary-box">
-                                <div class="summary-label">💳 Payment Method</div>
-                                <div class="summary-value">${paymentMethod || 'COD'}</div>
-                            </div>
-                        </div>
-
-                        <!-- PAYMENT INFO BADGE -->
-                        <div class="payment-info">
-                            <div class="payment-badge">✓ PAYMENT RECEIVED</div>
-                            <div class="payment-detail"><strong>Status:</strong> ${paymentStatus === 'Paid' ? 'Paid Successfully' : 'Payment Pending'}</div>
-                            <div class="payment-detail"><strong>Payment ID:</strong> PAY-${orderId.substring(0, 8)}</div>
-                            <div class="payment-detail"><strong>Mode:</strong> ${paymentMethod || 'Cash on Delivery'}</div>
-                        </div>
-
-                        <!-- QR CODE -->
-                        <div class="qr-section">
-                            <div style="font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 10px;">📱 Scan for Order Status & Returns</div>
-                            <svg class="qr-unit" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="200" height="200" fill="white"/>
-                                <rect x="20" y="20" width="50" height="50" fill="black"/>
-                                <rect x="30" y="30" width="30" height="30" fill="white"/>
-                                <rect x="130" y="20" width="50" height="50" fill="black"/>
-                                <rect x="140" y="30" width="30" height="30" fill="white"/>
-                                <rect x="20" y="130" width="50" height="50" fill="black"/>
-                                <rect x="30" y="140" width="30" height="30" fill="white"/>
-                                <circle cx="100" cy="100" r="15" fill="black" opacity="0.4"/>
-                            </svg>
-                            <div class="qr-label">Links to Order History & Return Policy</div>
-                        </div>
-
-                        <!-- SIGNATURE BLOCK -->
-                        <div class="signature-block">
-                            <div class="sig-item">
-                                <div class="sig-line"></div>
-                                <div class="sig-label">Authorized Signatory</div>
-                            </div>
-                            <div class="sig-item">
-                                <div style="text-align: center; margin-bottom: 8px; font-size: 20px;">🔒</div>
-                                <div class="sig-label">Security Seal</div>
-                            </div>
-                        </div>
-
-                        <!-- RETURN INFO -->
-                        <div class="return-box">
-                            <div class="return-title">📱 Scan for Easy 7-Day Returns & Exchange Policy</div>
-                            This invoice QR code provides quick access to our comprehensive return and exchange policy. Returns are accepted within 7 days of delivery in original condition.
-                        </div>
-
-                        <!-- FOOTER -->
-                        <div class="footer">
-                            <div class="foot">
-                                This is a computer-generated Tax Invoice and does not require a physical signature per GST Rules.<br/>
-                                <strong>Support:</strong> support@eshopperr.me | <strong>Website:</strong> eshopperr.me
-                            </div>
-                            <div class="foot-premium">💎 eShopper Boutique Luxe • TAX INVOICE • Certified Authentic 💎</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
-};
+    };
+    // ...existing code...
 
 const buildInvoiceHtml = ({
     orderId,
