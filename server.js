@@ -284,57 +284,37 @@ async function sendOrderConfirmationEmail({
     }
 }
 
-// 🔴 BUILD TAX INVOICE HTML - For download after delivery with legal compliance
-const buildTaxInvoiceHtml = ({
-    orderId,
-    userName,
-    userEmail,
-    paymentMethod,
-    paymentStatus,
-    finalAmount,
-    totalAmount,
-    shippingAmount,
-    shippingAddress,
-    products,
-    orderDate
-}) => {
-    const displayName = userName || 'Valued Customer';
-    const safeProducts = Array.isArray(products) ? products : [];
-    const orderDateText = new Date(orderDate || Date.now()).toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-
-    const subtotal = Number(totalAmount || safeProducts.reduce((sum, item) => sum + Number(item.total || (item.price * item.qty) || 0), 0));
-    const shipping = Number(shippingAmount ?? Math.max(0, Number(finalAmount || 0) - subtotal));
-    const payable = Number(finalAmount || (subtotal + shipping));
-
-    // Render tax-invoice.handlebars template
-    const hbs = require('handlebars');
-    const fs = require('fs');
-    const templatePath = path.join(__dirname, 'views', 'emails', 'tax-invoice.handlebars');
-    const templateSource = fs.readFileSync(templatePath, 'utf8');
-    const template = hbs.compile(templateSource);
-    return template({ orderId, userName, userEmail, paymentMethod, paymentStatus, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate });
-};
 // ...existing code...
-
-const buildInvoiceHtml = ({
-    orderId,
-    userName,
-    userEmail,
-    paymentMethod,
-    paymentStatus,
-    finalAmount,
-    totalAmount,
-    shippingAmount,
-    shippingAddress,
-    products,
-    orderDate
-}) => {
+const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, invoiceBase64, attachmentName }) => {
+    if (!toEmail) return false;
+    const displayName = userName || 'Valued Customer';
+    let templateFile = null;
+    // Map status to template file
+    switch ((status || '').toLowerCase()) {
+        case 'ordered':
+        case 'order placed':
+            templateFile = '01-order-placed.html'; break;
+        case 'confirmed':
+        case 'order confirmed':
+            templateFile = '02-order-confirmed.html'; break;
+        case 'packed':
+        case 'order packed':
+            templateFile = '03-order-packed.html'; break;
+        case 'shipped':
+        case 'order shipped':
+            templateFile = '04-order-shipped.html'; break;
+        case 'out for delivery':
+            templateFile = '05-out-for-delivery.html'; break;
+        case 'delivered':
+        case 'order delivered':
+            templateFile = '06-order-delivered.html'; break;
+        default:
+            templateFile = '01-order-placed.html';
+    }
+    // FIX: Define templatePath for Railway production
+    const templatePath = path.join(__dirname, 'views', 'emails', templateFile);
+    try {
+        let htmlContent = fs.readFileSync(templatePath, 'utf8');
     const displayName = userName || 'Valued Customer';
     const safeProducts = Array.isArray(products) ? products : [];
     const orderDateText = new Date(orderDate || Date.now()).toLocaleString('en-IN', {
@@ -378,88 +358,9 @@ const buildInvoiceHtml = ({
                 .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
                 .card { background: #fff; border: 3px solid #d4af37; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 32px rgba(0,0,0,0.12); }
 
-
-// 🔴 WHATSAPP MEDIA FUNCTION - FOR SHIPPED STATUS WITH IMAGE
-
-// 🔴 LUXURY STATUS NOTIFICATION ORCHESTRATOR
+// ...existing code...
+`;
 };
-
-const sendOrderStatusEmail = async ({ toEmail, userName, orderId, status, trackingLink, estimatedDelivery, totalAmount, invoiceBase64, attachmentName }) => {
-    if (!toEmail) return false;
-    const displayName = userName || 'Valued Customer';
-    let templateFile = null;
-    // Map status to template file
-    switch ((status || '').toLowerCase()) {
-        case 'ordered':
-        case 'order placed':
-            templateFile = '01-order-placed.html'; break;
-        case 'confirmed':
-        case 'order confirmed':
-            templateFile = '02-order-confirmed.html'; break;
-        case 'packed':
-        case 'order packed':
-            templateFile = '03-order-packed.html'; break;
-        case 'shipped':
-        case 'order shipped':
-            templateFile = '04-order-shipped.html'; break;
-        case 'out for delivery':
-            templateFile = '05-out-for-delivery.html'; break;
-        case 'delivered':
-        case 'order delivered':
-            templateFile = '06-order-delivered.html'; break;
-        default:
-            templateFile = '01-order-placed.html';
-    }
-    // FIX: Define templatePath for Railway production
-    const templatePath = path.join(__dirname, 'views', 'emails', templateFile);
-    try {
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
-        htmlContent = htmlContent
-            .replace(/{{orderId}}/g, orderId)
-            .replace(/{{userName}}/g, displayName)
-            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
-            .replace(/{{trackingLink}}/g, trackingLink || '')
-            .replace(/{{status}}/g, status || '')
-            .replace(/{{estimatedDelivery}}/g, estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN') : '')
-                .replace(/{{totalAmount}}/g, totalAmount ? `₹${Number(totalAmount).toLocaleString('en-IN')}` : '');
-        const attachments = [];
-        if (invoiceBase64 && typeof invoiceBase64 === 'string' && invoiceBase64.trim().length > 0 && /^[A-Za-z0-9+/=]+$/.test(invoiceBase64.trim())) {
-            attachments.push({
-                filename: attachmentName || `Invoice-${orderId}.pdf`,
-                content: invoiceBase64.trim(),
-                contentType: 'application/pdf'
-            });
-        }
-        const result = await sendTransactionalEmail({
-            toEmail,
-            toName: displayName,
-            subject: `${status || 'Order Update'} - Order ${orderId} | Eshopper Boutique`,
-            htmlContent,
-            attachments
-        });
-        console.log(`✅ Status email sent via ${result.provider}: ${orderId} -> ${status}`);
-        return true;
-    } catch (error) {
-        console.error('❌ Status email failed:', error.message);
-        return false;
-    }
-};
-
-// ==================== EMAIL #1: ORDER PLACED (IMMEDIATE NOTIFICATION) ====================
-
-const sendOrderPlacedEmail = async ({ toEmail, userName, orderId, finalAmount, products, shippingAddress, invoiceBuffer }) => {
-    if (!toEmail || !toEmail.includes('@')) {
-        console.error('❌ Invalid email:', toEmail);
-        throw new Error('Invalid toEmail address');
-    }
-    try {
-        const displayName = userName || 'Valued Customer';
-        const templatePath = path.join(__dirname, 'views', 'emails', '01-order-placed.html');
-        let htmlContent = fs.readFileSync(templatePath, 'utf8');
-        htmlContent = htmlContent
-            .replace(/{{orderId}}/g, orderId)
-            .replace(/{{userName}}/g, displayName)
-            .replace(/{{orderDate}}/g, new Date().toLocaleDateString('en-IN'))
             .replace(/{{totalAmount}}/g, finalAmount ? `₹${Number(finalAmount).toLocaleString('en-IN')}` : '')
             // Add more replacements as needed
         ;
@@ -756,57 +657,7 @@ const placeOrderHandler = async (req, res) => {
         // 📧 SEND "ORDER PLACED" EMAIL AUTOMATICALLY
         // [EMAIL PLACEHOLDER] Integrate new premium order placed email logic here.
 
-        // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
-        if (FEATURE_WHATSAPP_NOTIFICATIONS) {
-            try {
-                const phoneNumber = addressPayload?.phone || user.phone;
-
-                console.log(`\n🔔 WhatsApp Notification Debug for Order ${orderId}:`);
-                console.log(`   User: ${user.name} (${userId})`);
-                console.log(`   Email: ${user.email}`);
-                console.log(`   Phone from profile: "${user.phone || 'NOT SET'}"`);
-                console.log(`   Phone from address: "${addressPayload?.phone || 'NOT PROVIDED'}"`);
-                console.log(`   Final phone: "${phoneNumber || 'MISSING'}"\n`);
-
-                if (!phoneNumber) {
-                    console.log(`ℹ️  WhatsApp SKIPPED - No phone number in profile. User should update profile at: https://eshopperr.me/profile\n`);
-                } else {
-                    const itemSummary = cleanProducts
-                        .slice(0, 5)
-                        .map((item, idx) => `   ${idx + 1}. ${item.name}\n      Qty: ${item.qty} | Rate: ₹${Number(item.price || 0).toLocaleString('en-IN')} | Subtotal: ₹${Number(item.total || 0).toLocaleString('en-IN')}`)
-                        .join('\n');
-
-                    const savedAmount = total - payable;
-                    const discountInfo = savedAmount > 0 ? `\n💰 Total Savings: ₹${Number(savedAmount).toLocaleString('en-IN')}` : '';
-                    const estimatedDays = 5; // Default 5 days delivery
-                    const deliveryDate = new Date();
-                    deliveryDate.setDate(deliveryDate.getDate() + estimatedDays);
-                    const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-
-                    const whatsappMsg = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')}\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT: ${paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod || 'Card'}\n\n📅 ESTIMATED DELIVERY: ${formattedDeliveryDate}\n\n🎯 NEXT STEPS:\n✓ We're preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery\n\n🔗 TRACK: https://eshopperr.me/order-tracking/${orderId}\n\n🙏 Thank you for your business!\nEshopper Boutique Luxe`;
-
-                    try {
-                        console.log(`📤 Sending WhatsApp to ${phoneNumber} for order ${orderId}`);
-                        await sendWhatsApp(phoneNumber, whatsappMsg);
-                        console.log(`✅ WhatsApp sent for order ${orderId}`);
-                    } catch (waErr) {
-                        if (isExpectedWhatsAppError(waErr)) {
-                            console.log(`ℹ️  WhatsApp skipped for ${orderId}:`, waErr.message);
-                        } else {
-                            console.error(`⚠️  WhatsApp failed for ${orderId}:`, waErr.message);
-                            if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
-                        }
-                    }
-                }
-            } catch (waError) {
-                if (isExpectedWhatsAppError(waError)) {
-                    console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waError.message);
-                } else {
-                    console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
-                    if (process.env.SENTRY_DSN) Sentry.captureException(waError);
-                }
-            }
-        }
+        // ...existing code...
 
         return res.status(201).json({
             success: true,
@@ -823,180 +674,7 @@ const placeOrderHandler = async (req, res) => {
 app.post('/api/place-order', placeOrderHandler);
 app.post('/api/orders', placeOrderHandler);
 
-// ==================== TEST NOTIFICATION ENDPOINT ====================
-app.post('/api/test-notification', async (req, res) => {
-    if (!FEATURE_EMAIL_NOTIFICATIONS && !FEATURE_WHATSAPP_NOTIFICATIONS) {
-        return res.status(410).json({
-            success: false,
-            message: 'Notification system is currently disabled'
-        });
-    }
-    try {
-        const { phone, email, testType } = req.body;
-
-        if (!phone && !email) {
-            return res.status(400).json({
-                success: false,
-                message: 'Phone or email is required'
-            });
-        }
-
-        const results = {
-            email: { attempted: false, success: false, error: null },
-            whatsapp: { attempted: false, success: false, error: null },
-            config: {
-                evolutionApiUrl: process.env.EVOLUTION_API_URL ? '✅ Configured' : '❌ Missing',
-                whatsappToken: process.env.WHATSAPP_TOKEN ? '✅ Configured' : '❌ Missing',
-                evolutionApiKey: process.env.EVOLUTION_API_KEY ? '✅ Configured' : '❌ Missing',
-                // brevoApiKey config removed
-                whatsappInstance: process.env.WHATSAPP_INSTANCE || 'eshopper_bot',
-                whatsappSenderNumber: process.env.WHATSAPP_SENDER_NUMBER || '❌ Missing'
-            }
-        };
-
-        // Test WhatsApp Notification
-        if (phone) {
-            results.whatsapp.attempted = true;
-            try {
-                const testCaption = `✨ TEST NOTIFICATION 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello! This is a test message from Eshopper.\n\n✅ WhatsApp Integration: WORKING\nTimestamp: ${new Date().toLocaleString('en-IN')}\n\nIf you receive this, your WhatsApp notifications are configured correctly! 🎉\n\n🎯 You'll receive order confirmations, shipment updates, and delivery notifications on WhatsApp.\n\n🔗 Need Help?\nWhatsApp: wa.me/918447859784\nEmail: support@eshopperr.me\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-
-                await sendWhatsApp(phone, testCaption);
-                results.whatsapp.success = true;
-                results.whatsapp.message = 'WhatsApp notification sent successfully';
-            } catch (waError) {
-                results.whatsapp.success = false;
-                results.whatsapp.error = waError.message;
-                results.whatsapp.details = {
-                    status: waError.response?.status,
-                    data: waError.response?.data
-                };
-            }
-        }
-
-        // Test Email Notification
-        if (email) {
-            results.email.attempted = true;
-            try {
-                await sendEmail({
-                    to: email,
-                    subject: '✅ Test Notification - Eshopper Boutique',
-                    htmlContent: `
-                        <div style="font-family:Arial,sans-serif;padding:20px;background:#f8f8f8;">
-                            <h2 style="color:#111;">✨ Test Email Notification</h2>
-                            <p>This is a test email from your Eshopper notification system.</p>
-                            <p><strong>Email Integration:</strong> ✅ WORKING</p>
-                            <p><strong>Timestamp:</strong> ${new Date().toLocaleString('en-IN')}</p>
-                            <p>If you receive this, your email notifications are configured correctly! 🎉</p>
-                            <hr style="border:1px solid #ddd;margin:20px 0;" />
-                            <p style="font-size:12px;color:#666;">This is an automated test message from Eshopper Boutique Luxe</p>
-                        </div>
-                    `
-                });
-                results.email.success = true;
-                results.email.message = 'Email notification sent successfully';
-            } catch (emailError) {
-                results.email.success = false;
-                results.email.error = emailError.message;
-                results.email.details = {
-                    status: emailError.response?.status,
-                    data: emailError.response?.data
-                };
-            }
-        }
-
-const allSuccess =
-    (!results.email.attempted || results.email.success) &&
-    (!results.whatsapp.attempted || results.whatsapp.success);
-
-return res.status(allSuccess ? 200 : 207).json({
-    success: allSuccess,
-    message: allSuccess ? 'All notifications sent successfully' : 'Some notifications failed',
-    results
-});
-
-    } catch (e) {
-    console.error('❌ Test Notification Error:', e.message);
-    if (process.env.SENTRY_DSN) Sentry.captureException(e);
-    return res.status(500).json({
-        success: false,
-        message: 'Failed to test notifications',
-        error: e.message
-    });
-}
-});
-
-// ==================== WHATSAPP DIAGNOSTIC ENDPOINT ====================
-app.get('/api/check-whatsapp-status/:userId', async (req, res) => {
-    if (!FEATURE_WHATSAPP_NOTIFICATIONS) {
-        return res.status(410).json({
-            success: false,
-            message: 'WhatsApp system is currently disabled'
-        });
-    }
-    try {
-        const { userId } = req.params;
-        const user = await User.findById(userId).lean();
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: 'User not found'
-            });
-        }
-
-        const phoneNumber = user.phone || '';
-        const hasPhone = !!phoneNumber && phoneNumber.trim().length > 0;
-
-        // Check if phone is valid format
-        const normalizePhoneStrict = (phone = '') => {
-            let digits = String(phone || '').replace(/\D/g, '');
-            if (digits.length === 10) return `91${digits}`;
-            if (digits.length === 12 && digits.startsWith('91')) return digits;
-            return '';
-        };
-
-        const normalizedPhone = normalizePhoneStrict(phoneNumber);
-        const isValidFormat = !!normalizedPhone;
-
-        console.log(`🔍 WhatsApp Status Check for User ${userId}:`);
-        console.log(`   Name: ${user.name || 'N/A'}`);
-        console.log(`   Email: ${user.email || 'N/A'}`);
-        console.log(`   Raw Phone: "${phoneNumber}"`);
-        console.log(`   Has Phone: ${hasPhone ? '✅ Yes' : '❌ No'}`);
-        console.log(`   Valid Format: ${isValidFormat ? '✅ Yes' : '❌ No'}`);
-
-        return res.status(200).json({
-            success: true,
-            userId,
-            user: {
-                name: user.name,
-                email: user.email,
-                phone: phoneNumber,
-                hasPhone,
-                isValidFormat,
-                normalizedPhone: normalizedPhone || 'INVALID'
-            },
-            whatsappStatus: {
-                configured: hasPhone && isValidFormat ? '✅ READY' : '❌ NOT CONFIGURED',
-                action: hasPhone && isValidFormat
-                    ? 'User will receive WhatsApp notifications'
-                    : 'User needs to add phone number to profile',
-                updateLink: 'https://eshopperr.me/profile'
-            }
-        });
-
-    } catch (error) {
-        console.error('❌ WhatsApp Status Check Error:', error.message);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to check WhatsApp status',
-            error: error.message
-        });
-    }
-});
-
-// ==================== COMPATIBILITY API ALIASES ====================
-// These aliases keep legacy frontend calls working without 404 errors.
+// ...existing code...
 app.get('/api/user/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -1139,53 +817,6 @@ const PORT = process.env.PORT || 5000;
 
         const generateWithRest = async (modelName, fullPrompt) => {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-            const payload = {
-                contents: [
-                    {
-                        role: 'user',
-                        parts: [{ text: fullPrompt }]
-                    }
-                ],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 300
-                }
-            };
-
-            const response = await axios.post(url, payload, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': geminiApiKey
-                }
-            });
-
-            return extractGeminiText(response.data);
-        };
-
-
-
-app.get('/api/orders/recent/:userId', async (req, res) => {
-    try {
-        const userId = String(req.params.userId || '').trim();
-        const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
-        if (!userId) {
-            return res.status(400).json({ message: 'userId is required' });
-        }
-        const orders = await Order.find({ userid: userId })
-            .sort({ updatedAt: -1, createdAt: -1 })
-            .limit(limit)
-            .lean();
-        return res.json({
-            success: true,
-            orders: orders.map((item) => ({
-                orderId: item.orderId,
-                orderStatus: item.orderStatus,
-                finalAmount: item.finalAmount,
-                updatedAt: item.updatedAt,
-                createdAt: item.createdAt
-            }))
-        });
-    } catch (err) {
         console.error('❌ Error fetching recent orders:', err.message);
         return res.status(500).json({ message: 'Failed to fetch recent orders' });
     }
@@ -1230,276 +861,6 @@ app.get('/api/order/:orderId', async (req, res) => {
     }
 });
 
-        app.get('/api/order/:orderId/invoice', async (req, res) => {
-            if (!FEATURE_INVOICE_SYSTEM) {
-                return res.status(410).json({ message: 'Invoice system is currently disabled' });
-            }
-            try {
-                const { orderId } = req.params;
-                const userId = String(req.query.userId || '').trim();
-                const disposition = String(req.query.disposition || 'attachment').toLowerCase() === 'inline' ? 'inline' : 'attachment';
-
-                if (!orderId || !userId) {
-                    return res.status(400).json({ message: 'orderId and userId are required' });
-                }
-
-                const order = await Order.findOne({ orderId, userid: userId }).lean();
-                if (!order) return res.status(404).json({ message: 'Order not found' });
-
-                // Generate invoice with timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
-
-                try {
-                    // Map status -> PDF variant
-                    const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-                    const isDelivered = orderStatus === 'delivered';
-                    const isConfirmed = orderStatus === 'confirmed' || orderStatus === 'ordered';
-                    const pdfType = isDelivered ? 'final' : (isConfirmed ? 'confirmation' : 'receipt');
-
-                    const pdfBuffer = await generateInvoicePdfBuffer({
-                        orderId: order.orderId,
-                        userName: order.userName,
-                        userEmail: order.userEmail,
-                        paymentMethod: order.paymentMethod,
-                        paymentStatus: order.paymentStatus,
-                        finalAmount: Number(order.finalAmount || 0),
-                        totalAmount: Number(order.totalAmount || 0),
-                        shippingAmount: Number(order.shippingAmount || 0),
-                        shippingAddress: order.shippingAddress || {},
-                        products: Array.isArray(order.products) ? order.products : [],
-                        orderDate: order.orderDate || order.createdAt,
-                        orderStatus: order.orderStatus || order.status || 'Ordered',
-                        pdfType,
-                        isDelivered: isDelivered  // Auto-detect: Receipt or Tax Invoice
-                    });
-
-                    clearTimeout(timeoutId);
-
-                    if (!pdfBuffer || pdfBuffer.length < 500) {
-                        return res.status(500).json({ message: 'Invoice generation failed - empty PDF' });
-                    }
-
-                    const fileName = isDelivered
-                        ? `TaxInvoice-${order.orderId}.pdf`
-                        : (isConfirmed ? `Confirmation-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`);
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
-                    res.setHeader('Content-Length', String(pdfBuffer.length));
-                    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-                    res.setHeader('Pragma', 'no-cache');
-                    res.setHeader('Expires', '0');
-
-                    return res.send(pdfBuffer);
-                } catch (pdfErr) {
-                    clearTimeout(timeoutId);
-                    console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
-                    if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
-                    return res.status(500).json({ message: 'Failed to generate invoice - please try again' });
-                }
-            } catch (e) {
-                console.error('❌ Invoice endpoint error:', e.message, e.stack);
-                if (process.env.SENTRY_DSN) Sentry.captureException(e);
-                return res.status(500).json({ message: 'Invoice generation error' });
-            }
-        });
-
-        // 🔴 SMART DOWNLOAD ENDPOINT - Returns Receipt or Tax Invoice based on Delivery Status
-        app.get('/api/orders/:orderId/download', async (req, res) => {
-            if (!FEATURE_INVOICE_SYSTEM) {
-                return res.status(410).json({ message: 'Invoice system is currently disabled' });
-            }
-            try {
-                const { orderId } = req.params;
-                const userId = String(req.query.userId || '').trim();
-                const pdfType = String(req.query.type || 'receipt').toLowerCase();
-
-                if (!orderId || !userId) {
-                    return res.status(400).json({ message: 'orderId and userId are required' });
-                }
-
-                if (!['receipt', 'confirmation', 'final'].includes(pdfType)) {
-                    return res.status(400).json({ message: 'Invalid PDF type. Use "receipt", "confirmation", or "final"' });
-                }
-
-                // Fetch order
-                const order = await Order.findOne({ orderId, userid: userId }).lean();
-                if (!order) {
-                    return res.status(404).json({ message: 'Order not found' });
-                }
-
-                // Check order status
-                const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-                const isDelivered = orderStatus === 'delivered';
-
-                // Determine filename based on requested type
-                const fileName = pdfType === 'final'
-                    ? `TaxInvoice-${orderId}.pdf`
-                    : (pdfType === 'confirmation' ? `Confirmation-${orderId}.pdf` : `Receipt-${orderId}.pdf`);
-
-                console.log(`📥 Download Request: Order ${orderId} | Type: ${pdfType} | Status: ${orderStatus} | Delivered: ${isDelivered}`);
-
-                // Generate PDF with timeout
-                const timeoutId = setTimeout(() => { }, 120000);
-
-                try {
-                    const pdfBuffer = await generateInvoicePdfBuffer({
-                        orderId: order.orderId,
-                        userName: order.userName,
-                        userEmail: order.userEmail,
-                        paymentMethod: order.paymentMethod,
-                        paymentStatus: order.paymentStatus,
-                        finalAmount: Number(order.finalAmount || 0),
-                        totalAmount: Number(order.totalAmount || 0),
-                        shippingAmount: Number(order.shippingAmount || 0),
-                        shippingAddress: order.shippingAddress || {},
-                        products: Array.isArray(order.products) ? order.products : [],
-                        orderDate: order.orderDate || order.createdAt,
-                        orderStatus: order.orderStatus || order.status || 'Ordered',
-                        isDelivered: isDelivered,  // Pass delivery status for footer customization
-                        pdfType: pdfType
-                    });
-
-                    clearTimeout(timeoutId);
-
-                    // Validate PDF buffer
-                    if (!pdfBuffer || pdfBuffer.length < 500) {
-                        throw new Error('Generated PDF buffer is invalid or too small');
-                    }
-
-                    // Set response headers
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-                    res.setHeader('Content-Length', String(pdfBuffer.length));
-                    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-                    res.setHeader('Pragma', 'no-cache');
-                    res.setHeader('Expires', '0');
-
-                    console.log(`✅ PDF generated successfully: ${fileName}`);
-                    return res.send(pdfBuffer);
-                } catch (pdfErr) {
-                    clearTimeout(timeoutId);
-                    console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
-                    if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(pdfErr);
-                    return res.status(500).json({ message: 'Failed to generate PDF - please try again' });
-                }
-            } catch (e) {
-                console.error('❌ Download endpoint error:', e.message, e.stack);
-                if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(e);
-                return res.status(500).json({ message: 'Download error' });
-            }
-        });
-
-        // 🔴 DYNAMIC INVOICE DOWNLOADER - Auto-detects PDF type based on order status
-        app.get('/api/orders/:id/download-invoice', async (req, res) => {
-            if (!FEATURE_INVOICE_SYSTEM) {
-                return res.status(410).json({
-                    success: false,
-                    message: 'Invoice system is currently disabled'
-                });
-            }
-            try {
-                const orderId = String(req.params.id || '').trim();
-                const userId = String(req.query.userId || '').trim();
-
-                // Validation
-                if (!orderId || !userId) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'orderId and userId are required'
-                    });
-                }
-
-                // Fetch order with authentication check
-                const order = await Order.findOne({ orderId, userid: userId }).lean();
-                if (!order) {
-                    return res.status(404).json({
-                        success: false,
-                        message: 'Order not found or you do not have access to this order'
-                    });
-                }
-
-                // Determine PDF type based on order status
-                const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-
-                let pdfType = 'receipt'; // Default for 'Pending'/'Ordered'
-                let fileName = `Receipt-${orderId}.pdf`;
-
-                if (orderStatus === 'delivered') {
-                    // Delivered → Final Tax Invoice
-                    pdfType = 'final';
-                    fileName = `TaxInvoice-${orderId}.pdf`;
-                } else if (
-                    orderStatus === 'confirmed' ||
-                    orderStatus === 'packed' ||
-                    orderStatus === 'shipped' ||
-                    orderStatus === 'out for delivery'
-                ) {
-                    // Confirmed to Out for Delivery → Proforma Confirmation
-                    pdfType = 'confirmation';
-                    fileName = `Confirmation-${orderId}.pdf`;
-                }
-
-                console.log(`📥 Dynamic Invoice Download: ${orderId} | Status: ${orderStatus} → PDF Type: ${pdfType}`);
-
-                // Generate PDF with timeout protection
-                const timeoutId = setTimeout(() => { }, 120000);
-
-                try {
-                    const pdfBuffer = await generateInvoicePdfBuffer({
-                        orderId: order.orderId,
-                        userName: order.userName,
-                        userEmail: order.userEmail,
-                        paymentMethod: order.paymentMethod,
-                        paymentStatus: order.paymentStatus,
-                        finalAmount: Number(order.finalAmount || 0),
-                        totalAmount: Number(order.totalAmount || 0),
-                        shippingAmount: Number(order.shippingAmount || 0),
-                        shippingAddress: order.shippingAddress || {},
-                        products: Array.isArray(order.products) ? order.products : [],
-                        orderDate: order.orderDate || order.createdAt,
-                        orderStatus: order.orderStatus || order.status || 'Ordered',
-                        isDelivered: orderStatus === 'delivered',
-                        pdfType: pdfType
-                    });
-
-                    clearTimeout(timeoutId);
-
-                    // Validate PDF buffer
-                    if (!pdfBuffer || pdfBuffer.length < 500) {
-                        throw new Error('Generated PDF buffer is invalid or too small');
-                    }
-
-                    // Stream PDF to frontend with proper headers
-                    res.setHeader('Content-Type', 'application/pdf');
-                    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-                    res.setHeader('Content-Length', String(pdfBuffer.length));
-                    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-                    res.setHeader('Pragma', 'no-cache');
-                    res.setHeader('Expires', '0');
-
-                    console.log(`✅ Dynamic invoice generated: ${fileName} (${pdfBuffer.length} bytes)`);
-                    return res.send(pdfBuffer);
-
-                } catch (pdfErr) {
-                    clearTimeout(timeoutId);
-                    console.error(`❌ PDF generation failed for ${orderId}:`, pdfErr.message);
-                    if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(pdfErr);
-                    return res.status(500).json({
-                        success: false,
-                        message: 'Failed to generate invoice. Please try again later.'
-                    });
-                }
-
-            } catch (err) {
-                console.error('❌ Dynamic invoice download error:', err.message, err.stack);
-                if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(err);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Unable to process invoice download request'
-                });
-            }
-        });
 
         // 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
         app.get('/api/admin/orders', async (req, res) => {
