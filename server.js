@@ -1,3 +1,4 @@
+const Contact = require('./models/Contact');
 const Checkout = require('./models/Checkout');
 const Wishlist = require('./models/Wishlist');
 const Cart = require('./models/Cart');
