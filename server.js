@@ -1,3 +1,4 @@
+const Brand = require('./models/Brand');
 const Subcategory = require('./models/Subcategory');
 const Maincategory = require('./models/Maincategory');
 const Product = require('./models/Product');
