@@ -3167,64 +3167,62 @@ app.get('/api/orders/recent/:userId', async (req, res) => {
         const userId = String(req.params.userId || '').trim();
         const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
         if (!userId) {
-            return res.status(400).json({ message: 'userId is required' });
-        }
-        const orders = await Order.find({ userid: userId })
-            .sort({ updatedAt: -1, createdAt: -1 })
-            .limit(limit)
-            .select('orderId orderStatus finalAmount updatedAt createdAt')
-            .lean();
-        return res.json({
-            success: true,
-            orders: orders.map((item) => ({
-// --- End of /api/orders/recent/:userId ---
+        return res.status(400).json({ message: 'userId is required' });
+    }
+    const orders = await Order.find({ userid: userId })
+        .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(limit)
+        .lean();
+    return res.json({
+        success: true,
+        orders: orders.map((item) => ({
+            orderId: item.orderId,
+            orderStatus: item.orderStatus,
+            finalAmount: item.finalAmount,
+            updatedAt: item.updatedAt,
+            createdAt: item.createdAt
+        }))
+    });
+});
 
 app.get('/api/order/:orderId', async (req, res) => {
     try {
         const { orderId } = req.params;
         const userId = req.query.userId;
-
-                if (!orderId || !userId) {
-                    return res.status(400).json({ message: 'orderId and userId are required' });
-                }
-
-                const order = await Order.findOne({
-                    orderId,
-                    userid: userId
-                }).lean();
-
-                if (!order) return res.status(404).json({ message: 'Order not found' });
-
-                // 📦 Build comprehensive order response
-                const statusHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [
-                    { status: 'Ordered', timestamp: order.orderDate || order.createdAt || new Date() }
-                ];
-
-                return res.json({
-                    orderId: order.orderId,
-                    userid: order.userid,
-                    orderStatus: order.orderStatus || 'Ordered',
-                    userName: order.userName || '',
-                    userEmail: order.userEmail || '',
-                    paymentMethod: order.paymentMethod || 'COD',
-                    paymentStatus: order.paymentStatus || 'Pending',
-                    totalAmount: Number(order.totalAmount || 0),
-                    shippingAmount: Number(order.shippingAmount || 0),
-                    finalAmount: order.finalAmount || 0,
-                    shippingAddress: order.shippingAddress || {},
-                    products: Array.isArray(order.products) ? order.products : [],
-                    estimatedDelivery: order.estimatedArrival || null,
-                    estimatedArrival: order.estimatedArrival || null,
-                    statusHistory: statusHistory,
-                    createdAt: order.orderDate || order.createdAt || new Date(),
-                    orderDate: order.orderDate || order.createdAt,
-                    updatedAt: order.updatedAt || order.createdAt || new Date()
-                });
-            } catch (e) {
-                console.error('❌ Order fetch error:', e.message);
-                return res.status(500).json({ message: 'Failed to fetch order' });
-            }
+        if (!orderId || !userId) {
+            return res.status(400).json({ message: 'orderId and userId are required' });
+        }
+        const order = await Order.findOne({ orderId, userid: userId }).lean();
+        if (!order) return res.status(404).json({ message: 'Order not found' });
+        // 📦 Build comprehensive order response
+        const statusHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [
+            { status: 'Ordered', timestamp: order.orderDate || order.createdAt || new Date() }
+        ];
+        return res.json({
+            orderId: order.orderId,
+            userid: order.userid,
+            orderStatus: order.orderStatus || 'Ordered',
+            userName: order.userName || '',
+            userEmail: order.userEmail || '',
+            paymentMethod: order.paymentMethod || 'COD',
+            paymentStatus: order.paymentStatus || 'Pending',
+            totalAmount: Number(order.totalAmount || 0),
+            shippingAmount: Number(order.shippingAmount || 0),
+            finalAmount: order.finalAmount || 0,
+            shippingAddress: order.shippingAddress || {},
+            products: Array.isArray(order.products) ? order.products : [],
+            estimatedDelivery: order.estimatedArrival || null,
+            estimatedArrival: order.estimatedArrival || null,
+            statusHistory: statusHistory,
+            createdAt: order.orderDate || order.createdAt || new Date(),
+            orderDate: order.orderDate || order.createdAt,
+            updatedAt: order.updatedAt || order.createdAt || new Date()
         });
+    } catch (e) {
+        console.error('❌ Order fetch error:', e.message);
+        return res.status(500).json({ message: 'Failed to fetch order' });
+    }
+});
 
         app.get('/api/order/:orderId/invoice', async (req, res) => {
             if (!FEATURE_INVOICE_SYSTEM) {
