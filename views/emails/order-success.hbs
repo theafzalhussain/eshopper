@@ -1,0 +1,23 @@
+<!-- Order Success Email Template -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Success - ESHOPPER</title>
+    <style>
+        /* Add premium responsive styles here */
+    </style>
+</head>
+<body>
+    <h2>Order Successful: #{{orderId}}</h2>
+    <p>Namaste {{userName}},</p>
+    <p>Aapka order successfully deliver ho gaya hai!</p>
+    <h3>Products:</h3>
+    <ul>
+        {{#each products}}
+        <li>{{this.name}} x {{this.qty}} - ₹{{this.price}}</li>
+        {{/each}}
+    </ul>
+    <p>Dhanyavaad for shopping with ESHOPPER!</p>
+</body>
+</html>

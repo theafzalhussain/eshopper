@@ -253,6 +253,17 @@ const upload = multer({
 ]);
 
 
+const hbs = require('handlebars');
+const fs = require('fs');
+// Order Success Email Template Rendering
+function sendOrderSuccessEmail({ orderId, userName, products, to, subject }) {
+    const templatePath = path.join(__dirname, 'views', 'emails', 'order-success.hbs');
+    const templateSource = fs.readFileSync(templatePath, 'utf8');
+    const template = hbs.compile(templateSource);
+    const htmlContent = template({ orderId, userName, products });
+    // sendEmail({ to, subject, htmlContent });
+    return htmlContent;
+}
 // ...existing code...
 // ...existing code...
 
@@ -304,14 +315,21 @@ const enqueueEmailJob = async (jobType, payload) => {
 // Clean route imports
 const orderController = require('./controllers/orderController');
 // Use modular routes
+const orderRoutes = require('./routes/orderRoutes');
+app.use('/api/orders', orderRoutes);
+// ...existing code...
 
 // 🔴 SEND ORDER CONFIRMATION EMAIL (Brevo)
 async function sendOrderConfirmationEmail({
     orderId, userName, userEmail, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate, estimatedArrival, deliveryPartner
 }) {
-    const htmlContent = buildOrderConfirmationProformaHtml({
-        orderId, userName, userEmail, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate, estimatedArrival, deliveryPartner
-    });
+    // Render order-confirmation.handlebars template
+    const hbs = require('handlebars');
+    const fs = require('fs');
+    const templatePath = path.join(__dirname, 'views', 'emails', 'order-confirmation.handlebars');
+    const templateSource = fs.readFileSync(templatePath, 'utf8');
+    const template = hbs.compile(templateSource);
+    const htmlContent = template({ orderId, userName, userEmail, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate, estimatedArrival, deliveryPartner });
     const subject = `Order Confirmed: #${orderId} | ESHOPPER`;
     try {
         await sendEmail({ to: userEmail, subject, htmlContent });
@@ -355,117 +373,13 @@ const buildTaxInvoiceHtml = ({
         const line = Number(item.total || (qty * price));
         const itemDesc = item.name ? `${item.name}${item.size ? ` • Size: ${item.size}` : ''}${item.color ? ` • ${item.color}` : ''}` : 'Product';
         const hsn = item.hsn || '6204';
-        const unitPrice = price;
-        const discountPct = item.discountPercent || 0;
-        const taxRate = 18; // IGST
-        const taxAmount = Math.round((line * taxRate) / 100);
-        const priceBeforeTax = line;
-
-        return `
-            <tr>
-                <td style="width:6%; text-align:center;">${String(idx + 1).padStart(2, '0')}</td>
-                <td style="width:3%; text-align:center; font-weight:600;">${hsn}</td>
-                <td style="width:38%;"><strong>${itemDesc}</strong></td>
-                <td style="width:8%; text-align:center;">${qty}</td>
-                <td style="width:12%; text-align:right; font-weight:600;">₹${unitPrice.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                <td style="width:10%; text-align:center;">${discountPct}%</td>
-                <td style="width:12%; text-align:right; font-weight:600;">₹${priceBeforeTax.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-                <td style="width:11%; text-align:right; font-weight:700; color:#1f8f54;">₹${taxAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
-            </tr>
-        `;
-    }).join('');
-
-    return `
-        <!doctype html>
-        <html>
-        <head>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                html { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                body { background: #f5f5f3; color: #1a1a1a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.5; }
-                .wrap { max-width: 900px; margin: 0 auto; padding: 16px; position: relative; }
-                
-                /* PAID STAMP */
-                .paid-stamp {
-                    position: fixed;
-                    top: 30%;
-                    right: 10%;
-                    transform: rotate(25deg);
-                    font-size: 64px;
-                    font-weight: 900;
-                    color: rgba(31, 143, 84, 0.15);
-                    white-space: nowrap;
-                    pointer-events: none;
-                    z-index: 0;
-                    letter-spacing: 2px;
-                    text-transform: uppercase;
-                    border: 3px solid rgba(31, 143, 84, 0.15);
-                    padding: 12px 28px;
-                    border-radius: 8px;
-                }
-                
-                .card { background: #fff; border: 2px solid #d4af37; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; z-index: 1; }
-                .head { padding: 22px 20px; background: #f5f5f3; border-bottom: 1px solid #e8dcc8; position: relative; }
-                .tax-label { position: absolute; top: 20px; right: 20px; font-size: 14px; font-weight: 900; color: #d4af37; letter-spacing: 2px; text-transform: uppercase; }
-                .brand-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-                .brand-left { width: 64px; text-align: left; vertical-align: middle; }
-                .brand-center { text-align: center; vertical-align: middle; }
-                .brand-spacer { width: 64px; }
-                .brand-badge { width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg, #0a0a0a, #16213e); border: 2px solid #d4af37; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-                .brand-badge img { width: 100%; height: 100%; object-fit: contain; }
-                .brand-title { font-size: 32px; font-weight: 900; color: #d4af37; letter-spacing: 1px; margin: 0; }
-                .tagline { font-size: 11px; color: #8b7521; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 4px 0 0 0; }
-                .body { padding: 32px; }
-                .title { font-size: 20px; font-weight: 800; margin: 0 0 12px; color: #0f0f0f; letter-spacing: 1px; }
-                .seller-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; font-size: 12px; line-height: 1.8; }
-                .seller-box { border: 1px solid #d4af37; padding: 12px; background: #f9f7f4; border-radius: 8px; }
-                .seller-title { font-weight: 800; color: #0f0f0f; margin-bottom: 8px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
-                .seller-text { color: #333; font-size: 11px; }
-                .items-section { margin: 24px 0; }
-                .section-title { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: #0f0f0f; font-weight: 800; margin-bottom: 12px; }
-                table { width: 100%; border-collapse: collapse; background: #fff; }
-                th { background: linear-gradient(135deg, #0f0f0f, #1a1a1a); color: #ffd700; font-size: 10px; letter-spacing: 1px; padding: 12px 8px; text-transform: uppercase; font-weight: 800; text-align: left; border: 1px solid #d4af37; white-space: nowrap; }
-                td { border: 1px solid #e8dcc8; padding: 11px 8px; font-size: 12px; color: #1a1a1a; }
-                tr:nth-child(even) { background: #f5f5f3; }
-                tr:nth-child(odd) { background: #fff; }
-                tr:hover { background: #fffef8; }
-                .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
-                .summary-box { border: 1px solid #d4af37; padding: 14px; background: #f9f7f4; border-radius: 8px; text-align: center; }
-                .summary-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #8b7521; font-weight: 800; margin-bottom: 6px; }
-                .summary-value { font-size: 16px; font-weight: 800; color: #0f0f0f; }
-                .payment-info { border: 2px solid #1f8f54; padding: 16px; background: rgba(31, 143, 84, 0.05); border-radius: 8px; margin: 20px 0; }
-                .payment-badge { display: inline-block; background: linear-gradient(135deg, #1f8f54, #16a34a); color: #fff; padding: 8px 16px; border-radius: 14px; font-weight: 800; font-size: 11px; letter-spacing: 1px; margin-bottom: 10px; }
-                .payment-detail { font-size: 12px; color: #333; margin: 6px 0; }
-                .qr-section { text-align: center; margin: 20px 0; padding: 16px; background: #f9f7f4; border-radius: 8px; border: 1px solid #d4af37; }
-                .qr-unit { display: inline-block; width: 120px; height: 120px; background: #fff; border: 2px solid #d4af37; border-radius: 6px; }
-                .qr-label { font-size: 10px; margin-top: 8px; color: #666; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; }
-                .signature-block { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0; padding-top: 16px; border-top: 1px solid #e8dcc8; }
-                .sig-item { text-align: center; }
-                .sig-line { border-top: 2px solid #000; margin-bottom: 4px; height: 40px; }
-                .sig-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #333; font-weight: 700; }
-                .return-box { border-left: 4px solid #d4af37; padding: 12px; background: #f9f7f4; margin: 16px 0; font-size: 11px; color: #333; border-radius: 4px; }
-                .return-title { font-weight: 800; color: #0f0f0f; margin-bottom: 6px; }
-                .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e8dcc8; }
-                .foot { font-size: 11px; color: #666; text-align: center; line-height: 1.7; }
-                .foot-premium { color: #d4af37; font-weight: 800; margin-top: 8px; font-size: 12px; letter-spacing: 1px; }
-                @media (max-width: 768px) {
-                    .body { padding: 20px; }
-                    .seller-section { grid-template-columns: 1fr; }
-                    .signature-block { grid-template-columns: 1fr; }
-                    table { font-size: 11px; }
-                    th, td { padding: 8px 6px; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="paid-stamp">PAID</div>
-            <div class="wrap">
-                <div class="card">
-                    <!-- PREMIUM HEADER -->
-                    <div class="head">
-                        <div class="tax-label">TAX INVOICE</div>
+        // Render tax-invoice.handlebars template
+        const hbs = require('handlebars');
+        const fs = require('fs');
+        const templatePath = path.join(__dirname, 'views', 'emails', 'tax-invoice.handlebars');
+        const templateSource = fs.readFileSync(templatePath, 'utf8');
+        const template = hbs.compile(templateSource);
+        return template({ orderId, userName, userEmail, paymentMethod, paymentStatus, finalAmount, totalAmount, shippingAmount, shippingAddress, products, orderDate });
                         <table class="brand-table" role="presentation" cellpadding="0" cellspacing="0">
                             <tr>
                                 <td class="brand-left">
@@ -1444,7 +1358,7 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
 
         console.error('❌ WhatsApp media send failed:', {
             status: error.response?.status,
-            message: error.response?.data?.message || error.message,
+            message: error.response?.data?.message || error.response?.data || error.message,
             endpoint: error.config?.url,
             data: error.response?.data || error.details
         });
@@ -1508,7 +1422,7 @@ const sendLuxeStatusNotification = async ({ orderId, status, phone, customerName
         else if (status === 'Shipped') {
             // 🚚 SHIPPED: WhatsApp + Email (Parallel)
             const deliveryDate = estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Soon';
-            const shippedMsg = `🚚 YOUR ORDER IS ON THE WAY! 📍✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is shipping!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Premium Delivery\n🚚 Shipping: Fast & Secure\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n📅 DELIVERY WINDOW:\n📍 Expected Arrival: ${deliveryDate}\n⏰ Delivery Time: 9 AM - 6 PM\n\n🎯 WHAT TO EXPECT:\n✓ Professional White-Glove delivery\n✓ Careful handling of your selection\n✓ Real-time location tracking\n✓ Safe placement at your doorstep\n\n🔗 LIVE TRACKING: ${trackingLink}\n\n💡 PRO TIP:\n→ Ensure someone is available for delivery\n→ Keep door accessible\n→ Contact us if you need delivery rescheduling\n\n📞 DELIVERY SUPPORT:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n\n💎 Thank you for your business!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+            const shippedMsg = `🚚 YOUR ORDER IS ON THE WAY! 📍✨\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHi ${firstName},\nYour premium selection is shipping!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ Order: #${orderId}\n📍 Status: Out for Premium Delivery\n🚚 Shipping: Fast & Secure\n📦 Order Value: ₹${Number(finalAmount || 0).toLocaleString('en-IN')}\n\n📅 DELIVERY WINDOW:\n📍 Expected Arrival: ${deliveryDate}\n⏰ Delivery Time: 9 AM - 6 PM\n\n🎯 WHAT TO EXPECT:\n✓ Professional White-Glove delivery\n✓ Careful handling of your selection\n✓ Real-time location tracking\n✓ Safe placement at your doorstep\n\n🔗 LIVE TRACKING: ${trackingLink}\n\n💡 PRO TIP:\n→ Ensure someone is available for delivery\n→ Keep door accessible\n→ Contact us if you need delivery rescheduling\n\n📞 DELIVERY SUPPORT:\n• WhatsApp: wa.me/918447859784\n• Call: 8447859784\n• Email: support@eshopperr.me\n• Chat: Available 24/7\n\n💡 PRO TIP:\nIf you miss delivery, reschedule instantly from tracking page or WhatsApp us!\n\n🎁 Almost there!\nEshopper Boutique Luxe\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
             // Send both WhatsApp and Email in parallel
             const shippedResults = await Promise.allSettled([
@@ -2644,13 +2558,14 @@ app.get('/api/order/:orderId', async (req, res) => {
                         orderDate: order.orderDate || order.createdAt,
                         orderStatus: order.orderStatus || order.status || 'Ordered',
                         isDelivered: isDelivered,  // Pass delivery status for footer customization
-                        pdfType: pdfType // 'receipt' | 'confirmation' | 'final'
+                        pdfType: pdfType
                     });
 
                     clearTimeout(timeoutId);
 
+                    // Validate PDF buffer
                     if (!pdfBuffer || pdfBuffer.length < 500) {
-                        return res.status(500).json({ message: 'PDF generation failed - invalid buffer' });
+                        throw new Error('Generated PDF buffer is invalid or too small');
                     }
 
                     // Set response headers
@@ -2666,12 +2581,12 @@ app.get('/api/order/:orderId', async (req, res) => {
                 } catch (pdfErr) {
                     clearTimeout(timeoutId);
                     console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
-                    if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
+                    if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(pdfErr);
                     return res.status(500).json({ message: 'Failed to generate PDF - please try again' });
                 }
             } catch (e) {
                 console.error('❌ Download endpoint error:', e.message, e.stack);
-                if (process.env.SENTRY_DSN) Sentry.captureException(e);
+                if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(e);
                 return res.status(500).json({ message: 'Download error' });
             }
         });

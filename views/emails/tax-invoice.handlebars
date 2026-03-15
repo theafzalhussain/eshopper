@@ -1,0 +1,28 @@
+<!-- Tax Invoice Email Template -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tax Invoice - ESHOPPER</title>
+    <style>
+        /* Add your premium responsive styles here */
+    </style>
+</head>
+<body>
+    <h2>Tax Invoice: #{{orderId}}</h2>
+    <p>Customer: {{userName}}</p>
+    <p>Email: {{userEmail}}</p>
+    <p>Payment Method: {{paymentMethod}}</p>
+    <p>Payment Status: {{paymentStatus}}</p>
+    <p>Order Date: {{orderDate}}</p>
+    <h3>Products:</h3>
+    <ul>
+        {{#each products}}
+        <li>{{this.name}} x {{this.qty}} - ₹{{this.price}}</li>
+        {{/each}}
+    </ul>
+    <p>Subtotal: ₹{{totalAmount}}</p>
+    <p>Shipping: ₹{{shippingAmount}}</p>
+    <p>Total Payable: ₹{{finalAmount}}</p>
+</body>
+</html>

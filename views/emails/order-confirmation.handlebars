@@ -1,0 +1,32 @@
+<!-- Order Confirmation Email Template -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Confirmed - ESHOPPER</title>
+    <style>
+        /* Add your premium responsive styles here */
+    </style>
+</head>
+<body>
+    <h2>Order Confirmed: #{{orderId}}</h2>
+    <p>Namaste {{userName}},</p>
+    <p>Aapka order successfully place ho gaya hai!</p>
+    <p>Order Details:</p>
+    <ul>
+        <li>Payment Method: {{paymentMethod}}</li>
+        <li>Final Amount: ₹{{finalAmount}}</li>
+        <li>Shipping Address: {{shippingAddress}}</li>
+        <li>Order Date: {{orderDate}}</li>
+        <li>Estimated Arrival: {{estimatedArrival}}</li>
+        <li>Delivery Partner: {{deliveryPartner}}</li>
+    </ul>
+    <h3>Products:</h3>
+    <ul>
+        {{#each products}}
+        <li>{{this.name}} x {{this.qty}} - ₹{{this.price}}</li>
+        {{/each}}
+    </ul>
+    <p>Dhanyavaad for shopping with ESHOPPER!</p>
+</body>
+</html>
