@@ -1,3 +1,4 @@
+const Checkout = require('./models/Checkout');
 const Wishlist = require('./models/Wishlist');
 const Cart = require('./models/Cart');
 const Brand = require('./models/Brand');
