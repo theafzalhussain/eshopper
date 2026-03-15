@@ -46,6 +46,9 @@ const sendEmail = sendTransactionalEmail;
 // ===== EMAIL UTILITY (Brevo)
 require('./models/OTPRecord');
 const User = require('./models/User');
+const Product = require('./models/Product');
+const Order = require('./models/Order');
+const OTPRecord = require('./models/OTPRecord');
 const authRoutes = require('./routes/authRoutes');
 // ...existing code...
 // ...existing code...
@@ -2099,25 +2102,6 @@ app.get('/api/products', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-async function startServer() {
-    try {
-        await mongoose.connect(MONGO_URI, {
-            dbName: process.env.DB_NAME || 'eshoper',
-            autoIndex: true,
-            serverSelectionTimeoutMS: 10000,
-            socketTimeoutMS: 45000,
-            retryWrites: true,
-            w: 'majority'
-        });
-
-        console.log("✅ MongoDB connected successfully");
-        console.log(`📊 Database: ${mongoose.connection.name}`);
-        console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
-
-        // 🔴 Trimming to ensure no space/newline error
-        // --- server.js AI REFACTOR START ---
-        const geminiApiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
-        const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
         let cachedGenerateModels = [];
         let cachedAt = 0;
         const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
@@ -3127,22 +3111,6 @@ app.get('/api/order/:orderId', async (req, res) => {
         });
 
 
-        server.on('error', (err) => {
-            if (err.code === 'EADDRINUSE') {
-                console.error(`\n❌ Port ${PORT} already in use!`);
-                console.error(`   Run this command to fix it:`);
-                console.error(`   Windows: netstat -ano | findstr :${PORT}  →  taskkill /PID <number> /F`);
-                process.exit(1);
-            }
-            throw err;
-        });
-    } catch (e) {
-        console.error("❌ MongoDB Connection Failed:", e.message);
-        console.error("   Details:", e.code || e.codeName);
-        console.error("   URI (masked):", MONGO_URI.replace(/mongodb\+srv:\/\/(.+)@/, 'mongodb+srv://***@'));
-        process.exit(1);
-    }
-}
 
 process.on("unhandledRejection", (err) => {
     console.error("❌ Unhandled Rejection:", err?.message || err);
@@ -3150,42 +3118,40 @@ process.on("unhandledRejection", (err) => {
     process.exit(1);
 });
 
-process.on("SIGINT", async () => {
-    console.log("\n🛑 Shutting down gracefully...");
+// --- SERVER START LOGIC (FIXED) ---
+const startServer = async () => {
     try {
-        await mongoose.connection.close(false);
-        console.log("✅ MongoDB connection closed");
-    } catch (e) {
-        console.error("❌ Error closing MongoDB:", e?.message || e);
+        const PORT = process.env.PORT || 5000;
+        const MONGO_URI = process.env.MONGO_URI;
+
+        if (!MONGO_URI) {
+            throw new Error("❌ MONGO_URI is not defined in .env file");
+        }
+
+        await mongoose.connect(MONGO_URI, {
+            dbName: process.env.DB_NAME || 'eshoper',
+            serverSelectionTimeoutMS: 10000,
+        });
+
+        server.listen(PORT, () => {
+            console.log(`🚀 Server running on port ${PORT}`);
+        });
+    } catch (err) {
+        console.error("❌ Failed to start server:", err.message);
+        process.exit(1);
     }
-    process.exit(0);
+};
+
+// Start the server execution
+startServer();
+
+// --- GLOBAL ERROR HANDLERS ---
+process.on("uncaughtException", (err) => {
+    console.error("❌ Uncaught Exception:", err.message);
+    process.exit(1);
 });
 
-// 📡 MONITOR MONGOOSE CONNECTION EVENTS
-mongoose.connection.on('connected', () => {
-    console.log('✅ Mongoose connected to MongoDB');
+process.on("unhandledRejection", (err) => {
+    console.error("❌ Unhandled Rejection:", err.message);
+    process.exit(1);
 });
-
-mongoose.connection.on('error', (err) => {
-    console.error('❌ Mongoose connection error:', err.message);
-});
-
-mongoose.connection.on('disconnected', () => {
-    console.warn('⚠️  Mongoose disconnected. Attempting reconnect in 5s...');
-    setTimeout(async () => {
-            try {
-                await mongoose.connect(MONGO_URI, {
-                    dbName: process.env.DB_NAME || 'eshoper',
-                    serverSelectionTimeoutMS: 10000,
-                    socketTimeoutMS: 45000,
-                    retryWrites: true,
-                    w: 'majority'
-                });
-                console.log('✅ MongoDB reconnected successfully');
-            } catch (e) {
-                console.error('❌ MongoDB reconnect failed:', e.message);
-            }
-    }, 5000);
-});
-    }
-    startServer();
