@@ -50,7 +50,8 @@ export default function AdminOrders() {
 
     // Socket.io setup for real-time updates
     useEffect(() => {
-        const socket = io(BASE_URL);
+        const userId = localStorage.getItem('userid');
+        const socket = io(BASE_URL, { auth: { userId } });
         
         const handleStatusUpdate = (payload) => {
             console.log('📡 Real-time update received:', payload);

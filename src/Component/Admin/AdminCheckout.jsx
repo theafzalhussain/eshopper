@@ -38,8 +38,9 @@ export default function AdminCheckout() {
 
     // 🔄 Socket.io setup for real-time updates
     useEffect(() => {
-        const newSocket = io(BASE_URL)
-        setSocket(newSocket)
+        const userId = localStorage.getItem('userid');
+        const newSocket = io(BASE_URL, { auth: { userId } });
+        setSocket(newSocket);
 
         newSocket.on('statusUpdate', (payload) => {
             console.log('📡 Real-time update received:', payload)
