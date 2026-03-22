@@ -2,18 +2,55 @@
 // Usage: node seed.js
 
 const mongoose = require('mongoose');
+
 const Product = require('./models/Product');
 const User = require('./models/User');
 const Cart = require('./models/Cart');
 const Wishlist = require('./models/Wishlist');
 const Newslatter = require('./models/Newslatter');
+const Maincategory = require('./models/Maincategory');
+const Subcategory = require('./models/Subcategory');
+const Brand = require('./models/Brand');
 
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/eshopper';
 
 async function seed() {
+
+
   await mongoose.connect(MONGO_URI);
 
-  // Sample User
+  // Cleanup all collections for fresh seed
+  await Promise.all([
+    Product.deleteMany({}),
+    User.deleteMany({}),
+    Cart.deleteMany({}),
+    Wishlist.deleteMany({}),
+    Newslatter.deleteMany({}),
+    Maincategory.deleteMany({}),
+    Subcategory.deleteMany({}),
+    Brand.deleteMany({})
+  ]);
+
+  // Maincategory
+  const mainCat = await Maincategory.create({
+    name: 'Fashion',
+    description: 'All fashion products'
+  });
+
+  // Brand
+  const brand = await Brand.create({
+    name: 'BrandX',
+    description: 'Premium brand'
+  });
+
+  // Subcategory
+  const subCat = await Subcategory.create({
+    name: 'T-Shirts',
+    maincategory: mainCat._id,
+    description: 'Trendy T-Shirts'
+  });
+
+  // User
   const user = await User.create({
     email: 'testuser@example.com',
     password: '$2a$10$testpasswordhash', // Use a real bcrypt hash in production
@@ -21,12 +58,12 @@ async function seed() {
     phone: '9999999999',
   });
 
-  // Sample Product
+  // Product
   const product = await Product.create({
     name: 'Sample T-Shirt',
-    maincategory: 'Fashion',
-    subcategory: 'T-Shirts',
-    brand: 'BrandX',
+    maincategory: mainCat.name,
+    subcategory: subCat.name,
+    brand: brand.name,
     color: 'Blue',
     size: 'L',
     baseprice: 999,
@@ -39,19 +76,19 @@ async function seed() {
     reviews: 12
   });
 
-  // Sample Cart
+  // Cart
   await Cart.create({
     user: user._id,
     items: [{ product: product._id, quantity: 2 }]
   });
 
-  // Sample Wishlist
+  // Wishlist
   await Wishlist.create({
     user: user._id,
     products: [product._id]
   });
 
-  // Sample Newsletter
+  // Newsletter
   await Newslatter.create({
     email: 'subscriber@example.com'
   });
