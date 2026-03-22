@@ -4,7 +4,10 @@ import './OrderDetailsModal.css';
 
 export default function OrderDetailsModal({ order, open, onClose }) {
   const modalRef = useRef();
+
   if (!open || !order) return null;
+  // Debug: log the order object to see available fields
+  console.log('Order in Modal:', order);
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
@@ -32,46 +35,59 @@ export default function OrderDetailsModal({ order, open, onClose }) {
         </div>
         <div className="order-modal-section">
           <h4>Order Info</h4>
-          <div><b>Order ID:</b> {order.orderId}</div>
-          <div><b>Date:</b> {new Date(order.orderDate || order.createdAt).toLocaleString()}</div>
-          <div><b>Status:</b> {order.orderStatus}</div>
+          <div><b>Order ID:</b> {order.orderId || 'N/A'}</div>
+          <div><b>Date:</b> {
+            order.orderDate ? new Date(order.orderDate).toLocaleString() :
+            order.createdAt ? new Date(order.createdAt).toLocaleString() :
+            order.updatedAt ? new Date(order.updatedAt).toLocaleString() :
+            'N/A'}
+          </div>
+          <div><b>Status:</b> {order.orderStatus || 'N/A'}</div>
         </div>
         <div className="order-modal-section">
           <h4>Customer</h4>
-          <div><b>Name:</b> {order.userName}</div>
-          <div><b>Email:</b> {order.userEmail}</div>
-          <div><b>Phone:</b> {order.userPhone || 'N/A'}</div>
+          <div><b>Name:</b> {order.userName || order.customerName || 'N/A'}</div>
+          <div><b>Email:</b> {order.userEmail || order.email || 'N/A'}</div>
+          <div><b>Phone:</b> {order.userPhone || order.phone || 'N/A'}</div>
         </div>
         <div className="order-modal-section">
           <h4>Shipping Address</h4>
-          <div>{order.shippingAddress || 'N/A'}</div>
+          <div>{order.shippingAddress || order.address || 'N/A'}</div>
         </div>
         <div className="order-modal-section">
           <h4>Items</h4>
           <ul className="order-modal-items">
-            {(order.products || order.orderItems || []).map((item, idx) => (
-              <li key={idx} className="order-modal-item">
-                <img src={item.pic1 || item.image || item.thumbnail} alt="" width={40} height={40} style={{objectFit:'cover',borderRadius:8,marginRight:8}} />
-                <span>{item.name} x {item.qty || item.quantity || 1} <span className="text-muted">₹{item.price}</span></span>
-              </li>
-            ))}
+            {(order.products || order.orderItems || []).length === 0 ? (
+              <li className="text-muted">No items found</li>
+            ) : (
+              (order.products || order.orderItems || []).map((item, idx) => (
+                <li key={idx} className="order-modal-item">
+                  <img src={item.pic1 || item.image || item.thumbnail || ''} alt="" width={40} height={40} style={{objectFit:'cover',borderRadius:8,marginRight:8}} />
+                  <span>{item.name || item.title || 'N/A'} x {item.qty || item.quantity || 1} <span className="text-muted">₹{item.price || item.amount || 0}</span></span>
+                </li>
+              ))
+            )}
           </ul>
         </div>
         <div className="order-modal-section">
           <h4>Payment</h4>
-          <div><b>Method:</b> {order.paymentMethod}</div>
-          <div><b>Status:</b> {order.paymentStatus}</div>
-          <div><b>Amount:</b> ₹{order.finalAmount}</div>
+          <div><b>Method:</b> {order.paymentMethod || order.method || 'N/A'}</div>
+          <div><b>Status:</b> {order.paymentStatus || order.status || 'N/A'}</div>
+          <div><b>Amount:</b> ₹{order.finalAmount || order.amount || 0}</div>
         </div>
         <div className="order-modal-section">
           <h4>Status Timeline</h4>
           <ul className="order-modal-timeline">
-            {(order.statusHistory || []).map((entry, idx) => (
-              <li key={idx}>
-                <b>{entry.status}</b> <span className="text-muted">{new Date(entry.timestamp).toLocaleString()}</span>
-                {entry.message && <div className="small text-muted">{entry.message}</div>}
-              </li>
-            ))}
+            {(order.statusHistory || []).length === 0 ? (
+              <li className="text-muted">No status history</li>
+            ) : (
+              (order.statusHistory || []).map((entry, idx) => (
+                <li key={idx}>
+                  <b>{entry.status || 'N/A'}</b> <span className="text-muted">{entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'N/A'}</span>
+                  {entry.message && <div className="small text-muted">{entry.message}</div>}
+                </li>
+              ))
+            )}
           </ul>
         </div>
       </div>

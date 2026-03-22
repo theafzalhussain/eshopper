@@ -1,34 +1,3 @@
-    // Bulk Export CSV
-    const handleBulkExport = () => {
-        if (selectedOrders.size === 0) return;
-        const selected = orders.filter(o => selectedOrders.has(o.orderId));
-        if (!selected.length) return;
-        const csvRows = [];
-        // Header
-        csvRows.push([
-            'Order ID', 'Customer', 'Email', 'Amount', 'Status', 'Date', 'Items'
-        ].join(','));
-        // Data
-        selected.forEach(order => {
-            csvRows.push([
-                order.orderId,
-                '"' + (order.userName || '') + '"',
-                order.userEmail,
-                order.finalAmount,
-                order.orderStatus,
-                new Date(order.updatedAt).toLocaleString(),
-                (order.productCount || order.products?.length || 0)
-            ].join(','));
-        });
-        const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.join('\n');
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute('download', 'orders_export.csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
 import React, { useState, useEffect, useMemo } from 'react';
 import OrderDetailsModal from './OrderDetailsModal';
 import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check } from 'lucide-react';
@@ -37,7 +6,6 @@ import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 import LefNav from './LefNav';
 import './AdminOrders.css';
-import './OrderDetailsModal.css';
 
 const ALLOWED_STATUSES = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const STATUS_COLORS = {
@@ -64,9 +32,6 @@ export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [fromDate, setFromDate] = useState('');
-    const [toDate, setToDate] = useState('');
-    const [customer, setCustomer] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
@@ -81,6 +46,35 @@ export default function AdminOrders() {
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [expandedHistory, setExpandedHistory] = useState(null);
+    // Bulk status update state
+    const [bulkStatus, setBulkStatus] = useState('');
+    const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
+        // Bulk Status Update Handler
+        const handleBulkStatusUpdate = async () => {
+            if (selectedOrders.size === 0 || !bulkStatus) {
+                showNotification('Select orders and status!', 'info');
+                return;
+            }
+            setBulkStatusLoading(true);
+            let successCount = 0;
+            let failCount = 0;
+            for (const orderId of selectedOrders) {
+                try {
+                    const response = await axios.post(`${BASE_URL}/api/update-order-status`, { orderId, status: bulkStatus });
+                    if (response.data.success) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (err) {
+                    failCount++;
+                }
+            }
+            showNotification(`Bulk status updated: ${successCount} success${failCount ? `, ${failCount} failed` : ''}`, failCount ? 'info' : 'success');
+            setBulkStatusLoading(false);
+            setBulkStatus('');
+            setTimeout(() => fetchOrders(), 800);
+        };
     // Order details modal state
     const [detailsModalOrder, setDetailsModalOrder] = useState(null);
 
@@ -107,7 +101,7 @@ export default function AdminOrders() {
     // Fetch orders on mount and when page/search/status changes
     useEffect(() => {
         fetchOrders();
-    }, [page, search, selectedStatus, fromDate, toDate, customer]);
+    }, [page, search, selectedStatus]);
 
     const fetchOrders = async () => {
         try {
@@ -116,11 +110,9 @@ export default function AdminOrders() {
                 page,
                 limit: 10,
                 ...(search && { search }),
-                ...(selectedStatus && { status: selectedStatus }),
-                ...(fromDate && { fromDate }),
-                ...(toDate && { toDate }),
-                ...(customer && { customer })
+                ...(selectedStatus && { status: selectedStatus })
             };
+
             const response = await axios.get(`${BASE_URL}/api/admin/orders`, { params });
             setOrders(response.data.orders || []);
             setTotalPages(response.data.pages || 0);
@@ -307,58 +299,37 @@ export default function AdminOrders() {
 
                             <div className="admin-orders-toolbar mb-4">
                                 <div className="row">
-                                    <div className="col-md-3 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID)</label>
+                                    <div className="col-md-5 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID / Name / Email)</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
                                                 <span className="input-group-text bg-white"><Search size={18} className="text-muted" /></span>
                                             </div>
                                             <input
                                                 type="text"
-                                                placeholder="Order ID..."
+                                                placeholder="Search orders..."
                                                 value={search}
-                                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                                onChange={(e) => {
+                                                    setSearch(e.target.value);
+                                                    setPage(1);
+                                                }}
                                                 className="form-control"
                                             />
                                         </div>
                                     </div>
-                                    <div className="col-md-3 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Customer Name/Email</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Name or Email..."
-                                            value={customer}
-                                            onChange={e => { setCustomer(e.target.value); setPage(1); }}
-                                            className="form-control"
-                                        />
-                                    </div>
-                                    <div className="col-md-2 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">From Date</label>
-                                        <input
-                                            type="date"
-                                            value={fromDate}
-                                            onChange={e => { setFromDate(e.target.value); setPage(1); }}
-                                            className="form-control"
-                                        />
-                                    </div>
-                                    <div className="col-md-2 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">To Date</label>
-                                        <input
-                                            type="date"
-                                            value={toDate}
-                                            onChange={e => { setToDate(e.target.value); setPage(1); }}
-                                            className="form-control"
-                                        />
-                                    </div>
-                                    <div className="col-md-2 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Status</label>
+
+                                    <div className="col-md-4 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Filter by Status</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
                                                 <span className="input-group-text bg-white"><Filter size={18} className="text-muted" /></span>
                                             </div>
                                             <select
                                                 value={selectedStatus}
-                                                onChange={(e) => { setSelectedStatus(e.target.value); setPage(1); }}
+                                                onChange={(e) => {
+                                                    setSelectedStatus(e.target.value);
+                                                    setPage(1);
+                                                }}
                                                 className="form-control"
                                             >
                                                 <option value="">All Statuses</option>
@@ -367,6 +338,10 @@ export default function AdminOrders() {
                                                 ))}
                                             </select>
                                         </div>
+                                    </div>
+
+                                    <div className="col-md-3 mb-3 d-flex align-items-end">
+                                        <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
                                     </div>
                                 </div>
                             </div>
@@ -395,23 +370,36 @@ export default function AdminOrders() {
                                             </>
                                         )}
                                     </button>
-                                    <button
-                                        onClick={handleBulkExport}
-                                        className="btn btn-primary d-flex align-items-center mr-2"
-                                        disabled={selectedOrders.size === 0}
+                                    {/* Bulk Status Update Dropdown */}
+                                    <select
+                                        className="form-control mr-2"
+                                        style={{ width: 180, display: 'inline-block' }}
+                                        value={bulkStatus}
+                                        onChange={e => setBulkStatus(e.target.value)}
+                                        disabled={bulkStatusLoading}
                                     >
-                                        Export CSV
-                                    </button>
+                                        <option value="">Bulk Update Status</option>
+                                        {ALLOWED_STATUSES.map(status => (
+                                            <option key={status} value={status}>{status}</option>
+                                        ))}
+                                    </select>
                                     <button
-                                        onClick={handleBulkDelete}
-                                        className="btn btn-danger d-flex align-items-center"
-                                        disabled={selectedOrders.size === 0}
+                                        onClick={handleBulkStatusUpdate}
+                                        disabled={bulkStatusLoading || !bulkStatus || selectedOrders.size === 0}
+                                        className="btn btn-info d-flex align-items-center mr-2"
                                     >
-                                        Delete Selected
+                                        {bulkStatusLoading ? (
+                                            <>
+                                                <Loader2 size={16} className="admin-spin mr-2" />
+                                                Updating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle2 size={16} className="mr-2" />
+                                                Update Status
+                                            </>
+                                        )}
                                     </button>
-                                            showNotification('Bulk delete failed', 'error');
-                                        }
-                                    }
                                 </motion.div>
                             )}
 
