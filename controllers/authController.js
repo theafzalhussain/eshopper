@@ -5,7 +5,7 @@ const { sendTransactionalEmail } = require('../src/utils/email');
 const sendEmail = sendTransactionalEmail;
 const mongoose = require('mongoose');
 const OTPRecord = require('../models/OTPRecord');
-const User = mongoose.model('User');
+const User = require('../models/User');
 
 // FIREBASE AUTH SYNC
 exports.authSync = async (req, res) => {
