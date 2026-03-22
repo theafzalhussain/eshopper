@@ -1,54 +1,8 @@
 // Serve static assets (images, css, js, etc.)
 const path = require('path');
 const express = require('express');
-const Sentry = require('@sentry/node');
-const cors = require('cors');
 // Import sendTransactionalEmail for OTP/forget/signup email sending
 const app = express();
-require('dotenv').config();
-if (process.env.SENTRY_DSN) {
-    Sentry.init({ dsn: process.env.SENTRY_DSN });
-}
-
-// Trust proxy must be set before CORS
-app.set('trust proxy', 1);
-
-// CORS OPTIONS
-const corsOptions = {
-    origin: function(origin, callback) {
-        if (!origin) return callback(null, true);
-        if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin === 'http://localhost:3000' || origin === 'http://127.0.0.1:3000') {
-            console.log('CORS: Allowing local dev origin:', origin);
-            return callback(null, true);
-        }
-        const allowedProdOrigins = [
-            'https://eshopperr.me',
-            'https://www.eshopperr.me',
-            process.env.FRONTEND_URL
-        ].filter(Boolean);
-        if (allowedProdOrigins.includes(origin)) {
-            console.log('CORS: Allowing production origin:', origin);
-            return callback(null, true);
-        }
-        if (origin && origin.endsWith('.vercel.app')) {
-            return callback(null, true);
-        }
-        console.warn(`⚠️  CORS rejected: ${origin}`);
-        return callback(new Error('CORS policy: Unauthorized origin'));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-};
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-console.log('CORS middleware applied. Allowed origins: localhost, 127.0.0.1, eshopperr.me, www.eshopperr.me, .vercel.app,', process.env.FRONTEND_URL);
-
-// Parse JSON before routes
-app.use(express.json());
-
 // Static assets middleware must be after app is initialized
 app.use('/assets', express.static(path.join(__dirname, 'public/assets')));
 const { sendTransactionalEmail } = require('./utils/services/emailService');
@@ -78,6 +32,7 @@ const { cloudinary, upload } = require('./middleware/upload');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
+const cors = require('cors');
 // ...existing code...
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
@@ -111,6 +66,7 @@ if (firebaseAdminReady) {
     console.warn('⚠️ Firebase Admin NOT initialized. Google sign-in will not work.');
 }
 const fs = require('fs');
+const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
 // Email utility import/fix
 // Modular email utility is handled in helpers/utils
@@ -129,13 +85,58 @@ app.use('/api/user', userRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/user/wishlist', wishlistRoutes);
 
+// � INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
+if (process.env.SENTRY_DSN) {
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV || 'production',
+        tracesSampleRate: 0.1,
+        integrations: [
+            new Sentry.Integrations.Http({ tracing: true })
+        ]
+    });
+    console.log('✅ Sentry initialized for error tracking');
+} else {
+    console.log('⚠️  Sentry DSN not configured - error tracking disabled');
+}
 
 
 // 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
 app.set('trust proxy', 1);
 
 // / 🔒 CORS - Robust production config
-
+const corsOptions = {
+    origin: function(origin, callback) {
+        // Allow no origin (server-to-server, mobile)
+        if (!origin) return callback(null, true);
+        // Allow localhost for development
+        if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin === 'http://localhost:3000' || origin === 'http://127.0.0.1:3000') {
+            console.log('CORS: Allowing local dev origin:', origin);
+            return callback(null, true);
+        }
+        // Allow production frontend domains
+        const allowedProdOrigins = [
+            'https://eshopperr.me',
+            'https://www.eshopperr.me',
+            process.env.FRONTEND_URL
+        ].filter(Boolean);
+        if (allowedProdOrigins.includes(origin)) {
+            console.log('CORS: Allowing production origin:', origin);
+            return callback(null, true);
+        }
+        // Allow all Vercel preview deployments (*.vercel.app)
+        if (origin && origin.endsWith('.vercel.app')) {
+            return callback(null, true);
+        }
+        console.warn(`⚠️  CORS rejected: ${origin}`);
+        return callback(new Error('CORS policy: Unauthorized origin'));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
 
 // Apply CORS before any routes or middleware
 app.use(cors(corsOptions));
@@ -215,15 +216,60 @@ app.use(helmet({ contentSecurityPolicy: false }));
 // 🔒 RATE LIMITERS
 const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
+app.use(globalLimiter);
 
-// Use modular routes (must be after all middleware)
-app.use('/api/admin', adminRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-app.use('/api/user/wishlist', wishlistRoutes);
+
+// 📊 REQUEST LOGGING MIDDLEWARE (with CORS origin info)
+app.use((req, res, next) => {
+    const origin = req.headers.origin || 'NO-ORIGIN';
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} | Origin: ${origin}`);
+    next();
+});
+// 🛡️ GLOBAL ERROR HANDLER FOR MALFORMED REQUESTS & CORS
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.warn('⚠️ Malformed JSON request detected');
+        return res.status(400).json({ message: 'Invalid request format. Please check your input.' });
+    }
+    if (err.message && err.message.includes('CORS')) {
+        console.warn('⚠️ CORS error:', err.message);
+        return res.status(403).json({ message: 'CORS error: Unauthorized origin' });
+    }
+    next(err);
+});
+
+
+// 🖼️ BRAND LOGO SOURCES (robust for invoice/email rendering)
+const BRAND_SITE_URL = (process.env.BRAND_SITE_URL || process.env.FRONTEND_URL || 'https://eshopperr.me').trim().replace(/\/$/, '');
+const BRAND_LOGO_PRIMARY_URL = process.env.BRAND_LOGO_URL || `${BRAND_SITE_URL}/logo512.png`;
+
+// 🔧 DATABASE CONNECTION SETUP
+const MONGO_URI = process.env.MONGODB_URI;
+
+if (!MONGO_URI) {
+    console.error("❌ CRITICAL: Missing MONGODB_URI in environment variables");
+    console.error("   Please set MONGODB_URI in your Railway environment");
+    process.exit(1);
+}
+
+console.log("🔍 Attempting MongoDB connection...");
+
+// 🔧 CLOUDINARY CONFIGURATION SETUP
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUD_NAME;
+const CLOUDINARY_API_KEY = process.env.CLOUD_API_KEY;
+const CLOUDINARY_API_SECRET = process.env.CLOUD_API_SECRET;
+
+if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
+    console.error("❌ CRITICAL: Missing Cloudinary credentials in environment variables");
+    console.error("   Please set CLOUD_NAME, CLOUD_API_KEY, and CLOUD_API_SECRET in Railway");
+    process.exit(1);
+}
+
+cloudinary.config({
+    cloud_name: CLOUDINARY_CLOUD_NAME,
+    api_key: CLOUDINARY_API_KEY,
+    api_secret: CLOUDINARY_API_SECRET
+});
 
 console.log("✅ Cloudinary configured successfully");
 console.log(`📸 Cloud Name: ${CLOUDINARY_CLOUD_NAME}`);
