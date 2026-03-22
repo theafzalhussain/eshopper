@@ -1,7 +1,7 @@
 import { takeEvery, put } from "redux-saga/effects"
 // यहाँ हमने forgetPasswordAPI की जगह resetPasswordAPI कर दिया है
-import { getUserAPI, updateUserAPI, resetPasswordAPI, createUserAPI } from "../Services" 
-import { ADD_USER, ADD_USER_RED, GET_USER, GET_USER_RED, UPDATE_USER, UPDATE_USER_RED, FORGET_PASSWORD } from "../Constant"
+import { getUserAPI, updateUserAPI, resetPasswordAPI, createUserAPI, deleteUserAPI } from "../Services" 
+import { ADD_USER, ADD_USER_RED, GET_USER, GET_USER_RED, UPDATE_USER, UPDATE_USER_RED, FORGET_PASSWORD, DELETE_USER, DELETE_USER_RED, GET_USER_RED } from "../Constant"
 
 function* getUserSaga() {
     try {
@@ -47,9 +47,23 @@ function* forgetSaga(action) {
     }
 }
 
+function* deleteUserSaga(action) {
+    try {
+        if (!action || !action.payload) return;
+        let res = yield deleteUserAPI(action.payload);
+        yield put({ type: DELETE_USER_RED, data: action.payload });
+        // Refresh user list after delete
+        yield put({ type: GET_USER });
+    } catch (e) {
+        console.error("Delete User Error:", e);
+        alert("User delete failed: " + (e.message || "Unknown error"));
+    }
+}
+
 export function* userSaga() {
     yield takeEvery(GET_USER, getUserSaga);
     yield takeEvery(ADD_USER, createUserSaga);
     yield takeEvery(UPDATE_USER, updateUserSaga);
     yield takeEvery(FORGET_PASSWORD, forgetSaga);
+    yield takeEvery(DELETE_USER, deleteUserSaga);
 }

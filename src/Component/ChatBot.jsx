@@ -705,10 +705,26 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
       products: []
     }
 
+
+    // Add user message
     setMessages((prev) => [...prev, userMessage])
     setInputValue('')
     setLoading(true)
     setMood('thinking')
+
+    // Show instant Typing... message for ultra-fast feedback
+    const typingMsgId = Date.now() + 1000
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: typingMsgId,
+        sender: 'bot',
+        text: '',
+        timestamp: new Date(),
+        products: [],
+        typing: true
+      }
+    ])
 
     try {
       const askedPreference = detectLanguagePreferenceRequest(prompt)
@@ -789,16 +805,17 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
         }
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'bot',
-          text: responseText.replace(/\[PRODUCT:.*?\]/g, '').trim(),
-          timestamp: new Date(),
-          products: finalProducts
-        }
-      ])
+      // Replace Typing... message with real response
+      setMessages((prev) => prev.map((msg) =>
+        msg.id === typingMsgId
+          ? {
+              ...msg,
+              typing: false,
+              text: responseText.replace(/\[PRODUCT:.*?\]/g, '').trim(),
+              products: finalProducts
+            }
+          : msg
+      ))
       setMood('happy')
     } catch {
       const askedPreference = detectLanguagePreferenceRequest(prompt)
@@ -855,16 +872,17 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
             : `Sure ${currentUser?.name || 'friend'}, I understand! 😊 Tell me more - color preference, occasion, budget? I'll give you accurate suggestions! 💫`)
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: 'bot',
-          text: fallbackText,
-          timestamp: new Date(),
-          products: quickProducts
-        }
-      ])
+      // Replace Typing... message with fallback/error response
+      setMessages((prev) => prev.map((msg) =>
+        msg.id === typingMsgId
+          ? {
+              ...msg,
+              typing: false,
+              text: fallbackText,
+              products: quickProducts
+            }
+          : msg
+      ))
       setMood('idle')
     } finally {
       setLoading(false)
@@ -1027,7 +1045,8 @@ Provide helpful, intelligent, human-like response with fashion expertise.`
                 </motion.div>
               ))}
 
-              {loading && (
+              {/* Show Typing... message if any message has typing: true */}
+              {messages.some((msg) => msg.typing) && (
                 <motion.div className="msg-row msg-bot" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <div className="profile-box">
                     <div className="avatar bot-avatar-wrap"><span className="bot-fallback">🤖</span></div>
