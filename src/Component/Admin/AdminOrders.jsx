@@ -46,35 +46,7 @@ export default function AdminOrders() {
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [expandedHistory, setExpandedHistory] = useState(null);
-    // Bulk status update state
-    const [bulkStatus, setBulkStatus] = useState('');
-    const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
-        // Bulk Status Update Handler
-        const handleBulkStatusUpdate = async () => {
-            if (selectedOrders.size === 0 || !bulkStatus) {
-                showNotification('Select orders and status!', 'info');
-                return;
-            }
-            setBulkStatusLoading(true);
-            let successCount = 0;
-            let failCount = 0;
-            for (const orderId of selectedOrders) {
-                try {
-                    const response = await axios.post(`${BASE_URL}/api/update-order-status`, { orderId, status: bulkStatus });
-                    if (response.data.success) {
-                        successCount++;
-                    } else {
-                        failCount++;
-                    }
-                } catch (err) {
-                    failCount++;
-                }
-            }
-            showNotification(`Bulk status updated: ${successCount} success${failCount ? `, ${failCount} failed` : ''}`, failCount ? 'info' : 'success');
-            setBulkStatusLoading(false);
-            setBulkStatus('');
-            setTimeout(() => fetchOrders(), 800);
-        };
+    // ...existing code...
     // Order details modal state
     const [detailsModalOrder, setDetailsModalOrder] = useState(null);
 
@@ -367,36 +339,6 @@ export default function AdminOrders() {
                                             <>
                                                 <CheckCircle2 size={16} className="mr-2" />
                                                 Bulk Confirm Orders & Send Emails
-                                            </>
-                                        )}
-                                    </button>
-                                    {/* Bulk Status Update Dropdown */}
-                                    <select
-                                        className="form-control mr-2"
-                                        style={{ width: 180, display: 'inline-block' }}
-                                        value={bulkStatus}
-                                        onChange={e => setBulkStatus(e.target.value)}
-                                        disabled={bulkStatusLoading}
-                                    >
-                                        <option value="">Bulk Update Status</option>
-                                        {ALLOWED_STATUSES.map(status => (
-                                            <option key={status} value={status}>{status}</option>
-                                        ))}
-                                    </select>
-                                    <button
-                                        onClick={handleBulkStatusUpdate}
-                                        disabled={bulkStatusLoading || !bulkStatus || selectedOrders.size === 0}
-                                        className="btn btn-info d-flex align-items-center mr-2"
-                                    >
-                                        {bulkStatusLoading ? (
-                                            <>
-                                                <Loader2 size={16} className="admin-spin mr-2" />
-                                                Updating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle2 size={16} className="mr-2" />
-                                                Update Status
                                             </>
                                         )}
                                     </button>
