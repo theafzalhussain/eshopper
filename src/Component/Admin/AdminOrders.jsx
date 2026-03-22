@@ -1,3 +1,34 @@
+    // Bulk Export CSV
+    const handleBulkExport = () => {
+        if (selectedOrders.size === 0) return;
+        const selected = orders.filter(o => selectedOrders.has(o.orderId));
+        if (!selected.length) return;
+        const csvRows = [];
+        // Header
+        csvRows.push([
+            'Order ID', 'Customer', 'Email', 'Amount', 'Status', 'Date', 'Items'
+        ].join(','));
+        // Data
+        selected.forEach(order => {
+            csvRows.push([
+                order.orderId,
+                '"' + (order.userName || '') + '"',
+                order.userEmail,
+                order.finalAmount,
+                order.orderStatus,
+                new Date(order.updatedAt).toLocaleString(),
+                (order.productCount || order.products?.length || 0)
+            ].join(','));
+        });
+        const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', 'orders_export.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 import React, { useState, useEffect, useMemo } from 'react';
 import OrderDetailsModal from './OrderDetailsModal';
 import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check } from 'lucide-react';
@@ -378,62 +409,9 @@ export default function AdminOrders() {
                                     >
                                         Delete Selected
                                     </button>
-    // Bulk Export CSV
-    const handleBulkExport = () => {
-        if (selectedOrders.size === 0) return;
-        const selected = orders.filter(o => selectedOrders.has(o.orderId));
-        if (!selected.length) return;
-        const csvRows = [];
-        // Header
-        csvRows.push([
-            'Order ID', 'Customer', 'Email', 'Amount', 'Status', 'Date', 'Items'
-        ].join(','));
-        // Data
-        selected.forEach(order => {
-            csvRows.push([
-                order.orderId,
-                '"' + (order.userName || '') + '"',
-                order.userEmail,
-                order.finalAmount,
-                order.orderStatus,
-                new Date(order.updatedAt).toLocaleString(),
-                (order.productCount || order.products?.length || 0)
-            ].join(','));
-        });
-        const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.join('\n');
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute('download', 'orders_export.csv');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-                                    // Bulk Delete
-                                    const handleBulkDelete = async () => {
-                                        if (selectedOrders.size === 0) return;
-                                        if (!window.confirm('Are you sure you want to delete the selected orders? This action cannot be undone.')) return;
-                                        try {
-                                            setBulkUpdating(true);
-                                            const orderIds = Array.from(selectedOrders);
-                                            const response = await axios.post(`${BASE_URL}/api/admin/delete-orders`, { orderIds }, {
-                                                headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET }
-                                            });
-                                            if (response.data.success) {
-                                                showNotification(`🗑️ ${orderIds.length} order(s) deleted`, 'success');
-                                                setSelectedOrders(new Set());
-                                                setSelectAll(false);
-                                                setTimeout(() => fetchOrders(), 800);
-                                            } else {
-                                                showNotification('Failed to delete orders', 'error');
-                                            }
-                                        } catch (error) {
                                             showNotification('Bulk delete failed', 'error');
-                                        } finally {
-                                            setBulkUpdating(false);
                                         }
-                                    };
+                                    }
                                 </motion.div>
                             )}
 
