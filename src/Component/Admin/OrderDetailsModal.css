@@ -1,0 +1,72 @@
+.order-modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(30,32,38,0.32);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.order-modal {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  padding: 32px 28px 24px 28px;
+  min-width: 380px;
+  max-width: 98vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: fadeInModalScale 0.32s cubic-bezier(.22,1,.36,1);
+}
+.order-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 18px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.order-modal-close:hover {
+  color: #e11d48;
+}
+.order-modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #1e293b;
+}
+.order-modal-section {
+  margin-bottom: 18px;
+}
+.order-modal-section h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #0ea5e9;
+}
+.order-modal-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.order-modal-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.order-modal-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.order-modal-timeline li {
+  margin-bottom: 6px;
+}
+@keyframes fadeInModalScale {
+  from { opacity: 0; transform: scale(0.92) translateY(30px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}

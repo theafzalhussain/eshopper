@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useToast } from './ToastNotification';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
 import { getMaincategory } from '../Store/ActionCreaters/MaincategoryActionCreators';
@@ -13,6 +14,9 @@ export default function Shop() {
     var { maincat } = useParams()
     var dispatch = useDispatch()
     var navigate = useNavigate()
+    const location = useLocation();
+    const params = new URLSearchParams(location.search);
+    const category = params.get('category');
 
     // --- STATES ---
     var [mc, setmc] = useState(maincat)
@@ -25,7 +29,7 @@ export default function Shop() {
     var [sortBy, setSortBy] = useState("newest")
     var [selectedSizes, setSelectedSizes] = useState({}) // Track selected sizes per product
     var [cartNotifications, setCartNotifications] = useState({}) // Track cart add counts
-    var [showNotification, setShowNotification] = useState(null) // Current notification to show
+    const toast = useToast();
     var [selectedColors, setSelectedColors] = useState({}) // Track selected colors per product
     
     // Available sizes for products
@@ -103,27 +107,15 @@ export default function Shop() {
         // Check if size is selected
         const selectedSize = sizeFromParam || selectedSizes[p.id]
         if (!selectedSize) {
-            setShowNotification({
-                type: 'warning',
-                message: '⚠️ Please select a size first',
-                productId: p.id,
-                count: 0
-            })
-            setTimeout(() => setShowNotification(null), 2000)
-            return
+            toast.warning('⚠️ Please select a size first');
+            return;
         }
 
         // Check if color is selected (if product has color options)
         const selectedColor = colorFromParam || selectedColors[p.id]
         if (normalizeColors(p.color).length > 0 && !selectedColor) {
-            setShowNotification({
-                type: 'warning',
-                message: '⚠️ Please select a color first',
-                productId: p.id,
-                count: 0
-            })
-            setTimeout(() => setShowNotification(null), 2000)
-            return
+            toast.warning('⚠️ Please select a color first');
+            return;
         }
         
         // Check if product already exists in cart with this size AND color
@@ -136,15 +128,9 @@ export default function Shop() {
         
         if (existingItem) {
             // Item already in cart - just show notification
-            const currentCount = (cartNotifications[p.id] || 0) + 1
-            setCartNotifications({...cartNotifications, [p.id]: currentCount})
-            
-            setShowNotification({
-                type: 'info',
-                message: `✓ Already added! Total: ${currentCount} time(s)`,
-                productId: p.id,
-                count: currentCount
-            })
+            const currentCount = (cartNotifications[p.id] || 0) + 1;
+            setCartNotifications({...cartNotifications, [p.id]: currentCount});
+            toast.info(`✓ Already added! Total: ${currentCount} time(s)`);
         } else {
             // Add new item to cart
             let item = {
@@ -163,21 +149,43 @@ export default function Shop() {
             const currentCount = (cartNotifications[p.id] || 0) + 1
             setCartNotifications({...cartNotifications, [p.id]: currentCount})
             
-            setShowNotification({
-                type: 'success',
-                message: `✓ Added to bag! (${currentCount} item)`,
-                productId: p.id,
-                count: currentCount
-            })
+            toast.success(`✓ Added to bag! (${currentCount} item)`);
         }
-        
-        // Clear notification after 3 seconds
-        setTimeout(() => setShowNotification(null), 3000)
     }
 
     // --- SMART FILTERING LOGIC (For Fast Loading) ---
     const filteredProducts = useMemo(() => {
         let temp = [...product];
+
+        // Editorial category filter (from Home page) - case-insensitive, flexible
+        if (category === 'men') {
+            temp = temp.filter(x => {
+                const main = (x.maincategory || '').toLowerCase();
+                const sub = (x.subcategory || '').toLowerCase();
+                return (
+                    /men|mens|boy|boys/.test(main) ||
+                    /men|mens|boy|boys/.test(sub)
+                );
+            });
+        } else if (category === 'women') {
+            temp = temp.filter(x => {
+                const main = (x.maincategory || '').toLowerCase();
+                const sub = (x.subcategory || '').toLowerCase();
+                return (
+                    /women|ladies|girl|girls|female/.test(main) ||
+                    /women|ladies|girl|girls|female/.test(sub)
+                );
+            });
+        } else if (category === 'kids') {
+            temp = temp.filter(x => {
+                const main = (x.maincategory || '').toLowerCase();
+                const sub = (x.subcategory || '').toLowerCase();
+                return (
+                    /kid|kids|child|children/.test(main) ||
+                    /kid|kids|child|children/.test(sub)
+                );
+            });
+        }
 
         if (mc !== 'All') temp = temp.filter(x => x.maincategory === mc);
         if (sc !== 'All') temp = temp.filter(x => x.subcategory === sc);
@@ -198,22 +206,11 @@ export default function Shop() {
         else temp.reverse(); // newest
 
         return temp;
-    }, [product, mc, sc, br, size, min, max, search, sortBy]);
+    }, [product, mc, sc, br, size, min, max, search, sortBy, category]);
 
     return (
         <div style={{ backgroundColor: "#fcfcfc" }}>
-            {/* Toast Notification */}
-            {showNotification && (
-                <motion.div 
-                    className={`toast-notification toast-${showNotification.type}`}
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <span className="toast-message">{showNotification.message}</span>
-                </motion.div>
-            )}
+            {/* Toast Notification handled globally by ToastProvider */}
             
             {/* --- TOP PREMIUM BANNER --- */}
             <div className="hero-wrap py-5" style={{ background: 'linear-gradient(45deg, #17a2b8, #0056b3)', position: 'relative' }}>

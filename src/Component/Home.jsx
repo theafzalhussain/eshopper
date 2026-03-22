@@ -113,6 +113,12 @@ export default function Home() {
         }
     }
 
+    // --- Editorial Section Handlers ---
+    const handleEditorialClick = (cat) => {
+        // cat: 'men', 'women', 'kids'
+        navigate(`/shop?category=${cat}`);
+    };
+
     return (
         <div className="home-ultimate-root" style={{ backgroundColor: "#fff", overflowX: 'hidden' }}>
             {wishlistToast.show && (
@@ -227,24 +233,24 @@ export default function Home() {
                     </div>
                     <div className="row g-3 g-md-4 align-items-stretch">
                         <div className="col-12 col-md-6 mb-3 mb-md-4">
-                            <motion.div whileHover={{ scale: 0.99 }} className="story-card shadow-lg rounded-3xl overflow-hidden position-relative h-100">
+                            <motion.div whileHover={{ scale: 0.99 }} className="story-card shadow-lg rounded-3xl overflow-hidden position-relative h-100" onClick={() => handleEditorialClick('men')} style={{ cursor: 'pointer' }}>
                                 <img src="/assets/images/choose-1.jpg" className="w-100 h-100 object-cover story-img" alt="Manifesto" loading="eager" decoding="async" />
                                 <div className="story-overlay p-4 p-md-5 d-flex flex-column justify-content-end">
                                     <h3 className="text-white font-weight-bold mb-3 story-title">MANIFESTO<br/>MAN</h3>
-                                    <Link to="/shop/Male" className="btn btn-outline-light rounded-0 px-4 px-md-5 font-weight-bold ls-2 story-btn">EXPLORE SHOP</Link>
+                                    <button className="btn btn-outline-light rounded-0 px-4 px-md-5 font-weight-bold ls-2 story-btn">EXPLORE SHOP</button>
                                 </div>
                             </motion.div>
                         </div>
                         <div className="col-12 col-md-6">
                             <div className="d-flex flex-column h-100">
-                                <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl shadow-lg overflow-hidden position-relative mb-3 mb-md-4" style={{ flex: 1, minHeight: '250px' }}>
+                                <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl shadow-lg overflow-hidden position-relative mb-3 mb-md-4" style={{ flex: 1, minHeight: '250px' }} onClick={() => handleEditorialClick('women')} style={{ cursor: 'pointer' }}>
                                     <img src="/assets/images/CR-1.png" className="w-100 h-100 object-cover opacity-75 story-img" alt="Woman" loading="eager" decoding="async" />
                                     <div className="story-overlay-light p-4 p-md-5">
                                         <h3 className="h2 h1-md text-white font-weight-bold mb-0">ELEGANT<br/>MODERN</h3>
-                                        <Link to="/shop/Female" className="text-white font-weight-bold border-bottom pb-1 small mt-2 d-inline-block">VIEW DETAILS</Link>
+                                        <span className="text-white font-weight-bold border-bottom pb-1 small mt-2 d-inline-block">VIEW DETAILS</span>
                                     </div>
                                 </motion.div>
-                                <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl bg-info shadow-lg p-4 p-md-5 position-relative overflow-hidden" style={{ flex: 1, minHeight: '250px' }}>
+                                <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl bg-info shadow-lg p-4 p-md-5 position-relative overflow-hidden" style={{ flex: 1, minHeight: '250px', cursor: 'pointer' }} onClick={() => handleEditorialClick('kids')}>
                                     <div className="story-overlay-kids position-absolute" style={{top:0, left:0, width:'100%', height:'100%'}}></div>
                                     <div className="position-relative z-index-10 text-white">
                                         <h4 className="font-weight-bold ls-2 small mb-2 opacity-75 uppercase">Exclusives</h4>
@@ -255,7 +261,7 @@ export default function Home() {
                                         >
                                             KIDS LAB
                                         </motion.h2>
-                                        <Link to="/shop/Kids" className="btn btn-white btn-sm px-4 font-weight-bold rounded-pill mt-3 shadow-sm">DISCOVER ALL</Link>
+                                        <span className="btn btn-white btn-sm px-4 font-weight-bold rounded-pill mt-3 shadow-sm">DISCOVER ALL</span>
                                     </div>
                                     <img src="/assets/images/kids3.png" className="position-absolute kids-img" alt="" loading="lazy" decoding="async"/>
                                 </motion.div>

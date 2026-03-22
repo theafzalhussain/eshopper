@@ -146,6 +146,8 @@ const io = new Server(httpServer, {
     },
     transports: ['websocket', 'polling']
 });
+// Make io available to controllers
+app.set('io', io);
 
 const ALLOWED_ORDER_STATUS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed'];
 const normalizeOrderStatus = (s = '') => {
@@ -1878,23 +1880,41 @@ app.get('/api/admin/orders', async (req, res) => {
     try {
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
+
         const search = String(req.query.search || '').trim();
         const statusFilter = String(req.query.status || '').trim();
+        const fromDate = req.query.fromDate ? new Date(req.query.fromDate) : null;
+        const toDate = req.query.toDate ? new Date(req.query.toDate) : null;
+        const customer = String(req.query.customer || '').trim();
 
         let query = {};
 
-        // Search by orderId, userName, or userEmail
+        // Search by orderId
         if (search) {
+            query.orderId = { $regex: search, $options: 'i' };
+        }
+
+        // Filter by customer name/email
+        if (customer) {
             query.$or = [
-                { orderId: { $regex: search, $options: 'i' } },
-                { userName: { $regex: search, $options: 'i' } },
-                { userEmail: { $regex: search, $options: 'i' } }
+                { userName: { $regex: customer, $options: 'i' } },
+                { userEmail: { $regex: customer, $options: 'i' } }
             ];
         }
 
         // Filter by status
         if (statusFilter && ALLOWED_ORDER_STATUS.includes(statusFilter)) {
             query.orderStatus = statusFilter;
+        }
+
+        // Filter by date range (createdAt)
+        if (fromDate || toDate) {
+            query.createdAt = {};
+            if (fromDate) query.createdAt.$gte = fromDate;
+            if (toDate) {
+                toDate.setHours(23,59,59,999);
+                query.createdAt.$lte = toDate;
+            }
         }
 
         const skip = (page - 1) * limit;

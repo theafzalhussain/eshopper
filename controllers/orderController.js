@@ -1,3 +1,30 @@
+// Bulk delete orders
+exports.deleteOrders = async (req, res) => {
+    try {
+        const { orderIds } = req.body;
+        if (!Array.isArray(orderIds) || !orderIds.length) {
+            return res.status(400).json({ success: false, message: 'No orderIds provided.' });
+        }
+        // Security: Only allow admin (x-admin-secret header)
+        if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+        const result = await Order.deleteMany({ orderId: { $in: orderIds } });
+        // Emit socket.io event for each deleted order
+        if (typeof req.app.get === 'function') {
+            const io = req.app.get('io');
+            if (io) {
+                orderIds.forEach(orderId => {
+                    io.emit('orderDeleted', { orderId });
+                });
+            }
+        }
+        res.json({ success: true, deletedCount: result.deletedCount });
+    } catch (err) {
+        console.error('Bulk delete error:', err.message);
+        res.status(500).json({ success: false, message: 'Bulk delete failed.' });
+    }
+};
 const mongoose = require('mongoose');
 const { sendTransactionalEmail } = require('../src/utils/email');
 const Order = mongoose.model('Order');

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import OrderDetailsModal from './OrderDetailsModal';
 import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check } from 'lucide-react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 import LefNav from './LefNav';
 import './AdminOrders.css';
+import './OrderDetailsModal.css';
 
 const ALLOWED_STATUSES = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const STATUS_COLORS = {
@@ -31,6 +33,9 @@ export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    const [customer, setCustomer] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
@@ -45,6 +50,8 @@ export default function AdminOrders() {
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [expandedHistory, setExpandedHistory] = useState(null);
+    // Order details modal state
+    const [detailsModalOrder, setDetailsModalOrder] = useState(null);
 
     const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://api.eshopperr.me';
 
@@ -69,7 +76,7 @@ export default function AdminOrders() {
     // Fetch orders on mount and when page/search/status changes
     useEffect(() => {
         fetchOrders();
-    }, [page, search, selectedStatus]);
+    }, [page, search, selectedStatus, fromDate, toDate, customer]);
 
     const fetchOrders = async () => {
         try {
@@ -78,9 +85,11 @@ export default function AdminOrders() {
                 page,
                 limit: 10,
                 ...(search && { search }),
-                ...(selectedStatus && { status: selectedStatus })
+                ...(selectedStatus && { status: selectedStatus }),
+                ...(fromDate && { fromDate }),
+                ...(toDate && { toDate }),
+                ...(customer && { customer })
             };
-
             const response = await axios.get(`${BASE_URL}/api/admin/orders`, { params });
             setOrders(response.data.orders || []);
             setTotalPages(response.data.pages || 0);
@@ -267,37 +276,58 @@ export default function AdminOrders() {
 
                             <div className="admin-orders-toolbar mb-4">
                                 <div className="row">
-                                    <div className="col-md-5 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID / Name / Email)</label>
+                                    <div className="col-md-3 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID)</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
                                                 <span className="input-group-text bg-white"><Search size={18} className="text-muted" /></span>
                                             </div>
                                             <input
                                                 type="text"
-                                                placeholder="Search orders..."
+                                                placeholder="Order ID..."
                                                 value={search}
-                                                onChange={(e) => {
-                                                    setSearch(e.target.value);
-                                                    setPage(1);
-                                                }}
+                                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                                                 className="form-control"
                                             />
                                         </div>
                                     </div>
-
-                                    <div className="col-md-4 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Filter by Status</label>
+                                    <div className="col-md-3 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Customer Name/Email</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Name or Email..."
+                                            value={customer}
+                                            onChange={e => { setCustomer(e.target.value); setPage(1); }}
+                                            className="form-control"
+                                        />
+                                    </div>
+                                    <div className="col-md-2 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">From Date</label>
+                                        <input
+                                            type="date"
+                                            value={fromDate}
+                                            onChange={e => { setFromDate(e.target.value); setPage(1); }}
+                                            className="form-control"
+                                        />
+                                    </div>
+                                    <div className="col-md-2 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">To Date</label>
+                                        <input
+                                            type="date"
+                                            value={toDate}
+                                            onChange={e => { setToDate(e.target.value); setPage(1); }}
+                                            className="form-control"
+                                        />
+                                    </div>
+                                    <div className="col-md-2 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Status</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
                                                 <span className="input-group-text bg-white"><Filter size={18} className="text-muted" /></span>
                                             </div>
                                             <select
                                                 value={selectedStatus}
-                                                onChange={(e) => {
-                                                    setSelectedStatus(e.target.value);
-                                                    setPage(1);
-                                                }}
+                                                onChange={(e) => { setSelectedStatus(e.target.value); setPage(1); }}
                                                 className="form-control"
                                             >
                                                 <option value="">All Statuses</option>
@@ -306,10 +336,6 @@ export default function AdminOrders() {
                                                 ))}
                                             </select>
                                         </div>
-                                    </div>
-
-                                    <div className="col-md-3 mb-3 d-flex align-items-end">
-                                        <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
                                     </div>
                                 </div>
                             </div>
@@ -324,7 +350,7 @@ export default function AdminOrders() {
                                     <button
                                         onClick={handleBulkConfirm}
                                         disabled={bulkUpdating}
-                                        className="btn btn-success d-flex align-items-center"
+                                        className="btn btn-success d-flex align-items-center mr-2"
                                     >
                                         {bulkUpdating ? (
                                             <>
@@ -338,6 +364,76 @@ export default function AdminOrders() {
                                             </>
                                         )}
                                     </button>
+                                    <button
+                                        onClick={handleBulkExport}
+                                        className="btn btn-primary d-flex align-items-center mr-2"
+                                        disabled={selectedOrders.size === 0}
+                                    >
+                                        Export CSV
+                                    </button>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="btn btn-danger d-flex align-items-center"
+                                        disabled={selectedOrders.size === 0}
+                                    >
+                                        Delete Selected
+                                    </button>
+    // Bulk Export CSV
+    const handleBulkExport = () => {
+        if (selectedOrders.size === 0) return;
+        const selected = orders.filter(o => selectedOrders.has(o.orderId));
+        if (!selected.length) return;
+        const csvRows = [];
+        // Header
+        csvRows.push([
+            'Order ID', 'Customer', 'Email', 'Amount', 'Status', 'Date', 'Items'
+        ].join(','));
+        // Data
+        selected.forEach(order => {
+            csvRows.push([
+                order.orderId,
+                '"' + (order.userName || '') + '"',
+                order.userEmail,
+                order.finalAmount,
+                order.orderStatus,
+                new Date(order.updatedAt).toLocaleString(),
+                (order.productCount || order.products?.length || 0)
+            ].join(','));
+        });
+        const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', 'orders_export.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+                                    // Bulk Delete
+                                    const handleBulkDelete = async () => {
+                                        if (selectedOrders.size === 0) return;
+                                        if (!window.confirm('Are you sure you want to delete the selected orders? This action cannot be undone.')) return;
+                                        try {
+                                            setBulkUpdating(true);
+                                            const orderIds = Array.from(selectedOrders);
+                                            const response = await axios.post(`${BASE_URL}/api/admin/delete-orders`, { orderIds }, {
+                                                headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET }
+                                            });
+                                            if (response.data.success) {
+                                                showNotification(`🗑️ ${orderIds.length} order(s) deleted`, 'success');
+                                                setSelectedOrders(new Set());
+                                                setSelectAll(false);
+                                                setTimeout(() => fetchOrders(), 800);
+                                            } else {
+                                                showNotification('Failed to delete orders', 'error');
+                                            }
+                                        } catch (error) {
+                                            showNotification('Bulk delete failed', 'error');
+                                        } finally {
+                                            setBulkUpdating(false);
+                                        }
+                                    };
                                 </motion.div>
                             )}
 
@@ -403,45 +499,53 @@ export default function AdminOrders() {
                                                             <td>{order.productCount || order.products?.length || 0} item{(order.productCount || order.products?.length || 0) !== 1 ? 's' : ''}</td>
                                                             <td>{new Date(order.updatedAt).toLocaleDateString('en-IN')}</td>
                                                             <td>
-                                                                <div className="position-relative">
+                                                                <div className="d-flex align-items-center gap-2 position-relative">
                                                                     <button
-                                                                        onClick={() => setDropdownOpen(dropdownOpen === order.orderId ? null : order.orderId)}
-                                                                        disabled={updating === order.orderId}
-                                                                        className="btn btn-outline-dark btn-sm d-flex align-items-center"
+                                                                        onClick={() => setDetailsModalOrder(order)}
+                                                                        className="btn btn-info btn-sm mr-2"
+                                                                        title="View Details"
                                                                     >
-                                                                        {updating === order.orderId ? (
-                                                                            <>
-                                                                                <Loader2 size={14} className="admin-spin mr-2" />
-                                                                                Updating...
-                                                                            </>
-                                                                        ) : (
-                                                                            <>
-                                                                                Update Status
-                                                                                <ChevronDown size={14} className={`ml-1 ${dropdownOpen === order.orderId ? 'rotate-180' : ''}`} />
-                                                                            </>
-                                                                        )}
+                                                                        View Details
                                                                     </button>
-
-                                                                    {dropdownOpen === order.orderId && (
-                                                                        <motion.div
-                                                                            initial={{ opacity: 0, y: -10 }}
-                                                                            animate={{ opacity: 1, y: 0 }}
-                                                                            className="admin-status-dropdown"
+                                                                    <div className="position-relative">
+                                                                        <button
+                                                                            onClick={() => setDropdownOpen(dropdownOpen === order.orderId ? null : order.orderId)}
+                                                                            disabled={updating === order.orderId}
+                                                                            className="btn btn-outline-dark btn-sm d-flex align-items-center"
                                                                         >
-                                                                            {ALLOWED_STATUSES.map((status) => (
-                                                                                <button
-                                                                                    key={status}
-                                                                                    onClick={() => updateOrderStatus(order.orderId, status)}
-                                                                                    disabled={updating === order.orderId || order.orderStatus === status}
-                                                                                    className={`admin-status-option ${order.orderStatus === status ? 'disabled' : ''}`}
-                                                                                >
-                                                                                    {STATUS_ICONS[status] || <Clock size={14} />}
-                                                                                    <span>{status}</span>
-                                                                                    {order.orderStatus === status && <Check size={14} />}
-                                                                                </button>
-                                                                            ))}
-                                                                        </motion.div>
-                                                                    )}
+                                                                            {updating === order.orderId ? (
+                                                                                <>
+                                                                                    <Loader2 size={14} className="admin-spin mr-2" />
+                                                                                    Updating...
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    Update Status
+                                                                                    <ChevronDown size={14} className={`ml-1 ${dropdownOpen === order.orderId ? 'rotate-180' : ''}`} />
+                                                                                </>
+                                                                            )}
+                                                                        </button>
+                                                                        {dropdownOpen === order.orderId && (
+                                                                            <motion.div
+                                                                                initial={{ opacity: 0, y: -10 }}
+                                                                                animate={{ opacity: 1, y: 0 }}
+                                                                                className="admin-status-dropdown"
+                                                                            >
+                                                                                {ALLOWED_STATUSES.map((status) => (
+                                                                                    <button
+                                                                                        key={status}
+                                                                                        onClick={() => updateOrderStatus(order.orderId, status)}
+                                                                                        disabled={updating === order.orderId || order.orderStatus === status}
+                                                                                        className={`admin-status-option ${order.orderStatus === status ? 'disabled' : ''}`}
+                                                                                    >
+                                                                                        {STATUS_ICONS[status] || <Clock size={14} />}
+                                                                                        <span>{status}</span>
+                                                                                        {order.orderStatus === status && <Check size={14} />}
+                                                                                    </button>
+                                                                                ))}
+                                                                            </motion.div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                             </td>
                                                         </motion.tr>
@@ -531,6 +635,8 @@ export default function AdminOrders() {
                     </div>
                 </div>
             </div>
+        {/* Order Details Modal */}
+        <OrderDetailsModal order={detailsModalOrder} open={!!detailsModalOrder} onClose={() => setDetailsModalOrder(null)} />
         </motion.div>
     );
 }

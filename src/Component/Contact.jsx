@@ -1,27 +1,57 @@
 import React, { useState } from 'react'
+import { useToast } from './ToastNotification';
 import { Link } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { addContact } from "../Store/ActionCreaters/ContactActionCreators"
 import { motion } from 'framer-motion' // For smooth premium animations
 
 export default function Contact() {
-    var dispatch = useDispatch()
-    var [show, setshow] = useState(false)
+    var dispatch = useDispatch();
+    const toast = useToast();
+    var [show, setshow] = useState(false);
     var [data, setdata] = useState({
         name: "",
         email: "",
         phone: "",
         subject: "",
         message: ""
-    })
+    });
+    const [captcha, setCaptcha] = useState("");
+    const [captchaInput, setCaptchaInput] = useState("");
+    const [captchaError, setCaptchaError] = useState("");
+
+    // Get contact info from env
+    const brandName = process.env.REACT_APP_BRAND_NAME || "Eshopper";
+    const brandSite = process.env.REACT_APP_BRAND_SITE_URL || "https://eshopperr.me";
+    const brandEmail = process.env.REACT_APP_BRAND_EMAIL || "info@eshopper.com";
+    const brandPhone = process.env.REACT_APP_BRAND_PHONE || "+91 8447859784";
+    const brandAddress = process.env.REACT_APP_BRAND_ADDRESS || "A-43 Sector 16 Noida, UP, India";
 
     function getData(e) {
-        var { name, value } = e.target
-        setdata((old) => ({ ...old, [name]: value }))
+        var { name, value } = e.target;
+        setdata((old) => ({ ...old, [name]: value }));
+    }
+
+    function generateCaptcha() {
+        // 5 digit random code
+        const code = Math.random().toString().slice(2, 7);
+        setCaptcha(code);
+        setCaptchaInput("");
+        setCaptchaError("");
     }
 
     function postData(e) {
-        e.preventDefault()
+        e.preventDefault();
+        if (!captcha) {
+            generateCaptcha();
+            toast.info("Please enter the captcha code to submit your message.");
+            return;
+        }
+        if (captchaInput !== captcha) {
+            setCaptchaError("Captcha code incorrect. Please try again.");
+            generateCaptcha();
+            return;
+        }
         var item = {
             name: data.name,
             email: data.email,
@@ -30,11 +60,14 @@ export default function Contact() {
             message: data.message,
             status: "Active",
             time: new Date()
-        }
-        dispatch(addContact(item))
-        setshow(true)
-        // Form clear logic
-        setdata({ name: "", email: "", phone: "", subject: "", message: "" })
+        };
+        dispatch(addContact(item));
+        setshow(true);
+        toast.success("Your message has been sent! We'll contact you soon.");
+        setdata({ name: "", email: "", phone: "", subject: "", message: "" });
+        setCaptcha("");
+        setCaptchaInput("");
+        setCaptchaError("");
     }
 
     // Animation Variants
@@ -62,10 +95,10 @@ export default function Contact() {
                     {/* --- CONTACT INFO CARDS --- */}
                     <div className="row d-flex mb-5 contact-info">
                         {[
-                            { icon: "icon-map-marker", label: "Address", text: "A-43 Sector 16 Noida, UP, India", link: "#" },
-                            { icon: "icon-phone", label: "Phone", text: "+91 8447859784", link: "tel://8447859784" },
-                            { icon: "icon-paper-plane", label: "Email", text: "info@eshopper.com", link: "mailto:info@eshopper.com" },
-                            { icon: "icon-globe", label: "Website", text: "eshopper.vercel.app", link: "#" }
+                            { icon: "icon-map-marker", label: "Address", text: brandAddress, link: "#" },
+                            { icon: "icon-phone", label: "Phone", text: brandPhone, link: `tel:${brandPhone.replace(/\D/g, "")}` },
+                            { icon: "icon-paper-plane", label: "Email", text: brandEmail, link: `mailto:${brandEmail}` },
+                            { icon: "icon-globe", label: "Website", text: brandSite.replace(/^https?:\/\//, ''), link: brandSite }
                         ].map((item, i) => (
                             <motion.div key={i} className="col-md-3 d-flex" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
                                 <div className="info bg-white p-4 shadow-sm rounded-lg border-0 w-100 text-center transition-all hover-info">
@@ -93,7 +126,7 @@ export default function Contact() {
                                     </div>
                                 )}
                                 <h3 className="mb-4 font-weight-bold">Write to Us</h3>
-                                <form onSubmit={postData}>
+                                <form onSubmit={postData} autoComplete="off">
                                     <div className="form-group">
                                         <input type="text" className="form-control premium-input" name='name' value={data.name} onChange={getData} placeholder="Full Name" required />
                                     </div>
@@ -109,9 +142,20 @@ export default function Contact() {
                                     <div className="form-group">
                                         <textarea rows="4" className="form-control premium-input" name='message' value={data.message} onChange={getData} placeholder="Your Message" required></textarea>
                                     </div>
+                                    {/* Captcha Section */}
+                                    {captcha && (
+                                        <div className="form-group">
+                                            <div className="d-flex align-items-center mb-2">
+                                                <span className="badge badge-info p-2 mr-2" style={{ fontSize: 18, letterSpacing: 2 }}>{captcha}</span>
+                                                <button type="button" className="btn btn-sm btn-outline-info ml-2" onClick={generateCaptcha}>↻</button>
+                                            </div>
+                                            <input type="text" className="form-control premium-input" placeholder="Enter captcha code above" value={captchaInput} onChange={e => setCaptchaInput(e.target.value)} required />
+                                            {captchaError && <div className="text-danger small mt-1">{captchaError}</div>}
+                                        </div>
+                                    )}
                                     <div className="form-group">
                                         <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" className="btn btn-info py-3 px-5 rounded-pill shadow-lg w-100 font-weight-bold">
-                                            SEND MESSAGE
+                                            {captcha ? "SUBMIT" : "SEND MESSAGE"}
                                         </motion.button>
                                     </div>
                                 </form>
