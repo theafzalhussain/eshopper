@@ -120,7 +120,7 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
                   <OrderTimeline statusHistory={order.statusHistory || []} />
                 </div>
               </div>
-              import OrderTimeline from './OrderTimeline';
+             
               <div className="drawer-section d-flex align-items-center">
                 <Calendar size={16} className="mr-2 text-muted" />
                 <span><strong>Created:</strong> {new Date(order.createdAt).toLocaleString('en-IN')}</span>

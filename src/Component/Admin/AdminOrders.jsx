@@ -422,99 +422,90 @@ export default function AdminOrders() {
                                 </motion.div>
                             )}
 
-                            <div className="admin-orders-toolbar mb-4 d-flex flex-wrap align-items-end justify-content-between">
-                                <div className="row flex-grow-1">
-                                    <div className="col-md-3 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID / Email)</label>
-                                        <div className="input-group">
-                                            <div className="input-group-prepend">
-                                                <span className="input-group-text bg-white"><Search size={18} className="text-muted" /></span>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                placeholder="Search orders..."
-                                                value={searchInput}
-                                                ref={searchInputRef}
-                                                onChange={e => setSearchInput(e.target.value)}
-                                                className="form-control"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="col-md-2 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">From Date</label>
-                                        <input
-                                            type="date"
-                                            className="form-control"
-                                            value={fromDate}
-                                            onChange={e => {
-                                                setFromDate(e.target.value);
-                                                setPage(1);
-                                            }}
-                                            max={toDate || undefined}
-                                        />
-                                    </div>
-
-                                    <div className="col-md-2 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">To Date</label>
-                                        <input
-                                            type="date"
-                                            className="form-control"
-                                            value={toDate}
-                                            onChange={e => {
-                                                setToDate(e.target.value);
-                                                setPage(1);
-                                            }}
-                                            min={fromDate || undefined}
-                                        />
-                                    </div>
-
-
-
-
-                                    <div className="col-md-2 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Payment Status</label>
-                                        <select
-                                            className="form-control"
-                                            value={paymentStatus}
-                                            onChange={e => {
-                                                setPaymentStatus(e.target.value);
-                                                setPage(1);
-                                            }}
-                                        >
-                                            <option value="">All</option>
-                                            {PAYMENT_STATUSES.map(status => (
-                                                <option key={status} value={status}>{status}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    <div className="col-md-2 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Filter by Status</label>
-                                        <div className="input-group">
-                                            <div className="input-group-prepend">
-                                                <span className="input-group-text bg-white"><Filter size={18} className="text-muted" /></span>
-                                            </div>
-                                            <select
-                                                value={selectedStatus}
-                                                onChange={(e) => {
-                                                    setSelectedStatus(e.target.value);
-                                                    setSearchInput('');
-                                                    setSearch('');
-                                                    setPage(1);
-                                                }}
-                                                className="form-control"
-                                            >
-                                                <option value="">All Statuses</option>
-                                                {ALLOWED_STATUSES.map(status => (
-                                                    <option key={status} value={status}>{status}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="col-md-1 mb-3 d-flex align-items-end">
-                                        <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
+                                                        <div className="admin-orders-toolbar mb-4 d-flex flex-wrap align-items-end justify-content-between premium-toolbar-responsive">
+                                                            <div className="row flex-grow-1 w-100">
+                                                                <div className="col-12 col-md-3 mb-3">
+                                                                    <label className="premium-label">Search (Order ID / Email)</label>
+                                                                    <div className="input-group premium-input-group">
+                                                                        <span className="input-group-text bg-white premium-input-icon"><Search size={18} className="text-muted" /></span>
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Search orders..."
+                                                                            value={searchInput}
+                                                                            ref={searchInputRef}
+                                                                            onChange={e => setSearchInput(e.target.value)}
+                                                                            className="form-control premium-input"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="col-6 col-md-2 mb-3">
+                                                                    <label className="premium-label">From Date</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        className="form-control premium-input"
+                                                                        value={fromDate}
+                                                                        onChange={e => {
+                                                                            setFromDate(e.target.value);
+                                                                            setPage(1);
+                                                                        }}
+                                                                        max={toDate || undefined}
+                                                                    />
+                                                                </div>
+                                                                <div className="col-6 col-md-2 mb-3">
+                                                                    <label className="premium-label">To Date</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        className="form-control premium-input"
+                                                                        value={toDate}
+                                                                        onChange={e => {
+                                                                            setToDate(e.target.value);
+                                                                            setPage(1);
+                                                                        }}
+                                                                        min={fromDate || undefined}
+                                                                    />
+                                                                </div>
+                                                                <div className="col-6 col-md-2 mb-3">
+                                                                    <label className="premium-label">Payment Status</label>
+                                                                    <select
+                                                                        className="form-control premium-input"
+                                                                        value={paymentStatus}
+                                                                        onChange={e => {
+                                                                            setPaymentStatus(e.target.value);
+                                                                            setPage(1);
+                                                                        }}
+                                                                    >
+                                                                        <option value="">All</option>
+                                                                        {PAYMENT_STATUSES.map(status => (
+                                                                            <option key={status} value={status}>{status}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                                <div className="col-6 col-md-2 mb-3">
+                                                                    <label className="premium-label">Filter by Status</label>
+                                                                    <div className="input-group premium-input-group">
+                                                                        <span className="input-group-text bg-white premium-input-icon"><Filter size={18} className="text-muted" /></span>
+                                                                        <select
+                                                                            value={selectedStatus}
+                                                                            onChange={(e) => {
+                                                                                setSelectedStatus(e.target.value);
+                                                                                setSearchInput('');
+                                                                                setSearch('');
+                                                                                setPage(1);
+                                                                            }}
+                                                                            className="form-control premium-input"
+                                                                        >
+                                                                            <option value="">All Statuses</option>
+                                                                            {ALLOWED_STATUSES.map(status => (
+                                                                                <option key={status} value={status}>{status}</option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="col-12 col-md-1 mb-3 d-flex align-items-end">
+                                                                    <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="export-btn-wrap mb-3 ml-auto d-flex flex-row flex-wrap premium-export-btns">
                                     </div>
                                 </div>
                                 <div className="export-btn-wrap mb-3 ml-auto">
@@ -783,7 +774,7 @@ export default function AdminOrders() {
                             </div>
                         </div>
                     </div>
-                </div>
+            
         <OrderDetailsDrawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
