@@ -82,11 +82,30 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 7px 16px 7px 12px;
   border-radius: 999px;
-  border: 1px solid transparent;
-  font-size: 12px;
+  border: 1.5px solid transparent;
+  font-size: 13px;
   font-weight: 700;
+  min-width: 120px;
+  box-shadow: 0 2px 12px 0 rgba(52, 211, 153, 0.10);
+  position: relative;
+  transition: box-shadow 0.18s, transform 0.18s;
+  outline: none;
+}
+
+.premium-status-badge {
+  background: linear-gradient(90deg, #f0fdfa 0%, #e0e7ff 100%);
+  border: 1.5px solid #a5f3fc;
+  box-shadow: 0 4px 18px 0 rgba(52, 211, 153, 0.13);
+  position: relative;
+  z-index: 1;
+}
+
+.status-pill:focus, .status-pill:hover {
+  box-shadow: 0 6px 24px 0 rgba(52, 211, 153, 0.18);
+  transform: scale(1.07);
+  outline: none;
 }
 
 .status-order-placed,
