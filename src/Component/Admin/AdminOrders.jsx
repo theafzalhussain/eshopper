@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import OrderDetailsModal from './OrderDetailsModal';
 import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check } from 'lucide-react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 import LefNav from './LefNav';
 import './AdminOrders.css';
+import { FileText, Copy, Printer, Download, X } from 'lucide-react';
 
 const ALLOWED_STATUSES = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const STATUS_COLORS = {
@@ -46,9 +46,8 @@ export default function AdminOrders() {
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [expandedHistory, setExpandedHistory] = useState(null);
+
     // ...existing code...
-    // Order details modal state
-    const [detailsModalOrder, setDetailsModalOrder] = useState(null);
 
     const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://api.eshopperr.me';
 
@@ -84,7 +83,6 @@ export default function AdminOrders() {
                 ...(search && { search }),
                 ...(selectedStatus && { status: selectedStatus })
             };
-
             const response = await axios.get(`${BASE_URL}/api/admin/orders`, { params });
             setOrders(response.data.orders || []);
             setTotalPages(response.data.pages || 0);
@@ -218,6 +216,16 @@ export default function AdminOrders() {
 
     const filteredOrders = useMemo(() => orders, [orders]);
 
+    // Copy order details to clipboard
+    const handleCopyDetails = () => {
+        if (!detailsOrder) return;
+        const text = JSON.stringify(detailsOrder, null, 2);
+        navigator.clipboard.writeText(text);
+        showNotification('Order details copied!', 'success');
+    };
+
+    // ...existing code...
+
     if (loading && orders.length === 0) {
         return (
             <div className="admin-orders-page d-flex align-items-center justify-content-center">
@@ -271,7 +279,7 @@ export default function AdminOrders() {
 
                             <div className="admin-orders-toolbar mb-4">
                                 <div className="row">
-                                    <div className="col-md-5 mb-3">
+                                    <div className="col-md-4 mb-3">
                                         <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID / Name / Email)</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
@@ -290,7 +298,7 @@ export default function AdminOrders() {
                                         </div>
                                     </div>
 
-                                    <div className="col-md-4 mb-3">
+                                    <div className="col-md-3 mb-3">
                                         <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Filter by Status</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
@@ -311,8 +319,9 @@ export default function AdminOrders() {
                                             </select>
                                         </div>
                                     </div>
-
-                                    <div className="col-md-3 mb-3 d-flex align-items-end">
+                                </div>
+                                <div className="row">
+                                    <div className="col-12 d-flex align-items-end justify-content-end">
                                         <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
                                     </div>
                                 </div>
@@ -328,7 +337,7 @@ export default function AdminOrders() {
                                     <button
                                         onClick={handleBulkConfirm}
                                         disabled={bulkUpdating}
-                                        className="btn btn-success d-flex align-items-center mr-2"
+                                        className="btn btn-success d-flex align-items-center"
                                     >
                                         {bulkUpdating ? (
                                             <>
@@ -407,53 +416,119 @@ export default function AdminOrders() {
                                                             <td>{order.productCount || order.products?.length || 0} item{(order.productCount || order.products?.length || 0) !== 1 ? 's' : ''}</td>
                                                             <td>{new Date(order.updatedAt).toLocaleDateString('en-IN')}</td>
                                                             <td>
-                                                                <div className="d-flex align-items-center gap-2 position-relative">
+                                                                <div className="position-relative d-flex align-items-center gap-2">
                                                                     <button
-                                                                        onClick={() => setDetailsModalOrder(order)}
-                                                                        className="btn btn-info btn-sm mr-2"
+                                                                        onClick={() => {
+                                                                            setDetailsOrder(order);
+                                                                            setShowDetails(true);
+                                                                        }}
+                                                                        className="btn btn-info btn-sm d-flex align-items-center mr-2"
                                                                         title="View Details"
                                                                     >
-                                                                        View Details
+                                                                        <FileText size={15} className="mr-1" /> Details
                                                                     </button>
-                                                                    <div className="position-relative">
-                                                                        <button
-                                                                            onClick={() => setDropdownOpen(dropdownOpen === order.orderId ? null : order.orderId)}
-                                                                            disabled={updating === order.orderId}
-                                                                            className="btn btn-outline-dark btn-sm d-flex align-items-center"
-                                                                        >
-                                                                            {updating === order.orderId ? (
-                                                                                <>
-                                                                                    <Loader2 size={14} className="admin-spin mr-2" />
-                                                                                    Updating...
-                                                                                </>
-                                                                            ) : (
-                                                                                <>
-                                                                                    Update Status
-                                                                                    <ChevronDown size={14} className={`ml-1 ${dropdownOpen === order.orderId ? 'rotate-180' : ''}`} />
-                                                                                </>
-                                                                            )}
-                                                                        </button>
-                                                                        {dropdownOpen === order.orderId && (
-                                                                            <motion.div
-                                                                                initial={{ opacity: 0, y: -10 }}
-                                                                                animate={{ opacity: 1, y: 0 }}
-                                                                                className="admin-status-dropdown"
-                                                                            >
-                                                                                {ALLOWED_STATUSES.map((status) => (
-                                                                                    <button
-                                                                                        key={status}
-                                                                                        onClick={() => updateOrderStatus(order.orderId, status)}
-                                                                                        disabled={updating === order.orderId || order.orderStatus === status}
-                                                                                        className={`admin-status-option ${order.orderStatus === status ? 'disabled' : ''}`}
-                                                                                    >
-                                                                                        {STATUS_ICONS[status] || <Clock size={14} />}
-                                                                                        <span>{status}</span>
-                                                                                        {order.orderStatus === status && <Check size={14} />}
-                                                                                    </button>
-                                                                                ))}
-                                                                            </motion.div>
+                                                                                                {/* Order Details Modal */}
+                                                                                                <Modal show={showDetails} onHide={() => setShowDetails(false)} size="lg" centered backdrop="static">
+                                                                                                    <Modal.Header closeButton>
+                                                                                                        <Modal.Title>
+                                                                                                            <FileText className="text-info mr-2" size={22} /> Order Details
+                                                                                                        </Modal.Title>
+                                                                                                    </Modal.Header>
+                                                                                                    <Modal.Body>
+                                                                                                        {detailsOrder && (
+                                                                                                            <div id="order-details-modal-content" className="order-details-modal-content">
+                                                                                                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                                                                                                    <div>
+                                                                                                                        <span className="font-weight-bold text-info">Order ID:</span> <span className="order-id-cell">{String(detailsOrder.orderId || '').slice(-8)}</span>
+                                                                                                                    </div>
+                                                                                                                    <div>
+                                                                                                                        <span className={`status-pill ${STATUS_COLORS[detailsOrder.orderStatus]}`}>{STATUS_ICONS[detailsOrder.orderStatus]} {detailsOrder.orderStatus}</span>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                                <div className="mb-2"><span className="font-weight-bold">Customer:</span> {detailsOrder.userName} ({detailsOrder.userEmail})</div>
+                                                                                                                <div className="mb-2"><span className="font-weight-bold">Amount:</span> ₹{Number(detailsOrder.finalAmount || 0).toLocaleString('en-IN')}</div>
+                                                                                                                <div className="mb-2"><span className="font-weight-bold">Address:</span> {detailsOrder.address || 'N/A'}</div>
+                                                                                                                <div className="mb-2"><span className="font-weight-bold">Phone:</span> {detailsOrder.phone || 'N/A'}</div>
+                                                                                                                <div className="mb-2"><span className="font-weight-bold">Payment:</span> {detailsOrder.paymentMethod || 'N/A'} {detailsOrder.paymentStatus ? `(${detailsOrder.paymentStatus})` : ''}</div>
+                                                                                                                <div className="mb-2"><span className="font-weight-bold">Placed:</span> {detailsOrder.createdAt ? new Date(detailsOrder.createdAt).toLocaleString('en-IN') : 'N/A'}</div>
+                                                                                                                <div className="mb-2"><span className="font-weight-bold">Updated:</span> {detailsOrder.updatedAt ? new Date(detailsOrder.updatedAt).toLocaleString('en-IN') : 'N/A'}</div>
+                                                                                                                <div className="mb-3"><span className="font-weight-bold">Items:</span>
+                                                                                                                    <ul className="pl-3">
+                                                                                                                        {(detailsOrder.products || []).map((item, idx) => (
+                                                                                                                            <li key={idx} className="mb-1">
+                                                                                                                                <span className="font-weight-bold">{item.productName}</span> x{item.qty} — ₹{Number(item.price).toLocaleString('en-IN')}
+                                                                                                                            </li>
+                                                                                                                        ))}
+                                                                                                                    </ul>
+                                                                                                                </div>
+                                                                                                                {detailsOrder.statusHistory && detailsOrder.statusHistory.length > 0 && (
+                                                                                                                    <div className="mb-2">
+                                                                                                                        <span className="font-weight-bold">Status History:</span>
+                                                                                                                        <ul className="pl-3">
+                                                                                                                            {detailsOrder.statusHistory.map((entry, idx) => (
+                                                                                                                                <li key={idx}>
+                                                                                                                                    <span>{entry.status}</span> — <span>{new Date(entry.timestamp).toLocaleString('en-IN')}</span> {entry.message && <span>({entry.message})</span>}
+                                                                                                                                </li>
+                                                                                                                            ))}
+                                                                                                                        </ul>
+                                                                                                                    </div>
+                                                                                                                )}
+                                                                                                            </div>
+                                                                                                        )}
+                                                                                                    </Modal.Body>
+                                                                                                    <Modal.Footer>
+                                                                                                        <Button variant="secondary" onClick={handleCopyDetails} title="Copy">
+                                                                                                            <Copy size={16} className="mr-1" /> Copy
+                                                                                                        </Button>
+                                                                                                        <Button variant="secondary" onClick={handlePrintDetails} title="Print">
+                                                                                                            <Printer size={16} className="mr-1" /> Print
+                                                                                                        </Button>
+                                                                                                        <Button variant="secondary" onClick={handleExportPDF} title="Export PDF">
+                                                                                                            <Download size={16} className="mr-1" /> PDF
+                                                                                                        </Button>
+                                                                                                        <Button variant="danger" onClick={() => setShowDetails(false)}>
+                                                                                                            <X size={16} className="mr-1" /> Close
+                                                                                                        </Button>
+                                                                                                    </Modal.Footer>
+                                                                                                </Modal>
+                                                                    <button
+                                                                        onClick={() => setDropdownOpen(dropdownOpen === order.orderId ? null : order.orderId)}
+                                                                        disabled={updating === order.orderId}
+                                                                        className="btn btn-outline-dark btn-sm d-flex align-items-center"
+                                                                    >
+                                                                        {updating === order.orderId ? (
+                                                                            <>
+                                                                                <Loader2 size={14} className="admin-spin mr-2" />
+                                                                                Updating...
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                Update Status
+                                                                                <ChevronDown size={14} className={`ml-1 ${dropdownOpen === order.orderId ? 'rotate-180' : ''}`} />
+                                                                            </>
                                                                         )}
-                                                                    </div>
+                                                                    </button>
+
+                                                                    {dropdownOpen === order.orderId && (
+                                                                        <motion.div
+                                                                            initial={{ opacity: 0, y: -10 }}
+                                                                            animate={{ opacity: 1, y: 0 }}
+                                                                            className="admin-status-dropdown"
+                                                                        >
+                                                                            {ALLOWED_STATUSES.map((status) => (
+                                                                                <button
+                                                                                    key={status}
+                                                                                    onClick={() => updateOrderStatus(order.orderId, status)}
+                                                                                    disabled={updating === order.orderId || order.orderStatus === status}
+                                                                                    className={`admin-status-option ${order.orderStatus === status ? 'disabled' : ''}`}
+                                                                                >
+                                                                                    {STATUS_ICONS[status] || <Clock size={14} />}
+                                                                                    <span>{status}</span>
+                                                                                    {order.orderStatus === status && <Check size={14} />}
+                                                                                </button>
+                                                                            ))}
+                                                                        </motion.div>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                         </motion.tr>
@@ -543,8 +618,6 @@ export default function AdminOrders() {
                     </div>
                 </div>
             </div>
-        {/* Order Details Modal */}
-        <OrderDetailsModal order={detailsModalOrder} open={!!detailsModalOrder} onClose={() => setDetailsModalOrder(null)} />
         </motion.div>
     );
 }
