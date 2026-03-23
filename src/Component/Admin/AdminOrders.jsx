@@ -423,7 +423,7 @@ export default function AdminOrders() {
                             <div className="admin-orders-toolbar mb-4 d-flex flex-wrap align-items-end justify-content-between">
                                 <div className="row flex-grow-1">
                                     <div className="col-md-3 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID / Name / Email)</label>
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID / Email)</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
                                                 <span className="input-group-text bg-white"><Search size={18} className="text-muted" /></span>

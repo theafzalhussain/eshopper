@@ -150,10 +150,12 @@ const io = new Server(httpServer, {
 // Make io available to controllers
 app.set('io', io);
 
-const ALLOWED_ORDER_STATUS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Return Initiated', 'Return Completed', 'Refund Initiated', 'Refund Completed'];
+const ALLOWED_ORDER_STATUS = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const normalizeOrderStatus = (s = '') => {
     const v = String(s).trim().toLowerCase();
     if (v === 'ordered') return 'Ordered';
+    if (v === 'order placed') return 'Order Placed';
+    if (v === 'confirmed') return 'Confirmed';
     if (v === 'packed') return 'Packed';
     if (v === 'shipped') return 'Shipped';
     if (v === 'out for delivery') return 'Out for Delivery';
@@ -1870,9 +1872,7 @@ app.get('/api/admin/orders', async (req, res) => {
             const safeSearch = String(search).replace(/\s+/g, ' ').trim();
             query.$or = [
                 { orderId: { $regex: safeSearch, $options: 'i' } },
-                { userName: { $regex: safeSearch.split(' ').join('.*'), $options: 'i' } },
                 { userEmail: { $regex: safeSearch, $options: 'i' } },
-                { username: { $regex: safeSearch.split(' ').join('.*'), $options: 'i' } },
                 { email: { $regex: safeSearch, $options: 'i' } }
             ];
         }
