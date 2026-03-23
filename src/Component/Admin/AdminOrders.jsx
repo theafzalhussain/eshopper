@@ -38,6 +38,13 @@ export default function AdminOrders() {
     const [selectedStatus, setSelectedStatus] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
+    // Advanced filter states
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    const [customer, setCustomer] = useState('');
+    const [paymentStatus, setPaymentStatus] = useState('');
+
+    const PAYMENT_STATUSES = ['Pending', 'Paid', 'Failed', 'Refunded'];
     const [updating, setUpdating] = useState(null);
     const [notification, setNotification] = useState(null);
     
@@ -79,7 +86,7 @@ export default function AdminOrders() {
     // Fetch orders on mount and when page/search/status changes
     useEffect(() => {
         fetchOrders();
-    }, [page, search, selectedStatus]);
+    }, [page, search, selectedStatus, fromDate, toDate, customer, paymentStatus]);
 
     const fetchOrders = async () => {
         try {
@@ -88,7 +95,11 @@ export default function AdminOrders() {
                 page,
                 limit: 10,
                 ...(search && { search }),
-                ...(selectedStatus && { status: selectedStatus })
+                ...(selectedStatus && { status: selectedStatus }),
+                ...(fromDate && { fromDate }),
+                ...(toDate && { toDate }),
+                ...(customer && { customer }),
+                ...(paymentStatus && { paymentStatus })
             };
 
             const response = await axios.get(`${BASE_URL}/api/admin/orders`, { params });
@@ -400,7 +411,7 @@ export default function AdminOrders() {
 
                             <div className="admin-orders-toolbar mb-4 d-flex flex-wrap align-items-end justify-content-between">
                                 <div className="row flex-grow-1">
-                                    <div className="col-md-5 mb-3">
+                                    <div className="col-md-3 mb-3">
                                         <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID / Name / Email)</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
@@ -419,7 +430,67 @@ export default function AdminOrders() {
                                         </div>
                                     </div>
 
-                                    <div className="col-md-4 mb-3">
+                                    <div className="col-md-2 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">From Date</label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            value={fromDate}
+                                            onChange={e => {
+                                                setFromDate(e.target.value);
+                                                setPage(1);
+                                            }}
+                                            max={toDate || undefined}
+                                        />
+                                    </div>
+
+                                    <div className="col-md-2 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">To Date</label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            value={toDate}
+                                            onChange={e => {
+                                                setToDate(e.target.value);
+                                                setPage(1);
+                                            }}
+                                            min={fromDate || undefined}
+                                        />
+                                    </div>
+
+                                    <div className="col-md-2 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Customer (Name/Email)</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Customer name or email"
+                                            value={customer}
+                                            onChange={e => {
+                                                setCustomer(e.target.value);
+                                                setPage(1);
+                                            }}
+                                        />
+                                    </div>
+
+
+                                    <div className="col-md-2 mb-3">
+                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Payment Status</label>
+                                        <select
+                                            className="form-control"
+                                            value={paymentStatus}
+                                            onChange={e => {
+                                                setPaymentStatus(e.target.value);
+                                                setPage(1);
+                                            }}
+                                        >
+                                            <option value="">All</option>
+                                            {PAYMENT_STATUSES.map(status => (
+                                                <option key={status} value={status}>{status}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="col-md-2 mb-3">
                                         <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Filter by Status</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
@@ -441,7 +512,7 @@ export default function AdminOrders() {
                                         </div>
                                     </div>
 
-                                    <div className="col-md-3 mb-3 d-flex align-items-end">
+                                    <div className="col-md-1 mb-3 d-flex align-items-end">
                                         <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
                                     </div>
                                 </div>

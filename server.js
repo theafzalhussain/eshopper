@@ -1861,6 +1861,7 @@ app.get('/api/admin/orders', async (req, res) => {
         const fromDate = req.query.fromDate ? new Date(req.query.fromDate) : null;
         const toDate = req.query.toDate ? new Date(req.query.toDate) : null;
         const customer = String(req.query.customer || '').trim();
+        const paymentStatus = String(req.query.paymentStatus || '').trim();
 
         let query = {};
 
@@ -1877,9 +1878,15 @@ app.get('/api/admin/orders', async (req, res) => {
             ];
         }
 
+
         // Filter by status
         if (statusFilter && ALLOWED_ORDER_STATUS.includes(statusFilter)) {
             query.orderStatus = statusFilter;
+        }
+
+        // Filter by payment status (case-insensitive)
+        if (paymentStatus) {
+            query.paymentStatus = { $regex: `^${paymentStatus}$`, $options: 'i' };
         }
 
         // Filter by date range (createdAt)
