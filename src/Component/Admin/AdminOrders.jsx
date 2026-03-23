@@ -11,16 +11,14 @@ import LefNav from './LefNav';
 import './AdminOrders.css';
 
 const ALLOWED_STATUSES = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
-
-// Enhanced: Add gradient and shadow classes for premium look
 const STATUS_COLORS = {
-    'Order Placed': 'status-order-placed premium-status-badge',
-    'Ordered': 'status-ordered premium-status-badge',
-    'Confirmed': 'status-confirmed premium-status-badge',
-    'Packed': 'status-packed premium-status-badge',
-    'Shipped': 'status-shipped premium-status-badge',
-    'Out for Delivery': 'status-out-for-delivery premium-status-badge',
-    'Delivered': 'status-delivered premium-status-badge'
+    'Order Placed': 'status-order-placed',
+    'Ordered': 'status-ordered',
+    'Confirmed': 'status-confirmed',
+    'Packed': 'status-packed',
+    'Shipped': 'status-shipped',
+    'Out for Delivery': 'status-out-for-delivery',
+    'Delivered': 'status-delivered'
 };
 
 const STATUS_ICONS = {
@@ -649,20 +647,9 @@ export default function AdminOrders() {
                                                             <td>{order.userEmail || 'N/A'}</td>
                                                             <td className="font-weight-bold text-dark">₹{Number(order.finalAmount || 0).toLocaleString('en-IN')}</td>
                                                             <td>
-                                                                <span
-                                                                    className={`status-pill ${STATUS_COLORS[order.orderStatus] || STATUS_COLORS['Order Placed']}`}
-                                                                    style={{
-                                                                        boxShadow: '0 2px 12px 0 rgba(52, 211, 153, 0.10)',
-                                                                        cursor: 'pointer',
-                                                                        transition: 'transform 0.18s cubic-bezier(.4,0,.2,1), box-shadow 0.18s',
-                                                                    }}
-                                                                    title={`Order Status: ${order.orderStatus || 'Order Placed'}`}
-                                                                    tabIndex={0}
-                                                                    onMouseOver={e => e.currentTarget.style.transform = 'scale(1.07)'}
-                                                                    onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
-                                                                >
+                                                                <span className={`status-pill ${STATUS_COLORS[order.orderStatus] || STATUS_COLORS['Order Placed']}`}>
                                                                     {STATUS_ICONS[order.orderStatus] || STATUS_ICONS['Order Placed']}
-                                                                    <span style={{fontWeight:700, letterSpacing:'0.2px'}}>{order.orderStatus || 'Order Placed'}</span>
+                                                                    <span>{order.orderStatus || 'Order Placed'}</span>
                                                                 </span>
                                                             </td>
                                                             <td>{order.productCount || order.products?.length || 0} item{(order.productCount || order.products?.length || 0) !== 1 ? 's' : ''}</td>
