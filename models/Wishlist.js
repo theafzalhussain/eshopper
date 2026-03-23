@@ -6,4 +6,4 @@ const wishlistSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Wishlist', wishlistSchema);
+module.exports = mongoose.models.Wishlist || mongoose.model('Wishlist', wishlistSchema);

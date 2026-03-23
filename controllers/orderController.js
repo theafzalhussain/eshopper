@@ -25,10 +25,9 @@ exports.deleteOrders = async (req, res) => {
         res.status(500).json({ success: false, message: 'Bulk delete failed.' });
     }
 };
-const mongoose = require('mongoose');
 const { sendTransactionalEmail } = require('../src/utils/email');
-const Order = mongoose.model('Order');
-const Product = mongoose.model('Product');
+const Order = require('../models/Order');
+const Product = require('../models/Product');
 
 // Order confirmation email logic
 exports.sendOrderConfirmation = async (req, res) => {

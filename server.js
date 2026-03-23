@@ -587,42 +587,14 @@ const User = mongoose.model('User', new mongoose.Schema({
     failedAttempts: { type: Number, default: 0 }, 
     lockUntil: Date 
 }, opts));
-const Product = mongoose.model('Product', new mongoose.Schema({ name: String, maincategory: String, subcategory: String, brand: String, color: String, size: String, baseprice: Number, discount: Number, finalprice: Number, stock: String, description: String, pic1: String, pic2: String, pic3: String, pic4: String, rating: { type: Number, default: 4.5, min: 0, max: 5 }, reviews: { type: Number, default: 0 } }, opts));
+const Product = require('./models/Product');
 const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
 const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
 const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
 const Cart = mongoose.model('Cart', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, qty: Number, total: Number, pic: String }, opts));
 const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
 const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
-const Order = mongoose.model('Order', new mongoose.Schema({
-    orderId: { type: String, unique: true, required: true, index: true },
-    userid: { type: String, required: true, index: true },
-    userName: String,
-    userEmail: String,
-    paymentMethod: String,
-    paymentStatus: { type: String, default: 'Pending' },
-    orderStatus: { type: String, default: 'Order Placed' },
-    totalAmount: Number,
-    shippingAmount: Number,
-    finalAmount: Number,
-    shippingAddress: {
-        fullName: String,
-        phone: String,
-        addressline1: String,
-        city: String,
-        state: String,
-        pin: String,
-        country: { type: String, default: 'India' }
-    },
-    products: Array,
-    estimatedArrival: Date,
-    statusHistory: [{
-        status: String,
-        timestamp: { type: Date, default: Date.now },
-        message: String
-    }],
-    orderDate: { type: Date, default: Date.now }
-}, opts));
+const Order = require('./models/Order');
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 

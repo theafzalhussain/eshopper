@@ -8,4 +8,4 @@ const checkoutSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Checkout', checkoutSchema);
+module.exports = mongoose.models.Checkout || mongoose.model('Checkout', checkoutSchema);

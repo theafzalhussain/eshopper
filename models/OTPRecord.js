@@ -4,4 +4,4 @@ const otpSchema = new mongoose.Schema({
     otp: String,
     createdAt: { type: Date, expires: '5m', default: Date.now }
 });
-module.exports = mongoose.model('OTPRecord', otpSchema);
+module.exports = mongoose.models.OTPRecord || mongoose.model('OTPRecord', otpSchema);

@@ -6,4 +6,4 @@ const brandSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Brand', brandSchema);
+module.exports = mongoose.models.Brand || mongoose.model('Brand', brandSchema);

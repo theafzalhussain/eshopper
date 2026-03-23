@@ -5,4 +5,4 @@ const newslatterSchema = new mongoose.Schema({
     subscribedAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Newslatter', newslatterSchema);
+module.exports = mongoose.models.Newslatter || mongoose.model('Newslatter', newslatterSchema);
