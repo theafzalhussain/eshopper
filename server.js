@@ -3,6 +3,7 @@ require('dotenv').config();
 
 // NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS
 const express = require('express');
+const orderRoutes = require('./routes/orderRoutes');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
@@ -194,6 +195,8 @@ io.on('connection', (socket) => {
 
 
 app.use(express.json());
+// Register order routes (fixes missing /api/admin/delete-orders)
+app.use(orderRoutes);
 
 // 🔒 SECURITY HEADERS
 app.use(helmet({ contentSecurityPolicy: false }));

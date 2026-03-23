@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Download, FileText } from 'lucide-react';
+import OrderDetailsDrawer from './OrderDetailsDrawer';
 import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check } from 'lucide-react';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 import LefNav from './LefNav';
 import './AdminOrders.css';
-import { FileText, Copy, Printer, Download, X } from 'lucide-react';
 
 const ALLOWED_STATUSES = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const STATUS_COLORS = {
@@ -38,16 +41,20 @@ export default function AdminOrders() {
     const [updating, setUpdating] = useState(null);
     const [notification, setNotification] = useState(null);
     
-    // Bulk actions state
-    const [selectedOrders, setSelectedOrders] = useState(new Set());
+    // Bulk actions state (array-based for robust handling)
+    const [selectedOrders, setSelectedOrders] = useState([]);
     const [selectAll, setSelectAll] = useState(false);
     const [bulkUpdating, setBulkUpdating] = useState(false);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
     
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [expandedHistory, setExpandedHistory] = useState(null);
 
-    // ...existing code...
+    // Order details drawer state
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [drawerOrder, setDrawerOrder] = useState(null);
+    const [drawerLoading, setDrawerLoading] = useState(false);
 
     const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://api.eshopperr.me';
 
@@ -83,16 +90,36 @@ export default function AdminOrders() {
                 ...(search && { search }),
                 ...(selectedStatus && { status: selectedStatus })
             };
+
             const response = await axios.get(`${BASE_URL}/api/admin/orders`, { params });
             setOrders(response.data.orders || []);
             setTotalPages(response.data.pages || 0);
-            setSelectedOrders(new Set());
+            setSelectedOrders([]);
             setSelectAll(false);
         } catch (error) {
             console.error('❌ Failed to fetch orders:', error);
             showNotification('Failed to load orders', 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Fetch single order details for drawer
+    const fetchOrderDetails = async (orderId) => {
+        setDrawerLoading(true);
+        setDrawerOrder(null);
+        setDrawerOpen(true);
+        try {
+            const response = await axios.get(`${BASE_URL}/api/admin/order/${orderId}`);
+            if (response.data && response.data.success) {
+                setDrawerOrder(response.data);
+            } else {
+                setDrawerOrder(null);
+            }
+        } catch (err) {
+            setDrawerOrder(null);
+        } finally {
+            setDrawerLoading(false);
         }
     };
 
@@ -137,36 +164,37 @@ export default function AdminOrders() {
         }
     };
 
+    // Array-based selection logic
     const handleOrderSelect = (orderId) => {
-        const newSelected = new Set(selectedOrders);
-        if (newSelected.has(orderId)) {
-            newSelected.delete(orderId);
+        let newSelected;
+        if (selectedOrders.includes(orderId)) {
+            newSelected = selectedOrders.filter(id => id !== orderId);
         } else {
-            newSelected.add(orderId);
+            newSelected = [...selectedOrders, orderId];
         }
         setSelectedOrders(newSelected);
-        setSelectAll(newSelected.size === orders.length && orders.length > 0);
+        setSelectAll(newSelected.length === orders.length && orders.length > 0);
     };
 
     const handleSelectAll = (e) => {
         if (e.target.checked) {
             setSelectAll(true);
-            setSelectedOrders(new Set(orders.map(o => o.orderId)));
+            setSelectedOrders(orders.map(o => o.orderId));
         } else {
             setSelectAll(false);
-            setSelectedOrders(new Set());
+            setSelectedOrders([]);
         }
     };
 
     const handleBulkConfirm = async () => {
-        if (selectedOrders.size === 0) {
+        if (selectedOrders.length === 0) {
             showNotification('Please select at least one order', 'info');
             return;
         }
 
         try {
             setBulkUpdating(true);
-            const ordersToConfirm = Array.from(selectedOrders);
+            const ordersToConfirm = [...selectedOrders];
             let successCount = 0;
             let failCount = 0;
 
@@ -194,7 +222,7 @@ export default function AdminOrders() {
                 `✅ ${successCount} order(s) confirmed${failCount > 0 ? ` • ${failCount} failed` : ''} • Emails sent!`,
                 failCount === 0 ? 'success' : 'info'
             );
-            setSelectedOrders(new Set());
+            setSelectedOrders([]);
             setSelectAll(false);
             setTimeout(() => fetchOrders(), 1000);
         } catch (error) {
@@ -209,6 +237,36 @@ export default function AdminOrders() {
         }
     };
 
+    // Bulk Delete Orders Handler
+    const handleBulkDelete = async () => {
+        if (selectedOrders.length === 0) {
+            showNotification('Please select at least one order', 'info');
+            return;
+        }
+        if (!window.confirm(`Are you sure you want to delete ${selectedOrders.length} order(s)? This cannot be undone!`)) return;
+        try {
+            setBulkDeleting(true);
+            const response = await axios.post(
+                `${BASE_URL}/api/admin/delete-orders`,
+                { orderIds: selectedOrders },
+                { headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET } }
+            );
+            if (response.data.success) {
+                showNotification(`🗑️ ${response.data.deletedCount} order(s) deleted`, 'success');
+            } else {
+                showNotification('Bulk delete failed.', 'error');
+            }
+            setSelectedOrders([]);
+            setSelectAll(false);
+            setTimeout(() => fetchOrders(), 1000);
+        } catch (error) {
+            console.error('❌ Bulk delete failed:', error);
+            showNotification('Bulk delete failed', 'error');
+        } finally {
+            setBulkDeleting(false);
+        }
+    };
+
     const showNotification = (message, type = 'info') => {
         setNotification({ message, type });
         setTimeout(() => setNotification(null), 4000);
@@ -216,15 +274,78 @@ export default function AdminOrders() {
 
     const filteredOrders = useMemo(() => orders, [orders]);
 
-    // Copy order details to clipboard
-    const handleCopyDetails = () => {
-        if (!detailsOrder) return;
-        const text = JSON.stringify(detailsOrder, null, 2);
-        navigator.clipboard.writeText(text);
-        showNotification('Order details copied!', 'success');
+    // CSV Export
+    const exportOrdersToCSV = () => {
+        // Use selected orders if any, else filteredOrders
+        const exportOrders = selectedOrders.size > 0
+            ? orders.filter(o => selectedOrders.includes(o.orderId))
+            : filteredOrders;
+        if (!exportOrders.length) return alert('No orders to export!');
+        const headers = [
+            'Order ID', 'Customer', 'Email', 'Amount', 'Status', 'Items', 'Updated'
+        ];
+        const rows = exportOrders.map(order => [
+            order.orderId,
+            order.userName,
+            order.userEmail,
+            order.finalAmount,
+            order.orderStatus,
+            order.productCount || (order.products?.length || 0),
+            new Date(order.updatedAt).toLocaleDateString('en-IN')
+        ]);
+        let csv = '';
+        csv += headers.join(',') + '\n';
+        rows.forEach(row => {
+            csv += row.map(val => '"' + String(val).replace(/"/g, '""') + '"').join(',') + '\n';
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `orders_export_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     };
 
-    // ...existing code...
+    // PDF Export
+    const exportOrdersToPDF = () => {
+        const exportOrders = selectedOrders.size > 0
+            ? orders.filter(o => selectedOrders.includes(o.orderId))
+            : filteredOrders;
+        if (!exportOrders.length) return alert('No orders to export!');
+        const doc = new jsPDF();
+        const tableColumn = [
+            'Order ID',
+            'Customer',
+            'Email',
+            'Amount',
+            'Status',
+            'Items',
+            'Updated'
+        ];
+        const tableRows = exportOrders.map(order => ([
+            String(order.orderId || '').slice(-8),
+            order.userName || 'Customer',
+            order.userEmail || 'N/A',
+            `₹${Number(order.finalAmount || 0).toLocaleString('en-IN')}`,
+            order.orderStatus || 'Order Placed',
+            order.productCount || (order.products?.length || 0),
+            new Date(order.updatedAt).toLocaleDateString('en-IN')
+        ]));
+        doc.autoTable({
+            head: [tableColumn],
+            body: tableRows,
+            styles: { fontSize: 10, cellPadding: 2 },
+            headStyles: { fillColor: [44, 62, 80], textColor: [255,255,255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [240, 248, 255] },
+            margin: { top: 28 }
+        });
+        doc.setFontSize(16);
+        doc.text('Order List', 14, 18);
+        doc.save('orders.pdf');
+    };
 
     if (loading && orders.length === 0) {
         return (
@@ -277,9 +398,9 @@ export default function AdminOrders() {
                                 </motion.div>
                             )}
 
-                            <div className="admin-orders-toolbar mb-4">
-                                <div className="row">
-                                    <div className="col-md-4 mb-3">
+                            <div className="admin-orders-toolbar mb-4 d-flex flex-wrap align-items-end justify-content-between">
+                                <div className="row flex-grow-1">
+                                    <div className="col-md-5 mb-3">
                                         <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID / Name / Email)</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
@@ -298,7 +419,7 @@ export default function AdminOrders() {
                                         </div>
                                     </div>
 
-                                    <div className="col-md-3 mb-3">
+                                    <div className="col-md-4 mb-3">
                                         <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Filter by Status</label>
                                         <div className="input-group">
                                             <div className="input-group-prepend">
@@ -319,25 +440,45 @@ export default function AdminOrders() {
                                             </select>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="row">
-                                    <div className="col-12 d-flex align-items-end justify-content-end">
+
+                                    <div className="col-md-3 mb-3 d-flex align-items-end">
                                         <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
                                     </div>
                                 </div>
+                                <div className="export-btn-wrap mb-3 ml-auto">
+                                    <div className="d-flex gap-2">
+                                        <button
+                                            className="export-csv-btn-premium mr-2"
+                                            onClick={exportOrdersToCSV}
+                                            title="Export orders as CSV"
+                                        >
+                                            <Download size={18} style={{marginRight: 6, marginTop: -2}} />
+                                            Export CSV
+                                        </button>
+                                        <button
+                                            className="export-pdf-btn-premium"
+                                            onClick={exportOrdersToPDF}
+                                            title="Export orders as PDF"
+                                        >
+                                            <FileText size={18} style={{marginRight: 6, marginTop: -2}} />
+                                            Export PDF
+                                        </button>
+                                    </div>
+                                </div>
+                                </div>
                             </div>
 
-                            {selectedOrders.size > 0 && (
+                            {selectedOrders.length > 0 && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     className="admin-bulk-bar d-flex flex-wrap align-items-center"
                                 >
-                                    <span className="mr-3 font-weight-bold">Bulk Actions ({selectedOrders.size} selected):</span>
+                                    <span className="mr-3 font-weight-bold">Bulk Actions ({selectedOrders.length} selected):</span>
                                     <button
                                         onClick={handleBulkConfirm}
-                                        disabled={bulkUpdating}
-                                        className="btn btn-success d-flex align-items-center"
+                                        disabled={bulkUpdating || bulkDeleting}
+                                        className="btn btn-success d-flex align-items-center mr-2"
                                     >
                                         {bulkUpdating ? (
                                             <>
@@ -348,6 +489,23 @@ export default function AdminOrders() {
                                             <>
                                                 <CheckCircle2 size={16} className="mr-2" />
                                                 Bulk Confirm Orders & Send Emails
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        disabled={bulkDeleting || bulkUpdating}
+                                        className="btn btn-danger d-flex align-items-center"
+                                    >
+                                        {bulkDeleting ? (
+                                            <>
+                                                <Loader2 size={16} className="admin-spin mr-2" />
+                                                Deleting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <AlertCircle size={16} className="mr-2" />
+                                                Bulk Delete Orders
                                             </>
                                         )}
                                     </button>
@@ -387,14 +545,15 @@ export default function AdminOrders() {
                                                 {filteredOrders.map((order, index) => (
                                                     <React.Fragment key={order.orderId}>
                                                         <motion.tr
-                                                            initial={{ opacity: 0, y: 10 }}
+                                                            initial={{ opacity: 0, y: 18 }}
                                                             animate={{ opacity: 1, y: 0 }}
-                                                            transition={{ delay: index * 0.03 }}
+                                                            transition={{ delay: index * 0.04 }}
+                                                            className="order-row-premium"
                                                         >
                                                             <td>
                                                                 <input
                                                                     type="checkbox"
-                                                                    checked={selectedOrders.has(order.orderId)}
+                                                                    checked={selectedOrders.includes(order.orderId)}
                                                                     onChange={() => handleOrderSelect(order.orderId)}
                                                                     className="cursor-pointer"
                                                                 />
@@ -403,6 +562,16 @@ export default function AdminOrders() {
                                                                 <span className="font-weight-bold text-info order-id-cell">
                                                                     {String(order.orderId || '').slice(-8)}
                                                                 </span>
+                                                                    <span
+                                                                        className="view-details-link-premium-gradient"
+                                                                        onClick={() => fetchOrderDetails(order.orderId)}
+                                                                        title="View Order Details"
+                                                                        tabIndex={0}
+                                                                        role="button"
+                                                                        onKeyPress={e => { if (e.key === 'Enter') fetchOrderDetails(order.orderId); }}
+                                                                    >
+                                                                        View Details
+                                                                    </span>
                                                             </td>
                                                             <td className="font-weight-bold">{order.userName || 'Customer'}</td>
                                                             <td>{order.userEmail || 'N/A'}</td>
@@ -416,81 +585,7 @@ export default function AdminOrders() {
                                                             <td>{order.productCount || order.products?.length || 0} item{(order.productCount || order.products?.length || 0) !== 1 ? 's' : ''}</td>
                                                             <td>{new Date(order.updatedAt).toLocaleDateString('en-IN')}</td>
                                                             <td>
-                                                                <div className="position-relative d-flex align-items-center gap-2">
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setDetailsOrder(order);
-                                                                            setShowDetails(true);
-                                                                        }}
-                                                                        className="btn btn-info btn-sm d-flex align-items-center mr-2"
-                                                                        title="View Details"
-                                                                    >
-                                                                        <FileText size={15} className="mr-1" /> Details
-                                                                    </button>
-                                                                                                {/* Order Details Modal */}
-                                                                                                <Modal show={showDetails} onHide={() => setShowDetails(false)} size="lg" centered backdrop="static">
-                                                                                                    <Modal.Header closeButton>
-                                                                                                        <Modal.Title>
-                                                                                                            <FileText className="text-info mr-2" size={22} /> Order Details
-                                                                                                        </Modal.Title>
-                                                                                                    </Modal.Header>
-                                                                                                    <Modal.Body>
-                                                                                                        {detailsOrder && (
-                                                                                                            <div id="order-details-modal-content" className="order-details-modal-content">
-                                                                                                                <div className="d-flex justify-content-between align-items-center mb-3">
-                                                                                                                    <div>
-                                                                                                                        <span className="font-weight-bold text-info">Order ID:</span> <span className="order-id-cell">{String(detailsOrder.orderId || '').slice(-8)}</span>
-                                                                                                                    </div>
-                                                                                                                    <div>
-                                                                                                                        <span className={`status-pill ${STATUS_COLORS[detailsOrder.orderStatus]}`}>{STATUS_ICONS[detailsOrder.orderStatus]} {detailsOrder.orderStatus}</span>
-                                                                                                                    </div>
-                                                                                                                </div>
-                                                                                                                <div className="mb-2"><span className="font-weight-bold">Customer:</span> {detailsOrder.userName} ({detailsOrder.userEmail})</div>
-                                                                                                                <div className="mb-2"><span className="font-weight-bold">Amount:</span> ₹{Number(detailsOrder.finalAmount || 0).toLocaleString('en-IN')}</div>
-                                                                                                                <div className="mb-2"><span className="font-weight-bold">Address:</span> {detailsOrder.address || 'N/A'}</div>
-                                                                                                                <div className="mb-2"><span className="font-weight-bold">Phone:</span> {detailsOrder.phone || 'N/A'}</div>
-                                                                                                                <div className="mb-2"><span className="font-weight-bold">Payment:</span> {detailsOrder.paymentMethod || 'N/A'} {detailsOrder.paymentStatus ? `(${detailsOrder.paymentStatus})` : ''}</div>
-                                                                                                                <div className="mb-2"><span className="font-weight-bold">Placed:</span> {detailsOrder.createdAt ? new Date(detailsOrder.createdAt).toLocaleString('en-IN') : 'N/A'}</div>
-                                                                                                                <div className="mb-2"><span className="font-weight-bold">Updated:</span> {detailsOrder.updatedAt ? new Date(detailsOrder.updatedAt).toLocaleString('en-IN') : 'N/A'}</div>
-                                                                                                                <div className="mb-3"><span className="font-weight-bold">Items:</span>
-                                                                                                                    <ul className="pl-3">
-                                                                                                                        {(detailsOrder.products || []).map((item, idx) => (
-                                                                                                                            <li key={idx} className="mb-1">
-                                                                                                                                <span className="font-weight-bold">{item.productName}</span> x{item.qty} — ₹{Number(item.price).toLocaleString('en-IN')}
-                                                                                                                            </li>
-                                                                                                                        ))}
-                                                                                                                    </ul>
-                                                                                                                </div>
-                                                                                                                {detailsOrder.statusHistory && detailsOrder.statusHistory.length > 0 && (
-                                                                                                                    <div className="mb-2">
-                                                                                                                        <span className="font-weight-bold">Status History:</span>
-                                                                                                                        <ul className="pl-3">
-                                                                                                                            {detailsOrder.statusHistory.map((entry, idx) => (
-                                                                                                                                <li key={idx}>
-                                                                                                                                    <span>{entry.status}</span> — <span>{new Date(entry.timestamp).toLocaleString('en-IN')}</span> {entry.message && <span>({entry.message})</span>}
-                                                                                                                                </li>
-                                                                                                                            ))}
-                                                                                                                        </ul>
-                                                                                                                    </div>
-                                                                                                                )}
-                                                                                                            </div>
-                                                                                                        )}
-                                                                                                    </Modal.Body>
-                                                                                                    <Modal.Footer>
-                                                                                                        <Button variant="secondary" onClick={handleCopyDetails} title="Copy">
-                                                                                                            <Copy size={16} className="mr-1" /> Copy
-                                                                                                        </Button>
-                                                                                                        <Button variant="secondary" onClick={handlePrintDetails} title="Print">
-                                                                                                            <Printer size={16} className="mr-1" /> Print
-                                                                                                        </Button>
-                                                                                                        <Button variant="secondary" onClick={handleExportPDF} title="Export PDF">
-                                                                                                            <Download size={16} className="mr-1" /> PDF
-                                                                                                        </Button>
-                                                                                                        <Button variant="danger" onClick={() => setShowDetails(false)}>
-                                                                                                            <X size={16} className="mr-1" /> Close
-                                                                                                        </Button>
-                                                                                                    </Modal.Footer>
-                                                                                                </Modal>
+                                                                <div className="position-relative">
                                                                     <button
                                                                         onClick={() => setDropdownOpen(dropdownOpen === order.orderId ? null : order.orderId)}
                                                                         disabled={updating === order.orderId}
@@ -617,7 +712,12 @@ export default function AdminOrders() {
                         </div>
                     </div>
                 </div>
-            </div>
-        </motion.div>
+        <OrderDetailsDrawer
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            order={drawerOrder}
+            loading={drawerLoading}
+        />
+          </motion.div>
     );
 }
