@@ -115,15 +115,11 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
               <div className="drawer-section">
                 <Calendar size={18} className="mr-2 text-success" />
                 <strong>Order Timeline:</strong>
-                <ul className="drawer-timeline mt-2">
-                  {order.statusHistory?.map((entry, idx) => (
-                    <li key={idx}>
-                      <span className="font-weight-bold text-primary">{entry.status}</span> - {new Date(entry.timestamp).toLocaleString('en-IN')}
-                      {entry.message && <div className="drawer-timeline-msg">{entry.message}</div>}
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-2">
+                  <OrderTimeline statusHistory={order.statusHistory || []} />
+                </div>
               </div>
+              import OrderTimeline from './OrderTimeline';
               <div className="drawer-section d-flex align-items-center">
                 <Calendar size={16} className="mr-2 text-muted" />
                 <span><strong>Created:</strong> {new Date(order.createdAt).toLocaleString('en-IN')}</span>

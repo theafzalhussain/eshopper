@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import OrderTimeline from './OrderTimeline';
 import { Copy, Printer, FileText, X } from 'lucide-react';
 import './OrderDetailsModal.css';
 
@@ -77,18 +78,7 @@ export default function OrderDetailsModal({ order, open, onClose }) {
         </div>
         <div className="order-modal-section">
           <h4>Status Timeline</h4>
-          <ul className="order-modal-timeline">
-            {(order.statusHistory || []).length === 0 ? (
-              <li className="text-muted">No status history</li>
-            ) : (
-              (order.statusHistory || []).map((entry, idx) => (
-                <li key={idx}>
-                  <b>{entry.status || 'N/A'}</b> <span className="text-muted">{entry.timestamp ? new Date(entry.timestamp).toLocaleString() : 'N/A'}</span>
-                  {entry.message && <div className="small text-muted">{entry.message}</div>}
-                </li>
-              ))
-            )}
-          </ul>
+          <OrderTimeline statusHistory={order.statusHistory || []} />
         </div>
       </div>
     </div>
