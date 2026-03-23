@@ -1,3 +1,19 @@
+// Get order details for admin (including statusHistory)
+exports.getAdminOrderDetails = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        if (!orderId) return res.status(400).json({ success: false, message: 'Order ID required.' });
+        // Security: Only allow admin (x-admin-secret header)
+        if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+        const order = await Order.findOne({ orderId });
+        if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+        res.json({ success: true, order });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to fetch order.' });
+    }
+};
 // Bulk delete orders
 exports.deleteOrders = async (req, res) => {
     try {

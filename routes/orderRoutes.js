@@ -1,3 +1,6 @@
+const orderController = require('../controllers/orderController');
+// Admin: Get order details (with statusHistory)
+router.get('/api/admin/order/:orderId', orderController.getAdminOrderDetails);
 const express = require('express');
 const router = express.Router();
 

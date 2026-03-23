@@ -132,9 +132,11 @@ export default function AdminOrders() {
         setDrawerOrder(null);
         setDrawerOpen(true);
         try {
-            const response = await axios.get(`${BASE_URL}/api/admin/order/${orderId}`);
-            if (response.data && response.data.success) {
-                setDrawerOrder(response.data);
+            const response = await axios.get(`${BASE_URL}/api/admin/order/${orderId}`,
+                { headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET } }
+            );
+            if (response.data && response.data.success && response.data.order) {
+                setDrawerOrder(response.data.order);
             } else {
                 setDrawerOrder(null);
             }
