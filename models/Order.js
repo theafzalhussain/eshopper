@@ -22,6 +22,14 @@ const orderSchema = new mongoose.Schema({
     },
     products: Array,
     estimatedArrival: Date,
+    // Admin notes/comments for this order
+    orderNotes: [
+        {
+            note: { type: String, required: true },
+            author: { type: String }, // admin name or id
+            createdAt: { type: Date, default: Date.now }
+        }
+    ],
     statusHistory: [
         {
             status: String,

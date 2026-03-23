@@ -25,9 +25,47 @@ exports.deleteOrders = async (req, res) => {
         res.status(500).json({ success: false, message: 'Bulk delete failed.' });
     }
 };
+
 const { sendTransactionalEmail } = require('../src/utils/email');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+
+// Get all notes for an order (admin only)
+exports.getOrderNotes = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        if (!orderId) return res.status(400).json({ success: false, message: 'Order ID required.' });
+        // Security: Only allow admin (x-admin-secret header)
+        if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+        const order = await Order.findOne({ orderId });
+        if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+        res.json({ success: true, notes: order.orderNotes || [] });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to fetch notes.' });
+    }
+};
+
+// Add a new note to an order (admin only)
+exports.addOrderNote = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { note, author } = req.body;
+        if (!orderId || !note) return res.status(400).json({ success: false, message: 'Order ID and note required.' });
+        // Security: Only allow admin (x-admin-secret header)
+        if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+        const order = await Order.findOne({ orderId });
+        if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+        order.orderNotes.push({ note, author });
+        await order.save();
+        res.json({ success: true, notes: order.orderNotes });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to add note.' });
+    }
+};
 
 // Order confirmation email logic
 exports.sendOrderConfirmation = async (req, res) => {

@@ -1,9 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package, User, Mail, CreditCard, MapPin, Calendar, ShoppingBag, Clock } from 'lucide-react';
 import './OrderDetailsDrawer.css';
 
+
 export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
-  if (!open) return null;
+  const [notes, setNotes] = useState([]);
+  const [newNote, setNewNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const isAdmin = localStorage.getItem('role') === 'admin';
+
+  useEffect(() => {
+    if (open && order?.orderId && isAdmin) {
+      fetchNotes();
+    } else {
+      setNotes([]);
+    }
+    // eslint-disable-next-line
+  }, [open, order?.orderId]);
+
+  const fetchNotes = async () => {
+    setNotesLoading(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BASE_URL || 'https://api.eshopperr.me'}/api/admin/order/${order.orderId}/notes`, {
+        headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET }
+      });
+      const data = await res.json();
+      if (data.success) setNotes(data.notes);
+    } catch (e) {}
+    setNotesLoading(false);
+  };
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${process.env.REACT_APP_BASE_URL || 'https://api.eshopperr.me'}/api/admin/order/${order.orderId}/notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET
+        },
+        body: JSON.stringify({ note: newNote, author: localStorage.getItem('name') || 'Admin' })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotes(data.notes);
+        setNewNote('');
+      }
+    } catch (e) {}
+    setSaving(false);
+  };
 
   return (
     <div className={`order-details-drawer premium-glass${open ? ' open' : ''}`}>
@@ -85,6 +132,40 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
                 <Clock size={16} className="mr-2 text-muted" />
                 <span><strong>Updated:</strong> {new Date(order.updatedAt).toLocaleString('en-IN')}</span>
               </div>
+
+              {/* Admin Order Notes Section */}
+              {isAdmin && (
+                <div className="drawer-section">
+                  <h5 className="mb-2">Order Notes <span style={{fontWeight:400, fontSize:13, color:'#888'}}>(Admin Only)</span></h5>
+                  {notesLoading ? <div>Loading notes...</div> : (
+                    <ul style={{paddingLeft:0, listStyle:'none'}}>
+                      {notes.length === 0 && <li className="text-muted">No notes yet.</li>}
+                      {notes.map((n, i) => (
+                        <li key={i} style={{marginBottom:8, background:'#f8f9fa', borderRadius:6, padding:'6px 10px'}}>
+                          <div style={{fontSize:14}}>{n.note}</div>
+                          <div style={{fontSize:12, color:'#888'}}>
+                            — {n.author || 'Admin'} <span style={{marginLeft:8}}>{n.createdAt ? new Date(n.createdAt).toLocaleString('en-IN') : ''}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="mt-2">
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      placeholder="Add a note..."
+                      value={newNote}
+                      onChange={e => setNewNote(e.target.value)}
+                      disabled={saving}
+                      style={{resize:'vertical', fontSize:14}}
+                    />
+                    <button className="btn btn-primary btn-sm mt-2" onClick={handleAddNote} disabled={saving || !newNote.trim()}>
+                      {saving ? 'Saving...' : 'Add Note'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="drawer-error">Order not found.</div>
