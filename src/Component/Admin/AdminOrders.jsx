@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Download, FileText } from 'lucide-react';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
 import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check } from 'lucide-react';
@@ -35,13 +35,15 @@ export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchInputRef = useRef(null);
+    const debounceTimeout = useRef();
     const [selectedStatus, setSelectedStatus] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     // Advanced filter states
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
-    const [customer, setCustomer] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('');
 
     const PAYMENT_STATUSES = ['Pending', 'Paid', 'Failed', 'Refunded'];
@@ -86,7 +88,17 @@ export default function AdminOrders() {
     // Fetch orders on mount and when page/search/status changes
     useEffect(() => {
         fetchOrders();
-    }, [page, search, selectedStatus, fromDate, toDate, customer, paymentStatus]);
+    }, [page, search, selectedStatus, fromDate, toDate, paymentStatus]);
+
+    // Debounce search: update search param after user stops typing for 400ms
+    useEffect(() => {
+        if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+        debounceTimeout.current = setTimeout(() => {
+            setSearch(searchInput);
+            setPage(1);
+        }, 400);
+        return () => clearTimeout(debounceTimeout.current);
+    }, [searchInput]);
 
     const fetchOrders = async () => {
         try {
@@ -98,7 +110,6 @@ export default function AdminOrders() {
                 ...(selectedStatus && { status: selectedStatus }),
                 ...(fromDate && { fromDate }),
                 ...(toDate && { toDate }),
-                ...(customer && { customer }),
                 ...(paymentStatus && { paymentStatus })
             };
 
@@ -420,11 +431,9 @@ export default function AdminOrders() {
                                             <input
                                                 type="text"
                                                 placeholder="Search orders..."
-                                                value={search}
-                                                onChange={(e) => {
-                                                    setSearch(e.target.value);
-                                                    setPage(1);
-                                                }}
+                                                value={searchInput}
+                                                ref={searchInputRef}
+                                                onChange={e => setSearchInput(e.target.value)}
                                                 className="form-control"
                                             />
                                         </div>
@@ -458,19 +467,7 @@ export default function AdminOrders() {
                                         />
                                     </div>
 
-                                    <div className="col-md-2 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Customer (Name/Email)</label>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Customer name or email"
-                                            value={customer}
-                                            onChange={e => {
-                                                setCustomer(e.target.value);
-                                                setPage(1);
-                                            }}
-                                        />
-                                    </div>
+
 
 
                                     <div className="col-md-2 mb-3">
@@ -500,6 +497,8 @@ export default function AdminOrders() {
                                                 value={selectedStatus}
                                                 onChange={(e) => {
                                                     setSelectedStatus(e.target.value);
+                                                    setSearchInput('');
+                                                    setSearch('');
                                                     setPage(1);
                                                 }}
                                                 className="form-control"

@@ -1865,16 +1865,15 @@ app.get('/api/admin/orders', async (req, res) => {
 
         let query = {};
 
-        // Search by orderId
+        // Search by orderId, userName, or userEmail (case-insensitive, partial match, ignore spaces)
         if (search) {
-            query.orderId = { $regex: search, $options: 'i' };
-        }
-
-        // Filter by customer name/email
-        if (customer) {
+            const safeSearch = String(search).replace(/\s+/g, ' ').trim();
             query.$or = [
-                { userName: { $regex: customer, $options: 'i' } },
-                { userEmail: { $regex: customer, $options: 'i' } }
+                { orderId: { $regex: safeSearch, $options: 'i' } },
+                { userName: { $regex: safeSearch.split(' ').join('.*'), $options: 'i' } },
+                { userEmail: { $regex: safeSearch, $options: 'i' } },
+                { username: { $regex: safeSearch.split(' ').join('.*'), $options: 'i' } },
+                { email: { $regex: safeSearch, $options: 'i' } }
             ];
         }
 
