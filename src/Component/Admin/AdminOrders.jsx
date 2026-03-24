@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 import LefNav from './LefNav';
 import './AdminOrders.css';
+import { FileInvoice, Printer } from 'lucide-react';
 
 const ALLOWED_STATUSES = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const STATUS_COLORS = {
@@ -371,6 +372,18 @@ export default function AdminOrders() {
         doc.save('orders.pdf');
     };
 
+    // Handler for Generate Invoice
+    const handleGenerateInvoice = (order) => {
+        // TODO: Implement invoice PDF generation logic
+        alert(`Invoice generation for Order #${order.orderId} coming soon!`);
+    };
+
+    // Handler for Generate Shipping Label
+    const handleGenerateShippingLabel = (order) => {
+        // TODO: Implement shipping label PDF logic
+        alert(`Shipping label for Order #${order.orderId} coming soon!`);
+    };
+
     if (loading && orders.length === 0) {
         return (
             <div className="admin-orders-page d-flex align-items-center justify-content-center">
@@ -611,7 +624,7 @@ export default function AdminOrders() {
                                                             initial={{ opacity: 0, y: 18 }}
                                                             animate={{ opacity: 1, y: 0 }}
                                                             transition={{ delay: index * 0.04 }}
-                                                            className="order-row-premium"
+                                                            className={`order-row-premium${selectedOrders.includes(order.orderId) ? ' selected' : ''}`}
                                                         >
                                                             <td>
                                                                 <input

@@ -283,24 +283,73 @@
 .admin-orders-table thead tr {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #fff;
+  text-transform: uppercase;
+  font-weight: 900;
+  font-size: 1.08rem;
+  letter-spacing: 1.2px;
+  box-shadow: 0 2px 8px 0 rgba(44,62,80,0.10);
+  border-bottom: 3px solid #6366f1;
+}
+.admin-orders-table th {
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(44,62,80,0.10);
+  border-bottom: 2px solid #6366f1;
+  background: transparent;
 }
 
-.admin-orders-table th,
-.admin-orders-table td {
-  vertical-align: middle;
-  white-space: nowrap;
+/* --- Row Hover & Selection --- */
+.admin-orders-table tbody tr.order-row-premium:hover {
+  background: linear-gradient(90deg, #e0e7ff 0%, #f0fdfa 100%);
+  box-shadow: 0 4px 18px 0 rgba(106,130,251,0.10);
+  border-left: 4px solid #6366f1;
+  transform: scale(1.01);
+  z-index: 2;
+}
+.admin-orders-table tbody tr.order-row-premium.selected {
+  background: linear-gradient(90deg, #f0fdfa 0%, #e0e7ff 100%);
+  border-left: 5px solid #6366f1;
+  box-shadow: 0 6px 24px 0 rgba(106,130,251,0.13);
+  transform: scale(1.012);
+  z-index: 3;
 }
 
-.admin-orders-table td:nth-child(3),
-.admin-orders-table td:nth-child(4) {
-  max-width: 220px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* --- Premium Export Buttons --- */
+.export-csv-btn-premium, .export-pdf-btn-premium {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  max-width: 100%;
+  background: linear-gradient(90deg, #ffecd2 0%, #fcb69f 100%);
+  color: #222;
+  border: none;
+  border-radius: 24px;
+  padding: 10px 0;
+  font-weight: 700;
+  font-size: 1.08rem;
+  box-shadow: 0 2px 12px 0 rgba(252,182,159,0.18);
+  transition: box-shadow 0.2s, transform 0.2s;
+  margin-left: 8px;
+  gap: 8px;
+  letter-spacing: 0.5px;
+}
+.export-csv-btn-premium:hover, .export-pdf-btn-premium:hover, .export-csv-btn-premium:focus, .export-pdf-btn-premium:focus {
+  box-shadow: 0 4px 24px 0 rgba(252,182,159,0.28);
+  transform: translateY(-2px) scale(1.03);
+  color: #d35400;
+}
+@media (max-width: 700px) {
+  .export-csv-btn-premium, .export-pdf-btn-premium {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    margin-bottom: 8px;
+  }
 }
 
 .order-id-cell {
   font-family: 'Courier New', Courier, monospace;
+  letter-spacing: 1px;
 }
 
 .status-pill {
