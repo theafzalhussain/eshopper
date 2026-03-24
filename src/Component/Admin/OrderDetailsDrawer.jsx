@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Copy } from 'lucide-react';
 import OrderTimeline from './OrderTimeline';
 import { Package, User, Mail, CreditCard, MapPin, Calendar, ShoppingBag, Clock } from 'lucide-react';
 import './OrderDetailsDrawer.css';
@@ -10,6 +11,15 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
   const [saving, setSaving] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
   const isAdmin = localStorage.getItem('role') === 'admin';
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyOrderId = () => {
+    if (order?.orderId) {
+      navigator.clipboard.writeText(order.orderId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    }
+  };
 
   useEffect(() => {
     if (open && order?.orderId && isAdmin) {
@@ -70,6 +80,15 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
               <div className="drawer-section d-flex align-items-center">
                 <CreditCard size={18} className="mr-2 text-info" />
                 <span><strong>Order ID:</strong> {order.orderId}</span>
+                <button
+                  className="btn btn-sm btn-outline-primary ml-2 d-flex align-items-center"
+                  style={{borderRadius: '16px', fontSize: 13, padding: '2px 10px', marginLeft: 10, height: 28}}
+                  onClick={handleCopyOrderId}
+                  title="Copy Order ID"
+                >
+                  <Copy size={15} style={{marginRight: 4, marginTop: -2}} />
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <User size={18} className="mr-2 text-primary" />
