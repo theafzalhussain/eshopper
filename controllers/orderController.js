@@ -26,13 +26,14 @@ exports.deleteOrders = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
         const result = await Order.deleteMany({ orderId: { $in: orderIds } });
-        // Emit socket.io event for each deleted order
+        // Emit socket.io event for each deleted order and dashboard update
         if (typeof req.app.get === 'function') {
             const io = req.app.get('io');
             if (io) {
                 orderIds.forEach(orderId => {
                     io.emit('orderDeleted', { orderId });
                 });
+                io.emit('dashboardUpdate');
             }
         }
         res.json({ success: true, deletedCount: result.deletedCount });
@@ -77,6 +78,11 @@ exports.addOrderNote = async (req, res) => {
         if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
         order.orderNotes.push({ note, author });
         await order.save();
+        // Emit dashboard update event
+        if (typeof req.app.get === 'function') {
+            const io = req.app.get('io');
+            if (io) io.emit('dashboardUpdate');
+        }
         res.json({ success: true, notes: order.orderNotes });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Failed to add note.' });

@@ -35,4 +35,9 @@ exports.login = async (req, res) => {
 // USER SIGNUP (with OTP)
 exports.signup = async (req, res) => {
     // ...existing code from /user POST handler...
+    // Emit dashboard update event after user signup
+    if (typeof req.app.get === 'function') {
+        const io = req.app.get('io');
+        if (io) io.emit('dashboardUpdate');
+    }
 };
