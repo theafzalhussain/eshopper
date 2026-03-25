@@ -1972,7 +1972,7 @@ app.get('/api/admin/order/:orderId', async (req, res) => {
 // 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
 const handleOrderStatusUpdate = async (req, res) => {
     try {
-        const { orderId, status } = req.body;
+        const { orderId, status, deliverySchedule, adminNote } = req.body;
         const normalized = normalizeOrderStatus(status);
 
         if (!orderId || !normalized) {
@@ -2001,6 +2001,10 @@ const handleOrderStatusUpdate = async (req, res) => {
             }
             
             // Create order record from checkout data
+            const estimatedArrival = deliverySchedule?.date
+                ? new Date(deliverySchedule.date)
+                : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Default 7 days
+
             const newOrder = await Order.create({
                 orderId: orderId,
                 userid: checkout.userid,
@@ -2013,23 +2017,41 @@ const handleOrderStatusUpdate = async (req, res) => {
                 shippingAmount: checkout.shippingAmount,
                 finalAmount: checkout.finalAmount,
                 products: checkout.products || [],
+                estimatedArrival: estimatedArrival,
+                deliverySchedule: deliverySchedule || null,
                 statusHistory: [{
                     status: normalized,
                     timestamp: new Date(),
-                    message: `Order status changed to ${normalized}`
+                    message: `Order status changed to ${normalized}`,
+                    deliverySchedule: deliverySchedule || null,
+                    adminNote: adminNote || null
                 }]
             });
             order = newOrder;
         } else {
             // Update existing order
             order.orderStatus = normalized;
+
+            // 🔴 UPDATE DELIVERY SCHEDULE IF PROVIDED
+            if (deliverySchedule) {
+                order.deliverySchedule = deliverySchedule;
+                // Update estimatedArrival if new delivery date provided
+                if (deliverySchedule.date) {
+                    order.estimatedArrival = new Date(deliverySchedule.date);
+                } else if (deliverySchedule.estimatedDelivery) {
+                    order.estimatedArrival = new Date(deliverySchedule.estimatedDelivery);
+                }
+            }
+
             const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
             order.statusHistory = [
                 ...existingTimeline,
                 {
                     status: normalized,
                     timestamp: new Date(),
-                    message: `Order status changed to ${normalized}`
+                    message: `Order status changed to ${normalized}`,
+                    deliverySchedule: deliverySchedule || null,
+                    adminNote: adminNote || null
                 }
             ];
             await order.save();
@@ -2039,7 +2061,9 @@ const handleOrderStatusUpdate = async (req, res) => {
             order.statusHistory = [{
                 status: normalized,
                 timestamp: new Date(),
-                message: `Order status changed to ${normalized}`
+                message: `Order status changed to ${normalized}`,
+                deliverySchedule: deliverySchedule || null,
+                adminNote: adminNote || null
             }];
             await order.save();
         }
@@ -2054,7 +2078,15 @@ const handleOrderStatusUpdate = async (req, res) => {
             orderId: order.orderId,
             userId: order.userid,
             status: order.orderStatus,
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            // 🔴 INCLUDE DELIVERY INFORMATION FOR REAL-TIME FRONTEND UPDATES
+            estimatedDelivery: order.estimatedArrival || null,
+            deliverySchedule: order.deliverySchedule || (order.estimatedArrival ? {
+                date: order.estimatedArrival,
+                time: order.deliveryTime || null,
+                scheduledAt: order.estimatedArrival
+            } : null),
+            adminNote: req.body.adminNote || null
         };
 
         // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)

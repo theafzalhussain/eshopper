@@ -22,6 +22,14 @@ const orderSchema = new mongoose.Schema({
     },
     products: Array,
     estimatedArrival: Date,
+    // 🔴 DELIVERY SCHEDULE FOR REAL-TIME FRONTEND UPDATES
+    deliverySchedule: {
+        date: Date,
+        time: String,
+        scheduledAt: Date,
+        estimatedDays: Number,
+        estimatedDelivery: Date
+    },
     // Admin notes/comments for this order
     orderNotes: [
         {
@@ -34,7 +42,15 @@ const orderSchema = new mongoose.Schema({
         {
             status: String,
             timestamp: { type: Date, default: Date.now },
-            message: String
+            message: String,
+            deliverySchedule: {
+                date: Date,
+                time: String,
+                scheduledAt: Date,
+                estimatedDays: Number,
+                estimatedDelivery: Date
+            },
+            adminNote: String
         }
     ],
     orderDate: { type: Date, default: Date.now }
