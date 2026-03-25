@@ -19,16 +19,19 @@ body {
   font-family: 'Inter', sans-serif;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap');
+
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', 'Roboto', Arial, sans-serif;
   background: linear-gradient(135deg, #18191A 0%, #23272F 100%);
   color: #fff;
 }
 
+
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Inter', 'Roboto', Arial, sans-serif;
 }
 
 .glass {

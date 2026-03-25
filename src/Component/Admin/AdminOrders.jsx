@@ -36,6 +36,7 @@ export default function AdminOrders() {
     // Global CSS reset for this section
     // Responsive container
     // (If you have a main wrapper div, add boxSizing and maxWidth)
+    const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [searchInput, setSearchInput] = useState('');
