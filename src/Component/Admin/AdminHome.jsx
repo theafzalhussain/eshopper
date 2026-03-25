@@ -4,12 +4,12 @@ import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Users, ShoppingBag, DollarSign, Package, ShieldCheck, Mail, Phone,
-    Edit3, ClipboardList, TrendingUp, TrendingDown, AlertTriangle, Activity,
+    Edit3, TrendingUp, TrendingDown, AlertTriangle, Activity,
     ArrowRight, RefreshCw, Zap
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getSocket } from './socket'
-import DashboardCharts from './DashboardCharts'
+import SystemControlCenter from './SystemControlCenter'
 import PremiumCharts from './PremiumCharts'
 import TopProducts from './TopProducts'
 import './SystemControlCenter.css'
@@ -350,210 +350,13 @@ export default function AdminHome() {
                         </div>
 
                         {/* Charts Section */}
-                        <div className="scc-charts-grid">
-                            {/* Revenue Trend Chart */}
-                            <motion.div
-                                className="scc-chart-card"
-                                initial={{ opacity: 0, x: -30 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.2 }}
-                            >
-                                <div className="scc-chart-header">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <div style={{
-                                            width: 40, height: 40, borderRadius: '12px',
-                                            background: 'linear-gradient(135deg, #D4AF37, #B8860B)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}>
-                                            <BarChart3 size={20} color="#fff" />
-                                        </div>
-                                        <h2 className="scc-chart-title">Sales Revenue Trend</h2>
-                                    </div>
-                                </div>
+                        <PremiumCharts
+                            monthlyData={formattedMonthlyData}
+                            salesByCategory={dashboardData.salesByCategory}
+                        />
 
-                                <ResponsiveContainer width="100%" height={280}>
-                                    <AreaChart data={formattedMonthlyData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.4} />
-                                                <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                                            </linearGradient>
-                                            <linearGradient id="targetGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#0D9488" stopOpacity={0.2} />
-                                                <stop offset="95%" stopColor="#0D9488" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                                        <XAxis dataKey="monthLabel" stroke="#64748B" tick={{ fill: '#94A3B8', fontSize: 11 }} />
-                                        <YAxis stroke="#64748B" tick={{ fill: '#94A3B8', fontSize: 11 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Area type="monotone" dataKey="target" stroke="#0D9488" strokeWidth={2} strokeDasharray="5 5" fill="url(#targetGradient)" name="Target" />
-                                        <Area type="monotone" dataKey="revenue" stroke="#D4AF37" strokeWidth={3} fill="url(#revenueGradient)" name="Revenue" dot={{ r: 4, fill: '#D4AF37', strokeWidth: 2, stroke: '#1E293B' }} />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-
-                                <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#D4AF37' }} />
-                                        <span style={{ color: '#94A3B8', fontSize: '0.75rem' }}>Revenue</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#0D9488' }} />
-                                        <span style={{ color: '#94A3B8', fontSize: '0.75rem' }}>Target</span>
-                                    </div>
-                                </div>
-                            </motion.div>
-
-                            {/* Category Distribution Pie Chart */}
-                            <motion.div
-                                className="scc-chart-card"
-                                initial={{ opacity: 0, x: 30 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.3 }}
-                            >
-                                <div className="scc-chart-header">
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <div style={{
-                                            width: 40, height: 40, borderRadius: '12px',
-                                            background: 'linear-gradient(135deg, #0D9488, #0F766E)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}>
-                                            <PieIcon size={20} color="#fff" />
-                                        </div>
-                                        <h2 className="scc-chart-title">Category Distribution</h2>
-                                    </div>
-                                </div>
-
-                                {dashboardData.salesByCategory.length > 0 ? (
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <ResponsiveContainer width="55%" height={280}>
-                                            <PieChart>
-                                                <Pie
-                                                    data={dashboardData.salesByCategory}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={55}
-                                                    outerRadius={90}
-                                                    paddingAngle={3}
-                                                    dataKey="value"
-                                                    nameKey="_id"
-                                                >
-                                                    {dashboardData.salesByCategory.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="rgba(15, 23, 42, 0.8)" strokeWidth={2} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip
-                                                    contentStyle={{ background: 'rgba(15, 23, 42, 0.95)', border: '1px solid rgba(13, 148, 136, 0.3)', borderRadius: '12px' }}
-                                                    labelStyle={{ color: '#fff' }}
-                                                />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-
-                                        <div style={{ width: '45%', paddingLeft: '0.5rem' }}>
-                                            {dashboardData.salesByCategory.slice(0, 5).map((item, index) => (
-                                                <motion.div
-                                                    key={item._id || index}
-                                                    initial={{ opacity: 0, x: 20 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    transition={{ delay: 0.3 + index * 0.1 }}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                        padding: '0.4rem 0', borderBottom: '1px solid rgba(148, 163, 184, 0.1)'
-                                                    }}
-                                                >
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: CHART_COLORS[index % CHART_COLORS.length] }} />
-                                                        <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 500 }}>{item._id || 'Unknown'}</span>
-                                                    </div>
-                                                    <span style={{ color: CHART_COLORS[index % CHART_COLORS.length], fontWeight: 600, fontSize: '0.75rem' }}>{item.value}</span>
-                                                </motion.div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
-                                        No category data available
-                                    </div>
-                                )}
-                            </motion.div>
-                        </div>
-
-                        {/* Top 5 Products Section */}
-                        <motion.div
-                            className="scc-top-products"
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
-                        >
-                            <div className="scc-chart-header" style={{ marginBottom: '1.25rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <div style={{
-                                        width: 40, height: 40, borderRadius: '12px',
-                                        background: 'linear-gradient(135deg, #D4AF37, #B8860B)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                    }}>
-                                        <TrendingUp size={20} color="#fff" />
-                                    </div>
-                                    <div>
-                                        <h2 className="scc-chart-title">Top 5 Best Sellers</h2>
-                                        <p style={{ color: '#64748B', fontSize: '0.7rem', margin: 0 }}>Most ordered products</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {dashboardData.topProducts.length > 0 ? (
-                                <div>
-                                    {dashboardData.topProducts.map((product, index) => (
-                                        <motion.div
-                                            key={product._id || index}
-                                            className="scc-product-item"
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: 0.1 * index }}
-                                            whileHover={{ scale: 1.01 }}
-                                        >
-                                            <div className={`scc-product-rank scc-product-rank--${index + 1}`}>
-                                                {index + 1}
-                                            </div>
-                                            <img
-                                                src={product.pic1 || '/assets/images/noimage.png'}
-                                                alt={product.name}
-                                                className="scc-product-img"
-                                                onError={(e) => { e.target.src = '/assets/images/noimage.png' }}
-                                            />
-                                            <div className="scc-product-info">
-                                                <div className="scc-product-name">
-                                                    {product.name?.length > 25 ? product.name.slice(0, 25) + '...' : product.name}
-                                                </div>
-                                                <div className="scc-product-category">
-                                                    {product.maincategory || 'Uncategorized'}
-                                                </div>
-                                            </div>
-                                            <div className="scc-product-sales">
-                                                <div className="scc-product-count">{product.totalSold || 0}</div>
-                                                <div className="scc-product-label">Sold</div>
-                                            </div>
-                                            <div style={{ minWidth: '70px', textAlign: 'right' }}>
-                                                <div style={{ color: '#D4AF37', fontWeight: 700, fontSize: '0.85rem' }}>
-                                                    ₹{(product.finalprice || 0).toLocaleString('en-IN')}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div style={{ padding: '2rem', textAlign: 'center', color: '#94A3B8' }}>
-                                    <ShoppingBag size={40} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                                    <p>No product data available</p>
-                                </div>
-                            )}
-
-                            <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'center' }}>
-                                <Link to="/admin-product" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0D9488', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none' }}>
-                                    View All Products <ArrowRight size={14} />
-                                </Link>
-                            </div>
-                        </motion.div>
+                        {/* Top Products Section */}
+                        <TopProducts />
 
                         {/* Last Updated */}
                         {lastUpdated && (
