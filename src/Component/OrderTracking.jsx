@@ -300,18 +300,11 @@ export default function OrderTracking() {
                 ...(prev || {}),
                 updatedAt: payload.updatedAt || new Date().toISOString(),
                 // Update delivery schedule if provided in payload
-                ...(payload.deliverySchedule && { deliverySchedule: payload.deliverySchedule })
+                ...(payload.deliverySchedule && { deliverySchedule: payload.deliverySchedule }),
+                // NEW: expectedDeliveryDate and deliveryNote
+                ...(payload.expectedDeliveryDate && { estimatedDelivery: payload.expectedDeliveryDate }),
+                ...(payload.deliveryNote && { deliveryNote: payload.deliveryNote })
               }
-
-              // If deliverySchedule has a date, also update estimatedDelivery
-              if (payload.deliverySchedule?.date) {
-                updated.estimatedDelivery = payload.deliverySchedule.scheduledAt || payload.deliverySchedule.date
-              } else if (payload.deliverySchedule?.estimatedDelivery) {
-                updated.estimatedDelivery = payload.deliverySchedule.estimatedDelivery
-              } else if (payload.estimatedDelivery) {
-                updated.estimatedDelivery = payload.estimatedDelivery
-              }
-
               return updated
             })
 
@@ -322,16 +315,20 @@ export default function OrderTracking() {
                 status: nextStatus,
                 timestamp: payload.updatedAt || new Date().toISOString(),
                 deliverySchedule: payload.deliverySchedule || null,
-                adminNote: payload.adminNote || null
+                adminNote: payload.adminNote || null,
+                // NEW: deliveryNote
+                deliveryNote: payload.deliveryNote || null
               }
             ])
 
             // Show delivery update notification if delivery date changed
-            if (payload.deliverySchedule?.date) {
+            if (payload.expectedDeliveryDate) {
+              showDeliveryUpdateToast({ date: payload.expectedDeliveryDate, note: payload.deliveryNote })
+            } else if (payload.deliverySchedule?.date) {
               showDeliveryUpdateToast(payload.deliverySchedule)
             }
 
-            console.log('🔄 Status updated to:', nextStatus, payload.deliverySchedule ? 'with delivery update' : '')
+            console.log('🔄 Status updated to:', nextStatus, payload.expectedDeliveryDate ? 'with expected delivery update' : (payload.deliverySchedule ? 'with delivery update' : ''))
           }
         }
       })
@@ -475,41 +472,61 @@ export default function OrderTracking() {
           }}
         >
           {/* ORDER INFO - PREMIUM LAYOUT WITH ENHANCED DETAILS */}
-          <div className="p-4 rounded-xl mb-4" style={{ background: 'linear-gradient(135deg, #fafaf8, #f9f7f4)', border: '2px solid #d4af37' }}>
-            <div className="row">
-              <div className="col-md-6 mb-3 mb-md-0">
-                <div className="d-flex flex-column">
-                  <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase' }}>Payment Status</p>
-                  <p className="font-weight-bold mb-3" style={{ fontSize: '14px', color: order?.paymentStatus === 'Paid' ? '#27ae60' : '#ff9500' }}>
-                    {order?.paymentStatus === 'Paid' ? '✅ Paid' : order?.paymentStatus === 'Pending' ? '⏳ Pending' : order?.paymentStatus}
-                  </p>
-                  <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase' }}>Payment Method</p>
-                  <p className="font-weight-bold" style={{ fontSize: '14px', color: '#2c2c2c' }}>
-                    {order?.paymentMethod || 'N/A'}
-                  </p>
+          {/* PAYMENT INFO - PREMIUM CARD DESIGN WITH ICONS */}
+          <div className="mb-4 premium-payment-card" style={{
+            border: '2.5px solid #D4AF37',
+            borderRadius: '22px',
+            background: 'linear-gradient(120deg, #fffbe6 60%, #f5e7b2 100%)',
+            boxShadow: '0 8px 32px rgba(212,175,55,0.13), 0 1.5px 0 #fff',
+            position: 'relative',
+            overflow: 'hidden',
+            padding: '32px 28px 24px 28px',
+            minHeight: 120
+          }}>
+            <div style={{ position: 'absolute', top: -18, left: -18, opacity: 0.10, fontSize: 120, pointerEvents: 'none' }}>💳</div>
+            <div className="row align-items-center">
+              <div className="col-md-7 mb-3 mb-md-0">
+                <div className="d-flex flex-column" style={{ gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 22, color: '#27ae60' }}>{order?.paymentStatus === 'Paid' ? '✅' : order?.paymentStatus === 'Pending' ? '⏳' : '❌'}</span>
+                    <span className="text-muted small" style={{ color: '#6b5b2b', fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 700 }}>Payment Status</span>
+                  </div>
+                  <span className="font-weight-bold" style={{ fontSize: '18px', color: order?.paymentStatus === 'Paid' ? '#27ae60' : order?.paymentStatus === 'Pending' ? '#ff9500' : '#e74c3c', letterSpacing: '0.5px' }}>
+                    {order?.paymentStatus === 'Paid' ? 'Paid' : order?.paymentStatus === 'Pending' ? 'Pending' : (order?.paymentStatus || 'N/A')}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                    <span style={{ fontSize: 20, color: '#b8860b' }}>💳</span>
+                    <span className="text-muted small" style={{ color: '#6b5b2b', fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 700 }}>Payment Method</span>
+                  </div>
+                  <span className="font-weight-bold" style={{ fontSize: '16px', color: '#2c2c2c', letterSpacing: '0.2px' }}>{order?.paymentMethod || 'N/A'}</span>
                 </div>
               </div>
-              <div className="col-md-6 text-md-right">
-                <div className="d-flex flex-column align-items-md-end">
+              <div className="col-md-5 text-md-right">
+                <div className="d-flex flex-column align-items-md-end" style={{ gap: 6 }}>
                   {order?.totalAmount && (
-                    <>
-                      <p className="text-muted small mb-1" style={{ fontSize: '11px' }}>Subtotal</p>
-                      <p className="mb-2" style={{ fontSize: '13px', color: '#666' }}>₹{Number(order.totalAmount).toLocaleString('en-IN')}</p>
-                    </>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18, color: '#b8860b' }}>🧾</span>
+                      <span className="text-muted small" style={{ fontSize: '12px' }}>Subtotal</span>
+                      <span style={{ fontSize: '15px', color: '#666', fontWeight: 600 }}>₹{Number(order.totalAmount).toLocaleString('en-IN')}</span>
+                    </div>
                   )}
                   {order?.shippingAmount > 0 && (
-                    <>
-                      <p className="text-muted small mb-1" style={{ fontSize: '11px' }}>Shipping</p>
-                      <p className="mb-2" style={{ fontSize: '13px', color: '#666' }}>₹{Number(order.shippingAmount).toLocaleString('en-IN')}</p>
-                    </>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18, color: '#b8860b' }}>🚚</span>
+                      <span className="text-muted small" style={{ fontSize: '12px' }}>Shipping</span>
+                      <span style={{ fontSize: '15px', color: '#666', fontWeight: 600 }}>₹{Number(order.shippingAmount).toLocaleString('en-IN')}</span>
+                    </div>
                   )}
                   {order?.finalAmount && (
                     <>
-                      <hr style={{ margin: '8px 0', borderColor: '#d4af37', borderWidth: '1.5px' }} />
-                      <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount</p>
-                      <p className="font-weight-bold" style={{ fontSize: '22px', background: 'linear-gradient(135deg, #d4af37, #b8860b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                        ₹{Number(order.finalAmount).toLocaleString('en-IN')}
-                      </p>
+                      <hr style={{ margin: '8px 0', borderColor: '#d4af37', borderWidth: '1.5px', width: '100%' }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 20, color: '#d4af37' }}>💰</span>
+                        <span className="text-muted small" style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>Total Amount</span>
+                        <span className="font-weight-bold" style={{ fontSize: '22px', background: 'linear-gradient(135deg, #d4af37, #b8860b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', letterSpacing: '0.5px' }}>
+                          ₹{Number(order.finalAmount).toLocaleString('en-IN')}
+                        </span>
+                      </div>
                     </>
                   )}
                 </div>
@@ -517,47 +534,85 @@ export default function OrderTracking() {
             </div>
           </div>
 
-          {/* ESTIMATED DELIVERY - ENHANCED WITH SMART DATE FORMATTING */}
-          {getDeliveryInfo && (
+          {/* ESTIMATED DELIVERY - PREMIUM DESIGN WITH ICONS */}
+          {(order?.estimatedDelivery || order?.expectedDeliveryDate || status === 'Delivered') && (
             <motion.div
-              key={getDeliveryInfo.date} // Key ensures re-render on date change
+              key={order?.estimatedDelivery || order?.expectedDeliveryDate || 'delivered'}
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-              className="p-4 rounded-xl mb-4"
+              className="p-4 mb-4 premium-delivery-card"
               style={{
-                background: 'rgba(255, 255, 255, 0.55)',
-                border: '1.5px solid #D4AF37',
-                boxShadow: '0 12px 30px rgba(212,175,55,0.12)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)'
+                border: '2.5px solid #D4AF37',
+                borderRadius: '22px',
+                background: 'linear-gradient(120deg, #fffbe6 60%, #f5e7b2 100%)',
+                boxShadow: '0 8px 32px rgba(212,175,55,0.13), 0 1.5px 0 #fff',
+                position: 'relative',
+                overflow: 'hidden',
+                minHeight: 110
               }}
             >
-              <div className="d-flex align-items-center">
-                <div style={{ fontSize: '32px', marginRight: '16px' }}>📅</div>
-                <div>
-                  <p className="text-muted small mb-1" style={{ color: '#6b5b2b', fontSize: '11px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                    Expected Delivery
-                  </p>
-                  <p className="font-weight-bold mb-0" style={{ fontSize: '20px', color: '#5f4b1b', lineHeight: '1.3' }}>
-                    {formatDeliveryDate(getDeliveryInfo.date)}
-                    {getDeliveryInfo.time && (
-                      <span style={{ fontSize: '16px', color: '#8b7355', marginLeft: '8px' }}>
-                        at {getDeliveryInfo.time}
-                      </span>
-                    )}
-                  </p>
-                  <p style={{ fontSize: '12px', color: '#8b7355', marginTop: '4px', marginBottom: '0' }}>
-                    {new Date(getDeliveryInfo.date).toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'short',
-                      year: 'numeric'
-                    })}
-                  </p>
-                  {order?.shippingAddress?.city && (
-                    <p style={{ fontSize: '12px', color: '#6b5b2b', marginTop: '6px', marginBottom: '0' }}>
-                      📍 Delivering to {order.shippingAddress.city}
-                    </p>
+              <div style={{ position: 'absolute', top: -18, right: -18, opacity: 0.13, fontSize: 120, pointerEvents: 'none' }}>⭐</div>
+              <div className="d-flex align-items-center" style={{ gap: 24 }}>
+                <div style={{
+                  background: 'linear-gradient(135deg, #d4af37 60%, #fffbe6 100%)',
+                  borderRadius: '16px',
+                  width: 60,
+                  height: 60,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 18px #d4af3740',
+                  marginRight: 18
+                }}>
+                  <span style={{ fontSize: 36, color: '#fff', textShadow: '0 2px 8px #b8860b' }}>📦</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18, color: '#b8860b' }}>🗓️</span>
+                    <span className="text-muted small" style={{ color: '#6b5b2b', fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 700 }}>
+                      Expected Delivery
+                    </span>
+                  </div>
+                  {status === 'Delivered' ? (
+                    <>
+                      <p className="font-weight-bold mb-0" style={{ fontSize: '22px', color: '#1f8f54', lineHeight: '1.3', letterSpacing: '0.5px', marginTop: 8 }}>
+                        <span style={{ fontSize: '24px', color: '#D4AF37', fontWeight: 700, letterSpacing: '1px', textShadow: '0 2px 8px #f5e7b2' }}>
+                          🎉 Your order delivered successfully!
+                        </span>
+                      </p>
+                      <p style={{ fontSize: '15px', color: '#8b7355', marginTop: '8px', marginBottom: '0', fontWeight: 600, letterSpacing: '0.2px' }}>
+                        Thank you for shopping with Boutique Luxe. Enjoy your premium experience!
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                        <span style={{ fontSize: 18, color: '#b8860b' }}>📅</span>
+                        <span className="font-weight-bold" style={{ fontSize: '20px', color: '#5f4b1b', lineHeight: '1.3' }}>
+                          {formatDeliveryDate(order?.expectedDeliveryDate || order?.estimatedDelivery)}
+                        </span>
+                        {order?.deliverySchedule?.time && (
+                          <span style={{ fontSize: '16px', color: '#8b7355', marginLeft: '8px' }}>
+                            ⏰ {order.deliverySchedule.time}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                        <span style={{ fontSize: 18, color: '#b8860b' }}>📍</span>
+                        <span style={{ fontSize: '13px', color: '#6b5b2b' }}>
+                          {order?.shippingAddress?.city ? `Delivering to ${order.shippingAddress.city}` : ''}
+                        </span>
+                      </div>
+                      {(order?.deliveryNote || order?.deliverySchedule?.note) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                          <span style={{ fontSize: 18, color: '#b8860b' }}>📝</span>
+                          <span style={{ fontSize: '13px', color: '#6b5b2b' }}>
+                            {order.deliveryNote || order.deliverySchedule.note}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -769,15 +824,26 @@ export default function OrderTracking() {
           </motion.div>
 
           {/* STATUS TIMELINE - ENHANCED WITH ADMIN NOTES AND DELIVERY UPDATES */}
+          {/* STATUS TIMELINE - PREMIUM CARD DESIGN WITH ICONS */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
-            className="mt-5 p-4 rounded-xl"
-            style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
+            className="mt-5 mb-4 premium-timeline-card"
+            style={{
+              border: '2.5px solid #D4AF37',
+              borderRadius: '22px',
+              background: 'linear-gradient(120deg, #fffbe6 60%, #f5e7b2 100%)',
+              boxShadow: '0 8px 32px rgba(212,175,55,0.13), 0 1.5px 0 #fff',
+              position: 'relative',
+              overflow: 'hidden',
+              padding: '36px 28px 28px 28px',
+              minHeight: 120
+            }}
           >
-            <h5 className="font-weight-bold mb-4" style={{ color: '#111', fontSize: '16px', letterSpacing: '0.5px' }}>
-              📍 Status Timeline
+            <div style={{ position: 'absolute', top: -18, left: -18, opacity: 0.10, fontSize: 120, pointerEvents: 'none' }}>🕒</div>
+            <h5 className="font-weight-bold mb-4" style={{ color: '#111', fontSize: '18px', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 22, color: '#d4af37' }}>📍</span> Status Timeline
             </h5>
             <div style={{ position: 'relative', paddingLeft: '20px' }}>
               {timelineSteps.map((event, idx) => {
@@ -788,44 +854,39 @@ export default function OrderTracking() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 + idx * 0.05 }}
-                    style={{ marginBottom: idx < timelineSteps.length - 1 ? '20px' : 0, position: 'relative' }}
+                    style={{ marginBottom: idx < timelineSteps.length - 1 ? '28px' : 0, position: 'relative', display: 'flex', alignItems: 'flex-start', gap: 18 }}
                   >
-                    {/* Timeline dot */}
+                    {/* Timeline dot with icon */}
                     <div
                       style={{
-                        position: 'absolute',
-                        left: '-28px',
-                        top: '2px',
-                        width: '12px',
-                        height: '12px',
+                        position: 'relative',
+                        width: 28,
+                        height: 28,
                         borderRadius: '50%',
-                        background: event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db',
-                        border: '3px solid white',
-                        boxShadow: `0 0 0 2px ${event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db'}33`
+                        background: event.isReached ? STATUS_COLOR[event.step] : '#e5e7eb',
+                        border: `2.5px solid ${event.isReached ? STATUS_COLOR[event.step] : '#e5e7eb'}`,
+                        boxShadow: event.isReached ? `0 2px 8px ${STATUS_COLOR[event.step]}33` : 'none',
+                        zIndex: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 16,
+                        color: event.isReached ? '#fff' : '#bdbdbd',
+                        marginTop: 2
                       }}
-                    />
-                    {/* Timeline line */}
-                    {idx < timelineSteps.length - 1 && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: '-23px',
-                          top: '12px',
-                          width: '2px',
-                          height: '20px',
-                          background: '#e5e7eb'
-                        }}
-                      />
-                    )}
-                    <div>
-                      <p className="font-weight-bold small mb-1" style={{ color: '#111', fontSize: '13px' }}>
-                        {event.step}
-                      </p>
-                      <p className="small mb-1" style={{ color: '#6b7280', fontSize: '12px' }}>
+                    >
+                      {event.step === 'Ordered' && '📝'}
+                      {event.step === 'Packed' && '📦'}
+                      {event.step === 'Shipped' && '🚚'}
+                      {event.step === 'Out for Delivery' && '📍'}
+                      {event.step === 'Delivered' && '✅'}
+                    </div>
+                    {/* Timeline content */}
+                    <div style={{ marginLeft: 0, flex: 1 }}>
+                      <span className="font-weight-bold" style={{ color: event.isReached ? STATUS_COLOR[event.step] : '#999', fontSize: '16px', letterSpacing: '0.2px' }}>{event.step}</span>
+                      <div className="small text-muted" style={{ marginTop: 2, marginBottom: 2, fontSize: '13px' }}>
                         {STATUS_SUBTEXT[event.step]}
-                      </p>
-
-                      {/* Enhanced timeline with delivery schedule */}
+                      </div>
                       {timelineEvent?.deliverySchedule && (
                         <div className="mt-2 p-2 rounded" style={{ background: '#e0f2fe', border: '1px solid #0284c7' }}>
                           <p className="small mb-0" style={{ color: '#0c4a6e', fontSize: '11px', fontWeight: '600' }}>
@@ -834,8 +895,6 @@ export default function OrderTracking() {
                           </p>
                         </div>
                       )}
-
-                      {/* Admin notes */}
                       {timelineEvent?.adminNote && (
                         <div className="mt-2 p-2 rounded" style={{ background: '#fef3c7', border: '1px solid #f59e0b' }}>
                           <p className="small mb-0" style={{ color: '#92400e', fontSize: '11px', fontWeight: '600' }}>
@@ -843,7 +902,6 @@ export default function OrderTracking() {
                           </p>
                         </div>
                       )}
-
                       <p className="text-muted small mb-0" style={{ fontSize: '12px' }}>
                         {event.timestamp
                           ? new Date(event.timestamp).toLocaleString('en-IN', {
@@ -869,27 +927,29 @@ export default function OrderTracking() {
               <div className="col-12">
                 <motion.button
                   whileHover={{ 
-                    scale: 1.02,
-                    boxShadow: '0 20px 40px rgba(15,15,16,0.3)'
+                    scale: 1.03,
+                    boxShadow: '0 20px 40px #d4af3740',
+                    y: -2
                   }}
-                  whileTap={{ scale: 0.96 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => navigate('/my-orders')}
-                  className="btn btn-block rounded-pill"
+                  className="btn btn-block rounded-pill premium-btn"
                   style={{ 
                     width: '100%',
                     maxWidth: '400px',
                     margin: '0 auto',
                     fontWeight: '700', 
-                    fontSize: '15px', 
-                    padding: '14px 28px',
-                    background: 'linear-gradient(135deg, #0f0f10, #1a1f26)',
+                    fontSize: '17px', 
+                    padding: '16px 32px',
+                    background: 'linear-gradient(90deg, #d4af37 60%, #b8860b 100%)',
                     color: '#fff',
-                    border: '1.5px solid #2b3138',
-                    letterSpacing: '0.4px',
-                    boxShadow: '0 10px 30px rgba(15,15,16,0.2)',
+                    border: 'none',
+                    letterSpacing: '0.5px',
+                    boxShadow: '0 10px 30px #d4af3740',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer',
-                    display: 'block'
+                    display: 'block',
+                    textShadow: '0 2px 8px #f5e7b2'
                   }}
                 >
                   ← Back to My Orders
@@ -902,31 +962,32 @@ export default function OrderTracking() {
               {/* Chat Support Button */}
               <motion.button
                 whileHover={{ 
-                  scale: 1.03,
-                  boxShadow: '0 16px 36px rgba(37,211,102,0.3)',
+                  scale: 1.04,
+                  boxShadow: '0 16px 36px #27ae6040',
                   y: -2
                 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => {
                   const message = `Hi Luxe Support, I need assistance with my Order: ${orderId}`
                   window.open(`https://wa.me/918447859784?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
                 }}
-                className="btn btn-sm rounded-pill"
+                className="btn btn-sm rounded-pill premium-btn"
                 style={{
                   flex: '1 1 auto',
-                  minWidth: '150px',
-                  background: 'linear-gradient(135deg, #25D366, #1aa84f)',
+                  minWidth: '170px',
+                  background: 'linear-gradient(90deg, #27ae60 60%, #1f8f54 100%)',
                   color: '#fff',
-                  border: '1.5px solid #1ea952',
+                  border: 'none',
                   fontWeight: '700',
-                  fontSize: '13px',
-                  padding: '12px 20px',
-                  letterSpacing: '0.3px',
+                  fontSize: '15px',
+                  padding: '14px 28px',
+                  letterSpacing: '0.4px',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 8px 20px rgba(37,211,102,0.25)',
+                  boxShadow: '0 8px 20px #27ae6040',
                   cursor: 'pointer',
                   position: 'relative',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  textShadow: '0 2px 8px #b7f7c7'
                 }}
                 title="Chat with our Luxe Concierge"
               >

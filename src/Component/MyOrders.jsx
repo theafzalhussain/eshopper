@@ -50,353 +50,371 @@ export default function MyOrders() {
   useEffect(() => {
     const fetchOrders = async () => {
       if (!userId) {
-        setError('Please login to view your orders')
-        setLoading(false)
-        return
-      }
-
-      try {
-        setLoading(true)
-        const { data } = await axios.get(`${BASE_URL}/api/orders/${userId}`, { timeout: 15000 })
-        setOrders(Array.isArray(data?.orders) ? data.orders : [])
-      } catch (e) {
-        setError('Unable to load your orders right now')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchOrders()
-  }, [userId])
-
-  // 🔴 INITIALIZE SOCKET.IO FOR REAL-TIME STATUS UPDATES
-  useEffect(() => {
-    if (!userId) return
-
-    let mounted = true
-    const socketRef_local = io(BASE_URL, {
-      auth: { userId },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5
-    })
-
-    socketRef.current = socketRef_local
-
-    socketRef_local.on('connect', () => {
-      if (mounted) {
-        setSocketConnected(true)
-        console.log('✅ MyOrders Socket connected, room:', `user:${userId}`)
-      }
-    })
-
-    socketRef_local.on('disconnect', () => {
-      if (mounted) {
-        setSocketConnected(false)
-        console.log('❌ MyOrders Socket disconnected')
-      }
-    })
-
-    // 🔴 LISTEN FOR STATUS UPDATES AND UPDATE ORDERS IN REAL-TIME
-    socketRef_local.on('statusUpdate', (payload) => {
-      if (payload?.orderId && payload?.status && mounted) {
-        console.log('🔄 Real-time status update received:', payload)
-        setOrders((prevOrders) => {
-          return prevOrders.map((order) => {
-            if (order.orderId === payload.orderId) {
-              return {
-                ...order,
-                orderStatus: payload.status,
-                updatedAt: payload.updatedAt || new Date().toISOString()
-              }
-            }
-            return order
-          })
-        })
-      }
-    })
-
-    socketRef_local.on('error', (error) => {
-      console.error('❌ Socket error in MyOrders:', error)
-    })
-
-    return () => {
-      mounted = false
-      if (socketRef_local) {
-        socketRef_local.disconnect()
-      }
-    }
-  }, [userId])
-
-
-  const filteredOrders = useMemo(() => {
-    let result = [...orders]
-
-    if (activeFilter === 'Delivered') {
-      result = result.filter((item) => normalizeStatus(item.orderStatus) === 'Delivered')
-    } else if (activeFilter === 'In Transit') {
-      result = result.filter((item) => {
-        const st = normalizeStatus(item.orderStatus)
-        return st === 'Ordered' || st === 'Packed' || st === 'Shipped'
-      })
-    }
-
-    if (searchOrderId.trim()) {
-      const query = searchOrderId.trim().toLowerCase()
-      result = result.filter((item) => String(item.orderId || '').toLowerCase().includes(query))
-    }
-
-    if (fromDate) {
-      const from = new Date(fromDate)
-      from.setHours(0, 0, 0, 0)
-      result = result.filter((item) => new Date(item.updatedAt) >= from)
-    }
-
-    if (toDate) {
-      const to = new Date(toDate)
-      to.setHours(23, 59, 59, 999)
-      result = result.filter((item) => new Date(item.updatedAt) <= to)
-    }
-
-    return result
-  }, [orders, activeFilter, searchOrderId, fromDate, toDate])
-
-  return (
-    <div style={{ minHeight: '100vh', background: '#f6f6f4', padding: '100px 16px 40px' }}>
-      <div className="container" style={{ maxWidth: 980 }}>
-        <div className="d-flex flex-wrap align-items-center justify-content-between mb-4">
-          <div>
-            <h2 className="font-weight-bold mb-1" style={{ color: '#111' }}>My Orders</h2>
-            <p className="text-muted mb-0">Track all your recent and past orders in one place</p>
-          </div>
-          <div className="d-flex align-items-center mt-2 mt-md-0" style={{ gap: '12px' }}>
-            <span
-              className="px-3 py-2 rounded-pill"
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: '#fff',
-                background: socketConnected ? '#10b981' : '#ef4444',
-                boxShadow: socketConnected ? '0 4px 12px rgba(16,185,129,0.28)' : 'none'
-              }}
-            >
-              {socketConnected ? '🟢 Live Connected' : '🔴 Connecting...'}
-            </span>
-            <button className="btn btn-dark rounded-pill px-4" onClick={() => navigate('/profile')}>
-              Back to Profile
-            </button>
-          </div>
-        </div>
-
-        {/* 🌟 PREMIUM FILTER BUTTONS */}
-        <div className="d-flex flex-wrap mb-4" style={{ gap: '8px' }}>
-          {FILTERS.map((item) => (
-            <motion.button
-              key={item}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setActiveFilter(item)}
-              className="btn rounded-pill"
-              style={{
-                background: activeFilter === item 
-                  ? 'linear-gradient(135deg, #1a1a1a, #3a3a3a)' 
-                  : 'linear-gradient(135deg, #fff, #f9f9f9)',
-                color: activeFilter === item ? '#fff' : '#333',
-                border: activeFilter === item ? '1.5px solid #555' : '1.5px solid #ddd',
-                minWidth: 120,
-                fontWeight: 700,
-                letterSpacing: '0.3px',
-                padding: '8px 18px',
-                boxShadow: activeFilter === item 
-                  ? '0 6px 16px rgba(0,0,0,0.2)' 
-                  : '0 2px 8px rgba(0,0,0,0.05)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer'
-              }}
-            >
-              {item}
-            </motion.button>
-          ))}
-        </div>
-
-        {/* 💎 PREMIUM SEARCH BOX */}
-        <motion.div 
-          className="mb-4"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          style={{ 
-            background: 'linear-gradient(135deg, #ffffff, #fbfbfb)',
-            border: '1.5px solid #e0e0e0',
-            borderRadius: '16px',
-            padding: '20px 24px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
-            backdropFilter: 'blur(10px)'
-          }}
-        >
-          <div className="row align-items-center">
-            <div className="col-12 col-md-8 mb-3 mb-md-0">
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }}>🔍</span>
-                <input
-                  type="text"
-                  value={searchOrderId}
-                  onChange={(e) => setSearchOrderId(e.target.value)}
-                  className="form-control"
-                  placeholder="Search by Order ID..."
-                  style={{ 
-                    borderRadius: '12px', 
-                    padding: '12px 12px 12px 40px',
-                    border: '1px solid #ddd',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    background: '#fff',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#8b6c2f'
-                    e.target.style.boxShadow = '0 4px 16px rgba(139,108,47,0.15)'
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#ddd'
-                    e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'
-                  }}
-                />
+        return (
+          <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8f6ef 0%, #f6e7c5 100%)', padding: '100px 16px 40px' }}>
+            <div className="container" style={{ maxWidth: 980 }}>
+              {/* Header with gold accent */}
+              <div className="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                <div>
+                  <h2 className="font-weight-bold mb-1" style={{ color: '#a88344', letterSpacing: '0.5px', textShadow: '0 2px 8px #f6e7c5' }}>My Orders</h2>
+                  <p className="text-muted mb-0" style={{ fontWeight: 500 }}>Track all your recent and past orders in one place</p>
+                </div>
+                <div className="d-flex align-items-center mt-2 mt-md-0" style={{ gap: '12px' }}>
+                  <span
+                    className="px-3 py-2 rounded-pill"
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      color: '#fff',
+                      background: socketConnected ? 'linear-gradient(90deg, #d4af37 60%, #10b981 100%)' : '#ef4444',
+                      boxShadow: socketConnected ? '0 4px 16px #d4af3760' : 'none',
+                      border: socketConnected ? '1.5px solid #d4af37' : '1.5px solid #ef4444',
+                      letterSpacing: '0.2px',
+                      textShadow: socketConnected ? '0 1px 4px #fff7e0' : 'none'
+                    }}
+                  >
+                    {socketConnected ? '🟢 Luxe Live' : '🔴 Connecting...'}
+                  </span>
+                  <button className="btn rounded-pill px-4" style={{
+                    background: 'linear-gradient(90deg, #fffbe6 0%, #f6e7c5 100%)',
+                    color: '#a88344',
+                    fontWeight: 700,
+                    border: '1.5px solid #d4af37',
+                    boxShadow: '0 2px 8px #d4af3720',
+                    letterSpacing: '0.2px',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }} onClick={() => navigate('/profile')}>
+                    ← Back to Profile
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="col-12 col-md-4 d-flex gap-2">
-              {(searchOrderId || fromDate || toDate) && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="button"
-                  onClick={() => {
-                    setSearchOrderId('')
-                    setFromDate('')
-                    setToDate('')
-                  }}
-                  className="btn btn-outline-secondary flex-grow-1"
-                  style={{ fontSize: '13px', fontWeight: 600 }}
-                >
-                  ✕ Clear
-                </motion.button>
-              )}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={() => setShowAdvancedFilters((prev) => !prev)}
-                className="btn rounded-pill flex-grow-1"
-                style={{ 
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  background: 'linear-gradient(135deg, #8b6c2f, #a88344)',
-                  color: '#fff',
-                  border: '1.5px solid #9d7d3f',
-                  boxShadow: '0 4px 12px rgba(139,108,47,0.2)',
-                  letterSpacing: '0.2px'
-                }}
-                title="Show/Hide Advanced Filters"
-              >
-                {showAdvancedFilters ? '⬆ Hide' : '⚙️ Filters'}
-              </motion.button>
-            </div>
-          </div>
-          
-          {/* Advanced Date Filters - Show only if needed */}
-          {showAdvancedFilters && (
-            <motion.div 
-              className="row mt-4"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className="col-md-6 mb-3 mb-md-0">
-                <label className="small font-weight-bold mb-2" style={{ display: 'block', color: '#333' }}>📅 From Date</label>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="form-control"
-                  style={{ borderRadius: '12px', border: '1.5px solid #ddd', fontWeight: 500 }}
-                />
-              </div>
-              <div className="col-md-6">
-                <label className="small font-weight-bold mb-2" style={{ display: 'block', color: '#333' }}>📅 To Date</label>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="form-control"
-                  style={{ borderRadius: '12px', border: '1.5px solid #ddd', fontWeight: 500 }}
-                />
-              </div>
-              <div className="col-12 mt-4 d-flex justify-content-end">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="button"
-                  onClick={() => {
-                    setFromDate('')
-                    setToDate('')
-                  }}
-                  className="btn btn-sm rounded-pill"
-                  style={{
-                    background: 'linear-gradient(135deg, #e0e0e0, #d0d0d0)',
-                    color: '#333',
-                    fontWeight: 600,
-                    border: '1.5px solid #ccc',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                  }}
-                >
-                  ✕ Clear Dates
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </motion.div>
 
-        {loading ? (
-          <div className="p-4 text-center bg-white rounded-xl shadow-sm text-muted">Loading orders...</div>
-        ) : error ? (
-          <div className="p-4 text-center bg-white rounded-xl shadow-sm text-danger">{error}</div>
-        ) : filteredOrders.length ? (
-          filteredOrders.map((item, idx) => {
-            const badge = getStatusStyles(item.orderStatus)
-            const label = normalizeStatus(item.orderStatus)
-            return (
-              <motion.div
-                key={item.orderId}
-                initial={{ opacity: 0, y: 20 }}
+              {/* 🌟 PREMIUM FILTER BUTTONS - Gold accent, tactile */}
+              <div className="d-flex flex-wrap mb-4" style={{ gap: '10px' }}>
+                {FILTERS.map((item) => (
+                  <motion.button
+                    key={item}
+                    whileHover={{ scale: 1.08, boxShadow: '0 6px 24px #d4af3730' }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => setActiveFilter(item)}
+                    className="btn rounded-pill"
+                    style={{
+                      background: activeFilter === item 
+                        ? 'linear-gradient(135deg, #d4af37 60%, #fffbe6 100%)' 
+                        : 'linear-gradient(135deg, #fff, #f9f9f9)',
+                      color: activeFilter === item ? '#fff' : '#a88344',
+                      border: activeFilter === item ? '2px solid #d4af37' : '1.5px solid #e0c98d',
+                      minWidth: 120,
+                      fontWeight: 700,
+                      letterSpacing: '0.3px',
+                      padding: '10px 22px',
+                      boxShadow: activeFilter === item 
+                        ? '0 8px 24px #d4af3730' 
+                        : '0 2px 8px #d4af3710',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      cursor: 'pointer',
+                      textShadow: activeFilter === item ? '0 1px 4px #fff7e0' : 'none'
+                    }}
+                  >
+                    {item}
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* 💎 PREMIUM SEARCH BOX - Glassy, gold border */}
+              <motion.div 
+                className="mb-4"
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05, duration: 0.4 }}
-                whileHover={{ y: -6, boxShadow: '0 24px 50px rgba(212,175,55,0.15)' }}
-                className="mb-3"
+                transition={{ duration: 0.4 }}
                 style={{ 
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95))',
-                  border: '1.5px solid rgba(212,175,55,0.2)',
+                  background: 'linear-gradient(135deg, #fffbe6 0%, #f6e7c5 100%)',
+                  border: '2px solid #d4af37',
                   borderRadius: '18px',
-                  padding: '24px',
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  backdropFilter: 'blur(10px)',
-                  position: 'relative'
+                  padding: '22px 28px',
+                  boxShadow: '0 8px 32px #d4af3720',
+                  backdropFilter: 'blur(12px)'
                 }}
               >
-                {/* Header Row - Premium Layout */}
-                <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 pb-3" style={{ borderBottom: '1.5px solid #f0f0f0' }}>
-                  <div className="flex-grow-1">
-                    <div className="font-weight-bold" style={{ fontSize: '18px', color: '#0f0f10', letterSpacing: '0.2px' }}>
-                      {item.orderId}
+                <div className="row align-items-center">
+                  <div className="col-12 col-md-8 mb-3 mb-md-0">
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#d4af37', fontSize: 18 }}>🔍</span>
+                      <input
+                        type="text"
+                        value={searchOrderId}
+                        onChange={(e) => setSearchOrderId(e.target.value)}
+                        className="form-control"
+                        placeholder="Search by Order ID..."
+                        style={{ 
+                          borderRadius: '14px', 
+                          padding: '13px 13px 13px 44px',
+                          border: '2px solid #e0c98d',
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          background: 'rgba(255,255,255,0.85)',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: '0 2px 12px #d4af3710',
+                          color: '#a88344',
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#d4af37'
+                          e.target.style.boxShadow = '0 4px 16px #d4af3720'
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e0c98d'
+                          e.target.style.boxShadow = '0 2px 12px #d4af3710'
+                        }}
+                      />
                     </div>
-                    <div className="small mt-2 d-flex align-items-center" style={{ color: '#888' }}>
-                      <Clock3 size={14} className="mr-2" /> 
-                      {new Date(item.updatedAt).toLocaleDateString('en-IN', { 
-                        day: 'numeric', 
-                        month: 'short', 
+                  </div>
+                  <div className="col-12 col-md-4 d-flex gap-2">
+                    {(searchOrderId || fromDate || toDate) && (
+                      <motion.button
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="button"
+                        onClick={() => {
+                          setSearchOrderId('')
+                          setFromDate('')
+                          setToDate('')
+                        }}
+                        className="btn btn-outline-secondary flex-grow-1"
+                        style={{ fontSize: '14px', fontWeight: 700, color: '#a88344', border: '1.5px solid #d4af37', background: '#fffbe6' }}
+                      >
+                        ✕ Clear
+                      </motion.button>
+                    )}
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.98 }}
+                      type="button"
+                      onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                      className="btn rounded-pill flex-grow-1"
+                      style={{ 
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        background: 'linear-gradient(135deg, #d4af37 60%, #a88344 100%)',
+                        color: '#fff',
+                        border: '2px solid #d4af37',
+                        boxShadow: '0 4px 16px #d4af3720',
+                        letterSpacing: '0.2px',
+                        textShadow: '0 1px 4px #fff7e0'
+                      }}
+                      title="Show/Hide Advanced Filters"
+                    >
+                      {showAdvancedFilters ? '⬆ Hide' : '⚙️ Filters'}
+                    </motion.button>
+                  </div>
+                </div>
+                {/* Advanced Date Filters - Show only if needed */}
+                {showAdvancedFilters && (
+                  <motion.div 
+                    className="row mt-4"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <div className="col-md-6 mb-3 mb-md-0">
+                      <label className="small font-weight-bold mb-2" style={{ display: 'block', color: '#a88344' }}>📅 From Date</label>
+                      <input
+                        type="date"
+                        value={fromDate}
+                        onChange={(e) => setFromDate(e.target.value)}
+                        className="form-control"
+                        style={{ borderRadius: '12px', border: '2px solid #e0c98d', fontWeight: 600, color: '#a88344', background: '#fffbe6' }}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="small font-weight-bold mb-2" style={{ display: 'block', color: '#a88344' }}>📅 To Date</label>
+                      <input
+                        type="date"
+                        value={toDate}
+                        onChange={(e) => setToDate(e.target.value)}
+                        className="form-control"
+                        style={{ borderRadius: '12px', border: '2px solid #e0c98d', fontWeight: 600, color: '#a88344', background: '#fffbe6' }}
+                      />
+                    </div>
+                    <div className="col-12 mt-4 d-flex justify-content-end">
+                      <motion.button
+                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="button"
+                        onClick={() => {
+                          setFromDate('')
+                          setToDate('')
+                        }}
+                        className="btn btn-sm rounded-pill"
+                        style={{
+                          background: 'linear-gradient(135deg, #fffbe6, #f6e7c5)',
+                          color: '#a88344',
+                          fontWeight: 700,
+                          border: '2px solid #d4af37',
+                          boxShadow: '0 2px 8px #d4af3710'
+                        }}
+                      >
+                        ✕ Clear Dates
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+
+              {/* Order List - Premium Card Design */}
+              {loading ? (
+                <div className="p-4 text-center bg-white rounded-xl shadow-sm text-muted" style={{ border: '2px solid #d4af37', background: '#fffbe6' }}>Loading orders...</div>
+              ) : error ? (
+                <div className="p-4 text-center bg-white rounded-xl shadow-sm text-danger" style={{ border: '2px solid #d4af37', background: '#fffbe6' }}>{error}</div>
+              ) : filteredOrders.length ? (
+                filteredOrders.map((item, idx) => {
+                  const badge = getStatusStyles(item.orderStatus)
+                  const label = normalizeStatus(item.orderStatus)
+                  return (
+                    <motion.div
+                      key={item.orderId}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05, duration: 0.4 }}
+                      whileHover={{ y: -8, boxShadow: '0 32px 80px #d4af3730' }}
+                      className="mb-4"
+                      style={{ 
+                        background: 'linear-gradient(135deg, #fffbe6 0%, #f6e7c5 100%)',
+                        border: '2.5px solid #d4af37',
+                        borderRadius: '22px',
+                        padding: '30px',
+                        boxShadow: '0 16px 48px #d4af3720, inset 0 1px 0 #fff7e0',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        backdropFilter: 'blur(12px)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      {/* Header Row - Luxe Layout */}
+                      <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 pb-3" style={{ borderBottom: '2px solid #f6e7c5' }}>
+                        <div className="flex-grow-1">
+                          <div className="font-weight-bold" style={{ fontSize: '20px', color: '#a88344', letterSpacing: '0.3px', textShadow: '0 1px 4px #fff7e0' }}>
+                            <span style={{ marginRight: 8 }}>🛒</span>{item.orderId}
+                          </div>
+                          <div className="small mt-2 d-flex align-items-center" style={{ color: '#a88344', fontWeight: 600 }}>
+                            <Clock3 size={15} className="mr-2" /> 
+                            {new Date(item.updatedAt).toLocaleDateString('en-IN', { 
+                              day: 'numeric', 
+                              month: 'short', 
+                              year: 'numeric'
+                            })}
+                          </div>
+                        </div>
+                        <div className="d-flex align-items-center gap-2">
+                          <span
+                            className="px-3 py-2 rounded-pill"
+                            style={{
+                              background: badge.bg,
+                              color: badge.color,
+                              fontWeight: 700,
+                              fontSize: '14px',
+                              letterSpacing: '0.3px',
+                              border: `2px solid ${badge.color}`,
+                              boxShadow: '0 2px 8px #d4af3710',
+                              textShadow: '0 1px 4px #fff7e0'
+                            }}
+                          >
+                            {label}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Order Details Row - Luxe Info */}
+                      <div className="row align-items-center mb-3">
+                        <div className="col-12 col-md-8 mb-2 mb-md-0">
+                          <div className="d-flex flex-wrap align-items-center gap-3">
+                            <span className="font-weight-bold" style={{ color: '#a88344', fontSize: '16px', textShadow: '0 1px 4px #fff7e0' }}>₹{item.totalAmount}</span>
+                            <span className="text-muted small" style={{ color: '#a88344', fontWeight: 600 }}>{item.products?.length || 0} items</span>
+                            <span className="text-muted small" style={{ color: '#a88344', fontWeight: 600 }}>{item.paymentMethod}</span>
+                          </div>
+                        </div>
+                        <div className="col-12 col-md-4 text-md-right">
+                          <span className="text-muted small" style={{ color: '#a88344', fontWeight: 600 }}>{item.shippingAddress?.address}</span>
+                        </div>
+                      </div>
+
+                      {/* Premium Action Buttons - Luxe Animations */}
+                      <div className="d-flex gap-3 flex-wrap align-items-center" style={{ rowGap: '10px' }}>
+                        {/* Track Order Button */}
+                        <motion.button
+                          whileHover={{ 
+                            scale: 1.06,
+                            boxShadow: '0 24px 48px #d4af3730',
+                            y: -4
+                          }}
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => navigate(`/order-tracking/${item.orderId}`)}
+                          className="btn btn-sm rounded-pill"
+                          style={{
+                            flex: '1 1 auto',
+                            minWidth: '160px',
+                            background: 'linear-gradient(135deg, #d4af37 60%, #a88344 100%)',
+                            color: '#fff',
+                            border: '2px solid #d4af37',
+                            fontWeight: 700,
+                            fontSize: '14px',
+                            letterSpacing: '0.3px',
+                            padding: '13px 20px',
+                            boxShadow: '0 8px 24px #d4af3720',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            textShadow: '0 1px 4px #fff7e0'
+                          }}
+                        >
+                          <span style={{ position: 'relative', zIndex: 2 }}>
+                            <span style={{ marginRight: 6 }}>🔎</span>Track Order
+                          </span>
+                        </motion.button>
+                        {/* Chat Support Button */}
+                        <motion.button
+                          whileHover={{ 
+                            scale: 1.06,
+                            boxShadow: '0 24px 48px #25D36640',
+                            y: -4
+                          }}
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => openWhatsAppSupport(item.orderId)}
+                          className="btn btn-sm rounded-pill"
+                          style={{
+                            flex: '1 1 auto',
+                            minWidth: '150px',
+                            background: 'linear-gradient(135deg, #25D366 60%, #a88344 100%)',
+                            color: '#fff',
+                            border: '2px solid #25D366',
+                            fontWeight: 700,
+                            fontSize: '14px',
+                            padding: '13px 20px',
+                            letterSpacing: '0.3px',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: '0 8px 24px #25D36620',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            textShadow: '0 1px 4px #fff7e0'
+                          }}
+                          title="Chat with Luxe Support"
+                        >
+                          <span style={{ position: 'relative', zIndex: 2 }}>
+                            <span style={{ marginRight: 6 }}>💬</span>Chat Support
+                          </span>
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )
+                })
+              ) : (
+                <div className="p-5 text-center bg-white rounded-xl shadow-sm" style={{ border: '2px solid #d4af37', background: '#fffbe6' }}>
+                  <PackageSearch size={40} className="text-muted opacity-50" />
+                  <p className="mt-3 mb-0 text-muted">No orders found for selected filters.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )
                         year: 'numeric'
                       })}
                     </div>

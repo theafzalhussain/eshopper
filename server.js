@@ -2079,12 +2079,14 @@ const handleOrderStatusUpdate = async (req, res) => {
             userId: order.userid,
             status: order.orderStatus,
             updatedAt: new Date().toISOString(),
-            // 🔴 INCLUDE DELIVERY INFORMATION FOR REAL-TIME FRONTEND UPDATES
-            estimatedDelivery: order.estimatedArrival || null,
+            // 🔴 NEW: Use expectedDeliveryDate and deliveryNote for clarity
+            expectedDeliveryDate: order.estimatedArrival || null,
+            deliveryNote: (order.deliverySchedule && order.deliverySchedule.note) || req.body.deliveryNote || null,
             deliverySchedule: order.deliverySchedule || (order.estimatedArrival ? {
                 date: order.estimatedArrival,
                 time: order.deliveryTime || null,
-                scheduledAt: order.estimatedArrival
+                scheduledAt: order.estimatedArrival,
+                note: (order.deliverySchedule && order.deliverySchedule.note) || req.body.deliveryNote || null
             } : null),
             adminNote: req.body.adminNote || null
         };
