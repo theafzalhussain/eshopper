@@ -52,7 +52,7 @@ export default function Cart() {
     useEffect(() => { getAPIData() }, [carts.length])
 
     return (
-        <div style={{ backgroundColor: "#f4f7f6", minHeight: "100vh" }}>
+        <div style={{ backgroundColor: "#f4f7f6", minHeight: "100vh", boxSizing: 'border-box', maxWidth: '100vw' }}>
             {/* Header Section */}
             <div className="py-5 bg-dark text-center shadow-sm">
                 <h2 className="text-white font-weight-bold mb-0">Shopping Cart</h2>
@@ -78,7 +78,7 @@ export default function Cart() {
                                         layout
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="bg-white rounded-lg shadow-sm p-3 mb-3 border-0 transition-all hover-shadow"
+                                        className="bg-white p-3 mb-3 border-0"
                                     >
                                         <div className="row align-items-center">
                                             {/* Product Info */}
@@ -131,7 +131,7 @@ export default function Cart() {
 
                         {/* Order Summary Sidebar */}
                         <div className="col-lg-4 mt-5 mt-lg-0">
-                            <div className="card border-0 shadow rounded-lg p-4 bg-white sticky-top" style={{ top: "100px" }}>
+                            <div className="card border-0 p-4 bg-white sticky-top" style={{ top: "100px" }}>
                                 <h5 className="font-weight-bold mb-4">Order Summary</h5>
                                 <div className="d-flex justify-content-between mb-3">
                                     <span className="text-muted">Subtotal</span>

@@ -20,7 +20,7 @@ export default function Wishlist() {
     useEffect(() => { getAPIData() }, [wishlists.length])
 
     return (
-        <section className="ftco-section bg-light">
+        <section className="ftco-section bg-light" style={{ boxSizing: 'border-box', maxWidth: '100vw' }}>
             <div className="container">
                 <div className="row">
                     <div className="col-md-12">

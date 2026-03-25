@@ -47,7 +47,6 @@ export default function BuyerProfile({ user }) {
                     >
                         <motion.div
                             whileHover={{ y: -4, boxShadow: '0 12px 28px rgba(212,175,55,0.15)' }}
-                            className="p-4 rounded-2xl"
                             style={{
                                 background: 'linear-gradient(135deg, #f9fafb, #f3f4f6)',
                                 border: '1.5px solid rgba(212,175,55,0.1)',

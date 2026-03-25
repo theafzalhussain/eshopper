@@ -1,6 +1,23 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* === CSS RESET & GLOBAL STYLES === */
+html {
+  box-sizing: border-box;
+  font-size: 16px;
+}
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+img, video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #18191A 0%, #23272F 100%);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+}
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap');
 

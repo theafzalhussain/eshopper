@@ -33,7 +33,9 @@ const STATUS_ICONS = {
 };
 
 export default function AdminOrders() {
-    const [orders, setOrders] = useState([]);
+    // Global CSS reset for this section
+    // Responsive container
+    // (If you have a main wrapper div, add boxSizing and maxWidth)
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [searchInput, setSearchInput] = useState('');
@@ -522,7 +524,7 @@ export default function AdminOrders() {
                                     </div>
                                 </div>
                                 <div className="export-btn-wrap mb-3 ml-auto">
-                                    <div className="d-flex gap-2">
+                                    <div className="d-flex">
                                         <button
                                             className="export-csv-btn-premium mr-2"
                                             onClick={exportOrdersToCSV}
@@ -711,7 +713,7 @@ export default function AdminOrders() {
                                                                 className="bg-light"
                                                             >
                                                                 <td colSpan="9" className="p-3">
-                                                                    <div className="bg-white rounded p-3 border">
+                                                                    <div className="bg-white p-3 border">
                                                                         <h4 className="h6 font-weight-bold mb-3">📋 Status History</h4>
                                                                         <div>
                                                                             {order.statusHistory.map((entry, idx) => (

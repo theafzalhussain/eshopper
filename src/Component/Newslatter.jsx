@@ -37,7 +37,7 @@ export default function Newslatter() {
                     initial={{ opacity: 0, y: 30 }}
                     whileInView={{ opacity: 1, y: 0 }}
                 >
-                    <div className="col-md-10 col-lg-8 bg-info rounded-2xl p-5 shadow-2xl position-relative overflow-hidden text-center">
+                    <div className="col-md-10 col-lg-8 bg-info p-5 position-relative overflow-hidden text-center">
                         {/* Background Decoration */}
                         <div style={{ position:'absolute', top:'-20px', right:'-20px', width:'150px', height:'150px', borderRadius:'50%', background:'rgba(255,255,255,0.1)' }}></div>
                         

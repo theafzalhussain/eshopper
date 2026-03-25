@@ -11,7 +11,7 @@ export default function About() {
     }
 
     return (
-        <div style={{ backgroundColor: "#ffffff", overflowX: "hidden" }}>
+        <div style={{ backgroundColor: "#ffffff", overflowX: "hidden", boxSizing: 'border-box', maxWidth: '100vw' }}>
             
             {/* --- 1. MINIMALIST HERO SECTION (Same as your about) --- */}
             <section className="about-hero-new py-5" style={{ background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)", minHeight: "70vh", display: "flex", alignItems: "center" }}>
@@ -38,8 +38,8 @@ export default function About() {
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 whileInView={{ opacity: 1, scale: 1 }}
                             >
-                                <img src="/assets/images/choose-1.jpg" className="img-fluid rounded-3xl shadow-2xl main-hero-img" alt="Fashion" />
-                                <div className="experience-tag shadow-lg">
+                                <img src="/assets/images/choose-1.jpg" className="img-fluid main-hero-img" alt="Fashion" />
+                                <div className="experience-tag">
                                     <h2 className="mb-0 font-weight-bold">24/7</h2>
                                     <p className="mb-0 small">Global Support</p>
                                 </div>
@@ -52,7 +52,7 @@ export default function About() {
             {/* --- 2. PREMIUM STATS --- */}
             <section className="py-5" style={{ marginTop: "-50px" }}>
                 <div className="container">
-                    <div className="row bg-white shadow-xl rounded-2xl py-5 text-center border">
+                    <div className="row bg-white py-5 text-center border">
                         <div className="col-md-3 border-right">
                             <h2 className="display-4 font-weight-bold text-info">15k+</h2>
                             <p className="text-muted text-uppercase small font-weight-bold">Happy Clients</p>
@@ -82,7 +82,7 @@ export default function About() {
                                 {/* Decorative elements to make it look premium */}
                                 <div className="decor-box-behind"></div>
                                 <motion.div 
-                                    className="overflow-hidden rounded-3xl shadow-2xl border-white border-8"
+                                    className="border-white border-8"
                                     initial="hidden" whileInView="visible" variants={fadeIn}
                                 >
                                     <img 
