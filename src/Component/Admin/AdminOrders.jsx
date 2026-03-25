@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Download, FileText } from 'lucide-react';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
 import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check } from 'lucide-react';
@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 import LefNav from './LefNav';
 import './AdminOrders.css';
+import { FileInvoice, Printer } from 'lucide-react';
 
 const ALLOWED_STATUSES = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const STATUS_COLORS = {
@@ -35,9 +36,18 @@ export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchInputRef = useRef(null);
+    const debounceTimeout = useRef();
     const [selectedStatus, setSelectedStatus] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
+    // Advanced filter states
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    const [paymentStatus, setPaymentStatus] = useState('');
+
+    const PAYMENT_STATUSES = ['Pending', 'Paid', 'Failed', 'Refunded'];
     const [updating, setUpdating] = useState(null);
     const [notification, setNotification] = useState(null);
     
@@ -79,7 +89,17 @@ export default function AdminOrders() {
     // Fetch orders on mount and when page/search/status changes
     useEffect(() => {
         fetchOrders();
-    }, [page, search, selectedStatus]);
+    }, [page, search, selectedStatus, fromDate, toDate, paymentStatus]);
+
+    // Debounce search: update search param after user stops typing for 400ms
+    useEffect(() => {
+        if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+        debounceTimeout.current = setTimeout(() => {
+            setSearch(searchInput);
+            setPage(1);
+        }, 400);
+        return () => clearTimeout(debounceTimeout.current);
+    }, [searchInput]);
 
     const fetchOrders = async () => {
         try {
@@ -88,7 +108,10 @@ export default function AdminOrders() {
                 page,
                 limit: 10,
                 ...(search && { search }),
-                ...(selectedStatus && { status: selectedStatus })
+                ...(selectedStatus && { status: selectedStatus }),
+                ...(fromDate && { fromDate }),
+                ...(toDate && { toDate }),
+                ...(paymentStatus && { paymentStatus })
             };
 
             const response = await axios.get(`${BASE_URL}/api/admin/orders`, { params });
@@ -110,9 +133,11 @@ export default function AdminOrders() {
         setDrawerOrder(null);
         setDrawerOpen(true);
         try {
-            const response = await axios.get(`${BASE_URL}/api/admin/order/${orderId}`);
-            if (response.data && response.data.success) {
-                setDrawerOrder(response.data);
+            const response = await axios.get(`${BASE_URL}/api/admin/order/${orderId}`,
+                { headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET } }
+            );
+            if (response.data && response.data.success && response.data.order) {
+                setDrawerOrder(response.data.order);
             } else {
                 setDrawerOrder(null);
             }
@@ -347,6 +372,18 @@ export default function AdminOrders() {
         doc.save('orders.pdf');
     };
 
+    // Handler for Generate Invoice
+    const handleGenerateInvoice = (order) => {
+        // TODO: Implement invoice PDF generation logic
+        alert(`Invoice generation for Order #${order.orderId} coming soon!`);
+    };
+
+    // Handler for Generate Shipping Label
+    const handleGenerateShippingLabel = (order) => {
+        // TODO: Implement shipping label PDF logic
+        alert(`Shipping label for Order #${order.orderId} coming soon!`);
+    };
+
     if (loading && orders.length === 0) {
         return (
             <div className="admin-orders-page d-flex align-items-center justify-content-center">
@@ -398,51 +435,90 @@ export default function AdminOrders() {
                                 </motion.div>
                             )}
 
-                            <div className="admin-orders-toolbar mb-4 d-flex flex-wrap align-items-end justify-content-between">
-                                <div className="row flex-grow-1">
-                                    <div className="col-md-5 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Search (Order ID / Name / Email)</label>
-                                        <div className="input-group">
-                                            <div className="input-group-prepend">
-                                                <span className="input-group-text bg-white"><Search size={18} className="text-muted" /></span>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                placeholder="Search orders..."
-                                                value={search}
-                                                onChange={(e) => {
-                                                    setSearch(e.target.value);
-                                                    setPage(1);
-                                                }}
-                                                className="form-control"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="col-md-4 mb-3">
-                                        <label className="small font-weight-bold text-uppercase text-muted mb-2 d-block">Filter by Status</label>
-                                        <div className="input-group">
-                                            <div className="input-group-prepend">
-                                                <span className="input-group-text bg-white"><Filter size={18} className="text-muted" /></span>
-                                            </div>
-                                            <select
-                                                value={selectedStatus}
-                                                onChange={(e) => {
-                                                    setSelectedStatus(e.target.value);
-                                                    setPage(1);
-                                                }}
-                                                className="form-control"
-                                            >
-                                                <option value="">All Statuses</option>
-                                                {ALLOWED_STATUSES.map(status => (
-                                                    <option key={status} value={status}>{status}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="col-md-3 mb-3 d-flex align-items-end">
-                                        <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
+                                                        <div className="admin-orders-toolbar mb-4 d-flex flex-wrap align-items-end justify-content-between premium-toolbar-responsive">
+                                                            <div className="row flex-grow-1 w-100">
+                                                                <div className="col-12 col-md-3 mb-3">
+                                                                    <label className="premium-label">Search (Order ID / Email)</label>
+                                                                    <div className="input-group premium-input-group">
+                                                                        <span className="input-group-text bg-white premium-input-icon"><Search size={18} className="text-muted" /></span>
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Search orders..."
+                                                                            value={searchInput}
+                                                                            ref={searchInputRef}
+                                                                            onChange={e => setSearchInput(e.target.value)}
+                                                                            className="form-control premium-input"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="col-6 col-md-2 mb-3">
+                                                                    <label className="premium-label">From Date</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        className="form-control premium-input"
+                                                                        value={fromDate}
+                                                                        onChange={e => {
+                                                                            setFromDate(e.target.value);
+                                                                            setPage(1);
+                                                                        }}
+                                                                        max={toDate || undefined}
+                                                                    />
+                                                                </div>
+                                                                <div className="col-6 col-md-2 mb-3">
+                                                                    <label className="premium-label">To Date</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        className="form-control premium-input"
+                                                                        value={toDate}
+                                                                        onChange={e => {
+                                                                            setToDate(e.target.value);
+                                                                            setPage(1);
+                                                                        }}
+                                                                        min={fromDate || undefined}
+                                                                    />
+                                                                </div>
+                                                                <div className="col-6 col-md-2 mb-3">
+                                                                    <label className="premium-label">Payment Status</label>
+                                                                    <select
+                                                                        className="form-control premium-input"
+                                                                        value={paymentStatus}
+                                                                        onChange={e => {
+                                                                            setPaymentStatus(e.target.value);
+                                                                            setPage(1);
+                                                                        }}
+                                                                    >
+                                                                        <option value="">All</option>
+                                                                        {PAYMENT_STATUSES.map(status => (
+                                                                            <option key={status} value={status}>{status}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                                <div className="col-6 col-md-2 mb-3">
+                                                                    <label className="premium-label">Filter by Status</label>
+                                                                    <div className="input-group premium-input-group">
+                                                                        <span className="input-group-text bg-white premium-input-icon"><Filter size={18} className="text-muted" /></span>
+                                                                        <select
+                                                                            value={selectedStatus}
+                                                                            onChange={(e) => {
+                                                                                setSelectedStatus(e.target.value);
+                                                                                setSearchInput('');
+                                                                                setSearch('');
+                                                                                setPage(1);
+                                                                            }}
+                                                                            className="form-control premium-input"
+                                                                        >
+                                                                            <option value="">All Statuses</option>
+                                                                            {ALLOWED_STATUSES.map(status => (
+                                                                                <option key={status} value={status}>{status}</option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="col-12 col-md-1 mb-3 d-flex align-items-end">
+                                                                    <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="export-btn-wrap mb-3 ml-auto d-flex flex-row flex-wrap premium-export-btns">
                                     </div>
                                 </div>
                                 <div className="export-btn-wrap mb-3 ml-auto">
@@ -548,7 +624,7 @@ export default function AdminOrders() {
                                                             initial={{ opacity: 0, y: 18 }}
                                                             animate={{ opacity: 1, y: 0 }}
                                                             transition={{ delay: index * 0.04 }}
-                                                            className="order-row-premium"
+                                                            className={`order-row-premium${selectedOrders.includes(order.orderId) ? ' selected' : ''}`}
                                                         >
                                                             <td>
                                                                 <input
@@ -711,7 +787,7 @@ export default function AdminOrders() {
                             </div>
                         </div>
                     </div>
-                </div>
+            
         <OrderDetailsDrawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
