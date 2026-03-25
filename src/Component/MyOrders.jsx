@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
@@ -5,6 +6,7 @@ import { motion } from 'framer-motion'
 import { io } from 'socket.io-client'
 import { BASE_URL } from '../constants'
 import { Clock3, MessageCircle, PackageSearch } from 'lucide-react'
+import './MyOrdersPremium.css'
 
 const FILTERS = ['All', 'In Transit', 'Delivered']
 
@@ -164,27 +166,16 @@ export default function MyOrders() {
   }, [orders, activeFilter, searchOrderId, fromDate, toDate])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f6f6f4', padding: '100px 16px 40px' }}>
-      <div className="container" style={{ maxWidth: 980 }}>
-        <div className="d-flex flex-wrap align-items-center justify-content-between mb-4">
+    <div className="myorders-premium-bg">
+      <div className="container myorders-premium-container">
+        <div className="myorders-premium-header d-flex flex-wrap align-items-center justify-content-between mb-4">
           <div>
-            <h2 className="font-weight-bold mb-1" style={{ color: '#111' }}>My Orders</h2>
-            <p className="text-muted mb-0">Track all your recent and past orders in one place</p>
+            <h2 className="myorders-premium-title">My Orders</h2>
+            <p className="myorders-premium-desc">Track all your recent and past orders in one place</p>
           </div>
-          <div className="d-flex align-items-center mt-2 mt-md-0" style={{ gap: '12px' }}>
-            <span
-              className="px-3 py-2 rounded-pill"
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: '#fff',
-                background: socketConnected ? '#10b981' : '#ef4444',
-                boxShadow: socketConnected ? '0 4px 12px rgba(16,185,129,0.28)' : 'none'
-              }}
-            >
-              {socketConnected ? '🟢 Live Connected' : '🔴 Connecting...'}
-            </span>
-            <button className="btn btn-dark rounded-pill px-4" onClick={() => navigate('/profile')}>
+          <div className="d-flex align-items-center mt-2 mt-md-0 myorders-premium-statusbar">
+            <span className={`myorders-premium-status ${socketConnected ? 'connected' : 'disconnected'}`}>{socketConnected ? '🟢 Live Connected' : '🔴 Connecting...'}</span>
+            <button className="myorders-premium-profile-btn" onClick={() => navigate('/profile')}>
               Back to Profile
             </button>
           </div>

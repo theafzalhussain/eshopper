@@ -173,6 +173,14 @@ io.use(async (socket, next) => {
     try {
         const userId = socket.handshake.auth?.userId || socket.handshake.query?.userId;
         if (!userId) return next(new Error('Unauthorized: userId missing'));
+
+        // Allow admin-dashboard connections without user validation
+        if (userId === 'admin-dashboard') {
+            socket.data.userId = 'admin-dashboard';
+            socket.data.isAdmin = true;
+            return next();
+        }
+
         const userExists = await User.exists({ _id: String(userId) });
         if (!userExists) return next(new Error('Unauthorized: invalid user'));
         socket.data.userId = String(userId);
@@ -1449,6 +1457,18 @@ const placeOrderHandler = async (req, res) => {
         }
         }
 
+        // 🔴 EMIT REAL-TIME DASHBOARD UPDATE VIA SOCKET.IO
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('newOrder', {
+                orderId: orderDoc.orderId,
+                amount: orderDoc.finalAmount,
+                timestamp: new Date()
+            });
+            io.emit('dashboardUpdate', { type: 'newOrder', timestamp: new Date() });
+            console.log(`📡 Socket.io: Dashboard update emitted for new order ${orderId}`);
+        }
+
         return res.status(201).json({
             success: true,
             message: 'Order placed successfully',
@@ -1852,6 +1872,170 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
     }
 });
 
+// 🔴 PREMIUM ADMIN DASHBOARD ANALYTICS - Enterprise-Grade Aggregation
+app.get('/api/admin/dashboard-analytics', async (req, res) => {
+    try {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
+        // 1. TOTAL REVENUE (excluding Cancelled orders)
+        const [currentRevenue, previousRevenue] = await Promise.all([
+            Order.aggregate([
+                { $match: { orderStatus: { $ne: 'Cancelled' } } },
+                { $group: { _id: null, total: { $sum: '$finalAmount' } } }
+            ]),
+            Order.aggregate([
+                { $match: {
+                    orderStatus: { $ne: 'Cancelled' },
+                    createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth }
+                } },
+                { $group: { _id: null, total: { $sum: '$finalAmount' } } }
+            ])
+        ]);
+
+        // 2. TODAY'S ORDERS & NEW CUSTOMERS
+        const [todayOrders, todayCustomers, previousOrders, previousCustomers] = await Promise.all([
+            Order.countDocuments({ createdAt: { $gte: startOfToday } }),
+            User.countDocuments({ createdAt: { $gte: startOfToday } }),
+            Order.countDocuments({
+                createdAt: {
+                    $gte: new Date(startOfToday.getTime() - 86400000),
+                    $lt: startOfToday
+                }
+            }),
+            User.countDocuments({
+                createdAt: {
+                    $gte: new Date(startOfToday.getTime() - 86400000),
+                    $lt: startOfToday
+                }
+            })
+        ]);
+
+        // 3. LOW STOCK ALERT (stock < 10 as default threshold)
+        const lowStockThreshold = 10;
+        const lowStockCount = await Product.countDocuments({
+            $expr: {
+                $and: [
+                    { $gt: [{ $toInt: { $ifNull: ['$stock', '0'] } }, 0] },
+                    { $lt: [{ $toInt: { $ifNull: ['$stock', '0'] } }, lowStockThreshold] }
+                ]
+            }
+        });
+
+        // 4. ACTIVE PRODUCTS
+        const activeProducts = await Product.countDocuments({
+            stock: { $ne: '0' }
+        });
+
+        // 5. MONTHLY REVENUE FOR CHARTS (Last 12 months)
+        const months = Array.from({ length: 12 }, (_, i) => {
+            const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+            return { year: d.getFullYear(), month: d.getMonth() };
+        });
+
+        const monthlyRevenue = await Order.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: new Date(now.getFullYear(), now.getMonth() - 11, 1) },
+                    orderStatus: { $ne: 'Cancelled' }
+                }
+            },
+            {
+                $group: {
+                    _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
+                    revenue: { $sum: '$finalAmount' }
+                }
+            },
+            { $sort: { '_id.year': 1, '_id.month': 1 } }
+        ]);
+
+        // Target: 10% growth from first month
+        let baseRevenue = monthlyRevenue.length ? monthlyRevenue[0].revenue : 100000;
+        const monthlyData = months.map(({ year, month }, i) => {
+            const found = monthlyRevenue.find(m => m._id.year === year && m._id.month === month + 1);
+            const revenue = found ? found.revenue : 0;
+            const target = Math.round(baseRevenue * Math.pow(1.1, i));
+            return {
+                month: `${year}-${String(month + 1).padStart(2, '0')}`,
+                revenue,
+                target
+            };
+        });
+
+        // 6. SALES BY CATEGORY (Pie Chart)
+        const salesByCategory = await Order.aggregate([
+            { $match: { orderStatus: { $ne: 'Cancelled' } } },
+            { $unwind: '$products' },
+            {
+                $group: {
+                    _id: '$products.maincategory',
+                    value: { $sum: { $ifNull: ['$products.qty', 1] } }
+                }
+            },
+            { $match: { _id: { $ne: null } } },
+            { $sort: { value: -1 } },
+            { $limit: 6 }
+        ]);
+
+        // 7. TOP 5 MOST ORDERED PRODUCTS
+        const topProducts = await Order.aggregate([
+            { $match: { orderStatus: { $ne: 'Cancelled' } } },
+            { $unwind: '$products' },
+            {
+                $group: {
+                    _id: '$products.id',
+                    name: { $first: '$products.name' },
+                    pic1: { $first: '$products.pic1' },
+                    maincategory: { $first: '$products.maincategory' },
+                    brand: { $first: '$products.brand' },
+                    finalprice: { $first: '$products.finalprice' },
+                    totalSold: { $sum: { $ifNull: ['$products.qty', 1] } }
+                }
+            },
+            { $sort: { totalSold: -1 } },
+            { $limit: 5 }
+        ]);
+
+        // 8. ACTIVE SESSIONS (approximate based on recent activity)
+        const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+        const activeSessions = await User.countDocuments({
+            updatedAt: { $gte: thirtyMinutesAgo }
+        }).catch(() => todayCustomers); // Fallback to today's customers
+
+        res.json({
+            success: true,
+            metrics: {
+                totalRevenue: currentRevenue[0]?.total || 0,
+                newOrders: todayOrders,
+                newCustomers: todayCustomers,
+                activeProducts
+            },
+            previousMetrics: {
+                totalRevenue: previousRevenue[0]?.total || 0,
+                newOrders: previousOrders,
+                newCustomers: previousCustomers
+            },
+            lowStockCount,
+            activeSessions,
+            monthlyData,
+            salesByCategory,
+            topProducts
+        });
+
+    } catch (err) {
+        console.error('Dashboard analytics error:', err.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch dashboard analytics',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
 // 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
 app.get('/api/admin/orders', async (req, res) => {
     try {
@@ -2121,6 +2305,23 @@ const handleOrderStatusUpdate = async (req, res) => {
                     .catch(err => {
                         console.error(`⚠️  Background notification error: ${err.message}`);
                     });
+            });
+        }
+
+        // 🔴 EMIT REAL-TIME DASHBOARD UPDATE VIA SOCKET.IO
+        const io = req.app.get('io');
+        if (io) {
+            io.emit('dashboardUpdate', {
+                type: 'orderStatusUpdate',
+                orderId: order.orderId,
+                newStatus: normalized,
+                timestamp: new Date()
+            });
+            // Also emit to specific user room
+            io.to(`user:${order.userid}`).emit('orderUpdate', {
+                orderId: order.orderId,
+                status: normalized,
+                timestamp: new Date()
             });
         }
 
