@@ -52,7 +52,7 @@ export default function OrderTracking() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [socketConnected, setSocketConnected] = useState(false)
-  const [toast, setToast] = useState(null)
+  const [toasts, setToasts] = useState([])
   const [didCelebrate, setDidCelebrate] = useState(false)
   const [statusTimeline, setStatusTimeline] = useState([])
 
@@ -104,15 +104,108 @@ export default function OrderTracking() {
       Delivered: '🎉 Luxury Experience Complete - Thank you!'
     }
 
-    setToast({
+    const newToast = {
       id: Date.now(),
       title: '📨 Status Updated',
-      message: messages[nextStatus] || `Status: ${statusText}`
-    })
+      message: messages[nextStatus] || `Status: ${statusText}`,
+      type: 'status'
+    }
+
+    setToasts(prev => [...prev, newToast])
+
+    // Auto-remove after 3.5 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== newToast.id))
+    }, 3500)
 
     // Status update notification
     console.log(`📊 Status Updated: ${nextStatus}`)
   }
+
+  const showDeliveryUpdateToast = (deliverySchedule) => {
+    if (!deliverySchedule?.date) return
+
+    const deliveryDate = new Date(deliverySchedule.date)
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    let dateText = deliveryDate.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    })
+
+    if (deliveryDate.toDateString() === today.toDateString()) {
+      dateText = 'Today'
+    } else if (deliveryDate.toDateString() === tomorrow.toDateString()) {
+      dateText = 'Tomorrow'
+    }
+
+    const timeText = deliverySchedule.time ? ` at ${deliverySchedule.time}` : ''
+
+    const newToast = {
+      id: Date.now() + 1, // Different ID to show alongside status toast
+      title: '📅 Delivery Updated',
+      message: `🚚 Expected delivery: ${dateText}${timeText}`,
+      type: 'delivery'
+    }
+
+    setToasts(prev => [...prev, newToast])
+
+    // Auto-remove after 3.5 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== newToast.id))
+    }, 3500)
+
+    console.log(`📅 Delivery Date Updated: ${dateText}${timeText}`)
+  }
+
+  // Smart Date Formatter - Shows "Today", "Tomorrow", or full date
+  const formatDeliveryDate = (dateString) => {
+    if (!dateString) return null
+
+    const deliveryDate = new Date(dateString)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const deliveryDateOnly = new Date(deliveryDate)
+    deliveryDateOnly.setHours(0, 0, 0, 0)
+
+    if (deliveryDateOnly.getTime() === today.getTime()) {
+      return 'Today'
+    } else if (deliveryDateOnly.getTime() === tomorrow.getTime()) {
+      return 'Tomorrow'
+    } else {
+      return deliveryDate.toLocaleDateString('en-IN', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
+  }
+
+  // Get the most recent delivery date from deliverySchedule or estimatedDelivery
+  const getDeliveryInfo = useMemo(() => {
+    // Priority: deliverySchedule.date > estimatedDelivery
+    if (order?.deliverySchedule?.date) {
+      return {
+        date: order.deliverySchedule.date,
+        time: order.deliverySchedule.time,
+        source: 'schedule'
+      }
+    } else if (order?.estimatedDelivery) {
+      return {
+        date: order.estimatedDelivery,
+        time: null,
+        source: 'estimate'
+      }
+    }
+    return null
+  }, [order])
 
   // Track page visit
   useEffect(() => {
@@ -200,18 +293,45 @@ export default function OrderTracking() {
               }
               return nextStatus
             })
-            setOrder((prev) => ({ ...(prev || {}), updatedAt: payload.updatedAt || new Date().toISOString() }))
-            
-            // Add to timeline
+
+            // Update order with new delivery information if provided
+            setOrder((prev) => {
+              const updated = {
+                ...(prev || {}),
+                updatedAt: payload.updatedAt || new Date().toISOString(),
+                // Update delivery schedule if provided in payload
+                ...(payload.deliverySchedule && { deliverySchedule: payload.deliverySchedule })
+              }
+
+              // If deliverySchedule has a date, also update estimatedDelivery
+              if (payload.deliverySchedule?.date) {
+                updated.estimatedDelivery = payload.deliverySchedule.scheduledAt || payload.deliverySchedule.date
+              } else if (payload.deliverySchedule?.estimatedDelivery) {
+                updated.estimatedDelivery = payload.deliverySchedule.estimatedDelivery
+              } else if (payload.estimatedDelivery) {
+                updated.estimatedDelivery = payload.estimatedDelivery
+              }
+
+              return updated
+            })
+
+            // Add to timeline with enhanced information
             setStatusTimeline((prev) => [
               ...prev,
               {
                 status: nextStatus,
-                timestamp: payload.updatedAt || new Date().toISOString()
+                timestamp: payload.updatedAt || new Date().toISOString(),
+                deliverySchedule: payload.deliverySchedule || null,
+                adminNote: payload.adminNote || null
               }
             ])
-            
-            console.log('🔄 Status updated to:', nextStatus)
+
+            // Show delivery update notification if delivery date changed
+            if (payload.deliverySchedule?.date) {
+              showDeliveryUpdateToast(payload.deliverySchedule)
+            }
+
+            console.log('🔄 Status updated to:', nextStatus, payload.deliverySchedule ? 'with delivery update' : '')
           }
         }
       })
@@ -228,12 +348,6 @@ export default function OrderTracking() {
       if (socketRef) socketRef.disconnect()
     }
   }, [orderId, userId])
-
-  useEffect(() => {
-    if (!toast?.id) return undefined
-    const timeout = setTimeout(() => setToast(null), 3400)
-    return () => clearTimeout(timeout)
-  }, [toast])
 
   useEffect(() => {
     if (status !== 'Delivered' || didCelebrate) return
@@ -277,31 +391,60 @@ export default function OrderTracking() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f6f6f4', padding: '100px 16px 40px' }}>
-      {toast && (
-        <motion.div
-          initial={{ opacity: 0, y: -16, x: 18 }}
-          animate={{ opacity: 1, y: 0, x: 0 }}
-          exit={{ opacity: 0, y: -10, x: 20 }}
-          className="position-fixed"
-          style={{
-            top: 24,
-            right: 20,
-            zIndex: 1000,
-            minWidth: 260,
-            background: '#111111',
-            border: '1px solid #d4af37',
-            color: '#f8e8c7',
-            borderRadius: 14,
-            boxShadow: '0 14px 34px rgba(0,0,0,0.35)',
-            padding: '12px 14px'
-          }}
-        >
-          <div style={{ fontSize: 12, letterSpacing: '.9px', textTransform: 'uppercase', color: '#d4af37', fontWeight: 700 }}>
-            {toast.title}
-          </div>
-          <div style={{ marginTop: 4, fontSize: 13, color: '#f4eee0' }}>{toast.message}</div>
-        </motion.div>
-      )}
+      {/* ENHANCED MULTIPLE TOASTS DISPLAY */}
+      <div style={{ position: 'fixed', top: 24, right: 20, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {toasts.map((toast, index) => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, y: -16, x: 18 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: -10, x: 20 }}
+            style={{
+              minWidth: 280,
+              background: toast.type === 'delivery'
+                ? 'linear-gradient(135deg, #1e3a8a, #1e40af)'
+                : '#111111',
+              border: toast.type === 'delivery'
+                ? '1px solid #3b82f6'
+                : '1px solid #d4af37',
+              color: '#f8e8c7',
+              borderRadius: 14,
+              boxShadow: toast.type === 'delivery'
+                ? '0 14px 34px rgba(59,130,246,0.35)'
+                : '0 14px 34px rgba(0,0,0,0.35)',
+              padding: '12px 14px',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Premium shimmer effect */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `linear-gradient(90deg, transparent, ${toast.type === 'delivery' ? 'rgba(255,255,255,0.1)' : 'rgba(212,175,55,0.1)'}, transparent)`,
+                animation: 'toast-shimmer 2s infinite',
+                pointerEvents: 'none'
+              }}
+            />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{
+                fontSize: 12,
+                letterSpacing: '.9px',
+                textTransform: 'uppercase',
+                color: toast.type === 'delivery' ? '#60a5fa' : '#d4af37',
+                fontWeight: 700
+              }}>
+                {toast.title}
+              </div>
+              <div style={{ marginTop: 4, fontSize: 13, color: '#f4eee0' }}>{toast.message}</div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
 
       <div className="container" style={{ maxWidth: 900 }}>
         {/* HEADER */}
@@ -374,12 +517,13 @@ export default function OrderTracking() {
             </div>
           </div>
 
-          {/* ESTIMATED DELIVERY */}
-          {order?.estimatedDelivery && (
+          {/* ESTIMATED DELIVERY - ENHANCED WITH SMART DATE FORMATTING */}
+          {getDeliveryInfo && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              key={getDeliveryInfo.date} // Key ensures re-render on date change
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
               className="p-4 rounded-xl mb-4"
               style={{
                 background: 'rgba(255, 255, 255, 0.55)',
@@ -392,17 +536,26 @@ export default function OrderTracking() {
               <div className="d-flex align-items-center">
                 <div style={{ fontSize: '32px', marginRight: '16px' }}>📅</div>
                 <div>
-                  <p className="text-muted small mb-1" style={{ color: '#6b5b2b' }}>Expected Delivery</p>
-                  <p className="font-weight-bold mb-0" style={{ fontSize: '18px', color: '#5f4b1b' }}>
-                    {new Date(order.estimatedDelivery).toLocaleDateString('en-IN', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
+                  <p className="text-muted small mb-1" style={{ color: '#6b5b2b', fontSize: '11px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    Expected Delivery
+                  </p>
+                  <p className="font-weight-bold mb-0" style={{ fontSize: '20px', color: '#5f4b1b', lineHeight: '1.3' }}>
+                    {formatDeliveryDate(getDeliveryInfo.date)}
+                    {getDeliveryInfo.time && (
+                      <span style={{ fontSize: '16px', color: '#8b7355', marginLeft: '8px' }}>
+                        at {getDeliveryInfo.time}
+                      </span>
+                    )}
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#8b7355', marginTop: '4px', marginBottom: '0' }}>
+                    {new Date(getDeliveryInfo.date).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
                     })}
                   </p>
                   {order?.shippingAddress?.city && (
-                    <p style={{ fontSize: '12px', color: '#6b5b2b', marginTop: '4px' }}>
+                    <p style={{ fontSize: '12px', color: '#6b5b2b', marginTop: '6px', marginBottom: '0' }}>
                       📍 Delivering to {order.shippingAddress.city}
                     </p>
                   )}
@@ -615,7 +768,7 @@ export default function OrderTracking() {
             </p>
           </motion.div>
 
-          {/* STATUS TIMELINE */}
+          {/* STATUS TIMELINE - ENHANCED WITH ADMIN NOTES AND DELIVERY UPDATES */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -627,62 +780,85 @@ export default function OrderTracking() {
               📍 Status Timeline
             </h5>
             <div style={{ position: 'relative', paddingLeft: '20px' }}>
-              {timelineSteps.map((event, idx) => (
-                <motion.div
-                  key={event.step}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + idx * 0.05 }}
-                  style={{ marginBottom: idx < statusTimeline.length - 1 ? '20px' : 0, position: 'relative' }}
-                >
-                  {/* Timeline dot */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '-28px',
-                      top: '2px',
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      background: event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db',
-                      border: '3px solid white',
-                      boxShadow: `0 0 0 2px ${event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db'}33`
-                    }}
-                  />
-                  {/* Timeline line */}
-                  {idx < timelineSteps.length - 1 && (
+              {timelineSteps.map((event, idx) => {
+                const timelineEvent = statusTimeline.find(t => t.status === event.step)
+                return (
+                  <motion.div
+                    key={event.step}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + idx * 0.05 }}
+                    style={{ marginBottom: idx < timelineSteps.length - 1 ? '20px' : 0, position: 'relative' }}
+                  >
+                    {/* Timeline dot */}
                     <div
                       style={{
                         position: 'absolute',
-                        left: '-23px',
-                        top: '12px',
-                        width: '2px',
-                        height: '20px',
-                        background: '#e5e7eb'
+                        left: '-28px',
+                        top: '2px',
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        background: event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db',
+                        border: '3px solid white',
+                        boxShadow: `0 0 0 2px ${event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db'}33`
                       }}
                     />
-                  )}
-                  <div>
-                    <p className="font-weight-bold small mb-1" style={{ color: '#111', fontSize: '13px' }}>
-                      {event.step}
-                    </p>
-                    <p className="small mb-1" style={{ color: '#6b7280', fontSize: '12px' }}>
-                      {STATUS_SUBTEXT[event.step]}
-                    </p>
-                    <p className="text-muted small mb-0" style={{ fontSize: '12px' }}>
-                      {event.timestamp
-                        ? new Date(event.timestamp).toLocaleString('en-IN', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                        : 'Pending'}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+                    {/* Timeline line */}
+                    {idx < timelineSteps.length - 1 && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: '-23px',
+                          top: '12px',
+                          width: '2px',
+                          height: '20px',
+                          background: '#e5e7eb'
+                        }}
+                      />
+                    )}
+                    <div>
+                      <p className="font-weight-bold small mb-1" style={{ color: '#111', fontSize: '13px' }}>
+                        {event.step}
+                      </p>
+                      <p className="small mb-1" style={{ color: '#6b7280', fontSize: '12px' }}>
+                        {STATUS_SUBTEXT[event.step]}
+                      </p>
+
+                      {/* Enhanced timeline with delivery schedule */}
+                      {timelineEvent?.deliverySchedule && (
+                        <div className="mt-2 p-2 rounded" style={{ background: '#e0f2fe', border: '1px solid #0284c7' }}>
+                          <p className="small mb-0" style={{ color: '#0c4a6e', fontSize: '11px', fontWeight: '600' }}>
+                            📅 Delivery Scheduled: {timelineEvent.deliverySchedule.date}
+                            {timelineEvent.deliverySchedule.time && ` at ${timelineEvent.deliverySchedule.time}`}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Admin notes */}
+                      {timelineEvent?.adminNote && (
+                        <div className="mt-2 p-2 rounded" style={{ background: '#fef3c7', border: '1px solid #f59e0b' }}>
+                          <p className="small mb-0" style={{ color: '#92400e', fontSize: '11px', fontWeight: '600' }}>
+                            💼 Admin Note: {timelineEvent.adminNote}
+                          </p>
+                        </div>
+                      )}
+
+                      <p className="text-muted small mb-0" style={{ fontSize: '12px' }}>
+                        {event.timestamp
+                          ? new Date(event.timestamp).toLocaleString('en-IN', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                          : 'Pending'}
+                      </p>
+                    </div>
+                  </motion.div>
+                )
+              })}
             </div>
           </motion.div>
 
@@ -797,6 +973,19 @@ export default function OrderTracking() {
           75%, 100% {
             transform: scale(1.25);
             opacity: 0;
+          }
+        }
+
+        /* Premium Toast Shimmer Animation */
+        @keyframes toast-shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          50% {
+            transform: translateX(100%);
+          }
+          100% {
+            transform: translateX(100%);
           }
         }
 

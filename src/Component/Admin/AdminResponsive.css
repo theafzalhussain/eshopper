@@ -1,0 +1,631 @@
+/* =====================================================
+   ADMIN PANEL - COMPREHENSIVE RESPONSIVE STYLES
+   Mobile-First Responsive Design for All Admin Components
+   ===================================================== */
+
+/* =====================================================
+   BASE RESPONSIVE CONTAINER
+   ===================================================== */
+.container-fluid {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (max-width: 767px) {
+  .container-fluid {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+/* =====================================================
+   ADMIN SIDEBAR RESPONSIVE
+   ===================================================== */
+.admin-sidebar {
+  width: 100%;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 991px) {
+  .admin-sidebar {
+    margin-bottom: 1.5rem;
+  }
+
+  .admin-sidebar .list-group-item {
+    padding: 0.875rem 1rem !important;
+    font-size: 0.9rem;
+  }
+
+  .admin-sidebar .list-group-item span {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-sidebar {
+    margin-bottom: 1.25rem;
+  }
+
+  .admin-sidebar .list-group-item {
+    padding: 0.75rem 0.875rem !important;
+    font-size: 0.85rem;
+  }
+
+  .admin-sidebar .list-group-item svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .admin-sidebar .list-group-item span {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .admin-sidebar .list-group-item {
+    padding: 0.65rem 0.75rem !important;
+    font-size: 0.8rem;
+  }
+
+  .admin-sidebar .list-group-item svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* =====================================================
+   ADMIN GRID LAYOUT RESPONSIVE
+   ===================================================== */
+.row {
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+
+.row > [class*='col-'] {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+@media (max-width: 767px) {
+  .row {
+    margin-left: -0.375rem;
+    margin-right: -0.375rem;
+  }
+
+  .row > [class*='col-'] {
+    padding-left: 0.375rem;
+    padding-right: 0.375rem;
+  }
+}
+
+/* =====================================================
+   ADMIN CARD RESPONSIVE
+   ===================================================== */
+.card {
+  margin-bottom: 1.5rem;
+  border-radius: 16px;
+}
+
+@media (max-width: 991px) {
+  .card {
+    margin-bottom: 1.25rem;
+    border-radius: 14px;
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+
+  .card-header {
+    padding: 1rem 1.25rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .card {
+    margin-bottom: 1rem;
+    border-radius: 12px;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .card-header {
+    padding: 0.875rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .card-title {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .card {
+    margin-bottom: 0.875rem;
+    border-radius: 10px;
+  }
+
+  .card-body {
+    padding: 0.875rem;
+  }
+
+  .card-header {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.85rem;
+  }
+
+  .card-title {
+    font-size: 1rem;
+  }
+}
+
+/* =====================================================
+   ADMIN FORM RESPONSIVE
+   ===================================================== */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 767px) {
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-control {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .form-label,
+  label {
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .form-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .form-group {
+    margin-bottom: 0.875rem;
+  }
+
+  .form-control {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.85rem;
+  }
+
+  .form-label,
+  label {
+    font-size: 0.8rem;
+  }
+}
+
+/* =====================================================
+   ADMIN BUTTON RESPONSIVE
+   ===================================================== */
+.btn {
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 767px) {
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-lg {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+  }
+
+  .btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .btn {
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .btn-lg {
+    padding: 0.55rem 1.1rem;
+    font-size: 0.9rem;
+  }
+
+  .btn-sm {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* =====================================================
+   ADMIN TABLE ACTIONS RESPONSIVE
+   ===================================================== */
+.table-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  .table-actions {
+    gap: 0.375rem;
+  }
+
+  .table-actions .btn {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .table-actions svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (max-width: 575px) {
+  .table-actions {
+    gap: 0.25rem;
+    justify-content: flex-start;
+  }
+
+  .table-actions .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .table-actions svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* =====================================================
+   ADMIN MODAL RESPONSIVE
+   ===================================================== */
+.modal-content {
+  border-radius: 16px;
+}
+
+@media (max-width: 767px) {
+  .modal-content {
+    border-radius: 14px;
+  }
+
+  .modal-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .modal-body {
+    padding: 1rem 1.25rem;
+  }
+
+  .modal-footer {
+    padding: 0.875rem 1.25rem;
+  }
+
+  .modal-title {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .modal-dialog {
+    margin: 0.5rem;
+  }
+
+  .modal-content {
+    border-radius: 12px;
+  }
+
+  .modal-header {
+    padding: 0.875rem 1rem;
+  }
+
+  .modal-body {
+    padding: 0.875rem 1rem;
+  }
+
+  .modal-footer {
+    padding: 0.75rem 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  .modal-title {
+    font-size: 1rem;
+  }
+}
+
+/* =====================================================
+   ADMIN BADGE RESPONSIVE
+   ===================================================== */
+.badge {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 767px) {
+  .badge {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .badge {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
+}
+
+/* =====================================================
+   ADMIN DASHBOARD METRICS RESPONSIVE
+   ===================================================== */
+.dashboard-metric-card {
+  padding: 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 991px) {
+  .dashboard-metric-card {
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-metric-card {
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .dashboard-metric-card h3 {
+    font-size: 1.75rem;
+  }
+
+  .dashboard-metric-card h4 {
+    font-size: 1.25rem;
+  }
+
+  .dashboard-metric-card p {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .dashboard-metric-card {
+    padding: 0.875rem;
+    border-radius: 10px;
+  }
+
+  .dashboard-metric-card h3 {
+    font-size: 1.5rem;
+  }
+
+  .dashboard-metric-card h4 {
+    font-size: 1.1rem;
+  }
+
+  .dashboard-metric-card p {
+    font-size: 0.8rem;
+  }
+}
+
+/* =====================================================
+   ADMIN HEADER / PAGE TITLE RESPONSIVE
+   ===================================================== */
+.admin-page-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.admin-page-title {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+@media (max-width: 991px) {
+  .admin-page-title {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-page-header {
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.875rem;
+  }
+
+  .admin-page-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .admin-page-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .admin-page-title {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .admin-page-title {
+    font-size: 1.2rem;
+  }
+}
+
+/* =====================================================
+   ADMIN DROPDOWN MENU RESPONSIVE
+   ===================================================== */
+.dropdown-menu {
+  border-radius: 12px;
+}
+
+@media (max-width: 767px) {
+  .dropdown-menu {
+    border-radius: 10px;
+    min-width: auto;
+  }
+
+  .dropdown-item {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .dropdown-item {
+    padding: 0.45rem 0.875rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* =====================================================
+   ADMIN IMAGE UPLOAD RESPONSIVE
+   ===================================================== */
+.image-upload-preview {
+  max-width: 200px;
+  border-radius: 12px;
+  margin-top: 1rem;
+}
+
+@media (max-width: 767px) {
+  .image-upload-preview {
+    max-width: 150px;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 575px) {
+  .image-upload-preview {
+    max-width: 120px;
+    border-radius: 8px;
+  }
+}
+
+/* =====================================================
+   UTILITY CLASSES - RESPONSIVE TEXT
+   ===================================================== */
+@media (max-width: 767px) {
+  .h1, h1 { font-size: 1.75rem; }
+  .h2, h2 { font-size: 1.5rem; }
+  .h3, h3 { font-size: 1.25rem; }
+  .h4, h4 { font-size: 1.1rem; }
+  .h5, h5 { font-size: 1rem; }
+  .h6, h6 { font-size: 0.9rem; }
+}
+
+@media (max-width: 575px) {
+  .h1, h1 { font-size: 1.5rem; }
+  .h2, h2 { font-size: 1.35rem; }
+  .h3, h3 { font-size: 1.15rem; }
+  .h4, h4 { font-size: 1rem; }
+  .h5, h5 { font-size: 0.9rem; }
+  .h6, h6 { font-size: 0.85rem; }
+}
+
+/* =====================================================
+   SCROLL TO TOP BUTTON - RESPONSIVE
+   ===================================================== */
+.scroll-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000;
+}
+
+@media (max-width: 767px) {
+  .scroll-to-top {
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .scroll-to-top button {
+    width: 40px;
+    height: 40px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .scroll-to-top {
+    bottom: 1rem;
+    right: 1rem;
+  }
+
+  .scroll-to-top button {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+}
+
+/* =====================================================
+   TOUCH-FRIENDLY INTERACTIONS
+   ===================================================== */
+@media (max-width: 767px) {
+  /* Increase touch target sizes */
+  button,
+  .btn,
+  a.btn,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better spacing for touch targets */
+  .btn-group .btn {
+    margin: 0 2px;
+  }
+}
+
+/* =====================================================
+   PREVENT HORIZONTAL OVERFLOW
+   ===================================================== */
+@media (max-width: 991px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .container-fluid,
+  .row {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}

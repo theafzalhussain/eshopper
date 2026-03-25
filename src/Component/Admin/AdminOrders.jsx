@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Download, FileText } from 'lucide-react';
+import { Download, FileText, X, Calendar } from 'lucide-react';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
 import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check } from 'lucide-react';
 import axios from 'axios';
@@ -9,7 +9,8 @@ import { motion } from 'framer-motion';
 import io from 'socket.io-client';
 import LefNav from './LefNav';
 import './AdminOrders.css';
-import { FileInvoice, Printer } from 'lucide-react';
+import './LuxeTable.css';
+import './AdminResponsive.css';
 
 const ALLOWED_STATUSES = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const STATUS_COLORS = {
@@ -33,9 +34,6 @@ const STATUS_ICONS = {
 };
 
 export default function AdminOrders() {
-    // Global CSS reset for this section
-    // Responsive container
-    // (If you have a main wrapper div, add boxSizing and maxWidth)
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -69,6 +67,18 @@ export default function AdminOrders() {
     const [drawerOrder, setDrawerOrder] = useState(null);
     const [drawerLoading, setDrawerLoading] = useState(false);
 
+    // Status Update Sidebar state
+    const [statusModal, setStatusModal] = useState({ open: false, order: null });
+    const [modalStatus, setModalStatus] = useState('');
+    const [deliveryDate, setDeliveryDate] = useState('');
+    const [deliveryTime, setDeliveryTime] = useState('');
+    const [quickDateSelection, setQuickDateSelection] = useState(''); // 'today', 'tomorrow', 'custom'
+    const [deliveryTimeline, setDeliveryTimeline] = useState(3); // 3-7 days slider
+    const [adminNote, setAdminNote] = useState(''); // Admin internal note
+
+    // Order Summary Modal state
+    const [summaryModal, setSummaryModal] = useState({ open: false, order: null });
+
     const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://api.eshopperr.me';
 
     // Socket.io setup for real-time updates
@@ -88,6 +98,17 @@ export default function AdminOrders() {
         socket.on('statusUpdate', handleStatusUpdate);
         return () => socket.off('statusUpdate', handleStatusUpdate);
     }, [BASE_URL]);
+
+    // =====================================================
+    // FULL-STACK CONNECTION: React State Management
+    // =====================================================
+    // Real-time filters working via React state + useEffect:
+    // - All filter states (search, selectedStatus, fromDate, toDate, paymentStatus)
+    //   trigger fetchOrders() when changed
+    // - Debounced search (400ms) prevents excessive API calls
+    // - Socket.io provides real-time order status updates
+    // - Backend endpoint: GET /api/admin/orders with query params
+    // =====================================================
 
     // Fetch orders on mount and when page/search/status changes
     useEffect(() => {
@@ -178,6 +199,139 @@ export default function AdminOrders() {
                     ? ' & Premium Email Sent! 📧'
                     : '';
                 showNotification(`✅ Status updated to ${newStatus}${emailInfo}`, 'success');
+                setTimeout(() => fetchOrders(), 500);
+            }
+        } catch (error) {
+            console.error('❌ Update failed:', error);
+            if (error.response?.status === 403) {
+                showNotification('🔒 Unauthorized - Admin access required', 'error');
+            } else {
+                showNotification('Failed to update status', 'error');
+            }
+        } finally {
+            setUpdating(null);
+        }
+    };
+
+    // Open Status Update Sidebar
+    const openStatusModal = (order) => {
+        setStatusModal({ open: true, order });
+        setModalStatus(order.orderStatus || 'Order Placed');
+        setDeliveryDate('');
+        setDeliveryTime('');
+        setQuickDateSelection('');
+        setDeliveryTimeline(3);
+        setAdminNote('');
+        setDropdownOpen(null);
+    };
+
+    // Close Status Update Sidebar
+    const closeStatusModal = () => {
+        setStatusModal({ open: false, order: null });
+        setModalStatus('');
+        setDeliveryDate('');
+        setDeliveryTime('');
+        setQuickDateSelection('');
+        setDeliveryTimeline(3);
+        setAdminNote('');
+    };
+
+    // Quick Date Selection Handler
+    const handleQuickDate = (type) => {
+        setQuickDateSelection(type);
+        const today = new Date();
+        if (type === 'today') {
+            setDeliveryDate(today.toISOString().split('T')[0]);
+        } else if (type === 'tomorrow') {
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            setDeliveryDate(tomorrow.toISOString().split('T')[0]);
+        } else {
+            setDeliveryDate('');
+        }
+    };
+
+    // Open Order Summary Modal
+    const openSummaryModal = (order) => {
+        setSummaryModal({ open: true, order });
+    };
+
+    // Close Order Summary Modal
+    const closeSummaryModal = () => {
+        setSummaryModal({ open: false, order: null });
+    };
+
+    // =====================================================
+    // FULL-STACK CONNECTION: Status Update with Delivery Schedule
+    // =====================================================
+    // Frontend: Modal collects status + deliveryDate + deliveryTime
+    // Backend: Node.js API updates MongoDB with:
+    //   - orderStatus: New status value
+    //   - deliverySchedule: { date, time, scheduledAt }
+    //   - statusHistory: Array with timestamp, status, message
+    // Endpoints:
+    //   - POST /api/admin/confirm-order (for Confirmed status + email)
+    //   - POST /api/update-order-status (for other statuses)
+    // =====================================================
+
+    // Handle Modal Status Update with Delivery Schedule
+    const handleModalStatusUpdate = async () => {
+        if (!statusModal.order) return;
+
+        const orderId = statusModal.order.orderId;
+        const newStatus = modalStatus;
+
+        // Build delivery schedule with timeline
+        let deliverySchedule = null;
+        if (deliveryDate || deliveryTime || deliveryTimeline) {
+            const estimatedDate = new Date();
+            estimatedDate.setDate(estimatedDate.getDate() + deliveryTimeline);
+
+            deliverySchedule = {
+                date: deliveryDate || null,
+                time: deliveryTime || null,
+                scheduledAt: deliveryDate ? new Date(`${deliveryDate}T${deliveryTime || '12:00'}`).toISOString() : null,
+                estimatedDays: deliveryTimeline,
+                estimatedDelivery: estimatedDate.toISOString()
+            };
+        }
+
+        // Include admin note in status history
+        const statusNote = adminNote.trim() || null;
+
+        try {
+            setUpdating(orderId);
+
+            // Special handling for "Confirmed" status - use premium email endpoint
+            const endpoint = newStatus === 'Confirmed'
+                ? `${BASE_URL}/api/admin/confirm-order`
+                : `${BASE_URL}/api/update-order-status`;
+
+            const config = newStatus === 'Confirmed'
+                ? {
+                    headers: {
+                        'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET
+                    }
+                }
+                : {};
+
+            const payload = newStatus === 'Confirmed'
+                ? { orderId, deliverySchedule, adminNote: statusNote }
+                : { orderId, status: newStatus, deliverySchedule, adminNote: statusNote };
+
+            const response = newStatus === 'Confirmed'
+                ? await axios.post(endpoint, payload, config)
+                : await axios.post(endpoint, payload);
+
+            if (response.data.success) {
+                closeStatusModal();
+                const emailInfo = newStatus === 'Confirmed' && response.data.emailSent
+                    ? ' & Premium Email Sent! 📧'
+                    : '';
+                const scheduleInfo = deliverySchedule?.date
+                    ? ` | Delivery: ${deliveryDate}${deliveryTime ? ' at ' + deliveryTime : ''}`
+                    : '';
+                showNotification(`✅ Status updated to ${newStatus}${emailInfo}${scheduleInfo}`, 'success');
                 setTimeout(() => fetchOrders(), 500);
             }
         } catch (error) {
@@ -409,12 +563,33 @@ export default function AdminOrders() {
                     <div className="col-lg-2 mb-4"><LefNav /></div>
                     <div className="col-lg-10">
                         <div className="admin-orders-card">
-                            <div className="mb-4">
-                                <h1 className="admin-orders-title d-flex align-items-center mb-2">
-                                    <Package className="text-info mr-2" size={30} />
-                                    Manage Orders
-                                </h1>
-                                <p className="text-muted mb-0">Premium order management with real-time updates & bulk actions</p>
+                            {/* Header with Export Buttons */}
+                            <div className="admin-orders-header">
+                                <div className="admin-orders-header-left">
+                                    <h1 className="admin-orders-title d-flex align-items-center mb-2">
+                                        <Package className="text-info mr-2" size={30} />
+                                        Manage Orders
+                                    </h1>
+                                    <p className="text-muted mb-0">Premium order management with real-time updates & bulk actions</p>
+                                </div>
+                                <div className="admin-orders-header-right">
+                                    <button
+                                        className="export-btn-premium export-csv-btn-premium"
+                                        onClick={exportOrdersToCSV}
+                                        title="Export orders as CSV"
+                                    >
+                                        <Download size={18} className="export-btn-icon" />
+                                        Export CSV
+                                    </button>
+                                    <button
+                                        className="export-btn-premium export-pdf-btn-premium"
+                                        onClick={exportOrdersToPDF}
+                                        title="Export orders as PDF"
+                                    >
+                                        <FileText size={18} className="export-btn-icon" />
+                                        Export PDF
+                                    </button>
+                                </div>
                             </div>
 
                             {notification && (
@@ -438,112 +613,88 @@ export default function AdminOrders() {
                                 </motion.div>
                             )}
 
-                                                        <div className="admin-orders-toolbar mb-4 d-flex flex-wrap align-items-end justify-content-between premium-toolbar-responsive">
-                                                            <div className="row flex-grow-1 w-100">
-                                                                <div className="col-12 col-md-3 mb-3">
-                                                                    <label className="premium-label">Search (Order ID / Email)</label>
-                                                                    <div className="input-group premium-input-group">
-                                                                        <span className="input-group-text bg-white premium-input-icon"><Search size={18} className="text-muted" /></span>
-                                                                        <input
-                                                                            type="text"
-                                                                            placeholder="Search orders..."
-                                                                            value={searchInput}
-                                                                            ref={searchInputRef}
-                                                                            onChange={e => setSearchInput(e.target.value)}
-                                                                            className="form-control premium-input"
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                                <div className="col-6 col-md-2 mb-3">
-                                                                    <label className="premium-label">From Date</label>
-                                                                    <input
-                                                                        type="date"
-                                                                        className="form-control premium-input"
-                                                                        value={fromDate}
-                                                                        onChange={e => {
-                                                                            setFromDate(e.target.value);
-                                                                            setPage(1);
-                                                                        }}
-                                                                        max={toDate || undefined}
-                                                                    />
-                                                                </div>
-                                                                <div className="col-6 col-md-2 mb-3">
-                                                                    <label className="premium-label">To Date</label>
-                                                                    <input
-                                                                        type="date"
-                                                                        className="form-control premium-input"
-                                                                        value={toDate}
-                                                                        onChange={e => {
-                                                                            setToDate(e.target.value);
-                                                                            setPage(1);
-                                                                        }}
-                                                                        min={fromDate || undefined}
-                                                                    />
-                                                                </div>
-                                                                <div className="col-6 col-md-2 mb-3">
-                                                                    <label className="premium-label">Payment Status</label>
-                                                                    <select
-                                                                        className="form-control premium-input"
-                                                                        value={paymentStatus}
-                                                                        onChange={e => {
-                                                                            setPaymentStatus(e.target.value);
-                                                                            setPage(1);
-                                                                        }}
-                                                                    >
-                                                                        <option value="">All</option>
-                                                                        {PAYMENT_STATUSES.map(status => (
-                                                                            <option key={status} value={status}>{status}</option>
-                                                                        ))}
-                                                                    </select>
-                                                                </div>
-                                                                <div className="col-6 col-md-2 mb-3">
-                                                                    <label className="premium-label">Filter by Status</label>
-                                                                    <div className="input-group premium-input-group">
-                                                                        <span className="input-group-text bg-white premium-input-icon"><Filter size={18} className="text-muted" /></span>
-                                                                        <select
-                                                                            value={selectedStatus}
-                                                                            onChange={(e) => {
-                                                                                setSelectedStatus(e.target.value);
-                                                                                setSearchInput('');
-                                                                                setSearch('');
-                                                                                setPage(1);
-                                                                            }}
-                                                                            className="form-control premium-input"
-                                                                        >
-                                                                            <option value="">All Statuses</option>
-                                                                            {ALLOWED_STATUSES.map(status => (
-                                                                                <option key={status} value={status}>{status}</option>
-                                                                            ))}
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="col-12 col-md-1 mb-3 d-flex align-items-end">
-                                                                    <div className="small font-weight-bold text-muted">Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}</div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="export-btn-wrap mb-3 ml-auto d-flex flex-row flex-wrap premium-export-btns">
+                            {/* Modern CSS Grid Toolbar */}
+                            <div className="admin-orders-toolbar">
+                                <div className="admin-toolbar-item search-item">
+                                    <label className="premium-label">Search (Order ID / Email)</label>
+                                    <div className="premium-input-group">
+                                        <Search size={18} className="premium-input-icon" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search orders..."
+                                            value={searchInput}
+                                            ref={searchInputRef}
+                                            onChange={e => setSearchInput(e.target.value)}
+                                            className="premium-input"
+                                        />
                                     </div>
                                 </div>
-                                <div className="export-btn-wrap mb-3 ml-auto">
-                                    <div className="d-flex">
-                                        <button
-                                            className="export-csv-btn-premium mr-2"
-                                            onClick={exportOrdersToCSV}
-                                            title="Export orders as CSV"
-                                        >
-                                            <Download size={18} style={{marginRight: 6, marginTop: -2}} />
-                                            Export CSV
-                                        </button>
-                                        <button
-                                            className="export-pdf-btn-premium"
-                                            onClick={exportOrdersToPDF}
-                                            title="Export orders as PDF"
-                                        >
-                                            <FileText size={18} style={{marginRight: 6, marginTop: -2}} />
-                                            Export PDF
-                                        </button>
-                                    </div>
+
+                                <div className="admin-toolbar-item">
+                                    <label className="premium-label">From Date</label>
+                                    <input
+                                        type="date"
+                                        className="premium-input"
+                                        value={fromDate}
+                                        onChange={e => {
+                                            setFromDate(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        max={toDate || undefined}
+                                    />
                                 </div>
+
+                                <div className="admin-toolbar-item">
+                                    <label className="premium-label">To Date</label>
+                                    <input
+                                        type="date"
+                                        className="premium-input"
+                                        value={toDate}
+                                        onChange={e => {
+                                            setToDate(e.target.value);
+                                            setPage(1);
+                                        }}
+                                        min={fromDate || undefined}
+                                    />
+                                </div>
+
+                                <div className="admin-toolbar-item">
+                                    <label className="premium-label">Payment Status</label>
+                                    <select
+                                        className="premium-input"
+                                        value={paymentStatus}
+                                        onChange={e => {
+                                            setPaymentStatus(e.target.value);
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <option value="">All</option>
+                                        {PAYMENT_STATUSES.map(status => (
+                                            <option key={status} value={status}>{status}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="admin-toolbar-item">
+                                    <label className="premium-label">Order Status</label>
+                                    <div className="premium-input-group">
+                                        <Filter size={18} className="premium-input-icon" />
+                                        <select
+                                            value={selectedStatus}
+                                            onChange={(e) => {
+                                                setSelectedStatus(e.target.value);
+                                                setSearchInput('');
+                                                setSearch('');
+                                                setPage(1);
+                                            }}
+                                            className="premium-input"
+                                        >
+                                            <option value="">All Statuses</option>
+                                            {ALLOWED_STATUSES.map(status => (
+                                                <option key={status} value={status}>{status}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -629,7 +780,7 @@ export default function AdminOrders() {
                                                             transition={{ delay: index * 0.04 }}
                                                             className={`order-row-premium${selectedOrders.includes(order.orderId) ? ' selected' : ''}`}
                                                         >
-                                                            <td>
+                                                            <td data-label="Select">
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={selectedOrders.includes(order.orderId)}
@@ -637,73 +788,52 @@ export default function AdminOrders() {
                                                                     className="cursor-pointer"
                                                                 />
                                                             </td>
-                                                            <td>
-                                                                <span className="font-weight-bold text-info order-id-cell">
+                                                            <td data-label="Order ID">
+                                                                <span
+                                                                    className="luxe-order-id"
+                                                                    onClick={() => openSummaryModal(order)}
+                                                                    title="Click to view summary"
+                                                                    role="button"
+                                                                    tabIndex={0}
+                                                                    onKeyPress={e => { if (e.key === 'Enter') openSummaryModal(order); }}
+                                                                >
                                                                     {String(order.orderId || '').slice(-8)}
                                                                 </span>
-                                                                    <span
-                                                                        className="view-details-link-premium-gradient"
-                                                                        onClick={() => fetchOrderDetails(order.orderId)}
-                                                                        title="View Order Details"
-                                                                        tabIndex={0}
-                                                                        role="button"
-                                                                        onKeyPress={e => { if (e.key === 'Enter') fetchOrderDetails(order.orderId); }}
-                                                                    >
-                                                                        View Details
-                                                                    </span>
                                                             </td>
-                                                            <td className="font-weight-bold">{order.userName || 'Customer'}</td>
-                                                            <td>{order.userEmail || 'N/A'}</td>
-                                                            <td className="font-weight-bold text-dark">₹{Number(order.finalAmount || 0).toLocaleString('en-IN')}</td>
-                                                            <td>
+                                                            <td data-label="Customer" className="font-weight-bold">{order.userName || 'Customer'}</td>
+                                                            <td data-label="Email">{order.userEmail || 'N/A'}</td>
+                                                            <td data-label="Amount">
+                                                                <span className="luxe-amount">
+                                                                    <span className="luxe-currency">₹</span>
+                                                                    {Number(order.finalAmount || 0).toLocaleString('en-IN')}
+                                                                </span>
+                                                            </td>
+                                                            <td data-label="Status">
                                                                 <span className={`status-pill ${STATUS_COLORS[order.orderStatus] || STATUS_COLORS['Order Placed']}`}>
                                                                     {STATUS_ICONS[order.orderStatus] || STATUS_ICONS['Order Placed']}
                                                                     <span>{order.orderStatus || 'Order Placed'}</span>
                                                                 </span>
                                                             </td>
-                                                            <td>{order.productCount || order.products?.length || 0} item{(order.productCount || order.products?.length || 0) !== 1 ? 's' : ''}</td>
-                                                            <td>{new Date(order.updatedAt).toLocaleDateString('en-IN')}</td>
-                                                            <td>
-                                                                <div className="position-relative">
-                                                                    <button
-                                                                        onClick={() => setDropdownOpen(dropdownOpen === order.orderId ? null : order.orderId)}
-                                                                        disabled={updating === order.orderId}
-                                                                        className="btn btn-outline-dark btn-sm d-flex align-items-center"
-                                                                    >
-                                                                        {updating === order.orderId ? (
-                                                                            <>
-                                                                                <Loader2 size={14} className="admin-spin mr-2" />
-                                                                                Updating...
-                                                                            </>
-                                                                        ) : (
-                                                                            <>
-                                                                                Update Status
-                                                                                <ChevronDown size={14} className={`ml-1 ${dropdownOpen === order.orderId ? 'rotate-180' : ''}`} />
-                                                                            </>
-                                                                        )}
-                                                                    </button>
-
-                                                                    {dropdownOpen === order.orderId && (
-                                                                        <motion.div
-                                                                            initial={{ opacity: 0, y: -10 }}
-                                                                            animate={{ opacity: 1, y: 0 }}
-                                                                            className="admin-status-dropdown"
-                                                                        >
-                                                                            {ALLOWED_STATUSES.map((status) => (
-                                                                                <button
-                                                                                    key={status}
-                                                                                    onClick={() => updateOrderStatus(order.orderId, status)}
-                                                                                    disabled={updating === order.orderId || order.orderStatus === status}
-                                                                                    className={`admin-status-option ${order.orderStatus === status ? 'disabled' : ''}`}
-                                                                                >
-                                                                                    {STATUS_ICONS[status] || <Clock size={14} />}
-                                                                                    <span>{status}</span>
-                                                                                    {order.orderStatus === status && <Check size={14} />}
-                                                                                </button>
-                                                                            ))}
-                                                                        </motion.div>
+                                                            <td data-label="Items">{order.productCount || order.products?.length || 0} item{(order.productCount || order.products?.length || 0) !== 1 ? 's' : ''}</td>
+                                                            <td data-label="Updated">{new Date(order.updatedAt).toLocaleDateString('en-IN')}</td>
+                                                            <td data-label="Action">
+                                                                <button
+                                                                    onClick={() => openStatusModal(order)}
+                                                                    disabled={updating === order.orderId}
+                                                                    className="btn btn-outline-dark btn-sm d-flex align-items-center"
+                                                                >
+                                                                    {updating === order.orderId ? (
+                                                                        <>
+                                                                            <Loader2 size={14} className="admin-spin mr-2" />
+                                                                            Updating...
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            Update Status
+                                                                            <ChevronDown size={14} className="ml-1" />
+                                                                        </>
                                                                     )}
-                                                                </div>
+                                                                </button>
                                                             </td>
                                                         </motion.tr>
 
@@ -714,7 +844,7 @@ export default function AdminOrders() {
                                                                 className="bg-light"
                                                             >
                                                                 <td colSpan="9" className="p-3">
-                                                                    <div className="bg-white p-3 border">
+                                                                    <div className="bg-white rounded p-3 border">
                                                                         <h4 className="h6 font-weight-bold mb-3">📋 Status History</h4>
                                                                         <div>
                                                                             {order.statusHistory.map((entry, idx) => (
@@ -790,7 +920,238 @@ export default function AdminOrders() {
                             </div>
                         </div>
                     </div>
-            
+                </div>
+            </div>
+
+            {/* Premium Status Update Slide-In Sidebar */}
+            <div className={`status-sidebar-overlay ${statusModal.open ? 'open' : ''}`} onClick={closeStatusModal} />
+            <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: statusModal.open ? 0 : '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className={`status-sidebar ${statusModal.open ? 'open' : ''}`}
+            >
+                {/* Sidebar Header */}
+                <div className="status-sidebar-header">
+                    <div className="status-sidebar-title">
+                        <div className="status-sidebar-title-icon">
+                            <Package size={22} />
+                        </div>
+                        <div>
+                            <h3>Update Status</h3>
+                            <p>Order #{String(statusModal.order?.orderId || '').slice(-8)}</p>
+                        </div>
+                    </div>
+                    <button className="status-sidebar-close" onClick={closeStatusModal}>
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Sidebar Body */}
+                <div className="status-sidebar-body">
+                    {/* Status Selection */}
+                    <div className="sidebar-section">
+                        <label className="sidebar-section-label">
+                            <CheckCircle2 size={14} />
+                            Select New Status
+                        </label>
+                        <select
+                            className="sidebar-select"
+                            value={modalStatus}
+                            onChange={(e) => setModalStatus(e.target.value)}
+                        >
+                            {ALLOWED_STATUSES.map((status) => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Quick Date Selection */}
+                    <div className="sidebar-section">
+                        <label className="sidebar-section-label">
+                            <Calendar size={14} />
+                            Update Date
+                        </label>
+                        <div className="quick-date-buttons">
+                            <button
+                                className={`quick-date-btn ${quickDateSelection === 'today' ? 'active' : ''}`}
+                                onClick={() => handleQuickDate('today')}
+                            >
+                                Today
+                            </button>
+                            <button
+                                className={`quick-date-btn ${quickDateSelection === 'tomorrow' ? 'active' : ''}`}
+                                onClick={() => handleQuickDate('tomorrow')}
+                            >
+                                Tomorrow
+                            </button>
+                            <button
+                                className={`quick-date-btn ${quickDateSelection === 'custom' ? 'active' : ''}`}
+                                onClick={() => handleQuickDate('custom')}
+                            >
+                                Custom
+                            </button>
+                        </div>
+                        {quickDateSelection === 'custom' && (
+                            <div className="datetime-grid">
+                                <input
+                                    type="date"
+                                    className="sidebar-input"
+                                    value={deliveryDate}
+                                    onChange={(e) => setDeliveryDate(e.target.value)}
+                                    min={new Date().toISOString().split('T')[0]}
+                                />
+                                <input
+                                    type="time"
+                                    className="sidebar-input"
+                                    value={deliveryTime}
+                                    onChange={(e) => setDeliveryTime(e.target.value)}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Delivery Timeline Slider */}
+                    <div className="sidebar-section">
+                        <label className="sidebar-section-label">
+                            <Truck size={14} />
+                            Delivery Timeline
+                        </label>
+                        <div className="timeline-slider-wrap">
+                            <div className="timeline-slider-header">
+                                <span className="timeline-slider-value">{deliveryTimeline} Days</span>
+                                <span className="timeline-slider-label">Estimated Delivery</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="1"
+                                max="10"
+                                value={deliveryTimeline}
+                                onChange={(e) => setDeliveryTimeline(parseInt(e.target.value))}
+                                className="timeline-slider"
+                            />
+                            <div className="timeline-labels">
+                                <span>1 Day</span>
+                                <span>5 Days</span>
+                                <span>10 Days</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Admin Internal Note */}
+                    <div className="sidebar-section">
+                        <label className="sidebar-section-label">
+                            <AlertCircle size={14} />
+                            Admin Internal Note
+                        </label>
+                        <textarea
+                            className="sidebar-textarea"
+                            placeholder="E.g., Order delayed due to stock unavailability..."
+                            value={adminNote}
+                            onChange={(e) => setAdminNote(e.target.value)}
+                            rows={4}
+                        />
+                    </div>
+                </div>
+
+                {/* Sidebar Footer */}
+                <div className="status-sidebar-footer">
+                    <button className="sidebar-btn sidebar-btn-cancel" onClick={closeStatusModal}>
+                        Cancel
+                    </button>
+                    <button
+                        className="sidebar-btn sidebar-btn-confirm"
+                        onClick={handleModalStatusUpdate}
+                        disabled={updating === statusModal.order?.orderId}
+                    >
+                        {updating === statusModal.order?.orderId ? (
+                            <>
+                                <span className="sidebar-spinner"></span>
+                                Updating...
+                            </>
+                        ) : (
+                            <>
+                                <Check size={18} />
+                                Update Status
+                            </>
+                        )}
+                    </button>
+                </div>
+            </motion.div>
+
+            {/* Order Summary Modal */}
+            {summaryModal.open && summaryModal.order && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="order-summary-overlay"
+                    onClick={(e) => e.target === e.currentTarget && closeSummaryModal()}
+                >
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="order-summary-modal"
+                    >
+                        <div className="order-summary-header">
+                            <div>
+                                <h3>Order Summary</h3>
+                                <span>#{String(summaryModal.order.orderId || '').slice(-8)}</span>
+                            </div>
+                            <button className="order-summary-close" onClick={closeSummaryModal}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="order-summary-body">
+                            <div className="summary-row">
+                                <span className="summary-label">Customer</span>
+                                <span className="summary-value">{summaryModal.order.userName || 'N/A'}</span>
+                            </div>
+                            <div className="summary-row">
+                                <span className="summary-label">Email</span>
+                                <span className="summary-value">{summaryModal.order.userEmail || 'N/A'}</span>
+                            </div>
+                            <div className="summary-row">
+                                <span className="summary-label">Amount</span>
+                                <span className="summary-value luxe-amount">
+                                    <span className="luxe-currency">₹</span>
+                                    {Number(summaryModal.order.finalAmount || 0).toLocaleString('en-IN')}
+                                </span>
+                            </div>
+                            <div className="summary-row">
+                                <span className="summary-label">Status</span>
+                                <span className={`summary-status status-pill ${STATUS_COLORS[summaryModal.order.orderStatus] || 'status-order-placed'}`}>
+                                    {summaryModal.order.orderStatus || 'Order Placed'}
+                                </span>
+                            </div>
+                            <div className="summary-row">
+                                <span className="summary-label">Items</span>
+                                <span className="summary-value">{summaryModal.order.productCount || summaryModal.order.products?.length || 0}</span>
+                            </div>
+                            <div className="summary-row">
+                                <span className="summary-label">Order Date</span>
+                                <span className="summary-value">{new Date(summaryModal.order.createdAt).toLocaleDateString('en-IN')}</span>
+                            </div>
+                            <div className="summary-row">
+                                <span className="summary-label">Last Updated</span>
+                                <span className="summary-value">{new Date(summaryModal.order.updatedAt).toLocaleDateString('en-IN')}</span>
+                            </div>
+                        </div>
+                        <div className="order-summary-footer">
+                            <button
+                                className="sidebar-btn sidebar-btn-confirm"
+                                onClick={() => {
+                                    closeSummaryModal();
+                                    fetchOrderDetails(summaryModal.order.orderId);
+                                }}
+                            >
+                                View Full Details
+                            </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+
         <OrderDetailsDrawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}

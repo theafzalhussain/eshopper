@@ -1,0 +1,489 @@
+/* =====================================================
+   LUXE TABLE - Premium Grid UI with Elevation Effects
+   Gold-White Theme | Luxury Admin Design
+   ===================================================== */
+
+/* Import Luxury Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+
+/* =====================================================
+   LUXURY COLOR PALETTE
+   ===================================================== */
+:root {
+  --luxe-gold: #B8860B;
+  --luxe-gold-light: #D4AF37;
+  --luxe-gold-pale: #F5E6C8;
+  --luxe-gold-glow: rgba(184, 134, 11, 0.15);
+  --luxe-white: #FFFEF9;
+  --luxe-cream: #FDF8EF;
+  --luxe-dark: #1A1A1A;
+  --luxe-shadow: rgba(184, 134, 11, 0.08);
+  --luxe-border: rgba(184, 134, 11, 0.2);
+}
+
+/* =====================================================
+   LUXE TABLE WRAPPER - WITH HORIZONTAL SCROLL
+   ===================================================== */
+.luxe-table-wrap {
+  background: var(--luxe-white);
+  border-radius: 20px;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  box-shadow:
+    0 4px 30px var(--luxe-shadow),
+    0 0 0 1px var(--luxe-border);
+  position: relative;
+}
+
+.luxe-table-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--luxe-gold), var(--luxe-gold-light), var(--luxe-gold));
+  z-index: 1;
+}
+
+/* Premium Scrollbar */
+.luxe-table-wrap::-webkit-scrollbar {
+  height: 10px;
+  background: var(--luxe-cream);
+  border-radius: 10px;
+}
+
+.luxe-table-wrap::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--luxe-gold) 0%, var(--luxe-gold-light) 100%);
+  border-radius: 10px;
+  border: 2px solid var(--luxe-cream);
+}
+
+.luxe-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--luxe-gold-light) 0%, var(--luxe-gold) 100%);
+}
+
+/* =====================================================
+   LUXE TABLE - Desktop View (Maintain on all screens)
+   ===================================================== */
+.luxe-table {
+  width: 100%;
+  min-width: 1000px; /* Ensures table doesn't shrink below this */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* Table Header - Luxury Gold */
+.luxe-table thead tr {
+  background: linear-gradient(135deg, var(--luxe-dark) 0%, #2D2D2D 100%);
+}
+
+.luxe-table thead th {
+  padding: 18px 16px;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--luxe-gold-light);
+  text-align: left;
+  border-bottom: 2px solid var(--luxe-gold);
+  position: relative;
+}
+
+.luxe-table thead th::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--luxe-gold), transparent);
+}
+
+/* =====================================================
+   LUXE TABLE ROWS - Elevation Effect
+   ===================================================== */
+.luxe-table tbody tr {
+  background: var(--luxe-white);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+/* Subtle Elevation on Hover - Scale 1.01 + Gold-White Background */
+.luxe-table tbody tr:hover {
+  transform: scale(1.01);
+  background: linear-gradient(135deg, var(--luxe-cream) 0%, var(--luxe-gold-pale) 100%);
+  box-shadow:
+    0 8px 32px var(--luxe-gold-glow),
+    0 4px 16px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+  border-radius: 8px;
+}
+
+.luxe-table tbody tr:hover td {
+  border-color: transparent;
+}
+
+.luxe-table tbody tr:hover td:first-child {
+  border-left: 3px solid var(--luxe-gold);
+  padding-left: 13px;
+}
+
+/* Selected Row State */
+.luxe-table tbody tr.luxe-selected {
+  background: linear-gradient(135deg, var(--luxe-gold-pale) 0%, #FFF9E6 100%);
+  box-shadow:
+    0 6px 24px var(--luxe-gold-glow),
+    inset 0 0 0 2px var(--luxe-gold);
+  border-radius: 8px;
+}
+
+/* Table Cells */
+.luxe-table tbody td {
+  padding: 16px;
+  font-size: 0.95rem;
+  color: var(--luxe-dark);
+  border-bottom: 1px solid #F0E6D3;
+  vertical-align: middle;
+  transition: all 0.3s ease;
+}
+
+.luxe-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Alternate Row Colors (subtle) */
+.luxe-table tbody tr:nth-child(even) {
+  background: var(--luxe-cream);
+}
+
+.luxe-table tbody tr:nth-child(even):hover {
+  background: linear-gradient(135deg, var(--luxe-cream) 0%, var(--luxe-gold-pale) 100%);
+}
+
+/* =====================================================
+   LUXURY CURRENCY SYMBOL - ₹
+   ===================================================== */
+.luxe-currency {
+  font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  font-weight: 700;
+  font-size: 1.15em;
+  color: var(--luxe-gold);
+  letter-spacing: 0.5px;
+}
+
+.luxe-amount {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--luxe-dark);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.luxe-amount .luxe-currency {
+  font-size: 1.2em;
+  margin-right: 2px;
+  background: linear-gradient(135deg, var(--luxe-gold) 0%, var(--luxe-gold-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* =====================================================
+   LUXE ORDER ID - Clickable
+   ===================================================== */
+.luxe-order-id {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--luxe-gold);
+  cursor: pointer;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #FFF9E6 0%, var(--luxe-gold-pale) 100%);
+  border-radius: 8px;
+  border: 1px solid var(--luxe-border);
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.luxe-order-id:hover {
+  background: linear-gradient(135deg, var(--luxe-gold) 0%, var(--luxe-gold-light) 100%);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px var(--luxe-gold-glow);
+}
+
+/* =====================================================
+   MOBILE RESPONSIVE - Keep Table Layout with Horizontal Scroll
+   ===================================================== */
+
+/* Scroll Hint for Mobile */
+@media (max-width: 991px) {
+  .luxe-table-wrap::after {
+    content: '👈 Scroll to view all →';
+    display: block;
+    text-align: center;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--luxe-cream) 0%, var(--luxe-gold-pale) 100%);
+    color: var(--luxe-gold);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border-top: 1px solid var(--luxe-border);
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .luxe-table {
+    min-width: 900px;
+  }
+
+  /* Compact cells for mobile */
+  .luxe-table thead th {
+    padding: 14px 12px;
+    font-size: 0.75rem;
+  }
+
+  .luxe-table tbody td {
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+
+  /* Adjust status badges */
+  .luxe-status {
+    padding: 6px 10px;
+    font-size: 0.7rem;
+  }
+
+  /* Compact order ID */
+  .luxe-order-id {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+
+  /* Compact amount */
+  .luxe-amount {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .luxe-table {
+    min-width: 850px;
+  }
+
+  .luxe-table thead th {
+    padding: 12px 10px;
+    font-size: 0.7rem;
+  }
+
+  .luxe-table tbody td {
+    padding: 10px;
+    font-size: 0.8rem;
+  }
+
+  .luxe-status {
+    padding: 5px 8px;
+    font-size: 0.65rem;
+  }
+
+  .luxe-order-id {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+
+  .luxe-amount {
+    font-size: 0.9rem;
+  }
+
+  /* Adjust checkbox size */
+  .luxe-checkbox {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* =====================================================
+   VERY SMALL SCREENS - Ultra Compact
+   ===================================================== */
+@media (max-width: 400px) {
+  .luxe-table {
+    min-width: 800px;
+  }
+
+  .luxe-table thead th,
+  .luxe-table tbody td {
+    padding: 8px;
+    font-size: 0.75rem;
+  }
+
+  .luxe-status {
+    padding: 4px 7px;
+    font-size: 0.6rem;
+  }
+}
+
+/* =====================================================
+   LUXE STATUS BADGES
+   ===================================================== */
+.luxe-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.luxe-status-confirmed {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  color: #065F46;
+  border: 1px solid #34D399;
+}
+
+.luxe-status-shipped {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  color: #1E40AF;
+  border: 1px solid #60A5FA;
+}
+
+.luxe-status-delivered {
+  background: linear-gradient(135deg, var(--luxe-gold-pale) 0%, #FFF9E6 100%);
+  color: var(--luxe-gold);
+  border: 1px solid var(--luxe-gold);
+}
+
+/* =====================================================
+   LUXE CHECKBOX
+   ===================================================== */
+.luxe-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--luxe-border);
+  border-radius: 6px;
+  background: var(--luxe-white);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+}
+
+.luxe-checkbox:checked {
+  background: linear-gradient(135deg, var(--luxe-gold) 0%, var(--luxe-gold-light) 100%);
+  border-color: var(--luxe-gold);
+}
+
+.luxe-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.luxe-checkbox:hover {
+  border-color: var(--luxe-gold);
+  box-shadow: 0 0 0 3px var(--luxe-gold-glow);
+}
+
+/* =====================================================
+   LUXE ACTION BUTTON
+   ===================================================== */
+.luxe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, var(--luxe-gold) 0%, var(--luxe-gold-light) 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px var(--luxe-gold-glow);
+}
+
+.luxe-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--luxe-gold-glow);
+}
+
+.luxe-btn:active {
+  transform: translateY(0);
+}
+
+.luxe-btn-outline {
+  background: transparent;
+  border: 2px solid var(--luxe-gold);
+  color: var(--luxe-gold);
+  box-shadow: none;
+}
+
+.luxe-btn-outline:hover {
+  background: var(--luxe-gold);
+  color: #fff;
+}
+
+/* =====================================================
+   LOADING SPINNER - Luxury Gold
+   ===================================================== */
+.luxe-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--luxe-gold-pale);
+  border-top-color: var(--luxe-gold);
+  border-radius: 50%;
+  animation: luxeSpin 0.8s linear infinite;
+}
+
+@keyframes luxeSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =====================================================
+   LUXE EMPTY STATE
+   ===================================================== */
+.luxe-empty {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--luxe-cream);
+  border-radius: 16px;
+}
+
+.luxe-empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.luxe-empty-text {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.2rem;
+  color: var(--luxe-gold);
+  margin-bottom: 8px;
+}
+
+.luxe-empty-subtext {
+  font-size: 0.9rem;
+  color: #64748B;
+}
