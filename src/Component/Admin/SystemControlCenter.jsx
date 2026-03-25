@@ -15,6 +15,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { getSocket } from './socket';
+import { BASE_URL } from '../../constants';
 import './SystemControlCenter.css';
 
 // Premium Stats Card Component
@@ -115,7 +116,7 @@ export default function SystemControlCenter() {
   // Fetch dashboard data from API
   const fetchDashboardData = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/dashboard-analytics');
+      const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`);
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
 

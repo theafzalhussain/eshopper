@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { TrendingUp, PieChart as PieIcon, Calendar, RefreshCw } from 'lucide-react';
 import { getSocket } from './socket';
+import { BASE_URL } from '../../constants';
 import './SystemControlCenter.css';
 
 // Custom Tooltip for Line Chart
@@ -76,7 +77,7 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
   const fetchChartData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/admin/dashboard-analytics');
+      const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`);
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
 

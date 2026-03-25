@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import LefNav from './LefNav'
 import { useSelector, useDispatch } from 'react-redux'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
     Users, ShoppingBag, DollarSign, Package, ShieldCheck, Mail, Phone,
     Edit3, TrendingUp, TrendingDown, AlertTriangle, Activity,
@@ -19,6 +19,7 @@ import { getUser } from '../../Store/ActionCreaters/UserActionCreators'
 import { getProduct } from '../../Store/ActionCreaters/ProductActionCreators'
 import { getCheckout } from '../../Store/ActionCreaters/CheckoutActionCreators'
 import { getContact } from '../../Store/ActionCreaters/ContactActionCreators'
+import { BASE_URL } from '../../constants'
 
 // Premium Stats Card Component
 const PremiumStatsCard = ({
@@ -110,12 +111,30 @@ export default function AdminHome() {
     const [lastUpdated, setLastUpdated] = useState(null)
     const [isLive, setIsLive] = useState(true)
 
+    // Test database connection
+    const testConnection = useCallback(async () => {
+        try {
+            console.log('🧪 Testing database connection...')
+            const response = await fetch(`${BASE_URL}/api/admin/test-connection`)
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+            const data = await response.json()
+            console.log('✅ Test connection result:', data)
+            alert(`Database Test Successful!\n\nUsers: ${data.counts.users}\nProducts: ${data.counts.products}\nOrders: ${data.counts.orders}\nMongo Status: ${data.mongoStatus}`)
+        } catch (error) {
+            console.error('❌ Test connection failed:', error)
+            alert(`Database Test Failed!\n\nError: ${error.message}\n\nCheck console for details.`)
+        }
+    }, [])
+
     // Fetch dashboard analytics from API
     const fetchDashboardData = useCallback(async () => {
         try {
-            const response = await fetch('/api/admin/dashboard-analytics')
-            if (!response.ok) throw new Error('Failed to fetch')
+            console.log('🔄 Fetching dashboard data from:', `${BASE_URL}/api/admin/dashboard-analytics`)
+            const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`)
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
             const data = await response.json()
+
+            console.log('✅ Dashboard data received:', data)
 
             setDashboardData({
                 metrics: data.metrics,
@@ -129,7 +148,8 @@ export default function AdminHome() {
             setLastUpdated(new Date())
             setIsLoading(false)
         } catch (error) {
-            console.error('Dashboard fetch error:', error)
+            console.error('❌ Dashboard fetch error:', error)
+            console.error('🔍 Check if backend server is running at:', BASE_URL)
             setIsLoading(false)
         }
     }, [])
@@ -232,6 +252,23 @@ export default function AdminHome() {
                                     </div>
                                 )}
                                 <motion.button
+                                    onClick={testConnection}
+                                    whileHover={{ scale: 1.05 }}
+                                    transition={{ duration: 0.2 }}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: '#fff',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '8px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    Test DB
+                                </motion.button>
+                                <motion.button
                                     onClick={fetchDashboardData}
                                     whileHover={{ rotate: 180 }}
                                     transition={{ duration: 0.3 }}
@@ -298,55 +335,53 @@ export default function AdminHome() {
 
                         {/* Premium Stats Grid */}
                         <div className="scc-stats-grid">
-                            <AnimatePresence mode="wait">
-                                <PremiumStatsCard
-                                    key="revenue"
-                                    title="Total Revenue"
-                                    value={formatCurrency(metrics.totalRevenue)}
-                                    icon={DollarSign}
-                                    percentChange={revenueChange.change}
-                                    trend={revenueChange.trend}
-                                    variant="revenue"
-                                    progress={75}
-                                    reportLink="/admin-orders"
-                                    isLoading={isLoading}
-                                    subtitle="vs last month"
-                                />
-                                <PremiumStatsCard
-                                    key="stock"
-                                    title="Low Stock Alert"
-                                    value={dashboardData.lowStockCount}
-                                    icon={AlertTriangle}
-                                    variant="stock"
-                                    progress={(dashboardData.lowStockCount / 50) * 100}
-                                    reportLink="/admin-product"
-                                    isLoading={isLoading}
-                                    subtitle="Products need restock"
-                                />
-                                <PremiumStatsCard
-                                    key="sessions"
-                                    title="Active Sessions"
-                                    value={dashboardData.activeSessions || metrics.newCustomers || 0}
-                                    icon={Activity}
-                                    variant="sessions"
-                                    reportLink="/admin-user"
-                                    isLoading={isLoading}
-                                    subtitle="Users online today"
-                                />
-                                <PremiumStatsCard
-                                    key="orders"
-                                    title="Today's Orders"
-                                    value={metrics.newOrders || 0}
-                                    icon={Package}
-                                    percentChange={ordersChange.change}
-                                    trend={ordersChange.trend}
-                                    variant="orders"
-                                    progress={65}
-                                    reportLink="/admin-orders"
-                                    isLoading={isLoading}
-                                    subtitle="Orders placed today"
-                                />
-                            </AnimatePresence>
+                            <PremiumStatsCard
+                                key="revenue"
+                                title="Total Revenue"
+                                value={formatCurrency(metrics.totalRevenue)}
+                                icon={DollarSign}
+                                percentChange={revenueChange.change}
+                                trend={revenueChange.trend}
+                                variant="revenue"
+                                progress={75}
+                                reportLink="/admin-orders"
+                                isLoading={isLoading}
+                                subtitle="vs last month"
+                            />
+                            <PremiumStatsCard
+                                key="stock"
+                                title="Low Stock Alert"
+                                value={dashboardData.lowStockCount}
+                                icon={AlertTriangle}
+                                variant="stock"
+                                progress={(dashboardData.lowStockCount / 50) * 100}
+                                reportLink="/admin-product"
+                                isLoading={isLoading}
+                                subtitle="Products need restock"
+                            />
+                            <PremiumStatsCard
+                                key="sessions"
+                                title="Active Sessions"
+                                value={dashboardData.activeSessions || metrics.newCustomers || 0}
+                                icon={Activity}
+                                variant="sessions"
+                                reportLink="/admin-user"
+                                isLoading={isLoading}
+                                subtitle="Users online today"
+                            />
+                            <PremiumStatsCard
+                                key="orders"
+                                title="Today's Orders"
+                                value={metrics.newOrders || 0}
+                                icon={Package}
+                                percentChange={ordersChange.change}
+                                trend={ordersChange.trend}
+                                variant="orders"
+                                progress={65}
+                                reportLink="/admin-orders"
+                                isLoading={isLoading}
+                                subtitle="Orders placed today"
+                            />
                         </div>
 
                         {/* Charts Section */}
