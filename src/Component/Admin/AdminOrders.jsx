@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check } from 'lucide-react';
+import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check, Crown, Star, Zap } from 'lucide-react';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import io from 'socket.io-client';
+import './AdminOrders.css';
 
 const ALLOWED_STATUSES = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered'];
 const STATUS_COLORS = {
-    'Pending': 'bg-red-100 text-red-800 border-red-300',
-    'Confirmed': 'bg-green-100 text-green-800 border-green-300',
-    'Shipped': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-    'Out for Delivery': 'bg-lime-100 text-lime-800 border-lime-300',
-    'Delivered': 'bg-blue-100 text-blue-800 border-blue-300'
+    'Pending': 'status-pending',
+    'Confirmed': 'status-confirmed',
+    'Shipped': 'status-shipped',
+    'Out for Delivery': 'status-out-for-delivery',
+    'Delivered': 'status-delivered'
 };
 
 const STATUS_ICONS = {
@@ -209,217 +210,316 @@ export default function AdminOrders() {
 
     if (loading && orders.length === 0) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 size={48} className="text-blue-600 animate-spin" />
-                    <p className="text-gray-600 font-medium">Loading orders...</p>
+            <div className="admin-orders-page">
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                        <Loader2 size={48} className="mx-auto mb-4 animate-spin text-blue-600" />
+                        <p className="text-gray-600">Loading orders dashboard...</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8"
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="admin-orders-page"
         >
-            {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 flex items-center gap-3 mb-2">
-                    <Package className="text-blue-600" size={32} />
-                    Manage Orders
-                </h1>
-                <p className="text-gray-600">Premium order management with real-time updates & bulk actions</p>
-            </div>
+            {/* Premium Header */}
+            <motion.div
+                initial={{ y: -50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.8 }}
+                className="admin-orders-header"
+            >
+                <div className="admin-orders-header-left">
+                    <h1 className="admin-orders-title flex items-center gap-3">
+                        <motion.div
+                            animate={{ rotate: [0, 10, -10, 0] }}
+                            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                        >
+                            <Crown size={32} className="text-yellow-600" />
+                        </motion.div>
+                        Premium Orders
+                        <motion.div
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                        >
+                            <Star size={24} className="text-yellow-500" />
+                        </motion.div>
+                    </h1>
+                    <p className="text-gray-600 mt-2">Luxury order management with real-time updates & premium automation</p>
+                </div>
+            </motion.div>
 
-            {/* Notification */}
-            {notification && (
-                <motion.div 
-                    initial={{ y: -20, opacity: 0 }} 
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: -20, opacity: 0 }}
-                    className={`mb-6 p-4 rounded-lg border-l-4 flex items-center gap-3 ${
-                        notification.type === 'success' 
-                            ? 'bg-green-50 border-green-400 text-green-800'
-                            : notification.type === 'error'
-                            ? 'bg-red-50 border-red-400 text-red-800'
-                            : 'bg-blue-50 border-blue-400 text-blue-800'
-                    }`}
-                >
-                    {notification.type === 'success' && <CheckCircle2 size={20} />}
-                    {notification.type === 'error' && <AlertCircle size={20} />}
-                    {notification.type === 'info' && <Clock size={20} />}
-                    <span>{notification.message}</span>
-                </motion.div>
-            )}
+            {/* Premium Notification */}
+            <AnimatePresence>
+                {notification && (
+                    <motion.div
+                        initial={{ y: -20, opacity: 0, scale: 0.95 }}
+                        animate={{ y: 0, opacity: 1, scale: 1 }}
+                        exit={{ y: -20, opacity: 0, scale: 0.95 }}
+                        className={`mb-6 p-4 rounded-lg border-l-4 flex items-center gap-3 ${
+                            notification.type === 'success'
+                                ? 'bg-green-50 border-green-400 text-green-800'
+                                : notification.type === 'error'
+                                ? 'bg-red-50 border-red-400 text-red-800'
+                                : 'bg-blue-50 border-blue-400 text-blue-800'
+                        }`}
+                    >
+                        <motion.div
+                            animate={{ rotate: [0, 10, -10, 0] }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            {notification.type === 'success' && <CheckCircle2 size={20} />}
+                            {notification.type === 'error' && <AlertCircle size={20} />}
+                            {notification.type === 'info' && <Zap size={20} />}
+                        </motion.div>
+                        <span>{notification.message}</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-            {/* Search & Filter & Bulk Actions */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    {/* Search */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Search (Order ID / Name / Email)
+            {/* Premium Search & Filter & Bulk Actions */}
+            <motion.div
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="admin-orders-card-glass"
+            >
+                <div className="admin-orders-toolbar">
+                    {/* Premium Search */}
+                    <div className="admin-toolbar-item search-item">
+                        <label className="premium-label">
+                            <Search size={16} className="inline mr-2" />
+                            Search Orders
                         </label>
                         <div className="relative">
-                            <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-                            <input
+                            <motion.input
+                                whileFocus={{ scale: 1.02 }}
                                 type="text"
-                                placeholder="Search orders..."
+                                placeholder="Order ID, Name, Email..."
                                 value={search}
                                 onChange={(e) => {
                                     setSearch(e.target.value);
                                     setPage(1);
                                 }}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="premium-input"
                             />
                         </div>
                     </div>
 
-                    {/* Status Filter */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {/* Premium Status Filter */}
+                    <div className="admin-toolbar-item">
+                        <label className="premium-label">
+                            <Filter size={16} className="inline mr-2" />
                             Filter by Status
                         </label>
-                        <div className="flex items-center gap-2">
-                            <Filter size={20} className="text-gray-400" />
-                            <select
+                        <div className="relative">
+                            <motion.select
+                                whileFocus={{ scale: 1.02 }}
                                 value={selectedStatus}
                                 onChange={(e) => {
                                     setSelectedStatus(e.target.value);
                                     setPage(1);
                                 }}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="premium-input"
                             >
                                 <option value="">All Statuses</option>
                                 {ALLOWED_STATUSES.map(status => (
                                     <option key={status} value={status}>{status}</option>
                                 ))}
-                            </select>
+                            </motion.select>
                         </div>
                     </div>
 
-                    {/* Selection Stats */}
-                    <div className="flex flex-col justify-end">
-                        <p className="text-sm font-medium text-gray-700 mb-2">
-                            Selected: {selectedOrders.size} order{selectedOrders.size !== 1 ? 's' : ''}
-                        </p>
+                    {/* Premium Selection Stats */}
+                    <div className="admin-toolbar-item">
+                        <label className="premium-label">
+                            <Package size={16} className="inline mr-2" />
+                            Selection Stats
+                        </label>
+                        <div className="premium-input flex items-center justify-center bg-gray-50">
+                            <motion.span
+                                key={selectedOrders.size}
+                                initial={{ scale: 1.2, color: '#6366f1' }}
+                                animate={{ scale: 1, color: '#0f172a' }}
+                                className="font-bold"
+                            >
+                                {selectedOrders.size} selected
+                            </motion.span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Bulk Actions Bar */}
-                {selectedOrders.size > 0 && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="pt-4 border-t border-gray-200 flex gap-3 flex-wrap items-center"
-                    >
-                        <span className="text-sm font-medium text-gray-700">
-                            Bulk Actions ({selectedOrders.size} selected):
-                        </span>
-                        <button
-                            onClick={handleBulkConfirm}
-                            disabled={bulkUpdating}
-                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                {/* Premium Bulk Actions Bar */}
+                <AnimatePresence>
+                    {selectedOrders.size > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                            className="admin-bulk-bar"
                         >
-                            {bulkUpdating ? (
-                                <>
-                                    <Loader2 size={16} className="animate-spin" />
-                                    Confirming...
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle2 size={16} />
-                                    Bulk Confirm Orders & Send Emails
-                                </>
-                            )}
-                        </button>
-                    </motion.div>
-                )}
-            </div>
+                            <div className="flex items-center gap-2">
+                                <motion.div
+                                    animate={{ rotate: [0, 360] }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                >
+                                    <Zap size={20} className="text-green-600" />
+                                </motion.div>
+                                <span className="font-semibold text-gray-700">
+                                    Bulk Actions ({selectedOrders.size} selected)
+                                </span>
+                            </div>
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleBulkConfirm}
+                                disabled={bulkUpdating}
+                                className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {bulkUpdating ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        Confirming...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Crown size={16} />
+                                        Bulk Confirm & Send Premium Emails
+                                    </>
+                                )}
+                            </motion.button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.div>
 
-            {/* Orders Table */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            {/* Premium Orders Table */}
+            <motion.div
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="admin-orders-table-wrap"
+            >
                 {filteredOrders.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <Package size={48} className="mx-auto text-gray-300 mb-4" />
-                        <p className="text-gray-600 text-lg">No orders found</p>
-                    </div>
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="p-8 text-center"
+                    >
+                        <motion.div
+                            animate={{ rotate: [0, 15, -15, 0] }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                        >
+                            <Package size={80} className="mx-auto text-gray-300 mb-4" />
+                        </motion.div>
+                        <h3 className="text-xl font-semibold mb-2 text-gray-700">No Premium Orders Found</h3>
+                        <p className="text-gray-500">Your luxury orders will appear here when available</p>
+                    </motion.div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                        <table className="admin-orders-table">
+                            <thead>
                                 <tr>
-                                    <th className="px-4 py-3 text-left">
-                                        <input
+                                    <th>
+                                        <motion.input
+                                            whileHover={{ scale: 1.1 }}
+                                            whileTap={{ scale: 0.9 }}
                                             type="checkbox"
                                             checked={selectAll && orders.length > 0}
                                             onChange={handleSelectAll}
-                                            className="w-4 h-4 cursor-pointer"
+                                            className="w-4 h-4 cursor-pointer accent-indigo-600"
                                         />
                                     </th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Order ID</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Customer</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Email</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Amount</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Items</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Updated</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold">Action</th>
+                                    <th><Crown size={16} className="inline mr-2" />Order ID</th>
+                                    <th><Package size={16} className="inline mr-2" />Customer</th>
+                                    <th>Email</th>
+                                    <th><Star size={16} className="inline mr-2" />Amount</th>
+                                    <th>Status</th>
+                                    <th>Items</th>
+                                    <th>Updated</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody>
                                 {filteredOrders.map((order, index) => (
                                     <React.Fragment key={order.orderId}>
-                                        <motion.tr 
-                                            initial={{ opacity: 0, y: 10 }}
+                                        <motion.tr
+                                            initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.05 }}
-                                            className="hover:bg-gray-50 transition-colors"
+                                            className="order-row-premium hover:bg-blue-50"
                                         >
-                                            <td className="px-4 py-4">
-                                                <input
+                                            <td>
+                                                <motion.input
+                                                    whileHover={{ scale: 1.1 }}
+                                                    whileTap={{ scale: 0.9 }}
                                                     type="checkbox"
                                                     checked={selectedOrders.has(order.orderId)}
                                                     onChange={() => handleOrderSelect(order.orderId)}
-                                                    className="w-4 h-4 cursor-pointer"
+                                                    className="w-4 h-4 cursor-pointer accent-indigo-600"
                                                 />
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className="font-mono text-sm text-blue-600 font-semibold">
+                                            <td className="order-id-cell">
+                                                <motion.span
+                                                    whileHover={{ scale: 1.05 }}
+                                                    className="font-mono text-indigo-600"
+                                                >
                                                     {order.orderId.slice(-8)}
-                                                </span>
+                                                </motion.span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm font-medium text-gray-900">{order.userName}</p>
+                                            <td>
+                                                <motion.p
+                                                    whileHover={{ scale: 1.05 }}
+                                                    className="font-semibold text-gray-900"
+                                                >
+                                                    {order.userName}
+                                                </motion.p>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td>
                                                 <p className="text-sm text-gray-600">{order.userEmail}</p>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm font-semibold text-green-600">₹{order.finalAmount.toLocaleString('en-IN')}</p>
+                                            <td>
+                                                <motion.div
+                                                    whileHover={{ scale: 1.1 }}
+                                                    className="flex items-center gap-1 font-bold text-green-600"
+                                                >
+                                                    <Star size={14} className="text-yellow-500" />
+                                                    ₹{order.finalAmount.toLocaleString('en-IN')}
+                                                </motion.div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border ${STATUS_COLORS[order.orderStatus] || STATUS_COLORS['Pending']}`}>
+                                            <td>
+                                                <motion.span
+                                                    whileHover={{ scale: 1.05 }}
+                                                    className={`status-pill ${STATUS_COLORS[order.orderStatus] || STATUS_COLORS['Pending']}`}
+                                                >
                                                     {STATUS_ICONS[order.orderStatus] || STATUS_ICONS['Pending']}
                                                     {order.orderStatus}
-                                                </span>
+                                                </motion.span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <p className="text-sm text-gray-600">{order.productCount || order.products?.length || 0} item{order.productCount !== 1 ? 's' : ''}</p>
+                                            <td>
+                                                <div className="flex items-center gap-1 text-gray-600">
+                                                    <Package size={14} />
+                                                    {order.productCount || order.products?.length || 0}
+                                                </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td>
                                                 <p className="text-xs text-gray-500">
                                                     {new Date(order.updatedAt).toLocaleDateString('en-IN')}
                                                 </p>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td>
                                                 <div className="relative">
-                                                    <button
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
                                                         onClick={() => setDropdownOpen(dropdownOpen === order.orderId ? null : order.orderId)}
                                                         disabled={updating === order.orderId}
-                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
                                                         {updating === order.orderId ? (
                                                             <>
@@ -428,81 +528,126 @@ export default function AdminOrders() {
                                                             </>
                                                         ) : (
                                                             <>
-                                                                Update Status
+                                                                <Zap size={16} />
+                                                                Update
                                                                 <ChevronDown size={16} className={`transition-transform ${dropdownOpen === order.orderId ? 'rotate-180' : ''}`} />
                                                             </>
                                                         )}
-                                                    </button>
+                                                    </motion.button>
 
                                                     {/* Status Dropdown */}
-                                                    {dropdownOpen === order.orderId && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, y: -10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            className="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-10 min-w-max"
-                                                        >
-                                                            {ALLOWED_STATUSES.map((status) => (
-                                                                <button
-                                                                    key={status}
-                                                                    onClick={() => updateOrderStatus(order.orderId, status)}
-                                                                    disabled={updating === order.orderId || order.orderStatus === status}
-                                                                    className={`w-full text-left px-4 py-2 text-sm font-medium transition-all flex items-center gap-2 ${
-                                                                        order.orderStatus === status
-                                                                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                                                                            : status === 'Confirmed'
-                                                                            ? 'text-green-600 hover:bg-green-50'
-                                                                            : 'text-gray-700 hover:bg-blue-50'
-                                                                    }`}
-                                                                >
-                                                                    {STATUS_ICONS[status]}
-                                                                    {status}
-                                                                    {order.orderStatus === status && <Check size={14} />}
-                                                                </button>
-                                                            ))}
-                                                        </motion.div>
-                                                    )}
+                                                    <AnimatePresence>
+                                                        {dropdownOpen === order.orderId && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                                className="admin-status-dropdown"
+                                                            >
+                                                                {ALLOWED_STATUSES.map((status) => (
+                                                                    <motion.button
+                                                                        key={status}
+                                                                        whileHover={{ scale: 1.02, x: 5 }}
+                                                                        whileTap={{ scale: 0.98 }}
+                                                                        onClick={() => updateOrderStatus(order.orderId, status)}
+                                                                        disabled={updating === order.orderId || order.orderStatus === status}
+                                                                        className={`admin-status-option ${order.orderStatus === status ? 'disabled' : ''}`}
+                                                                    >
+                                                                        <motion.div
+                                                                            animate={order.orderStatus === status ? { rotate: [0, 360] } : {}}
+                                                                            transition={{ duration: 0.5 }}
+                                                                        >
+                                                                            {STATUS_ICONS[status]}
+                                                                        </motion.div>
+                                                                        {status}
+                                                                        {order.orderStatus === status && (
+                                                                            <motion.div
+                                                                                initial={{ scale: 0 }}
+                                                                                animate={{ scale: 1 }}
+                                                                            >
+                                                                                <Check size={14} />
+                                                                            </motion.div>
+                                                                        )}
+                                                                    </motion.button>
+                                                                ))}
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
                                                 </div>
                                             </td>
                                         </motion.tr>
 
                                         {/* Status History */}
-                                        {expandedHistory === order.orderId && order.statusHistory && (
-                                            <motion.tr
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                className="bg-gray-50"
-                                            >
-                                                <td colSpan="9" className="px-6 py-4">
-                                                    <div className="bg-white rounded p-4 border border-gray-200">
-                                                        <h4 className="font-semibold text-gray-900 mb-3">📋 Status History</h4>
-                                                        <div className="space-y-2">
-                                                            {order.statusHistory && order.statusHistory.map((entry, idx) => (
-                                                                <div key={idx} className="flex items-start gap-3 p-2 border-l-2 border-blue-400 bg-blue-50 rounded">
-                                                                    <span className="text-xs font-mono text-gray-700 whitespace-nowrap">
-                                                                        {new Date(entry.timestamp).toLocaleDateString('en-IN')} {new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                                                                    </span>
-                                                                    <div className="flex-1">
-                                                                        <p className="text-sm font-medium text-gray-900">Status: {entry.status}</p>
-                                                                        {entry.message && <p className="text-xs text-gray-600">{entry.message}</p>}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                            </motion.tr>
-                                        )}
+                                        <AnimatePresence>
+                                            {expandedHistory === order.orderId && order.statusHistory && (
+                                                <motion.tr
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="bg-blue-50"
+                                                >
+                                                    <td colSpan="9" className="p-4">
+                                                        <motion.div
+                                                            initial={{ scale: 0.95, opacity: 0 }}
+                                                            animate={{ scale: 1, opacity: 1 }}
+                                                            className="admin-orders-card-glass mt-2 mb-2"
+                                                        >
+                                                            <h4 className="font-bold text-lg mb-3 flex items-center gap-2 text-gray-800">
+                                                                <Clock size={20} className="text-blue-600" />
+                                                                Status History
+                                                            </h4>
+                                                            <div className="space-y-2">
+                                                                {order.statusHistory && order.statusHistory.map((entry, idx) => (
+                                                                    <motion.div
+                                                                        key={idx}
+                                                                        initial={{ x: -20, opacity: 0 }}
+                                                                        animate={{ x: 0, opacity: 1 }}
+                                                                        transition={{ delay: idx * 0.1 }}
+                                                                        className="history-item flex items-start gap-3 p-3 rounded-lg bg-white border-l-4 border-blue-400"
+                                                                    >
+                                                                        <motion.div
+                                                                            animate={{ rotate: [0, 360] }}
+                                                                            transition={{ duration: 2, delay: idx * 0.2 }}
+                                                                            className="text-blue-600 mt-1"
+                                                                        >
+                                                                            <Star size={16} />
+                                                                        </motion.div>
+                                                                        <div className="flex-1">
+                                                                            <div className="history-time text-sm text-gray-500">
+                                                                                <Clock size={12} className="inline mr-1" />
+                                                                                {new Date(entry.timestamp).toLocaleDateString('en-IN')} {new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                                                            </div>
+                                                                            <p className="font-semibold text-gray-800">Status: {entry.status}</p>
+                                                                            {entry.message && <p className="text-sm text-gray-600">{entry.message}</p>}
+                                                                        </div>
+                                                                    </motion.div>
+                                                                ))}
+                                                            </div>
+                                                        </motion.div>
+                                                    </td>
+                                                </motion.tr>
+                                            )}
+                                        </AnimatePresence>
 
-                                        {/* Toggle History Button */}
+                                        {/* History Toggle */}
                                         {order.statusHistory && order.statusHistory.length > 0 && (
                                             <motion.tr className="bg-gray-50">
                                                 <td colSpan="9" className="px-6 py-2">
-                                                    <button
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.02 }}
+                                                        whileTap={{ scale: 0.98 }}
                                                         onClick={() => setExpandedHistory(expandedHistory === order.orderId ? null : order.orderId)}
-                                                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                                        className="text-xs text-blue-600 hover:text-blue-700 font-medium w-full text-center py-2"
                                                     >
-                                                        {expandedHistory === order.orderId ? '▼ Hide History' : `▶ Show History (${order.statusHistory.length})`}
-                                                    </button>
+                                                        <motion.div
+                                                            animate={{ rotate: expandedHistory === order.orderId ? 180 : 0 }}
+                                                            transition={{ duration: 0.3 }}
+                                                            className="inline-block mr-2"
+                                                        >
+                                                            <ChevronDown size={14} />
+                                                        </motion.div>
+                                                        {expandedHistory === order.orderId ? 'Hide History' : `Show History (${order.statusHistory.length})`}
+                                                    </motion.button>
                                                 </td>
                                             </motion.tr>
                                         )}
@@ -512,48 +657,133 @@ export default function AdminOrders() {
                         </table>
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="mt-6 flex justify-center items-center gap-2">
-                    <button
-                        onClick={() => setPage(Math.max(1, page - 1))}
-                        disabled={page === 1}
-                        className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            <AnimatePresence>
+                {totalPages > 1 && (
+                    <motion.div
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.8 }}
+                        className="flex justify-center items-center gap-2 mt-6"
                     >
-                        Previous
-                    </button>
-                    <div className="flex gap-2">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                            <button
-                                key={p}
-                                onClick={() => setPage(p)}
-                                className={`px-3 py-2 rounded-lg transition-all ${
-                                    page === p
-                                        ? 'bg-blue-600 text-white'
-                                        : 'border border-gray-300 hover:bg-gray-50'
-                                }`}
-                            >
-                                {p}
-                            </button>
-                        ))}
-                    </div>
-                    <button
-                        onClick={() => setPage(Math.min(totalPages, page + 1))}
-                        disabled={page === totalPages}
-                        className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                        Next
-                    </button>
-                </div>
-            )}
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setPage(Math.max(1, page - 1))}
+                            disabled={page === 1}
+                            className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex items-center gap-2"
+                        >
+                            <ChevronDown size={16} style={{ transform: 'rotate(90deg)' }} />
+                            Previous
+                        </motion.button>
+
+                        <div className="flex gap-2">
+                            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (page <= 3) {
+                                    pageNum = i + 1;
+                                } else if (page >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = page - 2 + i;
+                                }
+
+                                return (
+                                    <motion.button
+                                        key={pageNum}
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => setPage(pageNum)}
+                                        className={`px-3 py-2 rounded-lg transition-all ${
+                                            page === pageNum
+                                                ? 'bg-blue-600 text-white'
+                                                : 'border border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </motion.button>
+                                );
+                            })}
+                        </div>
+
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setPage(Math.min(totalPages, page + 1))}
+                            disabled={page === totalPages}
+                            className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 flex items-center gap-2"
+                        >
+                            Next
+                            <ChevronDown size={16} style={{ transform: 'rotate(-90deg)' }} />
+                        </motion.button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Footer Info */}
-            <div className="mt-6 text-center text-sm text-gray-600">
-                <p>Showing page {page} of {totalPages}</p>
-                <p className="text-xs mt-2">✨ Premium Features: Real-time updates • Bulk Actions • Status History • Email Automation</p>
-            </div>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1 }}
+                className="text-center mt-8"
+            >
+                <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="admin-orders-card-glass inline-block"
+                >
+                    <div className="flex items-center justify-center gap-3 mb-3">
+                        <motion.div
+                            animate={{ rotate: [0, 360] }}
+                            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                        >
+                            <Crown size={24} className="text-indigo-600" />
+                        </motion.div>
+                        <p className="text-gray-800 font-semibold">
+                            Page {page} of {totalPages}
+                        </p>
+                        <motion.div
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                        >
+                            <Star size={20} className="text-yellow-500" />
+                        </motion.div>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
+                        <motion.div
+                            whileHover={{ scale: 1.05, color: '#6366f1' }}
+                            className="flex items-center gap-1"
+                        >
+                            <Zap size={14} />
+                            Real-time Updates
+                        </motion.div>
+                        <motion.div
+                            whileHover={{ scale: 1.05, color: '#6366f1' }}
+                            className="flex items-center gap-1"
+                        >
+                            <Crown size={14} />
+                            Bulk Actions
+                        </motion.div>
+                        <motion.div
+                            whileHover={{ scale: 1.05, color: '#6366f1' }}
+                            className="flex items-center gap-1"
+                        >
+                            <Clock size={14} />
+                            Status History
+                        </motion.div>
+                        <motion.div
+                            whileHover={{ scale: 1.05, color: '#6366f1' }}
+                            className="flex items-center gap-1"
+                        >
+                            <Star size={14} />
+                            Email Automation
+                        </motion.div>
+                    </div>
+                </motion.div>
+            </motion.div>
         </motion.div>
     );
 }
