@@ -425,7 +425,7 @@ export default function AdminOrders() {
                         <table className="admin-orders-table">
                             <thead>
                                 <tr>
-                                    <th>
+                                    <th className="text-center">
                                         <motion.input
                                             whileHover={{ scale: 1.1 }}
                                             whileTap={{ scale: 0.9 }}
@@ -452,9 +452,9 @@ export default function AdminOrders() {
                                             initial={{ opacity: 0, y: 20 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.05 }}
-                                            className="order-row-premium hover:bg-blue-50"
+                                            className="order-row-premium"
                                         >
-                                            <td>
+                                            <td className="text-center">
                                                 <motion.input
                                                     whileHover={{ scale: 1.1 }}
                                                     whileTap={{ scale: 0.9 }}
@@ -467,7 +467,7 @@ export default function AdminOrders() {
                                             <td className="order-id-cell">
                                                 <motion.span
                                                     whileHover={{ scale: 1.05 }}
-                                                    className="font-mono text-indigo-600"
+                                                    className="font-mono text-indigo-600 font-semibold"
                                                 >
                                                     {order.orderId.slice(-8)}
                                                 </motion.span>
@@ -577,87 +577,87 @@ export default function AdminOrders() {
                                             </td>
                                         </motion.tr>
 
-                                        {/* Status History */}
-                                        <AnimatePresence>
-                                            {expandedHistory === order.orderId && order.statusHistory && (
-                                                <motion.tr
-                                                    initial={{ opacity: 0, height: 0 }}
-                                                    animate={{ opacity: 1, height: 'auto' }}
-                                                    exit={{ opacity: 0, height: 0 }}
-                                                    className="bg-blue-50"
-                                                >
-                                                    <td colSpan="9" className="p-4">
-                                                        <motion.div
-                                                            initial={{ scale: 0.95, opacity: 0 }}
-                                                            animate={{ scale: 1, opacity: 1 }}
-                                                            className="admin-orders-card-glass mt-2 mb-2"
-                                                        >
-                                                            <h4 className="font-bold text-lg mb-3 flex items-center gap-2 text-gray-800">
-                                                                <Clock size={20} className="text-blue-600" />
-                                                                Status History
-                                                            </h4>
-                                                            <div className="space-y-2">
-                                                                {order.statusHistory && order.statusHistory.map((entry, idx) => (
-                                                                    <motion.div
-                                                                        key={idx}
-                                                                        initial={{ x: -20, opacity: 0 }}
-                                                                        animate={{ x: 0, opacity: 1 }}
-                                                                        transition={{ delay: idx * 0.1 }}
-                                                                        className="history-item flex items-start gap-3 p-3 rounded-lg bg-white border-l-4 border-blue-400"
-                                                                    >
-                                                                        <motion.div
-                                                                            animate={{ rotate: [0, 360] }}
-                                                                            transition={{ duration: 2, delay: idx * 0.2 }}
-                                                                            className="text-blue-600 mt-1"
-                                                                        >
-                                                                            <Star size={16} />
-                                                                        </motion.div>
-                                                                        <div className="flex-1">
-                                                                            <div className="history-time text-sm text-gray-500">
-                                                                                <Clock size={12} className="inline mr-1" />
-                                                                                {new Date(entry.timestamp).toLocaleDateString('en-IN')} {new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                                                                            </div>
-                                                                            <p className="font-semibold text-gray-800">Status: {entry.status}</p>
-                                                                            {entry.message && <p className="text-sm text-gray-600">{entry.message}</p>}
-                                                                        </div>
-                                                                    </motion.div>
-                                                                ))}
-                                                            </div>
-                                                        </motion.div>
-                                                    </td>
-                                                </motion.tr>
-                                            )}
-                                        </AnimatePresence>
-
-                                        {/* History Toggle */}
-                                        {order.statusHistory && order.statusHistory.length > 0 && (
-                                            <motion.tr className="bg-gray-50">
-                                                <td colSpan="9" className="px-6 py-2">
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.02 }}
-                                                        whileTap={{ scale: 0.98 }}
-                                                        onClick={() => setExpandedHistory(expandedHistory === order.orderId ? null : order.orderId)}
-                                                        className="text-xs text-blue-600 hover:text-blue-700 font-medium w-full text-center py-2"
+                        {/* Status History */}
+                        <AnimatePresence>
+                            {expandedHistory === order.orderId && order.statusHistory && (
+                                <motion.tr
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="bg-blue-50"
+                                >
+                                    <td colSpan="9" className="p-4">
+                                        <motion.div
+                                            initial={{ scale: 0.95, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="admin-orders-card-glass mt-2 mb-2"
+                                        >
+                                            <h4 className="font-bold text-lg mb-3 flex items-center gap-2 text-gray-800">
+                                                <Clock size={20} className="text-blue-600" />
+                                                Status History
+                                            </h4>
+                                            <div className="space-y-2">
+                                                {order.statusHistory && order.statusHistory.map((entry, idx) => (
+                                                    <motion.div
+                                                        key={idx}
+                                                        initial={{ x: -20, opacity: 0 }}
+                                                        animate={{ x: 0, opacity: 1 }}
+                                                        transition={{ delay: idx * 0.1 }}
+                                                        className="history-item flex items-start gap-3 p-3 rounded-lg bg-white border-l-4 border-blue-400"
                                                     >
                                                         <motion.div
-                                                            animate={{ rotate: expandedHistory === order.orderId ? 180 : 0 }}
-                                                            transition={{ duration: 0.3 }}
-                                                            className="inline-block mr-2"
+                                                            animate={{ rotate: [0, 360] }}
+                                                            transition={{ duration: 2, delay: idx * 0.2 }}
+                                                            className="text-blue-600 mt-1"
                                                         >
-                                                            <ChevronDown size={14} />
+                                                            <Star size={16} />
                                                         </motion.div>
-                                                        {expandedHistory === order.orderId ? 'Hide History' : `Show History (${order.statusHistory.length})`}
-                                                    </motion.button>
-                                                </td>
-                                            </motion.tr>
-                                        )}
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </motion.div>
+                                                        <div className="flex-1">
+                                                            <div className="history-time text-sm text-gray-500">
+                                                                <Clock size={12} className="inline mr-1" />
+                                                                {new Date(entry.timestamp).toLocaleDateString('en-IN')} {new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                                            </div>
+                                                            <p className="font-semibold text-gray-800">Status: {entry.status}</p>
+                                                            {entry.message && <p className="text-sm text-gray-600">{entry.message}</p>}
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        </motion.div>
+                                    </td>
+                                </motion.tr>
+                            )}
+                        </AnimatePresence>
+
+                        {/* History Toggle */}
+                        {order.statusHistory && order.statusHistory.length > 0 && (
+                            <motion.tr className="bg-gray-50">
+                                <td colSpan="9" className="px-6 py-2">
+                                    <motion.button
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => setExpandedHistory(expandedHistory === order.orderId ? null : order.orderId)}
+                                        className="text-xs text-blue-600 hover:text-blue-700 font-medium w-full text-center py-2"
+                                    >
+                                        <motion.div
+                                            animate={{ rotate: expandedHistory === order.orderId ? 180 : 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="inline-block mr-2"
+                                        >
+                                            <ChevronDown size={14} />
+                                        </motion.div>
+                                        {expandedHistory === order.orderId ? 'Hide History' : `Show History (${order.statusHistory.length})`}
+                                    </motion.button>
+                                </td>
+                            </motion.tr>
+                        )}
+                    </React.Fragment>
+                ))}
+            </tbody>
+        </table>
+    </div>
+)}
+</motion.div>
 
             {/* Pagination */}
             <AnimatePresence>
@@ -787,3 +787,4 @@ export default function AdminOrders() {
         </motion.div>
     );
 }
+                       
