@@ -4,6 +4,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteBrand, getBrand } from '../../Store/ActionCreaters/BrandActionCreators';
 import { Tag, Edit, Trash2, Plus } from 'lucide-react'
+import { motion } from 'framer-motion'
+import './SystemControlCenter.css'
 
 export default function AdminBrand() {
     const brand = useSelector((state) => state.BrandStateData)
@@ -15,20 +17,23 @@ export default function AdminBrand() {
 
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
-            <div className="container-fluid px-lg-5">
-                <div className="row">
-                    <div className="col-lg-2"><LefNav /></div>
-                    <div className="col-lg-10">
-                        <div className="bg-white shadow-xl rounded-3xl p-4 border-0">
-                            <div className="d-flex justify-content-between align-items-center mb-4">
+            {/* Premium Sidebar */}
+            <LefNav />
+
+            {/* Main Content Area */}
+            <div className="admin-main-content">
+                <div className="container-fluid">
+                    <div className="w-100">
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-xl rounded-3xl p-4 border-0">
+                            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-3">
                                 <h4 className="font-weight-bold d-flex align-items-center mb-0"><Tag className="mr-2 text-info" /> Brand Catalog</h4>
                                 <Link to="/admin-add-brand" className='btn btn-info rounded-pill px-4 shadow-sm font-weight-bold d-flex align-items-center'>
                                     <Plus size={16} className="mr-2" /> ADD BRAND
                                 </Link>
                             </div>
 
-                            <div style={{ overflowX: 'auto', width: '100%' }}>
-                                <table className="table table-hover" style={{ minWidth: '700px' }}>
+                            <div className="table-responsive">
+                                <table className="table table-hover">
                                     <thead className="table-dark">
                                         <tr>
                                             <th>Brand ID</th>
@@ -58,7 +63,7 @@ export default function AdminBrand() {
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
+                        </motion.div>
                     </div>
                 </div>
             </div>

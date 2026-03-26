@@ -54,15 +54,17 @@
   min-height: calc(100vh - 110px); /* Full height minus header */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 20px; /* Added proper content padding */
+  width: calc(100% - 260px); /* Proper width calculation */
 }
 
-@media (max-width: 768px) {
+/* Mobile and Tablet - Sidebar hidden, full width content */
+@media (max-width: 991px) {
   .admin-main-content {
-    margin-left: 0; /* Full width on mobile */
+    margin-left: 0 !important; /* Full width on mobile/tablet */
     margin-top: 75px; /* Below mobile header */
     min-height: calc(100vh - 75px); /* Full height minus mobile header */
-    width: 100%; /* Ensure full width */
-    padding: 20px; /* Maintain padding on mobile */
+    width: 100% !important; /* Ensure full width */
+    padding: 15px; /* Slightly less padding on smaller screens */
   }
 
   .scc-container {
@@ -544,30 +546,36 @@
 
 /* ======= PREMIUM ADMIN LAYOUT RESPONSIVE STYLES ======= */
 
-/* Desktop Layout */
-@media (min-width: 769px) {
+/* Desktop Layout - Sidebar Always Visible */
+@media (min-width: 992px) {
   body {
     overflow-x: hidden;
   }
 
   .admin-main-content {
-    margin-left: 260px;
+    margin-left: 260px !important;
     margin-top: 110px; /* Below header */
     min-height: calc(100vh - 110px); /* Full height minus header */
-    width: calc(100% - 260px);
+    width: calc(100% - 260px) !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 20px; /* Consistent desktop padding */
+    padding: 20px;
+    max-width: 1920px; /* Prevent ultra-wide overflow */
   }
 }
 
-/* Tablet Layout */
-@media (max-width: 768px) and (min-width: 481px) {
+/* Tablet Layout - Sidebar Hidden by Default */
+@media (max-width: 991px) and (min-width: 768px) {
   .admin-main-content {
-    margin-left: 0;
+    margin-left: 0 !important;
     margin-top: 75px; /* Below mobile header */
     min-height: calc(100vh - 75px); /* Full height minus mobile header */
-    width: 100%;
-    padding: 20px; /* Consistent tablet padding */
+    width: 100% !important;
+    padding: 18px; /* Consistent tablet padding */
+  }
+
+  .scc-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
   }
 
   .scc-header {
@@ -580,16 +588,20 @@
     align-self: flex-end;
     margin-left: 0 !important;
   }
+
+  .scc-charts-container {
+    padding: 1.25rem;
+  }
 }
 
-/* Mobile Layout */
-@media (max-width: 480px) {
+/* Mobile Layout - Sidebar Hidden by Default */
+@media (max-width: 767px) {
   .admin-main-content {
-    margin-left: 0;
+    margin-left: 0 !important;
     margin-top: 75px; /* Below mobile header */
     min-height: calc(100vh - 75px); /* Full height minus mobile header */
-    width: 100%;
-    padding: 20px; /* Consistent mobile padding */
+    width: 100% !important;
+    padding: 15px; /* Consistent mobile padding */
   }
 
   .scc-header {

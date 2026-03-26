@@ -4,21 +4,25 @@ import LefNav from './LefNav'
 import { deleteContact, getContact } from '../../Store/ActionCreaters/ContactActionCreators'
 import { motion } from 'framer-motion'
 import { MessageSquare, Trash2, Mail } from 'lucide-react'
+import './SystemControlCenter.css'
 
 export default function AdminContact() {
     const contacts = useSelector((state) => state.ContactStateData)
     const dispatch = useDispatch()
 
-    useEffect(() => { 
-        dispatch(getContact()) 
+    useEffect(() => {
+        dispatch(getContact())
     }, [dispatch])
 
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
-            <div className="container-fluid">
-                <div className="row">
-                    <div className="col-lg-2 mb-4"><LefNav /></div>
-                    <div className="col-lg-10">
+            {/* Premium Sidebar */}
+            <LefNav />
+
+            {/* Main Content Area */}
+            <div className="admin-main-content">
+                <div className="container-fluid">
+                    <div className="w-100">
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-lg rounded-2xl p-4 overflow-hidden border-0">
                             <h4 className="font-weight-bold mb-4 d-flex align-items-center text-dark">
                                 <MessageSquare className="mr-2 text-info" /> Customer Queries ({contacts.length})
@@ -30,7 +34,7 @@ export default function AdminContact() {
                                             <th>Name</th>
                                             <th>Contact Info</th>
                                             <th>Subject</th>
-                                            <th>Message</th>
+                                            <th className="d-none d-md-table-cell">Message</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -43,7 +47,7 @@ export default function AdminContact() {
                                                     <div>📞 {item.phone}</div>
                                                 </td>
                                                 <td className="align-middle text-muted small">{item.subject}</td>
-                                                <td className="align-middle small" style={{maxWidth: "300px"}}>{item.message}</td>
+                                                <td className="align-middle small d-none d-md-table-cell" style={{maxWidth: "300px"}}>{item.message}</td>
                                                 <td className="align-middle text-right">
                                                     <button onClick={() => {if(window.confirm("Delete?")) dispatch(deleteContact({id: item.id || item._id}))}} className="btn btn-sm text-danger">
                                                         <Trash2 size={18}/>

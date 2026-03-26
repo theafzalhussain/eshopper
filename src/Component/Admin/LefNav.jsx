@@ -12,8 +12,19 @@ export default function LefNav() {
     const [isMobileOpen, setIsMobileOpen] = useState(false)
     const [isCollapsed, setIsCollapsed] = useState(false)
     const [hoveredItem, setHoveredItem] = useState(null)
+    const [isMobile, setIsMobile] = useState(false)
 
     const isActive = (path) => location.pathname === path
+
+    // Check screen size on mount
+    useEffect(() => {
+        const checkScreenSize = () => {
+            setIsMobile(window.innerWidth < 992)
+        }
+        checkScreenSize()
+        window.addEventListener('resize', checkScreenSize)
+        return () => window.removeEventListener('resize', checkScreenSize)
+    }, [])
 
     // Close mobile menu on route change
     useEffect(() => {
@@ -23,7 +34,7 @@ export default function LefNav() {
     // Handle responsive behavior
     useEffect(() => {
         const handleResize = () => {
-            if (window.innerWidth > 768) {
+            if (window.innerWidth >= 992) {
                 setIsMobileOpen(false)
             }
         }
@@ -85,8 +96,8 @@ export default function LefNav() {
             {/* Premium Sidebar */}
             <motion.div
                 variants={sidebarVariants}
-                initial="closed"
-                animate="open" // Always open on desktop, controlled by CSS on mobile
+                initial={isMobile ? "closed" : "open"}
+                animate={isMobile ? (isMobileOpen ? "open" : "closed") : "open"}
                 className={`premium-admin-sidebar ${isMobileOpen ? 'mobile-open' : ''} ${isCollapsed ? 'collapsed' : ''}`}
             >
                 {/* Sidebar Header */}
@@ -224,13 +235,13 @@ export default function LefNav() {
                     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
                 }
 
-                @media (min-width: 769px) {
+                @media (min-width: 992px) {
                     .premium-mobile-toggle {
                         display: none !important;
                     }
                 }
 
-                @media (max-width: 768px) {
+                @media (max-width: 991px) {
                     .premium-mobile-toggle {
                         display: flex !important;
                     }
@@ -257,7 +268,7 @@ export default function LefNav() {
                     visibility: visible;
                 }
 
-                @media (min-width: 769px) {
+                @media (min-width: 992px) {
                     .premium-sidebar-overlay {
                         display: none !important;
                     }
@@ -294,28 +305,28 @@ export default function LefNav() {
                     border-radius: 10px;
                 }
 
-                /* Mobile Styles - Hide Sidebar by Default */
-                @media (max-width: 768px) {
+                /* Mobile & Tablet Styles - Hide Sidebar by Default (max-width: 991px) */
+                @media (max-width: 991px) {
                     .premium-admin-sidebar {
                         position: fixed;
                         top: 75px; /* Below mobile header (35px ribbon + ~40px navbar) */
                         height: calc(100vh - 75px); /* Full height minus mobile header */
                         z-index: 1040;
-                        transform: translateX(-100%);
+                        transform: translateX(-100%) !important; /* Override framer-motion */
                         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     }
 
                     /* Show sidebar when mobile menu is open */
                     .premium-admin-sidebar.mobile-open {
-                        transform: translateX(0);
+                        transform: translateX(0) !important; /* Override framer-motion */
                     }
                 }
 
-                /* Desktop - Always Show - Keep Fixed */
-                @media (min-width: 769px) {
+                /* Desktop - Always Show - Keep Fixed (min-width: 992px) */
+                @media (min-width: 992px) {
                     .premium-admin-sidebar {
                         position: fixed;
-                        transform: translateX(0) !important;
+                        transform: translateX(0) !important; /* Override framer-motion */
                     }
 
                     /* Hide mobile toggle on desktop */
@@ -506,7 +517,7 @@ export default function LefNav() {
                 }
 
                 /* Responsive Adjustments */
-                @media (max-width: 768px) {
+                @media (max-width: 991px) {
                     .premium-admin-sidebar {
                         width: 260px;
                     }

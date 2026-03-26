@@ -33,6 +33,43 @@ const STATUS_ICONS = {
     'Delivered': <Check size={16} />
 };
 
+// Helper function to format dates safely
+const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('en-IN');
+};
+
+// Helper function to get date from order with multiple field name attempts
+const getOrderDate = (order, type = 'created') => {
+    if (!order) return null;
+
+    const possibleFields = type === 'created'
+        ? ['createdAt', 'created_at', 'dateCreated', 'date_created', 'orderDate', 'order_date', 'timestamp']
+        : ['updatedAt', 'updated_at', 'dateUpdated', 'date_updated', 'lastModified', 'last_modified'];
+
+    for (const field of possibleFields) {
+        if (order[field]) {
+            return order[field];
+        }
+    }
+
+    // Only log when debugging is needed (first time)
+    if (window.debugOrderDates) {
+        console.log(`🗓️ getOrderDate: No ${type} date found in order, checked fields:`, possibleFields);
+    }
+    return null;
+};
+
+// Helper function to format date and time safely
+const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
+    return `${date.toLocaleDateString('en-IN')} ${date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`;
+};
+
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -115,6 +152,25 @@ export default function AdminOrders() {
         fetchOrders();
     }, [page, search, selectedStatus, fromDate, toDate, paymentStatus]);
 
+    // Check admin configuration on mount
+    useEffect(() => {
+        const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
+        const baseUrl = process.env.REACT_APP_BASE_URL;
+
+        console.log('🔧 Admin Configuration Check:');
+        console.log('  - Admin Secret available:', !!adminSecret);
+        console.log('  - Admin Secret length:', adminSecret ? adminSecret.length : 0);
+        console.log('  - Base URL:', baseUrl || 'Using default');
+
+        // Enable debug mode for order dates
+        window.debugOrderDates = true;
+
+        if (!adminSecret) {
+            console.warn('⚠️ REACT_APP_ADMIN_SECRET not found in environment variables');
+            showNotification('⚠️ Admin credentials not configured properly', 'error');
+        }
+    }, []);
+
     // Debounce search: update search param after user stops typing for 400ms
     useEffect(() => {
         if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
@@ -139,6 +195,11 @@ export default function AdminOrders() {
             };
 
             const response = await axios.get(`${BASE_URL}/api/admin/orders`, { params });
+            console.log('📊 Orders API response:', response.data);
+            if (response.data.orders && response.data.orders.length > 0) {
+                console.log('📋 Sample order data:', response.data.orders[0]);
+                console.log('🗓️ Order fields:', Object.keys(response.data.orders[0]));
+            }
             setOrders(response.data.orders || []);
             setTotalPages(response.data.pages || 0);
             setSelectedOrders([]);
@@ -156,18 +217,58 @@ export default function AdminOrders() {
         setDrawerLoading(true);
         setDrawerOrder(null);
         setDrawerOpen(true);
+
+        // First, try to find order in existing list (faster, serves as fallback)
+        const existingOrder = orders.find(o => o.orderId === orderId);
+        console.log('🔍 fetchOrderDetails called with orderId:', orderId);
+        console.log('📋 Found existing order in cache:', !!existingOrder);
+        console.log('🗃️ Available orders:', orders.map(o => o.orderId));
+
         try {
+            console.log('🔍 Fetching order details for:', orderId);
+            console.log('🔑 Admin secret available:', !!process.env.REACT_APP_ADMIN_SECRET);
             const response = await axios.get(`${BASE_URL}/api/admin/order/${orderId}`,
                 { headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET } }
             );
+            console.log('📡 Order details response:', response.data);
             if (response.data && response.data.success && response.data.order) {
+                console.log('✅ API success, using API data');
                 setDrawerOrder(response.data.order);
             } else {
-                setDrawerOrder(null);
+                console.warn('❌ Invalid order details response, using cached data');
+                // Use existing order data as fallback
+                if (existingOrder) {
+                    console.log('✅ Using cached order data as fallback');
+                    setDrawerOrder(existingOrder);
+                    showNotification('ℹ️ Showing basic order data', 'info');
+                } else {
+                    console.error('❌ No cached order data found');
+                    setDrawerOrder(null);
+                    showNotification('Failed to load order details', 'error');
+                }
             }
         } catch (err) {
-            setDrawerOrder(null);
+            console.error('❌ Failed to fetch order details:', err);
+            console.error('❌ Error status:', err.response?.status);
+            console.error('❌ Error message:', err.response?.data);
+
+            // WORKAROUND: Use existing order data from list if API fails
+            if (existingOrder) {
+                console.log('✅ API failed, using cached order data as fallback');
+                console.log('📋 Cached order data:', existingOrder);
+                setDrawerOrder(existingOrder);
+                if (err.response?.status === 403) {
+                    showNotification('ℹ️ Using basic data (API needs backend fix)', 'info');
+                } else {
+                    showNotification('ℹ️ Using cached order data', 'info');
+                }
+            } else {
+                console.error('❌ No cached order data available for fallback');
+                setDrawerOrder(null);
+                showNotification('Failed to load order details', 'error');
+            }
         } finally {
+            console.log('🏁 fetchOrderDetails complete, drawerLoading set to false');
             setDrawerLoading(false);
         }
     };
@@ -464,7 +565,7 @@ export default function AdminOrders() {
             : filteredOrders;
         if (!exportOrders.length) return alert('No orders to export!');
         const headers = [
-            'Order ID', 'Customer', 'Email', 'Amount', 'Status', 'Items', 'Updated'
+            'Order ID', 'Customer', 'Email', 'Amount', 'Status', 'Items', 'Order Date', 'Updated'
         ];
         const rows = exportOrders.map(order => [
             order.orderId,
@@ -473,7 +574,8 @@ export default function AdminOrders() {
             order.finalAmount,
             order.orderStatus,
             order.productCount || (order.products?.length || 0),
-            new Date(order.updatedAt).toLocaleDateString('en-IN')
+            formatDate(getOrderDate(order, 'created')),
+            formatDate(getOrderDate(order, 'updated'))
         ]);
         let csv = '';
         csv += headers.join(',') + '\n';
@@ -505,6 +607,7 @@ export default function AdminOrders() {
             'Amount',
             'Status',
             'Items',
+            'Order Date',
             'Updated'
         ];
         const tableRows = exportOrders.map(order => ([
@@ -514,7 +617,8 @@ export default function AdminOrders() {
             `₹${Number(order.finalAmount || 0).toLocaleString('en-IN')}`,
             order.orderStatus || 'Order Placed',
             order.productCount || (order.products?.length || 0),
-            new Date(order.updatedAt).toLocaleDateString('en-IN')
+            formatDate(getOrderDate(order, 'created')),
+            formatDate(getOrderDate(order, 'updated'))
         ]));
         doc.autoTable({
             head: [tableColumn],
@@ -565,40 +669,125 @@ export default function AdminOrders() {
             <div className="admin-main-content">
                 <div className="container-fluid px-lg-5">
                     <div className="admin-orders-card">
-                        {/* Premium Header */}
+                        {/* Premium Header with Gradient & Stats */}
                         <motion.div
-                            className="scc-header"
+                            className="premium-orders-header"
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                         >
-                            <div className="scc-header-icon">
-                                <Package size={28} />
-                            </div>
-                            <div>
-                                <h1 className="scc-title">Orders Management</h1>
-                                <p className="scc-subtitle">Premium order management with real-time updates & analytics</p>
-                            </div>
-                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <motion.button
-                                    className="export-btn-premium export-csv-btn-premium"
-                                    onClick={exportOrdersToCSV}
-                                    title="Export orders as CSV"
-                                    whileHover={{ scale: 1.05 }}
-                                    transition={{ duration: 0.2 }}
-                                >
-                                    <Download size={18} className="export-btn-icon" />
-                                    Export CSV
-                                </motion.button>
-                                <motion.button
-                                    className="export-btn-premium export-pdf-btn-premium"
-                                    onClick={exportOrdersToPDF}
-                                    title="Export orders as PDF"
-                                    whileHover={{ scale: 1.05 }}
-                                    transition={{ duration: 0.2 }}
-                                >
-                                    <FileText size={18} className="export-btn-icon" />
-                                    Export PDF
-                                </motion.button>
+                            {/* Main Header Section */}
+                            <div className="premium-header-main">
+                                <div className="premium-header-content">
+                                    <motion.div
+                                        className="premium-header-icon-wrapper"
+                                        whileHover={{ scale: 1.1, rotate: 360 }}
+                                        transition={{ duration: 0.5 }}
+                                    >
+                                        <div className="premium-header-icon">
+                                            <Package size={32} />
+                                        </div>
+                                        <div className="premium-icon-glow"></div>
+                                    </motion.div>
+                                    <div className="premium-header-text">
+                                        <h1 className="premium-title">
+                                            <span className="premium-gradient-text">Orders</span>
+                                            <span className="premium-accent-text">Management</span>
+                                        </h1>
+                                        <p className="premium-subtitle">
+                                            🚀 Advanced order processing with real-time analytics & automation
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Quick Stats */}
+                                <div className="premium-quick-stats">
+                                    <motion.div
+                                        className="stat-card stat-total"
+                                        whileHover={{ y: -5 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        <div className="stat-icon">
+                                            <Package size={20} />
+                                        </div>
+                                        <div className="stat-content">
+                                            <div className="stat-number">{orders.length || 0}</div>
+                                            <div className="stat-label">Total Orders</div>
+                                        </div>
+                                    </motion.div>
+                                    <motion.div
+                                        className="stat-card stat-pending"
+                                        whileHover={{ y: -5 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        <div className="stat-icon">
+                                            <Clock size={20} />
+                                        </div>
+                                        <div className="stat-content">
+                                            <div className="stat-number">
+                                                {orders.filter(o => ['Order Placed', 'Ordered'].includes(o.orderStatus)).length}
+                                            </div>
+                                            <div className="stat-label">Pending</div>
+                                        </div>
+                                    </motion.div>
+                                    <motion.div
+                                        className="stat-card stat-delivered"
+                                        whileHover={{ y: -5 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        <div className="stat-icon">
+                                            <CheckCircle2 size={20} />
+                                        </div>
+                                        <div className="stat-content">
+                                            <div className="stat-number">
+                                                {orders.filter(o => o.orderStatus === 'Delivered').length}
+                                            </div>
+                                            <div className="stat-label">Delivered</div>
+                                        </div>
+                                    </motion.div>
+                                    <motion.div
+                                        className="stat-card stat-revenue"
+                                        whileHover={{ y: -5 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        <div className="stat-icon">
+                                            <span className="revenue-icon">💰</span>
+                                        </div>
+                                        <div className="stat-content">
+                                            <div className="stat-number">
+                                                ₹{orders.reduce((total, order) => total + Number(order.finalAmount || 0), 0).toLocaleString('en-IN')}
+                                            </div>
+                                            <div className="stat-label">Total Revenue</div>
+                                        </div>
+                                    </motion.div>
+                                </div>
+
+                                {/* Export Actions */}
+                                <div className="premium-header-actions">
+                                    <motion.button
+                                        className="premium-export-btn csv-btn"
+                                        onClick={exportOrdersToCSV}
+                                        title="Export orders as CSV"
+                                        whileHover={{ scale: 1.05, y: -2 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        <Download size={18} />
+                                        CSV Export
+                                        <div className="btn-shine"></div>
+                                    </motion.button>
+                                    <motion.button
+                                        className="premium-export-btn pdf-btn"
+                                        onClick={exportOrdersToPDF}
+                                        title="Export orders as PDF"
+                                        whileHover={{ scale: 1.05, y: -2 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        <FileText size={18} />
+                                        PDF Export
+                                        <div className="btn-shine"></div>
+                                    </motion.button>
+                                </div>
                             </div>
                         </motion.div>
 
@@ -777,6 +966,7 @@ export default function AdminOrders() {
                                                     <th>Amount</th>
                                                     <th>Status</th>
                                                     <th>Items</th>
+                                                    <th>Order Date</th>
                                                     <th>Updated</th>
                                                     <th>Action</th>
                                                 </tr>
@@ -799,24 +989,42 @@ export default function AdminOrders() {
                                                                 />
                                                             </td>
                                                             <td data-label="Order ID">
-                                                                <span
-                                                                    className="luxe-order-id"
+                                                                <motion.span
+                                                                    className="premium-order-id"
                                                                     onClick={() => openSummaryModal(order)}
                                                                     title="Click to view summary"
                                                                     role="button"
                                                                     tabIndex={0}
                                                                     onKeyPress={e => { if (e.key === 'Enter') openSummaryModal(order); }}
+                                                                    whileHover={{ scale: 1.05, y: -2 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    transition={{ duration: 0.2 }}
                                                                 >
-                                                                    {String(order.orderId || '').slice(-8)}
-                                                                </span>
+                                                                    <div className="order-id-content">
+                                                                        <span className="order-hash">#</span>
+                                                                        <span className="order-number">
+                                                                            {String(order.orderId || '').slice(-8)}
+                                                                        </span>
+                                                                        <div className="order-id-shine"></div>
+                                                                    </div>
+                                                                </motion.span>
                                                             </td>
                                                             <td data-label="Customer" className="font-weight-bold">{order.userName || 'Customer'}</td>
                                                             <td data-label="Email">{order.userEmail || 'N/A'}</td>
                                                             <td data-label="Amount">
-                                                                <span className="luxe-amount">
-                                                                    <span className="luxe-currency">₹</span>
-                                                                    {Number(order.finalAmount || 0).toLocaleString('en-IN')}
-                                                                </span>
+                                                                <motion.div
+                                                                    className="premium-amount-wrapper"
+                                                                    whileHover={{ scale: 1.05 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                >
+                                                                    <div className="premium-amount">
+                                                                        <span className="amount-currency">₹</span>
+                                                                        <span className="amount-value">
+                                                                            {Number(order.finalAmount || 0).toLocaleString('en-IN')}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="amount-glow"></div>
+                                                                </motion.div>
                                                             </td>
                                                             <td data-label="Status">
                                                                 <span className={`status-pill ${STATUS_COLORS[order.orderStatus] || STATUS_COLORS['Order Placed']}`}>
@@ -825,25 +1033,38 @@ export default function AdminOrders() {
                                                                 </span>
                                                             </td>
                                                             <td data-label="Items">{order.productCount || order.products?.length || 0} item{(order.productCount || order.products?.length || 0) !== 1 ? 's' : ''}</td>
-                                                            <td data-label="Updated">{new Date(order.updatedAt).toLocaleDateString('en-IN')}</td>
+                                                            <td data-label="Order Date">{formatDate(getOrderDate(order, 'created'))}</td>
+                                                            <td data-label="Updated">{formatDate(getOrderDate(order, 'updated'))}</td>
                                                             <td data-label="Action">
-                                                                <button
+                                                                <motion.button
                                                                     onClick={() => openStatusModal(order)}
                                                                     disabled={updating === order.orderId}
-                                                                    className="btn btn-outline-dark btn-sm d-flex align-items-center"
+                                                                    className="premium-update-btn"
+                                                                    whileHover={{ scale: 1.05, y: -2 }}
+                                                                    whileTap={{ scale: 0.95 }}
+                                                                    transition={{ duration: 0.2 }}
                                                                 >
                                                                     {updating === order.orderId ? (
                                                                         <>
-                                                                            <Loader2 size={14} className="admin-spin mr-2" />
-                                                                            Updating...
+                                                                            <motion.div
+                                                                                animate={{ rotate: 360 }}
+                                                                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                                            >
+                                                                                <Loader2 size={16} />
+                                                                            </motion.div>
+                                                                            <span>Updating...</span>
                                                                         </>
                                                                     ) : (
                                                                         <>
-                                                                            Update Status
-                                                                            <ChevronDown size={14} className="ml-1" />
+                                                                            <div className="btn-icon">
+                                                                                <Package size={16} />
+                                                                            </div>
+                                                                            <span className="btn-text">Update Status</span>
+                                                                            <ChevronDown size={14} className="btn-arrow" />
+                                                                            <div className="btn-shine"></div>
                                                                         </>
                                                                     )}
-                                                                </button>
+                                                                </motion.button>
                                                             </td>
                                                         </motion.tr>
 
@@ -860,7 +1081,7 @@ export default function AdminOrders() {
                                                                             {order.statusHistory.map((entry, idx) => (
                                                                                 <div key={idx} className="history-item">
                                                                                     <span className="history-time">
-                                                                                        {new Date(entry.timestamp).toLocaleDateString('en-IN')} {new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                                                                        {formatDateTime(entry.timestamp)}
                                                                                     </span>
                                                                                     <div className="flex-grow-1 ml-2">
                                                                                         <p className="mb-1 small font-weight-bold">Status: {entry.status}</p>
@@ -1123,10 +1344,19 @@ export default function AdminOrders() {
                             </div>
                             <div className="summary-row">
                                 <span className="summary-label">Amount</span>
-                                <span className="summary-value luxe-amount">
-                                    <span className="luxe-currency">₹</span>
-                                    {Number(summaryModal.order.finalAmount || 0).toLocaleString('en-IN')}
-                                </span>
+                                <motion.div
+                                    className="premium-amount-wrapper summary-amount"
+                                    whileHover={{ scale: 1.05 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <div className="premium-amount">
+                                        <span className="amount-currency">₹</span>
+                                        <span className="amount-value">
+                                            {Number(summaryModal.order.finalAmount || 0).toLocaleString('en-IN')}
+                                        </span>
+                                    </div>
+                                    <div className="amount-glow"></div>
+                                </motion.div>
                             </div>
                             <div className="summary-row">
                                 <span className="summary-label">Status</span>
@@ -1140,11 +1370,11 @@ export default function AdminOrders() {
                             </div>
                             <div className="summary-row">
                                 <span className="summary-label">Order Date</span>
-                                <span className="summary-value">{new Date(summaryModal.order.createdAt).toLocaleDateString('en-IN')}</span>
+                                <span className="summary-value">{formatDate(getOrderDate(summaryModal.order, 'created'))}</span>
                             </div>
                             <div className="summary-row">
                                 <span className="summary-label">Last Updated</span>
-                                <span className="summary-value">{new Date(summaryModal.order.updatedAt).toLocaleDateString('en-IN')}</span>
+                                <span className="summary-value">{formatDate(getOrderDate(summaryModal.order, 'updated'))}</span>
                             </div>
                         </div>
                         <div className="order-summary-footer">
@@ -1168,6 +1398,478 @@ export default function AdminOrders() {
                 order={drawerOrder}
                 loading={drawerLoading}
             />
+
+            {/* Enhanced Premium Styles */}
+            <style jsx="true">{`
+                /* Premium Orders Header Styles */
+                .premium-orders-header {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 24px;
+                    padding: 2rem;
+                    margin-bottom: 2rem;
+                    position: relative;
+                    overflow: hidden;
+                    color: white;
+                    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+                }
+
+                .premium-orders-header::before {
+                    content: '';
+                    position: absolute;
+                    top: -50%;
+                    left: -50%;
+                    width: 200%;
+                    height: 200%;
+                    background: conic-gradient(from 0deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+                    animation: rotate 20s linear infinite;
+                    pointer-events: none;
+                }
+
+                @keyframes rotate {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+
+                .premium-header-main {
+                    display: grid;
+                    grid-template-columns: 1fr auto auto;
+                    gap: 2rem;
+                    align-items: center;
+                    position: relative;
+                    z-index: 2;
+                }
+
+                .premium-header-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 1.5rem;
+                }
+
+                .premium-header-icon-wrapper {
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .premium-header-icon {
+                    width: 80px;
+                    height: 80px;
+                    background: rgba(255, 255, 255, 0.15);
+                    border-radius: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    position: relative;
+                    z-index: 2;
+                }
+
+                .premium-icon-glow {
+                    position: absolute;
+                    top: -10px;
+                    left: -10px;
+                    right: -10px;
+                    bottom: -10px;
+                    background: linear-gradient(45deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+                    border-radius: 25px;
+                    z-index: 1;
+                    animation: pulse 3s ease-in-out infinite;
+                }
+
+                @keyframes pulse {
+                    0%, 100% { opacity: 0.5; transform: scale(1); }
+                    50% { opacity: 1; transform: scale(1.05); }
+                }
+
+                .premium-title {
+                    font-size: 2.5rem;
+                    font-weight: 800;
+                    margin: 0;
+                    letter-spacing: -0.02em;
+                    line-height: 1.1;
+                }
+
+                .premium-gradient-text {
+                    background: linear-gradient(135deg, #fff 0%, #f0f9ff 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                }
+
+                .premium-accent-text {
+                    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    margin-left: 0.5rem;
+                }
+
+                .premium-subtitle {
+                    color: rgba(255, 255, 255, 0.9);
+                    font-size: 1.1rem;
+                    margin: 0.5rem 0 0 0;
+                    font-weight: 500;
+                }
+
+                /* Premium Quick Stats */
+                .premium-quick-stats {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                    gap: 1rem;
+                }
+
+                .stat-card {
+                    background: rgba(255, 255, 255, 0.1);
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 16px;
+                    padding: 1rem;
+                    text-align: center;
+                    transition: all 0.3s ease;
+                    cursor: pointer;
+                }
+
+                .stat-card:hover {
+                    background: rgba(255, 255, 255, 0.15);
+                    transform: translateY(-2px);
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+                }
+
+                .stat-icon {
+                    width: 40px;
+                    height: 40px;
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 0.5rem;
+                    font-size: 1.2rem;
+                }
+
+                .stat-number {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    color: white;
+                    line-height: 1;
+                }
+
+                .stat-label {
+                    font-size: 0.75rem;
+                    color: rgba(255, 255, 255, 0.8);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-top: 0.25rem;
+                }
+
+                .revenue-icon {
+                    font-size: 20px;
+                }
+
+                /* Premium Export Buttons */
+                .premium-header-actions {
+                    display: flex;
+                    gap: 1rem;
+                    flex-direction: column;
+                }
+
+                .premium-export-btn {
+                    position: relative;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    color: white;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    backdrop-filter: blur(10px);
+                    overflow: hidden;
+                }
+
+                .premium-export-btn:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    transform: translateY(-2px);
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+                }
+
+                .btn-shine {
+                    position: absolute;
+                    top: -50%;
+                    left: -50%;
+                    width: 200%;
+                    height: 200%;
+                    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+                    transform: rotate(45deg);
+                    transition: all 0.6s;
+                }
+
+                .premium-export-btn:hover .btn-shine {
+                    animation: shine 0.6s ease-in-out;
+                }
+
+                @keyframes shine {
+                    0% { transform: translateX(-100%) rotate(45deg); }
+                    100% { transform: translateX(100%) rotate(45deg); }
+                }
+
+                /* Premium Amount Styles */
+                .premium-amount-wrapper {
+                    position: relative;
+                    display: inline-block;
+                    cursor: pointer;
+                }
+
+                .premium-amount {
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    color: white;
+                    padding: 0.5rem 1rem;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                    font-weight: 700;
+                    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .premium-amount::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+                    transition: left 0.5s;
+                }
+
+                .premium-amount-wrapper:hover .premium-amount::before {
+                    left: 100%;
+                }
+
+                .amount-currency {
+                    font-size: 1rem;
+                    opacity: 0.9;
+                }
+
+                .amount-value {
+                    font-size: 1.1rem;
+                    font-weight: 800;
+                }
+
+                .amount-glow {
+                    position: absolute;
+                    top: -2px;
+                    left: -2px;
+                    right: -2px;
+                    bottom: -2px;
+                    background: linear-gradient(135deg, #10b981, #059669);
+                    border-radius: 14px;
+                    z-index: -1;
+                    filter: blur(8px);
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .premium-amount-wrapper:hover .amount-glow {
+                    opacity: 0.6;
+                }
+
+                /* Premium Update Status Button */
+                .premium-update-btn {
+                    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                    border: none;
+                    color: white;
+                    padding: 0.75rem 1.25rem;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+                }
+
+                .premium-update-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+                    background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
+                }
+
+                .premium-update-btn:disabled {
+                    opacity: 0.7;
+                    cursor: not-allowed;
+                    transform: none;
+                }
+
+                .btn-icon {
+                    width: 24px;
+                    height: 24px;
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .btn-text {
+                    font-size: 0.9rem;
+                }
+
+                .btn-arrow {
+                    transition: transform 0.3s ease;
+                }
+
+                .premium-update-btn:hover .btn-arrow {
+                    transform: translateY(2px);
+                }
+
+                /* Premium Order ID Styles */
+                .premium-order-id {
+                    display: inline-block;
+                    cursor: pointer;
+                    position: relative;
+                }
+
+                .order-id-content {
+                    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                    color: white;
+                    padding: 0.5rem 1rem;
+                    border-radius: 10px;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                    font-weight: 700;
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                    position: relative;
+                    overflow: hidden;
+                    transition: all 0.3s ease;
+                }
+
+                .premium-order-id:hover .order-id-content {
+                    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+                    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+                }
+
+                .order-hash {
+                    font-size: 0.9rem;
+                    opacity: 0.8;
+                }
+
+                .order-number {
+                    font-size: 1rem;
+                    font-weight: 800;
+                    letter-spacing: 0.5px;
+                }
+
+                .order-id-shine {
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+                    transition: left 0.5s;
+                }
+
+                .premium-order-id:hover .order-id-shine {
+                    left: 100%;
+                }
+
+                /* Summary Amount Enhancement */
+                .summary-amount {
+                    display: inline-block;
+                }
+
+                /* Responsive Design */
+                @media (max-width: 992px) {
+                    .premium-header-main {
+                        grid-template-columns: 1fr;
+                        gap: 1.5rem;
+                        text-align: center;
+                    }
+
+                    .premium-title {
+                        font-size: 2rem;
+                    }
+
+                    .premium-quick-stats {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+
+                    .premium-header-actions {
+                        flex-direction: row;
+                        justify-content: center;
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .premium-orders-header {
+                        padding: 1.5rem;
+                    }
+
+                    .premium-title {
+                        font-size: 1.75rem;
+                    }
+
+                    .premium-quick-stats {
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 0.75rem;
+                    }
+
+                    .stat-card {
+                        padding: 0.75rem;
+                    }
+
+                    .stat-number {
+                        font-size: 1.25rem;
+                    }
+
+                    .premium-export-btn {
+                        padding: 0.6rem 1rem;
+                        font-size: 0.9rem;
+                    }
+                }
+
+                @media (max-width: 576px) {
+                    .premium-header-content {
+                        flex-direction: column;
+                        gap: 1rem;
+                    }
+
+                    .premium-header-icon {
+                        width: 60px;
+                        height: 60px;
+                    }
+
+                    .premium-title {
+                        font-size: 1.5rem;
+                    }
+
+                    .premium-quick-stats {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .premium-header-actions {
+                        flex-direction: column;
+                        width: 100%;
+                    }
+
+                    .premium-export-btn {
+                        justify-content: center;
+                    }
+                }
+            `}</style>
         </motion.div>
     );
 }
