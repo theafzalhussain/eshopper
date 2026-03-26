@@ -553,44 +553,54 @@ export default function AdminOrders() {
     }
 
     return (
-        <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             className="admin-orders-page py-5"
         >
-            <div className="container-fluid px-lg-5">
-                <div className="row">
-                    <div className="col-lg-2 mb-4"><LefNav /></div>
-                    <div className="col-lg-10">
-                        <div className="admin-orders-card">
-                            {/* Header with Export Buttons */}
-                            <div className="admin-orders-header">
-                                <div className="admin-orders-header-left">
-                                    <h1 className="admin-orders-title d-flex align-items-center mb-2">
-                                        <Package className="text-info mr-2" size={30} />
-                                        Manage Orders
-                                    </h1>
-                                    <p className="text-muted mb-0">Premium order management with real-time updates & bulk actions</p>
-                                </div>
-                                <div className="admin-orders-header-right">
-                                    <button
-                                        className="export-btn-premium export-csv-btn-premium"
-                                        onClick={exportOrdersToCSV}
-                                        title="Export orders as CSV"
-                                    >
-                                        <Download size={18} className="export-btn-icon" />
-                                        Export CSV
-                                    </button>
-                                    <button
-                                        className="export-btn-premium export-pdf-btn-premium"
-                                        onClick={exportOrdersToPDF}
-                                        title="Export orders as PDF"
-                                    >
-                                        <FileText size={18} className="export-btn-icon" />
-                                        Export PDF
-                                    </button>
-                                </div>
+            {/* Premium Sidebar */}
+            <LefNav />
+
+            {/* Main Content Area */}
+            <div className="admin-main-content">
+                <div className="container-fluid px-lg-5">
+                    <div className="admin-orders-card">
+                        {/* Premium Header */}
+                        <motion.div
+                            className="scc-header"
+                            initial={{ opacity: 0, y: -20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                        >
+                            <div className="scc-header-icon">
+                                <Package size={28} />
                             </div>
+                            <div>
+                                <h1 className="scc-title">Orders Management</h1>
+                                <p className="scc-subtitle">Premium order management with real-time updates & analytics</p>
+                            </div>
+                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <motion.button
+                                    className="export-btn-premium export-csv-btn-premium"
+                                    onClick={exportOrdersToCSV}
+                                    title="Export orders as CSV"
+                                    whileHover={{ scale: 1.05 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <Download size={18} className="export-btn-icon" />
+                                    Export CSV
+                                </motion.button>
+                                <motion.button
+                                    className="export-btn-premium export-pdf-btn-premium"
+                                    onClick={exportOrdersToPDF}
+                                    title="Export orders as PDF"
+                                    whileHover={{ scale: 1.05 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <FileText size={18} className="export-btn-icon" />
+                                    Export PDF
+                                </motion.button>
+                            </div>
+                        </motion.div>
 
                             {notification && (
                                 <motion.div
@@ -921,7 +931,7 @@ export default function AdminOrders() {
                         </div>
                     </div>
                 </div>
-            </div>
+         
 
             {/* Premium Status Update Slide-In Sidebar */}
             <div className={`status-sidebar-overlay ${statusModal.open ? 'open' : ''}`} onClick={closeStatusModal} />
@@ -1152,12 +1162,12 @@ export default function AdminOrders() {
                 </motion.div>
             )}
 
-        <OrderDetailsDrawer
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            order={drawerOrder}
-            loading={drawerLoading}
-        />
-          </motion.div>
+            <OrderDetailsDrawer
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                order={drawerOrder}
+                loading={drawerLoading}
+            />
+        </motion.div>
     );
 }

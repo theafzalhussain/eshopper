@@ -47,10 +47,13 @@ export default function AdminProduct() {
 
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
-            <div className="container-fluid px-lg-5">
-                <div className="row">
-                    <div className="col-lg-2"><LefNav /></div>
-                    <div className="col-lg-10">
+            {/* Premium Sidebar */}
+            <LefNav />
+
+            {/* Main Content Area */}
+            <div className="admin-main-content">
+                <div className="container-fluid px-lg-5">
+                        <div className="w-100">
                         <motion.div initial={{opacity:0}} animate={{opacity:1}} className="bg-white shadow-xl rounded-3xl p-4 border-0">
                             <div className="d-flex justify-content-between align-items-center mb-4">
                                 <h4 className="font-weight-bold d-flex align-items-center"><LayoutGrid className="mr-2 text-info"/> Product Catalog</h4>
@@ -116,9 +119,9 @@ export default function AdminProduct() {
                                 </button>
                             )}
                         </motion.div>
+                        </div>
                     </div>
                 </div>
-            </div>
             <style>{`.rounded-3xl{border-radius:28px !important} .btn-info-soft{background:#e0f7fa; color:#17a2b8} .btn-danger-soft{background:#fff1f0; color:#ff4d4f} .premium-grid{border:none !important}`}</style>
         </div>
     )

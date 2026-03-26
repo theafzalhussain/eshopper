@@ -95,10 +95,13 @@ export default function AdminCheckout() {
 
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
-            <div className="container-fluid">
-                <div className="row">
-                    <div className="col-lg-2"><LefNav /></div>
-                    <div className="col-lg-10">
+            {/* Premium Sidebar */}
+            <LefNav />
+
+            {/* Main Content Area */}
+            <div className="admin-main-content">
+                <div className="container-fluid">
+                        <div className="w-100">
                         {/* NOTIFICATION */}
                         {notification && (
                             <div className={`alert alert-${notification.type === 'success' ? 'success' : notification.type === 'error' ? 'danger' : 'warning'} alert-dismissible fade show mb-4`} role="alert">
@@ -213,9 +216,9 @@ export default function AdminCheckout() {
                                 </table>
                             </div>
                         </div>
+                        </div>
                     </div>
                 </div>
-            </div>
         </div>
     )
 }

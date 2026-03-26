@@ -13,10 +13,13 @@ export default function AdminUsers() {
 
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-4">
-            <div className="container-fluid">
-                <div className="row">
-                    <div className="col-lg-2"><LefNav /></div>
-                    <div className="col-lg-10">
+            {/* Premium Sidebar */}
+            <LefNav />
+
+            {/* Main Content Area */}
+            <div className="admin-main-content">
+                <div className="container-fluid">
+                        <div className="w-100">
                         <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="bg-white shadow-lg rounded-2xl p-4 border-0">
                             <div className="d-flex align-items-center mb-4">
                                 <Shield className="text-info mr-2" />
@@ -60,9 +63,9 @@ export default function AdminUsers() {
                                 </table>
                             </div>
                         </motion.div>
+                        </div>
                     </div>
                 </div>
-            </div>
         </div>
     )
 }

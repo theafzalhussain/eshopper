@@ -222,15 +222,14 @@ export default function AdminHome() {
 
     return (
         <div className="scc-container" style={{ minHeight: "100vh" }}>
-            <div className="container-fluid px-lg-4">
-                <div className="row">
-                    {/* LEFT MENU */}
-                    <div className="col-lg-2 col-md-3 mb-4">
-                        <LefNav />
-                    </div>
+            {/* Premium Sidebar */}
+            <LefNav />
 
-                    {/* MAIN DASHBOARD */}
-                    <div className="col-lg-10 col-md-9">
+            {/* Main Content Area with responsive margin */}
+            <div className="admin-main-content">
+                <div className="container-fluid px-lg-4">
+                        {/* MAIN DASHBOARD */}
+                        <div className="w-100">
                         {/* Header */}
                         <motion.div
                             className="scc-header"
