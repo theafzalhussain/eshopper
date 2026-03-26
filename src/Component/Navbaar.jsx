@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ShoppingCart, User } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { BASE_URL } from '../constants'
-import { getCart } from '../Store/ActionCreaters/CartActionCreators'
+import { getCart, clearCart } from '../Store/ActionCreaters/CartActionCreators'
 
 export default function Navbaar() {
     const navigate = useNavigate()
@@ -17,10 +17,15 @@ export default function Navbaar() {
     const role = localStorage.getItem("role")
     const name = localStorage.getItem("name")
     
-    // Redux cart selector with animation trigger
+    // Redux cart selector with authentication check
     const cartItems = useSelector(state => state.CartStateData || [])
     const userId = localStorage.getItem('userid')
-    const userCartItems = cartItems.filter((item) => String(item.userid || '') === String(userId || ''))
+    const isLoggedIn = localStorage.getItem('login')
+
+    // Only show cart count if user is logged in
+    const userCartItems = (isLoggedIn && userId)
+        ? cartItems.filter((item) => String(item.userid || '') === String(userId || ''))
+        : []
     const cartCount = userCartItems.reduce((sum, item) => sum + Number(item.qty || 1), 0)
     const prevCartCount = useRef(cartCount)
 
@@ -35,8 +40,13 @@ export default function Navbaar() {
     }, [cartCount])
 
     useEffect(() => {
-        if (localStorage.getItem('login')) dispatch(getCart())
-    }, [dispatch, location.pathname])
+        const isLoggedIn = localStorage.getItem('login')
+
+        if (isLoggedIn) {
+            // User is logged in - fetch their cart (only once per session)
+            dispatch(getCart())
+        }
+    }, [dispatch]) // Removed location.pathname to prevent cart fetch on every route change
 
     useEffect(() => {
         const handleScroll = () => { setIsScrolled(window.scrollY > 40) }
@@ -94,7 +104,15 @@ export default function Navbaar() {
         return () => window.removeEventListener('profile-updated', onProfileUpdated)
     }, [location.pathname])
 
-    const logout = () => { localStorage.clear(); navigate("/login") }
+    const logout = () => {
+        const currentUserId = localStorage.getItem('userid')
+        // Clear cart state for current user before logout
+        if (currentUserId) {
+            dispatch(clearCart({ userid: currentUserId }))
+        }
+        localStorage.clear();
+        navigate("/login")
+    }
     const isActive = (path) => location.pathname === path
 
     return (

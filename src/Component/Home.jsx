@@ -63,15 +63,15 @@ export default function Home() {
         dispatch(getProduct())
         dispatch(getUser())
         dispatch(getWishlist()) // Initializing Wishlist Data
-        
+
         const storedName = localStorage.getItem("name")
         if(storedName) setWelcomeUser(storedName)
 
         const timer = setInterval(() => {
-            setCurrentSlide((prev) => (prev === sliderData.length - 1 ? 0 : prev + 1));
+            setCurrentSlide((prev) => (prev === 3 ? 0 : prev + 1)); // Fixed to use actual slide count (4 slides = 0,1,2,3)
         }, 5000);
         return () => clearInterval(timer);
-    }, [dispatch, sliderData.length])
+    }, [dispatch]) // Removed sliderData.length dependency to prevent multiple API calls
 
     useEffect(() => {
         if (!wishlistToast.show) return
@@ -665,8 +665,12 @@ export default function Home() {
                     align-items: center;
                 }
                 .carousel-dots .dot {
-                    width: 12px;
-                    height: 12px;
+                    width: 12px !important;
+                    height: 12px !important;
+                    min-width: 12px !important;
+                    min-height: 12px !important;
+                    max-width: 12px !important;
+                    max-height: 12px !important;
                     background: transparent;
                     border: 2px solid rgba(0,0,0,0.26);
                     border-radius: 50%;
@@ -675,14 +679,17 @@ export default function Home() {
                     padding: 0;
                     position: relative;
                     overflow: hidden;
+                    transform: scale(1) !important;
                 }
                 .carousel-dots .dot:hover {
-                    transform: scale(1.4);
+                    transform: scale(1.4) !important;
                     border-color: #17a2b8;
                     background: rgba(23, 162, 184, 0.1);
                 }
                 .carousel-dots .dot.active {
-                    width: 36px;
+                    width: 36px !important;
+                    min-width: 36px !important;
+                    max-width: 36px !important;
                     border-radius: 999px;
                     background: linear-gradient(90deg, #17a2b8 0%, #0dafcc 100%);
                     border-color: #17a2b8;
@@ -1269,8 +1276,19 @@ export default function Home() {
                     .carousel-counter { padding: 5px 10px; gap: 5px; }
                     .carousel-counter .current { font-size: 13px; }
                     .carousel-dots { gap: 8px; }
-                    .carousel-dots .dot { width: 10px; height: 10px; }
-                    .carousel-dots .dot.active { width: 30px; }
+                    .carousel-dots .dot {
+                        width: 12px !important;
+                        height: 12px !important;
+                        min-width: 12px !important;
+                        min-height: 12px !important;
+                        max-width: 12px !important;
+                        max-height: 12px !important;
+                    }
+                    .carousel-dots .dot.active {
+                        width: 36px !important;
+                        min-width: 36px !important;
+                        max-width: 36px !important;
+                    }
                     
                     .hero-decoration-1, .hero-decoration-2 { display: none; }
                     
@@ -1414,8 +1432,20 @@ export default function Home() {
                         justify-content: space-between;
                     }
                     .carousel-dots { gap: 6px; }
-                    .carousel-dots .dot { width: 8px; height: 8px; border-width: 1.5px; }
-                    .carousel-dots .dot.active { width: 24px; }
+                    .carousel-dots .dot {
+                        width: 12px !important;
+                        height: 12px !important;
+                        min-width: 12px !important;
+                        min-height: 12px !important;
+                        max-width: 12px !important;
+                        max-height: 12px !important;
+                        border-width: 2px;
+                    }
+                    .carousel-dots .dot.active {
+                        width: 36px !important;
+                        min-width: 36px !important;
+                        max-width: 36px !important;
+                    }
                     .carousel-counter { padding: 4px 8px; gap: 4px; font-size: 11px; }
                     .carousel-counter .current { font-size: 12px; }
                     .carousel-counter .separator { font-size: 10px; }
@@ -1505,8 +1535,19 @@ export default function Home() {
                     .hero-badge { padding: 7px 12px; }
                     .hero-subtitle { font-size: 9px; letter-spacing: 0.7px; }
                     .carousel-navigation { gap: 8px; padding: 6px 8px; }
-                    .carousel-dots .dot { width: 7px; height: 7px; }
-                    .carousel-dots .dot.active { width: 20px; }
+                    .carousel-dots .dot {
+                        width: 12px !important;
+                        height: 12px !important;
+                        min-width: 12px !important;
+                        min-height: 12px !important;
+                        max-width: 12px !important;
+                        max-height: 12px !important;
+                    }
+                    .carousel-dots .dot.active {
+                        width: 36px !important;
+                        min-width: 36px !important;
+                        max-width: 36px !important;
+                    }
                     .carousel-counter { padding: 3px 7px; }
                     .carousel-counter .current { font-size: 11px; }
                     .carousel-counter .total { font-size: 9px; }
@@ -1535,6 +1576,31 @@ export default function Home() {
                     .carousel-navigation { width: calc(100% - 20px); }
                     .story-overlay,
                     .story-overlay-light { padding: 12px !important; }
+                }
+
+                /* ===== UNIVERSAL LOCK: CAROUSEL DOTS SIZE ===== */
+                /* Force carousel dots to stay at desktop size on ALL screens */
+                @media (max-width: 1400px), (max-width: 991px), (max-width: 768px), (max-width: 575px), (max-width: 480px), (max-width: 425px), (max-width: 375px) {
+                    .carousel-dots .dot {
+                        width: 12px !important;
+                        height: 12px !important;
+                        min-width: 12px !important;
+                        min-height: 12px !important;
+                        max-width: 12px !important;
+                        max-height: 12px !important;
+                        transform: scale(1) !important;
+                    }
+                    .carousel-dots .dot.active {
+                        width: 36px !important;
+                        min-width: 36px !important;
+                        max-width: 36px !important;
+                        height: 12px !important;
+                        min-height: 12px !important;
+                        max-height: 12px !important;
+                    }
+                    .carousel-dots .dot:hover {
+                        transform: scale(1.4) !important;
+                    }
                 }
             `}} />
         </div>

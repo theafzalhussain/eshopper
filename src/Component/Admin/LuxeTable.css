@@ -304,10 +304,16 @@
     font-size: 0.9rem;
   }
 
-  /* Adjust checkbox size */
-  .luxe-checkbox {
-    width: 18px;
-    height: 18px;
+  /* Force checkbox to stay at 18px - DO NOT SCALE */
+  .luxe-checkbox,
+  input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+    transform: scale(1) !important;
   }
 }
 
@@ -369,8 +375,12 @@
    LUXE CHECKBOX
    ===================================================== */
 .luxe-checkbox {
-  width: 20px;
-  height: 20px;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  min-height: 18px !important;
+  max-width: 18px !important;
+  max-height: 18px !important;
   border: 2px solid var(--luxe-border);
   border-radius: 6px;
   background: var(--luxe-white);
@@ -379,6 +389,7 @@
   appearance: none;
   -webkit-appearance: none;
   position: relative;
+  transform: scale(1) !important;
 }
 
 .luxe-checkbox:checked {

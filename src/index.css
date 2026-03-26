@@ -53,3 +53,116 @@ h1, h2, h3, h4, h5, h6 {
 .transition-custom {
   transition-timing-function: cubic-bezier(0.77, 0, 0.175, 1);
 }
+
+/* === UNIVERSAL CHECKBOX STYLES === */
+/* Lock checkbox size across all screen sizes and override any scaling */
+input[type="checkbox"] {
+  width: 18px !important;
+  height: 18px !important;
+  transform: scale(1) !important; /* Reset any previous scaling */
+  appearance: none !important; /* Remove default browser styling */
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+
+  /* Modern styling */
+  border: 2px solid #B8860B;
+  border-radius: 4px;
+  background-color: transparent;
+  cursor: pointer;
+
+  /* Perfect alignment with labels/text */
+  vertical-align: middle;
+  margin-bottom: 3px;
+  margin-right: 8px;
+
+  /* Smooth transitions */
+  transition: all 0.2s ease;
+}
+
+/* Checked state */
+input[type="checkbox"]:checked {
+  background-color: #B8860B;
+  border-color: #B8860B;
+}
+
+/* Checkmark icon when checked */
+input[type="checkbox"]:checked::before {
+  content: '✓';
+  display: block;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 14px;
+  text-align: center;
+}
+
+/* Hover effect */
+input[type="checkbox"]:hover {
+  border-color: rgba(184, 134, 11, 0.8);
+  box-shadow: 0 2px 4px rgba(184, 134, 11, 0.2);
+}
+
+/* Focus state for accessibility */
+input[type="checkbox"]:focus {
+  outline: 2px solid rgba(184, 134, 11, 0.4);
+  outline-offset: 2px;
+}
+
+/* === FORCE CHECKBOX SIZE ON ALL SCREEN SIZES === */
+/* Override any media query that tries to scale checkboxes */
+@media (max-width: 1200px) {
+  input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+    transform: scale(1) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+    transform: scale(1) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+    transform: scale(1) !important;
+  }
+}
+
+/* === UNIVERSAL CAROUSEL DOTS SIZE LOCK === */
+/* Lock carousel dots at desktop size across ALL screen sizes */
+.carousel-dots .dot {
+  width: 12px !important;
+  height: 12px !important;
+  min-width: 12px !important;
+  min-height: 12px !important;
+  max-width: 12px !important;
+  max-height: 12px !important;
+  transform: scale(1) !important;
+}
+
+.carousel-dots .dot.active {
+  width: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  height: 12px !important;
+  min-height: 12px !important;
+  max-height: 12px !important;
+}

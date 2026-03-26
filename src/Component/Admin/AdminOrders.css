@@ -7,24 +7,24 @@
 .admin-orders-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8f9fb 0%, #edf2f7 100%);
-  padding: 1.5rem;
+  padding: 0; /* Remove default padding - let SystemControlCenter handle it */
 }
 
 @media (max-width: 767px) {
   .admin-orders-page {
-    padding: 1rem;
+    padding: 0; /* Remove padding - handled by .admin-main-content */
   }
 }
 
 @media (max-width: 575px) {
   .admin-orders-page {
-    padding: 0.75rem;
+    padding: 0; /* Remove padding - handled by .admin-main-content */
   }
 }
 
 @media (max-width: 400px) {
   .admin-orders-page {
-    padding: 0.5rem;
+    padding: 0; /* Remove padding - handled by .admin-main-content */
   }
 }
 

@@ -603,10 +603,20 @@
   button,
   .btn,
   a.btn,
-  input[type="checkbox"],
   input[type="radio"] {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  /* Keep checkbox at fixed 18px size - DO NOT SCALE */
+  input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+    transform: scale(1) !important;
   }
 
   /* Better spacing for touch targets */

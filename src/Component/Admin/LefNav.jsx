@@ -69,7 +69,7 @@ export default function LefNav() {
                 {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
             </motion.button>
 
-            {/* Mobile Overlay */}
+            {/* Mobile Overlay - Only show on mobile when sidebar is open */}
             <AnimatePresence>
                 {isMobileOpen && (
                     <motion.div
@@ -77,7 +77,7 @@ export default function LefNav() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={() => setIsMobileOpen(false)}
-                        className="premium-sidebar-overlay"
+                        className={`premium-sidebar-overlay ${isMobileOpen ? 'show' : ''}`}
                     />
                 )}
             </AnimatePresence>
@@ -86,8 +86,8 @@ export default function LefNav() {
             <motion.div
                 variants={sidebarVariants}
                 initial="closed"
-                animate={isMobileOpen ? "open" : "closed"}
-                className={`premium-admin-sidebar ${isCollapsed ? 'collapsed' : ''}`}
+                animate="open" // Always open on desktop, controlled by CSS on mobile
+                className={`premium-admin-sidebar ${isMobileOpen ? 'mobile-open' : ''} ${isCollapsed ? 'collapsed' : ''}`}
             >
                 {/* Sidebar Header */}
                 <div className="premium-sidebar-header">
@@ -199,10 +199,10 @@ export default function LefNav() {
             </motion.div>
 
             <style dangerouslySetInnerHTML={{ __html: `
-                /* Mobile Toggle Button */
+                /* Mobile Toggle Button - Always Visible on Mobile */
                 .premium-mobile-toggle {
                     position: fixed;
-                    top: 20px;
+                    top: 85px; /* Below mobile header */
                     left: 20px;
                     z-index: 1100;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -226,41 +226,56 @@ export default function LefNav() {
 
                 @media (min-width: 769px) {
                     .premium-mobile-toggle {
-                        display: none;
+                        display: none !important;
                     }
                 }
 
-                /* Sidebar Overlay */
+                @media (max-width: 768px) {
+                    .premium-mobile-toggle {
+                        display: flex !important;
+                    }
+                }
+
+                /* Sidebar Overlay - Show on Mobile When Sidebar is Open */
                 .premium-sidebar-overlay {
                     position: fixed;
                     top: 0;
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: rgba(0, 0, 0, 0.5);
-                    backdrop-filter: blur(4px);
+                    background: rgba(0, 0, 0, 0.6);
+                    backdrop-filter: blur(8px);
                     z-index: 1040;
+                    opacity: 0;
+                    visibility: hidden;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                /* Show overlay when mobile sidebar is open */
+                .premium-sidebar-overlay.show {
+                    opacity: 1;
+                    visibility: visible;
                 }
 
                 @media (min-width: 769px) {
                     .premium-sidebar-overlay {
-                        display: none;
+                        display: none !important;
                     }
                 }
 
                 /* Premium Sidebar Container */
                 .premium-admin-sidebar {
                     position: fixed;
-                    top: 0;
+                    top: 110px; /* Below header (40px ribbon + ~70px navbar) */
                     left: 0;
-                    height: 100vh;
-                    width: 280px;
+                    height: calc(100vh - 110px); /* Full height minus header */
+                    width: 260px;
                     background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
                     border-right: 1px solid rgba(226, 232, 240, 0.8);
                     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.06);
                     display: flex;
                     flex-direction: column;
-                    z-index: 1050;
+                    z-index: 1040; /* Below header z-index of 1050 */
                     overflow-y: auto;
                     overflow-x: hidden;
                 }
@@ -279,19 +294,33 @@ export default function LefNav() {
                     border-radius: 10px;
                 }
 
-                /* Mobile Styles */
+                /* Mobile Styles - Hide Sidebar by Default */
                 @media (max-width: 768px) {
                     .premium-admin-sidebar {
                         position: fixed;
-                        z-index: 1050;
+                        top: 75px; /* Below mobile header (35px ribbon + ~40px navbar) */
+                        height: calc(100vh - 75px); /* Full height minus mobile header */
+                        z-index: 1040;
+                        transform: translateX(-100%);
+                        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    }
+
+                    /* Show sidebar when mobile menu is open */
+                    .premium-admin-sidebar.mobile-open {
+                        transform: translateX(0);
                     }
                 }
 
-                /* Desktop - Always Show */
+                /* Desktop - Always Show - Keep Fixed */
                 @media (min-width: 769px) {
                     .premium-admin-sidebar {
-                        position: relative;
+                        position: fixed;
                         transform: translateX(0) !important;
+                    }
+
+                    /* Hide mobile toggle on desktop */
+                    .premium-mobile-toggle {
+                        display: none !important;
                     }
                 }
 
@@ -364,20 +393,22 @@ export default function LefNav() {
                 }
 
                 .premium-nav-item:hover {
-                    background: linear-gradient(90deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+                    background: linear-gradient(90deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
                     color: #667eea;
-                    transform: translateX(4px);
+                    transform: translateX(6px);
+                    box-shadow: 0 2px 12px rgba(102, 126, 234, 0.15);
                 }
 
                 .premium-nav-item.active {
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
-                    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);
+                    transform: translateX(2px);
                 }
 
                 .premium-nav-item.active:hover {
-                    transform: translateX(4px);
-                    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+                    transform: translateX(6px);
+                    box-shadow: 0 6px 24px rgba(102, 126, 234, 0.45);
                 }
 
                 /* Icon Wrapper */
@@ -477,14 +508,14 @@ export default function LefNav() {
                 /* Responsive Adjustments */
                 @media (max-width: 768px) {
                     .premium-admin-sidebar {
-                        width: 280px;
+                        width: 260px;
                     }
                 }
 
                 @media (max-width: 480px) {
                     .premium-admin-sidebar {
                         width: 85vw;
-                        max-width: 320px;
+                        max-width: 300px;
                     }
                 }
 
