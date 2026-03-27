@@ -1193,35 +1193,28 @@ const handle = (path, Model, useUpload = false) => {
             res.status(500).json({ error: "Failed to fetch data." }); 
         }
     });
-    app.get(`${path}/:id`, async (req, res) => {
+    app.get(path, async (req, res) => {
         try {
-            const data = await Model.findById(req.params.id);
-            if (!data) return res.status(404).json({ error: "Not found." });
-            
-            // Return image URLs as-is from Cloudinary for single product
+            const data = await Model.find().sort({ _id: -1 });
+            // If Product model, return image URLs as-is from Cloudinary
             if (path === '/product') {
-                if (data.pic1) data.pic1 = sanitizeCloudinaryUrl(data.pic1);
-                if (data.pic2) data.pic2 = sanitizeCloudinaryUrl(data.pic2);
-                if (data.pic3) data.pic3 = sanitizeCloudinaryUrl(data.pic3);
-                if (data.pic4) data.pic4 = sanitizeCloudinaryUrl(data.pic4);
+                console.log(`📦 Fetching ${data.length} products...`);
+                data.forEach((product, idx) => {
+                    if (product.pic1) product.pic1 = sanitizeCloudinaryUrl(product.pic1);
+                    if (product.pic2) product.pic2 = sanitizeCloudinaryUrl(product.pic2);
+                    if (product.pic3) product.pic3 = sanitizeCloudinaryUrl(product.pic3);
+                    if (product.pic4) product.pic4 = sanitizeCloudinaryUrl(product.pic4);
+                    if (idx === 0 && product.pic1) {
+                        console.log(`✅ Sample Product pic1: ${product.pic1.substring(0, 60)}...`);
+                    }
+                });
             }
-            
             res.json(data);
-        } catch (e) { res.status(500).json({ error: "Failed to fetch item." }); }
+        } catch (e) { 
+            console.error(`❌ Error fetching ${path}:`, e.message);
+            res.status(500).json({ error: "Failed to fetch data." }); 
+        }
     });
-    app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
-        try {
-            if (path === '/user' && req.body.otp) {
-                const normalizedEmail = req.body.email.toLowerCase().trim();
-                const record = await OTPRecord.findOne({ email: normalizedEmail, otp: req.body.otp });
-                if (!record) return res.status(400).json({ message: "Invalid OTP" });
-                await OTPRecord.deleteOne({ email: normalizedEmail });
-                req.body.email = normalizedEmail;
-                req.body.username = req.body.username.toLowerCase().trim();
-            }
-            if (path === '/user') { const salt = await bcrypt.genSalt(10); req.body.password = await bcrypt.hash(req.body.password, salt); }
-            let d = new Model(req.body);
-            if (req.files) {
                 if (req.files.pic) d.pic = req.files.pic[0].path;
                 if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
                 if (req.files.pic2) d.pic2 = req.files.pic2[0].path;

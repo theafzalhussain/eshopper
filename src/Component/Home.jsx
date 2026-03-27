@@ -251,7 +251,7 @@ export default function Home() {
                                     </div>
                                 </motion.div>
                                 <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl bg-info shadow-lg p-4 p-md-5 position-relative overflow-hidden" style={{ flex: 1, minHeight: '250px', cursor: 'pointer' }} onClick={() => handleEditorialClick('kids')}>
-                                    <div className="story-overlay-kids position-absolute" style={{top:0, left:0, width:'100%', height:'100%'}}></div>
+                                <div className="story-overlay-kids position-absolute" style={{top:0, left:0, width:'100%', height:'100%'}}></div>
                                     <div className="position-relative z-index-10 text-white">
                                         <h4 className="font-weight-bold ls-2 small mb-2 opacity-75 uppercase">Exclusives</h4>
                                         <motion.h2 
