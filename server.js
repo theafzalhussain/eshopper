@@ -1172,7 +1172,7 @@ const handle = (path, Model, useUpload = false) => {
     app.get(path, async (req, res) => {
         try {
             const data = await Model.find().sort({ _id: -1 });
-            
+
             // If Product model, return image URLs as-is from Cloudinary
             if (path === '/product') {
                 console.log(`📦 Fetching ${data.length} products...`);
@@ -1186,7 +1186,7 @@ const handle = (path, Model, useUpload = false) => {
                     }
                 });
             }
-            
+
             res.json(data);
         } catch (e) { 
             console.error(`❌ Error fetching ${path}:`, e.message);
