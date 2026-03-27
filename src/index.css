@@ -1,7 +1,30 @@
 /* === CSS RESET & GLOBAL STYLES === */
+/* Universal Box-Sizing Reset and Text Size Adjust for Consistent Scaling */
+/* === Universal Image & Section Scaling === */
+img, video, svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+section, .section, .container, .row, .col, [class*="col-"] {
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  -webkit-text-size-adjust: 100%;
+}
 html {
   box-sizing: border-box;
-  font-size: 16px;
+  font-size: 1rem;
 }
 *, *::before, *::after {
   box-sizing: inherit;
@@ -57,8 +80,8 @@ h1, h2, h3, h4, h5, h6 {
 /* === UNIVERSAL CHECKBOX STYLES === */
 /* Lock checkbox size across all screen sizes and override any scaling */
 input[type="checkbox"] {
-  width: 18px !important;
-  height: 18px !important;
+  width: 1.125rem !important;
+  height: 1.125rem !important;
   transform: scale(1) !important; /* Reset any previous scaling */
   appearance: none !important; /* Remove default browser styling */
   -webkit-appearance: none !important;
@@ -72,8 +95,8 @@ input[type="checkbox"] {
 
   /* Perfect alignment with labels/text */
   vertical-align: middle;
-  margin-bottom: 3px;
-  margin-right: 8px;
+  margin-bottom: 0.1875rem;
+  margin-right: 0.5rem;
 
   /* Smooth transitions */
   transition: all 0.2s ease;
@@ -90,9 +113,9 @@ input[type="checkbox"]:checked::before {
   content: '✓';
   display: block;
   color: white;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: bold;
-  line-height: 14px;
+  line-height: 0.875rem;
   text-align: center;
 }
 
@@ -112,36 +135,36 @@ input[type="checkbox"]:focus {
 /* Override any media query that tries to scale checkboxes */
 @media (max-width: 1200px) {
   input[type="checkbox"] {
-    width: 18px !important;
-    height: 18px !important;
-    min-width: 18px !important;
-    min-height: 18px !important;
-    max-width: 18px !important;
-    max-height: 18px !important;
+    width: 1.125rem !important;
+    height: 1.125rem !important;
+    min-width: 1.125rem !important;
+    min-height: 1.125rem !important;
+    max-width: 1.125rem !important;
+    max-height: 1.125rem !important;
     transform: scale(1) !important;
   }
 }
 
 @media (max-width: 768px) {
   input[type="checkbox"] {
-    width: 18px !important;
-    height: 18px !important;
-    min-width: 18px !important;
-    min-height: 18px !important;
-    max-width: 18px !important;
-    max-height: 18px !important;
+    width: 1.125rem !important;
+    height: 1.125rem !important;
+    min-width: 1.125rem !important;
+    min-height: 1.125rem !important;
+    max-width: 1.125rem !important;
+    max-height: 1.125rem !important;
     transform: scale(1) !important;
   }
 }
 
 @media (max-width: 480px) {
   input[type="checkbox"] {
-    width: 18px !important;
-    height: 18px !important;
-    min-width: 18px !important;
-    min-height: 18px !important;
-    max-width: 18px !important;
-    max-height: 18px !important;
+    width: 1.125rem !important;
+    height: 1.125rem !important;
+    min-width: 1.125rem !important;
+    min-height: 1.125rem !important;
+    max-width: 1.125rem !important;
+    max-height: 1.125rem !important;
     transform: scale(1) !important;
   }
 }
@@ -149,20 +172,20 @@ input[type="checkbox"]:focus {
 /* === UNIVERSAL CAROUSEL DOTS SIZE LOCK === */
 /* Lock carousel dots at desktop size across ALL screen sizes */
 .carousel-dots .dot {
-  width: 12px !important;
-  height: 12px !important;
-  min-width: 12px !important;
-  min-height: 12px !important;
-  max-width: 12px !important;
-  max-height: 12px !important;
+  width: 0.75rem !important;
+  height: 0.75rem !important;
+  min-width: 0.75rem !important;
+  min-height: 0.75rem !important;
+  max-width: 0.75rem !important;
+  max-height: 0.75rem !important;
   transform: scale(1) !important;
 }
 
 .carousel-dots .dot.active {
-  width: 36px !important;
-  min-width: 36px !important;
-  max-width: 36px !important;
-  height: 12px !important;
-  min-height: 12px !important;
-  max-height: 12px !important;
+  width: 2.25rem !important;
+  min-width: 2.25rem !important;
+  max-width: 2.25rem !important;
+  height: 0.75rem !important;
+  min-height: 0.75rem !important;
+  max-height: 0.75rem !important;
 }
