@@ -1,0 +1,99 @@
+.flex-shell {
+  display: flex;
+  min-height: 70vh;
+  gap: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: stretch;
+}
+.flex-left,
+.flex-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  height: 100%;
+}
+.flex-left {
+  justify-content: center;
+}
+.flex-right {
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  justify-content: stretch;
+  position: relative;
+}
+.flex-half {
+  flex: 1 1 50%;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  height: 50%;
+  max-height: 50%;
+  margin: 0;
+  padding: 0;
+}
+.flex-half .img-overlay,
+.flex-half .main-img {
+  height: 100% !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  object-fit: cover !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+.img-overlay {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  margin: 0 auto;
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.08);
+  background: #fff;
+  display: flex;
+  align-items: stretch;
+}
+.main-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 1.5rem;
+}
+.overlay-text {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 1.2rem 1.5rem;
+  background: linear-gradient(0deg, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.05) 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border-radius: 0 0 1.5rem 1.5rem;
+}
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+.showcase-btn {
+  background: #fff;
+  color: #222;
+  border: none;
+  border-radius: 2rem;
+  padding: 0.5rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+/* Responsive media queries below (as before) */

@@ -1,30 +1,22 @@
 /* === CSS RESET & GLOBAL STYLES === */
-/* Universal Box-Sizing Reset and Text Size Adjust for Consistent Scaling */
-/* === Universal Image & Section Scaling === */
-img, video, svg {
+html {
+  box-sizing: border-box;
+  font-size: 16px;
+}
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+img, video {
   max-width: 100%;
   height: auto;
   display: block;
 }
-
-section, .section, .container, .row, .col, [class*="col-"] {
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow-x: auto;
-}
-* {
-  box-sizing: border-box;
+body {
   margin: 0;
   padding: 0;
-}
-html, body {
-  overflow-x: hidden;
-  width: 100%;
-  -webkit-text-size-adjust: 100%;
-}
-html {
-  box-sizing: border-box;
-  font-size: 1rem;
+  background: linear-gradient(135deg, #18191A 0%, #23272F 100%);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
 }
 *, *::before, *::after {
   box-sizing: inherit;

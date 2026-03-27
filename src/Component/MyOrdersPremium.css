@@ -7,12 +7,7 @@
 }
 
 .myorders-premium-container {
-  max-width: 100%;
-  @media (min-width: 600px) {
-    .myorders-premium-container {
-      max-width: 980px;
-    }
-  }
+  max-width: 980px;
   background: rgba(255,255,255,0.7);
   border-radius: 32px;
   box-shadow: 0 16px 48px rgba(212,175,55,0.08), 0 1.5px 0 #fff;
