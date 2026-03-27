@@ -60,7 +60,7 @@ module.exports = {
 
             // To-Do list (for demo, static; can be made dynamic)
             const todos = [
-                { id: 1, text: "Review today's new orders", done: false },
+                { id: 1, text: "Review new orders", done: false },
                 { id: 2, text: "Check low inventory products", done: false },
                 { id: 3, text: "Respond to customer queries", done: false }
             ];

@@ -1877,7 +1877,6 @@ app.get('/api/admin/dashboard-analytics', async (req, res) => {
     try {
         console.log('📊 Dashboard analytics requested');
         const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
@@ -1912,21 +1911,7 @@ app.get('/api/admin/dashboard-analytics', async (req, res) => {
 
             console.log(`📈 Basic counts - Orders: ${totalOrders}, Users: ${totalUsers}, Products: ${totalProducts}`);
 
-            // Today's orders
-            const todayOrders = await Order.countDocuments({
-                createdAt: { $gte: startOfToday }
-            }).catch(() => 0);
-
-            // Today's new users
-            const todayUsers = await User.countDocuments({
-                createdAt: { $gte: startOfToday }
-            }).catch(() => 0);
-
-            response.metrics.newOrders = todayOrders;
-            response.metrics.newCustomers = todayUsers;
             response.metrics.activeProducts = totalProducts;
-
-            console.log(`📅 Today's data - Orders: ${todayOrders}, Users: ${todayUsers}`);
         } catch (error) {
             console.error('❌ Basic counts error:', error.message);
         }
