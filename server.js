@@ -106,8 +106,8 @@ const corsOptions = {
     origin: function(origin, callback) {
         // Allow no origin (server-to-server, mobile)
         if (!origin) return callback(null, true);
-        // Allow localhost for development
-        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        // Allow localhost for development (3000, 3001)
+        if (origin.includes('localhost:3000') || origin.includes('127.0.0.1:3000') || origin.includes('localhost:3001') || origin.includes('127.0.0.1:3001')) {
             return callback(null, true);
         }
         // Allow production frontend domains
@@ -143,6 +143,8 @@ const io = new Server(httpServer, {
             'https://www.eshopperr.me',
             'http://localhost:3000',
             'http://127.0.0.1:3000',
+            'http://localhost:3001',
+            'http://127.0.0.1:3001',
             process.env.FRONTEND_URL
         ].filter(Boolean),
         credentials: true
@@ -152,17 +154,33 @@ const io = new Server(httpServer, {
 // Make io available to controllers
 app.set('io', io);
 
-const ALLOWED_ORDER_STATUS = ['Order Placed', 'Ordered', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
+const ALLOWED_ORDER_STATUS = [
+    'Order Placed',
+    'Ordered',
+    'Confirmed',
+    'Packed',
+    'Shipped',
+    'Out for Delivery',
+    'Delivered',
+    'Return Initiated',
+    'Return Completed',
+    'Refund Initiated',
+    'Refund Completed'
+];
 const normalizeOrderStatus = (s = '') => {
-    const v = String(s).trim().toLowerCase();
-    if (v === 'ordered') return 'Ordered';
-    if (v === 'order placed') return 'Order Placed';
-    if (v === 'confirmed') return 'Confirmed';
-    if (v === 'packed') return 'Packed';
-    if (v === 'shipped') return 'Shipped';
-    if (v === 'out for delivery') return 'Out for Delivery';
-    if (v === 'delivered') return 'Delivered';
-    return null;
+        const v = String(s).trim().toLowerCase();
+        if (v === 'ordered') return 'Ordered';
+        if (v === 'order placed') return 'Order Placed';
+        if (v === 'confirmed') return 'Confirmed';
+        if (v === 'packed') return 'Packed';
+        if (v === 'shipped') return 'Shipped';
+        if (v === 'out for delivery') return 'Out for Delivery';
+        if (v === 'delivered') return 'Delivered';
+        if (v === 'return initiated') return 'Return Initiated';
+        if (v === 'return completed') return 'Return Completed';
+        if (v === 'refund initiated') return 'Refund Initiated';
+        if (v === 'refund completed') return 'Refund Completed';
+        return null;
 };
 
 // Feature toggles for clean baseline (disable until tested).
@@ -1233,8 +1251,8 @@ handle('/checkout', Checkout);
 handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
-// --- Compatibility GET endpoints for legacy frontend calls ---
-const compatGet = [
+// --- Compatibility REST endpoints for legacy frontend calls (GET, POST, PUT, DELETE) ---
+const compatModels = [
     { path: '/user', Model: User },
     { path: '/cart', Model: Cart },
     { path: '/wishlist', Model: Wishlist },
@@ -1245,24 +1263,22 @@ const compatGet = [
     { path: '/brand', Model: Brand },
     { path: '/newslatter', Model: Newslatter },
 ];
-compatGet.forEach(({ path, Model }) => {
+compatModels.forEach(({ path, Model }) => {
+    // GET all or by id
     app.get(path, async (req, res) => {
         try {
-            // If id param is present, fetch by id
             if (req.query.id || req.query._id) {
                 const id = req.query.id || req.query._id;
                 const doc = await Model.findById(id);
                 if (!doc) return res.status(404).json({ message: 'Not found' });
                 return res.json(doc);
             }
-            // Otherwise, fetch all
             const docs = await Model.find().sort({ createdAt: -1 });
             res.json(docs);
         } catch (e) {
             res.status(500).json({ message: 'Failed to fetch' });
         }
     });
-    // Also support /:id for direct fetch
     app.get(`${path}/:id`, async (req, res) => {
         try {
             const doc = await Model.findById(req.params.id);
@@ -1270,6 +1286,36 @@ compatGet.forEach(({ path, Model }) => {
             res.json(doc);
         } catch (e) {
             res.status(500).json({ message: 'Failed to fetch' });
+        }
+    });
+    // POST (create)
+    app.post(path, async (req, res) => {
+        try {
+            const doc = new Model(req.body);
+            await doc.save();
+            res.status(201).json(doc);
+        } catch (e) {
+            res.status(400).json({ message: 'Failed to create', error: e.message });
+        }
+    });
+    // PUT (update by id)
+    app.put(`${path}/:id`, async (req, res) => {
+        try {
+            const doc = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
+            if (!doc) return res.status(404).json({ message: 'Not found' });
+            res.json(doc);
+        } catch (e) {
+            res.status(400).json({ message: 'Failed to update', error: e.message });
+        }
+    });
+    // DELETE (by id)
+    app.delete(`${path}/:id`, async (req, res) => {
+        try {
+            const doc = await Model.findByIdAndDelete(req.params.id);
+            if (!doc) return res.status(404).json({ message: 'Not found' });
+            res.json({ result: 'Deleted', doc });
+        } catch (e) {
+            res.status(400).json({ message: 'Failed to delete', error: e.message });
         }
     });
 });
