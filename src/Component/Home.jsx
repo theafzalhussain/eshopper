@@ -250,20 +250,12 @@ export default function Home() {
                                         <span className="text-white font-weight-bold border-bottom pb-1 small mt-2 d-inline-block">VIEW DETAILS</span>
                                     </div>
                                 </motion.div>
-                                <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl bg-info shadow-lg p-4 p-md-5 position-relative overflow-hidden" style={{ flex: 1, minHeight: '250px', cursor: 'pointer' }} onClick={() => handleEditorialClick('kids')}>
-                                <div className="story-overlay-kids position-absolute" style={{top:0, left:0, width:'100%', height:'100%'}}></div>
-                                    <div className="position-relative z-index-10 text-white">
-                                        <h4 className="font-weight-bold ls-2 small mb-2 opacity-75 uppercase">Exclusives</h4>
-                                        <motion.h2 
-                                            className="font-weight-bold kids-title kids-title-white"
-                                            initial={{ opacity: 0.8 }}
-                                            whileHover={{ opacity: 1, textShadow: "0 0 20px rgba(255,255,255,0.5)" }}
-                                        >
-                                            KIDS LAB
-                                        </motion.h2>
-                                        <span className="btn btn-white btn-sm px-4 font-weight-bold rounded-pill mt-3 shadow-sm">DISCOVER ALL</span>
+                                <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl shadow-lg overflow-hidden position-relative mb-3 mb-md-4" style={{ flex: 1, minHeight: '250px', cursor: 'pointer' }} onClick={() => handleEditorialClick('kids')}>
+                                    <img src="/assets/images/kids3.png" className="w-100 h-100 object-cover opacity-75 story-img" alt="Kids Lab" loading="eager" decoding="async" />
+                                    <div className="story-overlay-light p-4 p-md-5">
+                                        <h3 className="h2 h1-md text-white font-weight-bold mb-0">KIDS<br/>LAB</h3>
+                                        <span className="text-white font-weight-bold border-bottom pb-1 small mt-2 d-inline-block">DISCOVER ALL</span>
                                     </div>
-                                    <img src="/assets/images/kids3.png" className="position-absolute kids-img" alt="" loading="lazy" decoding="async"/>
                                 </motion.div>
                             </div>
                         </div>
@@ -1340,10 +1332,12 @@ export default function Home() {
                     .story-overlay-light {
                         padding: 16px !important;
                     }
-                    .kids-img {
-                        height: 86%;
-                        right: -8px;
-                        bottom: -12px;
+                    .kids-img, .story-img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        object-position: center;
+                        border-radius: 16px;
                     }
                     .fashion-card:hover {
                         transform: translateY(-4px);
