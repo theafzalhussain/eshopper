@@ -243,7 +243,7 @@ export default function Home() {
                         </div>
                         <div className="col-12 col-md-6">
                             <div className="d-flex flex-column h-100">
-                                <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl shadow-lg overflow-hidden position-relative mb-3 mb-md-4" style={{ flex: 1, minHeight: '250px' }} onClick={() => handleEditorialClick('women')} style={{ cursor: 'pointer' }}>
+                                <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl shadow-lg overflow-hidden position-relative mb-3 mb-md-4" style={{ flex: 1, minHeight: '250px', cursor: 'pointer' }} onClick={() => handleEditorialClick('women')}>
                                     <img src="/assets/images/CR-1.png" className="w-100 h-100 object-cover opacity-75 story-img" alt="Woman" loading="eager" decoding="async" />
                                     <div className="story-overlay-light p-4 p-md-5">
                                         <h3 className="h2 h1-md text-white font-weight-bold mb-0">ELEGANT<br/>MODERN</h3>

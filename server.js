@@ -1169,71 +1169,8 @@ app.post('/login', authLimiter, async (req, res) => {
 });
 
 const handle = (path, Model, useUpload = false) => {
-    app.get(path, async (req, res) => {
-        try {
-            const data = await Model.find().sort({ _id: -1 });
-
-            // If Product model, return image URLs as-is from Cloudinary
-            if (path === '/product') {
-                console.log(`📦 Fetching ${data.length} products...`);
-                data.forEach((product, idx) => {
-                    if (product.pic1) product.pic1 = sanitizeCloudinaryUrl(product.pic1);
-                    if (product.pic2) product.pic2 = sanitizeCloudinaryUrl(product.pic2);
-                    if (product.pic3) product.pic3 = sanitizeCloudinaryUrl(product.pic3);
-                    if (product.pic4) product.pic4 = sanitizeCloudinaryUrl(product.pic4);
-                    if (idx === 0 && product.pic1) {
-                        console.log(`✅ Sample Product pic1: ${product.pic1.substring(0, 60)}...`);
-                    }
-                });
-            }
-
-            res.json(data);
-        } catch (e) { 
-            console.error(`❌ Error fetching ${path}:`, e.message);
-            res.status(500).json({ error: "Failed to fetch data." }); 
-        }
-    });
-    app.get(path, async (req, res) => {
-        try {
-            const data = await Model.find().sort({ _id: -1 });
-            // If Product model, return image URLs as-is from Cloudinary
-            if (path === '/product') {
-                console.log(`📦 Fetching ${data.length} products...`);
-                data.forEach((product, idx) => {
-                    if (product.pic1) product.pic1 = sanitizeCloudinaryUrl(product.pic1);
-                    if (product.pic2) product.pic2 = sanitizeCloudinaryUrl(product.pic2);
-                    if (product.pic3) product.pic3 = sanitizeCloudinaryUrl(product.pic3);
-                    if (product.pic4) product.pic4 = sanitizeCloudinaryUrl(product.pic4);
-                    if (idx === 0 && product.pic1) {
-                        console.log(`✅ Sample Product pic1: ${product.pic1.substring(0, 60)}...`);
-                    }
-                });
-            }
-            res.json(data);
-        } catch (e) { 
-            console.error(`❌ Error fetching ${path}:`, e.message);
-            res.status(500).json({ error: "Failed to fetch data." }); 
-        }
-    });
-                if (req.files.pic) d.pic = req.files.pic[0].path;
-                if (req.files.pic1) d.pic1 = req.files.pic1[0].path;
-                if (req.files.pic2) d.pic2 = req.files.pic2[0].path;
-                if (req.files.pic3) d.pic3 = req.files.pic3[0].path;
-                if (req.files.pic4) d.pic4 = req.files.pic4[0].path;
-                
-                console.log(`📤 Files uploaded for ${path}:`, {
-                    pic1: d.pic1 ? '✅' : '❌',
-                    pic2: d.pic2 ? '✅' : '❌',
-                    pic3: d.pic3 ? '✅' : '❌',
-                    pic4: d.pic4 ? '✅' : '❌'
-                });
-            }
-            await d.save(); res.status(201).json(d);
-        } catch (e) { 
-            console.error(`❌ Error creating ${path}:`, e.message);
-            res.status(400).json(e); 
-        }
-    });
+    // ...existing code...
+    // ...existing code...
     app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             let upData = { ...req.body };
@@ -1275,6 +1212,16 @@ const handle = (path, Model, useUpload = false) => {
 
 handle('/user', User, true); 
 handle('/product', Product, true); 
+
+// Compatibility: GET /product returns all products (for frontend)
+app.get('/product', async (req, res) => {
+    try {
+        const products = await Product.find().sort({ createdAt: -1 });
+        res.json(products);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch products' });
+    }
+});
 handle('/maincategory', Maincategory);
 handle('/subcategory', Subcategory); 
 handle('/brand', Brand); 
