@@ -1,3 +1,5 @@
+
+
 // 🔴 LOAD ENV VARIABLES FIRST
 require('dotenv').config();
 
@@ -1210,17 +1212,17 @@ const handle = (path, Model, useUpload = false) => {
     });
 };
 
+
 handle('/user', User, true); 
 handle('/product', Product, true); 
-
 // Compatibility: GET /product returns all products (for frontend)
 app.get('/product', async (req, res) => {
-    try {
-        const products = await Product.find().sort({ createdAt: -1 });
-        res.json(products);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch products' });
-    }
+        try {
+                const products = await Product.find().sort({ createdAt: -1 });
+                res.json(products);
+        } catch (err) {
+                res.status(500).json({ error: 'Failed to fetch products' });
+        }
 });
 handle('/maincategory', Maincategory);
 handle('/subcategory', Subcategory); 
@@ -1230,6 +1232,47 @@ handle('/wishlist', Wishlist);
 handle('/checkout', Checkout); 
 handle('/contact', Contact);
 handle('/newslatter', Newslatter);
+
+// --- Compatibility GET endpoints for legacy frontend calls ---
+const compatGet = [
+    { path: '/user', Model: User },
+    { path: '/cart', Model: Cart },
+    { path: '/wishlist', Model: Wishlist },
+    { path: '/checkout', Model: Checkout },
+    { path: '/contact', Model: Contact },
+    { path: '/maincategory', Model: Maincategory },
+    { path: '/subcategory', Model: Subcategory },
+    { path: '/brand', Model: Brand },
+    { path: '/newslatter', Model: Newslatter },
+];
+compatGet.forEach(({ path, Model }) => {
+    app.get(path, async (req, res) => {
+        try {
+            // If id param is present, fetch by id
+            if (req.query.id || req.query._id) {
+                const id = req.query.id || req.query._id;
+                const doc = await Model.findById(id);
+                if (!doc) return res.status(404).json({ message: 'Not found' });
+                return res.json(doc);
+            }
+            // Otherwise, fetch all
+            const docs = await Model.find().sort({ createdAt: -1 });
+            res.json(docs);
+        } catch (e) {
+            res.status(500).json({ message: 'Failed to fetch' });
+        }
+    });
+    // Also support /:id for direct fetch
+    app.get(`${path}/:id`, async (req, res) => {
+        try {
+            const doc = await Model.findById(req.params.id);
+            if (!doc) return res.status(404).json({ message: 'Not found' });
+            res.json(doc);
+        } catch (e) {
+            res.status(500).json({ message: 'Failed to fetch' });
+        }
+    });
+});
 
 app.post('/api/cart/clear/:userid', async (req, res) => {
     try {

@@ -87,11 +87,25 @@ module.exports = {
         }
     },
     // Admin user management
-    getUsers: (req, res) => {
-        res.json({ message: 'Admin user management endpoint' });
+    getUsers: async (req, res) => {
+        try {
+            const User = require('../models/User');
+            const users = await User.find().sort({ createdAt: -1 });
+            res.json({ users });
+        } catch (err) {
+            console.error('Admin getUsers error:', err.message);
+            res.status(500).json({ message: 'Failed to fetch users' });
+        }
     },
     // Admin order management
-    getOrders: (req, res) => {
-        res.json({ message: 'Admin order management endpoint' });
+    getOrders: async (req, res) => {
+        try {
+            const Order = require('../models/Order');
+            const orders = await Order.find().sort({ createdAt: -1 });
+            res.json({ orders });
+        } catch (err) {
+            console.error('Admin getOrders error:', err.message);
+            res.status(500).json({ message: 'Failed to fetch orders' });
+        }
     }
 };
