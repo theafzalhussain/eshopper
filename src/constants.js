@@ -26,27 +26,27 @@ export const API_ENDPOINTS = {
   LOGIN: "/login",
   
   // User
-  USER: "/user",
-  USER_PROFILE: "/user/:id",
+  USER: "/api/user",
+  USER_PROFILE: "/api/user/:id",
   
   // Products
-  PRODUCT: "/product",
-  PRODUCT_DETAIL: "/product/:id",
+  PRODUCT: "/api/product",
+  PRODUCT_DETAIL: "/api/product/:id",
   
   // Categories
-  MAINCATEGORY: "/maincategory",
-  SUBCATEGORY: "/subcategory",
-  BRAND: "/brand",
+  MAINCATEGORY: "/api/maincategory",
+  SUBCATEGORY: "/api/subcategory",
+  BRAND: "/api/brand",
   
   // Shopping
-  CART: "/cart",
+  CART: "/api/cart",
   CLEAR_CART: "/api/cart/clear",
-  WISHLIST: "/wishlist",
-  CHECKOUT: "/checkout",
+  WISHLIST: "/api/wishlist",
+  CHECKOUT: "/api/checkout",
   PLACE_ORDER: "/api/place-order",
   
   // Other
-  CONTACT: "/contact",
+  CONTACT: "/api/contact",
   NEWSLETTER: "/newslatter"
 };
 

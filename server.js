@@ -4,6 +4,7 @@ require('dotenv').config();
 // NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS
 const express = require('express');
 const orderRoutes = require('./routes/orderRoutes');
+const userRoutes = require('./routes/userRoutes');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
@@ -207,6 +208,7 @@ io.on('connection', (socket) => {
 app.use(express.json());
 // Register order routes (fixes missing /api/admin/delete-orders)
 app.use(orderRoutes);
+app.use('/user', userRoutes);
 
 // 🔒 SECURITY HEADERS
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -1211,6 +1213,25 @@ const handle = (path, Model, useUpload = false) => {
 };
 
 handle('/user', User, true); 
+// Compatibility: GET /user returns all users
+// Compatibility: GET /user/:id returns single user
+app.get('/user/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch user' });
+    }
+});
+app.get('/user', async (req, res) => {
+    try {
+        const users = await User.find().sort({ createdAt: -1 });
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
 handle('/product', Product, true); 
 
 // Compatibility: GET /product returns all products (for frontend)
@@ -1226,9 +1247,104 @@ handle('/maincategory', Maincategory);
 handle('/subcategory', Subcategory); 
 handle('/brand', Brand); 
 handle('/cart', Cart);
+// Compatibility: GET /cart returns all carts
+// Compatibility: GET /cart/:id returns single cart
+app.get('/cart/:id', async (req, res) => {
+    try {
+        const cart = await Cart.findById(req.params.id);
+        if (!cart) return res.status(404).json({ error: 'Cart not found' });
+        res.json(cart);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch cart' });
+    }
+});
+app.get('/cart', async (req, res) => {
+    try {
+        const carts = await Cart.find().sort({ createdAt: -1 });
+        res.json(carts);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch carts' });
+    }
+});
 handle('/wishlist', Wishlist); 
+// Compatibility: GET /wishlist returns all wishlists
+app.get('/wishlist', async (req, res) => {
+    try {
+        const wishlists = await Wishlist.find().sort({ createdAt: -1 });
+        res.json(wishlists);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch wishlists' });
+    }
+});
+// Compatibility: GET /wishlist/:id returns single wishlist
+app.get('/wishlist/:id', async (req, res) => {
+    try {
+        const wishlist = await Wishlist.findById(req.params.id);
+        if (!wishlist) return res.status(404).json({ error: 'Wishlist not found' });
+        res.json(wishlist);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch wishlist' });
+    }
+});
 handle('/checkout', Checkout); 
+// Compatibility: GET /checkout/:id returns single checkout
+app.get('/checkout/:id', async (req, res) => {
+    try {
+        const checkout = await Checkout.findById(req.params.id);
+        if (!checkout) return res.status(404).json({ error: 'Checkout not found' });
+        res.json(checkout);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch checkout' });
+    }
+});
+// Compatibility: GET /checkout returns all checkouts
+app.get('/checkout', async (req, res) => {
+    try {
+        const checkouts = await Checkout.find().sort({ createdAt: -1 });
+        res.json(checkouts);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch checkouts' });
+    }
+});
 handle('/contact', Contact);
+// Compatibility: GET /contact returns all contacts
+app.get('/contact', async (req, res) => {
+    try {
+        const contacts = await Contact.find().sort({ createdAt: -1 });
+        res.json(contacts);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch contacts' });
+    }
+});
+// API Compatibility: GET /api/checkout returns all checkouts
+app.get('/api/checkout', async (req, res) => {
+    try {
+        const checkouts = await Checkout.find().sort({ createdAt: -1 });
+        res.json(checkouts);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch checkouts' });
+    }
+});
+
+// API Compatibility: GET /api/contact returns all contacts
+app.get('/api/contact', async (req, res) => {
+    try {
+        const contacts = await Contact.find().sort({ createdAt: -1 });
+        res.json(contacts);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch contacts' });
+    }
+});
+
+// API Compatibility: GET /api/product returns all products
+app.get('/api/product', async (req, res) => {
+    try {
+        const products = await Product.find().sort({ createdAt: -1 });
+        res.json(products);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch products' });
+    }
+});
 handle('/newslatter', Newslatter);
 
 app.post('/api/cart/clear/:userid', async (req, res) => {

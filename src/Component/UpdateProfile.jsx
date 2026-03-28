@@ -68,7 +68,7 @@ export default function Updateprofile() {
             try {
                 const userId = localStorage.getItem("userid")
                 if (userId) {
-                    const res = await fetch(`${BASE_URL}/user/${userId}`)
+                    const res = await fetch(`${BASE_URL}/api/user/${userId}`)
                     if (res.ok) {
                         const latestUser = await res.json()
                         if (latestUser?.name) localStorage.setItem("name", latestUser.name)

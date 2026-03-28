@@ -76,7 +76,7 @@ export default function Navbaar() {
 
                 if (!userId || !isLoggedIn) return
 
-                const res = await fetch(`${BASE_URL}/user/${userId}`)
+                const res = await fetch(`${BASE_URL}/api/user/${userId}`)
                 if (!res.ok) return
 
                 const user = await res.json()
