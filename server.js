@@ -151,8 +151,9 @@ const io = new Server(httpServer, {
     },
     transports: ['websocket', 'polling']
 });
-// Make io available to controllers
-app.set('io', io);
+// Rename io to socketio to avoid shadowing
+const socketio = io;
+app.set('io', socketio);
 
 const ALLOWED_ORDER_STATUS = [
     'Order Placed',
@@ -2372,8 +2373,11 @@ const handleOrderStatusUpdate = async (req, res) => {
         };
 
         // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
-        io.to(`user:${order.userid}`).emit('statusUpdate', payload);
-        console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
+        const ioInstance = req.app.get('io');
+        if (ioInstance) {
+            ioInstance.to(`user:${order.userid}`).emit('statusUpdate', payload);
+            console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
+        }
 
         // 🔴 TRIGGER LUXURY NOTIFICATIONS (WhatsApp - disabled unless explicitly enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
@@ -2407,16 +2411,15 @@ const handleOrderStatusUpdate = async (req, res) => {
         }
 
         // 🔴 EMIT REAL-TIME DASHBOARD UPDATE VIA SOCKET.IO
-        const io = req.app.get('io');
-        if (io) {
-            io.emit('dashboardUpdate', {
+        if (ioInstance) {
+            ioInstance.emit('dashboardUpdate', {
                 type: 'orderStatusUpdate',
                 orderId: order.orderId,
                 newStatus: normalized,
                 timestamp: new Date()
             });
             // Also emit to specific user room
-            io.to(`user:${order.userid}`).emit('orderUpdate', {
+            ioInstance.to(`user:${order.userid}`).emit('orderUpdate', {
                 orderId: order.orderId,
                 status: normalized,
                 timestamp: new Date()
