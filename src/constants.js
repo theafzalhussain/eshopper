@@ -39,7 +39,7 @@ export const API_ENDPOINTS = {
   BRAND: "/brand",
   
   // Shopping
-  CART: "/cart",
+  CART: "/api/cart",
   CLEAR_CART: "/api/cart/clear",
   WISHLIST: "/wishlist",
   CHECKOUT: "/checkout",

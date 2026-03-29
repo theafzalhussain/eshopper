@@ -8,6 +8,7 @@ import { useToast } from './ToastNotification';
 import { BASE_URL } from '../constants';
 axios.defaults.baseURL = BASE_URL;
 
+
 export default function Cart() {
     const [cart, setCart] = useState([]);
     const [removingIds, setRemovingIds] = useState([]);
@@ -21,8 +22,20 @@ export default function Cart() {
     const [couponError, setCouponError] = useState("");
     const [loading, setLoading] = useState(true);
     const userId = localStorage.getItem("userid");
+    const [userMissing, setUserMissing] = useState(false);
 
     async function fetchCartAndSummary() {
+        if (!userId) {
+            setUserMissing(true);
+            setCart([]);
+            setSubtotal(0);
+            setDiscount(0);
+            setShipping(0);
+            setGst(0);
+            setLoading(false);
+            return;
+        }
+        setUserMissing(false);
         setLoading(true);
         try {
             const cartRes = await axios.get(`/api/cart?userId=${userId}`);
@@ -111,7 +124,11 @@ export default function Cart() {
             </div>
 
             <div className="container py-5">
-                {loading ? (
+                {userMissing ? (
+                    <div className="text-center py-5">
+                        <span className="text-danger">Please login to view your cart.</span>
+                    </div>
+                ) : loading ? (
                     <div className="text-center py-5"><span>Loading...</span></div>
                 ) : cart.length > 0 ? (
                     <div className="row">

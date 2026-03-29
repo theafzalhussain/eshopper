@@ -1,7 +1,9 @@
-
 const express = require('express');
 const router = express.Router();
 const cartController = require('../controllers/cartController');
+
+// Add item to cart
+router.post('/cart', cartController.addToCart);
 
 // Apply coupon to cart
 router.post('/cart/apply-coupon', cartController.applyCoupon);

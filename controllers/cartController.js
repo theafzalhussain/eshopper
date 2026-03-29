@@ -1,3 +1,30 @@
+// Add item to cart (POST /api/cart)
+exports.addToCart = async (req, res) => {
+    try {
+        const { userId, productId, quantity } = req.body;
+        if (!userId || !productId) {
+            return res.status(400).json({ success: false, message: 'User ID and Product ID required.' });
+        }
+        const qty = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
+        let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+        if (!cart) {
+            cart = await Cart.create({ user: new mongoose.Types.ObjectId(userId), items: [] });
+        }
+        // Check if product already exists in cart
+        const existingItem = cart.items.find(item => item.product.toString() === productId);
+        if (existingItem) {
+            existingItem.quantity += qty;
+        } else {
+            cart.items.push({ product: productId, quantity: qty });
+        }
+        await cart.save();
+        cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+        res.json({ success: true, cart });
+    } catch (err) {
+        console.error('[ERROR] /api/cart (addToCart):', err);
+        res.status(500).json({ success: false, message: 'Failed to add item to cart.' });
+    }
+};
 // Apply promo code to cart (POST /api/cart/apply-coupon)
 exports.applyCoupon = async (req, res) => {
     try {
