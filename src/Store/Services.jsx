@@ -200,7 +200,7 @@ export const createBrandAPI = (d) => fastAPI(API_ENDPOINTS.BRAND, "POST", d);
 export const updateBrandAPI = (d) => fastAPI(`${API_ENDPOINTS.BRAND}/${getID(d)}`, "PUT", d);
 export const deleteBrandAPI = (d) => fastAPI(`${API_ENDPOINTS.BRAND}/${getID(d)}`, "DELETE");
 
-export const getCartAPI = () => fastAPI(API_ENDPOINTS.CART);
+export const getCartAPI = (userId) => fastAPI(`${API_ENDPOINTS.CART}?userId=${userId}`);
 export const createCartAPI = (d) => fastAPI(API_ENDPOINTS.CART, "POST", d);
 export const updateCartAPI = (d) => fastAPI(`${API_ENDPOINTS.CART}/${getID(d)}`, "PUT", d);
 export const deleteCartAPI = (d) => fastAPI(`${API_ENDPOINTS.CART}/${getID(d)}`, "DELETE");

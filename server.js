@@ -81,6 +81,9 @@ try {
 
 const app = express();
 
+// 🟢 FIX: Parse JSON body before any routes
+app.use(express.json());
+
 // 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
 // 🔒 TRUST PROXY (Railway/Production ke liye)
 app.set('trust proxy', 1);
@@ -230,7 +233,6 @@ io.on('connection', (socket) => {
 
 
 
-app.use(express.json());
 // Register order routes (fixes missing /api/admin/delete-orders)
 app.use(orderRoutes);
 
@@ -2795,7 +2797,6 @@ mongoose.connection.on('disconnected', () => {
     }, 5000);
 });
 
-startServer();
 // 📡 MONITOR MONGOOSE CONNECTION EVENTS
 mongoose.connection.on('connected', () => {
     console.log('✅ Mongoose connected to MongoDB');

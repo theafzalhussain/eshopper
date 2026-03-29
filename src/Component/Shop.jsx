@@ -133,18 +133,11 @@ export default function Shop() {
             toast.info(`✓ Already added! Total: ${currentCount} time(s)`);
         } else {
             // Add new item to cart
-            let item = {
-                productid: p.id,
-                userid: localStorage.getItem("userid"),
-                name: p.name,
-                color: selectedColor || p.color,
-                size: selectedSize,
-                price: Number(p.finalprice),
-                qty: 1,
-                total: Number(p.finalprice),
-                pic: p.pic1,
-            }
-            dispatch(addCart(item))
+            dispatch(addCart({
+                userId: localStorage.getItem("userid"),
+                productId: p.id,
+                quantity: 1
+            }))
             
             const currentCount = (cartNotifications[p.id] || 0) + 1
             setCartNotifications({...cartNotifications, [p.id]: currentCount})

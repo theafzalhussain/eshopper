@@ -8,12 +8,18 @@ import { getCart } from '../Store/ActionCreaters/CartActionCreators';
 import { useToast } from './ToastNotification';
 import axios from 'axios';
 import { BASE_URL } from '../constants';
+import Spinner from './Spinner';
 axios.defaults.baseURL = BASE_URL;
 
 export default function Cart() {
     const dispatch = useDispatch();
     const cartState = useSelector(state => state.CartStateData);
-    const cart = cartState && cartState.items ? cartState.items : [];
+    // Filter out duplicate items by _id to ensure unique React keys
+    const cartRaw = cartState && cartState.items ? cartState.items : [];
+    const cart = Array.isArray(cartRaw)
+        ? cartRaw.filter((item, idx, arr) =>
+            item && item._id && arr.findIndex(i => i && i._id === item._id) === idx)
+        : [];
     const [removingIds, setRemovingIds] = useState([]);
     const toast = useToast();
     const [subtotal, setSubtotal] = useState(0);
@@ -24,6 +30,7 @@ export default function Cart() {
     const [couponApplied, setCouponApplied] = useState(false);
     const [couponError, setCouponError] = useState("");
     const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false); // For update/remove/coupon
     const userId = localStorage.getItem("userid");
     const [userMissing, setUserMissing] = useState(false);
 
@@ -61,9 +68,10 @@ export default function Cart() {
         let currentQty = Number(item.quantity);
         if (op === "dec" && currentQty === 1) return;
         let newQty = (op === "dec") ? currentQty - 1 : currentQty + 1;
+        setActionLoading(true);
         try {
             await axios.put(`/api/cart/update-quantity/${item._id || item.id}`, { userId, quantity: newQty });
-            fetchCartAndSummary();
+            await fetchCartAndSummary();
         } catch (e) {
             if (e.response && e.response.data && e.response.data.message && e.response.data.message.includes('Out of Stock')) {
                 toast.error(e.response.data.message);
@@ -71,35 +79,57 @@ export default function Cart() {
                 toast.error('Failed to update quantity.');
             }
         }
+        setActionLoading(false);
     }
 
     async function removeProduct(id) {
         if (window.confirm("Remove this item?")) {
             setRemovingIds((prev) => [...prev, id]);
+            setActionLoading(true);
             setTimeout(async () => {
                 try {
                     await axios.delete(`/api/cart/remove-item/${id}`, { data: { userId } });
-                    fetchCartAndSummary();
+                    await fetchCartAndSummary();
                     toast.info('Item removed from cart.');
                 } catch (e) {
                     toast.error('Failed to remove item.');
                 } finally {
                     setRemovingIds((prev) => prev.filter(rid => rid !== id));
+                    setActionLoading(false);
                 }
             }, 350); // match animation duration
         }
     }
 
-    // Move to Wishlist (frontend only, not DB)
+
+    // Save for Later (moves to Wishlist collection in DB)
     const { addWishlist } = require("../Store/ActionCreaters/WishlistActionCreators");
-    function moveToWishlist(item) {
-        addWishlist(item);
-        removeProduct(item._id || item.id);
+    async function saveForLater(item) {
+        setActionLoading(true);
+        try {
+            // Add to wishlist in DB
+            await axios.post('/wishlist', {
+                userid: userId,
+                productid: item.productid || item.product?._id || item.product || item._id || item.id,
+                name: item.name,
+                color: item.color,
+                size: item.size,
+                price: item.price,
+                pic: item.pic
+            });
+            // Remove from cart
+            await removeProduct(item._id || item.id);
+            toast.success('Saved for later!');
+        } catch (e) {
+            toast.error('Failed to save for later.');
+        }
+        setActionLoading(false);
     }
 
     async function handleApplyCoupon() {
         if (!coupon || couponApplied) return;
         setCouponError("");
+        setActionLoading(true);
         try {
             const res = await axios.post('/api/cart/apply-coupon', { userId, coupon });
             if (res.data && res.data.success) {
@@ -112,12 +142,15 @@ export default function Cart() {
         } catch (err) {
             setCouponError(err.response?.data?.message || "Invalid or already applied coupon");
         }
+        setActionLoading(false);
     }
 
     useEffect(() => { fetchCartAndSummary(); }, []);
 
     return (
-        <div style={{ backgroundColor: "#f4f7f6", minHeight: "100vh", boxSizing: 'border-box', maxWidth: '100vw' }}>
+        <div style={{ backgroundColor: "#f4f7f6", minHeight: "100vh", boxSizing: 'border-box', maxWidth: '100vw', position: 'relative' }}>
+            {/* Spinner Overlay for Loading States */}
+            {(loading || actionLoading) && <Spinner />}
             {/* Header Section */}
             <div className="py-5 bg-dark text-center shadow-sm">
                 <h2 className="text-white font-weight-bold mb-0">Shopping Cart</h2>
@@ -144,7 +177,7 @@ export default function Cart() {
                             <AnimatePresence>
                                 {cart.map((item) => (
                                     <motion.div
-                                        key={item.id}
+                                        key={item._id || item.id}
                                         layout
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -161,31 +194,34 @@ export default function Cart() {
                                                         loading="lazy"
                                                         decoding="async"
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                                                        alt="" />
+                                                        alt=""
+                                                        key={item._id || item.id + '-img'}
+                                                    />
                                                 </div>
                                             </div>
                                             {/* Product Details */}
                                             <div className="cart-details-col flex-grow-1 px-3">
-                                                <h6 className="mb-1 font-weight-bold text-dark">{item.name}</h6>
-                                                <div className="small text-muted mb-1">{item.color} | Size: {item.size}</div>
+                                                <h6 className="mb-1 font-weight-bold text-dark" key={item._id || item.id + '-name'}>{item.name}</h6>
+                                                <div className="small text-muted mb-1" key={item._id || item.id + '-color'}>{item.color} | Size: {item.size}</div>
                                                 <div className="d-flex align-items-center mt-2">
-                                                    <button onClick={() => moveToWishlist(item)} className="btn btn-link btn-sm text-warning p-0 mr-3">Move to Wishlist</button>
-                                                    <span className="badge badge-light border px-2 py-1 ml-2">ID: {item._id || item.id}</span>
+                                                    <button key={item._id || item.id + '-save'} onClick={() => saveForLater(item)} className="btn btn-link btn-sm text-primary p-0 mr-2">Save for Later</button>
+                                                    <button key={item._id || item.id + '-wishlist'} onClick={() => addWishlist(item)} className="btn btn-link btn-sm text-warning p-0 mr-2">Move to Wishlist (Local)</button>
+                                                    <span className="badge badge-light border px-2 py-1 ml-2" key={item._id || item.id + '-badge'}>ID: {item._id || item.id}</span>
                                                 </div>
                                             </div>
                                             {/* Quantity & Price */}
                                             <div className="cart-qtyprice-col d-flex flex-column align-items-end">
                                                 <div className="d-flex align-items-center mb-2">
-                                                    <button onClick={() => updateQty(item, "dec")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">−</button>
-                                                    <span className="mx-2 font-weight-bold" style={{ minWidth: "24px" }}>{item.quantity}</span>
-                                                    <button onClick={() => updateQty(item, "inc")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">+</button>
+                                                    <button key={item._id || item.id + '-dec'} onClick={() => updateQty(item, "dec")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">−</button>
+                                                    <span className="mx-2 font-weight-bold" style={{ minWidth: "24px" }} key={item._id || item.id + '-qty'}>{item.quantity}</span>
+                                                    <button key={item._id || item.id + '-inc'} onClick={() => updateQty(item, "inc")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">+</button>
                                                 </div>
-                                                <div className="font-weight-bold text-info mb-1">₹{item.product?.price || item.price}</div>
-                                                <div className="text-muted small">Total: ₹{(item.product?.price || item.price) * item.quantity}</div>
+                                                <div className="font-weight-bold text-info mb-1" key={item._id || item.id + '-price'}>₹{item.product?.price || item.price}</div>
+                                                <div className="text-muted small" key={item._id || item.id + '-total'}>Total: ₹{(item.product?.price || item.price) * item.quantity}</div>
                                             </div>
                                             {/* Delete Icon */}
                                             <div className="cart-delete-col ml-3">
-                                                <button onClick={() => removeProduct(item._id || item.id)} className="btn btn-link p-0 premium-x-btn" title="Remove">
+                                                <button key={item._id || item.id + '-remove'} onClick={() => removeProduct(item._id || item.id)} className="btn btn-link p-0 premium-x-btn" title="Remove">
                                                     <svg width="28" height="28" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#f8f9fa"/><path d="M7 7l6 6M13 7l-6 6" stroke="#d9534f" strokeWidth="2" strokeLinecap="round"/></svg>
                                                 </button>
                                             </div>
@@ -233,11 +269,22 @@ export default function Cart() {
                                 </div>
                                 {couponError && <div className="text-danger small mb-2">{couponError}</div>}
                                 {couponApplied && <div className="text-success small mb-2">Coupon Applied!</div>}
-                                <Link to="/checkout" className="btn btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold premium-checkout-btn mt-2" style={{ background: "linear-gradient(90deg, #B8860B 0%, #f6e27a 100%)", color: "#222", border: "none", letterSpacing: 1 }}>
+                                {/* Sticky Checkout Button for Mobile */}
+                                <Link to="/checkout" className="btn btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold premium-checkout-btn mt-2 sticky-mobile-checkout" style={{ background: "linear-gradient(90deg, #B8860B 0%, #f6e27a 100%)", color: "#222", border: "none", letterSpacing: 1 }}>
                                     {`PROCEED TO CHECKOUT (${cart.reduce((acc, item) => acc + Number(item.quantity), 0)} item${cart.reduce((acc, item) => acc + Number(item.quantity), 0) !== 1 ? 's' : ''})`}
                                 </Link>
+                                {/* Security Badges */}
                                 <div className="text-center mt-4">
-                                    <p className="small text-muted"><i className="icon-lock mr-1"></i> Secure Checkout</p>
+                                    <div className="d-flex flex-column align-items-center">
+                                        <div className="d-flex align-items-center mb-2">
+                                            <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="secure" width="28" height="28" style={{marginRight:8}} />
+                                            <span className="small font-weight-bold text-success">Secure Checkout</span>
+                                        </div>
+                                        <div className="d-flex align-items-center">
+                                            <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="original" width="28" height="28" style={{marginRight:8}} />
+                                            <span className="small font-weight-bold text-primary">100% Original Products</span>
+                                        </div>
+                                    </div>
                                     <img src="https://www.paypalobjects.com/webstatic/mktg/logo/AM_mc_vs_dc_ae.jpg" width="100%" style={{ opacity: 0.6, filter: "grayscale(1)" }} alt="" />
                                 </div>
                             </div>
@@ -253,6 +300,21 @@ export default function Cart() {
             </div>
             {/* Custom Styling */}
             <style dangerouslySetInnerHTML={{ __html: `
+                /* Checkbox scale fix */
+                input[type="checkbox"] { width: 18px !important; height: 18px !important; }
+                /* Sticky checkout button for mobile */
+                @media (max-width: 767.98px) {
+                    .sticky-mobile-checkout {
+                        position: fixed !important;
+                        left: 0; right: 0; bottom: 0; z-index: 1002;
+                        border-radius: 0 !important;
+                        width: 100vw !important;
+                        max-width: 100vw !important;
+                        margin: 0 !important;
+                        box-shadow: 0 -2px 16px #e5e5e5 !important;
+                    }
+                    .premium-summary-card { margin-bottom: 80px !important; }
+                }
                 @media (max-width: 991.98px) {
                     .premium-summary-card { margin-top: 32px !important; position: static !important; }
                 }

@@ -19,7 +19,7 @@ export default function Checkout() {
     var [placingOrder, setplacingOrder] = useState(false)
 
     var users = useSelector((state) => state.UserStateData)
-    var carts = useSelector((state) => state.CartStateData)
+    var carts = useSelector((state) => (state.CartStateData && state.CartStateData.items) ? state.CartStateData.items : [])
     
     var dispatch = useDispatch()
     var navigate = useNavigate()
@@ -32,11 +32,11 @@ export default function Checkout() {
         var userData = users.find((item) => item.id === userId)
         if (userData) setuser(userData)
 
-        var userCart = carts.filter((item) => item.userid === userId)
-        if (userCart) {
-            setcart(userCart)
+        // If your cart is per-user, just use all items (already filtered by backend)
+        if (carts && carts.length > 0) {
+            setcart(carts)
             let sum = 0
-            userCart.forEach(i => sum += (Number(i.price) * Number(i.qty)))
+            carts.forEach(i => sum += (Number(i.price) * Number(i.qty)))
             let ship = (sum > 0 && sum < 1000) ? 150 : 0
             settotal(sum); setshipping(ship); setfinal(sum + ship)
         }

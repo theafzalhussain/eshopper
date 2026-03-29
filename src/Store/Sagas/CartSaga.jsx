@@ -13,7 +13,9 @@ function* createCartSaga(action) {
 
 function* getCartSaga() {
     try {
-        let response = yield getCartAPI();
+        const userId = localStorage.getItem("userid");
+        if (!userId) throw new Error("User ID required.");
+        let response = yield getCartAPI(userId);
         const cartData = response.cart || response;
         yield put({ type: GET_CART_RED, data: cartData });
     } catch (e) { console.error("❌ Cart Fetch Error:", e) }
