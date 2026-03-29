@@ -116,10 +116,13 @@ const corsOptions = {
         if (origin.includes('localhost:3000') || origin.includes('127.0.0.1:3000') || origin.includes('localhost:3001') || origin.includes('127.0.0.1:3001')) {
             return callback(null, true);
         }
-        // Allow production frontend domains
-        if (origin === 'https://eshopperr.me' || 
-            origin === 'https://www.eshopperr.me' || 
-            origin === process.env.FRONTEND_URL) {
+        // Always allow production frontend domains
+        const allowedProd = [
+            'https://eshopperr.me',
+            'https://www.eshopperr.me',
+            process.env.FRONTEND_URL
+        ].filter(Boolean);
+        if (allowedProd.includes(origin)) {
             return callback(null, true);
         }
         // Allow all Vercel preview deployments (*.vercel.app)
