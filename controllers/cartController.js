@@ -19,7 +19,24 @@ exports.addToCart = async (req, res) => {
         }
         await cart.save();
         cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
-        res.json({ success: true, cart });
+        // Map cart items to frontend-friendly format
+        const mappedCart = {
+            _id: cart._id,
+            user: cart.user,
+            items: cart.items.map(item => ({
+                _id: item._id,
+                productid: item.product?._id || item.product,
+                userid: cart.user,
+                name: item.product?.name || '',
+                color: item.product?.color || '',
+                size: item.product?.size || '',
+                price: item.product?.price || 0,
+                quantity: item.quantity,
+                pic: item.product?.pic1 || '',
+            })),
+            createdAt: cart.createdAt
+        };
+        res.json({ success: true, cart: mappedCart });
     } catch (err) {
         console.error('[ERROR] /api/cart (addToCart):', err);
         res.status(500).json({ success: false, message: 'Failed to add item to cart.' });
@@ -83,7 +100,24 @@ exports.getCart = async (req, res) => {
                 return res.status(500).json({ success: false, message: 'Failed to create cart for user.' });
             }
         }
-        res.json({ success: true, cart });
+        // Map cart items to frontend-friendly format
+        const mappedCart = cart ? {
+            _id: cart._id,
+            user: cart.user,
+            items: cart.items.map(item => ({
+                _id: item._id,
+                productid: item.product?._id || item.product,
+                userid: cart.user,
+                name: item.product?.name || '',
+                color: item.product?.color || '',
+                size: item.product?.size || '',
+                price: item.product?.price || 0,
+                quantity: item.quantity,
+                pic: item.product?.pic1 || '',
+            })),
+            createdAt: cart.createdAt
+        } : null;
+        res.json({ success: true, cart: mappedCart });
     } catch (err) {
         console.error('[DEBUG] /api/cart error:', err);
         res.status(500).json({ success: false, message: 'Failed to fetch cart.' });
@@ -112,7 +146,24 @@ exports.updateQuantity = async (req, res) => {
         }
         item.quantity = quantity;
         await cart.save();
-        res.json({ success: true, cart });
+        cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+        const mappedCart = cart ? {
+            _id: cart._id,
+            user: cart.user,
+            items: cart.items.map(item => ({
+                _id: item._id,
+                productid: item.product?._id || item.product,
+                userid: cart.user,
+                name: item.product?.name || '',
+                color: item.product?.color || '',
+                size: item.product?.size || '',
+                price: item.product?.price || 0,
+                quantity: item.quantity,
+                pic: item.product?.pic1 || '',
+            })),
+            createdAt: cart.createdAt
+        } : null;
+        res.json({ success: true, cart: mappedCart });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Failed to update quantity.' });
     }
@@ -128,7 +179,24 @@ exports.removeItem = async (req, res) => {
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
         cart.items.id(itemId).remove();
         await cart.save();
-        res.json({ success: true, cart });
+        cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+        const mappedCart = cart ? {
+            _id: cart._id,
+            user: cart.user,
+            items: cart.items.map(item => ({
+                _id: item._id,
+                productid: item.product?._id || item.product,
+                userid: cart.user,
+                name: item.product?.name || '',
+                color: item.product?.color || '',
+                size: item.product?.size || '',
+                price: item.product?.price || 0,
+                quantity: item.quantity,
+                pic: item.product?.pic1 || '',
+            })),
+            createdAt: cart.createdAt
+        } : null;
+        res.json({ success: true, cart: mappedCart });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Failed to remove item.' });
     }

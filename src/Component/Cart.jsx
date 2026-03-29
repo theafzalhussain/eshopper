@@ -1,16 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
-import axios from 'axios';
-
+import { useSelector, useDispatch } from 'react-redux';
+import { getCart } from '../Store/ActionCreaters/CartActionCreators';
 import { useToast } from './ToastNotification';
+import axios from 'axios';
 import { BASE_URL } from '../constants';
 axios.defaults.baseURL = BASE_URL;
 
-
 export default function Cart() {
-    const [cart, setCart] = useState([]);
+    const dispatch = useDispatch();
+    const cartState = useSelector(state => state.CartStateData);
+    const cart = cartState && cartState.items ? cartState.items : [];
     const [removingIds, setRemovingIds] = useState([]);
     const toast = useToast();
     const [subtotal, setSubtotal] = useState(0);
@@ -27,7 +30,6 @@ export default function Cart() {
     async function fetchCartAndSummary() {
         if (!userId) {
             setUserMissing(true);
-            setCart([]);
             setSubtotal(0);
             setDiscount(0);
             setShipping(0);
@@ -38,8 +40,8 @@ export default function Cart() {
         setUserMissing(false);
         setLoading(true);
         try {
-            const cartRes = await axios.get(`/api/cart?userId=${userId}`);
-            setCart(cartRes.data.cart?.items || []);
+            // Redux fetch
+            await dispatch(getCart());
             const summaryRes = await axios.get(`/api/cart/order-summary?userId=${userId}`);
             const s = summaryRes.data.summary || {};
             setSubtotal(s.subtotal || 0);
@@ -47,7 +49,6 @@ export default function Cart() {
             setShipping(s.shipping || 0);
             setGst(s.gst || 0);
         } catch (e) {
-            setCart([]);
             setSubtotal(0);
             setDiscount(0);
             setShipping(0);
@@ -130,7 +131,7 @@ export default function Cart() {
                     </div>
                 ) : loading ? (
                     <div className="text-center py-5"><span>Loading...</span></div>
-                ) : cart.length > 0 ? (
+                ) : cart && cart.length > 0 ? (
                     <div className="row">
                         {/* Cart Items List */}
                         <div className="col-lg-8 col-12 mb-4 mb-lg-0">

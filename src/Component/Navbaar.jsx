@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ShoppingCart, User } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { BASE_URL } from '../constants'
-import { getCart, clearCart } from '../Store/ActionCreaters/CartActionCreators'
+import { getCart } from '../Store/ActionCreaters/CartActionCreators'
 
 export default function Navbaar() {
     const navigate = useNavigate()
@@ -17,16 +17,12 @@ export default function Navbaar() {
     const role = localStorage.getItem("role")
     const name = localStorage.getItem("name")
     
-    // Redux cart selector with authentication check
-    const cartItems = useSelector(state => state.CartStateData || [])
+    // Redux cart selector with animation trigger (use items array)
+    const cartState = useSelector(state => state.CartStateData)
+    const cartItems = cartState && cartState.items ? cartState.items : [];
     const userId = localStorage.getItem('userid')
-    const isLoggedIn = localStorage.getItem('login')
-
-    // Only show cart count if user is logged in
-    const userCartItems = (isLoggedIn && userId)
-        ? cartItems.filter((item) => String(item.userid || '') === String(userId || ''))
-        : []
-    const cartCount = userCartItems.reduce((sum, item) => sum + Number(item.qty || 1), 0)
+    const userCartItems = cartItems.filter((item) => String(item.userid || '') === String(userId || ''))
+    const cartCount = userCartItems.reduce((sum, item) => sum + Number(item.quantity || 1), 0)
     const prevCartCount = useRef(cartCount)
 
     // 🎯 Trigger animation when product is added to cart
@@ -40,13 +36,8 @@ export default function Navbaar() {
     }, [cartCount])
 
     useEffect(() => {
-        const isLoggedIn = localStorage.getItem('login')
-
-        if (isLoggedIn) {
-            // User is logged in - fetch their cart (only once per session)
-            dispatch(getCart())
-        }
-    }, [dispatch]) // Removed location.pathname to prevent cart fetch on every route change
+        if (localStorage.getItem('login')) dispatch(getCart())
+    }, [dispatch, location.pathname])
 
     useEffect(() => {
         const handleScroll = () => { setIsScrolled(window.scrollY > 40) }
@@ -104,15 +95,7 @@ export default function Navbaar() {
         return () => window.removeEventListener('profile-updated', onProfileUpdated)
     }, [location.pathname])
 
-    const logout = () => {
-        const currentUserId = localStorage.getItem('userid')
-        // Clear cart state for current user before logout
-        if (currentUserId) {
-            dispatch(clearCart({ userid: currentUserId }))
-        }
-        localStorage.clear();
-        navigate("/login")
-    }
+    const logout = () => { localStorage.clear(); navigate("/login") }
     const isActive = (path) => location.pathname === path
 
     return (
@@ -137,7 +120,7 @@ export default function Navbaar() {
             <nav className="navbar navbar-light bg-white border-bottom py-2 shadow-sm">
                 <div className="container">
                     <div className="d-flex align-items-center justify-content-between w-100">
-                        {/* --- 🔥 PREMIUM LOGO --- */}
+                        {/* --- ORIGINAL LOGO --- */}
                         <Link className="navbar-brand d-flex align-items-center mb-0" to="/">
                             <motion.div 
                                 initial={{ x: -20, opacity: 0 }}

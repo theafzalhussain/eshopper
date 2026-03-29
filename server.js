@@ -78,17 +78,45 @@ try {
     console.error('⚠️ Continuing without Firebase Admin. Firebase auth-sync route will be unavailable until credentials are fixed.');
 }
 
+
 const app = express();
 
-// � INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
-// INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
-// Register cart routes
-const cartRoutes = require('./routes/cartRoutes');
-app.use('/api', cartRoutes);
+// 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
+// 🔒 TRUST PROXY (Railway/Production ke liye)
+app.set('trust proxy', 1);
 
-// Register promo code endpoint directly (for legacy/compatibility)
-const { applyCoupon } = require('./controllers/cartController');
-app.post('/api/cart/apply-coupon', applyCoupon);
+// 🔒 CORS - Robust production config
+const corsOptions = {
+    origin: function(origin, callback) {
+        if (!origin) {
+            console.log('[CORS] No Origin header, allowing request (likely server-to-server or curl)');
+            return callback(null, true);
+        }
+        // Localhost aur production domains allow karein
+        if (
+            origin.includes('localhost:3000') ||
+            origin.includes('127.0.0.1:3000') ||
+            origin === 'https://eshopperr.me' ||
+            origin === 'https://www.eshopperr.me'
+        ) {
+            console.log(`[CORS] Allowed origin: ${origin}`);
+            return callback(null, true);
+        }
+        console.error(`[CORS] Blocked origin: ${origin}`);
+        callback(new Error('CORS policy: Unauthorized origin'));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "x-admin-secret"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+
+// Apply CORS before any routes or middleware
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
 if (process.env.SENTRY_DSN) {
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
@@ -103,48 +131,16 @@ if (process.env.SENTRY_DSN) {
     console.log('⚠️  Sentry DSN not configured - error tracking disabled');
 }
 
+// Register cart routes
+const cartRoutes = require('./routes/cartRoutes');
+app.use('/api', cartRoutes);
 
-// 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
-app.set('trust proxy', 1);
-
-// 🔒 CORS - Robust production config
-const corsOptions = {
-    origin: function(origin, callback) {
-        // Allow no origin (server-to-server, mobile)
-        if (!origin) return callback(null, true);
-        // Allow localhost for development (3000, 3001)
-        if (origin.includes('localhost:3000') || origin.includes('127.0.0.1:3000') || origin.includes('localhost:3001') || origin.includes('127.0.0.1:3001')) {
-            return callback(null, true);
-        }
-        // Always allow production frontend domains
-        const allowedProd = [
-            'https://eshopperr.me',
-            'https://www.eshopperr.me',
-            process.env.FRONTEND_URL
-        ].filter(Boolean);
-        if (allowedProd.includes(origin)) {
-            return callback(null, true);
-        }
-        // Allow all Vercel preview deployments (*.vercel.app)
-        if (origin && origin.endsWith('.vercel.app')) {
-            return callback(null, true);
-        }
-        console.warn(`⚠️  CORS rejected: ${origin}`);
-        return callback(new Error('CORS policy: Unauthorized origin'));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept", "x-admin-secret"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-};
-
-// Apply CORS before any routes or middleware
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+// Register promo code endpoint directly (for legacy/compatibility)
+const { applyCoupon } = require('./controllers/cartController');
+app.post('/api/cart/apply-coupon', applyCoupon);
 
 // 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
-const httpServer = http.createServer(app);
+const httpServer = http.createServer(app); // 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
 const io = new Server(httpServer, {
     cors: {
         origin: [
@@ -239,8 +235,10 @@ app.use(express.json());
 app.use(orderRoutes);
 
 // 🔒 SECURITY HEADERS
+// 🔒 SECURITY HEADERS
 app.use(helmet({ contentSecurityPolicy: false }));
 
+// 🔒 RATE LIMITERS
 // 🔒 RATE LIMITERS
 const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
@@ -254,6 +252,7 @@ app.use((req, res, next) => {
     next();
 });
 
+// 🛡️ GLOBAL ERROR HANDLER FOR MALFORMED REQUESTS & CORS
 // 🛡️ GLOBAL ERROR HANDLER FOR MALFORMED REQUESTS & CORS
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
@@ -2769,6 +2768,34 @@ process.on("SIGINT", async () => {
     process.exit(0);
 });
 
+// 📡 MONITOR MONGOOSE CONNECTION EVENTS
+mongoose.connection.on('connected', () => {
+    console.log('✅ Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+    console.error('❌ Mongoose connection error:', err.message);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.warn('⚠️  Mongoose disconnected. Attempting reconnect in 5s...');
+    setTimeout(async () => {
+        try {
+            await mongoose.connect(MONGO_URI, {
+                dbName: process.env.DB_NAME || 'eshoper',
+                serverSelectionTimeoutMS: 10000,
+                socketTimeoutMS: 45000,
+                retryWrites: true,
+                w: 'majority'
+            });
+            console.log('✅ MongoDB reconnected successfully');
+        } catch (e) {
+            console.error('❌ MongoDB reconnect failed:', e.message);
+        }
+    }, 5000);
+});
+
+startServer();
 // 📡 MONITOR MONGOOSE CONNECTION EVENTS
 mongoose.connection.on('connected', () => {
     console.log('✅ Mongoose connected to MongoDB');

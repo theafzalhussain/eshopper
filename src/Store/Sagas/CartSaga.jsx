@@ -5,31 +5,35 @@ import { ADD_CART, ADD_CART_RED, CLEAR_CART, CLEAR_CART_RED, DELETE_CART, DELETE
 function* createCartSaga(action) {
     try {
         if (!action || !action.payload) return;
-        let response = yield createCartAPI(action.payload)
-        yield put({ type: ADD_CART_RED, data: response })
+        let response = yield createCartAPI(action.payload);
+        const cartData = response.cart || response;
+        yield put({ type: ADD_CART_RED, data: cartData });
     } catch (e) { console.error("❌ Cart Add Error:", e) }
 }
 
 function* getCartSaga() {
     try {
-        let response = yield getCartAPI()
-        yield put({ type: GET_CART_RED, data: response })
+        let response = yield getCartAPI();
+        const cartData = response.cart || response;
+        yield put({ type: GET_CART_RED, data: cartData });
     } catch (e) { console.error("❌ Cart Fetch Error:", e) }
 }
 
 function* deleteCartSaga(action) {
     try {
         if (!action || !action.payload) return;
-        yield deleteCartAPI(action.payload)
-        yield put({ type: DELETE_CART_RED, data: action.payload })
+        let response = yield deleteCartAPI(action.payload);
+        const cartData = response.cart || response;
+        yield put({ type: DELETE_CART_RED, data: cartData });
     } catch (e) { console.error("❌ Cart Delete Error:", e) }
 }
 
 function* updateCartSaga(action) {
     try {
         if (!action || !action.payload) return;
-        yield updateCartAPI(action.payload)
-        yield put({ type: UPDATE_CART_RED, data: action.payload })
+        let response = yield updateCartAPI(action.payload);
+        const cartData = response.cart || response;
+        yield put({ type: UPDATE_CART_RED, data: cartData });
     } catch (e) { console.error("❌ Cart Update Error:", e) }
 }
 

@@ -119,7 +119,7 @@ export default function Shop() {
         }
         
         // Check if product already exists in cart with this size AND color
-        let existingItem = cart.find((item) => 
+        let existingItem = (cart.items || []).find((item) => 
             item.productid === p.id && 
             item.userid === localStorage.getItem("userid") &&
             item.size === selectedSize &&
