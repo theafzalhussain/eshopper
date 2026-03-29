@@ -251,10 +251,49 @@ export default function Home() {
                                     </div>
                                 </motion.div>
                                 <motion.div whileHover={{ scale: 0.99 }} className="story-card rounded-3xl shadow-lg overflow-hidden position-relative mb-3 mb-md-4" style={{ flex: 1, minHeight: '250px', cursor: 'pointer' }} onClick={() => handleEditorialClick('kids')}>
-                                    <img src="/assets/images/kids3.png" className="w-100 h-100 object-cover opacity-75 story-img" alt="Kids Lab" loading="eager" decoding="async" />
-                                    <div className="story-overlay-light p-4 p-md-5">
-                                        <h3 className="h2 h1-md text-white font-weight-bold mb-0">KIDS<br/>LAB</h3>
-                                        <span className="text-white font-weight-bold border-bottom pb-1 small mt-2 d-inline-block">DISCOVER ALL</span>
+                                    <img 
+                                        src="/assets/images/kids3.png" 
+                                        className="w-100 h-100 object-cover opacity-75 story-img" 
+                                        alt="Kids Lab" 
+                                        loading="eager" 
+                                        decoding="async" 
+                                        style={{ filter: 'brightness(0.96) saturate(1.08)' }}
+                                    />
+                                    <div className="story-overlay-light p-4 p-md-5 d-flex flex-column align-items-start justify-content-end" style={{
+                                        // background: 'linear-gradient(120deg, #fff7f0cc 60%, #ffe0f7cc 0%)',
+                                        boxShadow: '0 8px 32px 0 rgba(255, 188, 143, 0.10)',
+                                        borderRadius: '2rem',
+                                        border: '1.5px solid #f7d1e6',
+                                        zIndex: 2
+                                    }}>
+                                        <h3 className="h2 h1-md text-white font-weight-bold mb-0" style={{
+                                            color: '#e17fa3',
+                                            fontFamily: 'Bodoni Moda, serif',
+                                            letterSpacing: 1,
+                                            textShadow: '0 2px 8px #fff8',
+                                            marginBottom: 8
+                                        }}>
+                                            KIDS<br/><span style={{ color: '#010101', fontWeight: 700 }}>LAB</span>
+                                        </h3>
+                                        <span className="text-white font-weight-bold border-bottom pb-1 small mt-2 d-inline-block" style={{
+                                          
+                                            background: '#fff8',
+                                            borderRadius: '1rem',
+                                            padding: '2px 14px',
+                                            fontSize: '1rem',
+                                            boxShadow: '0 2px 8px #fff6',
+                                            border: 'none',
+                                            marginBottom: 8
+                                        }}>DISCOVER ALL <span style={{fontSize:'1.1em',verticalAlign:'middle'}}>✨</span></span>
+                                        <button className="btn btn-outline-light rounded-pill mt-2 px-4 py-2 font-weight-bold" style={{
+                                            background: 'linear-gradient(90deg, #f7b267 0%, #e17fa3 100%)',
+                                            color: '#fff',
+                                            border: 'none',
+                                            boxShadow: '0 2px 8px #e17fa355',
+                                            letterSpacing: 1
+                                        }}>
+                                            SHOP KIDS <span style={{ fontSize: '1.2em', marginLeft: 4 }}>→</span>
+                                        </button>
                                     </div>
                                 </motion.div>
                             </div>

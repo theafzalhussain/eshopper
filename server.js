@@ -1,5 +1,3 @@
-
-
 // 🔴 LOAD ENV VARIABLES FIRST
 require('dotenv').config();
 
@@ -82,7 +80,7 @@ try {
 
 const app = express();
 
-// � INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
+// INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
 if (process.env.SENTRY_DSN) {
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
@@ -228,6 +226,14 @@ io.on('connection', (socket) => {
 app.use(express.json());
 // Register order routes (fixes missing /api/admin/delete-orders)
 app.use(orderRoutes);
+
+// Register cart routes
+const cartRoutes = require('./routes/cartRoutes');
+app.use('/api', cartRoutes);
+
+// Register promo code endpoint directly (for legacy/compatibility)
+const { applyCoupon } = require('./controllers/cartController');
+app.post('/api/cart/apply-coupon', applyCoupon);
 
 // 🔒 SECURITY HEADERS
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -1509,6 +1515,7 @@ const placeOrderHandler = async (req, res) => {
         if (process.env.SENTRY_DSN) Sentry.captureException(e);
         return res.status(500).json({ message: 'Failed to place order' });
     }
+
 };
 
 app.post('/api/place-order', placeOrderHandler);
