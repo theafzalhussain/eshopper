@@ -1,8 +1,10 @@
-// Apply coupon to cart
-router.post('/cart/apply-coupon', cartController.applyCoupon);
+
 const express = require('express');
 const router = express.Router();
 const cartController = require('../controllers/cartController');
+
+// Apply coupon to cart
+router.post('/cart/apply-coupon', cartController.applyCoupon);
 
 // Get cart for current user
 router.get('/cart', cartController.getCart);
