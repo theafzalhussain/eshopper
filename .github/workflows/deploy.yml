@@ -1,0 +1,97 @@
+name: Deploy
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build_and_test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Frontend
+        run: npm run build
+
+      - name: Test Build
+        run: |
+          if [ ! -d "build" ]; then
+            echo "❌ Build directory not created!"
+            exit 1
+          fi
+          echo "✅ Build successful!"
+
+  deploy_render_backend:
+    name: Deploy Backend to Render
+    runs-on: ubuntu-latest
+    needs: build_and_test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger Render Deployment
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "⚠️ RENDER_DEPLOY_HOOK not set in GitHub Secrets"
+            echo "Setup: https://github.com/${{ github.repository }}/settings/secrets/actions"
+            exit 0
+          fi
+          
+          echo "🚀 Triggering Render deployment for backend..."
+          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }} \
+            -H "Content-Type: application/json" \
+            --data '{"commit_sha":"'${{ github.sha }}'","ref":"'${{ github.ref }}'"}' \
+            -w "\nStatus: %{http_code}\n"
+        continue-on-error: true
+
+  deploy_vercel_frontend:
+    name: Deploy Frontend to Vercel
+    runs-on: ubuntu-latest
+    needs: build_and_test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: vercel/action@v5.1.0
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+        continue-on-error: true
+        env:
+          VERCEL_ENV: production
+
+  notify_deployment:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy_render_backend, deploy_vercel_frontend]
+    if: always()
+    steps:
+      - name: Log Deployment Summary
+        run: |
+          echo "📊 Deployment Summary"
+          echo "🔗 Repository: ${{ github.repository }}"
+          echo "📌 Branch: ${{ github.ref_name }}"
+          echo "💾 Commit: ${{ github.sha }}"
+          echo "👤 Author: ${{ github.actor }}"
+          echo ""
+          echo "✅ Backend Deploy Status: ${{ needs.deploy_render_backend.result }}"
+          echo "✅ Frontend Deploy Status: ${{ needs.deploy_vercel_frontend.result }}"
+          echo ""
+          echo "📍 Check deployment status at:"
+          echo "   - Render: https://dashboard.render.com"
+          echo "   - Vercel: https://vercel.com/dashboard"
+

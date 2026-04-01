@@ -2,12 +2,13 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "develop", "pr/**"]
   pull_request:
     branches: ["main"]
 
 jobs:
   build_test:
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,8 +20,18 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install
+      - name: Install dependencies
         run: npm ci
 
       - name: Build
         run: npm run build
+
+      - name: Verify Build Output
+        run: |
+          if [ ! -d "build" ]; then
+            echo "❌ Build failed: no build directory created"
+            exit 1
+          fi
+          echo "✅ Build successful"
+          ls -lh build/ | head -20
+
