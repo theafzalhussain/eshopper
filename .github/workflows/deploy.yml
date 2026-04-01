@@ -2,7 +2,8 @@ name: Deploy
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,59 +11,54 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Use Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Frontend
+      - name: Build project
         run: npm run build
 
-      - name: Test Build
+      - name: Verify build output
         run: |
           if [ ! -d "build" ]; then
-            echo "Build directory not created!"
+            echo "Build failed: no build directory"
             exit 1
           fi
-          echo "Build successful!"
+          echo "Build successful"
 
-  deploy_render_backend:
+  deploy_to_render:
     name: Deploy Backend to Render
     runs-on: ubuntu-latest
     needs: build_and_test
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && success()
     steps:
-      - name: Trigger Render Deployment
+      - name: Trigger Render webhook
         run: |
-          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
-            echo "WARNING: RENDER_DEPLOY_HOOK not set in GitHub Secrets"
-            echo "Setup: https://github.com/${{ github.repository }}/settings/secrets/actions"
+          WEBHOOK="${{ secrets.RENDER_DEPLOY_HOOK }}"
+          if [ -z "$WEBHOOK" ]; then
+            echo "Skipping Render: webhook not configured"
             exit 0
           fi
-          
-          echo "Triggering Render deployment for backend..."
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"commit_sha\":\"${{ github.sha }}\",\"ref\":\"${{ github.ref }}\"}" \
-            -w "\nStatus: %{http_code}\n"
+          echo "Deploying to Render..."
+          curl -s -X POST "$WEBHOOK"
+          echo "Render deployment triggered"
         continue-on-error: true
 
-  deploy_vercel_frontend:
+  deploy_to_vercel:
     name: Deploy Frontend to Vercel
     runs-on: ubuntu-latest
     needs: build_and_test
-    if: github.ref == 'refs/heads/main'
-    env:
-      VERCEL_ENV: production
+    if: github.ref == 'refs/heads/main' && success()
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Deploy to Vercel
@@ -71,27 +67,19 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
+          vercel-args: --prod
         continue-on-error: true
 
-  notify_deployment:
-    name: Notify Deployment Status
+  deployment_complete:
+    name: Deployment Complete
     runs-on: ubuntu-latest
-    needs: [deploy_render_backend, deploy_vercel_frontend]
+    needs: [build_and_test, deploy_to_render, deploy_to_vercel]
     if: always()
     steps:
-      - name: Log Deployment Summary
+      - name: Summary
         run: |
-          echo "DEPLOYMENT SUMMARY"
+          echo "Deployment workflow complete"
           echo "Repository: ${{ github.repository }}"
           echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "Author: ${{ github.actor }}"
-          echo ""
-          echo "Backend Deploy Status: ${{ needs.deploy_render_backend.result }}"
-          echo "Frontend Deploy Status: ${{ needs.deploy_vercel_frontend.result }}"
-          echo ""
-          echo "Check deployment status at:"
-          echo "- Render: https://dashboard.render.com"
-          echo "- Vercel: https://vercel.com/dashboard"
+          echo "View results on GitHub Actions"
 
