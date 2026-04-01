@@ -360,9 +360,17 @@
   box-shadow: 0 1px 6px 0 rgba(100,100,200,0.04);
   margin-top: 8px;
   transition: box-shadow 0.2s;
+  color: #111827;
 }
 .drawer-section:hover {
   box-shadow: 0 2px 12px 0 rgba(100,100,200,0.10);
+}
+.drawer-section,
+.drawer-section span,
+.drawer-section strong,
+.drawer-section div,
+.drawer-section li {
+  color: #111827;
 }
 .drawer-address {
   background: #f8f9fa;
@@ -370,6 +378,7 @@
   border-radius: 5px;
   margin-top: 4px;
   font-size: 0.97rem;
+  color: #1f2937;
 }
 .drawer-products {
   list-style: disc inside;
@@ -378,6 +387,9 @@
 }
 .drawer-products li {
   margin-bottom: 4px;
+}
+.drawer-products li span {
+  display: block;
 }
 .drawer-timeline {
   list-style: none;

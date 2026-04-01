@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Copy } from 'lucide-react';
-import OrderTimeline from './OrderTimeline';
 import { Package, User, Mail, CreditCard, MapPin, Calendar, ShoppingBag, Clock, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import './OrderDetailsDrawer.css';
@@ -38,7 +37,7 @@ const getOrderDate = (order, type = 'created') => {
     return null;
 };
 
-export default function OrderDetailsDrawer({ open, onClose, order, loading: initialLoading }) {
+export default function OrderDetailsDrawer({ open, onClose, order }) {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -48,14 +47,12 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading: init
   const isAdmin = localStorage.getItem('role')?.toLowerCase() === 'admin';
   const [copied, setCopied] = useState(false);
 
-  // Debug: Log the admin secret to verify it's set
-  useEffect(() => {
-    // Only log in development mode
-    if (process.env.NODE_ENV === 'development') {
-      console.log('REACT_APP_ADMIN_SECRET:', process.env.REACT_APP_ADMIN_SECRET);
-      console.log('Is Admin:', isAdmin);
-    }
-  }, []);
+  const resolveOrderPayload = (data) => {
+    if (!data) return null;
+    if (data.order && typeof data.order === 'object') return data.order;
+    if (data.success && (data.orderId || data.userName || data.userEmail || data.shippingAddress || data.products)) return data;
+    return null;
+  };
 
   const handleCopyOrderId = () => {
     if (fullOrderData?.orderId || order?.orderId) {
@@ -76,9 +73,10 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading: init
       const response = await axios.get(`${BASE_URL}/api/admin/order/${order.orderId}`, {
         headers: adminSecret ? { 'x-admin-secret': adminSecret } : {}
       });
-      
-      if (response.data?.order) {
-        setFullOrderData(response.data.order);
+
+      const payload = resolveOrderPayload(response.data);
+      if (payload) {
+        setFullOrderData(payload);
       } else {
         // Fallback to original order if API doesn't return full data
         setFullOrderData(order);
@@ -165,7 +163,7 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading: init
             <>
               <div className="drawer-section d-flex align-items-center">
                 <CreditCard size={18} className="mr-2 text-info" />
-                <span><strong>Order ID:</strong> {fullOrderData.orderId}</span>
+                <span><strong>Order ID:</strong> {fullOrderData.orderId || 'N/A'}</span>
                 <button
                   className="btn btn-sm btn-outline-primary ml-2 d-flex align-items-center"
                   style={{borderRadius: '16px', fontSize: 13, padding: '2px 10px', marginLeft: 10, height: 28}}
@@ -178,11 +176,11 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading: init
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <User size={18} className="mr-2 text-primary" />
-                <span><strong>Customer:</strong> {fullOrderData.userName}</span>
+                <span><strong>Customer:</strong> {fullOrderData.userName || fullOrderData.shippingAddress?.fullName || 'N/A'}</span>
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <Mail size={18} className="mr-2 text-warning" />
-                <span><strong>Email:</strong> {fullOrderData.userEmail}</span>
+                <span><strong>Email:</strong> {fullOrderData.userEmail || fullOrderData.email || 'N/A'}</span>
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <Calendar size={18} className="mr-2 text-success" />
@@ -194,11 +192,11 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading: init
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <ShoppingBag size={18} className="mr-2 text-success" />
-                <span><strong>Status:</strong> {fullOrderData.orderStatus}</span>
+                <span><strong>Status:</strong> {fullOrderData.orderStatus || fullOrderData.orderstatus || 'N/A'}</span>
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <CreditCard size={18} className="mr-2 text-danger" />
-                <span><strong>Payment:</strong> {fullOrderData.paymentMethod} ({fullOrderData.paymentStatus})</span>
+                <span><strong>Payment:</strong> {fullOrderData.paymentMethod || 'N/A'} ({fullOrderData.paymentStatus || 'N/A'})</span>
               </div>
               <div className="drawer-section">
                 <MapPin size={18} className="mr-2 text-secondary" />
@@ -215,21 +213,30 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading: init
                 <ShoppingBag size={18} className="mr-2 text-info" />
                 <strong>Products:</strong>
                 <ul className="drawer-products mt-2">
-                  {fullOrderData.products?.map((p, i) => (
-                    <li key={i} style={{display:'flex',alignItems:'center',marginBottom:8}}>
-                      {p.image && (
-                        <img
-                          src={p.image.startsWith('http') ? p.image : `${BASE_URL}/productimages/${p.image}`}
-                          alt={p.name}
-                          style={{width:44,height:44,objectFit:'cover',borderRadius:8,marginRight:12,border:'1.5px solid #eee'}}
-                        />
-                      )}
-                      <div style={{marginLeft:12}}>
-                        <span>{p.name}</span>
-                        <span style={{fontSize:12,color:'#b91c1c',marginTop:2}}>{p.description}</span>
-                      </div>
-                    </li>
-                  ))}
+                  {(Array.isArray(fullOrderData.products) ? fullOrderData.products : []).map((p, i) => {
+                    const productName = p?.name || p?.productName || p?.title || p?.productid?.name || 'Product';
+                    const productDescription = p?.description || p?.productid?.description || '';
+                    const imageValue = p?.image || p?.pic1 || p?.productid?.pic1 || '';
+                    const imageSrc = typeof imageValue === 'string' && imageValue.length > 0
+                      ? (imageValue.startsWith('http') ? imageValue : `${BASE_URL}/productimages/${imageValue}`)
+                      : '';
+
+                    return (
+                      <li key={i} style={{display:'flex',alignItems:'center',marginBottom:8}}>
+                        {imageSrc && (
+                          <img
+                            src={imageSrc}
+                            alt={productName}
+                            style={{width:44,height:44,objectFit:'cover',borderRadius:8,marginRight:12,border:'1.5px solid #eee'}}
+                          />
+                        )}
+                        <div style={{marginLeft:12}}>
+                          <span>{productName}</span>
+                          <span style={{fontSize:12,color:'#b91c1c',marginTop:2}}>{productDescription}</span>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
               {/* Payment History Section */}
