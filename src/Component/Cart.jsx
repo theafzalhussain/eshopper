@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
@@ -24,21 +24,29 @@ export default function Cart() {
     const toast = useToast();
     const [subtotal, setSubtotal] = useState(0);
     const [shipping, setShipping] = useState(0);
-    const [discount, setDiscount] = useState(0);
+    const [baseDiscount, setBaseDiscount] = useState(0);
+    const [couponDiscount, setCouponDiscount] = useState(0);
     const [gst, setGst] = useState(0);
     const [coupon, setCoupon] = useState("");
     const [couponApplied, setCouponApplied] = useState(false);
     const [couponError, setCouponError] = useState("");
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false); // For update/remove/coupon
+    const [movingIds, setMovingIds] = useState([]);
     const userId = localStorage.getItem("userid");
     const [userMissing, setUserMissing] = useState(false);
+    const totalDiscount = Number(baseDiscount) + Number(couponDiscount);
+
+    const itemCount = useMemo(() => {
+        return cart.reduce((acc, item) => acc + Number(item.quantity ?? item.qty ?? 1), 0);
+    }, [cart]);
 
     async function fetchCartAndSummary() {
         if (!userId) {
             setUserMissing(true);
             setSubtotal(0);
-            setDiscount(0);
+            setBaseDiscount(0);
+            setCouponDiscount(0);
             setShipping(0);
             setGst(0);
             setLoading(false);
@@ -52,12 +60,29 @@ export default function Cart() {
             const summaryRes = await axios.get(`/api/cart/order-summary?userId=${userId}`);
             const s = summaryRes.data.summary || {};
             setSubtotal(s.subtotal || 0);
-            setDiscount(s.discount || 0);
+            setBaseDiscount(s.discount || 0);
             setShipping(s.shipping || 0);
             setGst(s.gst || 0);
+
+            // Keep coupon discount in sync when cart values change.
+            if (couponApplied && coupon) {
+                try {
+                    const couponRes = await axios.post('/api/cart/apply-coupon', { userId, coupon });
+                    if (couponRes.data && couponRes.data.success) {
+                        setCouponDiscount(couponRes.data.discount || 0);
+                        setCouponError("");
+                    } else {
+                        setCouponDiscount(0);
+                    }
+                } catch (couponErr) {
+                    setCouponDiscount(0);
+                    setCouponError(couponErr.response?.data?.message || "Coupon no longer applicable");
+                }
+            }
         } catch (e) {
             setSubtotal(0);
-            setDiscount(0);
+            setBaseDiscount(0);
+            setCouponDiscount(0);
             setShipping(0);
             setGst(0);
         }
@@ -65,7 +90,7 @@ export default function Cart() {
     }
 
     async function updateQty(item, op) {
-        let currentQty = Number(item.quantity);
+        let currentQty = Number(item.quantity ?? item.qty ?? 1);
         if (op === "dec" && currentQty === 1) return;
         let newQty = (op === "dec") ? currentQty - 1 : currentQty + 1;
         setActionLoading(true);
@@ -82,48 +107,65 @@ export default function Cart() {
         setActionLoading(false);
     }
 
-    async function removeProduct(id) {
-        if (window.confirm("Remove this item?")) {
-            setRemovingIds((prev) => [...prev, id]);
-            setActionLoading(true);
+    async function removeProduct(id, silent = false) {
+        setRemovingIds((prev) => [...prev, id]);
+        setActionLoading(true);
+        return new Promise((resolve) => {
             setTimeout(async () => {
                 try {
-                    await axios.delete(`/api/cart/remove-item/${id}`, { data: { userId } });
+                    await axios.delete(`/api/cart/remove-item/${id}`, {
+                        params: { userId, userid: userId },
+                        data: { userId, userid: userId }
+                    });
                     await fetchCartAndSummary();
-                    toast.info('Item removed from cart.');
+                    if (!silent) toast.info('Item removed from cart.');
                 } catch (e) {
                     toast.error('Failed to remove item.');
                 } finally {
                     setRemovingIds((prev) => prev.filter(rid => rid !== id));
                     setActionLoading(false);
+                    resolve();
                 }
-            }, 350); // match animation duration
-        }
+            }, 250);
+        });
     }
 
-
-    // Save for Later (moves to Wishlist collection in DB)
-    const { addWishlist } = require("../Store/ActionCreaters/WishlistActionCreators");
-    async function saveForLater(item) {
+    async function moveToWishlist(item) {
+        const itemId = item._id || item.id;
+        const productId = item.productid || item.product?._id || item.product || itemId;
+        if (!userId) {
+            toast.error('Please login first.');
+            return;
+        }
+        setMovingIds((prev) => [...prev, itemId]);
         setActionLoading(true);
         try {
-            // Add to wishlist in DB
-            await axios.post('/wishlist', {
-                userid: userId,
-                productid: item.productid || item.product?._id || item.product || item._id || item.id,
-                name: item.name,
-                color: item.color,
-                size: item.size,
-                price: item.price,
-                pic: item.pic
-            });
-            // Remove from cart
-            await removeProduct(item._id || item.id);
-            toast.success('Saved for later!');
+            const wishlistRes = await axios.get('/wishlist');
+            const existing = Array.isArray(wishlistRes.data) ? wishlistRes.data : [];
+            const alreadyInWishlist = existing.some((w) =>
+                String(w.userid) === String(userId) && String(w.productid) === String(productId)
+            );
+
+            if (!alreadyInWishlist) {
+                await axios.post('/wishlist', {
+                    userid: userId,
+                    productid: productId,
+                    name: item.name || item.product?.name,
+                    color: item.color || item.product?.color,
+                    size: item.size || item.product?.size,
+                    price: Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0),
+                    pic: item.pic || item.product?.pic1 || ''
+                });
+            }
+
+            await removeProduct(itemId, true);
+            toast.success(alreadyInWishlist ? 'Already in wishlist, removed from cart.' : 'Moved to wishlist successfully.');
         } catch (e) {
-            toast.error('Failed to save for later.');
+            toast.error('Failed to move item to wishlist.');
+        } finally {
+            setMovingIds((prev) => prev.filter((id) => id !== itemId));
+            setActionLoading(false);
         }
-        setActionLoading(false);
     }
 
     async function handleApplyCoupon() {
@@ -133,7 +175,7 @@ export default function Cart() {
         try {
             const res = await axios.post('/api/cart/apply-coupon', { userId, coupon });
             if (res.data && res.data.success) {
-                setDiscount((prev) => prev + (res.data.discount || 0));
+                setCouponDiscount(res.data.discount || 0);
                 setCouponApplied(true);
                 setCouponError("");
             } else {
@@ -148,13 +190,14 @@ export default function Cart() {
     useEffect(() => { fetchCartAndSummary(); }, []);
 
     return (
-        <div style={{ backgroundColor: "#f4f7f6", minHeight: "100vh", boxSizing: 'border-box', maxWidth: '100vw', position: 'relative' }}>
+        <div className="cart-page-shell" style={{ minHeight: "100vh", boxSizing: 'border-box', maxWidth: '100vw', position: 'relative' }}>
             {/* Spinner Overlay for Loading States */}
             {(loading || actionLoading) && <Spinner />}
             {/* Header Section */}
-            <div className="py-5 bg-dark text-center shadow-sm">
-                <h2 className="text-white font-weight-bold mb-0">Shopping Cart</h2>
-                <nav className="small mt-2"><Link to="/" className="text-info">Home</Link> <span className="text-white-50">/ Cart</span></nav>
+            <div className="py-5 text-center shadow-sm cart-hero-band">
+                <h2 className="text-white font-weight-bold mb-1">Shopping Cart</h2>
+                <p className="text-white-50 mb-2">Luxury picks, ready for checkout</p>
+                <nav className="small mt-1"><Link to="/" className="text-info">Home</Link> <span className="text-white-50">/ Cart</span></nav>
             </div>
 
             <div className="container py-5">
@@ -168,6 +211,13 @@ export default function Cart() {
                     <div className="row">
                         {/* Cart Items List */}
                         <div className="col-lg-8 col-12 mb-4 mb-lg-0">
+                            <div className="cart-premium-intro mb-3">
+                                <div>
+                                    <p className="intro-label mb-1">Your Bag</p>
+                                    <h4 className="intro-title mb-0">{itemCount} curated item{itemCount !== 1 ? 's' : ''}</h4>
+                                </div>
+                                <div className="intro-value">₹{subtotal}</div>
+                            </div>
                             <div className="d-none d-md-flex row border-bottom pb-2 mb-3 text-muted small font-weight-bold px-3">
                                 <div className="col-5">PRODUCT</div>
                                 <div className="col-2 text-center">PRICE</div>
@@ -184,6 +234,7 @@ export default function Cart() {
                                     const itemQty = Number(item.quantity ?? item.qty ?? 1);
                                     const itemPrice = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0);
                                     const itemTotal = itemPrice * itemQty;
+                                    const isMoving = movingIds.includes(itemId);
 
                                     return (
                                     <motion.div
@@ -193,9 +244,18 @@ export default function Cart() {
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, x: 200 }}
                                         transition={{ duration: 0.35 }}
-                                        className="cart-premium-row bg-white p-3 mb-3 border-0 rounded-lg shadow-sm"
+                                        className="cart-premium-row bg-white p-3 mb-3 border-0 rounded-lg shadow-sm position-relative"
                                         style={removingIds.includes(itemId) ? { pointerEvents: 'none', opacity: 0.5 } : {}}
                                     >
+                                        <button
+                                            key={itemId + '-remove-top'}
+                                            onClick={() => removeProduct(itemId)}
+                                            className="btn btn-link p-0 premium-x-btn premium-x-top"
+                                            title="Remove"
+                                            disabled={isMoving}
+                                        >
+                                            <svg width="24" height="24" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#fff4f4"/><path d="M7 7l6 6M13 7l-6 6" stroke="#d9534f" strokeWidth="2" strokeLinecap="round"/></svg>
+                                        </button>
                                         <div className="d-flex align-items-center premium-cart-grid">
                                             {/* Product Image - Fixed Aspect Ratio, Fully Rounded */}
                                             <div className="cart-img-col d-flex align-items-center justify-content-center" style={{ minWidth: 90, minHeight: 90 }}>
@@ -213,27 +273,28 @@ export default function Cart() {
                                             <div className="cart-details-col flex-grow-1 px-3">
                                                 <h6 className="mb-1 font-weight-bold text-dark" key={itemId + '-name'}>{itemName}</h6>
                                                 <div className="small text-muted mb-1" key={itemId + '-color'}>{itemColor} | Size: {itemSize}</div>
-                                                <div className="d-flex align-items-center mt-2">
-                                                    <button key={itemId + '-save'} onClick={() => saveForLater(item)} className="btn btn-link btn-sm text-primary p-0 mr-2">Save for Later</button>
-                                                    <button key={itemId + '-wishlist'} onClick={() => addWishlist(item)} className="btn btn-link btn-sm text-warning p-0 mr-2">Move to Wishlist (Local)</button>
-                                                    <span className="badge badge-light border px-2 py-1 ml-2" key={itemId + '-badge'}>ID: {itemId}</span>
+                                                <div className="d-flex align-items-center mt-2 cart-action-row">
+                                                    <button
+                                                        key={itemId + '-wishlist'}
+                                                        onClick={() => moveToWishlist(item)}
+                                                        className="btn btn-sm premium-wishlist-btn mr-2"
+                                                        disabled={isMoving}
+                                                    >
+                                                        {isMoving ? 'Moving...' : 'Move to Wishlist'}
+                                                    </button>
+                                                    <span className="badge premium-id-pill px-2 py-1" key={itemId + '-badge'}>SKU: {itemId}</span>
                                                 </div>
                                             </div>
                                             {/* Quantity & Price */}
-                                            <div className="cart-qtyprice-col d-flex flex-column align-items-end">
-                                                <div className="d-flex align-items-center mb-2">
-                                                    <button key={itemId + '-dec'} onClick={() => updateQty(item, "dec")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">−</button>
-                                                    <span className="mx-2 font-weight-bold" style={{ minWidth: "24px" }} key={itemId + '-qty'}>{itemQty}</span>
-                                                    <button key={itemId + '-inc'} onClick={() => updateQty(item, "inc")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">+</button>
+                                            <div className="cart-qtyprice-col d-flex flex-column align-items-center justify-content-center">
+                                                <div className="d-flex align-items-center mb-1 premium-qty-line">
+                                                    <div className="d-flex align-items-center premium-qty-wrap mr-2">
+                                                    <button key={itemId + '-dec'} onClick={() => updateQty(item, "dec")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn" disabled={isMoving}>−</button>
+                                                    <span className="mx-2 font-weight-bold premium-qty-count" style={{ minWidth: "30px" }} key={itemId + '-qty'}>{itemQty}</span>
+                                                    <button key={itemId + '-inc'} onClick={() => updateQty(item, "inc")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn" disabled={isMoving}>+</button>
+                                                    </div>
+                                                    <div className="font-weight-bold text-info premium-live-price" key={itemId + '-price'}>₹{itemTotal}</div>
                                                 </div>
-                                                <div className="font-weight-bold text-info mb-1" key={itemId + '-price'}>₹{itemPrice}</div>
-                                                <div className="text-muted small" key={itemId + '-total'}>Total: ₹{itemTotal}</div>
-                                            </div>
-                                            {/* Delete Icon */}
-                                            <div className="cart-delete-col ml-3">
-                                                <button key={itemId + '-remove'} onClick={() => removeProduct(itemId)} className="btn btn-link p-0 premium-x-btn" title="Remove">
-                                                    <svg width="28" height="28" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#f8f9fa"/><path d="M7 7l6 6M13 7l-6 6" stroke="#d9534f" strokeWidth="2" strokeLinecap="round"/></svg>
-                                                </button>
                                             </div>
                                         </div>
                                     </motion.div>
@@ -254,8 +315,14 @@ export default function Cart() {
                                 </div>
                                 <div className="d-flex justify-content-between mb-2">
                                     <span className="text-muted">Instant Discount</span>
-                                    <span className="text-success font-weight-bold" style={{ color: "#B8860B" }}>-₹{discount}</span>
+                                    <span className="text-success font-weight-bold" style={{ color: "#B8860B" }}>-₹{totalDiscount}</span>
                                 </div>
+                                {couponApplied && couponDiscount > 0 && (
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <span className="text-muted">Coupon ({coupon.toUpperCase()})</span>
+                                        <span className="text-success font-weight-bold">-₹{couponDiscount}</span>
+                                    </div>
+                                )}
                                 <div className="d-flex justify-content-between mb-2">
                                     <span className="text-muted">Shipping Fee</span>
                                     <span className={shipping === 0 ? "text-success font-weight-bold" : "font-weight-bold"} style={{ color: shipping === 0 ? "#B8860B" : undefined }}>
@@ -268,21 +335,21 @@ export default function Cart() {
                                 </div>
                                 <div className="d-flex justify-content-between mb-3 border-top pt-3">
                                     <h5 className="font-weight-bold">Grand Total</h5>
-                                    <h5 className="font-weight-bold" style={{ color: "#B8860B" }}>₹{subtotal - discount + shipping + gst}</h5>
+                                    <h5 className="font-weight-bold" style={{ color: "#B8860B" }}>₹{subtotal - totalDiscount + shipping + gst}</h5>
                                 </div>
                                 {/* Coupon Input */}
                                 <div className="input-group mb-3 premium-coupon-group">
                                     <input type="text" className="form-control" placeholder="Apply Coupon" value={coupon} onChange={e => setCoupon(e.target.value)} disabled={couponApplied}
                                         style={{ border: "1px solid #eee", borderRight: 0, borderRadius: "50px 0 0 50px" }} />
                                     <div className="input-group-append">
-                                        <button className="btn" style={{ border: "1px solid #eee", borderLeft: 0, borderRadius: "0 50px 50px 0", background: "#B8860B", color: "#fff" }} type="button" onClick={handleApplyCoupon} disabled={couponApplied}>Apply</button>
+                                        <button className="btn" style={{ border: "1px solid #eee", borderLeft: 0, borderRadius: "0 50px 50px 0", background: "#B8860B", color: "#fff" }} type="button" onClick={handleApplyCoupon} disabled={couponApplied || !coupon.trim()}>Apply</button>
                                     </div>
                                 </div>
                                 {couponError && <div className="text-danger small mb-2">{couponError}</div>}
                                 {couponApplied && <div className="text-success small mb-2">Coupon Applied!</div>}
                                 {/* Sticky Checkout Button for Mobile */}
                                 <Link to="/checkout" className="btn btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold premium-checkout-btn mt-2 sticky-mobile-checkout" style={{ background: "linear-gradient(90deg, #B8860B 0%, #f6e27a 100%)", color: "#222", border: "none", letterSpacing: 1 }}>
-                                    {`PROCEED TO CHECKOUT (${cart.reduce((acc, item) => acc + Number(item.quantity), 0)} item${cart.reduce((acc, item) => acc + Number(item.quantity), 0) !== 1 ? 's' : ''})`}
+                                    {`PROCEED TO CHECKOUT (${itemCount} item${itemCount !== 1 ? 's' : ''})`}
                                 </Link>
                                 {/* Security Badges */}
                                 <div className="text-center mt-4">
@@ -313,6 +380,46 @@ export default function Cart() {
             <style dangerouslySetInnerHTML={{ __html: `
                 /* Checkbox scale fix */
                 input[type="checkbox"] { width: 18px !important; height: 18px !important; }
+                .cart-page-shell {
+                    background:
+                        radial-gradient(circle at 2% 2%, rgba(191, 219, 254, 0.2), transparent 30%),
+                        radial-gradient(circle at 98% 4%, rgba(253, 230, 138, 0.22), transparent 30%),
+                        linear-gradient(180deg, #f5f7fa 0%, #edf1f5 100%);
+                }
+                .cart-hero-band {
+                    background: linear-gradient(120deg, #1f2937, #111827 55%, #374151);
+                }
+                .cart-premium-intro {
+                    border: 1px solid #e7ebf0;
+                    border-radius: 16px;
+                    padding: 14px 16px;
+                    background: linear-gradient(130deg, #ffffff 0%, #f8fafc 100%);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+                }
+                .intro-label {
+                    color: #64748b;
+                    font-size: 12px;
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
+                    font-weight: 700;
+                }
+                .intro-title {
+                    color: #0f172a;
+                    font-size: 1.15rem;
+                    font-weight: 800;
+                }
+                .intro-value {
+                    background: linear-gradient(90deg, #0ea5b7, #0284c7);
+                    color: #ffffff;
+                    border-radius: 999px;
+                    padding: 8px 14px;
+                    font-weight: 800;
+                    font-size: 0.95rem;
+                    box-shadow: 0 6px 14px rgba(2, 132, 199, 0.28);
+                }
                 /* Sticky checkout button for mobile */
                 @media (max-width: 767.98px) {
                     .sticky-mobile-checkout {
@@ -335,21 +442,56 @@ export default function Cart() {
                 .rounded-pill { border-radius: 50px !important; }
                 .btn-info { background-color: #17a2b8; border-color: #17a2b8; }
                 .btn-info:hover { background-color: #138496; border-color: #117a8b; transform: translateY(-2px); }
-                .cart-premium-row { border-radius: 1.2rem !important; box-shadow: 0 2px 12px #f3f3f3 !important; }
-                .premium-cart-grid { display: flex; flex-wrap: wrap; align-items: center; }
+                .cart-premium-row {
+                    border-radius: 1.25rem !important;
+                    border: 1px solid #e7ebf0 !important;
+                    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06) !important;
+                    background: linear-gradient(145deg, #ffffff 0%, #f9fbfd 100%);
+                    padding-right: 42px !important;
+                }
+                .premium-cart-grid { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
                 .cart-img-col { flex: 0 0 90px; min-width: 90px; min-height: 90px; }
                 .cart-details-col { min-width: 180px; }
-                .cart-qtyprice-col { min-width: 120px; }
-                .cart-delete-col { min-width: 40px; }
+                .cart-qtyprice-col { min-width: 140px; margin-right: 8px; }
+                .premium-wishlist-btn { border: 1px solid #b9963a; color: #7a5c1f; background: linear-gradient(90deg, #fff8e1, #fef3c7); border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 700; }
+                .premium-wishlist-btn:hover { background: #f9edc8; color: #5f4717; }
+                .premium-id-pill { background: linear-gradient(120deg, #f3f4f6, #e9ecef); color: #556; border: 1px dashed #c8ced7; border-radius: 999px; font-weight: 700; font-size: 11px; }
+                .premium-id-pill { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
                 .premium-x-btn svg { transition: box-shadow 0.2s; border-radius: 50%; }
                 .premium-x-btn:hover svg { box-shadow: 0 2px 8px #f8d7da; background: #fff0f0; }
-                .premium-qty-btn { width: 32px; height: 32px; font-size: 20px; background: #f8f9fa; color: #333; }
+                .premium-x-top { position: absolute; top: 12px; right: 12px; z-index: 5; }
+                .premium-qty-wrap { background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e5eaf0; border-radius: 999px; padding: 4px 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.9); }
+                .premium-qty-line { gap: 8px; }
+                .premium-qty-count { text-align: center; color: #1f2937; }
+                .premium-live-price { font-size: 1.2rem; line-height: 1; }
+                .premium-qty-btn { width: 30px; height: 30px; font-size: 19px; background: #ffffff; color: #333; }
                 .premium-qty-btn:hover { background: #e2e6ea; }
-                .premium-summary-card { border-radius: 1.5rem !important; box-shadow: 0 4px 24px #f3f3f3 !important; }
+                .premium-wishlist-btn:disabled, .premium-qty-btn:disabled, .premium-x-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+                .premium-summary-card {
+                    border-radius: 1.4rem !important;
+                    border: 1px solid #e7ebf0 !important;
+                    box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08) !important;
+                    background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+                }
                 .premium-coupon-group input { border-radius: 50px 0 0 50px !important; }
                 .premium-coupon-group .btn { border-radius: 0 50px 50px 0 !important; }
                 .premium-checkout-btn { background: linear-gradient(90deg, #b19d5e 0%, #f6e27a 100%); color: #222; border: none; letter-spacing: 1px; }
                 .premium-checkout-btn:hover { background: linear-gradient(90deg, #f6e27a 0%, #b19d5e 100%); color: #111; transform: translateY(-2px); }
+                @media (max-width: 767.98px) {
+                    .premium-cart-grid { align-items: flex-start; }
+                    .cart-details-col { width: calc(100% - 102px); min-width: 0; padding-right: 4px !important; }
+                    .cart-qtyprice-col { width: 100%; margin-left: 102px; align-items: center !important; }
+                    .cart-premium-row { padding-right: 36px !important; }
+                    .premium-x-top { top: 8px; right: 8px; }
+                    .cart-action-row { flex-wrap: wrap; gap: 6px; }
+                    .premium-id-pill { max-width: 140px; }
+                    .premium-wishlist-btn { padding: 4px 10px; font-size: 11px; }
+                    .cart-qtyprice-col { margin-top: 6px; }
+                    .premium-qty-line { width: 100%; justify-content: center; }
+                    .cart-premium-intro { padding: 12px; }
+                    .intro-title { font-size: 1rem; }
+                    .intro-value { font-size: 0.85rem; padding: 7px 12px; }
+                }
             `}} />
         </div>
     );

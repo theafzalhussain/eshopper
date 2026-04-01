@@ -18,7 +18,7 @@ exports.addToCart = async (req, res) => {
             cart.items.push({ product: productId, quantity: qty });
         }
         await cart.save();
-        cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+        cart = await Cart.findById(cart._id).populate('items.product');
         // Map cart items to frontend-friendly format
         const mappedCart = {
             _id: cart._id,
@@ -172,14 +172,39 @@ exports.updateQuantity = async (req, res) => {
 // Remove an item from cart
 exports.removeItem = async (req, res) => {
     try {
-        const userId = req.user?._id || req.body.userId;
+        const userId = req.user?._id || req.body?.userId || req.body?.userid || req.query?.userId || req.query?.userid;
         const { itemId } = req.params;
-        if (!userId || !itemId) return res.status(400).json({ success: false, message: 'Missing data.' });
-        let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+        if (!itemId) return res.status(400).json({ success: false, message: 'Missing item id.' });
+
+        let cart = null;
+        if (userId && mongoose.Types.ObjectId.isValid(String(userId))) {
+            cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+        }
+
+        // Fallback lookup by cart item id / product id when userId is missing or stale on client.
+        if (!cart) {
+            cart = await Cart.findOne({ 'items._id': itemId });
+        }
+
+        if (!cart && mongoose.Types.ObjectId.isValid(String(itemId))) {
+            cart = await Cart.findOne({ 'items.product': new mongoose.Types.ObjectId(itemId) });
+        }
+
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
-        cart.items.id(itemId).remove();
+
+        const beforeCount = cart.items.length;
+        cart.items = cart.items.filter((item) => {
+            const subId = String(item._id || '');
+            const productId = String(item.product || '');
+            return subId !== String(itemId) && productId !== String(itemId);
+        });
+
+        if (cart.items.length === beforeCount) {
+            return res.status(404).json({ success: false, message: 'Item not found in cart.' });
+        }
+
         await cart.save();
-        cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+        cart = await Cart.findById(cart._id).populate('items.product');
         const mappedCart = cart ? {
             _id: cart._id,
             user: cart.user,
@@ -198,6 +223,7 @@ exports.removeItem = async (req, res) => {
         } : null;
         res.json({ success: true, cart: mappedCart });
     } catch (err) {
+        console.error('[ERROR] /api/cart/remove-item:', err);
         res.status(500).json({ success: false, message: 'Failed to remove item.' });
     }
 };

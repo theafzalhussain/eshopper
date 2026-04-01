@@ -5,12 +5,18 @@ export function WishlistReducer(state = [], action) {
         case ADD_WISHLIST_RED:
             return [...state, action.data];
         case GET_WISHLIST_RED:
-            return action.data;
+            return Array.isArray(action.data) ? action.data : state;
         case DELETE_WISHLIST_RED:
-            return state.filter(item => item.id !== action.data.id);
+            return state.filter(item => {
+                const currentId = item.id || item._id;
+                const targetId = action.data?.id || action.data?._id || action.data;
+                return String(currentId) !== String(targetId);
+            });
         case UPDATE_WISHLIST_RED:
             return state.map(item =>
-                item.id === action.data.id ? { ...item, ...action.data } : item
+                String(item.id || item._id) === String(action.data?.id || action.data?._id)
+                    ? { ...item, ...action.data }
+                    : item
             );
         default:
             return state;
