@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
@@ -9,10 +9,12 @@ import { useToast } from './ToastNotification';
 import axios from 'axios';
 import { BASE_URL } from '../constants';
 import Spinner from './Spinner';
+import io from 'socket.io-client';
 axios.defaults.baseURL = BASE_URL;
 
 export default function Cart() {
     const dispatch = useDispatch();
+    const socketRef = useRef(null);
     const cartState = useSelector(state => state.CartStateData);
     // Filter out duplicate items by _id to ensure unique React keys
     const cartRaw = cartState && cartState.items ? cartState.items : [];
@@ -32,7 +34,6 @@ export default function Cart() {
     const [couponError, setCouponError] = useState("");
     const [availableCoupons, setAvailableCoupons] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState(false); // For update/remove/coupon
     const [movingIds, setMovingIds] = useState([]);
     const userId = localStorage.getItem("userid");
     const [userMissing, setUserMissing] = useState(false);
@@ -96,42 +97,36 @@ export default function Cart() {
         let currentQty = Number(item.quantity ?? item.qty ?? 1);
         if (op === "dec" && currentQty === 1) return;
         let newQty = (op === "dec") ? currentQty - 1 : currentQty + 1;
-        setActionLoading(true);
-        try {
-            await axios.put(`/api/cart/update-quantity/${item._id || item.id}`, { userId, quantity: newQty });
-            await fetchCartAndSummary();
-        } catch (e) {
-            if (e.response && e.response.data && e.response.data.message && e.response.data.message.includes('Out of Stock')) {
-                toast.error(e.response.data.message);
-            } else {
-                toast.error('Failed to update quantity.');
-            }
+        
+        if (!socketRef.current || !socketRef.current.connected) {
+            toast.error('Connection lost. Please refresh.');
+            return;
         }
-        setActionLoading(false);
+
+        // Emit socket event (NO LOADING - instant update)
+        socketRef.current.emit('cart:update-quantity', {
+            userId,
+            productId: item._id || item.id,
+            quantity: newQty
+        });
     }
 
     async function removeProduct(id, silent = false) {
         setRemovingIds((prev) => [...prev, id]);
-        setActionLoading(true);
-        return new Promise((resolve) => {
-            setTimeout(async () => {
-                try {
-                    await axios.delete(`/api/cart/remove-item/${id}`, {
-                        params: { userId, userid: userId },
-                        data: { userId, userid: userId }
-                    });
-                    await fetchCartAndSummary();
-                    if (!silent) toast.info('Item removed from cart.');
-                } catch (e) {
-                    const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to remove item.';
-                    toast.error(msg);
-                } finally {
-                    setRemovingIds((prev) => prev.filter(rid => rid !== id));
-                    setActionLoading(false);
-                    resolve();
-                }
-            }, 250);
+
+        if (!socketRef.current || !socketRef.current.connected) {
+            toast.error('Connection lost. Please refresh.');
+            setRemovingIds((prev) => prev.filter(rid => rid !== id));
+            return Promise.resolve();
+        }
+
+        // Emit socket event (instant removal, no loading)
+        socketRef.current.emit('cart:remove-item', {
+            userId,
+            productId: id
         });
+
+        return Promise.resolve();
     }
 
     async function moveToWishlist(item) {
@@ -142,7 +137,6 @@ export default function Cart() {
             return;
         }
         setMovingIds((prev) => [...prev, itemId]);
-        setActionLoading(true);
         try {
             const wishlistRes = await axios.get('/wishlist');
             const existing = Array.isArray(wishlistRes.data) ? wishlistRes.data : [];
@@ -168,20 +162,19 @@ export default function Cart() {
             toast.error('Failed to move item to wishlist.');
         } finally {
             setMovingIds((prev) => prev.filter((id) => id !== itemId));
-            setActionLoading(false);
         }
     }
 
     async function handleApplyCoupon() {
         if (!coupon || couponApplied) return;
         setCouponError("");
-        setActionLoading(true);
         try {
             const res = await axios.post('/api/cart/apply-coupon', { userId, coupon });
             if (res.data && res.data.success) {
                 setCouponDiscount(res.data.discount || 0);
                 setCouponApplied(true);
                 setCouponError("");
+                toast.success('Coupon applied successfully!');
                 localStorage.setItem('appliedCoupon', JSON.stringify({
                     userId,
                     code: String(coupon).trim().toUpperCase(),
@@ -194,7 +187,6 @@ export default function Cart() {
             localStorage.removeItem('appliedCoupon');
             setCouponError(err.response?.data?.message || "Invalid or already applied coupon");
         }
-        setActionLoading(false);
     }
 
     async function fetchAvailableCoupons() {
@@ -222,14 +214,87 @@ export default function Cart() {
             }
         }
 
+        if (!userId) {
+            setUserMissing(true);
+            setLoading(false);
+            return;
+        }
+
+        // Set up Socket.IO connection for real-time updates
+        if (!socketRef.current) {
+            socketRef.current = io(BASE_URL, {
+                auth: { userId },
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: 5,
+                transports: ['websocket', 'polling']
+            });
+
+            // On connection success
+            socketRef.current.on('connected', (data) => {
+                console.log('🔗 Cart socket connected:', data);
+            });
+
+            // Real-time cart update (quantity changed)
+            socketRef.current.on('cart:updated', (data) => {
+                if (data.success) {
+                    toast.success('Quantity updated!');
+                    dispatch(getCart()); // Refresh Redux state
+                    socketRef.current.emit('cart:recalculate', { userId });
+                }
+            });
+
+            // Real-time item removed
+            socketRef.current.on('cart:item-removed', (data) => {
+                if (data.success) {
+                    setRemovingIds((prev) => prev.filter(rid => rid !== data.productId));
+                    toast.info(data.message || 'Item removed!');
+                    dispatch(getCart()); // Refresh Redux state
+                    socketRef.current.emit('cart:recalculate', { userId });
+                }
+            });
+
+            // Real-time cart summary update
+            socketRef.current.on('cart:summary-updated', (data) => {
+                setSubtotal(data.subtotal || 0);
+                setBaseDiscount(data.discount || 0);
+                setShipping(data.shipping || 0);
+                setGst(data.gst || 0);
+            });
+
+            // Socket error handling
+            socketRef.current.on('cart:error', (data) => {
+                toast.error(data.message || 'Cart operation failed');
+                setRemovingIds([]);
+            });
+
+            socketRef.current.on('disconnect', () => {
+                console.log('⚠️ Cart socket disconnected');
+            });
+
+            socketRef.current.on('error', (error) => {
+                console.error('Socket error:', error);
+            });
+        }
+
+        // Initial data fetch
         fetchCartAndSummary();
         fetchAvailableCoupons();
-    }, []);
+
+        // Cleanup on unmount
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
+            }
+        };
+    }, [userId]);
 
     return (
         <div className="cart-page-shell" style={{ minHeight: "100vh", boxSizing: 'border-box', maxWidth: '100vw', position: 'relative' }}>
             {/* Spinner Overlay for Loading States */}
-            {(loading || actionLoading) && <Spinner />}
+            {loading && <Spinner />}
             {/* Header Section */}
             <div className="py-5 text-center shadow-sm cart-hero-band">
                 <h2 className="text-white font-weight-bold mb-1">Shopping Cart</h2>

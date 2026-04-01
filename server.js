@@ -221,6 +221,134 @@ io.on('connection', (socket) => {
     socket.emit('connected', { ok: true, room: userRoom });
     console.log(`✅ User ${socket.data.userId} connected to room ${userRoom}`);
 
+    // 🛒 CART: UPDATE QUANTITY (Real-time without loading)
+    socket.on('cart:update-quantity', async (data) => {
+        try {
+            const { userId, productId, quantity } = data;
+            if (!userId || !productId || quantity < 1) {
+                socket.emit('cart:error', { message: 'Invalid request' });
+                return;
+            }
+
+            const cart = await Cart.findOne({ userid: userId });
+            if (!cart) {
+                socket.emit('cart:error', { message: 'Cart not found' });
+                return;
+            }
+
+            const item = cart.items.find(i => String(i._id) === String(productId));
+            if (!item) {
+                socket.emit('cart:error', { message: 'Item not found in cart' });
+                return;
+            }
+
+            // Check stock
+            const product = await Product.findById(item.productid || item.product?._id);
+            if (product && Number(quantity) > Number(product.stock || 0)) {
+                socket.emit('cart:error', { message: 'Out of Stock' });
+                return;
+            }
+
+            item.quantity = quantity;
+            await cart.save();
+
+            // Send updated cart immediately (no loading)
+            socket.emit('cart:updated', { 
+                success: true, 
+                item: item,
+                message: 'Quantity updated' 
+            });
+        } catch (e) {
+            console.error('Cart update error:', e);
+            socket.emit('cart:error', { message: 'Failed to update quantity' });
+        }
+    });
+
+    // 🛒 CART: REMOVE ITEM (Real-time without loading)
+    socket.on('cart:remove-item', async (data) => {
+        try {
+            const { userId, productId } = data;
+            if (!userId || !productId) {
+                socket.emit('cart:error', { message: 'Invalid request' });
+                return;
+            }
+
+            const cart = await Cart.findOne({ userid: userId });
+            if (!cart) {
+                socket.emit('cart:error', { message: 'Cart not found' });
+                return;
+            }
+
+            const itemIndex = cart.items.findIndex(i => String(i._id) === String(productId));
+            if (itemIndex === -1) {
+                socket.emit('cart:error', { message: 'Item not found' });
+                return;
+            }
+
+            cart.items.splice(itemIndex, 1);
+            await cart.save();
+
+            // Send removed item confirmation
+            socket.emit('cart:item-removed', { 
+                success: true, 
+                productId: productId,
+                message: 'Item removed from cart' 
+            });
+        } catch (e) {
+            console.error('Cart remove error:', e);
+            socket.emit('cart:error', { message: 'Failed to remove item' });
+        }
+    });
+
+    // 🛒 CART: RECALCULATE SUMMARY (Get fresh totals)
+    socket.on('cart:recalculate', async (data) => {
+        try {
+            const { userId } = data;
+            if (!userId) {
+                socket.emit('cart:error', { message: 'Invalid userId' });
+                return;
+            }
+
+            const cart = await Cart.findOne({ userid: userId }).populate('items.productid');
+            if (!cart || !cart.items.length) {
+                socket.emit('cart:summary-updated', { 
+                    subtotal: 0, 
+                    discount: 0, 
+                    shipping: 0, 
+                    gst: 0 
+                });
+                return;
+            }
+
+            let subtotal = 0;
+            let totalDiscount = 0;
+            cart.items.forEach(item => {
+                const price = Number(item.price || item.productid?.finalprice || 0);
+                const qty = Number(item.quantity || 1);
+                const itemTotal = price * qty;
+                subtotal += itemTotal;
+
+                if (item.discount) {
+                    totalDiscount += item.discount * qty;
+                }
+            });
+
+            const shipping = subtotal > 1000 ? 0 : 100;
+            const gst = Math.round(subtotal * 0.1);
+
+            socket.emit('cart:summary-updated', { 
+                subtotal, 
+                discount: totalDiscount, 
+                shipping, 
+                gst,
+                items: cart.items
+            });
+        } catch (e) {
+            console.error('Cart recalculate error:', e);
+            socket.emit('cart:error', { message: 'Failed to recalculate' });
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log(`❌ User ${socket.data.userId} disconnected`);
     });
