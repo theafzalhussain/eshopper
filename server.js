@@ -99,6 +99,14 @@ const allowedOrigins = [
     'http://127.0.0.1:3001',
 ].filter(Boolean);
 
+const extraAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+const isVercelPreviewOrigin = (origin = '') => /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
+const isTrustedOrigin = (origin = '') => allowedOrigins.includes(origin) || extraAllowedOrigins.includes(origin) || isVercelPreviewOrigin(origin);
+
 // 🔒 CORS - Robust production config
 const corsOptions = {
     origin: function(origin, callback) {
@@ -106,7 +114,7 @@ const corsOptions = {
             console.log('[CORS] No Origin header, allowing request (likely server-to-server or curl)');
             return callback(null, true);
         }
-        if (allowedOrigins.includes(origin)) {
+        if (isTrustedOrigin(origin)) {
             console.log(`[CORS] Allowed origin: ${origin}`);
             return callback(null, true);
         }
@@ -152,8 +160,7 @@ const httpServer = http.createServer(app); // 🔴 CREATE HTTP SERVER + SOCKET.I
 const io = new Server(httpServer, {
     cors: {
         origin: function(origin, callback) {
-            // Allow localhost WebSocket connections
-            if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || allowedOrigins.includes(origin)) {
+            if (!origin || isTrustedOrigin(origin)) {
                 callback(null, true);
             } else {
                 callback(new Error('CORS policy violation'), false);
