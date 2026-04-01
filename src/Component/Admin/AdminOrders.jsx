@@ -1,55 +1,67 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    AlertCircle,
-    Check,
     CheckCircle2,
-    ChevronDown,
-    Crown,
+    Clock,
     Download,
     FileText,
     Loader2,
     MapPin,
     Package,
-    RefreshCw,
     Search,
-    ShieldCheck,
-    SlidersHorizontal,
-    Sparkles,
-    Truck,
-    Zap
+    Truck
 } from 'lucide-react';
 import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import io from 'socket.io-client';
+import OrderDetailsDrawer from './OrderDetailsDrawer';
 import './AdminOrders.css';
 
 const ALLOWED_STATUSES = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered'];
 
-const STATUS_META = {
-    Pending: { icon: AlertCircle, className: 'status-pending' },
-    Confirmed: { icon: CheckCircle2, className: 'status-confirmed' },
-    Shipped: { icon: Truck, className: 'status-shipped' },
-    'Out for Delivery': { icon: MapPin, className: 'status-out-for-delivery' },
-    Delivered: { icon: Check, className: 'status-delivered' }
+const STATUS_COLORS = {
+    Pending: 'status-pending',
+    Confirmed: 'status-confirmed',
+    Shipped: 'status-shipped',
+    'Out for Delivery': 'status-out-for-delivery',
+    Delivered: 'status-delivered'
 };
 
-const PREF_KEY = 'admin_orders_preferences_v2';
-
-const formatCurrency = (value) => `INR ${Number(value || 0).toLocaleString('en-IN')}`;
-const formatDateTime = (value) => {
-    if (!value) return 'N/A';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'N/A';
-    return date.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+const STATUS_ICONS = {
+    Pending: Clock,
+    Confirmed: CheckCircle2,
+    Shipped: Truck,
+    'Out for Delivery': MapPin,
+    Delivered: CheckCircle2
 };
 
-const getSlaMeta = (updatedAt) => {
-    const date = new Date(updatedAt || Date.now());
-    const ageHours = Math.max(0, (Date.now() - date.getTime()) / (1000 * 60 * 60));
+const PAYMENT_STATUSES = ['All', 'Paid', 'Pending', 'Failed', 'COD'];
 
-    if (ageHours <= 6) return { label: 'On Track', className: 'sla-ok' };
-    if (ageHours <= 24) return { label: 'Watch', className: 'sla-watch' };
-    return { label: 'Attention', className: 'sla-risk' };
+const toDateValue = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - (offset * 60 * 1000));
+    return local.toISOString().slice(0, 10);
+};
+
+const inDateRange = (updatedAt, fromDate, toDate) => {
+    if (!fromDate && !toDate) return true;
+    const value = new Date(updatedAt || Date.now());
+    if (Number.isNaN(value.getTime())) return false;
+
+    if (fromDate) {
+        const start = new Date(`${fromDate}T00:00:00`);
+        if (value < start) return false;
+    }
+
+    if (toDate) {
+        const end = new Date(`${toDate}T23:59:59`);
+        if (value > end) return false;
+    }
+
+    return true;
 };
 
 export default function AdminOrders() {
@@ -57,48 +69,25 @@ export default function AdminOrders() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
+    const [paymentStatus, setPaymentStatus] = useState('All');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
-
     const [updating, setUpdating] = useState('');
+    const [bulkStatus, setBulkStatus] = useState('Confirmed');
+    const [bulkUpdating, setBulkUpdating] = useState(false);
     const [notification, setNotification] = useState(null);
-    const [dropdownOpen, setDropdownOpen] = useState('');
-    const [expandedHistory, setExpandedHistory] = useState('');
-
     const [selectedOrders, setSelectedOrders] = useState(new Set());
     const [selectAll, setSelectAll] = useState(false);
-    const [bulkUpdating, setBulkUpdating] = useState(false);
-
-    const [invoices, setInvoices] = useState([]);
-    const [invoiceLoading, setInvoiceLoading] = useState(false);
-    const [invoiceDownloading, setInvoiceDownloading] = useState('');
-
-    const [preferences, setPreferences] = useState({
-        cardView: false,
-        compact: false,
-        autoRefresh: true
-    });
+    const [autoRefresh, setAutoRefresh] = useState(true);
+    const [detailOrder, setDetailOrder] = useState(null);
 
     const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://eshopper-qtgl.onrender.com';
 
-    useEffect(() => {
-        try {
-            const raw = localStorage.getItem(PREF_KEY);
-            if (!raw) return;
-            const parsed = JSON.parse(raw);
-            setPreferences((prev) => ({ ...prev, ...parsed }));
-        } catch (err) {
-            console.warn('Preferences parse failed:', err.message);
-        }
-    }, []);
-
-    useEffect(() => {
-        localStorage.setItem(PREF_KEY, JSON.stringify(preferences));
-    }, [preferences]);
-
     const showNotification = (message, type = 'info') => {
         setNotification({ message, type });
-        setTimeout(() => setNotification(null), 4000);
+        setTimeout(() => setNotification(null), 3500);
     };
 
     const fetchOrders = async () => {
@@ -106,7 +95,7 @@ export default function AdminOrders() {
             setLoading(true);
             const params = {
                 page,
-                limit: 10,
+                limit: 25,
                 ...(search && { search }),
                 ...(selectedStatus && { status: selectedStatus })
             };
@@ -117,30 +106,10 @@ export default function AdminOrders() {
             setSelectedOrders(new Set());
             setSelectAll(false);
         } catch (error) {
-            console.error('Orders fetch failed:', error);
-            showNotification('Unable to load orders.', 'error');
+            console.error('Failed to fetch orders:', error);
+            showNotification('Failed to load orders', 'error');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const fetchInvoices = async () => {
-        try {
-            setInvoiceLoading(true);
-            const response = await axios.get(`${BASE_URL}/api/admin/invoices`, {
-                params: {
-                    page,
-                    limit: 8,
-                    search,
-                    adminSecret: process.env.REACT_APP_ADMIN_SECRET
-                }
-            });
-            setInvoices(response.data.invoices || []);
-        } catch (error) {
-            console.error('Invoices fetch failed:', error);
-            setInvoices([]);
-        } finally {
-            setInvoiceLoading(false);
         }
     };
 
@@ -149,8 +118,12 @@ export default function AdminOrders() {
     }, [page, search, selectedStatus]);
 
     useEffect(() => {
-        fetchInvoices();
-    }, [page, search]);
+        if (!autoRefresh) return undefined;
+        const timer = setInterval(() => {
+            fetchOrders();
+        }, 30000);
+        return () => clearInterval(timer);
+    }, [autoRefresh, page, search, selectedStatus]);
 
     useEffect(() => {
         const socket = io(BASE_URL);
@@ -164,53 +137,43 @@ export default function AdminOrders() {
         };
 
         socket.on('statusUpdate', handleStatusUpdate);
-
         return () => {
             socket.off('statusUpdate', handleStatusUpdate);
             socket.disconnect();
         };
     }, [BASE_URL]);
 
-    useEffect(() => {
-        if (!preferences.autoRefresh) return undefined;
-        const timer = setInterval(() => {
-            fetchOrders();
-        }, 30000);
+    const filteredOrders = useMemo(() => {
+        return orders.filter((order) => {
+            const orderPaymentStatus = String(order.paymentStatus || '').toLowerCase();
+            const passPayment = paymentStatus === 'All' || orderPaymentStatus === paymentStatus.toLowerCase();
+            const passDate = inDateRange(order.updatedAt, fromDate, toDate);
+            return passPayment && passDate;
+        });
+    }, [orders, paymentStatus, fromDate, toDate]);
 
-        return () => clearInterval(timer);
-    }, [preferences.autoRefresh, page, search, selectedStatus]);
+    const handleOrderSelect = (orderId) => {
+        const next = new Set(selectedOrders);
+        if (next.has(orderId)) next.delete(orderId);
+        else next.add(orderId);
+        setSelectedOrders(next);
+        setSelectAll(next.size === filteredOrders.length && filteredOrders.length > 0);
+    };
 
-    const downloadInvoice = async (orderId) => {
-        try {
-            setInvoiceDownloading(orderId);
-            const response = await axios.get(`${BASE_URL}/api/admin/invoices/${encodeURIComponent(orderId)}/download`, {
-                params: { adminSecret: process.env.REACT_APP_ADMIN_SECRET },
-                responseType: 'blob'
-            });
-
-            const blob = new Blob([response.data], { type: 'application/pdf' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Invoice-${orderId}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-            showNotification(`Invoice downloaded for ${orderId}`, 'success');
-        } catch (error) {
-            console.error('Invoice download failed:', error);
-            showNotification('Invoice download failed.', 'error');
-        } finally {
-            setInvoiceDownloading('');
+    const handleSelectAll = (checked) => {
+        if (!checked) {
+            setSelectedOrders(new Set());
+            setSelectAll(false);
+            return;
         }
+
+        setSelectedOrders(new Set(filteredOrders.map((o) => o.orderId)));
+        setSelectAll(true);
     };
 
     const updateOrderStatus = async (orderId, newStatus) => {
         try {
             setUpdating(orderId);
-            setDropdownOpen('');
-
             const endpoint = newStatus === 'Confirmed'
                 ? `${BASE_URL}/api/admin/confirm-order`
                 : `${BASE_URL}/api/update-order-status`;
@@ -224,498 +187,320 @@ export default function AdminOrders() {
                 : await axios.post(endpoint, { orderId, status: newStatus });
 
             if (response.data.success) {
-                showNotification(`Order ${orderId} moved to ${newStatus}.`, 'success');
-                setTimeout(() => fetchOrders(), 350);
+                showNotification(`Order ${orderId} updated to ${newStatus}`, 'success');
+                fetchOrders();
             } else {
-                showNotification('Status update failed.', 'error');
+                showNotification('Status update failed', 'error');
             }
         } catch (error) {
-            console.error('Status update failed:', error);
-            if (error.response?.status === 403) {
-                showNotification('Admin authorization missing for this action.', 'error');
-            } else {
-                showNotification('Could not update order status.', 'error');
-            }
+            console.error('Update failed:', error);
+            showNotification('Failed to update order status', 'error');
         } finally {
             setUpdating('');
         }
     };
 
-    const handleOrderSelect = (orderId) => {
-        const newSelected = new Set(selectedOrders);
-        if (newSelected.has(orderId)) {
-            newSelected.delete(orderId);
-        } else {
-            newSelected.add(orderId);
-        }
-        setSelectedOrders(newSelected);
-        setSelectAll(newSelected.size === orders.length && orders.length > 0);
-    };
-
-    const handleSelectAll = (checked) => {
-        if (checked) {
-            setSelectAll(true);
-            setSelectedOrders(new Set(orders.map((o) => o.orderId)));
-        } else {
-            setSelectAll(false);
-            setSelectedOrders(new Set());
-        }
-    };
-
-    const handleBulkConfirm = async () => {
+    const handleBulkUpdate = async () => {
         if (selectedOrders.size === 0) {
-            showNotification('Select at least one order.', 'info');
+            showNotification('Select at least one order first', 'info');
             return;
         }
 
-        try {
-            setBulkUpdating(true);
-            const orderIds = Array.from(selectedOrders);
-            let success = 0;
-            let failed = 0;
+        setBulkUpdating(true);
+        let success = 0;
+        let failed = 0;
 
-            for (const orderId of orderIds) {
-                try {
-                    const response = await axios.post(
-                        `${BASE_URL}/api/admin/confirm-order`,
-                        { orderId },
-                        { headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET } }
-                    );
-                    if (response.data.success) success += 1;
-                    else failed += 1;
-                } catch (err) {
-                    failed += 1;
-                    console.error(`Bulk confirm failed for ${orderId}:`, err.message);
-                }
+        for (const orderId of Array.from(selectedOrders)) {
+            try {
+                const endpoint = bulkStatus === 'Confirmed'
+                    ? `${BASE_URL}/api/admin/confirm-order`
+                    : `${BASE_URL}/api/update-order-status`;
+
+                const config = bulkStatus === 'Confirmed'
+                    ? { headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET } }
+                    : {};
+
+                const response = bulkStatus === 'Confirmed'
+                    ? await axios.post(endpoint, { orderId }, config)
+                    : await axios.post(endpoint, { orderId, status: bulkStatus });
+
+                if (response.data.success) success += 1;
+                else failed += 1;
+            } catch (error) {
+                failed += 1;
             }
-
-            showNotification(`Bulk confirm done. Success: ${success} | Failed: ${failed}`, failed ? 'info' : 'success');
-            setSelectedOrders(new Set());
-            setSelectAll(false);
-            setTimeout(() => fetchOrders(), 500);
-        } finally {
-            setBulkUpdating(false);
         }
+
+        setBulkUpdating(false);
+        setSelectedOrders(new Set());
+        setSelectAll(false);
+        showNotification(`Bulk update done: ${success} success, ${failed} failed`, failed > 0 ? 'info' : 'success');
+        fetchOrders();
+    };
+
+    const exportCsv = () => {
+        if (filteredOrders.length === 0) {
+            showNotification('No orders available for export', 'info');
+            return;
+        }
+
+        const headers = ['Order ID', 'Customer', 'Email', 'Amount', 'Status', 'Payment', 'Items', 'Updated'];
+        const rows = filteredOrders.map((o) => [
+            o.orderId,
+            o.userName || '',
+            o.userEmail || '',
+            o.finalAmount || 0,
+            o.orderStatus || '',
+            o.paymentStatus || '',
+            o.productCount || (o.products || []).length || 0,
+            new Date(o.updatedAt || Date.now()).toLocaleString('en-IN')
+        ]);
+
+        const csv = [headers, ...rows]
+            .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `orders-export-${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const exportPdf = () => {
+        if (filteredOrders.length === 0) {
+            showNotification('No orders available for export', 'info');
+            return;
+        }
+
+        const doc = new jsPDF({ orientation: 'landscape' });
+        doc.setFontSize(14);
+        doc.text('eShopper Admin Orders Export', 14, 14);
+
+        autoTable(doc, {
+            startY: 20,
+            head: [['Order ID', 'Customer', 'Email', 'Amount', 'Status', 'Payment', 'Items', 'Updated']],
+            body: filteredOrders.map((o) => [
+                String(o.orderId || ''),
+                String(o.userName || ''),
+                String(o.userEmail || ''),
+                `INR ${Number(o.finalAmount || 0).toLocaleString('en-IN')}`,
+                String(o.orderStatus || ''),
+                String(o.paymentStatus || ''),
+                String(o.productCount || (o.products || []).length || 0),
+                new Date(o.updatedAt || Date.now()).toLocaleDateString('en-IN')
+            ]),
+            styles: { fontSize: 8 }
+        });
+
+        doc.save(`orders-export-${Date.now()}.pdf`);
     };
 
     const stats = useMemo(() => {
-        const total = orders.length;
-        const pending = orders.filter((o) => String(o.orderStatus).toLowerCase() === 'pending').length;
-        const delivered = orders.filter((o) => String(o.orderStatus).toLowerCase() === 'delivered').length;
-        const revenue = orders.reduce((sum, order) => sum + Number(order.finalAmount || 0), 0);
-        return { total, pending, delivered, revenue };
-    }, [orders]);
-
-    const statusCounts = useMemo(() => {
-        const counts = {};
-        ALLOWED_STATUSES.forEach((status) => {
-            counts[status] = orders.filter((o) => o.orderStatus === status).length;
-        });
-        return counts;
-    }, [orders]);
-
-    const pageButtons = useMemo(() => {
-        if (totalPages <= 1) return [];
-        if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
-        if (page <= 3) return [1, 2, 3, 4, 5];
-        if (page >= totalPages - 2) return [totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-        return [page - 2, page - 1, page, page + 1, page + 2];
-    }, [page, totalPages]);
+        const total = filteredOrders.length;
+        const selected = selectedOrders.size;
+        const revenue = filteredOrders.reduce((sum, o) => sum + Number(o.finalAmount || 0), 0);
+        return { total, selected, revenue };
+    }, [filteredOrders, selectedOrders]);
 
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="orders-luxe-page">
-            <section className="orders-luxe-hero">
-                <div>
-                    <p className="orders-luxe-kicker"><ShieldCheck size={14} /> Enterprise Control Suite</p>
-                    <h1>Order Command Center</h1>
-                    <p className="orders-luxe-subtitle">
-                        Fresh premium design with live operations, SLA tracking, bulk automation and executive insights.
-                    </p>
-                </div>
-                <div className="orders-luxe-actions">
-                    <button className="luxe-btn luxe-btn-soft" onClick={fetchOrders}>
-                        <RefreshCw size={16} /> Refresh
-                    </button>
-                    <button className="luxe-btn luxe-btn-gold" onClick={() => setPreferences((p) => ({ ...p, cardView: !p.cardView }))}>
-                        <SlidersHorizontal size={16} /> {preferences.cardView ? 'Table View' : 'Card View'}
-                    </button>
-                </div>
-            </section>
+        <div className="admin-orders-page premium-layout-keep">
+            <div className="orders-toolbar-panel">
+                <div className="filter-grid">
+                    <div className="filter-item filter-search">
+                        <label>Search (Order ID / Name / Email)</label>
+                        <div className="search-input-wrap">
+                            <Search size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search orders..."
+                                value={search}
+                                onChange={(e) => {
+                                    setSearch(e.target.value);
+                                    setPage(1);
+                                }}
+                            />
+                        </div>
+                    </div>
 
-            <section className="orders-kpi-grid">
-                <article className="kpi-card">
-                    <span>Total Orders</span>
-                    <strong>{stats.total}</strong>
-                </article>
-                <article className="kpi-card">
-                    <span>Pending</span>
-                    <strong>{stats.pending}</strong>
-                </article>
-                <article className="kpi-card">
-                    <span>Delivered</span>
-                    <strong>{stats.delivered}</strong>
-                </article>
-                <article className="kpi-card">
-                    <span>Visible Revenue</span>
-                    <strong>{formatCurrency(stats.revenue)}</strong>
-                </article>
-            </section>
+                    <div className="filter-item">
+                        <label>From Date</label>
+                        <input
+                            type="date"
+                            value={fromDate}
+                            max={toDate || undefined}
+                            onChange={(e) => setFromDate(e.target.value)}
+                        />
+                    </div>
 
-            <AnimatePresence>
-                {notification && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className={`orders-toast toast-${notification.type}`}
-                    >
-                        {notification.message}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    <div className="filter-item">
+                        <label>To Date</label>
+                        <input
+                            type="date"
+                            value={toDate}
+                            min={fromDate || undefined}
+                            onChange={(e) => setToDate(e.target.value)}
+                        />
+                    </div>
 
-            <section className="orders-control-panel">
-                <div className="control-search">
-                    <Search size={16} />
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => {
-                            setSearch(e.target.value);
-                            setPage(1);
-                        }}
-                        placeholder="Search by order id, customer or email"
-                    />
-                </div>
+                    <div className="filter-item">
+                        <label>Payment Status</label>
+                        <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
+                            {PAYMENT_STATUSES.map((status) => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                <div className="status-filter-row">
-                    <button
-                        className={!selectedStatus ? 'status-chip active' : 'status-chip'}
-                        onClick={() => {
-                            setSelectedStatus('');
-                            setPage(1);
-                        }}
-                    >
-                        All ({orders.length})
-                    </button>
-                    {ALLOWED_STATUSES.map((status) => (
-                        <button
-                            key={status}
-                            className={selectedStatus === status ? 'status-chip active' : 'status-chip'}
-                            onClick={() => {
-                                setSelectedStatus(status);
+                    <div className="filter-item">
+                        <label>Filter by Status</label>
+                        <select
+                            value={selectedStatus}
+                            onChange={(e) => {
+                                setSelectedStatus(e.target.value);
                                 setPage(1);
                             }}
                         >
-                            {status} ({statusCounts[status] || 0})
-                        </button>
-                    ))}
-                </div>
-
-                <div className="view-toggles">
-                    <label>
-                        <input
-                            type="checkbox"
-                            checked={preferences.compact}
-                            onChange={(e) => setPreferences((p) => ({ ...p, compact: e.target.checked }))}
-                        />
-                        Compact rows
-                    </label>
-                    <label>
-                        <input
-                            type="checkbox"
-                            checked={preferences.autoRefresh}
-                            onChange={(e) => setPreferences((p) => ({ ...p, autoRefresh: e.target.checked }))}
-                        />
-                        Auto refresh 30s
-                    </label>
-                </div>
-            </section>
-
-            {selectedOrders.size > 0 && (
-                <section className="bulk-strip">
-                    <div>
-                        <Sparkles size={16} /> {selectedOrders.size} order(s) selected
+                            <option value="">All</option>
+                            {ALLOWED_STATUSES.map((status) => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
                     </div>
-                    <button className="luxe-btn luxe-btn-gold" onClick={handleBulkConfirm} disabled={bulkUpdating}>
-                        {bulkUpdating ? <Loader2 size={16} className="spin" /> : <Crown size={16} />}
-                        {bulkUpdating ? 'Confirming...' : 'Bulk Confirm + Premium Email'}
+                </div>
+
+                <div className="toolbar-second-row">
+                    <div className="toolbar-stats">
+                        <span>Selected: {stats.selected}</span>
+                        <span>Orders: {stats.total}</span>
+                        <span>Revenue: INR {stats.revenue.toLocaleString('en-IN')}</span>
+                    </div>
+
+                    <div className="toolbar-actions">
+                        <label className="auto-refresh-toggle">
+                            <input
+                                type="checkbox"
+                                checked={autoRefresh}
+                                onChange={(e) => setAutoRefresh(e.target.checked)}
+                            />
+                            Auto refresh
+                        </label>
+                        <button className="btn-export btn-csv" onClick={exportCsv}>
+                            <Download size={14} /> Export CSV
+                        </button>
+                        <button className="btn-export btn-pdf" onClick={exportPdf}>
+                            <FileText size={14} /> Export PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div className="bulk-row">
+                    <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}>
+                        {ALLOWED_STATUSES.map((status) => (
+                            <option key={status} value={status}>{status}</option>
+                        ))}
+                    </select>
+                    <button onClick={handleBulkUpdate} disabled={bulkUpdating}>
+                        {bulkUpdating ? <Loader2 size={14} className="spin" /> : <Package size={14} />} Bulk Update Selected
                     </button>
-                </section>
+                </div>
+            </div>
+
+            {notification && (
+                <div className={`orders-notification ${notification.type}`}>{notification.message}</div>
             )}
 
-            <section className="invoice-panel">
-                <div className="panel-head">
-                    <h3><FileText size={18} /> Recent Invoice Downloads</h3>
-                    <span>{invoices.length} entries</span>
-                </div>
-                {invoiceLoading ? (
-                    <div className="panel-empty"><Loader2 size={16} className="spin" /> Loading invoices...</div>
-                ) : invoices.length === 0 ? (
-                    <div className="panel-empty">No invoices found.</div>
-                ) : (
-                    <div className="invoice-table-wrap">
-                        <table className="invoice-table">
-                            <thead>
-                                <tr>
-                                    <th>Order</th>
-                                    <th>Customer</th>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {invoices.map((inv) => (
-                                    <tr key={inv.orderId}>
-                                        <td>{String(inv.orderId || '').slice(-10)}</td>
-                                        <td>{inv.userName || 'N/A'}</td>
-                                        <td>{inv.invoiceType || 'Receipt'}</td>
-                                        <td>{formatCurrency(inv.finalAmount || 0)}</td>
-                                        <td>
-                                            <button
-                                                className="luxe-mini-btn"
-                                                onClick={() => downloadInvoice(inv.orderId)}
-                                                disabled={invoiceDownloading === inv.orderId}
-                                            >
-                                                {invoiceDownloading === inv.orderId ? <Loader2 size={14} className="spin" /> : <Download size={14} />}
-                                                Download
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+            <div className="admin-orders-table-wrap">
+                {loading ? (
+                    <div className="loading-block">
+                        <Loader2 size={20} className="spin" /> Loading orders...
                     </div>
-                )}
-            </section>
-
-            {loading && orders.length === 0 ? (
-                <div className="orders-loading"><Loader2 size={22} className="spin" /> Loading command center...</div>
-            ) : orders.length === 0 ? (
-                <div className="orders-empty"><Package size={44} /> No orders found for current filters.</div>
-            ) : preferences.cardView ? (
-                <section className="orders-card-grid">
-                    {orders.map((order) => {
-                        const statusMeta = STATUS_META[order.orderStatus] || STATUS_META.Pending;
-                        const StatusIcon = statusMeta.icon;
-                        const sla = getSlaMeta(order.updatedAt);
-
-                        return (
-                            <article key={order.orderId} className={`order-card ${preferences.compact ? 'compact' : ''}`}>
-                                <div className="order-card-top">
-                                    <div>
-                                        <p className="order-id">#{String(order.orderId || '').slice(-10)}</p>
-                                        <h4>{order.userName || 'Unknown Customer'}</h4>
-                                    </div>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedOrders.has(order.orderId)}
-                                            onChange={() => handleOrderSelect(order.orderId)}
-                                        />
-                                    </label>
-                                </div>
-
-                                <div className="order-card-meta">
-                                    <span>{order.userEmail || 'No email'}</span>
-                                    <strong>{formatCurrency(order.finalAmount || 0)}</strong>
-                                </div>
-
-                                <div className="order-card-status-row">
-                                    <span className={`status-pill ${statusMeta.className}`}><StatusIcon size={14} /> {order.orderStatus || 'Pending'}</span>
-                                    <span className={`sla-pill ${sla.className}`}>{sla.label}</span>
-                                </div>
-
-                                <div className="order-card-meta">
-                                    <span>Items: {order.productCount || order.products?.length || 0}</span>
-                                    <span>{formatDateTime(order.updatedAt)}</span>
-                                </div>
-
-                                <div className="order-action-wrap">
-                                    <button
-                                        className="luxe-mini-btn"
-                                        onClick={() => setDropdownOpen(dropdownOpen === order.orderId ? '' : order.orderId)}
-                                        disabled={updating === order.orderId}
-                                    >
-                                        {updating === order.orderId ? <Loader2 size={14} className="spin" /> : <Zap size={14} />}
-                                        Update Status <ChevronDown size={14} />
-                                    </button>
-
-                                    <AnimatePresence>
-                                        {dropdownOpen === order.orderId && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -6 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -6 }}
-                                                className="status-dropdown"
-                                            >
-                                                {ALLOWED_STATUSES.map((status) => {
-                                                    const sm = STATUS_META[status];
-                                                    const SI = sm.icon;
-                                                    const disabled = status === order.orderStatus || updating === order.orderId;
-                                                    return (
-                                                        <button key={status} disabled={disabled} onClick={() => updateOrderStatus(order.orderId, status)}>
-                                                            <SI size={14} /> {status}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-
-                                {order.statusHistory?.length > 0 && (
-                                    <button
-                                        className="history-toggle"
-                                        onClick={() => setExpandedHistory(expandedHistory === order.orderId ? '' : order.orderId)}
-                                    >
-                                        {expandedHistory === order.orderId ? 'Hide History' : `Show History (${order.statusHistory.length})`}
-                                    </button>
-                                )}
-
-                                {expandedHistory === order.orderId && order.statusHistory?.length > 0 && (
-                                    <div className="history-panel">
-                                        {order.statusHistory.map((entry, idx) => (
-                                            <div key={`${order.orderId}-${idx}`} className="history-item">
-                                                <span>{entry.status}</span>
-                                                <small>{formatDateTime(entry.timestamp)}</small>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </article>
-                        );
-                    })}
-                </section>
-            ) : (
-                <section className="orders-table-wrap">
-                    <table className={`orders-table ${preferences.compact ? 'compact' : ''}`}>
+                ) : filteredOrders.length === 0 ? (
+                    <div className="loading-block">No orders found for selected filters.</div>
+                ) : (
+                    <table className="admin-orders-table keep-layout-table">
                         <thead>
                             <tr>
-                                <th>
+                                <th className="text-center">
                                     <input
                                         type="checkbox"
-                                        checked={selectAll && orders.length > 0}
+                                        checked={selectAll && filteredOrders.length > 0}
                                         onChange={(e) => handleSelectAll(e.target.checked)}
                                     />
                                 </th>
-                                <th>Order</th>
+                                <th>Order ID</th>
                                 <th>Customer</th>
                                 <th>Email</th>
                                 <th>Amount</th>
                                 <th>Status</th>
-                                <th>SLA</th>
                                 <th>Items</th>
                                 <th>Updated</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {orders.map((order) => {
-                                const statusMeta = STATUS_META[order.orderStatus] || STATUS_META.Pending;
-                                const StatusIcon = statusMeta.icon;
-                                const sla = getSlaMeta(order.updatedAt);
+                            {filteredOrders.map((order) => {
+                                const IconComp = STATUS_ICONS[order.orderStatus] || STATUS_ICONS.Pending;
+                                const statusClass = STATUS_COLORS[order.orderStatus] || STATUS_COLORS.Pending;
 
                                 return (
-                                    <React.Fragment key={order.orderId}>
-                                        <tr>
-                                            <td>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedOrders.has(order.orderId)}
-                                                    onChange={() => handleOrderSelect(order.orderId)}
-                                                />
-                                            </td>
-                                            <td className="order-id">#{String(order.orderId || '').slice(-10)}</td>
-                                            <td>{order.userName || 'Unknown Customer'}</td>
-                                            <td>{order.userEmail || 'N/A'}</td>
-                                            <td>{formatCurrency(order.finalAmount || 0)}</td>
-                                            <td><span className={`status-pill ${statusMeta.className}`}><StatusIcon size={14} /> {order.orderStatus || 'Pending'}</span></td>
-                                            <td><span className={`sla-pill ${sla.className}`}>{sla.label}</span></td>
-                                            <td>{order.productCount || order.products?.length || 0}</td>
-                                            <td>{formatDateTime(order.updatedAt)}</td>
-                                            <td>
-                                                <div className="order-action-wrap">
-                                                    <button
-                                                        className="luxe-mini-btn"
-                                                        onClick={() => setDropdownOpen(dropdownOpen === order.orderId ? '' : order.orderId)}
-                                                        disabled={updating === order.orderId}
-                                                    >
-                                                        {updating === order.orderId ? <Loader2 size={14} className="spin" /> : <Zap size={14} />}
-                                                        Update <ChevronDown size={14} />
-                                                    </button>
-
-                                                    <AnimatePresence>
-                                                        {dropdownOpen === order.orderId && (
-                                                            <motion.div
-                                                                initial={{ opacity: 0, y: -6 }}
-                                                                animate={{ opacity: 1, y: 0 }}
-                                                                exit={{ opacity: 0, y: -6 }}
-                                                                className="status-dropdown"
-                                                            >
-                                                                {ALLOWED_STATUSES.map((status) => {
-                                                                    const sm = STATUS_META[status];
-                                                                    const SI = sm.icon;
-                                                                    const disabled = status === order.orderStatus || updating === order.orderId;
-                                                                    return (
-                                                                        <button key={status} disabled={disabled} onClick={() => updateOrderStatus(order.orderId, status)}>
-                                                                            <SI size={14} /> {status}
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
-                                                </div>
-                                            </td>
-                                        </tr>
-
-                                        {order.statusHistory?.length > 0 && (
-                                            <tr className="history-row">
-                                                <td colSpan="10">
-                                                    <button
-                                                        className="history-toggle"
-                                                        onClick={() => setExpandedHistory(expandedHistory === order.orderId ? '' : order.orderId)}
-                                                    >
-                                                        {expandedHistory === order.orderId ? 'Hide History' : `Show History (${order.statusHistory.length})`}
-                                                    </button>
-                                                    {expandedHistory === order.orderId && (
-                                                        <div className="history-panel">
-                                                            {order.statusHistory.map((entry, idx) => (
-                                                                <div key={`${order.orderId}-${idx}`} className="history-item">
-                                                                    <span>{entry.status}</span>
-                                                                    <small>{formatDateTime(entry.timestamp)}</small>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </React.Fragment>
+                                    <tr key={order.orderId}>
+                                        <td className="text-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedOrders.has(order.orderId)}
+                                                onChange={() => handleOrderSelect(order.orderId)}
+                                            />
+                                        </td>
+                                        <td className="order-id-col">
+                                            <div>{String(order.orderId || '').slice(-8)}</div>
+                                            <button className="details-link" onClick={() => setDetailOrder(order)}>View Details</button>
+                                        </td>
+                                        <td>{order.userName || 'N/A'}</td>
+                                        <td>{order.userEmail || 'N/A'}</td>
+                                        <td className="amount-col">INR {Number(order.finalAmount || 0).toLocaleString('en-IN')}</td>
+                                        <td>
+                                            <span className={`status-pill ${statusClass}`}>
+                                                <IconComp size={13} /> {order.orderStatus || 'Pending'}
+                                            </span>
+                                        </td>
+                                        <td>{order.productCount || (order.products || []).length || 0} items</td>
+                                        <td>{new Date(order.updatedAt || Date.now()).toLocaleDateString('en-IN')}</td>
+                                        <td>
+                                            <select
+                                                disabled={updating === order.orderId}
+                                                value={order.orderStatus || 'Pending'}
+                                                onChange={(e) => updateOrderStatus(order.orderId, e.target.value)}
+                                            >
+                                                {ALLOWED_STATUSES.map((status) => (
+                                                    <option key={status} value={status}>{status}</option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                    </tr>
                                 );
                             })}
                         </tbody>
                     </table>
-                </section>
-            )}
+                )}
+            </div>
 
             {totalPages > 1 && (
-                <section className="pagination-wrap">
-                    <button className="luxe-mini-btn" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>Previous</button>
-                    {pageButtons.map((number) => (
-                        <button
-                            key={number}
-                            className={page === number ? 'page-btn active' : 'page-btn'}
-                            onClick={() => setPage(number)}
-                        >
-                            {number}
-                        </button>
-                    ))}
-                    <button className="luxe-mini-btn" onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}>Next</button>
-                </section>
+                <div className="pagination-row">
+                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
+                    <span>Page {page} of {totalPages}</span>
+                    <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
+                </div>
             )}
-        </motion.div>
+
+            <OrderDetailsDrawer
+                open={Boolean(detailOrder)}
+                onClose={() => setDetailOrder(null)}
+                order={detailOrder}
+                loading={false}
+            />
+        </div>
     );
 }
