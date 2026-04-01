@@ -628,6 +628,7 @@ const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: 
 const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
 const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
 const Cart = require('./models/Cart');
+const Coupon = require('./models/Coupon');
 const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
 const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
 const Order = require('./models/Order');
@@ -1195,8 +1196,49 @@ app.post('/login', authLimiter, async (req, res) => {
 });
 
 const handle = (path, Model, useUpload = false) => {
-    // ...existing code...
-    // ...existing code...
+    // GET all or by query
+    app.get(path, async (req, res) => {
+        try {
+            if (req.query.id || req.query._id) {
+                const id = req.query.id || req.query._id;
+                const doc = await Model.findById(id);
+                if (!doc) return res.status(404).json({ message: 'Not found' });
+                return res.json(doc);
+            }
+            const docs = await Model.find().sort({ createdAt: -1 });
+            res.json(docs);
+        } catch (e) {
+            res.status(500).json({ message: 'Failed to fetch', error: e.message });
+        }
+    });
+    // GET by id (param)
+    app.get(`${path}/:id`, async (req, res) => {
+        try {
+            const doc = await Model.findById(req.params.id);
+            if (!doc) return res.status(404).json({ message: 'Not found' });
+            res.json(doc);
+        } catch (e) {
+            res.status(500).json({ message: 'Failed to fetch', error: e.message });
+        }
+    });
+    // POST (create)
+    app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
+        try {
+            let data = { ...req.body };
+            if (req.files) {
+                if (req.files.pic) data.pic = req.files.pic[0].path;
+                if (req.files.pic1) data.pic1 = req.files.pic1[0].path;
+                if (req.files.pic2) data.pic2 = req.files.pic2[0].path;
+                if (req.files.pic3) data.pic3 = req.files.pic3[0].path;
+                if (req.files.pic4) data.pic4 = req.files.pic4[0].path;
+            }
+            const doc = new Model(data);
+            await doc.save();
+            res.status(201).json(doc);
+        } catch (e) {
+            res.status(400).json({ message: 'Failed to create', error: e.message });
+        }
+    });
     app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
         try {
             let upData = { ...req.body };
@@ -1206,22 +1248,15 @@ const handle = (path, Model, useUpload = false) => {
                 if (req.files.pic2) upData.pic2 = req.files.pic2[0].path;
                 if (req.files.pic3) upData.pic3 = req.files.pic3[0].path;
                 if (req.files.pic4) upData.pic4 = req.files.pic4[0].path;
-                
-                console.log(`📤 Files updated for ${path}:`, {
-                    pic1: upData.pic1 ? '✅' : '❌',
-                    pic2: upData.pic2 ? '✅' : '❌',
-                    pic3: upData.pic3 ? '✅' : '❌',
-                    pic4: upData.pic4 ? '✅' : '❌'
-                });
             }
             
             if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
                 const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
             } else if (path === '/user') { delete upData.password; }
             const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); 
+            if (!d) return res.status(404).json({ message: 'Not found' });
             res.json(d);
         } catch (e) { 
-            console.error(`❌ Error updating ${path}:`, e.message);
             res.status(500).json({ error: e.message }); 
         }
     });
@@ -1252,15 +1287,67 @@ handle('/maincategory', Maincategory);
 handle('/subcategory', Subcategory); 
 handle('/brand', Brand); 
 handle('/cart', Cart);
+handle('/coupon', Coupon);
 handle('/wishlist', Wishlist); 
 handle('/checkout', Checkout); 
 handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
+// 🔴 EXPLICIT /coupon ENDPOINTS (Ensure they always work)
+app.get('/coupon', async (req, res) => {
+    try {
+        const docs = await Coupon.find().sort({ createdAt: -1 });
+        res.json(docs);
+    } catch (e) {
+        res.status(500).json({ message: 'Failed to fetch coupons', error: e.message });
+    }
+});
+
+app.get('/coupon/:id', async (req, res) => {
+    try {
+        const doc = await Coupon.findById(req.params.id);
+        if (!doc) return res.status(404).json({ message: 'Coupon not found' });
+        res.json(doc);
+    } catch (e) {
+        res.status(500).json({ message: 'Failed to fetch', error: e.message });
+    }
+});
+
+app.post('/coupon', async (req, res) => {
+    try {
+        const doc = new Coupon(req.body);
+        await doc.save();
+        res.status(201).json(doc);
+    } catch (e) {
+        res.status(400).json({ message: 'Failed to create coupon', error: e.message });
+    }
+});
+
+app.put('/coupon/:id', async (req, res) => {
+    try {
+        const d = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!d) return res.status(404).json({ message: 'Coupon not found' });
+        res.json(d);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/coupon/:id', async (req, res) => {
+    try {
+        const d = await Coupon.findByIdAndDelete(req.params.id);
+        if (!d) return res.status(404).json({ message: 'Coupon not found' });
+        res.json({ result: 'Deleted', doc: d });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed to delete', message: e.message });
+    }
+});
+
 // --- Compatibility REST endpoints for legacy frontend calls (GET, POST, PUT, DELETE) ---
 const compatModels = [
     { path: '/user', Model: User },
     { path: '/cart', Model: Cart },
+    { path: '/coupon', Model: Coupon },
     { path: '/wishlist', Model: Wishlist },
     { path: '/checkout', Model: Checkout },
     { path: '/contact', Model: Contact },
@@ -1339,7 +1426,17 @@ app.post('/api/cart/clear/:userid', async (req, res) => {
 
 const placeOrderHandler = async (req, res) => {
     try {
-        const { userId, paymentMethod, finalAmount, totalAmount, shippingAmount, shippingAddress, products } = req.body;
+        const {
+            userId,
+            paymentMethod,
+            finalAmount,
+            totalAmount,
+            shippingAmount,
+            shippingAddress,
+            products,
+            couponCode,
+            couponDiscount
+        } = req.body;
 
         if (!userId || !Array.isArray(products) || products.length === 0) {
             return res.status(400).json({ message: 'userId and products are required' });
@@ -1366,7 +1463,61 @@ const placeOrderHandler = async (req, res) => {
 
         const total = Number(totalAmount ?? cleanProducts.reduce((sum, item) => sum + item.total, 0));
         const shipping = Number(shippingAmount ?? ((total > 0 && total < 1000) ? 150 : 0));
-        const payable = Number(finalAmount ?? (total + shipping));
+        let validCouponCode = '';
+        let validCouponDiscount = 0;
+
+        if (couponCode) {
+            const normalizedCouponCode = String(couponCode).trim().toUpperCase();
+            const couponDoc = await Coupon.findOne({ code: normalizedCouponCode, isActive: true });
+            if (!couponDoc) {
+                return res.status(400).json({ message: 'Invalid coupon code.' });
+            }
+
+            const now = new Date();
+            if (couponDoc.startsAt && now < couponDoc.startsAt) {
+                return res.status(400).json({ message: 'Coupon is not active yet.' });
+            }
+            if (couponDoc.expiresAt && now > couponDoc.expiresAt) {
+                return res.status(400).json({ message: 'Coupon has expired.' });
+            }
+            if (total < Number(couponDoc.minCartValue || 0)) {
+                return res.status(400).json({ message: `Minimum cart value Rs${couponDoc.minCartValue} required for this coupon.` });
+            }
+            if (Number(couponDoc.totalUsageCap || 0) > 0) {
+                const totalUsed = await Order.countDocuments({ couponCode: normalizedCouponCode });
+                if (totalUsed >= Number(couponDoc.totalUsageCap)) {
+                    return res.status(400).json({ message: 'Coupon usage limit reached.' });
+                }
+            }
+            if (couponDoc.perUserOnce) {
+                const userUsed = await Order.countDocuments({ userid: String(userId), couponCode: normalizedCouponCode });
+                if (userUsed > 0) {
+                    return res.status(400).json({ message: 'You have already used this coupon.' });
+                }
+            }
+            if (couponDoc.firstOrderOnly) {
+                const completedOrders = await Order.countDocuments({ userid: String(userId) });
+                if (completedOrders > 0) {
+                    return res.status(400).json({ message: 'This coupon is valid only on first order.' });
+                }
+            }
+
+            if (couponDoc.type === 'percent') {
+                validCouponDiscount = Math.round((total * Number(couponDoc.value || 0)) / 100);
+                if (Number(couponDoc.maxDiscount || 0) > 0) {
+                    validCouponDiscount = Math.min(validCouponDiscount, Number(couponDoc.maxDiscount));
+                }
+            } else {
+                validCouponDiscount = Math.round(Number(couponDoc.value || 0));
+            }
+
+            validCouponDiscount = Math.max(0, Math.min(validCouponDiscount, total));
+            validCouponCode = normalizedCouponCode;
+        } else {
+            validCouponDiscount = Math.max(0, Number(couponDiscount || 0));
+        }
+
+        const payable = Math.max(0, Number(finalAmount ?? (total + shipping - validCouponDiscount)));
 
         const addressPayload = shippingAddress || {
             fullName: user.name || '',
@@ -1389,6 +1540,8 @@ const placeOrderHandler = async (req, res) => {
             totalAmount: total,
             shippingAmount: shipping,
             finalAmount: payable,
+            couponCode: validCouponCode,
+            couponDiscount: validCouponDiscount,
             shippingAddress: addressPayload,
             products: cleanProducts,
             estimatedArrival,

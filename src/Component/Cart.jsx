@@ -30,6 +30,7 @@ export default function Cart() {
     const [coupon, setCoupon] = useState("");
     const [couponApplied, setCouponApplied] = useState(false);
     const [couponError, setCouponError] = useState("");
+    const [availableCoupons, setAvailableCoupons] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false); // For update/remove/coupon
     const [movingIds, setMovingIds] = useState([]);
@@ -76,6 +77,8 @@ export default function Cart() {
                     }
                 } catch (couponErr) {
                     setCouponDiscount(0);
+                    setCouponApplied(false);
+                    localStorage.removeItem('appliedCoupon');
                     setCouponError(couponErr.response?.data?.message || "Coupon no longer applicable");
                 }
             }
@@ -120,7 +123,8 @@ export default function Cart() {
                     await fetchCartAndSummary();
                     if (!silent) toast.info('Item removed from cart.');
                 } catch (e) {
-                    toast.error('Failed to remove item.');
+                    const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to remove item.';
+                    toast.error(msg);
                 } finally {
                     setRemovingIds((prev) => prev.filter(rid => rid !== id));
                     setActionLoading(false);
@@ -178,16 +182,49 @@ export default function Cart() {
                 setCouponDiscount(res.data.discount || 0);
                 setCouponApplied(true);
                 setCouponError("");
+                localStorage.setItem('appliedCoupon', JSON.stringify({
+                    userId,
+                    code: String(coupon).trim().toUpperCase(),
+                    discount: Number(res.data.discount || 0)
+                }));
             } else {
                 setCouponError(res.data.message || "Invalid coupon");
             }
         } catch (err) {
+            localStorage.removeItem('appliedCoupon');
             setCouponError(err.response?.data?.message || "Invalid or already applied coupon");
         }
         setActionLoading(false);
     }
 
-    useEffect(() => { fetchCartAndSummary(); }, []);
+    async function fetchAvailableCoupons() {
+        try {
+            const res = await axios.get('/api/cart/coupons', { params: { userId } });
+            const list = res?.data?.coupons;
+            setAvailableCoupons(Array.isArray(list) ? list : []);
+        } catch (err) {
+            setAvailableCoupons([]);
+        }
+    }
+
+    useEffect(() => {
+        const savedCouponRaw = localStorage.getItem('appliedCoupon');
+        if (savedCouponRaw) {
+            try {
+                const parsed = JSON.parse(savedCouponRaw);
+                if (parsed && String(parsed.userId) === String(userId) && parsed.code) {
+                    setCoupon(String(parsed.code));
+                    setCouponApplied(true);
+                    setCouponDiscount(Number(parsed.discount || 0));
+                }
+            } catch (e) {
+                localStorage.removeItem('appliedCoupon');
+            }
+        }
+
+        fetchCartAndSummary();
+        fetchAvailableCoupons();
+    }, []);
 
     return (
         <div className="cart-page-shell" style={{ minHeight: "100vh", boxSizing: 'border-box', maxWidth: '100vw', position: 'relative' }}>
@@ -345,6 +382,25 @@ export default function Cart() {
                                         <button className="btn" style={{ border: "1px solid #eee", borderLeft: 0, borderRadius: "0 50px 50px 0", background: "#B8860B", color: "#fff" }} type="button" onClick={handleApplyCoupon} disabled={couponApplied || !coupon.trim()}>Apply</button>
                                     </div>
                                 </div>
+                                {availableCoupons.length > 0 && (
+                                    <div className="mb-3">
+                                        <div className="small text-muted mb-2">Available Coupons</div>
+                                        <div className="d-flex flex-wrap gap-2">
+                                            {availableCoupons.map((c) => (
+                                                <button
+                                                    key={c.code}
+                                                    type="button"
+                                                    className="btn btn-sm premium-coupon-chip"
+                                                    disabled={couponApplied}
+                                                    title={c.description || c.title || c.code}
+                                                    onClick={() => setCoupon(c.code)}
+                                                >
+                                                    {c.code}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                                 {couponError && <div className="text-danger small mb-2">{couponError}</div>}
                                 {couponApplied && <div className="text-success small mb-2">Coupon Applied!</div>}
                                 {/* Sticky Checkout Button for Mobile */}
@@ -475,6 +531,16 @@ export default function Cart() {
                 }
                 .premium-coupon-group input { border-radius: 50px 0 0 50px !important; }
                 .premium-coupon-group .btn { border-radius: 0 50px 50px 0 !important; }
+                .premium-coupon-chip {
+                    border-radius: 999px;
+                    border: 1px dashed #c7a74d;
+                    background: #fff9e8;
+                    color: #7a5c1f;
+                    font-weight: 700;
+                    font-size: 11px;
+                    padding: 4px 10px;
+                }
+                .premium-coupon-chip:hover { background: #f9edc8; }
                 .premium-checkout-btn { background: linear-gradient(90deg, #b19d5e 0%, #f6e27a 100%); color: #222; border: none; letter-spacing: 1px; }
                 .premium-checkout-btn:hover { background: linear-gradient(90deg, #f6e27a 0%, #b19d5e 100%); color: #111; transform: translateY(-2px); }
                 @media (max-width: 767.98px) {

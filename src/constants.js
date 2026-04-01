@@ -51,7 +51,7 @@ export const API_ENDPOINTS = {
 };
 
 // ===== TIMEOUT SETTINGS =====
-export const REQUEST_TIMEOUT = 15000; // 15 seconds
+export const REQUEST_TIMEOUT = 30000; // 30 seconds (helps with cold starts)
 export const OTP_EXPIRY_TIME = 10 * 60 * 1000; // 10 minutes
 
 // ===== UI CONSTANTS =====

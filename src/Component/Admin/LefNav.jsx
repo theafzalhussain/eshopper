@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Home, Users, Layers, Grid, Tag,
-    ShoppingBag, MessageSquare, Send, CheckSquare, Package,
+    ShoppingBag, MessageSquare, Send, CheckSquare, Package, TicketPercent,
     Menu, X, ChevronRight, LayoutDashboard
 } from 'lucide-react'
 
@@ -50,6 +50,7 @@ export default function LefNav() {
         { name: "Sub Categories", path: "/admin-subcategory", icon: Grid, gradient: "from-indigo-500 to-purple-500" },
         { name: "Brands", path: "/admin-brand", icon: Tag, gradient: "from-pink-500 to-rose-500" },
         { name: "Products", path: "/admin-product", icon: ShoppingBag, gradient: "from-yellow-500 to-orange-500" },
+        { name: "Coupons", path: "/admin-coupon", icon: TicketPercent, gradient: "from-amber-500 to-yellow-500" },
         { name: "Contact", path: "/admin-contact", icon: MessageSquare, gradient: "from-cyan-500 to-blue-500" },
         { name: "Newsletters", path: "/admin-newsletter", icon: Send, gradient: "from-violet-500 to-purple-500" },
         { name: "Checkouts", path: "/admin-checkout", icon: CheckSquare, gradient: "from-emerald-500 to-green-500" },

@@ -47,6 +47,12 @@ exports.applyCoupon = async (req, res) => {
     try {
         const { userId, coupon } = req.body;
         if (!userId || !coupon) return res.status(400).json({ success: false, message: 'User ID and coupon required.' });
+        if (!mongoose.Types.ObjectId.isValid(String(userId))) {
+            return res.status(400).json({ success: false, message: 'Invalid user id.' });
+        }
+
+        await ensureDefaultCoupons();
+
         // Fetch cart for user
         let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
@@ -54,24 +60,166 @@ exports.applyCoupon = async (req, res) => {
         cart.items.forEach(item => {
             subtotal += ((item.product?.finalprice || item.product?.price || 0) * item.quantity);
         });
-        // Example: Only one valid coupon for demo
-        if (coupon.trim().toLowerCase() === 'eshopper10') {
-            // Flat ₹100 off if subtotal >= 1000
-            if (subtotal >= 1000) {
-                return res.json({ success: true, discount: 100, message: 'Coupon applied! ₹100 off.' });
-            } else {
-                return res.status(400).json({ success: false, message: 'Minimum cart value ₹1000 required for this coupon.' });
-            }
-        } else {
+
+        const code = String(coupon).trim().toUpperCase();
+        const couponDoc = await Coupon.findOne({ code, isActive: true });
+        if (!couponDoc) {
             return res.status(400).json({ success: false, message: 'Invalid coupon code.' });
         }
+
+        const now = new Date();
+        if (couponDoc.startsAt && now < couponDoc.startsAt) {
+            return res.status(400).json({ success: false, message: 'Coupon is not active yet.' });
+        }
+        if (couponDoc.expiresAt && now > couponDoc.expiresAt) {
+            return res.status(400).json({ success: false, message: 'Coupon has expired.' });
+        }
+        if (subtotal < Number(couponDoc.minCartValue || 0)) {
+            return res.status(400).json({
+                success: false,
+                message: `Minimum cart value Rs${couponDoc.minCartValue} required for this coupon.`
+            });
+        }
+
+        if (Number(couponDoc.totalUsageCap || 0) > 0) {
+            const totalUsed = await Order.countDocuments({ couponCode: couponDoc.code });
+            if (totalUsed >= Number(couponDoc.totalUsageCap)) {
+                return res.status(400).json({ success: false, message: 'Coupon usage limit reached.' });
+            }
+        }
+
+        if (couponDoc.perUserOnce) {
+            const userUsed = await Order.countDocuments({ userid: String(userId), couponCode: couponDoc.code });
+            if (userUsed > 0) {
+                return res.status(400).json({ success: false, message: 'You have already used this coupon.' });
+            }
+        }
+
+        if (couponDoc.firstOrderOnly) {
+            const completedOrders = await Order.countDocuments({ userid: String(userId) });
+            if (completedOrders > 0) {
+                return res.status(400).json({ success: false, message: 'This coupon is valid only on first order.' });
+            }
+        }
+
+        let discount = 0;
+        if (couponDoc.type === 'percent') {
+            discount = Math.round((subtotal * Number(couponDoc.value || 0)) / 100);
+            if (Number(couponDoc.maxDiscount || 0) > 0) {
+                discount = Math.min(discount, Number(couponDoc.maxDiscount));
+            }
+        } else {
+            discount = Math.round(Number(couponDoc.value || 0));
+        }
+
+        discount = Math.max(0, Math.min(discount, subtotal));
+
+        return res.json({
+            success: true,
+            discount,
+            message: 'Coupon applied successfully.',
+            coupon: {
+                code: couponDoc.code,
+                title: couponDoc.title,
+                description: couponDoc.description,
+                type: couponDoc.type,
+                value: couponDoc.value,
+                minCartValue: couponDoc.minCartValue,
+                maxDiscount: couponDoc.maxDiscount,
+                perUserOnce: couponDoc.perUserOnce,
+                totalUsageCap: couponDoc.totalUsageCap,
+                firstOrderOnly: couponDoc.firstOrderOnly,
+            }
+        });
     } catch (err) {
+        console.error('[ERROR] /api/cart/apply-coupon:', err);
         res.status(500).json({ success: false, message: 'Failed to apply coupon.' });
+    }
+};
+
+// List currently active coupons so frontend can show users what to apply
+exports.getAvailableCoupons = async (req, res) => {
+    try {
+        await ensureDefaultCoupons();
+        const userId = req.query.userId;
+        const now = new Date();
+        const coupons = await Coupon.find({ isActive: true }).sort({ createdAt: -1 });
+
+        const activeCoupons = [];
+        for (const c of coupons) {
+            if (c.startsAt && now < c.startsAt) continue;
+            if (c.expiresAt && now > c.expiresAt) continue;
+
+            if (Number(c.totalUsageCap || 0) > 0) {
+                const totalUsed = await Order.countDocuments({ couponCode: c.code });
+                if (totalUsed >= Number(c.totalUsageCap)) continue;
+            }
+
+            if (userId) {
+                if (c.perUserOnce) {
+                    const userUsed = await Order.countDocuments({ userid: String(userId), couponCode: c.code });
+                    if (userUsed > 0) continue;
+                }
+
+                if (c.firstOrderOnly) {
+                    const completedOrders = await Order.countDocuments({ userid: String(userId) });
+                    if (completedOrders > 0) continue;
+                }
+            }
+
+            activeCoupons.push({
+                code: c.code,
+                title: c.title,
+                description: c.description,
+                type: c.type,
+                value: c.value,
+                minCartValue: c.minCartValue,
+                maxDiscount: c.maxDiscount,
+                perUserOnce: c.perUserOnce,
+                totalUsageCap: c.totalUsageCap,
+                firstOrderOnly: c.firstOrderOnly,
+            });
+        }
+
+        return res.json({ success: true, coupons: activeCoupons });
+    } catch (err) {
+        console.error('[ERROR] /api/cart/coupons:', err);
+        return res.status(500).json({ success: false, coupons: [], message: 'Failed to fetch coupons.' });
     }
 };
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
+const Coupon = require('../models/Coupon');
+const Order = require('../models/Order');
 const mongoose = require('mongoose');
+
+const DEFAULT_COUPONS = [
+    {
+        code: 'ESHOPPER10',
+        title: 'Flat Rs100 Off',
+        description: 'Flat Rs100 off on cart value above Rs1000',
+        type: 'flat',
+        value: 100,
+        minCartValue: 1000,
+        isActive: true,
+    },
+    {
+        code: 'LUXE15',
+        title: '15% Off',
+        description: '15% off up to Rs500 on cart value above Rs2000',
+        type: 'percent',
+        value: 15,
+        minCartValue: 2000,
+        maxDiscount: 500,
+        isActive: true,
+    },
+];
+
+async function ensureDefaultCoupons() {
+    const count = await Coupon.countDocuments();
+    if (count > 0) return;
+    await Coupon.insertMany(DEFAULT_COUPONS);
+}
 
 // Get cart for current user (expects req.user or req.query.userId)
 exports.getCart = async (req, res) => {
@@ -176,55 +324,40 @@ exports.removeItem = async (req, res) => {
         const { itemId } = req.params;
         if (!itemId) return res.status(400).json({ success: false, message: 'Missing item id.' });
 
+        const queryByUser = (userId && mongoose.Types.ObjectId.isValid(String(userId)))
+            ? { user: new mongoose.Types.ObjectId(userId) }
+            : {};
+
         let cart = null;
-        if (userId && mongoose.Types.ObjectId.isValid(String(userId))) {
-            cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+
+        if (mongoose.Types.ObjectId.isValid(String(itemId))) {
+            const oid = new mongoose.Types.ObjectId(itemId);
+
+            // 1) Try remove by cart sub-item id.
+            cart = await Cart.findOneAndUpdate(
+                { ...queryByUser, 'items._id': oid },
+                { $pull: { items: { _id: oid } } },
+                { new: true }
+            );
+
+            // 2) Fallback remove by product id (legacy/frontend id mismatches).
+            if (!cart) {
+                cart = await Cart.findOneAndUpdate(
+                    { ...queryByUser, 'items.product': oid },
+                    { $pull: { items: { product: oid } } },
+                    { new: true }
+                );
+            }
         }
 
-        // Fallback lookup by cart item id / product id when userId is missing or stale on client.
         if (!cart) {
-            cart = await Cart.findOne({ 'items._id': itemId });
-        }
-
-        if (!cart && mongoose.Types.ObjectId.isValid(String(itemId))) {
-            cart = await Cart.findOne({ 'items.product': new mongoose.Types.ObjectId(itemId) });
-        }
-
-        if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
-
-        const beforeCount = cart.items.length;
-        cart.items = cart.items.filter((item) => {
-            const subId = String(item._id || '');
-            const productId = String(item.product || '');
-            return subId !== String(itemId) && productId !== String(itemId);
-        });
-
-        if (cart.items.length === beforeCount) {
             return res.status(404).json({ success: false, message: 'Item not found in cart.' });
         }
 
-        await cart.save();
-        cart = await Cart.findById(cart._id).populate('items.product');
-        const mappedCart = cart ? {
-            _id: cart._id,
-            user: cart.user,
-            items: cart.items.map(item => ({
-                _id: item._id,
-                productid: item.product?._id || item.product,
-                userid: cart.user,
-                name: item.product?.name || '',
-                color: item.product?.color || '',
-                size: item.product?.size || '',
-                price: item.product?.finalprice || item.product?.price || 0,
-                quantity: item.quantity,
-                pic: item.product?.pic1 || '',
-            })),
-            createdAt: cart.createdAt
-        } : null;
-        res.json({ success: true, cart: mappedCart });
+        res.json({ success: true, message: 'Item removed from cart.', cartId: cart._id, itemCount: cart.items.length });
     } catch (err) {
         console.error('[ERROR] /api/cart/remove-item:', err);
-        res.status(500).json({ success: false, message: 'Failed to remove item.' });
+        res.status(500).json({ success: false, message: 'Failed to remove item.', error: err.message });
     }
 };
 

@@ -8,6 +8,9 @@ router.post('/cart', cartController.addToCart);
 // Apply coupon to cart
 router.post('/cart/apply-coupon', cartController.applyCoupon);
 
+// List active coupons
+router.get('/cart/coupons', cartController.getAvailableCoupons);
+
 // Get cart for current user
 router.get('/cart', cartController.getCart);
 

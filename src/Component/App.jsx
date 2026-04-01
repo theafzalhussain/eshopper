@@ -38,6 +38,7 @@ import AdminProduct from './Admin/AdminProduct'
 import AdminAddProduct from './Admin/AdminAddProduct'
 import AdminUpdateProduct from './Admin/AdminUpdateProduct'
 import AdminOrders from './Admin/AdminOrders'
+import AdminCoupon from './Admin/AdminCoupon'
 
 const ScrollToTop = () => {
     const { pathname } = useLocation();
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="/admin-newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
           <Route path="/admin-checkout" element={<AdminRoute><AdminCheckout /></AdminRoute>} />
           <Route path="/admin-orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+          <Route path="/admin-coupon" element={<AdminRoute><AdminCoupon /></AdminRoute>} />
           <Route path="/admin-maincategory" element={<AdminRoute><AdminMaincategory /></AdminRoute>} />
           <Route path="/admin-add-maincategory" element={<AdminRoute><AdminAddMaincategory /></AdminRoute>} />
           <Route path="/admin-update-maincategory/:id" element={<AdminRoute><AdminUpdateMaincategory /></AdminRoute>} />

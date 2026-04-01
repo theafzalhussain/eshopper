@@ -11,6 +11,8 @@ const orderSchema = new mongoose.Schema({
     totalAmount: Number,
     shippingAmount: Number,
     finalAmount: Number,
+    couponCode: { type: String, default: '', uppercase: true, trim: true, index: true },
+    couponDiscount: { type: Number, default: 0 },
     shippingAddress: {
         fullName: String,
         phone: String,

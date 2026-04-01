@@ -17,6 +17,7 @@ export default function Checkout() {
     var [shipping, setshipping] = useState(0)
     var [final, setfinal] = useState(0)
     var [placingOrder, setplacingOrder] = useState(false)
+    var [appliedCoupon, setAppliedCoupon] = useState({ code: '', discount: 0 })
 
     var users = useSelector((state) => state.UserStateData)
     var carts = useSelector((state) => (state.CartStateData && state.CartStateData.items) ? state.CartStateData.items : [])
@@ -42,7 +43,26 @@ export default function Checkout() {
                 sum += (linePrice * lineQty)
             })
             let ship = (sum > 0 && sum < 1000) ? 150 : 0
-            settotal(sum); setshipping(ship); setfinal(sum + ship)
+
+            const savedCouponRaw = localStorage.getItem('appliedCoupon')
+            let couponDiscount = 0
+            let couponCode = ''
+            if (savedCouponRaw) {
+                try {
+                    const parsed = JSON.parse(savedCouponRaw)
+                    if (parsed && String(parsed.userId) === String(userId) && parsed.code) {
+                        couponCode = String(parsed.code)
+                        couponDiscount = Math.max(0, Number(parsed.discount || 0))
+                    }
+                } catch (e) {
+                    localStorage.removeItem('appliedCoupon')
+                }
+            }
+
+            setAppliedCoupon({ code: couponCode, discount: couponDiscount })
+            settotal(sum)
+            setshipping(ship)
+            setfinal(Math.max(0, sum + ship - couponDiscount))
         }
     }
 
@@ -59,6 +79,8 @@ export default function Checkout() {
                 totalAmount: total,
                 shippingAmount: shipping,
                 finalAmount: final,
+                couponCode: appliedCoupon.code || undefined,
+                couponDiscount: Number(appliedCoupon.discount || 0),
                 shippingAddress: {
                     fullName: user?.name || '',
                     phone: user?.phone || '',
@@ -76,6 +98,7 @@ export default function Checkout() {
 
             if (placedOrder) {
                 localStorage.setItem('lastPlacedOrder', JSON.stringify(placedOrder))
+                localStorage.removeItem('appliedCoupon')
                 dispatch(clearCart({ userid }))
                 navigate("/confirmation", { state: { order: placedOrder } })
                 return
@@ -149,6 +172,12 @@ export default function Checkout() {
                             <div className="bg-light p-4 rounded-xl mb-4 checkout-total-box">
                                 <div className="d-flex justify-content-between mb-2"><span>Subtotal</span><span>₹{total}</span></div>
                                 <div className="d-flex justify-content-between mb-2"><span>Shipping</span><span>{shipping === 0 ? "FREE" : `₹${shipping}`}</span></div>
+                                {appliedCoupon.code && appliedCoupon.discount > 0 && (
+                                    <div className="d-flex justify-content-between mb-2 text-success">
+                                        <span>Coupon ({appliedCoupon.code})</span>
+                                        <span>-₹{appliedCoupon.discount}</span>
+                                    </div>
+                                )}
                                 <hr />
                                 <div className="d-flex justify-content-between align-items-center">
                                     <h4 className="font-weight-bold mb-0">Payable Amount</h4>
