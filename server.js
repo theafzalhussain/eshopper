@@ -91,6 +91,10 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
     'https://eshopperr.me',
     'https://www.eshopperr.me',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
 ].filter(Boolean);
 
 // 🔒 CORS - Robust production config
