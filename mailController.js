@@ -3,64 +3,55 @@ const path = require('path');
 const fs = require('fs');
 const handlebars = require('handlebars');
 
-// Order Received
-async function sendOrderReceivedEmail({
-    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, paymentStatus, whatsappUrl, supportEmail, companyAddress
-}) {
-    const templatePath = path.join(__dirname, 'views', 'emails', 'order-received.hbs');
+const registerTemplatePartials = () => {
+    const partialsDir = path.join(__dirname, 'views', 'emails', 'partials');
+    if (!fs.existsSync(partialsDir)) return;
+
+    const partialFiles = fs.readdirSync(partialsDir).filter((file) => file.endsWith('.hbs'));
+    for (const fileName of partialFiles) {
+        const partialName = path.basename(fileName, '.hbs');
+        const partialPath = path.join(partialsDir, fileName);
+        const source = fs.readFileSync(partialPath, 'utf8');
+        handlebars.registerPartial(partialName, source);
+    }
+};
+
+const renderTemplate = (fileName, payload = {}) => {
+    registerTemplatePartials();
+    const templatePath = path.join(__dirname, 'views', 'emails', fileName);
     const source = fs.readFileSync(templatePath, 'utf8');
     const template = handlebars.compile(source);
-    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, paymentStatus, whatsappUrl, supportEmail, companyAddress });
+    return template(payload || {});
+};
+
+// Order Received
+async function sendOrderReceivedEmail(payload = {}) {
+    return renderTemplate('order-received.hbs', payload);
 }
 
 // Order Confirmed
-async function sendOrderConfirmedEmail({
-    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedArrival, companyAddress
-}) {
-    const templatePath = path.join(__dirname, 'views', 'emails', 'order-confirmed.hbs');
-    const source = fs.readFileSync(templatePath, 'utf8');
-    const template = handlebars.compile(source);
-    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedArrival, companyAddress });
+async function sendOrderConfirmedEmail(payload = {}) {
+    return renderTemplate('order-confirmed.hbs', payload);
 }
 
 // Order Packed
-async function sendOrderPackedEmail({
-    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, totalItems, packedOn, packageWeight, trackingUrl, companyAddress
-}) {
-    const templatePath = path.join(__dirname, 'views', 'emails', 'order-packed.hbs');
-    const source = fs.readFileSync(templatePath, 'utf8');
-    const template = handlebars.compile(source);
-    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, totalItems, packedOn, packageWeight, trackingUrl, companyAddress });
+async function sendOrderPackedEmail(payload = {}) {
+    return renderTemplate('order-packed.hbs', payload);
 }
 
 // Order Shipped
-async function sendOrderShippedEmail({
-    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedDate, courierPartner, trackingNumber, shippedOn, expectedDelivery, liveTrackingUrl, carrierWebsiteUrl, companyAddress
-}) {
-    const templatePath = path.join(__dirname, 'views', 'emails', 'order-shipped.hbs');
-    const source = fs.readFileSync(templatePath, 'utf8');
-    const template = handlebars.compile(source);
-    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedDate, courierPartner, trackingNumber, shippedOn, expectedDelivery, liveTrackingUrl, carrierWebsiteUrl, companyAddress });
+async function sendOrderShippedEmail(payload = {}) {
+    return renderTemplate('order-shipped.hbs', payload);
 }
 
 // Out for Delivery
-async function sendOrderOutForDeliveryEmail({
-    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedDate, courierPartner, trackingNumber, otp, deliveryAgent, agentContact, deliveryLocation, liveTrackingUrl, companyAddress
-}) {
-    const templatePath = path.join(__dirname, 'views', 'emails', 'order-out-for-delivery.hbs');
-    const source = fs.readFileSync(templatePath, 'utf8');
-    const template = handlebars.compile(source);
-    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, expectedDate, courierPartner, trackingNumber, otp, deliveryAgent, agentContact, deliveryLocation, liveTrackingUrl, companyAddress });
+async function sendOrderOutForDeliveryEmail(payload = {}) {
+    return renderTemplate('order-out-for-delivery.hbs', payload);
 }
 
 // Delivered
-async function sendOrderDeliveredEmail({
-    toEmail, logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, deliveredOn, receivedBy, invoiceUrl, reviewUrl, referralCode, referralShareUrl, instagramUrl, whatsappUrl, companyAddress
-}) {
-    const templatePath = path.join(__dirname, 'views', 'emails', 'order-delivered.hbs');
-    const source = fs.readFileSync(templatePath, 'utf8');
-    const template = handlebars.compile(source);
-    return template({ logoUrl, orderId, orderDate, customerName, customerEmail, items, subtotal, shippingCharges, gst, totalPaid, shippingAddress, paymentMethod, transactionId, deliveredOn, receivedBy, invoiceUrl, reviewUrl, referralCode, referralShareUrl, instagramUrl, whatsappUrl, companyAddress });
+async function sendOrderDeliveredEmail(payload = {}) {
+    return renderTemplate('order-delivered.hbs', payload);
 }
 
 

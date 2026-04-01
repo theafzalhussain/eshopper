@@ -19,8 +19,10 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
+const handlebars = require('handlebars');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
+const { sendOrderStatus } = require('./mailController');
 
 let firebaseAdminReady = false;
 
@@ -188,9 +190,9 @@ const normalizeOrderStatus = (s = '') => {
 };
 
 // Feature toggles for clean baseline (disable until tested).
-const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'false').toLowerCase() === 'true';
+const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'true').toLowerCase() === 'true';
 const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
-const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'false').toLowerCase() === 'true';
+const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'true').toLowerCase() === 'true';
 
 // 🔴 SOCKET.IO AUTHENTICATION MIDDLEWARE
 io.use(async (socket, next) => {
@@ -397,6 +399,410 @@ const BRAND_LOGO_PRIMARY_URL = process.env.BRAND_LOGO_URL || `${BRAND_SITE_URL}/
 const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_SITE_URL}/logo192.png`;
 const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_PRIMARY_URL;
 const BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
+const FRONTEND_PUBLIC_URL = (process.env.FRONTEND_URL || BRAND_SITE_URL).trim().replace(/\/$/, '');
+const SUPPORT_EMAIL_DEFAULT = (process.env.SUPPORT_EMAIL || process.env.BRAND_EMAIL || 'support@eshopperr.me').trim();
+const SUPPORT_PHONE_DEFAULT = (process.env.SUPPORT_PHONE || process.env.BRAND_PHONE || '+91 8447859784').trim();
+const INSTAGRAM_URL_DEFAULT = (
+    process.env.INSTAGRAM_URL ||
+    process.env.BRAND_INSTAGRAM ||
+    process.env.BRAND_instagram ||
+    'https://www.instagram.com/theafzal_hussain_786'
+).trim();
+
+const buildInvoiceHtml = ({
+    orderId,
+    userName,
+    userEmail,
+    paymentMethod,
+    paymentStatus,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    shippingAddress,
+    products,
+    orderDate,
+    orderStatus,
+    pdfType
+}) => {
+    const safeProducts = Array.isArray(products) ? products : [];
+    const safeAddress = shippingAddress || {};
+    const invoiceType = pdfType === 'final' ? 'Tax Invoice' : (pdfType === 'confirmation' ? 'Proforma Invoice' : 'Payment Receipt');
+    const invoiceNo = `INV-${String(orderId || '').replace(/[^a-zA-Z0-9]/g, '').slice(-10) || '000000'}`;
+    const orderDateStr = new Date(orderDate || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const rows = safeProducts.map((p, idx) => {
+        const qty = Number(p.qty || p.quantity || 1);
+        const price = Number(p.price || 0);
+        const lineTotal = Number(p.total || qty * price);
+        const name = String(p.name || 'Product');
+        const sku = String(p.productid || p._id || p.id || '').slice(0, 14);
+        return `
+            <tr>
+                <td>${idx + 1}</td>
+                <td><strong>${name}</strong><br/><span style="color:#64748b;font-size:11px;">SKU: ${sku || 'N/A'}</span></td>
+                <td>${qty}</td>
+                <td>₹${price.toLocaleString('en-IN')}</td>
+                <td>₹${lineTotal.toLocaleString('en-IN')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <style>
+                body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; padding: 20px; background: #f8fafc; }
+                .card { max-width: 980px; margin: 0 auto; background: #fff; border: 1px solid #dbe4ef; border-radius: 14px; overflow: hidden; }
+                .hero { background: linear-gradient(120deg, #0f172a, #1e293b); color: #fff; padding: 18px; display: flex; justify-content: space-between; gap: 16px; }
+                .hero h1 { margin: 0 0 5px; font-size: 22px; }
+                .hero p { margin: 0; color: #cbd5e1; font-size: 12px; }
+                .meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 14px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+                .meta .box { background: #fff; border: 1px solid #dbe4ef; border-radius: 10px; padding: 10px; }
+                .label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.4px; }
+                .val { font-size: 13px; font-weight: 700; color: #0f172a; line-height: 1.5; }
+                .body { padding: 14px 18px 18px; }
+                table { width: 100%; border-collapse: collapse; }
+                th { text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; padding: 9px 7px; letter-spacing: 0.4px; }
+                td { border-bottom: 1px solid #e2e8f0; padding: 10px 7px; font-size: 13px; vertical-align: top; }
+                .totals { margin-top: 14px; margin-left: auto; width: 340px; border: 1px solid #dbe4ef; border-radius: 10px; padding: 10px; background: #f8fafc; }
+                .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; }
+                .grand { display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 900; color: #0284c7; border-top: 1px dashed #94a3b8; padding-top: 8px; margin-top: 8px; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="hero">
+                    <div>
+                        <h1>${invoiceType}</h1>
+                        <p>Order ID: ${orderId || 'N/A'}</p>
+                        <p>Invoice No: ${invoiceNo}</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <img src="${BRAND_LOGO_PDF_SRC}" alt="brand" style="width:130px;background:#fff;border-radius:8px;padding:4px;" />
+                        <p>${BRAND_SITE_URL}</p>
+                    </div>
+                </div>
+                <div class="meta">
+                    <div class="box"><div class="label">Customer</div><div class="val">${userName || 'Customer'}<br/>${userEmail || '-'}</div></div>
+                    <div class="box"><div class="label">Order Date</div><div class="val">${orderDateStr}<br/>Status: ${orderStatus || 'Ordered'}</div></div>
+                    <div class="box"><div class="label">Payment</div><div class="val">${paymentMethod || 'COD'}<br/>${paymentStatus || 'Pending'}</div></div>
+                </div>
+                <div class="body">
+                    <div class="label">Shipping Address</div>
+                    <div class="val" style="margin-bottom:12px;">${safeAddress.fullName || '-'} • ${safeAddress.phone || '-'}<br/>${safeAddress.addressline1 || '-'}, ${safeAddress.city || '-'}, ${safeAddress.state || '-'} ${safeAddress.pin || '-'}</div>
+                    <table>
+                        <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <div class="totals">
+                        <div class="row"><span>Subtotal</span><strong>₹${Number(totalAmount || 0).toLocaleString('en-IN')}</strong></div>
+                        <div class="row"><span>Shipping</span><strong>${Number(shippingAmount || 0) === 0 ? 'FREE' : `₹${Number(shippingAmount || 0).toLocaleString('en-IN')}`}</strong></div>
+                        <div class="grand"><span>Grand Total</span><span>₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span></div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
+const generateInvoicePdfBuffer = async (invoiceData) => {
+    const html = buildInvoiceHtml(invoiceData || {});
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+    try {
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 45000 });
+        const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' } });
+        return Buffer.from(pdf);
+    } finally {
+        await browser.close();
+    }
+};
+
+const buildOrderEmailHtml = ({
+    userName,
+    orderId,
+    finalAmount,
+    paymentMethod,
+    estimatedArrival,
+    products = []
+}) => {
+    const shortItems = (Array.isArray(products) ? products : []).slice(0, 5);
+    const listHtml = shortItems.map((p) => {
+        const qty = Number(p.qty || p.quantity || 1);
+        const price = Number(p.price || 0);
+        return `<li style="margin-bottom:6px;"><strong>${p.name || 'Product'}</strong> • Qty ${qty} • ₹${price.toLocaleString('en-IN')}</li>`;
+    }).join('');
+    const eta = estimatedArrival ? new Date(estimatedArrival).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'TBD';
+
+    return `
+        <div style="font-family:Arial,sans-serif;background:#f5f8fc;padding:20px;color:#0f172a;">
+            <div style="max-width:620px;margin:0 auto;background:#fff;border:1px solid #dbe4ef;border-radius:14px;overflow:hidden;">
+                <div style="padding:18px;background:linear-gradient(120deg,#0f172a,#1e293b);color:#fff;">
+                    <img src="${BRAND_LOGO_EMAIL_URL}" alt="brand" style="width:130px;background:#fff;border-radius:8px;padding:4px;display:block;margin-bottom:8px;" />
+                    <div style="font-size:20px;font-weight:800;">Order Update • ${orderId}</div>
+                    <div style="font-size:13px;color:#cbd5e1;">Thank you ${userName || 'Customer'}, your premium order is being processed.</div>
+                </div>
+                <div style="padding:18px;">
+                    <p style="margin:0 0 8px;">Amount Paid: <strong>₹${Number(finalAmount || 0).toLocaleString('en-IN')}</strong></p>
+                    <p style="margin:0 0 8px;">Payment Method: <strong>${paymentMethod || 'COD'}</strong></p>
+                    <p style="margin:0 0 14px;">Estimated Delivery: <strong>${eta}</strong></p>
+                    <div style="font-weight:700;margin-bottom:8px;">Ordered Items:</div>
+                    <ul style="padding-left:18px;margin-top:0;">${listHtml || '<li>Items will appear shortly.</li>'}</ul>
+                    <a href="${getTrackingLink(orderId)}" style="display:inline-block;margin-top:8px;padding:10px 14px;border-radius:999px;background:linear-gradient(90deg,#0ea5b7,#0284c7);color:#fff;text-decoration:none;font-weight:700;">Track Order</a>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+const formatOrderDate = (value) => {
+    const dt = new Date(value || Date.now());
+    if (Number.isNaN(dt.getTime())) {
+        return new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+    return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatAddressForEmail = (shippingAddress = {}) => {
+    const parts = [
+        shippingAddress?.addressline1,
+        shippingAddress?.city,
+        shippingAddress?.state,
+        shippingAddress?.pin,
+        shippingAddress?.country || 'India'
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(', ') : 'Address not available';
+};
+
+const mapProductsForEmailTemplate = (products = []) => {
+    return (Array.isArray(products) ? products : []).map((p) => {
+        const qty = Number(p.qty || p.quantity || 1);
+        const unitPrice = Number(p.price || p.finalprice || 0);
+        const subtotal = Number(p.total || qty * unitPrice);
+        const imageUrl =
+            p.imageUrl ||
+            p.pic ||
+            p.pic1 ||
+            p.product?.pic1 ||
+            `${BRAND_SITE_URL}/assets/images/noimage.png`;
+        return {
+            imageUrl,
+            name: p.name || p.product?.name || 'Product',
+            size: p.size || p.product?.size || 'N/A',
+            color: p.color || p.product?.color || 'N/A',
+            quantity: qty,
+            qty,
+            price: unitPrice,
+            subtotal
+        };
+    });
+};
+
+const DELIVERY_PROGRESS_STEP_META = [
+    { label: 'Placed', icon: '&#128722;' },
+    { label: 'Confirmed', icon: '&#10003;' },
+    { label: 'Packed', icon: '&#128230;' },
+    { label: 'Shipped', icon: '&#128666;' },
+    { label: 'Delivered', icon: '&#127873;' }
+];
+
+const resolveProgressStage = (statusValue = '') => {
+    const statusText = String(statusValue || '').trim().toLowerCase();
+    if (!statusText) return 1;
+    if (statusText.includes('delivered')) return 5;
+    if (statusText.includes('out for delivery')) return 4;
+    if (statusText.includes('shipped')) return 4;
+    if (statusText.includes('packed')) return 3;
+    if (statusText.includes('confirmed')) return 2;
+    if (statusText.includes('cancel') || statusText.includes('fail')) return 1;
+    if (
+        statusText.includes('ordered') ||
+        statusText.includes('order placed') ||
+        statusText.includes('order received') ||
+        statusText.includes('placed') ||
+        statusText.includes('received')
+    ) {
+        return 1;
+    }
+    return 1;
+};
+
+const buildDeliveryProgress = (statusValue = '') => {
+    const stage = resolveProgressStage(statusValue);
+    const percentByStage = { 1: 20, 2: 40, 3: 60, 4: 80, 5: 100 };
+    const steps = DELIVERY_PROGRESS_STEP_META.map((step, idx) => {
+        const stepNo = idx + 1;
+        const state = stepNo < stage ? 'done' : (stepNo === stage ? 'active' : 'pending');
+        return {
+            label: step.label.toUpperCase(),
+            icon: state === 'done' ? '&#10003;' : step.icon,
+            state
+        };
+    });
+
+    return {
+        stage,
+        percent: percentByStage[stage] || 20,
+        steps
+    };
+};
+
+const buildTemplatePayload = (status, payload = {}) => {
+    const normStatus = String(status || payload.status || '').trim();
+    const products = mapProductsForEmailTemplate(payload.products || []);
+    const totalItems = products.reduce((acc, p) => acc + Number(p.quantity || 1), 0);
+    const shippingAddress = payload.shippingAddress || {};
+    const customerName = payload.customerName || payload.userName || shippingAddress.fullName || 'Customer';
+    const userId = String(payload.userId || payload.userid || '').trim();
+    const orderId = payload.orderId || 'ESHOPPER';
+    const trackingUrl = payload.trackingUrl || getTrackingLink(orderId);
+    const expectedArrivalDate = payload.estimatedDelivery || payload.estimatedArrival || new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+    const expectedArrival = formatOrderDate(expectedArrivalDate);
+    const referralCode = payload.referralCode || `LUXE${String(orderId).slice(-4)}`;
+    const myOrdersUrl = payload.myOrdersUrl || `${FRONTEND_PUBLIC_URL}/my-orders`;
+    const helpCenterUrl = payload.helpCenterUrl || `${FRONTEND_PUBLIC_URL}/contact`;
+    const shopUrl = payload.shopUrl || `${FRONTEND_PUBLIC_URL}/shop`;
+    const deliveryProgress = buildDeliveryProgress(normStatus || payload.orderStatus || payload.status);
+
+    const taxInvoiceUrl = payload.taxInvoiceUrl || (userId
+        ? `${BRAND_SITE_URL}/api/order/${encodeURIComponent(orderId)}/invoice?userId=${encodeURIComponent(userId)}`
+        : myOrdersUrl);
+
+    return {
+        status: normStatus,
+        toEmail: payload.toEmail,
+        logoUrl: BRAND_LOGO_EMAIL_URL,
+        orderId,
+        orderDate: formatOrderDate(payload.orderDate || payload.createdAt || Date.now()),
+        customerName,
+        customerEmail: payload.toEmail || payload.userEmail || '',
+        items: products,
+        subtotal: Number(payload.totalAmount || 0),
+        shippingCharges: Number(payload.shippingAmount || 0),
+        gst: Math.max(0, Math.round(Number(payload.totalAmount || 0) * 0.05)),
+        totalAmount: Number(payload.totalAmount || 0),
+        totalPaid: Number(payload.finalAmount || payload.totalAmount || 0),
+        finalAmount: Number(payload.finalAmount || payload.totalAmount || 0),
+        shippingName: shippingAddress.fullName || customerName,
+        shippingAddress: formatAddressForEmail(shippingAddress),
+        shippingPhone: shippingAddress.phone || payload.userPhone || '-',
+        paymentMethod: payload.paymentMethod || 'COD',
+        transactionId: payload.transactionId || orderId,
+        paymentStatus: payload.paymentStatus || 'Pending',
+        expectedArrival,
+        companyAddress: process.env.COMPANY_ADDRESS || 'Eshopper Boutique Luxe, New Delhi, India',
+        whatsappUrl: process.env.WHATSAPP_SUPPORT_URL || 'https://wa.me/919999999999',
+        supportEmail: SUPPORT_EMAIL_DEFAULT,
+        totalItems,
+        packedOn: formatOrderDate(Date.now()),
+        packageWeight: payload.packageWeight || `${Math.max(0.3, (totalItems * 0.25)).toFixed(1)} kg`,
+        trackingUrl,
+        courierPartner: payload.courierPartner || payload.deliveryPartner || 'Eshopper Express',
+        trackingNumber: payload.trackingNumber || orderId,
+        shippedOn: formatOrderDate(Date.now()),
+        expectedDelivery: expectedArrival,
+        liveTrackingUrl: trackingUrl,
+        carrierWebsiteUrl: process.env.CARRIER_WEBSITE_URL || trackingUrl,
+        deliveryDate: formatOrderDate(Date.now()),
+        deliveryTimeSlot: payload.deliverySchedule?.time || payload.deliverySlot || 'By 9:00 PM',
+        otp: payload.deliveryOtp || String(orderId).slice(-4) || '0000',
+        deliveryAgent: payload.deliveryAgent || 'Assigned Rider',
+        agentContact: payload.agentContact || shippingAddress.phone || '-',
+        deliveryLocation: `${shippingAddress.city || ''}${shippingAddress.state ? ', ' + shippingAddress.state : ''}` || 'Your Address',
+        deliveredOn: formatOrderDate(Date.now()),
+        receivedBy: payload.receivedBy || shippingAddress.fullName || customerName,
+        taxInvoiceUrl,
+        reviewUrl: payload.reviewUrl || `${BRAND_SITE_URL}/my-orders`,
+        referralCode,
+        referralShareUrl: payload.referralShareUrl || `${BRAND_SITE_URL}/signup?ref=${encodeURIComponent(referralCode)}`,
+        instagramUrl: INSTAGRAM_URL_DEFAULT,
+        brandSiteUrl: FRONTEND_PUBLIC_URL,
+        myOrdersUrl,
+        helpCenterUrl,
+        shopUrl,
+        supportPhone: SUPPORT_PHONE_DEFAULT,
+        supportWhatsAppLabel: process.env.SUPPORT_WHATSAPP_LABEL || 'Chat on WhatsApp',
+        invoiceDownloadUrl: payload.invoiceDownloadUrl || taxInvoiceUrl,
+        progressSteps: deliveryProgress.steps,
+        progressPercent: deliveryProgress.percent,
+        progressStage: deliveryProgress.stage
+    };
+};
+
+const renderTemplateEmailHtml = async (status, payload = {}) => {
+    const prepared = buildTemplatePayload(status, payload);
+    try {
+        return await sendOrderStatus(prepared);
+    } catch (templateErr) {
+        console.warn(`⚠️ Template render failed for status ${status}:`, templateErr.message);
+        return buildOrderEmailHtml({
+            userName: prepared.customerName,
+            orderId: prepared.orderId,
+            finalAmount: prepared.finalAmount,
+            paymentMethod: prepared.paymentMethod,
+            estimatedArrival: prepared.expectedArrival,
+            products: prepared.items
+        });
+    }
+};
+
+const sendOrderPlacedEmail = async (payload = {}) => {
+    const toEmail = String(payload.toEmail || '').trim();
+    if (!toEmail) return { skipped: true, reason: 'missing-email' };
+    const subject = `Order Placed • ${payload.orderId || 'ESHOPPER'}`;
+    const html = await renderTemplateEmailHtml('Order Placed', payload);
+    const attachments = [];
+    if (payload.invoiceBase64) {
+        attachments.push({
+            filename: `Receipt-${payload.orderId || 'order'}.pdf`,
+            content: payload.invoiceBase64,
+            contentType: 'application/pdf'
+        });
+    }
+    return sendTransactionalEmail({ toEmail, toName: payload.userName, subject, htmlContent: html, attachments });
+};
+
+const sendOrderConfirmationEmail = async (payload = {}) => {
+    const toEmail = String(payload.toEmail || '').trim();
+    if (!toEmail) return { skipped: true, reason: 'missing-email' };
+    const subject = `Order Confirmed • ${payload.orderId || 'ESHOPPER'}`;
+    const html = await renderTemplateEmailHtml('Confirmed', payload);
+    const attachments = [];
+    if (payload.invoiceBase64) {
+        attachments.push({
+            filename: `Confirmation-${payload.orderId || 'order'}.pdf`,
+            content: payload.invoiceBase64,
+            contentType: 'application/pdf'
+        });
+    }
+    return sendTransactionalEmail({ toEmail, toName: payload.userName, subject, htmlContent: html, attachments });
+};
+
+const sendOrderStatusEmail = async (payload = {}) => {
+    const toEmail = String(payload.toEmail || '').trim();
+    if (!toEmail) return { skipped: true, reason: 'missing-email' };
+    const subject = `Order ${payload.status || 'Update'} • ${payload.orderId || 'ESHOPPER'}`;
+    const html = await renderTemplateEmailHtml(payload.status || 'Update', {
+        ...payload,
+        estimatedArrival: payload.estimatedDelivery || payload.estimatedArrival
+    });
+    const attachments = [];
+    if (payload.invoiceBase64) {
+        const isDelivered = String(payload.status || '').trim().toLowerCase() === 'delivered';
+        attachments.push({
+            filename: isDelivered ? `TaxInvoice-${payload.orderId || 'order'}.pdf` : `Invoice-${payload.orderId || 'order'}.pdf`,
+            content: payload.invoiceBase64,
+            contentType: 'application/pdf'
+        });
+    }
+    return sendTransactionalEmail({ toEmail, toName: payload.customerName || payload.userName, subject, htmlContent: html, attachments });
+};
 
 // 🔧 DATABASE CONNECTION SETUP
 const MONGO_URI = process.env.MONGODB_URI;
@@ -480,16 +886,26 @@ const sendMail = async (to, otp) => {
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ') || 'Customer';
 
-        const data = {
-            sender: { name: "EShoppper Security", email: "support@eshopperr.me" },
-            to: [{ email: to }],
-            subject: `Your EShoppper Verification Code: ${otp}`,
-            textContent: `Hi ${recipientName},\n\nYour EShoppper verification code is: ${otp}\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email and secure your account.\n\nEShoppper Premium Security\nsupport@eshopperr.me`,
-            htmlContent: `
+        let otpHtml = '';
+        try {
+            const templatePath = path.join(__dirname, 'views', 'emails', 'otp-email.hbs');
+            const source = fs.readFileSync(templatePath, 'utf8');
+            const template = handlebars.compile(source);
+            otpHtml = template({
+                userName: recipientName,
+                otp: String(otp || ''),
+                supportEmail: SUPPORT_EMAIL_DEFAULT,
+                supportPhone: SUPPORT_PHONE_DEFAULT,
+                websiteUrl: FRONTEND_PUBLIC_URL,
+                companyAddress: process.env.COMPANY_ADDRESS || 'Eshopper Boutique Luxe, New Delhi, India'
+            });
+        } catch (templateErr) {
+            console.warn('⚠️ OTP template render failed, using fallback HTML:', templateErr.message);
+            otpHtml = `
                 <div style="font-family:Arial,Helvetica,sans-serif;background:#f4f6f8;padding:24px;color:#1f2937;">
                     <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
                         <div style="padding:22px 28px;background:linear-gradient(135deg,#111827,#1a2332,#8b7521);color:#ffffff;">
-                            <div style="font-size:20px;font-weight:700;letter-spacing:0.3px;background:linear-gradient(135deg,#f5deb3,#d4af37);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">EShoppper</div>
+                            <div style="font-size:20px;font-weight:700;letter-spacing:0.3px;">EShoppper Security</div>
                             <div style="font-size:13px;opacity:0.9;margin-top:4px;color:#d4af37;font-weight:600;">Secure Account Verification</div>
                         </div>
                         <div style="padding:28px;">
@@ -501,11 +917,16 @@ const sendMail = async (to, otp) => {
                             <p style="margin:0 0 8px 0;font-size:14px;color:#4b5563;">This code is valid for 10 minutes.</p>
                             <p style="margin:0;font-size:14px;color:#4b5563;">If you did not request this, please ignore this email and secure your account.</p>
                         </div>
-                        <div style="padding:16px 28px;border-top:1px solid #e5e7eb;background:#fafafa;font-size:12px;color:#6b7280;">
-                            Sent by EShoppper Premium Security • support@eshopperr.me
-                        </div>
                     </div>
-                </div>`,
+                </div>`;
+        }
+
+        const data = {
+            sender: { name: "EShoppper Security", email: "support@eshopperr.me" },
+            to: [{ email: to }],
+            subject: `Your EShoppper Verification Code: ${otp}`,
+            textContent: `Hi ${recipientName},\n\nYour EShoppper verification code is: ${otp}\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email and secure your account.\n\nEShoppper Premium Security\nsupport@eshopperr.me`,
+            htmlContent: otpHtml,
             replyTo: { email: "support@eshopperr.me" }
         };
 
@@ -1721,6 +2142,31 @@ const placeOrderHandler = async (req, res) => {
 
         const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
+        if (FEATURE_EMAIL_NOTIFICATIONS && recipientEmail) {
+            try {
+                await enqueueEmailJob('order-placed', {
+                    toEmail: recipientEmail,
+                    userId,
+                    userName: user.name,
+                    orderId,
+                    paymentMethod: paymentMethod || 'COD',
+                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+                    finalAmount: payable,
+                    totalAmount: total,
+                    shippingAmount: shipping,
+                    shippingAddress: addressPayload,
+                    products: cleanProducts,
+                    estimatedArrival,
+                    orderDate,
+                    invoiceBase64: invoiceBuffer ? invoiceBuffer.toString('base64') : null,
+                    status: 'Order Placed'
+                });
+            } catch (emailErr) {
+                console.warn(`⚠️ Order placed email queue failed for ${orderId}:`, emailErr.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+            }
+        }
+
         // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
         try {
@@ -2492,6 +2938,106 @@ app.get('/api/admin/orders', async (req, res) => {
     }
 });
 
+app.get('/api/admin/invoices', async (req, res) => {
+    try {
+        const adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
+        if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
+        const search = String(req.query.search || '').trim();
+
+        const query = {};
+        if (search) {
+            query.$or = [
+                { orderId: { $regex: search, $options: 'i' } },
+                { userName: { $regex: search, $options: 'i' } },
+                { userEmail: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (page - 1) * limit;
+        const total = await Order.countDocuments(query);
+        const orders = await Order.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount createdAt updatedAt')
+            .lean();
+
+        return res.json({
+            success: true,
+            total,
+            page,
+            limit,
+            pages: Math.ceil(total / limit),
+            invoices: orders.map((o) => ({
+                orderId: o.orderId,
+                userId: o.userid,
+                userName: o.userName || 'N/A',
+                userEmail: o.userEmail || 'N/A',
+                orderStatus: o.orderStatus || 'Ordered',
+                paymentStatus: o.paymentStatus || 'Pending',
+                finalAmount: Number(o.finalAmount || 0),
+                invoiceType: String(o.orderStatus || '').toLowerCase() === 'delivered' ? 'Tax Invoice' : 'Receipt',
+                createdAt: o.createdAt,
+                updatedAt: o.updatedAt || o.createdAt
+            }))
+        });
+    } catch (e) {
+        console.error('❌ Admin invoices fetch error:', e.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch invoices' });
+    }
+});
+
+app.get('/api/admin/invoices/:orderId/download', async (req, res) => {
+    try {
+        const adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
+        if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const { orderId } = req.params;
+        if (!orderId) return res.status(400).json({ success: false, message: 'orderId required' });
+
+        const order = await Order.findOne({ orderId }).lean();
+        if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+        const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+        const isDelivered = orderStatus === 'delivered';
+        const pdfType = isDelivered ? 'final' : 'receipt';
+
+        const pdfBuffer = await generateInvoicePdfBuffer({
+            orderId: order.orderId,
+            userName: order.userName,
+            userEmail: order.userEmail,
+            paymentMethod: order.paymentMethod,
+            paymentStatus: order.paymentStatus,
+            finalAmount: Number(order.finalAmount || 0),
+            totalAmount: Number(order.totalAmount || 0),
+            shippingAmount: Number(order.shippingAmount || 0),
+            shippingAddress: order.shippingAddress || {},
+            products: Array.isArray(order.products) ? order.products : [],
+            orderDate: order.orderDate || order.createdAt,
+            orderStatus: order.orderStatus || order.status || 'Ordered',
+            pdfType,
+            isDelivered
+        });
+
+        const fileName = isDelivered ? `TaxInvoice-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.setHeader('Content-Length', String(pdfBuffer.length));
+        return res.send(pdfBuffer);
+    } catch (e) {
+        console.error('❌ Admin invoice download error:', e.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(e);
+        return res.status(500).json({ success: false, message: 'Failed to generate invoice' });
+    }
+});
+
 // 🔴 ADMIN - GET DETAILED ORDER
 app.get('/api/admin/order/:orderId', async (req, res) => {
     try {
@@ -2697,6 +3243,78 @@ const handleOrderStatusUpdate = async (req, res) => {
             });
         }
 
+        // 🔴 TRIGGER STATUS EMAILS (confirmed/packed/shipped/out-for-delivery/delivered)
+        if (FEATURE_EMAIL_NOTIFICATIONS) {
+            setImmediate(() => {
+                (async () => {
+                    const emailStatuses = new Set(['Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered']);
+                    if (!emailStatuses.has(normalized)) return;
+
+                    const userDoc = await User.findById(order.userid).lean().catch(() => null);
+                    const toEmail = String(order.userEmail || userDoc?.email || '').trim();
+                    if (!toEmail) {
+                        console.warn(`⚠️ Skipping status email for ${order.orderId}: recipient email not found`);
+                        return;
+                    }
+
+                    const resolvedUserName = order.userName || userDoc?.name || 'Customer';
+                    let invoiceBase64 = null;
+
+                    // Delivered status should carry final tax invoice attachment.
+                    if (FEATURE_INVOICE_SYSTEM && normalized === 'Delivered') {
+                        try {
+                            const invoiceBuffer = await generateInvoicePdfBuffer({
+                                orderId: order.orderId,
+                                userName: resolvedUserName,
+                                userEmail: toEmail,
+                                paymentMethod: order.paymentMethod || 'COD',
+                                paymentStatus: order.paymentStatus || 'Pending',
+                                finalAmount: Number(order.finalAmount || 0),
+                                totalAmount: Number(order.totalAmount || 0),
+                                shippingAmount: Number(order.shippingAmount || 0),
+                                shippingAddress: order.shippingAddress || {},
+                                products: Array.isArray(order.products) ? order.products : [],
+                                orderDate: order.orderDate || order.createdAt,
+                                estimatedArrival: order.estimatedArrival,
+                                orderStatus: 'Delivered',
+                                pdfType: 'final',
+                                isDelivered: true
+                            });
+
+                            if (invoiceBuffer) {
+                                invoiceBase64 = invoiceBuffer.toString('base64');
+                            }
+                        } catch (pdfErr) {
+                            console.warn(`⚠️ Final invoice generation failed for ${order.orderId}: ${pdfErr.message}`);
+                            if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
+                        }
+                    }
+
+                    await enqueueEmailJob('order-status', {
+                        toEmail,
+                        userId: order.userid,
+                        userName: resolvedUserName,
+                        orderId: order.orderId,
+                        paymentMethod: order.paymentMethod || 'COD',
+                        paymentStatus: order.paymentStatus || 'Pending',
+                        finalAmount: Number(order.finalAmount || 0),
+                        totalAmount: Number(order.totalAmount || 0),
+                        shippingAmount: Number(order.shippingAmount || 0),
+                        shippingAddress: order.shippingAddress || {},
+                        products: Array.isArray(order.products) ? order.products : [],
+                        orderDate: order.orderDate || order.createdAt,
+                        estimatedArrival: order.estimatedArrival,
+                        status: normalized,
+                        orderStatus: normalized,
+                        invoiceBase64
+                    });
+                })().catch((emailErr) => {
+                    console.error(`⚠️ Status email queue failed for ${order.orderId}:`, emailErr.message);
+                    if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                });
+            });
+        }
+
         // 🔴 EMIT REAL-TIME DASHBOARD UPDATE VIA SOCKET.IO
         if (ioInstance) {
             ioInstance.emit('dashboardUpdate', {
@@ -2763,6 +3381,10 @@ app.post('/api/admin/confirm-order', async (req, res) => {
             return res.status(404).json({ message: 'Order not found' });
         }
 
+        const userDoc = await User.findById(order.userid).lean().catch(() => null);
+        const recipientEmail = String(order.userEmail || userDoc?.email || '').trim();
+        const recipientName = order.userName || userDoc?.name || 'Customer';
+
         // Generate Proforma PDF for Email #2 (Confirmed)
         let invoiceBase64 = null;
         if (FEATURE_INVOICE_SYSTEM) {
@@ -2794,16 +3416,21 @@ app.post('/api/admin/confirm-order', async (req, res) => {
 
         // Send Email #2: Order Confirmed (Ultra-Premium) via queue with Proforma attachment
         let emailSent = true;
-        if (FEATURE_EMAIL_NOTIFICATIONS) {
+        if (FEATURE_EMAIL_NOTIFICATIONS && recipientEmail) {
             try {
                 await enqueueEmailJob('order-confirmed', {
-                    toEmail: order.userEmail,
-                    userName: order.userName,
+                    toEmail: recipientEmail,
+                    userId: order.userid,
+                    userName: recipientName,
                     orderId: order.orderId,
                     paymentMethod: order.paymentMethod || 'COD',
+                    paymentStatus: order.paymentStatus || 'Pending',
                     finalAmount: order.finalAmount,
+                    totalAmount: order.totalAmount,
+                    shippingAmount: order.shippingAmount,
                     shippingAddress: order.shippingAddress,
                     products: order.products || [],
+                    orderDate: order.orderDate || order.createdAt,
                     estimatedArrival: order.estimatedArrival,
                     invoiceBase64: invoiceBase64,
                     orderStatus: 'Confirmed'

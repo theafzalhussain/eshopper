@@ -1,79 +1,185 @@
-<!--
-Ultra-Premium Luxe Email: Delivered Successfully
-Exact Green Celebration Banner, Tax Invoice Card, Feedback, Referral, and Footer as per reference
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Delivered Successfully - Eshopper Boutique Luxe</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delivered - {{orderId}}</title>
   <style>
-    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
-    .header { background: linear-gradient(90deg, #0A0A0A 60%, #43e97b 100%); padding: 32px 0 18px 0; text-align: center; }
-    .logo { height: 40px; margin-bottom: 12px; }
-    .banner { background: #43e97b; color: #fff; font-size: 22px; font-weight: 900; padding: 18px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .banner-icon { font-size: 26px; }
-    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
-    .delivered-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; text-align: center; }
-    .delivered-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
-    .delivered-status { font-size: 18px; color: #43e97b; font-weight: 900; margin-bottom: 2px; }
-    .invoice-card { background: #fff; border-radius: 12px; color: #181818; padding: 18px 18px; margin: 24px 0 0 0; text-align: center; }
-    .invoice-title { font-size: 16px; color: #FFD700; font-weight: 900; margin-bottom: 8px; }
-    .invoice-btn { display: inline-block; background: #FFD700; color: #181818; font-size: 15px; font-weight: 900; padding: 12px 32px; border-radius: 24px; text-decoration: none; margin-top: 10px; }
-    .feedback-card { background: #222; border-radius: 12px; color: #FFD700; padding: 18px 18px; margin: 24px 0 0 0; text-align: center; }
-    .feedback-title { font-size: 16px; color: #FFD700; font-weight: 900; margin-bottom: 8px; }
-    .stars { font-size: 24px; color: #FFD700; letter-spacing: 2px; }
-    .review-btn { display: inline-block; background: #fff; color: #181818; font-size: 15px; font-weight: 900; padding: 10px 28px; border-radius: 24px; text-decoration: none; margin-top: 10px; }
-    .referral-card { background: linear-gradient(90deg, #8f5cff 60%, #ff6a00 100%); border-radius: 12px; color: #fff; padding: 18px 18px; margin: 24px 0 0 0; text-align: center; }
-    .referral-title { font-size: 16px; color: #fff; font-weight: 900; margin-bottom: 8px; }
-    .referral-code { font-size: 18px; color: #FFD700; font-weight: 900; background: #222; border-radius: 8px; padding: 6px 18px; margin: 10px 0; display: inline-block; }
-    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
-    .social-row { display: flex; justify-content: center; gap: 18px; margin: 18px 0 0 0; }
-    .social-icon { width: 36px; height: 36px; border-radius: 50%; display: inline-block; }
-    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
-    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
-    @media (max-width: 650px) {
-      .container { max-width: 98vw; }
-      .social-row { flex-direction: column; gap: 10px; }
+    {{> theme_tokens}}
+    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
+    table{border-collapse:collapse;}
+    .wrap{width:100%;background:#0a0a0a;padding:20px 8px;}
+    .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
+    .top{padding:18px 20px;background:linear-gradient(120deg,#093722,#0e4f2f,#0c6d3d);}
+    .logo{height:34px;vertical-align:middle;}
+    .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#eafff0;border:1px solid #72db8f;background:#54bf6d;padding:7px 12px;border-radius:999px;}
+    .hero{background:#65c36f;color:#fff;text-align:center;padding:24px 12px;}
+    .hero .icon{font-size:48px;line-height:1;}
+    .hero .t{font-size:50px;font-weight:800;line-height:1;margin-top:6px;}
+    .hero .s{font-size:16px;opacity:.96;margin-top:8px;}
+    .section{padding:22px 20px;border-top:1px solid #272a30;}
+    .title{margin:0 0 10px;font-size:46px;line-height:1.08;text-align:center;}
+    .sub{text-align:center;color:#d6dae2;font-size:18px;line-height:1.62;margin:0;}
+    .confirm{margin:18px auto 0;max-width:360px;background:#064124;border:1px solid #0f8245;color:#75f2a9;border-radius:12px;padding:12px;text-align:center;font-size:20px;font-weight:700;}
+    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
+    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
+    .progress-grid{width:100%;}
+    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
+    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;font-size:18px;border:1px solid #3a404d;background:#1b212d;}
+    .p-icon.done{background:#2ea94b;border-color:#55d372;}
+    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;box-shadow:0 0 0 3px rgba(47,143,226,0.22);}
+    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
+    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
+    .p-label.done{color:#5fda7f;}
+    .p-label.active{color:#7bc6ff;}
+    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
+    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
+    .box{border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;}
+    .invoice{background:linear-gradient(120deg,#352307,#4b2a08);border:1px solid #9f7a2e;border-radius:12px;padding:16px;text-align:center;}
+    .invoice h3{margin:0 0 8px;color:#fff;font-size:42px;}
+    .invoice p{margin:0;color:#d6c7a2;line-height:1.5;font-size:18px;}
+    .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;}
+    .btn-gold{background:linear-gradient(90deg,#e0bf3f,#9b7f21);color:#fff;}
+    .review{margin-top:14px;border-top:1px solid #31353f;padding-top:14px;text-align:center;}
+    .review h4{margin:0;color:#f2f4f7;font-size:43px;}
+    .review p{margin:6px 0 0;color:#c5cad6;font-size:18px;}
+    .stars{font-size:54px;letter-spacing:6px;color:#f5cf4a;margin:12px 0;line-height:1;}
+    .btn-review{display:inline-block;background:#1e232d;border:1px solid #2f854f;color:#f1f2f5;text-decoration:none;border-radius:10px;padding:10px 14px;font-size:16px;font-weight:700;}
+    .heading{color:#1ed66a;font-size:30px;margin:0 0 14px;}
+    .items{width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;}
+    .items th{text-align:left;font-size:13px;color:#aeb7c9;background:#1b1f27;padding:10px;border-bottom:1px solid #2d313a;}
+    .items td{padding:12px 10px;font-size:16px;color:#eceef2;border-bottom:1px solid #2c3039;vertical-align:top;}
+    .items tr:last-child td{border-bottom:none;}
+    .thumb{width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;}
+    .total td{background:linear-gradient(90deg,#07412b,#095a39);color:#f0d26e;font-weight:800;font-size:16px;}
+    .ref{margin-top:14px;background:linear-gradient(120deg,#3f0a36,#3f123f);border:1px solid #8f4da1;border-radius:12px;padding:16px;text-align:center;}
+    .ref h4{margin:0;color:#fff;font-size:42px;}
+    .ref p{margin:10px 0 0;color:#d4b8e6;line-height:1.55;font-size:18px;}
+    .btn-ref{display:inline-block;background:#a074e8;color:#fff;text-decoration:none;border-radius:10px;padding:12px 14px;font-weight:700;font-size:18px;margin-top:12px;}
+    .rcode{margin-top:12px;display:inline-block;background:#2a1f10;border:1px dashed #d5b55a;color:#efcb4a;padding:10px 14px;border-radius:8px;font-weight:800;font-size:27px;letter-spacing:2px;}
+    .info{margin-top:14px;border-top:1px solid #31353f;padding-top:14px;}
+    .info h4{margin:0 0 10px;color:#f1f2f5;font-size:31px;text-align:center;}
+    .igrid{width:100%;}
+    .igrid td{width:50%;padding:8px;vertical-align:top;}
+    .ibox{border:1px solid #373b44;border-radius:12px;background:#1a1c22;padding:14px;text-align:center;}
+    .ibox .t{color:#f1f2f5;font-size:31px;font-weight:700;line-height:1.1;}
+    .ibox .d{margin-top:6px;color:#aeb5c6;font-size:16px;line-height:1.45;}
+    .social{margin-top:14px;text-align:center;border-top:1px solid #31353f;padding-top:14px;}
+    .social h4{margin:0;color:#f1f2f5;font-size:42px;}
+    .social p{margin:6px 0 0;color:#c6ccda;font-size:18px;}
+    .btn-row{width:100%;margin-top:12px;}
+    .btn-row td{width:50%;}
+    .btn-sm{display:block;text-align:center;text-decoration:none;font-weight:700;border-radius:10px;padding:11px 8px;font-size:16px;}
+    .insta{background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;margin-right:8px;}
+    .wa{background:#25d366;color:#0f1712;margin-left:8px;}
+    .help{margin-top:14px;text-align:center;border-top:1px solid #31353f;padding-top:14px;}
+    .help a{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:#151922;color:#7cf0a5;border:1px solid #2b7a45;text-decoration:none;font-weight:700;font-size:15px;}
+    .foot{padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;}
+    @media only screen and (max-width:620px){
+      .status{float:none;display:inline-block;margin-top:8px;}
+      .hero .t{font-size:38px;}
+      .title{font-size:34px;}
+      .sub{font-size:16px;}
+      .p-icon{width:32px;height:32px;font-size:16px;}
+      .p-label{font-size:10px;}
+      .stars{font-size:42px;}
+      .igrid td,.btn-row td{display:block;width:100%;}
+      .insta,.wa{margin:0 0 10px 0;}
+      .social h4,.review h4,.ref h4{font-size:30px;}
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
-    </div>
-    <div class="banner"><span class="banner-icon">🎉</span>DELIVERED!<span class="banner-icon">🎉</span></div>
-    <div class="greeting">Thank You, {{customerName}} <span style="font-size:18px;">🙏</span><br>We hope you love your luxury purchase! Your order <span style="color:#43e97b;">{{orderId}}</span> was delivered on <span style="color:#FFD700;">{{deliveredOn}}</span>.</div>
-    <div class="delivered-box">
-      <div class="delivered-title">DELIVERY CONFIRMED</div>
-      <div class="delivered-status">Received by: {{receivedBy}}</div>
-    </div>
-    <div class="invoice-card">
-      <div class="invoice-title">Your Tax Invoice is Ready</div>
-      <a class="invoice-btn" href="{{taxInvoiceUrl}}">📄 DOWNLOAD TAX INVOICE</a>
-    </div>
-    <div class="feedback-card">
-      <div class="feedback-title">How was your experience?<br><span style="font-size:14px; color:#FFD700;">Rate your order and help us serve you better</span></div>
-      <div class="stars">★ ★ ★ ★ ★</div>
-      <a class="review-btn" href="{{reviewUrl}}">Write a Review</a>
-    </div>
-    <div class="referral-card">
-      <div class="referral-title">Love Your Purchase? Share the Luxury!</div>
-      <div style="font-size:14px; color:#fff;">Refer a friend to Eshopper Boutique Luxe and you both get 10% OFF on your next luxe purchase!</div>
-      <div class="referral-code">{{referralCode}}</div>
-      <a class="review-btn" href="{{referralShareUrl}}">Share & Earn 10% Off</a>
-    </div>
-    <div class="footer">
-      <div class="social-row">
-        <a href="{{instagramUrl}}"><img class="social-icon" src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg" alt="Instagram" /></a>
-        <a href="{{whatsappUrl}}"><img class="social-icon" src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/whatsapp.svg" alt="WhatsApp" /></a>
-      </div>
-      <div class="address">{{companyAddress}}</div>
-      <div class="footer-note">* This is a delivery confirmation, not a Tax Invoice. Tax Invoice is attached above.</div>
-    </div>
-  </div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Delivered successfully - {{orderId}}. Your tax invoice is ready.</div>
+  <table class="wrap" role="presentation" width="100%"><tr><td>
+    <table class="card" role="presentation" align="center">
+      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">DELIVERED</span></td></tr>
+      <tr><td class="hero"><div class="icon">&#127881;</div><div class="t">DELIVERED!</div><div class="s">Your luxury package has arrived safely</div></td></tr>
+
+      <tr><td class="section">
+        <h2 class="title">Thank You, {{customerName}}</h2>
+        <p class="sub">We hope you love your luxury purchase! Your order {{orderId}} was delivered on {{deliveredOn}}.</p>
+        <div class="confirm">DELIVERY CONFIRMED - Received by: {{receivedBy}}</div>
+        <div class="progress-track">
+          <div class="progress-head">DELIVERY PROGRESS</div>
+          <table class="progress-grid" role="presentation"><tr>
+            {{#each progressSteps}}
+            <td>
+              <span class="p-icon {{state}}">{{{icon}}}</span>
+              <div class="p-label {{state}}">{{label}}</div>
+            </td>
+            {{/each}}
+          </tr></table>
+          <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+        </div>
+      </td></tr>
+
+      <tr><td class="section">
+        <div class="invoice">
+          <h3>Your Tax Invoice is Ready</h3>
+          <p>Download your official GST invoice for warranty, return, and tax purposes.</p>
+          <a class="btn btn-gold" href="{{invoiceDownloadUrl}}">DOWNLOAD TAX INVOICE</a>
+        </div>
+
+        <div class="review">
+          <h4>How was your experience?</h4>
+          <p>Rate your order and help us serve you better</p>
+          <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+          <a class="btn-review" href="{{reviewUrl}}">Write a Review</a>
+        </div>
+      </td></tr>
+
+      <tr><td class="section">
+        <div class="box">
+          <h3 class="heading">WHAT YOU RECEIVED</h3>
+          <table class="items" role="presentation" width="100%">
+            <tr><th>ITEM</th><th>DETAILS</th><th>QTY</th><th>PRICE</th></tr>
+            {{#each items}}
+            <tr>
+              <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" /></td>
+              <td><strong>{{name}}</strong><br><span style="color:#b4bac6;">{{size}} | {{color}}</span></td>
+              <td>{{quantity}}</td>
+              <td>INR {{subtotal}}</td>
+            </tr>
+            {{/each}}
+            <tr class="total"><td colspan="3">Total Paid</td><td>INR {{totalPaid}}</td></tr>
+          </table>
+
+          <div class="ref">
+            <h4>Love Your Purchase? Share the Luxury!</h4>
+            <p>Refer a friend to eShopper Luxe and you both get 10% OFF on your next luxe purchase.</p>
+            <a class="btn-ref" href="{{referralShareUrl}}">Share and Earn 10% Off</a><br>
+            <span class="rcode">{{referralCode}}</span>
+          </div>
+
+          <div class="info">
+            <h4>Important Information</h4>
+            <table class="igrid" role="presentation"><tr>
+              <td><div class="ibox"><div class="t">7-Day Returns</div><div class="d">Easy returns within 7 days if not satisfied.</div></div></td>
+              <td><div class="ibox"><div class="t">Warranty</div><div class="d">Keep your tax invoice safe for warranty claims.</div></div></td>
+            </tr></table>
+          </div>
+
+          <div class="social">
+            <h4>Stay Connected with eShopper Luxe</h4>
+            <p>Follow us for exclusive deals, luxury collections, and styling tips.</p>
+            <table class="btn-row" role="presentation"><tr>
+              <td><a class="btn-sm insta" href="{{instagramUrl}}">Follow on Instagram</a></td>
+              <td><a class="btn-sm wa" href="{{whatsappUrl}}">Join WhatsApp</a></td>
+            </tr></table>
+          </div>
+
+          <div class="help"><a href="mailto:{{supportEmail}}">{{supportEmail}}</a><a href="tel:{{supportPhone}}">{{supportPhone}}</a></div>
+        </div>
+      </td></tr>
+
+      <tr><td class="foot">
+        <div>eShopper Luxe, {{companyAddress}}</div>
+        <div>This email is generated from backend delivery confirmation and invoice workflow.</div>
+      </td></tr>
+    </table>
+  </td></tr></table>
 </body>
 </html>
+
+

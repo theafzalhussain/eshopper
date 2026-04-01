@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check, Crown, Star, Zap } from 'lucide-react';
+import { Package, Loader2, Search, Filter, AlertCircle, CheckCircle2, Clock, Truck, MapPin, ChevronDown, Check, Crown, Star, Zap, FileText, Download } from 'lucide-react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import io from 'socket.io-client';
@@ -40,6 +40,9 @@ export default function AdminOrders() {
     // Dropdown state
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [expandedHistory, setExpandedHistory] = useState(null);
+    const [invoices, setInvoices] = useState([]);
+    const [invoiceLoading, setInvoiceLoading] = useState(false);
+    const [invoiceDownloading, setInvoiceDownloading] = useState(null);
 
     const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://eshopper-qtgl.onrender.com';
 
@@ -65,6 +68,10 @@ export default function AdminOrders() {
         fetchOrders();
     }, [page, search, selectedStatus]);
 
+    useEffect(() => {
+        fetchInvoices();
+    }, [page, search]);
+
     const fetchOrders = async () => {
         try {
             setLoading(true);
@@ -85,6 +92,47 @@ export default function AdminOrders() {
             showNotification('Failed to load orders', 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchInvoices = async () => {
+        try {
+            setInvoiceLoading(true);
+            const response = await axios.get(`${BASE_URL}/api/admin/invoices`, {
+                params: { page, limit: 8, search, adminSecret: process.env.REACT_APP_ADMIN_SECRET }
+            });
+            setInvoices(response.data.invoices || []);
+        } catch (error) {
+            console.error('❌ Failed to fetch invoices:', error);
+            setInvoices([]);
+        } finally {
+            setInvoiceLoading(false);
+        }
+    };
+
+    const downloadInvoice = async (orderId) => {
+        try {
+            setInvoiceDownloading(orderId);
+            const response = await axios.get(`${BASE_URL}/api/admin/invoices/${encodeURIComponent(orderId)}/download`, {
+                params: { adminSecret: process.env.REACT_APP_ADMIN_SECRET },
+                responseType: 'blob'
+            });
+
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Invoice-${orderId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            showNotification(`Invoice downloaded for ${orderId}`, 'success');
+        } catch (error) {
+            console.error('❌ Invoice download failed:', error);
+            showNotification('Failed to download invoice', 'error');
+        } finally {
+            setInvoiceDownloading(null);
         }
     };
 
@@ -252,6 +300,68 @@ export default function AdminOrders() {
                     </h1>
                     <p className="text-gray-600 mt-2">Luxury order management with real-time updates & premium automation</p>
                 </div>
+            </motion.div>
+
+            {/* Premium Invoice History */}
+            <motion.div
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.45 }}
+                className="admin-orders-card-glass mt-6"
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <FileText size={20} className="text-indigo-600" />
+                        Invoice History
+                    </h3>
+                    <span className="text-sm text-gray-500">{invoices.length} recent invoices</span>
+                </div>
+
+                {invoiceLoading ? (
+                    <div className="text-center py-4 text-gray-500">
+                        <Loader2 size={20} className="animate-spin inline mr-2" />
+                        Loading invoices...
+                    </div>
+                ) : invoices.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500">No invoices found.</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-200 text-left text-gray-600">
+                                    <th className="py-2 pr-3">Order</th>
+                                    <th className="py-2 pr-3">Customer</th>
+                                    <th className="py-2 pr-3">Type</th>
+                                    <th className="py-2 pr-3">Amount</th>
+                                    <th className="py-2 pr-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {invoices.map((inv) => (
+                                    <tr key={inv.orderId} className="border-b border-gray-100">
+                                        <td className="py-2 pr-3 font-mono text-indigo-600">{String(inv.orderId || '').slice(-10)}</td>
+                                        <td className="py-2 pr-3 text-gray-700">{inv.userName || 'N/A'}</td>
+                                        <td className="py-2 pr-3 text-gray-600">{inv.invoiceType || 'Receipt'}</td>
+                                        <td className="py-2 pr-3 font-semibold text-green-600">₹{Number(inv.finalAmount || 0).toLocaleString('en-IN')}</td>
+                                        <td className="py-2 pr-3">
+                                            <button
+                                                onClick={() => downloadInvoice(inv.orderId)}
+                                                className="px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition-all disabled:opacity-60"
+                                                disabled={invoiceDownloading === inv.orderId}
+                                            >
+                                                {invoiceDownloading === inv.orderId ? (
+                                                    <><Loader2 size={12} className="inline animate-spin mr-1" />Downloading</>
+                                                ) : (
+                                                    <><Download size={12} className="inline mr-1" />Download</>
+                                                )}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </motion.div>
 
             {/* Premium Notification */}

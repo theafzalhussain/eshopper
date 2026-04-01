@@ -1,23 +1,82 @@
-<!-- Order Success Email Template -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Order Success - ESHOPPER</title>
-    <style>
-        /* Add premium responsive styles here */
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Success - {{orderId}}</title>
+  <style>
+    {{> theme_tokens}}
+    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f3f4f7;}
+    .wrap{padding:20px 8px;}
+    .card{max-width:620px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:16px;overflow:hidden;}
+    .top{padding:18px 20px;background:linear-gradient(120deg,#0a3b1f,#0f5f2f);font-size:12px;font-weight:700;color:#cbf8da;}
+    .hero{background:#59c86b;padding:22px 12px;text-align:center;color:#fff;font-size:36px;font-weight:800;}
+    .sec{padding:20px;border-top:1px solid #292d35;}
+    .sec h2{margin:0 0 10px;font-size:30px;}
+    .sec p{margin:0;color:#cdd2db;font-size:16px;line-height:1.6;}
+    .items{width:100%;border-collapse:collapse;margin-top:12px;border:1px solid #323742;border-radius:10px;overflow:hidden;}
+    .items th,.items td{padding:10px;border-bottom:1px solid #2c3039;text-align:left;font-size:14px;}
+    .items th{color:#efcb4a;background:#171a20;}
+    .items tr:last-child td{border-bottom:none;}
+    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
+    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
+    .progress-grid{width:100%;border-collapse:collapse;}
+    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
+    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;font-size:17px;border:1px solid #3a404d;background:#1b212d;}
+    .p-icon.done{background:#2ea94b;border-color:#55d372;}
+    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;}
+    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
+    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
+    .p-label.done{color:#5fda7f;}
+    .p-label.active{color:#7bc6ff;}
+    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
+    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
+    .btn{display:block;margin-top:14px;padding:12px;border-radius:10px;background:#4bbd60;color:#fff;text-decoration:none;text-align:center;font-weight:700;}
+    .contact{margin-top:10px;text-align:center;}
+    .contact a{display:inline-block;margin:4px;padding:9px 12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;}
+    .contact .mail{background:#101826;color:#d3e7ff;border:1px solid #355d8c;}
+    .contact .call{background:#161a21;color:#ffe19f;border:1px solid #7f6528;}
+    .contact .insta{background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;}
+    .foot{padding:16px;border-top:1px solid #292d35;text-align:center;color:#99a2b3;font-size:12px;}
+  </style>
 </head>
 <body>
-    <h2>Order Successful: #{{orderId}}</h2>
-    <p>Namaste {{userName}},</p>
-    <p>Aapka order successfully deliver ho gaya hai!</p>
-    <h3>Products:</h3>
-    <ul>
-        {{#each products}}
-        <li>{{this.name}} x {{this.qty}} - ₹{{this.price}}</li>
-        {{/each}}
-    </ul>
-    <p>Dhanyavaad for shopping with ESHOPPER!</p>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">ORDER SUCCESS</div>
+      <div class="hero">DELIVERED SUCCESSFULLY</div>
+      <div class="sec">
+        <h2>Thank You, {{userName}}</h2>
+        <p>Your order <strong>{{orderId}}</strong> has been completed successfully.</p>
+        <table class="items" role="presentation">
+          <tr><th>Product</th><th>Qty</th><th>Price</th></tr>
+          {{#each products}}
+          <tr><td>{{this.name}}</td><td>{{this.qty}}</td><td>INR {{this.price}}</td></tr>
+          {{/each}}
+        </table>
+        <div class="progress-track">
+          <div class="progress-head">DELIVERY PROGRESS</div>
+          <table class="progress-grid" role="presentation"><tr>
+            {{#each progressSteps}}
+            <td>
+              <span class="p-icon {{state}}">{{{icon}}}</span>
+              <div class="p-label {{state}}">{{label}}</div>
+            </td>
+            {{/each}}
+          </tr></table>
+          <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+        </div>
+        <a class="btn" href="{{myOrdersUrl}}">View Order History</a>
+        <div class="contact">
+          <a class="mail" href="mailto:{{supportEmail}}">{{supportEmail}}</a>
+          <a class="call" href="tel:{{supportPhone}}">{{supportPhone}}</a>
+          <a class="insta" href="{{instagramUrl}}">Instagram</a>
+        </div>
+      </div>
+      <div class="foot">eShopper Luxe</div>
+    </div>
+  </div>
 </body>
 </html>
+
+

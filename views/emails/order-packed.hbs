@@ -1,106 +1,151 @@
-<!--
-Ultra-Premium Luxe Email: Order Packed
-Exact Purple Banner, Quality Inspected badge, Package Summary, Eco-Luxe icons, and progress bar
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Packed - Eshopper Boutique Luxe</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Packed - {{orderId}}</title>
   <style>
-    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
-    .header { background: linear-gradient(90deg, #0A0A0A 60%, #9B59B6 100%); padding: 32px 0 18px 0; text-align: center; }
-    .logo { height: 40px; margin-bottom: 12px; }
-    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
-    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
-    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
-    .banner { background: #9B59B6; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; }
-    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
-    .badge { display: inline-block; background: #1ec773; color: #fff; font-size: 13px; font-weight: 700; border-radius: 16px; padding: 6px 18px; margin: 18px 0 0 0; }
-    .summary-title { font-size: 18px; color: #FFD700; font-weight: 700; margin: 32px 0 8px 0; }
-    .summary-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 0 0 24px 0; color: #FFD700; }
-    .summary-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .summary-label { color: #FFD700; font-size: 14px; font-weight: 700; }
-    .summary-value { color: #fff; font-size: 14px; }
-    .eco-row { display: flex; justify-content: space-between; gap: 8px; margin: 18px 0 0 0; }
-    .eco { flex: 1; background: #222; border-radius: 12px; padding: 12px 6px; text-align: center; color: #FFD700; }
-    .eco-icon { font-size: 24px; margin-bottom: 4px; display: block; }
-    .eco-title { font-size: 13px; font-weight: 700; color: #FFD700; margin-bottom: 2px; }
-    .eco-desc { color: #fff; font-size: 12px; }
-    .progress-bar { background: #222; border-radius: 8px; padding: 18px 0 12px 0; margin: 32px 0 0 0; text-align: center; }
-    .progress-icons { display: flex; justify-content: space-between; align-items: center; max-width: 90%; margin: 0 auto; }
-    .progress-step { flex: 1; text-align: center; }
-    .progress-tick { color: #1ec773; font-size: 22px; font-weight: 900; }
-    .progress-label { color: #FFD700; font-size: 12px; font-weight: 700; margin-top: 2px; }
-    .progress-dot { width: 12px; height: 12px; border-radius: 50%; background: #1ec773; display: inline-block; margin: 0 2px; }
-    .progress-dot.inactive { background: #888; }
-    .track-btn { display: block; width: 80%; margin: 32px auto 0 auto; background: #9B59B6; color: #fff; font-size: 16px; font-weight: 900; padding: 14px 0; border-radius: 24px; text-align: center; text-decoration: none; letter-spacing: 1px; }
-    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
-    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
-    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
-    @media (max-width: 650px) {
-      .container { max-width: 98vw; }
-      .eco-row { flex-direction: column; gap: 10px; }
-      .progress-icons { flex-direction: column; gap: 8px; }
+    {{> theme_tokens}}
+    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
+    table{border-collapse:collapse;}
+    .wrap{width:100%;background:#0a0a0a;padding:20px 8px;}
+    .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
+    .top{padding:18px 20px;background:linear-gradient(120deg,#1a1726,#2b1f44,#43266d);}
+    .logo{height:34px;vertical-align:middle;}
+    .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#f2e9ff;border:1px solid #ad7cf1;background:#8e62cf;padding:7px 12px;border-radius:999px;}
+    .hero{background:#9a6de0;color:#fff;text-align:center;padding:24px 12px;}
+    .hero .icon{font-size:48px;line-height:1;}
+    .hero .t{font-size:50px;font-weight:800;line-height:1;margin-top:6px;}
+    .hero .s{font-size:16px;opacity:.96;margin-top:8px;}
+    .section{padding:22px 20px;border-top:1px solid #272a30;}
+    .title{margin:0 0 10px;font-size:46px;line-height:1.08;text-align:center;}
+    .sub{text-align:center;color:#d6dae2;font-size:18px;line-height:1.62;margin:0;}
+    .inspect{margin:18px auto 0;max-width:260px;background:#04461d;border:2px solid #13a949;color:#70ef9f;border-radius:999px;padding:14px 16px;font-weight:700;text-align:center;font-size:18px;}
+    .box{border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;}
+    .heading{color:#bf8fff;font-size:33px;margin:0 0 14px;}
+    .summary{width:100%;border:1px solid #343844;border-radius:12px;overflow:hidden;}
+    .summary td{padding:12px 10px;border-bottom:1px solid #2d313a;font-size:16px;color:#e7e9ed;}
+    .summary tr:last-child td{border-bottom:none;}
+    .summary .k{color:#bfc3ce;}
+    .summary .v{color:#ffffff;font-weight:700;text-align:right;}
+    .eco{margin-top:14px;background:#003118;border:1px solid #0b8b42;border-radius:12px;padding:14px;}
+    .eco h4{margin:0 0 12px;text-align:center;color:#18ca64;font-size:32px;}
+    .egrid{width:100%;}
+    .egrid td{width:25%;text-align:center;color:#d6e8dd;padding:8px 4px;border-right:1px solid #1b6a3d;vertical-align:top;}
+    .egrid td:last-child{border-right:none;}
+    .egrid .i{font-size:28px;display:block;}
+    .egrid .t{font-size:16px;line-height:1.4;margin-top:6px;}
+    .next{margin-top:14px;border:1px solid #343844;border-radius:12px;padding:14px;background:#111317;}
+    .next h4{margin:0 0 10px;color:#efcb4a;font-size:30px;text-align:center;}
+    .next p{margin:0;text-align:center;color:#c8cdd7;font-size:17px;line-height:1.55;}
+    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
+    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
+    .progress-grid{width:100%;}
+    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
+    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;font-size:18px;border:1px solid #3a404d;background:#1b212d;}
+    .p-icon.done{background:#2ea94b;border-color:#55d372;}
+    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;box-shadow:0 0 0 3px rgba(47,143,226,0.22);}
+    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
+    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
+    .p-label.done{color:#5fda7f;}
+    .p-label.active{color:#7bc6ff;}
+    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
+    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
+    .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;}
+    .btn-primary{background:#9b6ee3;color:#fff;}
+    .btn-row{width:100%;margin-top:12px;}
+    .btn-row td{width:50%;}
+    .btn-sm{display:block;text-align:center;text-decoration:none;font-weight:700;border-radius:10px;padding:11px 8px;font-size:16px;}
+    .wa{background:#1ed66d;color:#0f1712;margin-right:8px;}
+    .insta{background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;margin-left:8px;}
+    .foot{padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;}
+    @media only screen and (max-width:620px){
+      .status{float:none;display:inline-block;margin-top:8px;}
+      .hero .t{font-size:38px;}
+      .title{font-size:34px;}
+      .sub{font-size:16px;}
+      .egrid td{display:block;width:100%;border-right:none;border-top:1px solid #1b6a3d;}
+      .egrid tr td:first-child{border-top:none;}
+      .p-icon{width:32px;height:32px;font-size:16px;}
+      .p-label{font-size:10px;}
+      .btn{font-size:21px;}
+      .btn-row td{display:block;width:100%;}
+      .wa,.insta{margin:0 0 10px 0;}
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
-      <div class="order-title">ORDER PACKED</div>
-      <div class="order-id">Order ID: {{orderId}}</div>
-      <div class="order-date">{{orderDate}}</div>
-    </div>
-    <div class="banner">WRAPPED WITH CARE</div>
-    <div class="greeting">Hi {{customerName}},<br>Your order has been <span style="color:#1ec773;font-weight:700;">sanitized</span>, <span style="color:#1ec773;font-weight:700;">quality-checked</span>, and carefully packed in our signature <span style="color:#FFD700;">eco-friendly luxe box</span>. Your premium items are protected and ready for their journey!</div>
-    <div class="badge">QUALITY INSPECTED</div>
-    <div class="summary-title">PACKAGE SUMMARY</div>
-    <div class="summary-box">
-      <div class="summary-row"><span class="summary-label">Order ID</span><span class="summary-value">{{orderId}}</span></div>
-      <div class="summary-row"><span class="summary-label">Total Items</span><span class="summary-value">{{totalItems}}</span></div>
-      <div class="summary-row"><span class="summary-label">Packed On</span><span class="summary-value">{{packedOn}}</span></div>
-      <div class="summary-row"><span class="summary-label">Package Weight</span><span class="summary-value">{{packageWeight}}</span></div>
-    </div>
-    <div class="eco-row">
-      <div class="eco">
-        <span class="eco-icon">♻️</span>
-        <div class="eco-title">100% Recyclable</div>
-        <div class="eco-desc">Eco-friendly materials</div>
-      </div>
-      <div class="eco">
-        <span class="eco-icon">🛡️</span>
-        <div class="eco-title">Bubble Wrapped</div>
-        <div class="eco-desc">Safe & secure packaging</div>
-      </div>
-      <div class="eco">
-        <span class="eco-icon">🧴</span>
-        <div class="eco-title">Sanitized</div>
-        <div class="eco-desc">Hygienic handling</div>
-      </div>
-      <div class="eco">
-        <span class="eco-icon">💎</span>
-        <div class="eco-title">Premium Sealant</div>
-        <div class="eco-desc">Tamper-proof</div>
-      </div>
-    </div>
-    <div class="progress-bar">
-      <div class="progress-icons">
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Placed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Confirmed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Packed</div></div>
-        <div class="progress-step"><span class="progress-tick" style="color:#888;">⬜</span><div class="progress-label" style="color:#888;">Shipped</div></div>
-        <div class="progress-step"><span class="progress-tick" style="color:#888;">⬜</span><div class="progress-label" style="color:#888;">Delivered</div></div>
-      </div>
-    </div>
-    <a class="track-btn" href="{{trackingUrl}}">TRACK PACKAGE</a>
-    <div class="footer">
-      <div class="address">{{companyAddress}}</div>
-      <div class="footer-note">* This is a package update, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
-    </div>
-  </div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} packed with care and ready for dispatch.</div>
+  <table class="wrap" role="presentation" width="100%"><tr><td>
+    <table class="card" role="presentation" align="center">
+      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">PACKED</span></td></tr>
+      <tr><td class="hero"><div class="icon">&#128230;</div><div class="t">WRAPPED WITH CARE</div><div class="s">Your luxe package is ready!</div></td></tr>
+
+      <tr><td class="section">
+        <h2 class="title">Hi {{customerName}}!</h2>
+        <p class="sub">Great news! Your order has been sanitized, quality-checked, and carefully packed in our signature eco-friendly luxe box. Your premium items are protected and ready for their journey!</p>
+        <div class="inspect">QUALITY INSPECTED</div>
+      </td></tr>
+
+      <tr><td class="section">
+        <div class="box">
+          <h3 class="heading">PACKAGE SUMMARY</h3>
+          <table class="summary" role="presentation" width="100%">
+            <tr><td class="k">Order ID</td><td class="v">{{orderId}}</td></tr>
+            <tr><td class="k">Total Items</td><td class="v">{{totalItems}}</td></tr>
+            <tr><td class="k">Packed On</td><td class="v">{{packedOn}}</td></tr>
+            <tr><td class="k">Package Weight</td><td class="v">{{packageWeight}}</td></tr>
+          </table>
+
+          <div class="eco">
+            <h4>ECO-LUXE PACKAGING</h4>
+            <table class="egrid" role="presentation"><tr>
+              <td><span class="i">&#9851;</span><div class="t">100% Recyclable</div></td>
+              <td><span class="i">&#128737;</span><div class="t">Bubble Wrapped</div></td>
+              <td><span class="i">&#129532;</span><div class="t">Sanitized Packaging</div></td>
+              <td><span class="i">&#128142;</span><div class="t">Premium Sealant</div></td>
+            </tr></table>
+          </div>
+
+          <div class="next">
+            <h4>WHAT'S NEXT?</h4>
+            <p>Your package will leave our warehouse within 24-48 hours. You'll receive a tracking link via email and SMS as soon as it's dispatched.</p>
+          </div>
+
+          <div class="progress-track">
+            <div class="progress-head">DELIVERY PROGRESS</div>
+            <table class="progress-grid" role="presentation"><tr>
+              {{#each progressSteps}}
+              <td>
+                <span class="p-icon {{state}}">{{{icon}}}</span>
+                <div class="p-label {{state}}">{{label}}</div>
+              </td>
+              {{/each}}
+            </tr></table>
+            <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+          </div>
+
+          <table class="summary" role="presentation" width="100%" style="margin-top:14px;">
+            <tr><td class="k">SHIPPING ADDRESS</td><td class="v">{{shippingName}}</td></tr>
+            <tr><td class="k">Address</td><td class="v">{{shippingAddress}}</td></tr>
+            <tr><td class="k">Phone</td><td class="v">{{shippingPhone}}</td></tr>
+          </table>
+
+          <a class="btn btn-primary" href="{{trackingUrl}}">TRACK PACKAGE</a>
+          <table class="btn-row" role="presentation"><tr>
+            <td><a class="btn-sm wa" href="{{whatsappUrl}}">WhatsApp Support</a></td>
+            <td><a class="btn-sm insta" href="{{instagramUrl}}">Instagram</a></td>
+          </tr></table>
+        </div>
+      </td></tr>
+
+      <tr><td class="foot">
+        <div>eShopper Luxe, {{companyAddress}}</div>
+        <div>This is a package update email generated from live backend fulfillment timeline.</div>
+      </td></tr>
+    </table>
+  </td></tr></table>
 </body>
 </html>
+
+

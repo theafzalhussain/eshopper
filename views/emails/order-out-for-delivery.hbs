@@ -1,89 +1,169 @@
-<!--
-Ultra-Premium Luxe Email: Arriving Today / Out for Delivery
-Exact Orange Banner, Security Box, Rider Info, Checklist, and layout as per reference
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arriving Today - Eshopper Boutique Luxe</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Out For Delivery - {{orderId}}</title>
   <style>
-    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
-    .header { background: linear-gradient(90deg, #0A0A0A 60%, #FF9800 100%); padding: 32px 0 18px 0; text-align: center; }
-    .logo { height: 40px; margin-bottom: 12px; }
-    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
-    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
-    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
-    .banner { background: #FF9800; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .banner-icon { font-size: 26px; }
-    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
-    .delivery-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; text-align: center; }
-    .delivery-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
-    .delivery-time { font-size: 18px; color: #fff; font-weight: 900; margin-bottom: 2px; }
-    .security-box { background: #fff3f3; border: 2px solid #e53935; border-radius: 10px; color: #e53935; padding: 16px; margin: 24px 0 0 0; font-size: 15px; font-weight: 700; }
-    .security-title { font-size: 15px; font-weight: 900; margin-bottom: 6px; }
-    .security-otp { font-size: 18px; color: #e53935; font-weight: 900; letter-spacing: 2px; background: #fff; border-radius: 6px; padding: 4px 12px; display: inline-block; margin: 8px 0; }
-    .rider-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; }
-    .rider-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
-    .rider-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .rider-label { color: #FFD700; font-size: 14px; font-weight: 700; }
-    .rider-value { color: #fff; font-size: 14px; }
-    .track-btn { display: block; width: 80%; margin: 24px auto 0 auto; background: #FF9800; color: #fff; font-size: 16px; font-weight: 900; padding: 14px 0; border-radius: 24px; text-align: center; text-decoration: none; letter-spacing: 1px; }
-    .checklist { background: #222; border-radius: 12px; padding: 18px 18px; margin: 24px 0 0 0; color: #FFD700; }
-    .checklist-title { font-size: 16px; color: #FFD700; font-weight: 700; margin-bottom: 6px; }
-    .checklist-list { color: #fff; font-size: 14px; margin: 0; padding-left: 18px; }
-    .checklist-list li { margin-bottom: 6px; }
-    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
-    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
-    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
-    @media (max-width: 650px) {
-      .container { max-width: 98vw; }
+    {{> theme_tokens}}
+    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
+    table{border-collapse:collapse;}
+    .wrap{width:100%;background:#0a0a0a;padding:20px 8px;}
+    .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
+    .top{padding:18px 20px;background:linear-gradient(120deg,#301d0b,#5a2d03,#7a3c08);}
+    .logo{height:34px;vertical-align:middle;}
+    .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#fff2df;border:1px solid #ffc15a;background:#ffb638;padding:7px 12px;border-radius:999px;}
+    .hero{background:#ffad22;color:#fff;text-align:center;padding:24px 12px;}
+    .hero .icon{font-size:48px;line-height:1;}
+    .hero .t{font-size:50px;font-weight:800;line-height:1;margin-top:6px;}
+    .hero .s{font-size:16px;opacity:.96;margin-top:8px;}
+    .section{padding:22px 20px;border-top:1px solid #272a30;}
+    .delivery{border:1px solid #e59116;background:#3a1f05;border-radius:14px;padding:14px;text-align:center;}
+    .delivery .h{color:#ffbf59;font-size:30px;font-weight:800;}
+    .delivery .d{color:#fff;font-size:52px;font-weight:800;line-height:1;margin-top:5px;}
+    .delivery .s{color:#f8d8a8;font-size:20px;margin-top:5px;}
+    .title{margin:14px 0 10px;font-size:44px;line-height:1.08;text-align:center;}
+    .sub{text-align:center;color:#d6dae2;font-size:18px;line-height:1.62;margin:0;}
+    .security{margin-top:14px;background:#3a0f0f;border:2px solid #b12b2b;border-radius:12px;padding:14px;}
+    .security h4{margin:0 0 8px;color:#ff584f;font-size:32px;}
+    .security p{margin:0;color:#ffd8d5;line-height:1.6;font-size:19px;}
+    .box{margin-top:14px;border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;}
+    .heading{color:#ffb12f;font-size:32px;margin:0 0 12px;}
+    .summary{width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;}
+    .summary td{padding:12px 10px;border-bottom:1px solid #2d313a;font-size:16px;color:#e7e9ed;}
+    .summary tr:last-child td{border-bottom:none;}
+    .summary .k{color:#bfc3ce;}
+    .summary .v{color:#ffffff;font-weight:700;text-align:right;}
+    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
+    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
+    .progress-grid{width:100%;}
+    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
+    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;font-size:18px;border:1px solid #3a404d;background:#1b212d;}
+    .p-icon.done{background:#2ea94b;border-color:#55d372;}
+    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;box-shadow:0 0 0 3px rgba(47,143,226,0.22);}
+    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
+    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
+    .p-label.done{color:#5fda7f;}
+    .p-label.active{color:#7bc6ff;}
+    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
+    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
+    .loc{margin-top:14px;border:1px solid #0a9446;background:#073629;border-radius:12px;padding:14px;}
+    .loc h4{margin:0 0 8px;color:#22dc6f;font-size:30px;}
+    .loc p{margin:0;color:#d8efe2;line-height:1.5;font-size:17px;}
+    .live{margin-top:14px;border:1px solid #3d414a;border-radius:12px;padding:16px;text-align:center;}
+    .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:12px;}
+    .btn-track{background:#ffb638;color:#fff;}
+    .btn-row{width:100%;margin-top:12px;}
+    .btn-row td{width:50%;}
+    .btn-sm{display:block;text-align:center;text-decoration:none;font-weight:700;border-radius:10px;padding:11px 8px;font-size:16px;}
+    .change{background:#2cd16b;color:#0f1712;margin-right:8px;}
+    .call{background:#1c1f26;color:#ffb638;border:1px solid #7c5a1e;margin-left:8px;}
+    .check{margin-top:14px;background:#04301a;border:1px solid #0b7c3b;border-radius:12px;padding:14px;}
+    .check h4{margin:0 0 8px;color:#19d15f;font-size:30px;}
+    .check ul{margin:0;padding-left:18px;color:#c9ead8;font-size:18px;line-height:1.55;}
+    .ins{margin-top:14px;border:1px solid #8d6f28;background:#2a210f;border-radius:12px;padding:12px;text-align:center;color:#f0d07a;font-size:18px;font-weight:700;}
+    .support{padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;}
+    .support h4{margin:0 0 10px;font-size:30px;color:#f1f2f5;}
+    .wa{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:#25d366;color:#0f1712;text-decoration:none;font-weight:700;font-size:15px;}
+    .insta{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;font-weight:700;font-size:15px;}
+    .foot{padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;}
+    @media only screen and (max-width:620px){
+      .status{float:none;display:inline-block;margin-top:8px;}
+      .hero .t{font-size:38px;}
+      .title{font-size:34px;}
+      .sub{font-size:16px;}
+      .delivery .d{font-size:40px;}
+      .p-icon{width:32px;height:32px;font-size:16px;}
+      .p-label{font-size:10px;}
+      .btn{font-size:21px;}
+      .btn-row td{display:block;width:100%;}
+      .change,.call{margin:0 0 10px 0;}
+      .support h4{font-size:24px;}
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
-      <div class="order-title">OUT FOR DELIVERY</div>
-      <div class="order-id">Order ID: {{orderId}}</div>
-      <div class="order-date">{{orderDate}}</div>
-    </div>
-    <div class="banner"><span class="banner-icon">🎁</span>IT'S ARRIVING TODAY!</div>
-    <div class="greeting">Hi {{customerName}},<br>Your luxury package is <span style="color:#FF9800;font-weight:700;">out for delivery</span> and will reach you today! Our delivery partner is on the way to your doorstep.</div>
-    <div class="delivery-box">
-      <div class="delivery-title">DELIVERY IN PROGRESS</div>
-      <div class="delivery-time">{{deliveryDate}}<br><span style="font-size:14px; color:#FFD700;">Expected by {{deliveryTimeSlot}}</span></div>
-    </div>
-    <div class="security-box">
-      <div class="security-title">⚠️ SECURITY FIRST!</div>
-      Please share the OTP or verification code <span class="security-otp">{{otp}}</span> ONLY when you receive the package in perfect condition.<br>Never share OTP before inspecting the package.
-    </div>
-    <div class="rider-box">
-      <div class="rider-title">YOUR DELIVERY PARTNER</div>
-      <div class="rider-row"><span class="rider-label">Courier Partner</span><span class="rider-value">{{courierPartner}}</span></div>
-      <div class="rider-row"><span class="rider-label">Tracking ID</span><span class="rider-value">{{trackingNumber}}</span></div>
-      <div class="rider-row"><span class="rider-label">Delivery Agent</span><span class="rider-value">{{deliveryAgent}}</span></div>
-      <div class="rider-row"><span class="rider-label">Agent Contact</span><span class="rider-value">{{agentContact}}</span></div>
-      <div class="rider-row"><span class="rider-label">Delivery Location</span><span class="rider-value">{{deliveryLocation}}</span></div>
-    </div>
-    <a class="track-btn" href="{{liveTrackingUrl}}">🚗 Track Live Location</a>
-    <div class="checklist">
-      <div class="checklist-title">BEFORE ACCEPTING DELIVERY</div>
-      <ul class="checklist-list">
-        <li>✔️ Check package seal is intact</li>
-        <li>✔️ Verify Order ID matches: <span style="color:#FFD700;">{{orderId}}</span></li>
-        <li>✔️ Open and inspect items condition</li>
-        <li>✔️ Then share OTP/verification code</li>
-      </ul>
-      <div style="color:#FFD700; font-size:13px; margin-top:8px;">All deliveries are fully insured during transit.</div>
-    </div>
-    <div class="footer">
-      <div class="address">{{companyAddress}}</div>
-      <div class="footer-note">* This is a delivery update, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
-    </div>
-  </div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} is out for delivery and arriving today.</div>
+  <table class="wrap" role="presentation" width="100%"><tr><td>
+    <table class="card" role="presentation" align="center">
+      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">OUT FOR DELIVERY</span></td></tr>
+      <tr><td class="hero"><div class="icon">&#127873;</div><div class="t">IT'S ARRIVING TODAY!</div><div class="s">Your luxury package is just minutes away</div></td></tr>
+
+      <tr><td class="section">
+        <div class="delivery"><div class="h">DELIVERY IN PROGRESS</div><div class="d">TODAY</div><div class="s">Expected by {{deliveryTimeSlot}}</div></div>
+        <h2 class="title">Hi {{customerName}}!</h2>
+        <p class="sub">Your luxury package is out for delivery and will reach you today. Our delivery partner is on the way to your doorstep.</p>
+
+        <div class="security">
+          <h4>SECURITY FIRST!</h4>
+          <p>Please share the OTP or verification code only when you receive the package in perfect condition.<br><strong>OTP: {{otp}}</strong></p>
+        </div>
+
+        <div class="box">
+          <h3 class="heading">YOUR DELIVERY PARTNER</h3>
+          <table class="summary" role="presentation" width="100%">
+            <tr><td class="k">Courier Partner</td><td class="v">{{courierPartner}}</td></tr>
+            <tr><td class="k">Tracking ID</td><td class="v">{{trackingNumber}}</td></tr>
+            <tr><td class="k">Delivery Agent</td><td class="v">{{deliveryAgent}}</td></tr>
+            <tr><td class="k">Agent Contact</td><td class="v">{{agentContact}}</td></tr>
+          </table>
+
+          <div class="progress-track">
+            <div class="progress-head">DELIVERY PROGRESS</div>
+            <table class="progress-grid" role="presentation"><tr>
+              {{#each progressSteps}}
+              <td>
+                <span class="p-icon {{state}}">{{{icon}}}</span>
+                <div class="p-label {{state}}">{{label}}</div>
+              </td>
+              {{/each}}
+            </tr></table>
+            <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+          </div>
+
+          <div class="loc">
+            <h4>DELIVERY LOCATION</h4>
+            <p><strong>{{shippingName}}</strong><br>{{shippingAddress}}<br>{{shippingPhone}}</p>
+          </div>
+
+          <div class="live">
+            <div style="font-size:48px;">&#128506;</div>
+            <div style="color:#c9d0de;font-size:22px;">Live tracking map</div>
+            <a class="btn btn-track" href="{{liveTrackingUrl}}">TRACK LIVE LOCATION</a>
+          </div>
+
+          <table class="btn-row" role="presentation"><tr>
+            <td><a class="btn-sm change" href="{{helpCenterUrl}}">Change Address</a></td>
+            <td><a class="btn-sm call" href="tel:{{supportPhone}}">Call Support</a></td>
+          </tr></table>
+
+          <div class="check">
+            <h4>BEFORE ACCEPTING DELIVERY</h4>
+            <ul>
+              <li>Check package seal is intact.</li>
+              <li>Verify Order ID matches: {{orderId}}</li>
+              <li>Open and inspect items condition.</li>
+              <li>Then share OTP/verification code.</li>
+            </ul>
+          </div>
+
+          <div class="ins">100% AUTHENTIC AND INSURED - All deliveries are fully insured during transit.</div>
+        </div>
+      </td></tr>
+
+      <tr><td class="support">
+        <h4>Questions? We're here to help!</h4>
+        <a class="wa" href="{{whatsappUrl}}">WhatsApp</a>
+        <a class="insta" href="{{instagramUrl}}">Instagram</a>
+      </td></tr>
+
+      <tr><td class="foot">
+        <div>eShopper Luxe, {{companyAddress}}</div>
+        <div>Out-for-delivery updates are generated from backend real-time delivery workflow.</div>
+      </td></tr>
+    </table>
+  </td></tr></table>
 </body>
 </html>
+
+

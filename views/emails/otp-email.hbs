@@ -1,18 +1,48 @@
-<!-- OTP Email Template -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>OTP Verification - ESHOPPER</title>
-    <style>
-        /* Add premium responsive styles here */
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OTP Verification</title>
+  <style>
+    {{> theme_tokens}}
+    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f3f4f7;}
+    .wrap{padding:20px 8px;}
+    .card{max-width:620px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:16px;overflow:hidden;}
+    .top{padding:18px 20px;background:linear-gradient(120deg,#111827,#1a2332,#8b7521);font-size:12px;font-weight:700;color:#d4af37;}
+    .hero{background:#1f2836;padding:22px 12px;text-align:center;color:#fff;font-size:30px;font-weight:800;}
+    .sec{padding:20px;border-top:1px solid #292d35;}
+    .sec h2{margin:0 0 10px;font-size:28px;}
+    .sec p{margin:0 0 10px;color:#cdd2db;font-size:16px;line-height:1.6;}
+    .otp{margin:14px auto;max-width:260px;text-align:center;background:#0f1722;border:1px solid #3a4a62;border-radius:12px;padding:16px;font-size:38px;font-weight:800;letter-spacing:6px;color:#64f0ad;}
+    .help{margin-top:10px;color:#aeb7c9;font-size:14px;}
+    .cta{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;}
+    .btn{display:inline-block;padding:10px 12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;}
+    .btn-primary{background:#1f8ad8;color:#fff;}
+    .btn-secondary{background:#121620;color:#cde4ff;border:1px solid #315a8e;}
+    .foot{padding:16px;border-top:1px solid #292d35;text-align:center;color:#99a2b3;font-size:12px;line-height:1.6;}
+  </style>
 </head>
 <body>
-    <h2>OTP Verification</h2>
-    <p>Namaste {{userName}},</p>
-    <p>Aapka OTP hai: <strong>{{otp}}</strong></p>
-    <p>OTP valid hai sirf 10 minutes ke liye.</p>
-    <p>Dhanyavaad for shopping with ESHOPPER!</p>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">ESHOPPER SECURITY VERIFICATION</div>
+      <div class="hero">OTP VERIFICATION</div>
+      <div class="sec">
+        <h2>Hi {{userName}}</h2>
+        <p>Use the OTP below to continue securely.</p>
+        <div class="otp">{{otp}}</div>
+        <p>This OTP is valid for 10 minutes only.</p>
+        <div class="help">Need help? {{supportEmail}} | {{supportPhone}}</div>
+        <div class="cta">
+          <a class="btn btn-primary" href="{{websiteUrl}}">Open eShopper</a>
+          <a class="btn btn-secondary" href="mailto:{{supportEmail}}">Email Support</a>
+        </div>
+      </div>
+      <div class="foot">{{companyAddress}}</div>
+    </div>
+  </div>
 </body>
 </html>
+
+

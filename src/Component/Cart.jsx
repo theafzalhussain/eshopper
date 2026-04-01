@@ -98,33 +98,52 @@ export default function Cart() {
         if (op === "dec" && currentQty === 1) return;
         let newQty = (op === "dec") ? currentQty - 1 : currentQty + 1;
         
-        if (!socketRef.current || !socketRef.current.connected) {
-            toast.error('Connection lost. Please refresh.');
-            return;
+        console.log(`📊 Updating qty for ${item._id}: ${currentQty} → ${newQty}`);
+        
+        // Always use HTTP directly (most reliable)
+        try {
+            await axios.put(`/api/cart/update-quantity/${item._id || item.id}`, { userId, quantity: newQty });
+            console.log('✅ Quantity updated via HTTP');
+            await dispatch(getCart());
+            toast.success('Quantity updated!');
+            // Also try to sync via socket if available
+            if (socketRef.current && socketRef.current.connected) {
+                socketRef.current.emit('cart:recalculate', { userId });
+            }
+        } catch (e) {
+            console.error('❌ Quantity update failed:', e.message);
+            if (e.response?.data?.message?.includes('Out of Stock')) {
+                toast.error(e.response.data.message);
+            } else {
+                toast.error('Failed to update quantity.');
+            }
         }
-
-        // Emit socket event (NO LOADING - instant update)
-        socketRef.current.emit('cart:update-quantity', {
-            userId,
-            productId: item._id || item.id,
-            quantity: newQty
-        });
     }
 
     async function removeProduct(id, silent = false) {
         setRemovingIds((prev) => [...prev, id]);
+        console.log(`🗑️ Removing item: ${id}`);
 
-        if (!socketRef.current || !socketRef.current.connected) {
-            toast.error('Connection lost. Please refresh.');
+        // Always use HTTP directly (most reliable)
+        try {
+            await axios.delete(`/api/cart/remove-item/${id}`, {
+                params: { userId, userid: userId },
+                data: { userId, userid: userId }
+            });
+            console.log('✅ Item removed via HTTP');
+            await dispatch(getCart());
+            if (!silent) toast.info('Item removed from cart.');
+            // Also try to sync via socket if available
+            if (socketRef.current && socketRef.current.connected) {
+                socketRef.current.emit('cart:recalculate', { userId });
+            }
+        } catch (e) {
+            console.error('❌ Remove failed:', e.message);
+            const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to remove item.';
+            toast.error(msg);
+        } finally {
             setRemovingIds((prev) => prev.filter(rid => rid !== id));
-            return Promise.resolve();
         }
-
-        // Emit socket event (instant removal, no loading)
-        socketRef.current.emit('cart:remove-item', {
-            userId,
-            productId: id
-        });
 
         return Promise.resolve();
     }
@@ -220,73 +239,51 @@ export default function Cart() {
             return;
         }
 
-        // Set up Socket.IO connection for real-time updates
+        // Set up optional Socket.IO for real-time sync (best effort, HTTP is reliable fallback)
         if (!socketRef.current) {
-            socketRef.current = io(BASE_URL, {
-                auth: { userId },
-                reconnection: true,
-                reconnectionDelay: 1000,
-                reconnectionDelayMax: 5000,
-                reconnectionAttempts: 5,
-                transports: ['websocket', 'polling']
-            });
+            try {
+                socketRef.current = io(BASE_URL, {
+                    auth: { userId },
+                    reconnection: true,
+                    reconnectionDelay: 2000,
+                    reconnectionDelayMax: 10000,
+                    reconnectionAttempts: 2,
+                    transports: ['websocket', 'polling'],
+                    forceNew: false,
+                    timeout: 5000
+                });
 
-            // On connection success
-            socketRef.current.on('connected', (data) => {
-                console.log('🔗 Cart socket connected:', data);
-            });
+                // Connection handlers
+                socketRef.current.on('connected', (data) => {
+                    console.log('✅ Socket connected (bonus real-time):', data);
+                });
 
-            // Real-time cart update (quantity changed)
-            socketRef.current.on('cart:updated', (data) => {
-                if (data.success) {
-                    toast.success('Quantity updated!');
-                    dispatch(getCart()); // Refresh Redux state
-                    socketRef.current.emit('cart:recalculate', { userId });
-                }
-            });
+                socketRef.current.on('connect_error', (error) => {
+                    console.warn('⚠️ Socket error (using HTTP fallback):', error.message);
+                });
 
-            // Real-time item removed
-            socketRef.current.on('cart:item-removed', (data) => {
-                if (data.success) {
-                    setRemovingIds((prev) => prev.filter(rid => rid !== data.productId));
-                    toast.info(data.message || 'Item removed!');
-                    dispatch(getCart()); // Refresh Redux state
-                    socketRef.current.emit('cart:recalculate', { userId });
-                }
-            });
-
-            // Real-time cart summary update
-            socketRef.current.on('cart:summary-updated', (data) => {
-                setSubtotal(data.subtotal || 0);
-                setBaseDiscount(data.discount || 0);
-                setShipping(data.shipping || 0);
-                setGst(data.gst || 0);
-            });
-
-            // Socket error handling
-            socketRef.current.on('cart:error', (data) => {
-                toast.error(data.message || 'Cart operation failed');
-                setRemovingIds([]);
-            });
-
-            socketRef.current.on('disconnect', () => {
-                console.log('⚠️ Cart socket disconnected');
-            });
-
-            socketRef.current.on('error', (error) => {
-                console.error('Socket error:', error);
-            });
+                socketRef.current.on('disconnect', () => {
+                    console.log('ℹ️ Socket disconnected (HTTP fallback active)');
+                });
+            } catch (e) {
+                console.error('Socket.IO setup error:', e);
+                socketRef.current = null;
+            }
         }
 
-        // Initial data fetch
+        // Initial data fetch with HTTP (reliable)
         fetchCartAndSummary();
         fetchAvailableCoupons();
 
         // Cleanup on unmount
         return () => {
             if (socketRef.current) {
-                socketRef.current.disconnect();
-                socketRef.current = null;
+                try {
+                    socketRef.current.disconnect();
+                    socketRef.current = null;
+                } catch (e) {
+                    console.error('Socket disconnect error:', e);
+                }
             }
         };
     }, [userId]);

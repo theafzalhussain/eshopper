@@ -1,85 +1,164 @@
-<!--
-Ultra-Premium Luxe Email: Order Shipped
-Exact Blue Banner, Rocket Icon, Shipment Info, Progress Bar, and Buttons
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Shipped - Eshopper Boutique Luxe</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Shipped - {{orderId}}</title>
   <style>
-    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
-    .header { background: linear-gradient(90deg, #0A0A0A 60%, #3498db 100%); padding: 32px 0 18px 0; text-align: center; }
-    .logo { height: 40px; margin-bottom: 12px; }
-    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
-    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
-    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
-    .banner { background: #3498db; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .banner-icon { font-size: 26px; }
-    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
-    .shipment-title { font-size: 18px; color: #FFD700; font-weight: 700; margin: 32px 0 8px 0; }
-    .shipment-box { background: #222; border-radius: 12px; padding: 18px 18px; margin: 0 0 24px 0; color: #FFD700; }
-    .shipment-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-    .shipment-label { color: #FFD700; font-size: 14px; font-weight: 700; }
-    .shipment-value { color: #fff; font-size: 14px; }
-    .progress-bar { background: #222; border-radius: 8px; padding: 18px 0 12px 0; margin: 32px 0 0 0; text-align: center; }
-    .progress-icons { display: flex; justify-content: space-between; align-items: center; max-width: 90%; margin: 0 auto; }
-    .progress-step { flex: 1; text-align: center; }
-    .progress-tick { color: #1ec773; font-size: 22px; font-weight: 900; }
-    .progress-label { color: #FFD700; font-size: 12px; font-weight: 700; margin-top: 2px; }
-    .progress-dot { width: 12px; height: 12px; border-radius: 50%; background: #1ec773; display: inline-block; margin: 0 2px; }
-    .progress-dot.inactive { background: #888; }
-    .progress-tick.inactive { color: #888; }
-    .btn-row { display: flex; justify-content: center; gap: 16px; margin: 32px 0 0 0; }
-    .btn { display: inline-block; padding: 14px 32px; border-radius: 24px; font-weight: 900; font-size: 15px; text-decoration: none; letter-spacing: 1px; }
-    .btn-live { background: #3498db; color: #fff; }
-    .btn-carrier { background: #222; color: #3498db; border: 2px solid #3498db; }
-    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
-    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
-    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
-    @media (max-width: 650px) {
-      .container { max-width: 98vw; }
-      .btn-row { flex-direction: column; gap: 10px; }
-      .progress-icons { flex-direction: column; gap: 8px; }
+    {{> theme_tokens}}
+    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
+    table{border-collapse:collapse;}
+    .wrap{width:100%;background:#0a0a0a;padding:20px 8px;}
+    .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
+    .top{padding:18px 20px;background:linear-gradient(120deg,#081f35,#0a3558,#0d4f82);}
+    .logo{height:34px;vertical-align:middle;}
+    .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#dbf0ff;border:1px solid #40a5ff;background:#2f9bf0;padding:7px 12px;border-radius:999px;}
+    .hero{background:#3b9be6;color:#fff;text-align:center;padding:24px 12px;}
+    .hero .icon{font-size:48px;line-height:1;}
+    .hero .t{font-size:50px;font-weight:800;line-height:1;margin-top:6px;}
+    .hero .s{font-size:16px;opacity:.96;margin-top:8px;}
+    .section{padding:22px 20px;border-top:1px solid #272a30;}
+    .title{margin:0 0 10px;font-size:46px;line-height:1.08;text-align:center;}
+    .sub{text-align:center;color:#d6dae2;font-size:18px;line-height:1.62;margin:0;}
+    .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;}
+    .btn-primary{background:#3da5ff;color:#fff;}
+    .box{border:1px solid #1982dd;border-radius:12px;padding:16px;background:#111317;}
+    .heading{color:#1998ff;font-size:34px;margin:0 0 14px;}
+    .summary{width:100%;border:1px solid #2d4e6b;border-radius:12px;overflow:hidden;}
+    .summary td{padding:12px 10px;border-bottom:1px solid #27435b;font-size:16px;color:#e7e9ed;}
+    .summary tr:last-child td{border-bottom:none;}
+    .summary .k{color:#bfc3ce;}
+    .summary .v{color:#ffffff;font-weight:700;text-align:right;}
+    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
+    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
+    .progress-grid{width:100%;}
+    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
+    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;font-size:18px;border:1px solid #3a404d;background:#1b212d;}
+    .p-icon.done{background:#2ea94b;border-color:#55d372;}
+    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;box-shadow:0 0 0 3px rgba(47,143,226,0.22);}
+    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
+    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
+    .p-label.done{color:#5fda7f;}
+    .p-label.active{color:#7bc6ff;}
+    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
+    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
+    .items{width:100%;margin-top:14px;border:1px solid #363a45;border-radius:10px;overflow:hidden;}
+    .items th{text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;}
+    .items td{padding:12px 10px;font-size:15px;color:#eceef2;border-bottom:1px solid #2c3039;vertical-align:top;}
+    .items tr:last-child td{border-bottom:none;}
+    .thumb{width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;}
+    .addr{margin-top:14px;border:1px solid #1779cc;background:#0a2034;border-radius:12px;padding:14px;}
+    .addr h4{margin:0 0 8px;color:#1ea0ff;font-size:28px;}
+    .addr p{margin:0;color:#d6e6f6;line-height:1.5;font-size:17px;}
+    .tips{margin-top:14px;border-left:4px solid #e0bf3f;background:#2b2211;border-radius:10px;padding:12px;}
+    .tips h4{margin:0 0 8px;color:#efcb4a;font-size:26px;}
+    .tips ul{margin:0;padding-left:18px;color:#d3c7a8;font-size:17px;line-height:1.55;}
+    .btn-row{width:100%;margin-top:12px;}
+    .btn-row td{width:50%;}
+    .btn-sm{display:block;text-align:center;text-decoration:none;font-weight:700;border-radius:10px;padding:11px 8px;font-size:16px;}
+    .live{background:#3da5ff;color:#fff;margin-right:8px;}
+    .carrier{background:#141923;color:#3da5ff;border:1px solid #2d75ad;margin-left:8px;}
+    .assist{padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;}
+    .assist h4{margin:0 0 10px;font-size:32px;color:#f1f2f5;}
+    .chat{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:#25d366;color:#0f1712;text-decoration:none;font-weight:700;font-size:15px;}
+    .call{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:#121620;color:#9cc9ff;border:1px solid #2a5586;text-decoration:none;font-weight:700;font-size:15px;}
+    .foot{padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;}
+    @media only screen and (max-width:620px){
+      .status{float:none;display:inline-block;margin-top:8px;}
+      .hero .t{font-size:38px;}
+      .title{font-size:34px;}
+      .sub{font-size:16px;}
+      .p-icon{width:32px;height:32px;font-size:16px;}
+      .p-label{font-size:10px;}
+      .btn{font-size:21px;}
+      .btn-row td{display:block;width:100%;}
+      .live,.carrier{margin:0 0 10px 0;}
+      .assist h4{font-size:26px;}
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
-      <div class="order-title">ORDER SHIPPED</div>
-      <div class="order-id">Order ID: {{orderId}}</div>
-      <div class="order-date">{{orderDate}}</div>
-    </div>
-    <div class="banner"><span class="banner-icon">🚀</span>YOUR ORDER IS SHIPPED!</div>
-    <div class="greeting">Hi {{customerName}},<br>Your luxury package has left our warehouse and is now en route to you. Track your delivery in real-time using the details below.</div>
-    <div class="shipment-title">SHIPMENT INFORMATION</div>
-    <div class="shipment-box">
-      <div class="shipment-row"><span class="shipment-label">Courier Partner</span><span class="shipment-value">{{courierPartner}}</span></div>
-      <div class="shipment-row"><span class="shipment-label">AWB Tracking Number</span><span class="shipment-value">{{trackingNumber}}</span></div>
-      <div class="shipment-row"><span class="shipment-label">Shipped On</span><span class="shipment-value">{{shippedOn}}</span></div>
-      <div class="shipment-row"><span class="shipment-label">Expected Delivery</span><span class="shipment-value">{{expectedDelivery}}</span></div>
-    </div>
-    <div class="progress-bar">
-      <div class="progress-icons">
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Placed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Confirmed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Packed</div></div>
-        <div class="progress-step"><span class="progress-tick">✔️</span><div class="progress-label">Shipped</div></div>
-        <div class="progress-step"><span class="progress-tick inactive">⬜</span><div class="progress-label" style="color:#888;">Delivered</div></div>
-      </div>
-    </div>
-    <div class="btn-row">
-      <a class="btn btn-live" href="{{liveTrackingUrl}}">LIVE TRACKING</a>
-      <a class="btn btn-carrier" href="{{carrierWebsiteUrl}}">CARRIER WEBSITE</a>
-    </div>
-    <div class="footer">
-      <div class="address">{{companyAddress}}</div>
-      <div class="footer-note">* This is a shipment update, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
-    </div>
-  </div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} shipped. Track your package now.</div>
+  <table class="wrap" role="presentation" width="100%"><tr><td>
+    <table class="card" role="presentation" align="center">
+      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">ON THE WAY</span></td></tr>
+      <tr><td class="hero"><div class="icon">&#128666;</div><div class="t">YOUR ORDER IS SHIPPED!</div><div class="s">Track your luxury package in real-time</div></td></tr>
+
+      <tr><td class="section">
+        <h2 class="title">Exciting News, {{customerName}}!</h2>
+        <p class="sub">Your luxury package has left our warehouse and is now en route to you. Track your delivery in real-time using the details below.</p>
+        <a class="btn btn-primary" href="{{liveTrackingUrl}}">TRACK PACKAGE NOW</a>
+      </td></tr>
+
+      <tr><td class="section">
+        <div class="box">
+          <h3 class="heading">SHIPMENT INFORMATION</h3>
+          <table class="summary" role="presentation" width="100%">
+            <tr><td class="k">Courier Partner</td><td class="v">{{courierPartner}}</td></tr>
+            <tr><td class="k">AWB Tracking Number</td><td class="v">{{trackingNumber}}</td></tr>
+            <tr><td class="k">Shipped On</td><td class="v">{{shippedOn}}</td></tr>
+            <tr><td class="k">Expected Delivery</td><td class="v">{{expectedDelivery}}</td></tr>
+          </table>
+
+          <div class="progress-track">
+            <div class="progress-head">DELIVERY PROGRESS</div>
+            <table class="progress-grid" role="presentation"><tr>
+              {{#each progressSteps}}
+              <td>
+                <span class="p-icon {{state}}">{{{icon}}}</span>
+                <div class="p-label {{state}}">{{label}}</div>
+              </td>
+              {{/each}}
+            </tr></table>
+            <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+          </div>
+
+          <table class="items" role="presentation" width="100%">
+            <tr><th>ITEM</th><th>DETAILS</th><th>QTY</th><th>PRICE</th></tr>
+            {{#each items}}
+            <tr>
+              <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" /></td>
+              <td><strong>{{name}}</strong><br><span style="color:#b4bac6;">Size: {{size}} | Color: {{color}}</span></td>
+              <td>{{quantity}}</td>
+              <td>INR {{subtotal}}</td>
+            </tr>
+            {{/each}}
+          </table>
+
+          <div class="addr">
+            <h4>DELIVERING TO</h4>
+            <p><strong>{{shippingName}}</strong><br>{{shippingAddress}}<br>{{shippingPhone}}</p>
+          </div>
+
+          <div class="tips">
+            <h4>IMPORTANT DELIVERY TIPS</h4>
+            <ul>
+              <li>Keep your phone accessible for delivery updates.</li>
+              <li>Ensure someone is available at the delivery address.</li>
+              <li>Check package condition before accepting delivery.</li>
+            </ul>
+          </div>
+
+          <table class="btn-row" role="presentation"><tr>
+            <td><a class="btn-sm live" href="{{liveTrackingUrl}}">LIVE TRACKING</a></td>
+            <td><a class="btn-sm carrier" href="{{carrierWebsiteUrl}}">CARRIER WEBSITE</a></td>
+          </tr></table>
+        </div>
+      </td></tr>
+
+      <tr><td class="assist">
+        <h4>Need Help with Your Delivery?</h4>
+        <a class="chat" href="{{whatsappUrl}}">Chat Support</a>
+        <a class="call" href="tel:{{supportPhone}}">Call Us</a>
+      </td></tr>
+
+      <tr><td class="foot">
+        <div>eShopper Luxe, {{companyAddress}}</div>
+        <div>Shipping updates are synced directly from backend carrier state events.</div>
+      </td></tr>
+    </table>
+  </td></tr></table>
 </body>
 </html>
+
+

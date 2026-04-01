@@ -1,106 +1,186 @@
-<!--
-Ultra-Premium Luxe Email: Order Confirmed
-Exact Green Banner, Luxe Promise, and layout as per reference
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Confirmed - Eshopper Boutique Luxe</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Confirmed - {{orderId}}</title>
   <style>
-    body { background: #0A0A0A; color: #FFD700; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
-    .container { max-width: 600px; margin: 0 auto; background: #181818; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 32px #0002; }
-    .header { background: linear-gradient(90deg, #0A0A0A 60%, #1ec773 100%); padding: 32px 0 18px 0; text-align: center; }
-    .logo { height: 40px; margin-bottom: 12px; }
-    .order-title { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: 1.5px; margin: 0; }
-    .order-id { font-size: 15px; color: #FFD700; font-weight: 700; margin-top: 6px; }
-    .order-date { font-size: 13px; color: #fff; margin-top: 2px; }
-    .banner { background: #1ec773; color: #fff; font-size: 20px; font-weight: 900; padding: 16px 0; border-radius: 8px; margin: 24px 0 0 0; letter-spacing: 1px; }
-    .greeting { font-size: 18px; color: #fff; margin: 24px 0 0 0; }
-    .arrival-box { background: #FFD700; color: #181818; font-size: 18px; font-weight: 900; border-radius: 8px; padding: 12px 0; margin: 24px 0 0 0; letter-spacing: 1px; }
-    .promise-row { display: flex; justify-content: space-between; gap: 8px; margin: 28px 0 0 0; }
-    .promise { flex: 1; background: #222; border-radius: 12px; padding: 16px 8px; text-align: center; color: #FFD700; }
-    .promise-icon { font-size: 28px; margin-bottom: 6px; display: block; }
-    .promise-title { font-size: 13px; font-weight: 700; color: #FFD700; margin-bottom: 2px; }
-    .promise-desc { color: #fff; font-size: 12px; }
-    .summary-title { font-size: 18px; color: #FFD700; font-weight: 700; margin: 32px 0 8px 0; }
-    .summary-table { width: 100%; border-collapse: collapse; background: #222; border-radius: 8px; overflow: hidden; }
-    .summary-table th, .summary-table td { padding: 12px 8px; text-align: left; }
-    .summary-table th { background: #181818; color: #FFD700; font-size: 14px; font-weight: 700; }
-    .summary-table td { color: #fff; font-size: 14px; border-bottom: 1px solid #333; }
-    .summary-table tr:last-child td { border-bottom: none; }
-    .product-img { width: 60px; border-radius: 8px; }
-    .total-row { font-size: 16px; color: #FFD700; font-weight: 900; }
-    .card { background: #181818; border-radius: 12px; padding: 16px; color: #FFD700; font-size: 14px; margin: 24px 0 0 0; }
-    .card-title { font-size: 13px; color: #FFD700; font-weight: 700; margin-bottom: 4px; }
-    .card-content { color: #fff; font-size: 14px; }
-    .footer { background: #181818; color: #FFD700; text-align: center; padding: 32px 0 0 0; border-radius: 0 0 18px 18px; }
-    .address { color: #fff; font-size: 13px; margin: 18px 0 0 0; }
-    .footer-note { color: #888; font-size: 12px; margin: 18px 0 0 0; }
-    @media (max-width: 650px) {
-      .container { max-width: 98vw; }
-      .promise-row { flex-direction: column; gap: 10px; }
+    {{> theme_tokens}}
+    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
+    table{border-collapse:collapse;}
+    .wrap{width:100%;background:#0a0a0a;padding:20px 8px;}
+    .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
+    .top{padding:18px 20px;background:linear-gradient(120deg,#0f2a18,#0d3d1f,#145b2f);}
+    .logo{height:34px;vertical-align:middle;}
+    .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#dbffe8;border:1px solid #4aba65;background:#2f8d44;padding:7px 12px;border-radius:999px;}
+    .hero{background:#49b84f;color:#fff;text-align:center;padding:22px 12px;}
+    .hero .t{font-size:50px;font-weight:800;line-height:1;}
+    .hero .s{font-size:14px;opacity:.96;margin-top:8px;}
+    .section{padding:22px 20px;border-top:1px solid #272a30;}
+    .title{margin:0 0 12px;font-size:46px;line-height:1.06;text-align:center;}
+    .sub{text-align:center;color:#d6dae2;font-size:18px;line-height:1.62;margin:0;}
+    .arrival{margin:18px auto 0;max-width:360px;background:#e0bf3f;color:#fff;border-radius:14px;text-align:center;padding:14px;}
+    .arrival .h{font-size:14px;font-weight:700;letter-spacing:1px;}
+    .arrival .d{font-size:52px;font-weight:800;line-height:1;margin-top:6px;}
+    .arrival .s{font-size:14px;margin-top:8px;}
+    .promise{background:#032312;border-top:1px solid #0f4f2a;border-bottom:1px solid #0f4f2a;padding:18px 12px;}
+    .promise h3{margin:0 0 14px;text-align:center;color:#2fe06f;font-size:34px;}
+    .pgrid{width:100%;}
+    .pgrid td{width:33.33%;text-align:center;color:#dce9df;padding:8px 6px;border-right:1px solid #1e6a3f;vertical-align:top;}
+    .pgrid td:last-child{border-right:none;}
+    .pgrid .i{font-size:28px;display:block;margin-bottom:6px;}
+    .pgrid .t{font-size:32px;font-weight:700;line-height:1.1;}
+    .pgrid .d{font-size:15px;color:#adc4b5;line-height:1.45;margin-top:6px;}
+    .box{border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;}
+    .heading{color:#f0c84a;font-size:34px;margin:0 0 14px;}
+    .items{width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;}
+    .items th{text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;}
+    .items td{padding:12px 10px;font-size:15px;color:#eceef2;border-bottom:1px solid #2c3039;vertical-align:top;}
+    .items tr:last-child td{border-bottom:none;}
+    .thumb{width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;}
+    .totals{margin-top:14px;border:1px solid #343844;border-radius:12px;padding:16px;}
+    .totals table{width:100%;}
+    .totals td{padding:5px 0;color:#d5d9e2;font-size:16px;}
+    .totals .final td{border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:33px;font-weight:800;}
+    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
+    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
+    .progress-grid{width:100%;}
+    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
+    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;font-size:18px;border:1px solid #3a404d;background:#1b212d;}
+    .p-icon.done{background:#2ea94b;border-color:#55d372;}
+    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;box-shadow:0 0 0 3px rgba(47,143,226,0.22);}
+    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
+    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
+    .p-label.done{color:#5fda7f;}
+    .p-label.active{color:#7bc6ff;}
+    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
+    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
+    .grid{width:100%;margin-top:14px;}
+    .grid td{width:50%;vertical-align:top;}
+    .mini{border:1px solid #0f6f35;background:#101a12;border-radius:12px;padding:14px;margin-right:8px;}
+    .mini2{border:1px solid #343944;background:#111317;border-radius:12px;padding:14px;margin-left:8px;}
+    .k{font-size:13px;color:#36d76d;margin-bottom:8px;font-weight:700;}
+    .k2{font-size:13px;color:#efcb4a;margin-bottom:8px;font-weight:700;}
+    .v{color:#e7e9ed;font-size:16px;line-height:1.45;}
+    .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;}
+    .btn-primary{background:#4ab75a;color:#fff;}
+    .btn-secondary{background:#151820;color:#f0d07a;border:1px solid #756225;}
+    .btn-third{background:#ea5bff;color:#fff;}
+    .foot{background:#052712;padding:20px 16px;border-top:1px solid #0b5a2a;text-align:center;}
+    .community{color:#d6f7e0;font-size:16px;}
+    .stars{color:#f4d64b;font-size:28px;letter-spacing:2px;margin:8px 0;}
+    .btn-inst{display:inline-block;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:18px;}
+    .assist{padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;}
+    .assist h4{margin:0 0 10px;font-size:36px;color:#f1f2f5;}
+    .smallbtn{display:inline-block;margin:6px 6px 0;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;}
+    .wa{background:#25d366;color:#0f1912;}
+    .mail{background:#121620;color:#e7d391;border:1px solid #715f2a;}
+    .footnote{text-align:center;color:#9ea4b2;font-size:12px;padding:18px 14px 24px;border-top:1px solid #272a30;line-height:1.7;}
+    @media only screen and (max-width:620px){
+      .status{float:none;display:inline-block;margin-top:8px;}
+      .hero .t{font-size:38px;}
+      .title{font-size:34px;}
+      .sub{font-size:16px;}
+      .arrival .d{font-size:42px;}
+      .pgrid td{display:block;width:100%;border-right:none;border-top:1px solid #1e6a3f;}
+      .pgrid tr td:first-child{border-top:none;}
+      .grid td{display:block;width:100%;}
+      .mini,.mini2{margin:0 0 10px 0;}
+      .p-icon{width:32px;height:32px;font-size:16px;}
+      .p-label{font-size:10px;}
+      .btn{font-size:21px;}
+      .assist h4{font-size:28px;}
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <img class="logo" src="{{logoUrl}}" alt="Eshopper Boutique Luxe Logo" />
-      <div class="order-title">ORDER CONFIRMED</div>
-      <div class="order-id">Order ID: {{orderId}}</div>
-      <div class="order-date">{{orderDate}}</div>
-    </div>
-    <div class="banner">ORDER CONFIRMED</div>
-    <div class="greeting">Hi {{customerName}},<br>Your order has been <span style="color:#1ec773;font-weight:700;">confirmed</span> and is now being prepared by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.</div>
-    <div class="arrival-box">EXPECTED ARRIVAL: {{expectedArrival}}</div>
-    <div class="promise-row">
-      <div class="promise">
-        <span class="promise-icon">🔍</span>
-        <div class="promise-title">Quality Check</div>
-        <div class="promise-desc">10-point inspection by experts</div>
-      </div>
-      <div class="promise">
-        <span class="promise-icon">📦</span>
-        <div class="promise-title">Premium Packaging</div>
-        <div class="promise-desc">Eco-friendly luxury boxes</div>
-      </div>
-      <div class="promise">
-        <span class="promise-icon">🛡️</span>
-        <div class="promise-title">100% Authentic</div>
-        <div class="promise-desc">Guaranteed genuine products</div>
-      </div>
-    </div>
-    <div class="summary-title">ORDER DETAILS</div>
-    <table class="summary-table">
-      <tr>
-        <th>ITEM</th>
-        <th>DETAILS</th>
-        <th>QTY</th>
-        <th>PRICE</th>
-      </tr>
-      {{#each items}}
-      <tr>
-        <td><img class="product-img" src="{{imageUrl}}" alt="{{name}}" /></td>
-        <td>{{name}}<br><span style="color:#FFD700; font-size:12px;">Size: {{size}}</span><br><span style="color:#fff; font-size:12px;">Color: {{color}}</span></td>
-        <td>{{quantity}}</td>
-        <td>&#8377;{{subtotal}}</td>
-      </tr>
-      {{/each}}
-      <tr class="total-row">
-        <td colspan="3" style="text-align:right;">Total Paid</td>
-        <td>&#8377;{{totalPaid}}</td>
-      </tr>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} confirmed. Premium preparation is in progress.</div>
+  <table class="wrap" role="presentation" width="100%"><tr><td>
+    <table class="card" role="presentation" align="center">
+      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">CONFIRMED</span></td></tr>
+      <tr><td class="hero"><div class="t">ORDER CONFIRMED!</div><div class="s">Order #{{orderId}} | {{orderDate}}</div></td></tr>
+
+      <tr><td class="section">
+        <h2 class="title">Hi {{customerName}}!</h2>
+        <p class="sub">Your order has been confirmed and is now being prepared by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.</p>
+        <div class="arrival"><div class="h">EXPECTED ARRIVAL</div><div class="d">{{expectedArrival}}</div><div class="s">3-5 Business Days</div></div>
+      </td></tr>
+
+      <tr><td class="promise">
+        <h3>THE LUXE PROMISE</h3>
+        <table class="pgrid" role="presentation"><tr>
+          <td><span class="i">&#128269;</span><div class="t">Quality Check</div><div class="d">10-point inspection by experts</div></td>
+          <td><span class="i">&#128230;</span><div class="t">Premium Packaging</div><div class="d">Eco-friendly luxury boxes</div></td>
+          <td><span class="i">&#128737;</span><div class="t">100% Authentic</div><div class="d">Guaranteed genuine products</div></td>
+        </tr></table>
+      </td></tr>
+
+      <tr><td class="section">
+        <div class="box">
+          <h3 class="heading">ORDER DETAILS</h3>
+          <table class="items" role="presentation" width="100%">
+            <tr><th>ITEM</th><th>DETAILS</th><th>QTY</th><th>PRICE</th></tr>
+            {{#each items}}
+            <tr>
+              <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" /></td>
+              <td><strong>{{name}}</strong><br><span style="color:#b4bac6;">Size: {{size}}</span><br><span style="color:#b4bac6;">Color: {{color}}</span></td>
+              <td>{{quantity}}</td>
+              <td>INR {{subtotal}}</td>
+            </tr>
+            {{/each}}
+          </table>
+
+          <div class="totals"><table role="presentation">
+            <tr><td>Item Price</td><td align="right">INR {{subtotal}}</td></tr>
+            <tr><td>Shipping Charges</td><td align="right">INR {{shippingCharges}}</td></tr>
+            <tr><td>GST (Included)</td><td align="right">INR {{gst}}</td></tr>
+            <tr class="final"><td>Total Amount Paid</td><td align="right">INR {{totalPaid}}</td></tr>
+          </table></div>
+
+          <table class="grid" role="presentation"><tr>
+            <td><div class="mini"><div class="k">SHIPPING TO</div><div class="v">{{shippingName}}<br>{{shippingAddress}}<br>Phone: {{shippingPhone}}</div></div></td>
+            <td><div class="mini2"><div class="k2">BILLING INFO</div><div class="v">{{customerName}}<br>Email: {{customerEmail}}<br>Transaction: {{transactionId}}</div></div></td>
+          </tr></table>
+
+          <div class="progress-track">
+            <div class="progress-head">DELIVERY PROGRESS</div>
+            <table class="progress-grid" role="presentation"><tr>
+              {{#each progressSteps}}
+              <td>
+                <span class="p-icon {{state}}">{{{icon}}}</span>
+                <div class="p-label {{state}}">{{label}}</div>
+              </td>
+              {{/each}}
+            </tr></table>
+            <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+          </div>
+
+          <a class="btn btn-primary" href="{{trackingUrl}}">TRACK YOUR ORDER</a>
+          <a class="btn btn-secondary" href="{{myOrdersUrl}}">VIEW RECEIPT</a>
+        </div>
+      </td></tr>
+
+      <tr><td class="foot">
+        <div class="community">Join our 50,000+ Luxe community</div>
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <a class="btn-inst" href="{{instagramUrl}}">Follow us on Instagram</a>
+      </td></tr>
+
+      <tr><td class="assist">
+        <h4>Need Assistance?</h4>
+        <a class="smallbtn wa" href="{{whatsappUrl}}">WhatsApp Us</a>
+        <a class="smallbtn mail" href="mailto:{{supportEmail}}">Email Support</a>
+        <a class="smallbtn mail" href="tel:{{supportPhone}}">Call Us</a>
+      </td></tr>
+
+      <tr><td class="footnote">
+        <div>eShopper Luxe, {{companyAddress}}</div>
+        <div>GSTIN and legal invoice details are shared in final tax invoice after delivery.</div>
+        <div><a href="{{helpCenterUrl}}" style="color:#d4b75a;text-decoration:none;">Privacy</a> | <a href="{{brandSiteUrl}}" style="color:#d4b75a;text-decoration:none;">Terms</a></div>
+      </td></tr>
     </table>
-    <div class="card">
-      <div class="card-title">SHIPPING ADDRESS</div>
-      <div class="card-content">{{shippingAddress}}</div>
-    </div>
-    <div class="footer">
-      <div class="address">{{companyAddress}}</div>
-      <div class="footer-note">* This is an order confirmation, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
-    </div>
-  </div>
+  </td></tr></table>
 </body>
 </html>
+
+
