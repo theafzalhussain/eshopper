@@ -1,9 +1,9 @@
 // ===== API BASE URL =====
-// Production API endpoint - HARDCODED for Vercel auto-deployment
+// Use env first so Vercel can control API target per environment.
 const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-export const BASE_URL = isDev 
-  ? (process.env.REACT_APP_API_URL || "http://localhost:5000")
-  : "https://api.eshopperr.me";
+export const BASE_URL = process.env.REACT_APP_API_URL || (isDev
+  ? "http://localhost:5000"
+  : "https://eshopper-qtgl.onrender.com");
 
 // ===== FRONTEND URLs =====
 // Always use production domain
@@ -60,7 +60,7 @@ export const IMAGE_FORMATS = ['jpg', 'png', 'jpeg'];
 export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // ===== ENV VARIABLES FOR REFERENCE =====
-// Required Railway Environment Variables:
+// Required Render Environment Variables:
 // - MONGODB_URI: MongoDB connection string
 //
 // - SENDER_EMAIL: Sender email address (e.g. support@eshopperr.me)
@@ -70,10 +70,10 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 // - FRONTEND_URL: Your frontend URL (https://eshopperr.me)
 // - SENTRY_DSN: Sentry error tracking DSN (Optional)
 // - NODE_ENV: production
-// Note: PORT is auto-assigned by Railway, do not set manually
+// Note: PORT is auto-assigned by Render, do not set manually
 
 // Required Vercel Environment Variables (in .env.local):
-// - REACT_APP_API_URL: Your production API URL (https://api.eshopperr.me)
+// - REACT_APP_API_URL: Your production API URL (https://eshopper-qtgl.onrender.com)
 // - REACT_APP_FRONTEND_URL: Your frontend URL (https://eshopperr.me)
 // - REACT_APP_BRAND_LOGO_URL: Final ESHOPPER logo URL
 // - REACT_APP_BRAND_WATERMARK_URL: Watermark logo URL (keep same as logo unless needed)

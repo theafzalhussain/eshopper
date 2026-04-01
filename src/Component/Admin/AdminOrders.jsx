@@ -41,7 +41,7 @@ export default function AdminOrders() {
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [expandedHistory, setExpandedHistory] = useState(null);
 
-    const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://api.eshopperr.me';
+    const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://eshopper-qtgl.onrender.com';
 
     // Socket.io setup for real-time updates
     useEffect(() => {

@@ -27,9 +27,9 @@ let firebaseAdminReady = false;
 try {
     let firebaseCredentials;
 
-    // PRODUCTION (Railway): Use environment variable JSON string
+    // PRODUCTION (Render): Use environment variable JSON string
     if (process.env.FIREBASE_CONFIG_JSON) {
-        console.log('📱 Loading Firebase Admin from Railway environment variable...');
+        console.log('📱 Loading Firebase Admin from Render environment variable...');
         firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
         console.log(`✅ Firebase config parsed successfully for project: ${firebaseCredentials.project_id}`);
     } 
@@ -66,8 +66,8 @@ try {
     console.error('   Error:', err.message);
     console.error('');
     console.error('📋 Setup Instructions:');
-    console.error('   PRODUCTION (Railway):');
-    console.error('   1. Go to Railway Dashboard → Your Project → Variables');
+    console.error('   PRODUCTION (Render):');
+    console.error('   1. Go to Render Dashboard → Your Service → Environment');
     console.error('   2. Add: FIREBASE_CONFIG_JSON');
     console.error('   3. Value: Paste the entire firebase-admin.json content as a single-line JSON string');
     console.error('');
@@ -84,19 +84,13 @@ const app = express();
 // 🟢 FIX: Parse JSON body before any routes
 app.use(express.json());
 
-// 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Railway/Cloudflare)
-// 🔒 TRUST PROXY (Railway/Production ke liye)
+// 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Render/Cloudflare)
+// 🔒 TRUST PROXY (Render/Production ke liye)
 app.set('trust proxy', 1);
 
 const allowedOrigins = [
     'https://eshopperr.me',
     'https://www.eshopperr.me',
-    'https://eshopper-qtgl.onrender.com',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 // 🔒 CORS - Robust production config
@@ -277,7 +271,7 @@ const MONGO_URI = process.env.MONGODB_URI;
 
 if (!MONGO_URI) {
     console.error("❌ CRITICAL: Missing MONGODB_URI in environment variables");
-    console.error("   Please set MONGODB_URI in your Railway environment");
+    console.error("   Please set MONGODB_URI in your Render environment");
     process.exit(1);
 }
 
@@ -290,7 +284,7 @@ const CLOUDINARY_API_SECRET = process.env.CLOUD_API_SECRET;
 
 if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     console.error("❌ CRITICAL: Missing Cloudinary credentials in environment variables");
-    console.error("   Please set CLOUD_NAME, CLOUD_API_KEY, and CLOUD_API_SECRET in Railway");
+    console.error("   Please set CLOUD_NAME, CLOUD_API_KEY, and CLOUD_API_SECRET in Render");
     process.exit(1);
 }
 

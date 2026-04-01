@@ -8,7 +8,7 @@ import React from "react";
 =======
 
 // --- Luxe Order Confirmation (Gold/Green, Table Layout, All Sections) ---
->>>>>>> parent of 9973d6f (Fixed railway workflow build error)
+>>>>>>> parent of 9973d6f (Fixed render workflow build error)
 const ConfirmationPremium = ({
   order = {},
   user = {},
@@ -481,7 +481,7 @@ const ConfirmationPremium = ({
           </tr>
         </tbody>
       </table>
->>>>>>> parent of 9973d6f (Fixed railway workflow build error)
+>>>>>>> parent of 9973d6f (Fixed render workflow build error)
     </div>
   );
 };

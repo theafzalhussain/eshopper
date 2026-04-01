@@ -6,7 +6,7 @@ const initializeFirebaseAdmin = () => {
         if (admin.apps.length > 0) return; // Pehle se init hai toh wapas mat karo
 
         let cert;
-        // 1. PRODUCTION MODE (Railway)
+        // 1. PRODUCTION MODE (Render)
         if (process.env.FIREBASE_CONFIG_JSON) {
             console.log("📱 Parsing Firebase JSON from Environment Variable...");
             const rawJson = process.env.FIREBASE_CONFIG_JSON.trim();
