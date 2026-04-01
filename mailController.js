@@ -3,13 +3,40 @@ const path = require('path');
 const fs = require('fs');
 const handlebars = require('handlebars');
 
+const DEFAULT_THEME_TOKENS_PARTIAL = `:root {
+    --font-premium: 'Trebuchet MS', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    --font-luxury: Georgia, 'Times New Roman', serif;
+    --text-primary: #f5f7fb;
+    --text-muted: #bac3d4;
+    --gold-accent: #f8d98a;
+    --panel-bg-a: #0f131a;
+    --panel-bg-b: #182033;
+    --panel-bg-c: #111827;
+    --progress-a: #34d399;
+    --progress-b: #60a5fa;
+    --progress-c: #a78bfa;
+}
+
+body {
+    font-family: var(--font-premium);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}`;
+
 const registerTemplatePartials = () => {
+        // Keep core tokens available even if file-based partial loading fails.
+        handlebars.registerPartial('theme_tokens', DEFAULT_THEME_TOKENS_PARTIAL);
+
     const partialsDir = path.join(__dirname, 'views', 'emails', 'partials');
     if (!fs.existsSync(partialsDir)) return;
 
-    const partialFiles = fs.readdirSync(partialsDir).filter((file) => file.endsWith('.hbs'));
+        const partialFiles = fs
+                .readdirSync(partialsDir)
+                .filter((file) => file.endsWith('.hbs') || file.endsWith('.handlebars'));
+
     for (const fileName of partialFiles) {
-        const partialName = path.basename(fileName, '.hbs');
+                const partialName = path.basename(fileName, path.extname(fileName));
         const partialPath = path.join(partialsDir, fileName);
         const source = fs.readFileSync(partialPath, 'utf8');
         handlebars.registerPartial(partialName, source);

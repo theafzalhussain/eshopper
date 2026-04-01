@@ -1036,19 +1036,54 @@ const sendTransactionalEmail = async ({ toEmail, toName, subject, htmlContent, t
     return { provider: 'brevo' };
 };
 
-const sendAdminAlert = async ({ title, details }) => {
+const renderEmailTemplateByFile = (fileName, payload = {}) => {
+    registerTemplatePartials();
+    const templatePath = path.join(__dirname, 'views', 'emails', fileName);
+    if (!fs.existsSync(templatePath)) {
+        throw new Error(`Email template not found: ${fileName}`);
+    }
+    const source = fs.readFileSync(templatePath, 'utf8');
+    const template = handlebars.compile(source);
+    return template(payload || {});
+};
+
+const sendAdminAlert = async ({ title, details, category = 'system', data = {} }) => {
     const adminEmail = process.env.ADMIN_EMAIL || 'support@eshopperr.me';
     if (!adminEmail || !adminEmail.includes('@')) return;
 
     const safeTitle = title || 'System Alert';
     const safeDetails = details || 'No details provided';
-    const html = `
-        <div style="font-family:Arial,sans-serif;background:#fff3cd;border:1px solid #facc15;padding:16px;border-radius:10px;max-width:640px;margin:0 auto;">
-            <h3 style="margin:0 0 8px 0;color:#7a2e0e;">⚠️ ${safeTitle}</h3>
-            <p style="margin:0 0 8px 0;color:#333;">${safeDetails}</p>
-            <p style="margin:0;color:#666;font-size:12px;">Time: ${new Date().toLocaleString('en-IN')}</p>
+    const now = new Date().toLocaleString('en-IN');
+    let html = `
+        <div style="font-family:'Trebuchet MS','Segoe UI',Arial,sans-serif;background:#0f172a;color:#e2e8f0;border:1px solid #334155;padding:18px;border-radius:12px;max-width:660px;margin:0 auto;">
+            <h3 style="margin:0 0 10px 0;color:#fbbf24;font-size:20px;">${safeTitle}</h3>
+            <p style="margin:0 0 10px 0;color:#cbd5e1;line-height:1.65;">${safeDetails}</p>
+            <p style="margin:0;color:#94a3b8;font-size:12px;">Time: ${now}</p>
         </div>
     `;
+
+    if (category === 'product-updated') {
+        try {
+            html = renderEmailTemplateByFile('product-updated.hbs', {
+                productName: data.productName || 'Unnamed Product',
+                productId: data.productId || 'N/A',
+                maincategory: data.maincategory || 'N/A',
+                subcategory: data.subcategory || 'N/A',
+                brand: data.brand || 'N/A',
+                stock: data.stock || 'N/A',
+                finalprice: data.finalprice || '0',
+                discount: data.discount || '0',
+                description: data.description || 'No description provided.',
+                imageUrl: data.imageUrl || '',
+                updatedAt: data.updatedAt || now,
+                adminProductUrl: data.adminProductUrl || `${FRONTEND_PUBLIC_URL}/admin/product`,
+                storeUrl: data.storeUrl || FRONTEND_PUBLIC_URL,
+                companyAddress: process.env.BRAND_ADDRESS || 'Eshopper Boutique Luxe, New Delhi, India'
+            });
+        } catch (templateErr) {
+            console.warn('⚠️ Product-updated template render failed, using fallback admin alert:', templateErr.message);
+        }
+    }
 
     try {
         await sendTransactionalEmail({
@@ -1805,6 +1840,33 @@ const handle = (path, Model, useUpload = false) => {
             } else if (path === '/user') { delete upData.password; }
             const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); 
             if (!d) return res.status(404).json({ message: 'Not found' });
+
+            if (path === '/product') {
+                const finalPrice = d.finalprice != null ? d.finalprice : (d.baseprice || 0);
+                sendAdminAlert({
+                    title: `Product Updated • ${d.name || 'Unnamed Product'}`,
+                    details: `Catalog product was updated successfully. Product ID: ${d._id}`,
+                    category: 'product-updated',
+                    data: {
+                        productName: d.name,
+                        productId: String(d._id || ''),
+                        maincategory: d.maincategory,
+                        subcategory: d.subcategory,
+                        brand: d.brand,
+                        stock: d.stock,
+                        finalprice: finalPrice,
+                        discount: d.discount || 0,
+                        description: d.description,
+                        imageUrl: d.pic1,
+                        updatedAt: new Date().toLocaleString('en-IN'),
+                        adminProductUrl: `${FRONTEND_PUBLIC_URL}/admin/product`,
+                        storeUrl: FRONTEND_PUBLIC_URL
+                    }
+                }).catch((alertErr) => {
+                    console.warn('⚠️ Product update alert email failed:', alertErr.message);
+                });
+            }
+
             res.json(d);
         } catch (e) { 
             res.status(500).json({ error: e.message }); 

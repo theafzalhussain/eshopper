@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Updated</title>
+  <style>
+    {{> theme_tokens}}
+    body{margin:0;padding:0;background:radial-gradient(circle at 12% -20%,#15324f 0,#0c1118 42%,#07090d 100%);font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#edf2fb;}
+    table{border-collapse:collapse;}
+    .wrap{padding:24px 10px;}
+    .card{width:100%;max-width:680px;margin:0 auto;background:#0f141f;border:1px solid #2c3748;border-radius:20px;overflow:hidden;box-shadow:0 18px 48px rgba(0,0,0,0.36);}
+    .head{padding:14px 18px;background:linear-gradient(120deg,#102038,#224164,#ac9550);color:#f3dfa0;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;text-align:center;}
+    .hero{padding:24px 20px;background:linear-gradient(180deg,#1a2a42,#101826);border-bottom:1px solid #2c384c;text-align:center;}
+    .hero h1{margin:0;color:#ffffff;font-size:36px;line-height:1.1;font-family:Georgia,'Times New Roman',serif;}
+    .hero p{margin:10px 0 0;color:#c0cee3;font-size:15px;line-height:1.6;}
+    .body{padding:22px 20px;}
+    .pill{display:inline-block;background:#0f4c2f;border:1px solid #2e8d61;color:#79f4b8;font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;letter-spacing:.4px;}
+    .title{margin:12px 0 8px;font-size:30px;line-height:1.2;color:#ffffff;font-family:Georgia,'Times New Roman',serif;}
+    .desc{margin:0;color:#c8d4e9;font-size:15px;line-height:1.7;}
+    .grid{width:100%;margin-top:16px;border:1px solid #2f3a4c;border-radius:14px;overflow:hidden;background:#0b111b;}
+    .grid td{padding:14px;border-bottom:1px solid #283246;vertical-align:top;}
+    .grid tr:last-child td{border-bottom:none;}
+    .label{font-size:11px;color:#8ea3c4;letter-spacing:.8px;text-transform:uppercase;font-weight:700;display:block;margin-bottom:4px;}
+    .value{font-size:15px;color:#f0f4ff;font-weight:700;line-height:1.5;}
+    .value-muted{font-size:14px;color:#b4c3dd;line-height:1.55;}
+    .image-wrap{margin-top:18px;padding:12px;background:#0a111c;border:1px solid #32425f;border-radius:12px;text-align:center;}
+    .image-wrap img{max-width:100%;height:auto;border-radius:10px;border:1px solid #2f3d57;}
+    .cta{margin-top:18px;}
+    .btn{display:inline-block;padding:12px 18px;border-radius:11px;text-decoration:none;font-size:14px;font-weight:800;}
+    .btn-primary{background:linear-gradient(90deg,#15a0ff,#2c6fff);color:#ffffff;}
+    .btn-secondary{background:#101827;color:#cfe1ff;border:1px solid #33507a;margin-left:8px;}
+    .foot{padding:16px 18px;border-top:1px solid #2b3749;background:#0a0f17;color:#98a8c2;font-size:12px;line-height:1.7;text-align:center;}
+    @media only screen and (max-width:620px){
+      .wrap{padding:14px 6px;}
+      .card{border-radius:16px;}
+      .hero{padding:20px 14px;}
+      .hero h1{font-size:30px;}
+      .hero p{font-size:14px;}
+      .body{padding:18px 14px;}
+      .title{font-size:26px;}
+      .grid td{display:block;width:100%;}
+      .btn{display:block;width:100%;text-align:center;box-sizing:border-box;}
+      .btn-secondary{margin-left:0;margin-top:8px;}
+    }
+  </style>
+</head>
+<body>
+  <table role="presentation" width="100%" class="wrap">
+    <tr>
+      <td>
+        <table role="presentation" class="card" align="center">
+          <tr><td class="head">ESHOPPER PRODUCT CATALOG UPDATE</td></tr>
+          <tr>
+            <td class="hero">
+              <h1>PRODUCT UPDATED</h1>
+              <p>A product record has been modified in your store catalog.</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="body">
+              <span class="pill">ADMIN UPDATE</span>
+              <h2 class="title">{{productName}}</h2>
+              <p class="desc">Your product listing has been refreshed with new details. Review highlights below.</p>
+
+              <table role="presentation" width="100%" class="grid">
+                <tr>
+                  <td width="50%"><span class="label">Category</span><div class="value">{{maincategory}}</div></td>
+                  <td width="50%"><span class="label">Subcategory</span><div class="value">{{subcategory}}</div></td>
+                </tr>
+                <tr>
+                  <td width="50%"><span class="label">Brand</span><div class="value">{{brand}}</div></td>
+                  <td width="50%"><span class="label">Stock</span><div class="value">{{stock}}</div></td>
+                </tr>
+                <tr>
+                  <td width="50%"><span class="label">Final Price</span><div class="value">INR {{finalprice}}</div></td>
+                  <td width="50%"><span class="label">Discount</span><div class="value">{{discount}}%</div></td>
+                </tr>
+                <tr>
+                  <td colspan="2">
+                    <span class="label">Description</span>
+                    <div class="value-muted">{{description}}</div>
+                  </td>
+                </tr>
+              </table>
+
+              {{#if imageUrl}}
+              <div class="image-wrap">
+                <img src="{{imageUrl}}" alt="{{productName}}" />
+              </div>
+              {{/if}}
+
+              <div class="cta">
+                <a href="{{adminProductUrl}}" class="btn btn-primary">Open Product In Admin</a>
+                <a href="{{storeUrl}}" class="btn btn-secondary">View Storefront</a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="foot">
+              Product ID: {{productId}}<br />
+              Updated At: {{updatedAt}}<br />
+              {{companyAddress}}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
