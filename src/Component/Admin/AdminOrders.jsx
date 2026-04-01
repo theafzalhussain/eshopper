@@ -15,6 +15,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import io from 'socket.io-client';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
+import { BASE_URL as SHARED_BASE_URL } from '../../constants';
 import './AdminOrders.css';
 
 const ALLOWED_STATUSES = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered'];
@@ -36,15 +37,6 @@ const STATUS_ICONS = {
 };
 
 const PAYMENT_STATUSES = ['All', 'Paid', 'Pending', 'Failed', 'COD'];
-
-const toDateValue = (value) => {
-    if (!value) return '';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return '';
-    const offset = d.getTimezoneOffset();
-    const local = new Date(d.getTime() - (offset * 60 * 1000));
-    return local.toISOString().slice(0, 10);
-};
 
 const inDateRange = (updatedAt, fromDate, toDate) => {
     if (!fromDate && !toDate) return true;
@@ -83,7 +75,11 @@ export default function AdminOrders() {
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [detailOrder, setDetailOrder] = useState(null);
 
-    const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://eshopper-qtgl.onrender.com';
+    const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const localApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const remoteApiUrl = process.env.REACT_APP_BASE_URL || SHARED_BASE_URL || 'https://eshopper-qtgl.onrender.com';
+    const [apiBaseUrl, setApiBaseUrl] = useState(isLocalHost ? localApiUrl : remoteApiUrl);
+    const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
 
     const showNotification = (message, type = 'info') => {
         setNotification({ message, type });
@@ -97,16 +93,35 @@ export default function AdminOrders() {
                 page,
                 limit: 25,
                 ...(search && { search }),
-                ...(selectedStatus && { status: selectedStatus })
+                ...(selectedStatus && { status: selectedStatus }),
+                ...(fromDate && { fromDate }),
+                ...(toDate && { toDate }),
+                ...(paymentStatus !== 'All' && { paymentStatus }),
+                ...(adminSecret && { adminSecret })
             };
 
-            const response = await axios.get(`${BASE_URL}/api/admin/orders`, { params });
+            const response = await axios.get(`${apiBaseUrl}/api/admin/orders`, {
+                params,
+                headers: adminSecret ? { 'x-admin-secret': adminSecret } : {}
+            });
             setOrders(response.data.orders || []);
             setTotalPages(response.data.pages || 0);
             setSelectedOrders(new Set());
             setSelectAll(false);
         } catch (error) {
             console.error('Failed to fetch orders:', error);
+            // Local dev safety: if remote API blocks localhost via CORS, switch to local API automatically.
+            if (isLocalHost && !String(apiBaseUrl).includes('localhost')) {
+                setApiBaseUrl(localApiUrl);
+                showNotification('Remote API blocked localhost. Switched to local backend URL.', 'info');
+                return;
+            }
+            // Local dev fallback: if local backend is not running, try hosted API once.
+            if (isLocalHost && String(apiBaseUrl).includes('localhost') && remoteApiUrl !== apiBaseUrl) {
+                setApiBaseUrl(remoteApiUrl);
+                showNotification('Local backend not reachable. Trying hosted API URL.', 'info');
+                return;
+            }
             showNotification('Failed to load orders', 'error');
         } finally {
             setLoading(false);
@@ -115,7 +130,7 @@ export default function AdminOrders() {
 
     useEffect(() => {
         fetchOrders();
-    }, [page, search, selectedStatus]);
+    }, [apiBaseUrl, page, search, selectedStatus, fromDate, toDate, paymentStatus]);
 
     useEffect(() => {
         if (!autoRefresh) return undefined;
@@ -123,10 +138,15 @@ export default function AdminOrders() {
             fetchOrders();
         }, 30000);
         return () => clearInterval(timer);
-    }, [autoRefresh, page, search, selectedStatus]);
+    }, [apiBaseUrl, autoRefresh, page, search, selectedStatus, fromDate, toDate, paymentStatus]);
 
     useEffect(() => {
-        const socket = io(BASE_URL);
+        const socket = io(apiBaseUrl, {
+            transports: ['websocket'],
+            withCredentials: true,
+            reconnectionAttempts: 3,
+            timeout: 8000
+        });
 
         const handleStatusUpdate = (payload) => {
             setOrders((prev) => prev.map((order) => (
@@ -136,21 +156,18 @@ export default function AdminOrders() {
             )));
         };
 
+        socket.on('connect_error', (err) => {
+            console.warn('Socket connection failed:', err.message);
+        });
+
         socket.on('statusUpdate', handleStatusUpdate);
         return () => {
             socket.off('statusUpdate', handleStatusUpdate);
             socket.disconnect();
         };
-    }, [BASE_URL]);
+    }, [apiBaseUrl]);
 
-    const filteredOrders = useMemo(() => {
-        return orders.filter((order) => {
-            const orderPaymentStatus = String(order.paymentStatus || '').toLowerCase();
-            const passPayment = paymentStatus === 'All' || orderPaymentStatus === paymentStatus.toLowerCase();
-            const passDate = inDateRange(order.updatedAt, fromDate, toDate);
-            return passPayment && passDate;
-        });
-    }, [orders, paymentStatus, fromDate, toDate]);
+    const filteredOrders = useMemo(() => orders.filter((order) => inDateRange(order.updatedAt, fromDate, toDate)), [orders, fromDate, toDate]);
 
     const handleOrderSelect = (orderId) => {
         const next = new Set(selectedOrders);
@@ -175,11 +192,11 @@ export default function AdminOrders() {
         try {
             setUpdating(orderId);
             const endpoint = newStatus === 'Confirmed'
-                ? `${BASE_URL}/api/admin/confirm-order`
-                : `${BASE_URL}/api/update-order-status`;
+                ? `${apiBaseUrl}/api/admin/confirm-order`
+                : `${apiBaseUrl}/api/update-order-status`;
 
             const config = newStatus === 'Confirmed'
-                ? { headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET } }
+                ? { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} }
                 : {};
 
             const response = newStatus === 'Confirmed'
@@ -213,11 +230,11 @@ export default function AdminOrders() {
         for (const orderId of Array.from(selectedOrders)) {
             try {
                 const endpoint = bulkStatus === 'Confirmed'
-                    ? `${BASE_URL}/api/admin/confirm-order`
-                    : `${BASE_URL}/api/update-order-status`;
+                    ? `${apiBaseUrl}/api/admin/confirm-order`
+                    : `${apiBaseUrl}/api/update-order-status`;
 
                 const config = bulkStatus === 'Confirmed'
-                    ? { headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET } }
+                    ? { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} }
                     : {};
 
                 const response = bulkStatus === 'Confirmed'
