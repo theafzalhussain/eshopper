@@ -17,7 +17,8 @@ export default function SingleProductPage() {
     let location = useLocation() // Current URL track karne ke liye (Update)
 
     let product = useSelector((state) => state.ProductStateData)
-    let cart = useSelector((state) => state.CartStateData)
+    let cartState = useSelector((state) => state.CartStateData)
+    const cartItems = cartState && Array.isArray(cartState.items) ? cartState.items : []
     let wishlist = useSelector((state) => state.WishlistStateData)
 
     function getAPIData() {
@@ -37,20 +38,16 @@ export default function SingleProductPage() {
             // Login ke baad wapas isi page par aane ke liye state pass ki hai
             navigate("/login", { state: { from: location.pathname } })
         } else {
-            let d = cart.find((item) => item.productid === id && item.userid === localStorage.getItem("userid"))
+            const userId = localStorage.getItem("userid")
+            const productId = p.id || p._id || id
+            let d = cartItems.find((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId))
             if (d) {
                 navigate("/cart")
             } else {
                 let item = {
-                    productid: p.id,
-                    userid: localStorage.getItem("userid"),
-                    name: p.name,
-                    color: p.color,
-                    size: p.size,
-                    price: Number(p.finalprice), // Ensure Number to avoid NaN
-                    qty: Number(qty),
-                    total: Number(p.finalprice) * Number(qty),
-                    pic: p.pic1,
+                    userId,
+                    productId,
+                    quantity: Number(qty),
                 }
                 dispatch(addCart(item))
                 navigate("/cart")

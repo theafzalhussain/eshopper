@@ -10,7 +10,8 @@ import './SystemControlCenter.css'
 export default function AdminUpdateCart() {
     var [name, setname] = useState("")
     var {id} = useParams()
-    var cart = useSelector((state) => state.CartStateData)
+    var cartState = useSelector((state) => state.CartStateData)
+    const cartItems = cartState && Array.isArray(cartState.items) ? cartState.items : []
     var navigate = useNavigate()
     var dispatch = useDispatch()
 
@@ -20,7 +21,7 @@ export default function AdminUpdateCart() {
 
     function postData(e) {
         e.preventDefault()
-        var item = cart.find((item) => item.name === name)
+        var item = cartItems.find((item) => item.name === name)
         if (item && item.id !== Number(id))
             alert("Cart Name is Already Exist")
         else {
@@ -31,9 +32,9 @@ export default function AdminUpdateCart() {
 
     useEffect(()=>{
         dispatch(getCart())
-        var item = cart.find((item)=> item.id===Number(id))
+        var item = cartItems.find((item)=> item.id===Number(id))
         if(item) setname(item.name)
-    },[cart.length, id])
+    },[cartItems.length, id])
 
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">

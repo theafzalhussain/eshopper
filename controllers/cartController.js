@@ -30,7 +30,7 @@ exports.addToCart = async (req, res) => {
                 name: item.product?.name || '',
                 color: item.product?.color || '',
                 size: item.product?.size || '',
-                price: item.product?.price || 0,
+                price: item.product?.finalprice || item.product?.price || 0,
                 quantity: item.quantity,
                 pic: item.product?.pic1 || '',
             })),
@@ -52,7 +52,7 @@ exports.applyCoupon = async (req, res) => {
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
         let subtotal = 0;
         cart.items.forEach(item => {
-            subtotal += (item.product.price || 0) * item.quantity;
+            subtotal += ((item.product?.finalprice || item.product?.price || 0) * item.quantity);
         });
         // Example: Only one valid coupon for demo
         if (coupon.trim().toLowerCase() === 'eshopper10') {
@@ -111,7 +111,7 @@ exports.getCart = async (req, res) => {
                 name: item.product?.name || '',
                 color: item.product?.color || '',
                 size: item.product?.size || '',
-                price: item.product?.price || 0,
+                price: item.product?.finalprice || item.product?.price || 0,
                 quantity: item.quantity,
                 pic: item.product?.pic1 || '',
             })),
@@ -157,7 +157,7 @@ exports.updateQuantity = async (req, res) => {
                 name: item.product?.name || '',
                 color: item.product?.color || '',
                 size: item.product?.size || '',
-                price: item.product?.price || 0,
+                price: item.product?.finalprice || item.product?.price || 0,
                 quantity: item.quantity,
                 pic: item.product?.pic1 || '',
             })),
@@ -190,7 +190,7 @@ exports.removeItem = async (req, res) => {
                 name: item.product?.name || '',
                 color: item.product?.color || '',
                 size: item.product?.size || '',
-                price: item.product?.price || 0,
+                price: item.product?.finalprice || item.product?.price || 0,
                 quantity: item.quantity,
                 pic: item.product?.pic1 || '',
             })),
@@ -211,7 +211,7 @@ exports.getOrderSummary = async (req, res) => {
         if (!cart) return res.json({ success: true, summary: { subtotal: 0, discount: 0, shipping: 0, gst: 0, grandTotal: 0 } });
         let subtotal = 0;
         cart.items.forEach(item => {
-            subtotal += (item.product.price || 0) * item.quantity;
+            subtotal += ((item.product?.finalprice || item.product?.price || 0) * item.quantity);
         });
         // Luxury logic: 10% discount if subtotal > 2000
         let discount = subtotal > 2000 ? Math.round(subtotal * 0.1) : 0;

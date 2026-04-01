@@ -88,6 +88,17 @@ app.use(express.json());
 // 🔒 TRUST PROXY (Railway/Production ke liye)
 app.set('trust proxy', 1);
 
+const allowedOrigins = [
+    'https://eshopperr.me',
+    'https://www.eshopperr.me',
+    'https://eshopper-qtgl.onrender.com',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    process.env.FRONTEND_URL,
+].filter(Boolean);
+
 // 🔒 CORS - Robust production config
 const corsOptions = {
     origin: function(origin, callback) {
@@ -95,13 +106,7 @@ const corsOptions = {
             console.log('[CORS] No Origin header, allowing request (likely server-to-server or curl)');
             return callback(null, true);
         }
-        // Localhost aur production domains allow karein
-        if (
-            origin.includes('localhost:3000') ||
-            origin.includes('127.0.0.1:3000') ||
-            origin === 'https://eshopperr.me' ||
-            origin === 'https://www.eshopperr.me'
-        ) {
+        if (allowedOrigins.includes(origin)) {
             console.log(`[CORS] Allowed origin: ${origin}`);
             return callback(null, true);
         }
@@ -146,15 +151,7 @@ app.post('/api/cart/apply-coupon', applyCoupon);
 const httpServer = http.createServer(app); // 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
 const io = new Server(httpServer, {
     cors: {
-        origin: [
-            'https://eshopperr.me',
-            'https://www.eshopperr.me',
-            'http://localhost:3000',
-            'http://127.0.0.1:3000',
-            'http://localhost:3001',
-            'http://127.0.0.1:3001',
-            process.env.FRONTEND_URL
-        ].filter(Boolean),
+        origin: allowedOrigins,
         credentials: true
     },
     transports: ['websocket', 'polling']
@@ -1587,10 +1584,11 @@ app.get('/api/products', async (req, res) => {
 
 
 
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 
 async function startServer() {
     try {
+        console.log(`🚀 Server boot config -> PORT: ${PORT}`);
         await mongoose.connect(MONGO_URI, {
             dbName: process.env.DB_NAME || 'eshoper',
             autoIndex: true,

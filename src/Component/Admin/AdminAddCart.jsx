@@ -9,7 +9,8 @@ import './SystemControlCenter.css'
 
 export default function AdminAddCart() {
     var [name, setname] = useState("")
-    var cart = useSelector((state) => state.CartStateData)
+    var cartState = useSelector((state) => state.CartStateData)
+    const cartItems = cartState && Array.isArray(cartState.items) ? cartState.items : []
     var navigate = useNavigate()
     var dispatch = useDispatch()
 
@@ -19,7 +20,7 @@ export default function AdminAddCart() {
 
     function postData(e) {
         e.preventDefault()
-        var item = cart.find((item) => item.name === name)
+        var item = cartItems.find((item) => item.name === name)
         if (item)
             alert("Cart Name is Already Exist")
         else {

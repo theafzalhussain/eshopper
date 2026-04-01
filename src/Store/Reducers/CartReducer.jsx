@@ -8,8 +8,10 @@ export function CartReducer(state = { items: [] }, action) {
         case UPDATE_CART_RED:
         case DELETE_CART_RED:
         case CLEAR_CART_RED:
-            // All actions replace the cart state with the new cart object
-            return action.data && action.data.items ? action.data : { items: [] };
+            // Normalize different API payload shapes into { items: [] }
+            if (action.data && Array.isArray(action.data.items)) return action.data;
+            if (Array.isArray(action.data)) return { items: action.data };
+            return { items: [] };
         default:
             return state;
     }

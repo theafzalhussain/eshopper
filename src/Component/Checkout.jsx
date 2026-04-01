@@ -36,7 +36,11 @@ export default function Checkout() {
         if (carts && carts.length > 0) {
             setcart(carts)
             let sum = 0
-            carts.forEach(i => sum += (Number(i.price) * Number(i.qty)))
+            carts.forEach(i => {
+                const lineQty = Number(i.quantity ?? i.qty ?? 1)
+                const linePrice = Number(i.price ?? i.product?.finalprice ?? i.product?.price ?? 0)
+                sum += (linePrice * lineQty)
+            })
             let ship = (sum > 0 && sum < 1000) ? 150 : 0
             settotal(sum); setshipping(ship); setfinal(sum + ship)
         }
@@ -118,16 +122,23 @@ export default function Checkout() {
                         <div className="card border-0 shadow-lg rounded-2xl p-4 bg-white">
                             <h4 className="font-weight-bold mb-4">Order Summary</h4>
                             <div className="checkout-items mb-4" style={{maxHeight:'300px', overflowY:'auto'}}>
-                                {cart.map((item, index) => (
+                                {cart.map((item, index) => {
+                                    const lineQty = Number(item.quantity ?? item.qty ?? 1)
+                                    const linePrice = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0)
+                                    const lineTotal = Number(item.total ?? (lineQty * linePrice))
+                                    const linePic = item.pic || item.product?.pic1 || "/assets/images/noimage.png"
+
+                                    return (
                                     <div key={index} className="d-flex align-items-center mb-3 border-bottom pb-3">
-                                        <img src={item.pic ? optimizeCloudinaryUrlAdvanced(item.pic, { maxWidth: 220, crop: 'fill' }) : "/assets/images/noimage.png"} width="70px" height="70px" loading="lazy" decoding="async" className="rounded shadow-sm object-fit-cover" alt="" />
+                                        <img src={optimizeCloudinaryUrlAdvanced(linePic, { maxWidth: 220, crop: 'fill' })} width="70px" height="70px" loading="lazy" decoding="async" className="rounded shadow-sm object-fit-cover" alt="" />
                                         <div className="ml-3 flex-grow-1">
                                             <h6 className="mb-0 font-weight-bold text-dark">{item.name}</h6>
-                                            <small className="text-muted">{item.qty} x ₹{item.price}</small>
+                                            <small className="text-muted">{lineQty} x ₹{linePrice}</small>
                                         </div>
-                                        <span className="font-weight-bold text-info">₹{item.total}</span>
+                                        <span className="font-weight-bold text-info">₹{lineTotal}</span>
                                     </div>
-                                ))}
+                                    )
+                                })}
                             </div>
 
                             <div className="bg-light p-4 rounded-xl mb-4">

@@ -8,7 +8,8 @@ import { ShoppingCart, Plus, Trash2, Edit } from 'lucide-react'
 import './SystemControlCenter.css'
 
 export default function AdminCart() {
-    var cart = useSelector((state) => state.CartStateData)
+    var cartState = useSelector((state) => state.CartStateData)
+    const cartItems = cartState && Array.isArray(cartState.items) ? cartState.items : []
     var dispatch = useDispatch()
 
     function getAPIData(){
@@ -55,7 +56,7 @@ export default function AdminCart() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {cart.length ? cart.map((item, index) => (
+                                        {cartItems.length ? cartItems.map((item, index) => (
                                             <tr key={index}>
                                                 <td>{item.id}</td>
                                                 <td className="font-weight-bold">{item.userid || 'N/A'}</td>

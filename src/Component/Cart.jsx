@@ -175,59 +175,70 @@ export default function Cart() {
                                 <div className="col-2 text-right">TOTAL</div>
                             </div>
                             <AnimatePresence>
-                                {cart.map((item) => (
+                                {cart.map((item) => {
+                                    const itemId = item._id || item.id;
+                                    const itemName = item.name || item.product?.name || 'Product';
+                                    const itemColor = item.color || item.product?.color || 'N/A';
+                                    const itemSize = item.size || item.product?.size || 'N/A';
+                                    const itemPic = item.pic || item.product?.pic1 || '/assets/images/noimage.png';
+                                    const itemQty = Number(item.quantity ?? item.qty ?? 1);
+                                    const itemPrice = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0);
+                                    const itemTotal = itemPrice * itemQty;
+
+                                    return (
                                     <motion.div
-                                        key={item._id || item.id}
+                                        key={itemId}
                                         layout
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, x: 200 }}
                                         transition={{ duration: 0.35 }}
                                         className="cart-premium-row bg-white p-3 mb-3 border-0 rounded-lg shadow-sm"
-                                        style={removingIds.includes(item._id || item.id) ? { pointerEvents: 'none', opacity: 0.5 } : {}}
+                                        style={removingIds.includes(itemId) ? { pointerEvents: 'none', opacity: 0.5 } : {}}
                                     >
                                         <div className="d-flex align-items-center premium-cart-grid">
                                             {/* Product Image - Fixed Aspect Ratio, Fully Rounded */}
                                             <div className="cart-img-col d-flex align-items-center justify-content-center" style={{ minWidth: 90, minHeight: 90 }}>
                                                 <div style={{ width: 90, height: 90, aspectRatio: '1/1', borderRadius: '50%', overflow: 'hidden', border: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
-                                                    <img src={item.pic ? optimizeCloudinaryUrlAdvanced(item.pic, { maxWidth: 240, crop: 'fill' }) : "/assets/images/noimage.png"}
+                                                    <img src={optimizeCloudinaryUrlAdvanced(itemPic, { maxWidth: 240, crop: 'fill' })}
                                                         loading="lazy"
                                                         decoding="async"
                                                         style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                                                         alt=""
-                                                        key={item._id || item.id + '-img'}
+                                                        key={itemId + '-img'}
                                                     />
                                                 </div>
                                             </div>
                                             {/* Product Details */}
                                             <div className="cart-details-col flex-grow-1 px-3">
-                                                <h6 className="mb-1 font-weight-bold text-dark" key={item._id || item.id + '-name'}>{item.name}</h6>
-                                                <div className="small text-muted mb-1" key={item._id || item.id + '-color'}>{item.color} | Size: {item.size}</div>
+                                                <h6 className="mb-1 font-weight-bold text-dark" key={itemId + '-name'}>{itemName}</h6>
+                                                <div className="small text-muted mb-1" key={itemId + '-color'}>{itemColor} | Size: {itemSize}</div>
                                                 <div className="d-flex align-items-center mt-2">
-                                                    <button key={item._id || item.id + '-save'} onClick={() => saveForLater(item)} className="btn btn-link btn-sm text-primary p-0 mr-2">Save for Later</button>
-                                                    <button key={item._id || item.id + '-wishlist'} onClick={() => addWishlist(item)} className="btn btn-link btn-sm text-warning p-0 mr-2">Move to Wishlist (Local)</button>
-                                                    <span className="badge badge-light border px-2 py-1 ml-2" key={item._id || item.id + '-badge'}>ID: {item._id || item.id}</span>
+                                                    <button key={itemId + '-save'} onClick={() => saveForLater(item)} className="btn btn-link btn-sm text-primary p-0 mr-2">Save for Later</button>
+                                                    <button key={itemId + '-wishlist'} onClick={() => addWishlist(item)} className="btn btn-link btn-sm text-warning p-0 mr-2">Move to Wishlist (Local)</button>
+                                                    <span className="badge badge-light border px-2 py-1 ml-2" key={itemId + '-badge'}>ID: {itemId}</span>
                                                 </div>
                                             </div>
                                             {/* Quantity & Price */}
                                             <div className="cart-qtyprice-col d-flex flex-column align-items-end">
                                                 <div className="d-flex align-items-center mb-2">
-                                                    <button key={item._id || item.id + '-dec'} onClick={() => updateQty(item, "dec")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">−</button>
-                                                    <span className="mx-2 font-weight-bold" style={{ minWidth: "24px" }} key={item._id || item.id + '-qty'}>{item.quantity}</span>
-                                                    <button key={item._id || item.id + '-inc'} onClick={() => updateQty(item, "inc")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">+</button>
+                                                    <button key={itemId + '-dec'} onClick={() => updateQty(item, "dec")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">−</button>
+                                                    <span className="mx-2 font-weight-bold" style={{ minWidth: "24px" }} key={itemId + '-qty'}>{itemQty}</span>
+                                                    <button key={itemId + '-inc'} onClick={() => updateQty(item, "inc")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn">+</button>
                                                 </div>
-                                                <div className="font-weight-bold text-info mb-1" key={item._id || item.id + '-price'}>₹{item.product?.price || item.price}</div>
-                                                <div className="text-muted small" key={item._id || item.id + '-total'}>Total: ₹{(item.product?.price || item.price) * item.quantity}</div>
+                                                <div className="font-weight-bold text-info mb-1" key={itemId + '-price'}>₹{itemPrice}</div>
+                                                <div className="text-muted small" key={itemId + '-total'}>Total: ₹{itemTotal}</div>
                                             </div>
                                             {/* Delete Icon */}
                                             <div className="cart-delete-col ml-3">
-                                                <button key={item._id || item.id + '-remove'} onClick={() => removeProduct(item._id || item.id)} className="btn btn-link p-0 premium-x-btn" title="Remove">
+                                                <button key={itemId + '-remove'} onClick={() => removeProduct(itemId)} className="btn btn-link p-0 premium-x-btn" title="Remove">
                                                     <svg width="28" height="28" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#f8f9fa"/><path d="M7 7l6 6M13 7l-6 6" stroke="#d9534f" strokeWidth="2" strokeLinecap="round"/></svg>
                                                 </button>
                                             </div>
                                         </div>
                                     </motion.div>
-                                ))}
+                                    )
+                                })}
                             </AnimatePresence>
                             <div className="mt-4">
                                 <Link to="/shop/All" className="btn btn-outline-dark rounded-pill px-4 btn-sm">← Back to Shop</Link>
