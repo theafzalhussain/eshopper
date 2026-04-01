@@ -141,11 +141,20 @@ export default function AdminOrders() {
     }, [apiBaseUrl, autoRefresh, page, search, selectedStatus, fromDate, toDate, paymentStatus]);
 
     useEffect(() => {
+        // Get userId from localStorage or use admin-dashboard identifier
+        const userId = localStorage.getItem('userId') || 'admin-dashboard';
+        
         const socket = io(apiBaseUrl, {
             transports: ['websocket'],
             withCredentials: true,
             reconnectionAttempts: 3,
-            timeout: 8000
+            timeout: 8000,
+            auth: {
+                userId: userId
+            },
+            query: {
+                userId: userId
+            }
         });
 
         const handleStatusUpdate = (payload) => {
@@ -155,6 +164,10 @@ export default function AdminOrders() {
                     : order
             )));
         };
+
+        socket.on('connect', () => {
+            console.log('✅ Socket connected successfully');
+        });
 
         socket.on('connect_error', (err) => {
             console.warn('Socket connection failed:', err.message);
