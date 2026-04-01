@@ -42,7 +42,7 @@ jobs:
     steps:
       - name: Trigger Render webhook
         run: |
-          WEBHOOK="${{ secrets.RENDER_DEPLOY_HOOK }}"
+          WEBHOOK=${{ secrets.RENDER_DEPLOY_HOOK }}
           if [ -z "$WEBHOOK" ]; then
             echo "Skipping Render: webhook not configured"
             exit 0
@@ -67,7 +67,7 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: --prod
+          vercel-args: '--prod'
         continue-on-error: true
 
   deployment_complete:
