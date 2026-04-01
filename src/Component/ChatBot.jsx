@@ -420,7 +420,7 @@ export default function ChatBot() {
         const localName = localStorage.getItem('name')
 
         if (userId) {
-          const response = await axios.get(`${BASE_URL}/user/${userId}`, { timeout: 9000 })
+          const response = await axios.get(`${BASE_URL}/api/user/${userId}`, { timeout: 9000 })
           const user = response.data || {}
           setCurrentUser({
             name: user.name || localName || 'User',
