@@ -22,7 +22,7 @@ const path = require('path');
 const handlebars = require('handlebars');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
-const { sendOrderStatus } = require('./mailController');
+const { sendOrderStatus, registerTemplatePartials } = require('./mailController');
 
 let firebaseAdminReady = false;
 
@@ -888,6 +888,7 @@ const sendMail = async (to, otp) => {
 
         let otpHtml = '';
         try {
+            registerTemplatePartials();
             const templatePath = path.join(__dirname, 'views', 'emails', 'otp-email.hbs');
             const source = fs.readFileSync(templatePath, 'utf8');
             const template = handlebars.compile(source);

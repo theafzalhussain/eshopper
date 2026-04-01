@@ -80,6 +80,7 @@ async function sendOrderStatus({ status, ...rest }) {
 }
 
 module.exports = {
+    registerTemplatePartials,
     sendOrderReceivedEmail,
     sendOrderConfirmedEmail,
     sendOrderPackedEmail,
