@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+    CalendarDays,
     CheckCircle2,
     Clock,
     Download,
@@ -8,6 +9,8 @@ import {
     MapPin,
     Package,
     Search,
+    SlidersHorizontal,
+    Sparkles,
     Truck
 } from 'lucide-react';
 import axios from 'axios';
@@ -15,14 +18,16 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import io from 'socket.io-client';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
+import OrderActionDrawer from './OrderActionDrawer';
 import { BASE_URL as SHARED_BASE_URL } from '../../constants';
 import './AdminOrders.css';
 
-const ALLOWED_STATUSES = ['Pending', 'Confirmed', 'Shipped', 'Out for Delivery', 'Delivered'];
+const ALLOWED_STATUSES = ['Pending', 'Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered'];
 
 const STATUS_COLORS = {
     Pending: 'status-pending',
     Confirmed: 'status-confirmed',
+    Packed: 'status-packed',
     Shipped: 'status-shipped',
     'Out for Delivery': 'status-out-for-delivery',
     Delivered: 'status-delivered'
@@ -31,12 +36,104 @@ const STATUS_COLORS = {
 const STATUS_ICONS = {
     Pending: Clock,
     Confirmed: CheckCircle2,
+    Packed: Package,
     Shipped: Truck,
     'Out for Delivery': MapPin,
     Delivered: CheckCircle2
 };
 
 const PAYMENT_STATUSES = ['All', 'Paid', 'Pending', 'Failed', 'COD'];
+const DELIVERY_TIME_SLOTS = ['By 12:00 PM', 'By 6:00 PM', 'By 9:00 PM'];
+
+const DATE_PRESETS = [
+    { key: 'all', label: 'All Dates' },
+    { key: 'today', label: 'Today' },
+    { key: 'tomorrow', label: 'Tomorrow' },
+    { key: 'week', label: 'Next 7 Days' }
+];
+
+const GENERIC_CUSTOMER_VALUES = new Set(['customer', 'n/a', 'na', 'unknown', 'guest']);
+
+const toInputDateValue = (value) => {
+    const dt = new Date(value || Date.now());
+    dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+    return dt.toISOString().slice(0, 10);
+};
+
+const normalizeStatus = (value = '') => {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw || raw === 'order placed' || raw === 'ordered') return 'Pending';
+    if (raw === 'confirmed') return 'Confirmed';
+    if (raw === 'packed') return 'Packed';
+    if (raw === 'shipped') return 'Shipped';
+    if (raw === 'out for delivery') return 'Out for Delivery';
+    if (raw === 'delivered') return 'Delivered';
+    return String(value || 'Pending');
+};
+
+const isGenericCustomerName = (name) => GENERIC_CUSTOMER_VALUES.has(String(name || '').trim().toLowerCase());
+
+const sanitizeCustomerName = (name = '') => {
+    const rawWords = String(name || '')
+        .replace(/[._-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(' ')
+        .filter(Boolean);
+
+    if (!rawWords.length) return '';
+
+    const collapsed = [];
+    rawWords.forEach((word) => {
+        const normalized = word.replace(/[^a-zA-Z']/g, '');
+        if (!normalized) return;
+        if (collapsed.length > 0 && collapsed[collapsed.length - 1].toLowerCase() === normalized.toLowerCase()) {
+            return;
+        }
+        collapsed.push(normalized);
+    });
+
+    const deduped = [];
+    collapsed.forEach((word) => {
+        if (!deduped.some((saved) => saved.toLowerCase() === word.toLowerCase())) {
+            deduped.push(word);
+        }
+    });
+
+    return deduped
+        .slice(0, 4)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+};
+
+const deriveNameFromEmail = (email = '') => {
+    const local = String(email || '').split('@')[0] || '';
+    if (!local) return '';
+    const fromLocal = local
+        .replace(/[._-]+/g, ' ')
+        .replace(/\d+/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .join(' ');
+    return sanitizeCustomerName(fromLocal);
+};
+
+const getDeliveryDateValue = (order = {}) => {
+    const rawDate = order.deliverySchedule?.date || order.deliverySchedule?.estimatedDelivery || order.estimatedArrival;
+    if (!rawDate) return '';
+    const parsed = new Date(rawDate);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return toInputDateValue(parsed);
+};
+
+const pickCustomerName = (order = {}) => {
+    const sourceName = sanitizeCustomerName(String(order.userName || order.customerName || '').trim());
+    const email = String(order.userEmail || order.email || '').trim();
+    if (sourceName && !isGenericCustomerName(sourceName)) return sourceName;
+    const fromEmail = deriveNameFromEmail(email);
+    return fromEmail || 'N/A';
+};
 
 const inDateRange = (updatedAt, fromDate, toDate) => {
     if (!fromDate && !toDate) return true;
@@ -64,6 +161,10 @@ export default function AdminOrders() {
     const [paymentStatus, setPaymentStatus] = useState('All');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [datePreset, setDatePreset] = useState('all');
+    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [density, setDensity] = useState('comfortable');
+    const [actualOnly, setActualOnly] = useState(true);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [updating, setUpdating] = useState('');
@@ -74,6 +175,11 @@ export default function AdminOrders() {
     const [selectAll, setSelectAll] = useState(false);
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [detailOrder, setDetailOrder] = useState(null);
+    const [actionOrder, setActionOrder] = useState(null);
+    const [actionStatus, setActionStatus] = useState('Pending');
+    const [actionDeliveryDate, setActionDeliveryDate] = useState('');
+    const [actionDeliveryTime, setActionDeliveryTime] = useState('By 9:00 PM');
+    const [actionAdminNote, setActionAdminNote] = useState('');
 
     const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const localApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -91,7 +197,7 @@ export default function AdminOrders() {
             setLoading(true);
             const params = {
                 page,
-                limit: 25,
+                limit: rowsPerPage,
                 ...(search && { search }),
                 ...(selectedStatus && { status: selectedStatus }),
                 ...(fromDate && { fromDate }),
@@ -130,7 +236,7 @@ export default function AdminOrders() {
 
     useEffect(() => {
         fetchOrders();
-    }, [apiBaseUrl, page, search, selectedStatus, fromDate, toDate, paymentStatus]);
+    }, [apiBaseUrl, page, rowsPerPage, search, selectedStatus, fromDate, toDate, paymentStatus]);
 
     useEffect(() => {
         if (!autoRefresh) return undefined;
@@ -138,7 +244,7 @@ export default function AdminOrders() {
             fetchOrders();
         }, 30000);
         return () => clearInterval(timer);
-    }, [apiBaseUrl, autoRefresh, page, search, selectedStatus, fromDate, toDate, paymentStatus]);
+    }, [apiBaseUrl, autoRefresh, page, rowsPerPage, search, selectedStatus, fromDate, toDate, paymentStatus]);
 
     useEffect(() => {
         // Get userId from localStorage or use admin-dashboard identifier
@@ -180,7 +286,92 @@ export default function AdminOrders() {
         };
     }, [apiBaseUrl]);
 
-    const filteredOrders = useMemo(() => orders.filter((order) => inDateRange(order.updatedAt, fromDate, toDate)), [orders, fromDate, toDate]);
+    const normalizedOrders = useMemo(() => {
+        const rowsByOrderId = new Map();
+
+        orders.forEach((entry) => {
+            const orderId = String(entry.orderId || '').trim();
+            if (!orderId) return;
+
+            const normalized = {
+                ...entry,
+                orderId,
+                orderStatus: normalizeStatus(entry.orderStatus),
+                userEmail: String(entry.userEmail || entry.email || '').trim() || 'N/A',
+                userName: pickCustomerName(entry)
+            };
+
+            const qualityScore =
+                (normalized.userName !== 'N/A' ? 2 : 0) +
+                (normalized.userEmail !== 'N/A' ? 2 : 0) +
+                (Number(normalized.productCount || 0) > 0 ? 1 : 0);
+
+            const prev = rowsByOrderId.get(orderId);
+            if (!prev || qualityScore > prev.__score) {
+                rowsByOrderId.set(orderId, { ...normalized, __score: qualityScore });
+            }
+        });
+
+        return Array.from(rowsByOrderId.values()).map(({ __score, ...rest }) => rest);
+    }, [orders]);
+
+    const filteredOrders = useMemo(
+        () => normalizedOrders.filter((order) => {
+            const passesDate = inDateRange(order.updatedAt, fromDate, toDate);
+            if (!passesDate) return false;
+            if (!actualOnly) return true;
+
+            const hasActualName = order.userName && order.userName !== 'N/A' && !isGenericCustomerName(order.userName);
+            const hasActualEmail = order.userEmail && order.userEmail !== 'N/A';
+            return hasActualName || hasActualEmail;
+        }),
+        [normalizedOrders, fromDate, toDate, actualOnly]
+    );
+
+    const applyDatePreset = (preset) => {
+        setDatePreset(preset);
+        setPage(1);
+
+        if (preset === 'all') {
+            setFromDate('');
+            setToDate('');
+            return;
+        }
+
+        const now = new Date();
+        if (preset === 'today') {
+            const today = toInputDateValue(now);
+            setFromDate(today);
+            setToDate(today);
+            return;
+        }
+
+        if (preset === 'tomorrow') {
+            const tomorrowDate = new Date(now);
+            tomorrowDate.setDate(now.getDate() + 1);
+            const tomorrow = toInputDateValue(tomorrowDate);
+            setFromDate(tomorrow);
+            setToDate(tomorrow);
+            return;
+        }
+
+        const weekStart = toInputDateValue(now);
+        const weekEndDate = new Date(now);
+        weekEndDate.setDate(now.getDate() + 7);
+        const weekEnd = toInputDateValue(weekEndDate);
+        setFromDate(weekStart);
+        setToDate(weekEnd);
+    };
+
+    const resetFilters = () => {
+        setSearch('');
+        setSelectedStatus('');
+        setPaymentStatus('All');
+        setFromDate('');
+        setToDate('');
+        setDatePreset('all');
+        setPage(1);
+    };
 
     const handleOrderSelect = (orderId) => {
         const next = new Set(selectedOrders);
@@ -201,33 +392,117 @@ export default function AdminOrders() {
         setSelectAll(true);
     };
 
-    const updateOrderStatus = async (orderId, newStatus) => {
+    const openActionDrawer = (order = {}) => {
+        setActionOrder(order);
+        setActionStatus(normalizeStatus(order.orderStatus || 'Pending'));
+        setActionDeliveryDate(getDeliveryDateValue(order));
+        setActionDeliveryTime(order.deliverySchedule?.time || 'By 9:00 PM');
+        setActionAdminNote('');
+    };
+
+    const closeActionDrawer = () => {
+        if (updating) return;
+        setActionOrder(null);
+    };
+
+    const updateOrderStatus = async (orderId, newStatus, options = {}) => {
         try {
             setUpdating(orderId);
-            const endpoint = newStatus === 'Confirmed'
+            const deliveryDate = String(options.deliveryDate || '').trim();
+            const deliveryTime = String(options.deliveryTime || '').trim() || 'By 9:00 PM';
+
+            let deliverySchedule = null;
+            if (deliveryDate) {
+                const deliveryDateObj = new Date(`${deliveryDate}T00:00:00`);
+                if (!Number.isNaN(deliveryDateObj.getTime())) {
+                    deliverySchedule = {
+                        date: deliveryDateObj.toISOString(),
+                        time: deliveryTime,
+                        scheduledAt: new Date().toISOString(),
+                        estimatedDelivery: deliveryDateObj.toISOString()
+                    };
+                }
+            }
+
+            const shouldUseConfirmEndpoint =
+                newStatus === 'Confirmed' &&
+                !deliverySchedule &&
+                !options.adminNote;
+
+            const endpoint = shouldUseConfirmEndpoint
                 ? `${apiBaseUrl}/api/admin/confirm-order`
                 : `${apiBaseUrl}/api/update-order-status`;
 
-            const config = newStatus === 'Confirmed'
-                ? { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} }
-                : {};
+            const payload = shouldUseConfirmEndpoint
+                ? { orderId }
+                : {
+                    orderId,
+                    status: newStatus,
+                    ...(deliverySchedule && { deliverySchedule }),
+                    ...(options.adminNote && { adminNote: options.adminNote })
+                };
 
-            const response = newStatus === 'Confirmed'
-                ? await axios.post(endpoint, { orderId }, config)
-                : await axios.post(endpoint, { orderId, status: newStatus });
+            const response = await axios.post(
+                endpoint,
+                payload,
+                { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} }
+            );
 
             if (response.data.success) {
-                showNotification(`Order ${orderId} updated to ${newStatus}`, 'success');
+                const successMessage = options.successMessage || `Order ${orderId} updated to ${newStatus}`;
+                showNotification(successMessage, 'success');
                 fetchOrders();
+                return true;
             } else {
                 showNotification('Status update failed', 'error');
+                return false;
             }
         } catch (error) {
             console.error('Update failed:', error);
             showNotification('Failed to update order status', 'error');
+            return false;
         } finally {
             setUpdating('');
         }
+    };
+
+    const applyOrderAction = async () => {
+        if (!actionOrder?.orderId) return;
+
+        const currentStatus = normalizeStatus(actionOrder.orderStatus || 'Pending');
+        const currentDeliveryDate = getDeliveryDateValue(actionOrder);
+        const nextStatus = normalizeStatus(actionStatus || currentStatus);
+        const nextDeliveryDate = String(actionDeliveryDate || '').trim();
+        const adminNote = String(actionAdminNote || '').trim();
+
+        const changedStatus = nextStatus !== currentStatus;
+        const changedDate = nextDeliveryDate !== String(currentDeliveryDate || '').trim();
+        const changedNote = adminNote.length > 0;
+
+        if (!changedStatus && !changedDate && !changedNote) {
+            showNotification('No action changes to apply for this order', 'info');
+            return;
+        }
+
+        const ok = await updateOrderStatus(actionOrder.orderId, nextStatus, {
+            deliveryDate: nextDeliveryDate,
+            deliveryTime: actionDeliveryTime,
+            adminNote,
+            successMessage: changedDate
+                ? `Order ${actionOrder.orderId} updated with delivery schedule`
+                : `Order ${actionOrder.orderId} status updated`
+        });
+
+        if (ok) {
+            setActionOrder(null);
+        }
+    };
+
+    const applyQuickDeliveryPreset = (days = 0) => {
+        const baseDate = new Date();
+        baseDate.setDate(baseDate.getDate() + days);
+        const quickDate = toInputDateValue(baseDate);
+        setActionDeliveryDate(quickDate);
     };
 
     const handleBulkUpdate = async () => {
@@ -361,7 +636,11 @@ export default function AdminOrders() {
                             type="date"
                             value={fromDate}
                             max={toDate || undefined}
-                            onChange={(e) => setFromDate(e.target.value)}
+                            onChange={(e) => {
+                                setDatePreset('custom');
+                                setFromDate(e.target.value);
+                                setPage(1);
+                            }}
                         />
                     </div>
 
@@ -371,7 +650,11 @@ export default function AdminOrders() {
                             type="date"
                             value={toDate}
                             min={fromDate || undefined}
-                            onChange={(e) => setToDate(e.target.value)}
+                            onChange={(e) => {
+                                setDatePreset('custom');
+                                setToDate(e.target.value);
+                                setPage(1);
+                            }}
                         />
                     </div>
 
@@ -398,6 +681,67 @@ export default function AdminOrders() {
                                 <option key={status} value={status}>{status}</option>
                             ))}
                         </select>
+                    </div>
+                </div>
+
+                <div className="quick-date-row">
+                    <div className="quick-date-title">
+                        <CalendarDays size={15} /> Smart Date Filters
+                    </div>
+                    <div className="quick-date-actions">
+                        {DATE_PRESETS.map((preset) => (
+                            <button
+                                key={preset.key}
+                                type="button"
+                                className={`preset-btn ${datePreset === preset.key ? 'active' : ''}`}
+                                onClick={() => applyDatePreset(preset.key)}
+                            >
+                                {preset.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="customization-row">
+                    <div className="custom-title">
+                        <SlidersHorizontal size={15} /> Customization
+                    </div>
+                    <div className="custom-controls">
+                        <label>
+                            Rows
+                            <select
+                                value={rowsPerPage}
+                                onChange={(e) => {
+                                    setRowsPerPage(Number(e.target.value));
+                                    setPage(1);
+                                }}
+                            >
+                                <option value={10}>10</option>
+                                <option value={25}>25</option>
+                                <option value={50}>50</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            Density
+                            <select value={density} onChange={(e) => setDensity(e.target.value)}>
+                                <option value="compact">Compact</option>
+                                <option value="comfortable">Comfortable</option>
+                            </select>
+                        </label>
+
+                        <label className="actual-only-toggle">
+                            <input
+                                type="checkbox"
+                                checked={actualOnly}
+                                onChange={(e) => setActualOnly(e.target.checked)}
+                            />
+                            Show only actual customer data
+                        </label>
+
+                        <button type="button" className="reset-btn" onClick={resetFilters}>
+                            <Sparkles size={14} /> Reset Filters
+                        </button>
                     </div>
                 </div>
 
@@ -450,7 +794,7 @@ export default function AdminOrders() {
                 ) : filteredOrders.length === 0 ? (
                     <div className="loading-block">No orders found for selected filters.</div>
                 ) : (
-                    <table className="admin-orders-table keep-layout-table">
+                    <table className={`admin-orders-table keep-layout-table density-${density}`}>
                         <thead>
                             <tr>
                                 <th className="text-center">
@@ -477,37 +821,40 @@ export default function AdminOrders() {
 
                                 return (
                                     <tr key={order.orderId}>
-                                        <td className="text-center">
+                                        <td className="text-center" data-label="Select">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedOrders.has(order.orderId)}
                                                 onChange={() => handleOrderSelect(order.orderId)}
                                             />
                                         </td>
-                                        <td className="order-id-col">
+                                        <td className="order-id-col" data-label="Order ID">
                                             <div>{String(order.orderId || '').slice(-8)}</div>
                                             <button className="details-link" onClick={() => setDetailOrder(order)}>View Details</button>
                                         </td>
-                                        <td>{order.userName || 'N/A'}</td>
-                                        <td>{order.userEmail || 'N/A'}</td>
-                                        <td className="amount-col">INR {Number(order.finalAmount || 0).toLocaleString('en-IN')}</td>
-                                        <td>
+                                        <td data-label="Customer" className="customer-col">
+                                            <div className="customer-name">{order.userName || 'N/A'}</div>
+                                            {order.userEmail && order.userEmail !== 'N/A' ? (
+                                                <div className="customer-email-mini">{order.userEmail}</div>
+                                            ) : null}
+                                        </td>
+                                        <td data-label="Email">{order.userEmail || 'N/A'}</td>
+                                        <td data-label="Amount" className="amount-col">INR {Number(order.finalAmount || 0).toLocaleString('en-IN')}</td>
+                                        <td data-label="Status">
                                             <span className={`status-pill ${statusClass}`}>
                                                 <IconComp size={13} /> {order.orderStatus || 'Pending'}
                                             </span>
                                         </td>
-                                        <td>{order.productCount || (order.products || []).length || 0} items</td>
-                                        <td>{new Date(order.updatedAt || Date.now()).toLocaleDateString('en-IN')}</td>
-                                        <td>
-                                            <select
-                                                disabled={updating === order.orderId}
-                                                value={order.orderStatus || 'Pending'}
-                                                onChange={(e) => updateOrderStatus(order.orderId, e.target.value)}
+                                        <td data-label="Items">{order.productCount || (order.products || []).length || 0} items</td>
+                                        <td data-label="Updated">{new Date(order.updatedAt || Date.now()).toLocaleDateString('en-IN')}</td>
+                                        <td data-label="Action" className="action-cell">
+                                            <button
+                                                type="button"
+                                                className="open-action-drawer-btn"
+                                                onClick={() => openActionDrawer(order)}
                                             >
-                                                {ALLOWED_STATUSES.map((status) => (
-                                                    <option key={status} value={status}>{status}</option>
-                                                ))}
-                                            </select>
+                                                <Sparkles size={14} /> Update Status
+                                            </button>
                                         </td>
                                     </tr>
                                 );
@@ -529,6 +876,28 @@ export default function AdminOrders() {
                 open={Boolean(detailOrder)}
                 onClose={() => setDetailOrder(null)}
                 order={detailOrder}
+            />
+
+            <OrderActionDrawer
+                open={Boolean(actionOrder)}
+                onClose={closeActionDrawer}
+                order={actionOrder}
+                updating={Boolean(actionOrder && updating === actionOrder.orderId)}
+                apiBaseUrl={apiBaseUrl}
+                adminSecret={adminSecret}
+                allowedStatuses={ALLOWED_STATUSES}
+                deliveryTimeSlots={DELIVERY_TIME_SLOTS}
+                status={actionStatus}
+                setStatus={setActionStatus}
+                deliveryDate={actionDeliveryDate}
+                setDeliveryDate={setActionDeliveryDate}
+                deliveryTime={actionDeliveryTime}
+                setDeliveryTime={setActionDeliveryTime}
+                adminNote={actionAdminNote}
+                setAdminNote={setActionAdminNote}
+                onToday={() => applyQuickDeliveryPreset(0)}
+                onTomorrow={() => applyQuickDeliveryPreset(1)}
+                onApply={applyOrderAction}
             />
         </div>
     );

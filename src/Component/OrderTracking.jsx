@@ -42,6 +42,58 @@ const normalizeStatus = (value = '') => {
   return 'Ordered'
 }
 
+const formatMoney = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`
+
+const resolveItemImage = (item = {}) => {
+  const raw =
+    item?.image ||
+    item?.pic ||
+    item?.pic1 ||
+    item?.thumbnail ||
+    item?.productid?.pic1 ||
+    ''
+
+  if (!raw || typeof raw !== 'string') return ''
+  if (raw.startsWith('http') || raw.startsWith('data:')) return raw
+  return `${BASE_URL}/productimages/${raw}`
+}
+
+const formatDateTimeShort = (value) => {
+  if (!value) return 'Pending'
+  const dt = new Date(value)
+  if (Number.isNaN(dt.getTime())) return 'Pending'
+  return dt.toLocaleString('en-IN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const formatRelativeTime = (value) => {
+  if (!value) return ''
+  const dt = new Date(value)
+  if (Number.isNaN(dt.getTime())) return ''
+  const diffMs = Date.now() - dt.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin} min ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr} hr ago`
+  const diffDay = Math.floor(diffHr / 24)
+  return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`
+}
+
+const formatDeliverySchedule = (deliverySchedule = null) => {
+  if (!deliverySchedule) return ''
+  const baseDate = deliverySchedule?.date || deliverySchedule?.estimatedDelivery
+  if (!baseDate) return ''
+  const dateLabel = formatDateTimeShort(baseDate)
+  const timeLabel = deliverySchedule?.time ? ` • ${deliverySchedule.time}` : ''
+  return `${dateLabel}${timeLabel}`
+}
+
 export default function OrderTracking() {
   const { orderId } = useParams()
   const navigate = useNavigate()
@@ -64,23 +116,85 @@ export default function OrderTracking() {
     return []
   }, [order])
 
-  const primaryItem = useMemo(() => orderItems[0] || null, [orderItems])
+  const orderItemsDetailed = useMemo(
+    () => orderItems.map((item, index) => {
+      const quantityVal = Number(item?.quantity || item?.qty || item?.count || 1)
+      const quantity = Number.isFinite(quantityVal) && quantityVal > 0 ? quantityVal : 1
 
-  const primaryImage = useMemo(() => {
-    return (
-      primaryItem?.image ||
-      primaryItem?.pic ||
-      primaryItem?.pic1 ||
-      primaryItem?.thumbnail ||
-      ''
-    )
-  }, [primaryItem])
+      const priceVal = Number(
+        item?.price ||
+        item?.finalprice ||
+        item?.salePrice ||
+        item?.baseprice ||
+        item?.productid?.finalprice ||
+        item?.productid?.baseprice ||
+        0
+      )
+      const unitPrice = Number.isFinite(priceVal) ? priceVal : 0
 
-  const timelineMap = useMemo(() => {
+      const lineTotalVal = Number(item?.totalPrice || item?.total || unitPrice * quantity)
+      const lineTotal = Number.isFinite(lineTotalVal) ? lineTotalVal : unitPrice * quantity
+
+      return {
+        id: String(item?._id || item?.id || item?.productid?._id || index),
+        name: item?.title || item?.name || item?.productName || item?.productid?.name || `Item ${index + 1}`,
+        description: item?.description || item?.productid?.description || '',
+        quantity,
+        unitPrice,
+        lineTotal,
+        image: resolveItemImage(item)
+      }
+    }),
+    [orderItems]
+  )
+
+  const totalItemCount = useMemo(
+    () => orderItemsDetailed.reduce((sum, item) => sum + item.quantity, 0),
+    [orderItemsDetailed]
+  )
+
+  const subtotalAmount = useMemo(() => {
+    const fromOrder = Number(order?.totalAmount)
+    if (Number.isFinite(fromOrder) && fromOrder > 0) return fromOrder
+    return orderItemsDetailed.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0)
+  }, [order?.totalAmount, orderItemsDetailed])
+
+  const shippingAmount = useMemo(() => {
+    const parsed = Number(order?.shippingAmount || 0)
+    return Number.isFinite(parsed) ? parsed : 0
+  }, [order?.shippingAmount])
+
+  const discountAmount = useMemo(() => {
+    const parsed = Number(order?.couponDiscount || 0)
+    return Number.isFinite(parsed) ? parsed : 0
+  }, [order?.couponDiscount])
+
+  const finalAmount = useMemo(() => {
+    const parsed = Number(order?.finalAmount)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+    return Math.max(subtotalAmount + shippingAmount - discountAmount, 0)
+  }, [order?.finalAmount, subtotalAmount, shippingAmount, discountAmount])
+
+  const paymentStatusLabel = useMemo(() => {
+    const raw = String(order?.paymentStatus || '').toLowerCase()
+    if (raw === 'paid') return 'Paid'
+    if (raw === 'pending') return 'Pending'
+    if (raw === 'failed') return 'Failed'
+    return order?.paymentStatus || 'Pending'
+  }, [order?.paymentStatus])
+
+  const timelineEventMap = useMemo(() => {
     const map = {}
     ;(statusTimeline || []).forEach((entry) => {
-      const normalized = normalizeStatus(entry?.status)
-      if (!map[normalized]) map[normalized] = entry?.timestamp
+      const normalized = normalizeStatus(entry?.status || '')
+      const entryTime = new Date(entry?.timestamp || 0).getTime()
+      const existingTime = new Date(map[normalized]?.timestamp || 0).getTime()
+      if (!map[normalized] || entryTime >= existingTime) {
+        map[normalized] = {
+          ...entry,
+          status: normalized
+        }
+      }
     })
     return map
   }, [statusTimeline])
@@ -90,10 +204,18 @@ export default function OrderTracking() {
       step,
       index,
       isReached: index <= activeIndex,
-      timestamp: timelineMap[step]
+      timestamp: timelineEventMap[step]?.timestamp,
+      details: timelineEventMap[step] || null
     })),
-    [activeIndex, timelineMap]
+    [activeIndex, timelineEventMap]
   )
+
+  const lastTimelineUpdate = useMemo(() => {
+    const entries = Object.values(timelineEventMap || {})
+    if (!entries.length) return ''
+    const latest = entries.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())[0]
+    return latest?.timestamp || ''
+  }, [timelineEventMap])
 
   const showStatusToast = (nextStatus) => {
     const statusText = normalizeStatus(nextStatus)
@@ -390,7 +512,7 @@ export default function OrderTracking() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f6f6f4', padding: '100px 16px 40px' }}>
+    <div className="tracking-luxe-page" style={{ minHeight: '100vh', background: '#f6f6f4', padding: '100px 16px 40px' }}>
       {/* ENHANCED MULTIPLE TOASTS DISPLAY */}
       <div style={{ position: 'fixed', top: 24, right: 20, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {toasts.map((toast, index) => (
@@ -465,7 +587,7 @@ export default function OrderTracking() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="p-4 p-md-5 shadow-lg rounded-3xl bg-white"
+          className="p-4 p-md-5 shadow-lg rounded-3xl bg-white tracking-main-card"
           style={{ 
             border: '1.5px solid rgba(212,175,55,0.2)',
             boxShadow: '0 20px 60px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
@@ -475,94 +597,118 @@ export default function OrderTracking() {
           }}
         >
           {/* ORDER INFO - PREMIUM LAYOUT WITH ENHANCED DETAILS */}
-          <div className="p-4 rounded-xl mb-4" style={{ background: 'linear-gradient(135deg, #fafaf8, #f9f7f4)', border: '2px solid #d4af37' }}>
+          <div className="p-4 rounded-xl mb-4 order-finance-luxe-card">
             <div className="row">
-              <div className="col-md-6 mb-3 mb-md-0">
-                <div className="d-flex flex-column">
-                  <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase' }}>Payment Status</p>
-                  <p className="font-weight-bold mb-3" style={{ fontSize: '14px', color: order?.paymentStatus === 'Paid' ? '#27ae60' : '#ff9500' }}>
-                    {order?.paymentStatus === 'Paid' ? '✅ Paid' : order?.paymentStatus === 'Pending' ? '⏳ Pending' : order?.paymentStatus}
-                  </p>
-                  <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase' }}>Payment Method</p>
-                  <p className="font-weight-bold" style={{ fontSize: '14px', color: '#2c2c2c' }}>
-                    {order?.paymentMethod || 'N/A'}
-                  </p>
+              <div className="col-md-7 mb-3 mb-md-0">
+                <div className="d-flex flex-column payment-core-wrap">
+                  <p className="finance-kicker">Payment Status</p>
+                  <span className={`payment-status-chip status-${String(paymentStatusLabel).toLowerCase()}`}>
+                    {paymentStatusLabel === 'Paid' ? '✅ Paid' : paymentStatusLabel === 'Pending' ? '⏳ Pending' : paymentStatusLabel}
+                  </span>
+
+                  <p className="finance-kicker mt-3">Payment Method</p>
+                  <p className="finance-value mb-0">{order?.paymentMethod || 'N/A'}</p>
+
+                  <div className="finance-mini-grid mt-3">
+                    <div className="finance-mini-item">
+                      <span>Items</span>
+                      <strong>{totalItemCount}</strong>
+                    </div>
+                    <div className="finance-mini-item">
+                      <span>Order Ref</span>
+                      <strong>{String(orderId || '').slice(-8)}</strong>
+                    </div>
+                    <div className="finance-mini-item full">
+                      <span>Last Sync</span>
+                      <strong>{formatDateTimeShort(lastTimelineUpdate || order?.updatedAt)}</strong>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="col-md-6 text-md-right">
-                <div className="d-flex flex-column align-items-md-end">
-                  {order?.totalAmount && (
-                    <>
-                      <p className="text-muted small mb-1" style={{ fontSize: '11px' }}>Subtotal</p>
-                      <p className="mb-2" style={{ fontSize: '13px', color: '#666' }}>₹{Number(order.totalAmount).toLocaleString('en-IN')}</p>
-                    </>
+              <div className="col-md-5 text-md-right">
+                <div className="d-flex flex-column align-items-md-end finance-amount-panel">
+                  <div className="finance-amount-row">
+                    <span>Subtotal</span>
+                    <strong>{formatMoney(subtotalAmount)}</strong>
+                  </div>
+                  <div className="finance-amount-row">
+                    <span>Shipping</span>
+                    <strong>{formatMoney(shippingAmount)}</strong>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="finance-amount-row discount">
+                      <span>Coupon Discount</span>
+                      <strong>- {formatMoney(discountAmount)}</strong>
+                    </div>
                   )}
-                  {order?.shippingAmount > 0 && (
-                    <>
-                      <p className="text-muted small mb-1" style={{ fontSize: '11px' }}>Shipping</p>
-                      <p className="mb-2" style={{ fontSize: '13px', color: '#666' }}>₹{Number(order.shippingAmount).toLocaleString('en-IN')}</p>
-                    </>
-                  )}
-                  {order?.finalAmount && (
-                    <>
-                      <hr style={{ margin: '8px 0', borderColor: '#d4af37', borderWidth: '1.5px' }} />
-                      <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount</p>
-                      <p className="font-weight-bold" style={{ fontSize: '22px', background: 'linear-gradient(135deg, #d4af37, #b8860b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                        ₹{Number(order.finalAmount).toLocaleString('en-IN')}
-                      </p>
-                    </>
-                  )}
+                  <div className="finance-amount-row total">
+                    <span>Total Amount</span>
+                    <strong>{formatMoney(finalAmount)}</strong>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* ESTIMATED DELIVERY - ENHANCED WITH SMART DATE FORMATTING */}
-          {getDeliveryInfo && (
+          {/* DELIVERY SECTION - EXPECTED OR DELIVERED PREMIUM MESSAGE */}
+          {status === 'Delivered' ? (
             <motion.div
-              key={getDeliveryInfo.date} // Key ensures re-render on date change
+              initial={{ opacity: 0, y: 10, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+              className="p-4 rounded-xl mb-4 delivery-luxe-card delivered"
+            >
+              <div className="d-flex align-items-start align-items-md-center">
+                <div className="delivery-icon">✅</div>
+                <div>
+                  <p className="delivery-kicker">Delivery Completed</p>
+                  <p className="delivery-headline mb-1">
+                    Your order has been successfully delivered.
+                  </p>
+                  <p className="delivery-copy mb-1">
+                    Thank you for shopping with Boutique Luxe. We hope your premium experience was exceptional.
+                  </p>
+                  <p className="delivery-meta mb-0">
+                    Delivered on {new Date(order?.updatedAt || Date.now()).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                    {order?.shippingAddress?.city ? ` • Destination: ${order.shippingAddress.city}` : ''}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          ) : getDeliveryInfo ? (
+            <motion.div
+              key={getDeliveryInfo.date}
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-              className="p-4 rounded-xl mb-4"
-              style={{
-                background: 'rgba(255, 255, 255, 0.55)',
-                border: '1.5px solid #D4AF37',
-                boxShadow: '0 12px 30px rgba(212,175,55,0.12)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)'
-              }}
+              className="p-4 rounded-xl mb-4 delivery-luxe-card expected"
             >
               <div className="d-flex align-items-center">
-                <div style={{ fontSize: '32px', marginRight: '16px' }}>📅</div>
+                <div className="delivery-icon">📅</div>
                 <div>
-                  <p className="text-muted small mb-1" style={{ color: '#6b5b2b', fontSize: '11px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                    Expected Delivery
-                  </p>
-                  <p className="font-weight-bold mb-0" style={{ fontSize: '20px', color: '#5f4b1b', lineHeight: '1.3' }}>
+                  <p className="delivery-kicker">Expected Delivery</p>
+                  <p className="delivery-headline mb-0">
                     {formatDeliveryDate(getDeliveryInfo.date)}
                     {getDeliveryInfo.time && (
-                      <span style={{ fontSize: '16px', color: '#8b7355', marginLeft: '8px' }}>
-                        at {getDeliveryInfo.time}
-                      </span>
+                      <span className="delivery-time"> at {getDeliveryInfo.time}</span>
                     )}
                   </p>
-                  <p style={{ fontSize: '12px', color: '#8b7355', marginTop: '4px', marginBottom: '0' }}>
+                  <p className="delivery-meta mb-0">
                     {new Date(getDeliveryInfo.date).toLocaleDateString('en-IN', {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric'
                     })}
+                    {order?.shippingAddress?.city ? ` • Delivering to ${order.shippingAddress.city}` : ''}
                   </p>
-                  {order?.shippingAddress?.city && (
-                    <p style={{ fontSize: '12px', color: '#6b5b2b', marginTop: '6px', marginBottom: '0' }}>
-                      📍 Delivering to {order.shippingAddress.city}
-                    </p>
-                  )}
                 </div>
               </div>
             </motion.div>
-          )}
+          ) : null}
 
           {/* LIVE CONNECTED BADGE - WITH PULSE ANIMATION */}
           <div className="d-flex justify-content-center mb-4">
@@ -586,62 +732,46 @@ export default function OrderTracking() {
             </div>
           </div>
 
-          {/* PRODUCT THUMBNAIL */}
-          {primaryItem && (
+          {/* ORDERED ITEMS - SHOW ALL PRODUCTS */}
+          {orderItemsDetailed.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="mb-4 p-3 rounded-lg"
+              className="mb-4 p-3 rounded-lg all-items-luxe"
               style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
             >
-              <p className="small text-muted mb-2">Ordered Item</p>
-              <div className="d-flex align-items-center">
-                {primaryImage ? (
-                  <div style={{
-                    width: '72px',
-                    height: '72px',
-                    marginRight: '12px',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    background: '#fff',
-                    border: '1px solid #cbd5e1',
-                    boxShadow: '0 8px 24px rgba(15,23,42,0.12)'
-                  }}>
-                    <img 
-                      src={primaryImage}
-                      alt={primaryItem?.title || primaryItem?.name || 'Ordered product'}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+              <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap" style={{ gap: '8px' }}>
+                <p className="small text-muted mb-0" style={{ letterSpacing: '0.4px' }}>Ordered Items</p>
+                <span className="items-count-pill">{totalItemCount} items</span>
+              </div>
+
+              <div className="order-items-grid">
+                {orderItemsDetailed.map((item) => (
+                  <div key={item.id} className="order-item-card">
+                    {item.image ? (
+                      <div className="order-item-image-wrap">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="order-item-image"
+                        />
+                      </div>
+                    ) : (
+                      <div className="order-item-image-wrap no-image">No Image</div>
+                    )}
+                    <div className="order-item-content">
+                      <p className="order-item-name">{item.name}</p>
+                      {item.description ? (
+                        <p className="order-item-description">{item.description}</p>
+                      ) : null}
+                      <p className="order-item-meta">
+                        Qty {item.quantity} × {formatMoney(item.unitPrice)}
+                      </p>
+                      <p className="order-item-line-total">Line Total: {formatMoney(item.lineTotal)}</p>
+                    </div>
                   </div>
-                ) : (
-                  <div style={{
-                    width: '72px',
-                    height: '72px',
-                    marginRight: '12px',
-                    borderRadius: '12px',
-                    background: '#f8fafc',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid #cbd5e1',
-                    color: '#64748b',
-                    boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
-                    fontSize: '11px',
-                    fontWeight: 600
-                  }}>
-                    No Image
-                  </div>
-                )}
-                <div className="flex-grow-1">
-                  <p className="font-weight-bold small mb-1" style={{ color: '#111', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {primaryItem?.title || primaryItem?.name || 'Order Item'}
-                  </p>
-                  <p className="small text-muted mb-0">
-                    ₹{Number(primaryItem?.price || primaryItem?.finalprice || 0).toLocaleString('en-IN')}
-                    {primaryItem?.quantity && ` × ${primaryItem.quantity}`}
-                  </p>
-                </div>
+                ))}
               </div>
             </motion.div>
           )}
@@ -773,88 +903,70 @@ export default function OrderTracking() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
-            className="mt-5 p-4 rounded-xl"
-            style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
+            className="mt-5 p-4 rounded-xl timeline-luxe-shell"
           >
-            <h5 className="font-weight-bold mb-4" style={{ color: '#111', fontSize: '16px', letterSpacing: '0.5px' }}>
-              📍 Status Timeline
-            </h5>
-            <div style={{ position: 'relative', paddingLeft: '20px' }}>
+            <div className="timeline-head-row mb-4">
+              <h5 className="timeline-main-title mb-0">📍 Status Timeline</h5>
+              <div className="timeline-head-meta">
+                <span className={`timeline-live-chip ${socketConnected ? 'on' : 'off'}`}>
+                  {socketConnected ? 'Live Updates On' : 'Reconnecting'}
+                </span>
+                <span className="timeline-count-chip">{statusTimeline.length || timelineSteps.length} updates</span>
+              </div>
+            </div>
+
+            <div className="timeline-track-wrap">
               {timelineSteps.map((event, idx) => {
-                const timelineEvent = statusTimeline.find(t => t.status === event.step)
+                const timelineEvent = event.details
                 return (
                   <motion.div
                     key={event.step}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 + idx * 0.05 }}
-                    style={{ marginBottom: idx < timelineSteps.length - 1 ? '20px' : 0, position: 'relative' }}
+                    className={`timeline-event-card ${event.isReached ? 'reached' : 'pending'} ${idx === activeIndex ? 'active' : ''}`}
                   >
                     {/* Timeline dot */}
                     <div
+                      className="timeline-dot"
                       style={{
-                        position: 'absolute',
-                        left: '-28px',
-                        top: '2px',
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
                         background: event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db',
-                        border: '3px solid white',
                         boxShadow: `0 0 0 2px ${event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db'}33`
                       }}
                     />
                     {/* Timeline line */}
                     {idx < timelineSteps.length - 1 && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: '-23px',
-                          top: '12px',
-                          width: '2px',
-                          height: '20px',
-                          background: '#e5e7eb'
-                        }}
-                      />
+                      <div className="timeline-line" />
                     )}
-                    <div>
-                      <p className="font-weight-bold small mb-1" style={{ color: '#111', fontSize: '13px' }}>
-                        {event.step}
-                      </p>
-                      <p className="small mb-1" style={{ color: '#6b7280', fontSize: '12px' }}>
+                    <div className="timeline-event-content">
+                      <div className="timeline-event-head">
+                        <p className="timeline-step-name mb-0">{event.step}</p>
+                        <span className={`timeline-step-state ${event.isReached ? 'done' : 'wait'}`}>
+                          {idx === activeIndex ? 'Current' : event.isReached ? 'Completed' : 'Pending'}
+                        </span>
+                      </div>
+                      <p className="timeline-step-text mb-1">
                         {STATUS_SUBTEXT[event.step]}
                       </p>
 
                       {/* Enhanced timeline with delivery schedule */}
                       {timelineEvent?.deliverySchedule && (
-                        <div className="mt-2 p-2 rounded" style={{ background: '#e0f2fe', border: '1px solid #0284c7' }}>
-                          <p className="small mb-0" style={{ color: '#0c4a6e', fontSize: '11px', fontWeight: '600' }}>
-                            📅 Delivery Scheduled: {timelineEvent.deliverySchedule.date}
-                            {timelineEvent.deliverySchedule.time && ` at ${timelineEvent.deliverySchedule.time}`}
-                          </p>
+                        <div className="timeline-info-chip delivery mt-2">
+                          📅 Delivery Window: {formatDeliverySchedule(timelineEvent.deliverySchedule)}
                         </div>
                       )}
 
                       {/* Admin notes */}
                       {timelineEvent?.adminNote && (
-                        <div className="mt-2 p-2 rounded" style={{ background: '#fef3c7', border: '1px solid #f59e0b' }}>
-                          <p className="small mb-0" style={{ color: '#92400e', fontSize: '11px', fontWeight: '600' }}>
-                            💼 Admin Note: {timelineEvent.adminNote}
-                          </p>
+                        <div className="timeline-info-chip admin mt-2">
+                          💼 Admin Note: {timelineEvent.adminNote}
                         </div>
                       )}
 
-                      <p className="text-muted small mb-0" style={{ fontSize: '12px' }}>
-                        {event.timestamp
-                          ? new Date(event.timestamp).toLocaleString('en-IN', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })
-                          : 'Pending'}
-                      </p>
+                      <div className="timeline-time-row">
+                        <span>{formatDateTimeShort(event.timestamp)}</span>
+                        {event.timestamp ? <span>{formatRelativeTime(event.timestamp)}</span> : null}
+                      </div>
                     </div>
                   </motion.div>
                 )
@@ -1026,6 +1138,514 @@ export default function OrderTracking() {
           overflow: hidden;
         }
 
+        .tracking-luxe-page {
+          background: radial-gradient(circle at 15% 10%, #fffaf0 0%, #f6f6f4 38%, #eef3f8 100%);
+        }
+
+        .tracking-main-card {
+          border-radius: 26px !important;
+        }
+
+        .order-finance-luxe-card {
+          background: linear-gradient(145deg, #fafaf8, #f9f7f4);
+          border: 2px solid #d4af37;
+          box-shadow: 0 12px 26px rgba(212, 175, 55, 0.14);
+        }
+
+        .finance-kicker {
+          margin: 0;
+          color: #5b6474;
+          font-size: 11px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          font-weight: 700;
+        }
+
+        .payment-status-chip {
+          margin-top: 6px;
+          display: inline-flex;
+          align-items: center;
+          border-radius: 999px;
+          min-height: 32px;
+          padding: 0 12px;
+          font-size: 13px;
+          font-weight: 800;
+          width: fit-content;
+          border: 1px solid;
+        }
+
+        .payment-status-chip.status-paid {
+          color: #106a3a;
+          background: #def7e8;
+          border-color: #9fe1be;
+        }
+
+        .payment-status-chip.status-pending {
+          color: #a35d08;
+          background: #fff2d9;
+          border-color: #ebc57b;
+        }
+
+        .payment-status-chip.status-failed {
+          color: #9e1c35;
+          background: #ffe4ea;
+          border-color: #f2b3c2;
+        }
+
+        .finance-value {
+          margin-top: 6px;
+          color: #1a202b;
+          font-size: 22px;
+          line-height: 1.2;
+          font-weight: 800;
+        }
+
+        .finance-mini-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .finance-mini-item {
+          border: 1px solid #d7e2ef;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.86);
+          padding: 8px 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .finance-mini-item.full {
+          grid-column: 1 / -1;
+        }
+
+        .finance-mini-item span {
+          color: #607087;
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          font-weight: 700;
+        }
+
+        .finance-mini-item strong {
+          color: #1b324f;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .finance-amount-panel {
+          border: 1px solid #d8e2ef;
+          border-radius: 12px;
+          background: #ffffff;
+          padding: 10px;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .finance-amount-row {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          color: #4b5e78;
+          font-size: 13px;
+          padding: 5px 0;
+        }
+
+        .finance-amount-row strong {
+          color: #1b2e45;
+          font-weight: 800;
+        }
+
+        .finance-amount-row.discount {
+          color: #166534;
+        }
+
+        .finance-amount-row.total {
+          margin-top: 6px;
+          padding-top: 8px;
+          border-top: 1px dashed #d4af37;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .finance-amount-row.total strong {
+          text-transform: none;
+          letter-spacing: normal;
+          font-size: 30px;
+          background: linear-gradient(135deg, #d4af37, #b8860b);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .timeline-luxe-shell {
+          background: linear-gradient(150deg, #f9fbff, #f4f7fc);
+          border: 1px solid #d8e1ee;
+          box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .timeline-head-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .timeline-main-title {
+          color: #111;
+          font-size: 17px;
+          letter-spacing: 0.5px;
+          font-weight: 800;
+        }
+
+        .timeline-head-meta {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .timeline-live-chip,
+        .timeline-count-chip {
+          border-radius: 999px;
+          min-height: 28px;
+          padding: 0 10px;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .timeline-live-chip.on {
+          background: #d7f7e6;
+          color: #106a3a;
+          border: 1px solid #98dfbb;
+        }
+
+        .timeline-live-chip.off {
+          background: #ffe3e7;
+          color: #9d1e37;
+          border: 1px solid #f1b3bf;
+        }
+
+        .timeline-count-chip {
+          background: #edf3fb;
+          color: #24466d;
+          border: 1px solid #c9d9ee;
+        }
+
+        .timeline-track-wrap {
+          position: relative;
+          padding-left: 20px;
+        }
+
+        .timeline-event-card {
+          position: relative;
+          margin-bottom: 20px;
+          border: 1px solid #dbe4f1;
+          border-radius: 12px;
+          background: #fff;
+          padding: 10px 12px;
+          box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .timeline-event-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 20px rgba(15, 23, 42, 0.09);
+        }
+
+        .timeline-event-card.active {
+          border-color: #d4af37;
+          box-shadow: 0 10px 22px rgba(212, 175, 55, 0.16);
+        }
+
+        .timeline-dot {
+          position: absolute;
+          left: -28px;
+          top: 12px;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          border: 3px solid white;
+        }
+
+        .timeline-line {
+          position: absolute;
+          left: -23px;
+          top: 24px;
+          width: 2px;
+          height: calc(100% + 8px);
+          background: #e3e8f0;
+        }
+
+        .timeline-event-content {
+          min-width: 0;
+        }
+
+        .timeline-event-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .timeline-step-name {
+          color: #111;
+          font-size: 14px;
+          font-weight: 800;
+        }
+
+        .timeline-step-state {
+          border-radius: 999px;
+          min-height: 24px;
+          padding: 0 9px;
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .timeline-step-state.done {
+          background: #e4f3ff;
+          color: #1f5f95;
+          border: 1px solid #b9d6f2;
+        }
+
+        .timeline-step-state.wait {
+          background: #f1f5f9;
+          color: #64748b;
+          border: 1px solid #d8e0ea;
+        }
+
+        .timeline-step-text {
+          color: #677588;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .timeline-info-chip {
+          border-radius: 9px;
+          padding: 8px;
+          font-size: 11px;
+          font-weight: 700;
+          line-height: 1.35;
+        }
+
+        .timeline-info-chip.delivery {
+          background: #e0f2fe;
+          color: #0c4a6e;
+          border: 1px solid #93c5fd;
+        }
+
+        .timeline-info-chip.admin {
+          background: #fef3c7;
+          color: #92400e;
+          border: 1px solid #f59e0b;
+        }
+
+        .timeline-time-row {
+          margin-top: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          color: #6b7280;
+          font-size: 11px;
+          border-top: 1px dashed #e1e7ef;
+          padding-top: 7px;
+        }
+
+        .delivery-luxe-card {
+          border: 1.5px solid #d4af37;
+          box-shadow: 0 12px 30px rgba(212, 175, 55, 0.12);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          background: rgba(255, 255, 255, 0.55);
+        }
+
+        .delivery-luxe-card.delivered {
+          border-color: #1f8f54;
+          background: linear-gradient(135deg, #f0fbf4, #e7f8ef);
+          box-shadow: 0 14px 34px rgba(31, 143, 84, 0.16);
+        }
+
+        .delivery-icon {
+          width: 54px;
+          height: 54px;
+          border-radius: 14px;
+          margin-right: 14px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 26px;
+          background: linear-gradient(135deg, #f9eed0, #f4dfac);
+          box-shadow: inset 0 0 0 1px rgba(180, 136, 11, 0.2);
+          flex-shrink: 0;
+        }
+
+        .delivery-luxe-card.delivered .delivery-icon {
+          background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+          box-shadow: inset 0 0 0 1px rgba(31, 143, 84, 0.25);
+        }
+
+        .delivery-kicker {
+          color: #7b652d;
+          font-size: 11px;
+          letter-spacing: 0.6px;
+          text-transform: uppercase;
+          margin-bottom: 3px;
+          font-weight: 700;
+        }
+
+        .delivery-luxe-card.delivered .delivery-kicker {
+          color: #1d7e4a;
+        }
+
+        .delivery-headline {
+          font-size: 20px;
+          line-height: 1.35;
+          color: #5f4b1b;
+          font-weight: 800;
+        }
+
+        .delivery-luxe-card.delivered .delivery-headline {
+          color: #14532d;
+          font-size: 22px;
+        }
+
+        .delivery-copy {
+          font-size: 13px;
+          color: #36534a;
+          line-height: 1.45;
+          max-width: 560px;
+        }
+
+        .delivery-time {
+          font-size: 15px;
+          color: #8b7355;
+          margin-left: 8px;
+        }
+
+        .delivery-meta {
+          font-size: 12px;
+          color: #8b7355;
+          margin-top: 6px;
+        }
+
+        .all-items-luxe {
+          background: linear-gradient(145deg, #f9fbff, #f6f8fc) !important;
+          border: 1px solid #d9e2ee !important;
+          box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+        }
+
+        .items-count-pill {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 30px;
+          padding: 0 10px;
+          border-radius: 999px;
+          background: linear-gradient(120deg, #0f4f89, #238d81);
+          color: #fff;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.4px;
+        }
+
+        .order-items-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .order-item-card {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 10px;
+          border-radius: 13px;
+          background: #fff;
+          border: 1px solid #dbe5f2;
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .order-item-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+        }
+
+        .order-item-image-wrap {
+          width: 70px;
+          height: 70px;
+          border-radius: 12px;
+          overflow: hidden;
+          background: #fff;
+          border: 1px solid #cbd5e1;
+          box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+          flex-shrink: 0;
+        }
+
+        .order-item-image-wrap.no-image {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 600;
+          color: #64748b;
+          background: #f8fafc;
+        }
+
+        .order-item-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .order-item-content {
+          min-width: 0;
+          flex: 1;
+        }
+
+        .order-item-name {
+          margin: 0;
+          color: #111;
+          font-size: 14px;
+          font-weight: 700;
+          line-height: 1.35;
+        }
+
+        .order-item-description {
+          margin: 5px 0 0;
+          color: #6b7280;
+          font-size: 12px;
+          line-height: 1.35;
+        }
+
+        .order-item-meta {
+          margin: 5px 0 0;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .order-item-line-total {
+          margin: 3px 0 0;
+          color: #14532d;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
         @media (max-width: 576px) {
           .container {
             padding-left: 0 !important;
@@ -1054,6 +1674,65 @@ export default function OrderTracking() {
           }
           .d-flex.gap-3 {
             gap: 8px !important;
+          }
+
+          .tracking-main-card {
+            border-radius: 20px !important;
+          }
+
+          .delivery-icon {
+            width: 46px;
+            height: 46px;
+            font-size: 22px;
+            margin-right: 10px;
+          }
+
+          .delivery-headline {
+            font-size: 17px;
+          }
+
+          .delivery-luxe-card.delivered .delivery-headline {
+            font-size: 18px;
+          }
+
+          .order-items-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .order-item-image-wrap {
+            width: 60px;
+            height: 60px;
+          }
+
+          .finance-mini-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .finance-amount-row.total strong {
+            font-size: 24px;
+          }
+
+          .timeline-track-wrap {
+            padding-left: 16px;
+          }
+
+          .timeline-dot {
+            left: -22px;
+            top: 14px;
+          }
+
+          .timeline-line {
+            left: -17px;
+          }
+
+          .timeline-time-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 3px;
+          }
+
+          .timeline-event-card {
+            padding: 9px 10px;
           }
         }
 
