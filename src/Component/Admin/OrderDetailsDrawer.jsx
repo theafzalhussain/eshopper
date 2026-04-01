@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Copy } from 'lucide-react';
 import OrderTimeline from './OrderTimeline';
 import { Package, User, Mail, CreditCard, MapPin, Calendar, ShoppingBag, Clock, AlertCircle } from 'lucide-react';
+import axios from 'axios';
 import './OrderDetailsDrawer.css';
 import { BASE_URL } from '../../constants';
 
@@ -37,12 +38,14 @@ const getOrderDate = (order, type = 'created') => {
     return null;
 };
 
-export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
+export default function OrderDetailsDrawer({ open, onClose, order, loading: initialLoading }) {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
-  const isAdmin = localStorage.getItem('role') === 'admin';
+  const [loading, setLoading] = useState(false);
+  const [fullOrderData, setFullOrderData] = useState(null);
+  const isAdmin = localStorage.getItem('role')?.toLowerCase() === 'admin';
   const [copied, setCopied] = useState(false);
 
   // Debug: Log the admin secret to verify it's set
@@ -50,47 +53,84 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
     // Only log in development mode
     if (process.env.NODE_ENV === 'development') {
       console.log('REACT_APP_ADMIN_SECRET:', process.env.REACT_APP_ADMIN_SECRET);
+      console.log('Is Admin:', isAdmin);
     }
   }, []);
 
   const handleCopyOrderId = () => {
-    if (order?.orderId) {
-      navigator.clipboard.writeText(order.orderId);
+    if (fullOrderData?.orderId || order?.orderId) {
+      const id = fullOrderData?.orderId || order?.orderId;
+      navigator.clipboard.writeText(id);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     }
   };
 
+  // Fetch full order details from backend when drawer opens
+  const fetchFullOrderDetails = async () => {
+    if (!open || !order?.orderId) return;
+    
+    setLoading(true);
+    try {
+      const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
+      const response = await axios.get(`${BASE_URL}/api/admin/order/${order.orderId}`, {
+        headers: adminSecret ? { 'x-admin-secret': adminSecret } : {}
+      });
+      
+      if (response.data?.order) {
+        setFullOrderData(response.data.order);
+      } else {
+        // Fallback to original order if API doesn't return full data
+        setFullOrderData(order);
+      }
+    } catch (error) {
+      console.error('Failed to fetch full order details:', error);
+      // Fallback to original order data
+      setFullOrderData(order);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (open && order?.orderId && isAdmin) {
-      fetchNotes();
+    if (open && order?.orderId) {
+      fetchFullOrderDetails();
+      if (isAdmin) {
+        fetchNotes();
+      }
     } else {
       setNotes([]);
+      setFullOrderData(null);
     }
     // eslint-disable-next-line
   }, [open, order?.orderId]);
 
   const fetchNotes = async () => {
+    if (!order?.orderId) return;
     setNotesLoading(true);
     try {
+      const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
       const res = await fetch(`${BASE_URL}/api/admin/order/${order.orderId}/notes`, {
-        headers: { 'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET }
+        headers: adminSecret ? { 'x-admin-secret': adminSecret } : {}
       });
       const data = await res.json();
       if (data.success) setNotes(data.notes);
-    } catch (e) {}
+    } catch (e) {
+      console.error('Failed to fetch notes:', e);
+    }
     setNotesLoading(false);
   };
 
   const handleAddNote = async () => {
-    if (!newNote.trim()) return;
+    if (!newNote.trim() || !order?.orderId) return;
     setSaving(true);
     try {
+      const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
       const res = await fetch(`${BASE_URL}/api/admin/order/${order.orderId}/notes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-secret': process.env.REACT_APP_ADMIN_SECRET
+          ...(adminSecret ? { 'x-admin-secret': adminSecret } : {})
         },
         body: JSON.stringify({ note: newNote, author: localStorage.getItem('name') || 'Admin' })
       });
@@ -114,8 +154,8 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
         </div>
         <div className="drawer-body-scroll">
           {loading ? (
-            <div className="drawer-loading"><Clock className="mr-2" />Loading...</div>
-          ) : !order ? (
+            <div className="drawer-loading"><Clock className="mr-2" />Loading order details...</div>
+          ) : !fullOrderData ? (
             <div className="drawer-error text-center py-4">
               <AlertCircle size={48} className="text-danger mb-3" />
               <h5>Unable to Load Order Details</h5>
@@ -125,7 +165,7 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
             <>
               <div className="drawer-section d-flex align-items-center">
                 <CreditCard size={18} className="mr-2 text-info" />
-                <span><strong>Order ID:</strong> {order.orderId}</span>
+                <span><strong>Order ID:</strong> {fullOrderData.orderId}</span>
                 <button
                   className="btn btn-sm btn-outline-primary ml-2 d-flex align-items-center"
                   style={{borderRadius: '16px', fontSize: 13, padding: '2px 10px', marginLeft: 10, height: 28}}
@@ -138,44 +178,44 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <User size={18} className="mr-2 text-primary" />
-                <span><strong>Customer:</strong> {order.userName}</span>
+                <span><strong>Customer:</strong> {fullOrderData.userName}</span>
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <Mail size={18} className="mr-2 text-warning" />
-                <span><strong>Email:</strong> {order.userEmail}</span>
+                <span><strong>Email:</strong> {fullOrderData.userEmail}</span>
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <Calendar size={18} className="mr-2 text-success" />
-                <span><strong>Order Date:</strong> {formatDate(getOrderDate(order, 'created'))}</span>
+                <span><strong>Order Date:</strong> {formatDate(getOrderDate(fullOrderData, 'created'))}</span>
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <Clock size={18} className="mr-2 text-info" />
-                <span><strong>Last Updated:</strong> {formatDate(getOrderDate(order, 'updated'))}</span>
+                <span><strong>Last Updated:</strong> {formatDate(getOrderDate(fullOrderData, 'updated'))}</span>
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <ShoppingBag size={18} className="mr-2 text-success" />
-                <span><strong>Status:</strong> {order.orderStatus}</span>
+                <span><strong>Status:</strong> {fullOrderData.orderStatus}</span>
               </div>
               <div className="drawer-section d-flex align-items-center">
                 <CreditCard size={18} className="mr-2 text-danger" />
-                <span><strong>Payment:</strong> {order.paymentMethod} ({order.paymentStatus})</span>
+                <span><strong>Payment:</strong> {fullOrderData.paymentMethod} ({fullOrderData.paymentStatus})</span>
               </div>
               <div className="drawer-section">
                 <MapPin size={18} className="mr-2 text-secondary" />
                 <strong>Shipping Address:</strong>
                 <div className="drawer-address mt-2">
-                  {order.shippingAddress?.fullName}<br />
-                  {order.shippingAddress?.addressline1}<br />
-                  {order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.pin}<br />
-                  {order.shippingAddress?.country}
-                  <br />Phone: {order.shippingAddress?.phone}
+                  {fullOrderData.shippingAddress?.fullName}<br />
+                  {fullOrderData.shippingAddress?.addressline1}<br />
+                  {fullOrderData.shippingAddress?.city}, {fullOrderData.shippingAddress?.state} - {fullOrderData.shippingAddress?.pin}<br />
+                  {fullOrderData.shippingAddress?.country}
+                  <br />Phone: {fullOrderData.shippingAddress?.phone}
                 </div>
               </div>
               <div className="drawer-section">
                 <ShoppingBag size={18} className="mr-2 text-info" />
                 <strong>Products:</strong>
                 <ul className="drawer-products mt-2">
-                  {order.products?.map((p, i) => (
+                  {fullOrderData.products?.map((p, i) => (
                     <li key={i} style={{display:'flex',alignItems:'center',marginBottom:8}}>
                       {p.image && (
                         <img
@@ -193,12 +233,12 @@ export default function OrderDetailsDrawer({ open, onClose, order, loading }) {
                 </ul>
               </div>
               {/* Payment History Section */}
-              {order.paymentLogs && Array.isArray(order.paymentLogs) && order.paymentLogs.length > 0 && (
+              {fullOrderData.paymentLogs && Array.isArray(fullOrderData.paymentLogs) && fullOrderData.paymentLogs.length > 0 && (
                 <div className="drawer-section">
                   <CreditCard size={18} className="mr-2 text-danger" />
                   <strong>Payment History:</strong>
                   <ul style={{marginTop:8,paddingLeft:0,listStyle:'none'}}>
-                    {order.paymentLogs.map((log, idx) => (
+                    {fullOrderData.paymentLogs.map((log, idx) => (
                       <li key={idx} style={{marginBottom:6,padding:6,background:'#f8f9fa',borderRadius:6}}>
                         <div style={{fontSize:14}}>
                           <span className="font-weight-bold">{log.status}</span> — ₹{log.amount} via {log.gateway || log.method}

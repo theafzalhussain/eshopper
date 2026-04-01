@@ -516,7 +516,6 @@ export default function AdminOrders() {
                 open={Boolean(detailOrder)}
                 onClose={() => setDetailOrder(null)}
                 order={detailOrder}
-                loading={false}
             />
         </div>
     );
