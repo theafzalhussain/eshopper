@@ -151,10 +151,23 @@ app.post('/api/cart/apply-coupon', applyCoupon);
 const httpServer = http.createServer(app); // 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
 const io = new Server(httpServer, {
     cors: {
-        origin: allowedOrigins,
-        credentials: true
+        origin: function(origin, callback) {
+            // Allow localhost WebSocket connections
+            if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || allowedOrigins.includes(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('CORS policy violation'), false);
+            }
+        },
+        credentials: true,
+        methods: ["GET", "POST"],
+        allowedHeaders: ["Content-Type"]
     },
-    transports: ['websocket', 'polling']
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5
 });
 // Rename io to socketio to avoid shadowing
 const socketio = io;
@@ -220,6 +233,13 @@ io.use(async (socket, next) => {
 io.on('connection', (socket) => {
     const userRoom = `user:${socket.data.userId}`;
     socket.join(userRoom);
+    
+    // Join admin room if admin-dashboard connection
+    if (socket.data.userId === 'admin-dashboard') {
+        socket.join('admin:dashboard');
+        console.log(`✅ Admin Dashboard connected to room admin:dashboard`);
+    }
+    
     socket.emit('connected', { ok: true, room: userRoom });
     console.log(`✅ User ${socket.data.userId} connected to room ${userRoom}`);
 
@@ -3271,8 +3291,11 @@ const handleOrderStatusUpdate = async (req, res) => {
         // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
         const ioInstance = req.app.get('io');
         if (ioInstance) {
+            // Emit to individual user room
             ioInstance.to(`user:${order.userid}`).emit('statusUpdate', payload);
-            console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid}`);
+            // Emit to admin dashboard room
+            ioInstance.to('admin:dashboard').emit('statusUpdate', payload);
+            console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid} and admin:dashboard`);
         }
 
         // 🔴 TRIGGER LUXURY NOTIFICATIONS (WhatsApp - disabled unless explicitly enabled)
@@ -3532,6 +3555,13 @@ app.post('/api/admin/confirm-order', async (req, res) => {
 
         // Real-time update via Socket.IO
         io.to(`user:${order.userid}`).emit('statusUpdate', {
+            orderId: order.orderId,
+            status: 'Confirmed',
+            message: 'Your order has been confirmed! Check your email for full details.',
+            emailSent: emailSent
+        });
+        // Also emit to admin dashboard
+        io.to('admin:dashboard').emit('statusUpdate', {
             orderId: order.orderId,
             status: 'Confirmed',
             message: 'Your order has been confirmed! Check your email for full details.',
