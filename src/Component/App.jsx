@@ -39,6 +39,7 @@ import AdminAddProduct from './Admin/AdminAddProduct'
 import AdminUpdateProduct from './Admin/AdminUpdateProduct'
 import AdminOrders from './Admin/AdminOrders'
 import AdminCoupon from './Admin/AdminCoupon'
+import { useMembership } from './MembershipContext'
 
 const ScrollToTop = () => {
     const { pathname } = useLocation();
@@ -56,6 +57,8 @@ const AdminRoute = ({ children }) => {
 }
 
 export default function App() {
+  useMembership()
+
   return (
     <ToastProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

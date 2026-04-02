@@ -71,20 +71,6 @@ const formatDateTimeShort = (value) => {
   })
 }
 
-const formatRelativeTime = (value) => {
-  if (!value) return ''
-  const dt = new Date(value)
-  if (Number.isNaN(dt.getTime())) return ''
-  const diffMs = Date.now() - dt.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 1) return 'Just now'
-  if (diffMin < 60) return `${diffMin} min ago`
-  const diffHr = Math.floor(diffMin / 60)
-  if (diffHr < 24) return `${diffHr} hr ago`
-  const diffDay = Math.floor(diffHr / 24)
-  return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`
-}
-
 const formatDeliverySchedule = (deliverySchedule = null) => {
   if (!deliverySchedule) return ''
   const baseDate = deliverySchedule?.date || deliverySchedule?.estimatedDelivery
@@ -209,13 +195,6 @@ export default function OrderTracking() {
     })),
     [activeIndex, timelineEventMap]
   )
-
-  const lastTimelineUpdate = useMemo(() => {
-    const entries = Object.values(timelineEventMap || {})
-    if (!entries.length) return ''
-    const latest = entries.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())[0]
-    return latest?.timestamp || ''
-  }, [timelineEventMap])
 
   const showStatusToast = (nextStatus) => {
     const statusText = normalizeStatus(nextStatus)
@@ -512,7 +491,9 @@ export default function OrderTracking() {
   }
 
   return (
-    <div className="tracking-luxe-page" style={{ minHeight: '100vh', background: '#f6f6f4', padding: '100px 16px 40px' }}>
+    <div className="tracking-luxe-page" style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 25%, #1f1f1f 50%, #252525 75%, #1a1a1a 100%)', padding: '100px 16px 40px', position: 'relative', overflow: 'hidden' }}>
+      {/* Premium animated background effect */}
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'radial-gradient(circle at 20% 50%, rgba(212,175,55,0.05) 0%, transparent 50%)', pointerEvents: 'none', zIndex: 0 }} />
       {/* ENHANCED MULTIPLE TOASTS DISPLAY */}
       <div style={{ position: 'fixed', top: 24, right: 20, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {toasts.map((toast, index) => (
@@ -568,107 +549,132 @@ export default function OrderTracking() {
         ))}
       </div>
 
-      <div className="container" style={{ maxWidth: 900 }}>
-        {/* HEADER */}
-        <div className="mb-5 text-center">
-          <h1 className="font-weight-bold mb-2" style={{ fontSize: '32px', letterSpacing: '.5px', color: '#111' }}>
-            ✨ Boutique Luxe Order Tracking
-          </h1>
-          <p className="mb-1" style={{ color: '#333', fontWeight: 700, fontSize: '16px', letterSpacing: '.3px' }}>
-            Order #{orderId}
-          </p>
-          <p style={{ color: '#666', fontSize: '15px' }}>
-            Track your premium order in real-time
-          </p>
+      <div className="container" style={{ maxWidth: 900, position: 'relative', zIndex: 10 }}>
+        {/* LUXURY HEADER */}
+        <div className="mb-5 text-center premium-header">
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="font-weight-bold mb-2 luxury-title"
+            style={{ fontSize: '40px', letterSpacing: '1.2px', color: '#d4af37', textShadow: '0 2px 20px rgba(212,175,55,0.3)', fontFamily: '"Playfair Display", serif' }}
+          >
+            ✨ BOUTIQUE LUXE
+          </motion.h1>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            style={{ height: '3px', width: '120px', background: 'linear-gradient(90deg, #d4af37, rgba(212,175,55,0.3))', margin: '12px auto 16px' }}
+          />
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.5 }}
+            className="mb-1"
+            style={{ color: '#f8e8c7', fontWeight: 700, fontSize: '18px', letterSpacing: '0.3px' }}
+          >
+            Order Tracking #{orderId}
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            style={{ color: '#b8a586', fontSize: '15px', letterSpacing: '0.5px' }}
+          >
+            Premium Real-Time Delivery Experience
+          </motion.p>
         </div>
 
-        {/* MAIN CARD */}
+        {/* MAIN CARD - ULTRA PREMIUM DARK THEME */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="p-4 p-md-5 shadow-lg rounded-3xl bg-white tracking-main-card"
-          style={{ 
-            border: '1.5px solid rgba(212,175,55,0.2)',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
-            backdropFilter: 'blur(8px)',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95))',
-            position: 'relative'
+          transition={{ duration: 0.6 }}
+          className="p-4 p-md-5 shadow-lg rounded-3xl bg-white tracking-main-card premium-card"
+          style={{
+            border: '2px solid #d4af37',
+            boxShadow: '0 40px 80px rgba(212,175,55,0.25), 0 0 60px rgba(212,175,55,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(20px)',
+            background: 'linear-gradient(135deg, rgba(35,35,40,0.95) 0%, rgba(40,40,50,0.98) 50%, rgba(35,35,40,0.95) 100%)',
+            position: 'relative',
+            color: '#f8e8c7'
           }}
         >
-          {/* ORDER INFO - PREMIUM LAYOUT WITH ENHANCED DETAILS */}
-          <div className="p-4 rounded-xl mb-4 order-finance-luxe-card">
+          {/* ORDER INFO - ULTRA PREMIUM DARK LAYOUT */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="p-4 rounded-xl mb-4 order-finance-luxe-card"
+            style={{
+              background: 'linear-gradient(135deg, rgba(60,60,70,0.8) 0%, rgba(55,55,65,0.8) 100%)',
+              border: '1.5px solid #d4af37',
+              boxShadow: '0 20px 50px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.05)'
+            }}
+          >
             <div className="row">
               <div className="col-md-7 mb-3 mb-md-0">
                 <div className="d-flex flex-column payment-core-wrap">
-                  <p className="finance-kicker">Payment Status</p>
-                  <span className={`payment-status-chip status-${String(paymentStatusLabel).toLowerCase()}`}>
-                    {paymentStatusLabel === 'Paid' ? '✅ Paid' : paymentStatusLabel === 'Pending' ? '⏳ Pending' : paymentStatusLabel}
-                  </span>
+                  <div className="finance-block">
+                    <p className="finance-kicker" style={{ color: '#d4af37' }}>Payment Status</p>
+                    <span className={`payment-status-chip status-${String(paymentStatusLabel).toLowerCase()}`}>
+                      <span className="chip-dot" />
+                      {paymentStatusLabel === 'Paid' ? 'Paid' : paymentStatusLabel === 'Pending' ? 'Pending' : paymentStatusLabel}
+                    </span>
+                  </div>
 
-                  <p className="finance-kicker mt-3">Payment Method</p>
-                  <p className="finance-value mb-0">{order?.paymentMethod || 'N/A'}</p>
-
-                  <div className="finance-mini-grid mt-3">
-                    <div className="finance-mini-item">
-                      <span>Items</span>
-                      <strong>{totalItemCount}</strong>
-                    </div>
-                    <div className="finance-mini-item">
-                      <span>Order Ref</span>
-                      <strong>{String(orderId || '').slice(-8)}</strong>
-                    </div>
-                    <div className="finance-mini-item full">
-                      <span>Last Sync</span>
-                      <strong>{formatDateTimeShort(lastTimelineUpdate || order?.updatedAt)}</strong>
-                    </div>
+                  <div className="finance-block mt-3">
+                    <p className="finance-kicker" style={{ color: '#d4af37' }}>Payment Method</p>
+                    <p className="finance-method-value mb-0" style={{ color: '#d4af37', fontSize: '28px' }}>{order?.paymentMethod || 'N/A'}</p>
                   </div>
                 </div>
               </div>
               <div className="col-md-5 text-md-right">
-                <div className="d-flex flex-column align-items-md-end finance-amount-panel">
-                  <div className="finance-amount-row">
+                <div className="d-flex flex-column align-items-md-end finance-amount-panel" style={{ background: 'rgba(70,70,80,0.6)', border: '1.5px solid #d4af37', boxShadow: '0 12px 30px rgba(212,175,55,0.15)' }}>
+                  <div className="finance-amount-row" style={{ color: '#b8a586' }}>
                     <span>Subtotal</span>
-                    <strong>{formatMoney(subtotalAmount)}</strong>
+                    <strong style={{ color: '#f8e8c7' }}>{formatMoney(subtotalAmount)}</strong>
                   </div>
-                  <div className="finance-amount-row">
+                  <div className="finance-amount-row" style={{ color: '#b8a586' }}>
                     <span>Shipping</span>
-                    <strong>{formatMoney(shippingAmount)}</strong>
+                    <strong style={{ color: '#f8e8c7' }}>{formatMoney(shippingAmount)}</strong>
                   </div>
                   {discountAmount > 0 && (
-                    <div className="finance-amount-row discount">
+                    <div className="finance-amount-row discount" style={{ color: '#1f8f54' }}>
                       <span>Coupon Discount</span>
-                      <strong>- {formatMoney(discountAmount)}</strong>
+                      <strong style={{ color: '#4ade80' }}>- {formatMoney(discountAmount)}</strong>
                     </div>
                   )}
-                  <div className="finance-amount-row total">
-                    <span>Total Amount</span>
-                    <strong>{formatMoney(finalAmount)}</strong>
+                  <div className="finance-amount-row total" style={{ borderTopColor: '#d4af3766' }}>
+                    <span style={{ color: '#b8a586' }}>Total Amount</span>
+                    <strong style={{ background: 'linear-gradient(135deg, #d4af37, #f5e6b3)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{formatMoney(finalAmount)}</strong>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* DELIVERY SECTION - EXPECTED OR DELIVERED PREMIUM MESSAGE */}
           {status === 'Delivered' ? (
             <motion.div
               initial={{ opacity: 0, y: 10, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+              transition={{ delay: 0.15, type: 'spring', stiffness: 200 }}
               className="p-4 rounded-xl mb-4 delivery-luxe-card delivered"
+              style={{ background: 'linear-gradient(135deg, rgba(31,143,84,0.2), rgba(31,143,84,0.1))', border: '1.5px solid #1f8f54', boxShadow: '0 20px 50px rgba(31,143,84,0.2)' }}
             >
               <div className="d-flex align-items-start align-items-md-center">
-                <div className="delivery-icon">✅</div>
+                <div className="delivery-icon" style={{ background: 'linear-gradient(135deg, rgba(31,143,84,0.3), rgba(79,233,136,0.2))', boxShadow: 'inset 0 0 0 1px rgba(31,143,84,0.5)' }}>✅</div>
                 <div>
-                  <p className="delivery-kicker">Delivery Completed</p>
-                  <p className="delivery-headline mb-1">
+                  <p className="delivery-kicker" style={{ color: '#4ade80' }}>Delivery Completed</p>
+                  <p className="delivery-headline mb-1" style={{ color: '#4ade80', fontSize: '24px' }}>
                     Your order has been successfully delivered.
                   </p>
-                  <p className="delivery-copy mb-1">
+                  <p className="delivery-copy mb-1" style={{ color: '#b8a586' }}>
                     Thank you for shopping with Boutique Luxe. We hope your premium experience was exceptional.
                   </p>
-                  <p className="delivery-meta mb-0">
+                  <p className="delivery-meta mb-0" style={{ color: '#8b7355' }}>
                     Delivered on {new Date(order?.updatedAt || Date.now()).toLocaleDateString('en-IN', {
                       day: 'numeric',
                       month: 'short',
@@ -684,20 +690,21 @@ export default function OrderTracking() {
               key={getDeliveryInfo.date}
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+              transition={{ delay: 0.15, type: 'spring', stiffness: 200 }}
               className="p-4 rounded-xl mb-4 delivery-luxe-card expected"
+              style={{ background: 'linear-gradient(135deg, rgba(30,58,137,0.2), rgba(30,64,175,0.1))', border: '1.5px solid #3b82f6', boxShadow: '0 20px 50px rgba(59,130,246,0.2)' }}
             >
               <div className="d-flex align-items-center">
-                <div className="delivery-icon">📅</div>
+                <div className="delivery-icon" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.3), rgba(96,165,250,0.2))', boxShadow: 'inset 0 0 0 1px rgba(59,130,246,0.5)' }}>📅</div>
                 <div>
-                  <p className="delivery-kicker">Expected Delivery</p>
-                  <p className="delivery-headline mb-0">
+                  <p className="delivery-kicker" style={{ color: '#60a5fa' }}>Expected Delivery</p>
+                  <p className="delivery-headline mb-0" style={{ color: '#60a5fa' }}>
                     {formatDeliveryDate(getDeliveryInfo.date)}
                     {getDeliveryInfo.time && (
                       <span className="delivery-time"> at {getDeliveryInfo.time}</span>
                     )}
                   </p>
-                  <p className="delivery-meta mb-0">
+                  <p className="delivery-meta mb-0" style={{ color: '#8b7355' }}>
                     {new Date(getDeliveryInfo.date).toLocaleDateString('en-IN', {
                       day: 'numeric',
                       month: 'short',
@@ -737,18 +744,25 @@ export default function OrderTracking() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="mb-4 p-3 rounded-lg all-items-luxe"
-              style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
+              transition={{ delay: 0.2 }}
+              className="mb-4 p-4 rounded-lg all-items-luxe"
+              style={{ background: 'rgba(60,60,70,0.5)', border: '1.5px solid #d4af37', boxShadow: '0 12px 30px rgba(212,175,55,0.15)' }}
             >
               <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap" style={{ gap: '8px' }}>
-                <p className="small text-muted mb-0" style={{ letterSpacing: '0.4px' }}>Ordered Items</p>
+                <p className="small mb-0" style={{ letterSpacing: '0.4px', color: '#d4af37', fontWeight: 700 }}>📦 Ordered Items</p>
                 <span className="items-count-pill">{totalItemCount} items</span>
               </div>
 
               <div className="order-items-grid">
                 {orderItemsDetailed.map((item) => (
-                  <div key={item.id} className="order-item-card">
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ staggerChildren: 0.05 }}
+                    className="order-item-card"
+                    style={{ background: 'rgba(80,80,90,0.7)', border: '1px solid #d4af3744', color: '#f8e8c7' }}
+                  >
                     {item.image ? (
                       <div className="order-item-image-wrap">
                         <img
@@ -758,45 +772,45 @@ export default function OrderTracking() {
                         />
                       </div>
                     ) : (
-                      <div className="order-item-image-wrap no-image">No Image</div>
+                      <div className="order-item-image-wrap no-image" style={{ background: '#555' }}>No Image</div>
                     )}
                     <div className="order-item-content">
-                      <p className="order-item-name">{item.name}</p>
+                      <p className="order-item-name" style={{ color: '#f8e8c7' }}>{item.name}</p>
                       {item.description ? (
-                        <p className="order-item-description">{item.description}</p>
+                        <p className="order-item-description" style={{ color: '#b8a586' }}>{item.description}</p>
                       ) : null}
-                      <p className="order-item-meta">
+                      <p className="order-item-meta" style={{ color: '#8b7355' }}>
                         Qty {item.quantity} × {formatMoney(item.unitPrice)}
                       </p>
-                      <p className="order-item-line-total">Line Total: {formatMoney(item.lineTotal)}</p>
+                      <p className="order-item-line-total" style={{ color: '#d4af37' }}>Line Total: {formatMoney(item.lineTotal)}</p>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </motion.div>
           )}
           <div style={{ position: 'relative', margin: '50px 0 30px' }}>
             {/* Background bar */}
-            <div style={{ height: 10, borderRadius: 99, background: '#e5e7eb', overflow: 'hidden' }} />
+            <div style={{ height: 12, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)' }} />
 
-            {/* Animated progress bar */}
+            {/* Animated progress bar - PREMIUM GRADIENT */}
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progressPercent}%` }}
               transition={{ type: 'spring', stiffness: 60, damping: 15, delay: 0.2 }}
               style={{
-                height: 10,
+                height: 12,
                 borderRadius: 99,
-                background: `linear-gradient(90deg, #7f5f1f, #b48b2a, #d7b15a, #1f8f54)`,
+                background: `linear-gradient(90deg, #d4af37, #f5e6b3, #1f8f54, #4ade80)`,
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                boxShadow: `0 0 20px ${STATUS_COLOR[status]}66`
+                boxShadow: `0 0 30px #d4af37aa, 0 0 60px #d4af3755`,
               }}
             />
           </div>
 
-          {/* STEPPER STEPS */}
+          {/* STEPPER STEPS - GOLD ACCENTS */}
           <div className="stepper-scroll mt-4">
           <div className="d-flex justify-content-between min-stepper-width">
             {STEPS.map((s, i) => {
@@ -810,60 +824,67 @@ export default function OrderTracking() {
                     <div
                       style={{
                         position: 'absolute',
-                        top: 19,
+                        top: 22,
                         left: '50%',
                         width: '50%',
-                        height: 3,
-                        background: i < activeIndex ? STATUS_COLOR[s] : '#e5e7eb',
-                        transition: 'background 0.6s ease'
+                        height: 2,
+                        background: i < activeIndex ? STATUS_COLOR[s] : 'rgba(255,255,255,0.1)',
+                        transition: 'background 0.6s ease',
+                        boxShadow: i < activeIndex ? `0 0 10px ${STATUS_COLOR[s]}88` : 'none'
                       }}
                     />
                   )}
 
-                  {/* Step circle (non-blinking premium style) */}
+                  {/* Step circle */}
                   <motion.div
-                    animate={{ scale: isActive ? 1.06 : 1 }}
+                    animate={{ scale: isActive ? 1.12 : 1 }}
                     transition={{ duration: 0.25, ease: 'easeOut' }}
                     style={{
                       margin: '0 auto',
                       position: 'relative',
                       zIndex: 2 }}
                   >
-                    {/* Main circle */}
                     <div
                       style={{
-                        width: 50,
-                        height: 50,
+                        width: 56,
+                        height: 56,
                         borderRadius: '50%',
-                        background: isDone ? STATUS_COLOR[s] : '#f3f4f6',
-                        border: `3px solid ${isDone ? STATUS_COLOR[s] : '#e5e7eb'}`,
+                        background: isDone ? `linear-gradient(135deg, ${STATUS_COLOR[s]}, ${STATUS_COLOR[s]}dd)` : 'rgba(255,255,255,0.05)',
+                        border: `2.5px solid ${isDone ? STATUS_COLOR[s] : 'rgba(255,255,255,0.2)'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: isDone ? '#fff' : '#9ca3af',
-                        boxShadow: isActive ? `0 8px 25px ${STATUS_COLOR[s]}33` : 'none',
+                        color: isDone ? '#fff' : '#b8a586',
+                        boxShadow: isActive ? `0 0 30px ${STATUS_COLOR[s]}66, inset 0 1px 0 rgba(255,255,255,0.1)` : `0 0 0 1px rgba(255,255,255,0.05)`,
                         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                       }}
                     >
-                      <StepIcon size={20} />
+                      <StepIcon size={22} strokeWidth={2.5} />
                     </div>
                   </motion.div>
 
                   {/* Label */}
                   <motion.div
-                    animate={isActive ? { scale: 1.05 } : { scale: 1 }}
+                    animate={isActive ? { scale: 1.08 } : { scale: 1 }}
                     style={{
-                      marginTop: 12,
-                      fontSize: '13px',
-                      fontWeight: isActive ? '700' : '600',
-                      color: s === 'Shipped' ? '#ca8a04' : (isDone ? STATUS_COLOR[s] : '#9ca3af'),
-                      transition: 'color 0.4s ease'
+                      marginTop: 14,
+                      fontSize: '12px',
+                      fontWeight: isActive ? '800' : '600',
+                      color: isDone ? STATUS_COLOR[s] : '#8b7355',
+                      transition: 'color 0.4s ease',
+                      letterSpacing: '0.5px'
                     }}
                   >
                     {s}
                   </motion.div>
                   {isActive && (
-                    <div style={{ fontSize: '10px', color: '#999', marginTop: '4px' }}>Current</div>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      style={{ fontSize: '9px', color: '#d4af37', marginTop: '3px', fontWeight: 700 }}
+                    >
+                      ◆ Current
+                    </motion.div>
                   )}
                 </div>
               )
@@ -871,26 +892,27 @@ export default function OrderTracking() {
           </div>
           </div>
 
-          {/* STATUS DISPLAY */}
+          {/* STATUS DISPLAY - PREMIUM DARK */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.35 }}
             className="mt-5 p-4 rounded-xl"
             style={{
-              background: `${STATUS_COLOR[status]}0f`,
-              border: `2px solid ${STATUS_COLOR[status]}33`,
-              textAlign: 'center'
+              background: `linear-gradient(135deg, ${STATUS_COLOR[status]}15, ${STATUS_COLOR[status]}08)`,
+              border: `2px solid ${STATUS_COLOR[status]}44`,
+              textAlign: 'center',
+              boxShadow: `0 12px 30px ${STATUS_COLOR[status]}22`
             }}
           >
-            <p className="text-muted small mb-2">Current Status</p>
+            <p className="small mb-2" style={{ color: '#8b7355', letterSpacing: '0.5px', textTransform: 'uppercase', fontSize: '11px', fontWeight: 700 }}>Current Status</p>
             <h3
-              className="font-weight-bold mb-1"
-              style={{ color: status === 'Shipped' ? '#ca8a04' : STATUS_COLOR[status], fontSize: '24px' }}
+              className="font-weight-bold mb-2"
+              style={{ color: status === 'Shipped' ? '#ca8a04' : STATUS_COLOR[status], fontSize: '28px', letterSpacing: '0.5px' }}
             >
               {status}
             </h3>
-            <p className="small text-muted mb-0">
+            <p className="small mb-0" style={{ color: '#b8a586' }}>
               {status === 'Ordered' && '✅ Your order has been placed successfully'}
               {status === 'Packed' && '📦 Your order is being packed with care'}
               {status === 'Shipped' && '🚚 Your order is on its way to you'}
@@ -898,74 +920,287 @@ export default function OrderTracking() {
             </p>
           </motion.div>
 
-          {/* STATUS TIMELINE - ENHANCED WITH ADMIN NOTES AND DELIVERY UPDATES */}
+          {/* STATUS TIMELINE - ULTRA PREMIUM LUXURY WITH DETAILED UPDATES */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="mt-5 p-4 rounded-xl timeline-luxe-shell"
+            transition={{ delay: 0.4 }}
+            className="mt-5 p-5 rounded-2xl timeline-luxe-shell"
+            style={{
+              background: 'linear-gradient(135deg, rgba(50,50,60,0.7) 0%, rgba(45,45,55,0.7) 100%)',
+              border: '2px solid #d4af37',
+              boxShadow: '0 20px 60px rgba(212,175,55,0.25), inset 0 1px 0 rgba(255,255,255,0.08)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
           >
-            <div className="timeline-head-row mb-4">
-              <h5 className="timeline-main-title mb-0">📍 Status Timeline</h5>
-              <div className="timeline-head-meta">
-                <span className={`timeline-live-chip ${socketConnected ? 'on' : 'off'}`}>
-                  {socketConnected ? 'Live Updates On' : 'Reconnecting'}
-                </span>
-                <span className="timeline-count-chip">{statusTimeline.length || timelineSteps.length} updates</span>
-              </div>
+            {/* Premium header */}
+            <div style={{ marginBottom: '24px', paddingBottom: '16px', borderBottom: '1.5px solid #d4af3744' }}>
+              <h5 className="timeline-main-title mb-2" style={{ color: '#d4af37', fontSize: '20px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                📍 Journey Timeline
+              </h5>
+              <p style={{ color: '#8b7355', fontSize: '12px', margin: 0, letterSpacing: '0.3px' }}>
+                Real-time tracking of your premium order
+              </p>
             </div>
 
-            <div className="timeline-track-wrap">
+            <div className="timeline-track-wrap premium-timeline">
               {timelineSteps.map((event, idx) => {
                 const timelineEvent = event.details
+                const statusIcon = STATUS_ICON[event.step]
+                const isCompleted = event.isReached && idx < activeIndex
+                const isCurrent = idx === activeIndex
+
                 return (
                   <motion.div
                     key={event.step}
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={{ opacity: 0, x: -15 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + idx * 0.05 }}
-                    className={`timeline-event-card ${event.isReached ? 'reached' : 'pending'} ${idx === activeIndex ? 'active' : ''}`}
+                    transition={{ delay: 0.45 + idx * 0.08 }}
+                    className={`premium-timeline-event ${event.isReached ? 'reached' : 'pending'} ${isCurrent ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                    style={{
+                      background: isCurrent ? 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.08))' : 'transparent',
+                      borderRadius: '14px',
+                      padding: isCurrent ? '16px' : '12px',
+                      marginBottom: '20px',
+                      transition: 'all 0.3s ease'
+                    }}
                   >
-                    {/* Timeline dot */}
-                    <div
-                      className="timeline-dot"
-                      style={{
-                        background: event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db',
-                        boxShadow: `0 0 0 2px ${event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db'}33`
-                      }}
-                    />
-                    {/* Timeline line */}
-                    {idx < timelineSteps.length - 1 && (
-                      <div className="timeline-line" />
-                    )}
-                    <div className="timeline-event-content">
-                      <div className="timeline-event-head">
-                        <p className="timeline-step-name mb-0">{event.step}</p>
-                        <span className={`timeline-step-state ${event.isReached ? 'done' : 'wait'}`}>
-                          {idx === activeIndex ? 'Current' : event.isReached ? 'Completed' : 'Pending'}
-                        </span>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                      {/* Timeline dot with premium styling */}
+                      <div
+                        style={{
+                          position: 'relative',
+                          flexShrink: 0,
+                          width: '56px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        {/* Animated rings for current status */}
+                        {isCurrent && (
+                          <>
+                            <motion.div
+                              animate={{ scale: [1, 1.3, 1], opacity: [0.8, 0.3, 0.8] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                              style={{
+                                position: 'absolute',
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                border: `2px solid ${STATUS_COLOR[event.step]}`,
+                              }}
+                            />
+                            <motion.div
+                              animate={{ scale: [1, 1.5, 1], opacity: [0.6, 0.1, 0.6] }}
+                              transition={{ duration: 2.5, repeat: Infinity }}
+                              style={{
+                                position: 'absolute',
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                border: `1px solid ${STATUS_COLOR[event.step]}`,
+                              }}
+                            />
+                          </>
+                        )}
+
+                        {/* Main dot */}
+                        <div
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '50%',
+                            background: event.isReached
+                              ? `linear-gradient(135deg, ${STATUS_COLOR[event.step]}, ${STATUS_COLOR[event.step]}cc)`
+                              : 'rgba(255,255,255,0.08)',
+                            border: `2.5px solid ${event.isReached ? STATUS_COLOR[event.step] : 'rgba(255,255,255,0.15)'}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: event.isReached ? '#fff' : '#b8a586',
+                            boxShadow: isCurrent
+                              ? `0 0 35px ${STATUS_COLOR[event.step]}88, inset 0 1px 0 rgba(255,255,255,0.2)`
+                              : `0 0 0 1px rgba(255,255,255,0.08)`,
+                            position: 'relative',
+                            zIndex: 2,
+                            fontSize: '20px'
+                          }}
+                        >
+                          {statusIcon ? (
+                            <statusIcon size={24} strokeWidth={2} />
+                          ) : (
+                            '✓'
+                          )}
+                        </div>
+
+                        {/* Connector line to next event */}
+                        {idx < timelineSteps.length - 1 && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              width: '2px',
+                              height: '30px',
+                              background: idx < activeIndex ? STATUS_COLOR[event.step] : 'rgba(255,255,255,0.08)',
+                              zIndex: 0,
+                              transition: 'background 0.5s ease'
+                            }}
+                          />
+                        )}
                       </div>
-                      <p className="timeline-step-text mb-1">
-                        {STATUS_SUBTEXT[event.step]}
-                      </p>
 
-                      {/* Enhanced timeline with delivery schedule */}
-                      {timelineEvent?.deliverySchedule && (
-                        <div className="timeline-info-chip delivery mt-2">
-                          📅 Delivery Window: {formatDeliverySchedule(timelineEvent.deliverySchedule)}
+                      {/* Event content */}
+                      <div style={{ flex: 1, paddingTop: '6px' }}>
+                        {/* Status name with badge */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                          <p
+                            className="timeline-step-name"
+                            style={{
+                              color: '#d4af37',
+                              fontSize: '16px',
+                              fontWeight: 800,
+                              margin: 0,
+                              letterSpacing: '0.3px'
+                            }}
+                          >
+                            {event.step}
+                          </p>
+                          {isCurrent && (
+                            <motion.span
+                              animate={{ scale: [1, 1.05, 1] }}
+                              transition={{ duration: 1.5, repeat: Infinity }}
+                              style={{
+                                display: 'inline-block',
+                                background: `linear-gradient(135deg, ${STATUS_COLOR[event.step]}, ${STATUS_COLOR[event.step]}dd)`,
+                                color: '#fff',
+                                padding: '3px 10px',
+                                borderRadius: '999px',
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                letterSpacing: '0.4px',
+                                textTransform: 'uppercase'
+                              }}
+                            >
+                              ◆ Current
+                            </motion.span>
+                          )}
+                          {isCompleted && (
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                background: 'rgba(74, 222, 128, 0.2)',
+                                color: '#4ade80',
+                                padding: '3px 10px',
+                                borderRadius: '999px',
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                letterSpacing: '0.4px',
+                                textTransform: 'uppercase'
+                              }}
+                            >
+                              ✓ Completed
+                            </span>
+                          )}
                         </div>
-                      )}
 
-                      {/* Admin notes */}
-                      {timelineEvent?.adminNote && (
-                        <div className="timeline-info-chip admin mt-2">
-                          💼 Admin Note: {timelineEvent.adminNote}
+                        {/* Description */}
+                        <p
+                          className="timeline-step-text"
+                          style={{
+                            color: '#b8a586',
+                            fontSize: '13px',
+                            margin: '8px 0',
+                            lineHeight: '1.5'
+                          }}
+                        >
+                          {STATUS_SUBTEXT[event.step]}
+                        </p>
+
+                        {/* Timestamp */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '11px', color: '#8b7355' }}>📅</span>
+                          <p
+                            className="timeline-event-time"
+                            style={{
+                              color: '#8b7355',
+                              fontSize: '12px',
+                              margin: 0,
+                              fontWeight: 600,
+                              letterSpacing: '0.2px'
+                            }}
+                          >
+                            {formatDateTimeShort(event.timestamp)}
+                          </p>
                         </div>
-                      )}
 
-                      <div className="timeline-time-row">
-                        <span>{formatDateTimeShort(event.timestamp)}</span>
-                        {event.timestamp ? <span>{formatRelativeTime(event.timestamp)}</span> : null}
+                        {/* Detailed info chips */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {/* Delivery schedule */}
+                          {timelineEvent?.deliverySchedule && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.5 }}
+                              className="timeline-info-chip delivery"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(59,130,246,0.1))',
+                                border: '1.5px solid #3b82f6',
+                                color: '#60a5fa',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                lineHeight: '1.5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                            >
+                              <span>🚚</span>
+                              <div>
+                                <div style={{ fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px' }}>
+                                  Delivery Window
+                                </div>
+                                <div>{formatDeliverySchedule(timelineEvent.deliverySchedule)}</div>
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {/* Admin notes */}
+                          {timelineEvent?.adminNote && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.55 }}
+                              className="timeline-info-chip admin"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(245,158,11,0.25), rgba(245,158,11,0.1))',
+                                border: '1.5px solid #f59e0b',
+                                color: '#fbbf24',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                lineHeight: '1.5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                            >
+                              <span>💼</span>
+                              <div>
+                                <div style={{ fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px' }}>
+                                  Admin Update
+                                </div>
+                                <div>{timelineEvent.adminNote}</div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -980,28 +1215,29 @@ export default function OrderTracking() {
             <div className="row mb-4">
               <div className="col-12">
                 <motion.button
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.02,
-                    boxShadow: '0 20px 40px rgba(15,15,16,0.3)'
+                    boxShadow: '0 25px 50px rgba(212,175,55,0.4)'
                   }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => navigate('/my-orders')}
                   className="btn btn-block rounded-pill"
-                  style={{ 
+                  style={{
                     width: '100%',
                     maxWidth: '400px',
                     margin: '0 auto',
-                    fontWeight: '700', 
-                    fontSize: '15px', 
+                    fontWeight: '700',
+                    fontSize: '15px',
                     padding: '14px 28px',
-                    background: 'linear-gradient(135deg, #0f0f10, #1a1f26)',
-                    color: '#fff',
-                    border: '1.5px solid #2b3138',
+                    background: 'linear-gradient(135deg, #d4af37, #f5e6b3)',
+                    color: '#1a1a1a',
+                    border: '1.5px solid #d4af37',
                     letterSpacing: '0.4px',
-                    boxShadow: '0 10px 30px rgba(15,15,16,0.2)',
+                    boxShadow: '0 12px 30px rgba(212,175,55,0.25)',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer',
-                    display: 'block'
+                    display: 'block',
+                    fontWeight: 800
                   }}
                 >
                   ← Back to My Orders
@@ -1013,9 +1249,9 @@ export default function OrderTracking() {
             <div className="d-flex flex-wrap gap-3" style={{ rowGap: '12px' }}>
               {/* Chat Support Button */}
               <motion.button
-                whileHover={{ 
+                whileHover={{
                   scale: 1.03,
-                  boxShadow: '0 16px 36px rgba(37,211,102,0.3)',
+                  boxShadow: '0 20px 45px rgba(37,211,102,0.4)',
                   y: -2
                 }}
                 whileTap={{ scale: 0.95 }}
@@ -1030,12 +1266,12 @@ export default function OrderTracking() {
                   background: 'linear-gradient(135deg, #25D366, #1aa84f)',
                   color: '#fff',
                   border: '1.5px solid #1ea952',
-                  fontWeight: '700',
+                  fontWeight: '800',
                   fontSize: '13px',
                   padding: '12px 20px',
                   letterSpacing: '0.3px',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 8px 20px rgba(37,211,102,0.25)',
+                  boxShadow: '0 10px 25px rgba(37,211,102,0.3)',
                   cursor: 'pointer',
                   position: 'relative',
                   overflow: 'hidden'
@@ -1050,7 +1286,7 @@ export default function OrderTracking() {
           </div>
 
           {/* FOOTER NOTE */}
-          <p className="text-center text-muted small mt-4 mb-0" style={{ fontSize: '12px' }}>
+          <p className="text-center small mt-4 mb-0" style={{ fontSize: '12px', color: '#8b7355', letterSpacing: '0.3px' }}>
             Updates are live. Last known update: {order?.updatedAt ? new Date(order.updatedAt).toLocaleString() : 'Fetching...'}
           </p>
         </motion.div>
@@ -1139,65 +1375,116 @@ export default function OrderTracking() {
         }
 
         .tracking-luxe-page {
-          background: radial-gradient(circle at 15% 10%, #fffaf0 0%, #f6f6f4 38%, #eef3f8 100%);
+          background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 25%, #1f1f1f 50%, #252525 75%, #1a1a1a 100%);
         }
 
-        .tracking-main-card {
-          border-radius: 26px !important;
+        .premium-header {
+          animation: fadeInDown 0.8s ease;
+        }
+
+        .luxury-title {
+          font-size: 40px !important;
+          background: linear-gradient(135deg, #d4af37, #f5e6b3);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .premium-card {
+          border-radius: 28px !important;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .premium-card:hover {
+          box-shadow: 0 50px 100px rgba(212,175,55,0.35), 0 0 80px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+          transform: translateY(-2px);
         }
 
         .order-finance-luxe-card {
-          background: linear-gradient(145deg, #fafaf8, #f9f7f4);
-          border: 2px solid #d4af37;
-          box-shadow: 0 12px 26px rgba(212, 175, 55, 0.14);
+          background: linear-gradient(135deg, rgba(60,60,70,0.7) 0%, rgba(55,55,65,0.7) 100%) !important;
+          border: 1.5px solid #d4af37 !important;
+          box-shadow: 0 20px 50px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+          transition: all 0.3s ease;
+        }
+
+        .order-finance-luxe-card:hover {
+          box-shadow: 0 25px 60px rgba(212,175,55,0.3), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+        }
+
+        .payment-core-wrap {
+          height: 100%;
+          justify-content: center;
+          gap: 4px;
+        }
+
+        .finance-block {
+          display: flex;
+          flex-direction: column;
         }
 
         .finance-kicker {
           margin: 0;
-          color: #5b6474;
+          color: #d4af37;
           font-size: 11px;
           letter-spacing: 0.12em;
           text-transform: uppercase;
-          font-weight: 700;
+          font-weight: 800;
         }
 
         .payment-status-chip {
           margin-top: 6px;
           display: inline-flex;
           align-items: center;
+          gap: 7px;
           border-radius: 999px;
-          min-height: 32px;
-          padding: 0 12px;
+          min-height: 34px;
+          padding: 0 13px;
           font-size: 13px;
           font-weight: 800;
           width: fit-content;
           border: 1px solid;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .chip-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: currentColor;
+          opacity: 0.9;
         }
 
         .payment-status-chip.status-paid {
-          color: #106a3a;
-          background: #def7e8;
-          border-color: #9fe1be;
+          color: #4ade80;
+          background: rgba(31,143,84,0.2);
+          border-color: #1f8f54;
         }
 
         .payment-status-chip.status-pending {
-          color: #a35d08;
-          background: #fff2d9;
-          border-color: #ebc57b;
+          color: #facc15;
+          background: rgba(245,158,11,0.2);
+          border-color: #f59e0b;
         }
 
         .payment-status-chip.status-failed {
-          color: #9e1c35;
-          background: #ffe4ea;
-          border-color: #f2b3c2;
+          color: #ef4444;
+          background: rgba(239,68,68,0.2);
+          border-color: #dc2626;
         }
 
-        .finance-value {
+        .finance-method-value {
           margin-top: 6px;
-          color: #1a202b;
-          font-size: 22px;
+          color: #d4af37 !important;
+          font-size: 28px;
           line-height: 1.2;
           font-weight: 800;
+          letter-spacing: 0.01em;
+        }
+          color: #1f2a37;
+          font-size: 36px;
+          line-height: 1.2;
+          font-weight: 800;
+          letter-spacing: 0.01em;
         }
 
         .finance-mini-grid {
@@ -1235,11 +1522,11 @@ export default function OrderTracking() {
         }
 
         .finance-amount-panel {
-          border: 1px solid #d8e2ef;
-          border-radius: 12px;
+          border: 1px solid #ccd8e8;
+          border-radius: 14px;
           background: #ffffff;
-          padding: 10px;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+          padding: 12px;
+          box-shadow: 0 8px 18px rgba(26, 43, 71, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7);
         }
 
         .finance-amount-row {
@@ -1249,8 +1536,8 @@ export default function OrderTracking() {
           justify-content: space-between;
           gap: 12px;
           color: #4b5e78;
-          font-size: 13px;
-          padding: 5px 0;
+          font-size: 14px;
+          padding: 6px 0;
         }
 
         .finance-amount-row strong {
@@ -1264,11 +1551,11 @@ export default function OrderTracking() {
 
         .finance-amount-row.total {
           margin-top: 6px;
-          padding-top: 8px;
+          padding-top: 10px;
           border-top: 1px dashed #d4af37;
           text-transform: uppercase;
           letter-spacing: 0.06em;
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 700;
         }
 
@@ -1283,61 +1570,16 @@ export default function OrderTracking() {
         }
 
         .timeline-luxe-shell {
-          background: linear-gradient(150deg, #f9fbff, #f4f7fc);
-          border: 1px solid #d8e1ee;
-          box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-        }
-
-        .timeline-head-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          flex-wrap: wrap;
+          background: rgba(60,60,70,0.5) !important;
+          border: 1.5px solid #d4af37 !important;
+          box-shadow: 0 12px 30px rgba(212,175,55,0.15) !important;
         }
 
         .timeline-main-title {
-          color: #111;
-          font-size: 17px;
-          letter-spacing: 0.5px;
-          font-weight: 800;
-        }
-
-        .timeline-head-meta {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .timeline-live-chip,
-        .timeline-count-chip {
-          border-radius: 999px;
-          min-height: 28px;
-          padding: 0 10px;
-          font-size: 11px;
-          font-weight: 800;
-          letter-spacing: 0.04em;
-          display: inline-flex;
-          align-items: center;
-        }
-
-        .timeline-live-chip.on {
-          background: #d7f7e6;
-          color: #106a3a;
-          border: 1px solid #98dfbb;
-        }
-
-        .timeline-live-chip.off {
-          background: #ffe3e7;
-          color: #9d1e37;
-          border: 1px solid #f1b3bf;
-        }
-
-        .timeline-count-chip {
-          background: #edf3fb;
-          color: #24466d;
-          border: 1px solid #c9d9ee;
+          color: #f8e8c7 !important;
+          font-size: 18px !important;
+          letter-spacing: 0.5px !important;
+          font-weight: 800 !important;
         }
 
         .timeline-track-wrap {
@@ -1345,92 +1587,62 @@ export default function OrderTracking() {
           padding-left: 20px;
         }
 
+        .timeline-track-wrap::before {
+          content: '';
+          position: absolute;
+          left: -17px;
+          top: 10px;
+          bottom: 10px;
+          width: 2px;
+          background: rgba(255,255,255,0.1);
+          border-radius: 999px;
+        }
+
         .timeline-event-card {
           position: relative;
           margin-bottom: 20px;
-          border: 1px solid #dbe4f1;
-          border-radius: 12px;
-          background: #fff;
-          padding: 10px 12px;
-          box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .timeline-event-card:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 10px 20px rgba(15, 23, 42, 0.09);
+          border: none;
+          border-radius: 0;
+          background: transparent;
+          padding: 2px 0 2px 6px;
+          box-shadow: none;
+          transition: none;
         }
 
         .timeline-event-card.active {
-          border-color: #d4af37;
-          box-shadow: 0 10px 22px rgba(212, 175, 55, 0.16);
+          background: linear-gradient(90deg, rgba(212, 175, 55, 0.12), transparent 75%);
         }
 
         .timeline-dot {
           position: absolute;
           left: -28px;
-          top: 12px;
+          top: 9px;
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          border: 3px solid white;
+          border: 3px solid #2d2d35;
+          background: #d4af37;
         }
 
         .timeline-line {
           position: absolute;
           left: -23px;
-          top: 24px;
+          top: 20px;
           width: 2px;
           height: calc(100% + 8px);
-          background: #e3e8f0;
-        }
-
-        .timeline-event-content {
-          min-width: 0;
-        }
-
-        .timeline-event-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          flex-wrap: wrap;
+          background: rgba(255,255,255,0.08);
         }
 
         .timeline-step-name {
-          color: #111;
-          font-size: 14px;
-          font-weight: 800;
-        }
-
-        .timeline-step-state {
-          border-radius: 999px;
-          min-height: 24px;
-          padding: 0 9px;
-          font-size: 10px;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          display: inline-flex;
-          align-items: center;
-        }
-
-        .timeline-step-state.done {
-          background: #e4f3ff;
-          color: #1f5f95;
-          border: 1px solid #b9d6f2;
-        }
-
-        .timeline-step-state.wait {
-          background: #f1f5f9;
-          color: #64748b;
-          border: 1px solid #d8e0ea;
+          color: #d4af37 !important;
+          font-size: 14px !important;
+          font-weight: 800 !important;
         }
 
         .timeline-step-text {
-          color: #677588;
-          font-size: 12px;
-          line-height: 1.45;
+          color: #b8a586 !important;
+          font-size: 12px !important;
+          line-height: 1.45 !important;
         }
 
         .timeline-info-chip {
@@ -1441,27 +1653,11 @@ export default function OrderTracking() {
           line-height: 1.35;
         }
 
-        .timeline-info-chip.delivery {
-          background: #e0f2fe;
-          color: #0c4a6e;
-          border: 1px solid #93c5fd;
-        }
-
-        .timeline-info-chip.admin {
-          background: #fef3c7;
-          color: #92400e;
-          border: 1px solid #f59e0b;
-        }
-
-        .timeline-time-row {
+        .timeline-event-time {
           margin-top: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          color: #6b7280;
+          color: #8b7355;
           font-size: 11px;
-          border-top: 1px dashed #e1e7ef;
+          border-top: 1px dashed #d4af3744;
           padding-top: 7px;
         }
 
@@ -1475,8 +1671,14 @@ export default function OrderTracking() {
 
         .delivery-luxe-card.delivered {
           border-color: #1f8f54;
-          background: linear-gradient(135deg, #f0fbf4, #e7f8ef);
-          box-shadow: 0 14px 34px rgba(31, 143, 84, 0.16);
+          background: linear-gradient(135deg, rgba(31,143,84,0.2), rgba(31,143,84,0.1));
+          box-shadow: 0 14px 34px rgba(31,143,84,0.16);
+        }
+
+        .delivery-luxe-card.expected {
+          border-color: #3b82f6;
+          background: linear-gradient(135deg, rgba(30,58,137,0.2), rgba(30,64,175,0.1));
+          box-shadow: 0 20px 50px rgba(59,130,246,0.2);
         }
 
         .delivery-icon {
@@ -1488,18 +1690,13 @@ export default function OrderTracking() {
           align-items: center;
           justify-content: center;
           font-size: 26px;
-          background: linear-gradient(135deg, #f9eed0, #f4dfac);
+          background: linear-gradient(135deg, #d4af37, #f5e6b3);
           box-shadow: inset 0 0 0 1px rgba(180, 136, 11, 0.2);
           flex-shrink: 0;
         }
 
-        .delivery-luxe-card.delivered .delivery-icon {
-          background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-          box-shadow: inset 0 0 0 1px rgba(31, 143, 84, 0.25);
-        }
-
         .delivery-kicker {
-          color: #7b652d;
+          color: #d4af37;
           font-size: 11px;
           letter-spacing: 0.6px;
           text-transform: uppercase;
@@ -1507,32 +1704,23 @@ export default function OrderTracking() {
           font-weight: 700;
         }
 
-        .delivery-luxe-card.delivered .delivery-kicker {
-          color: #1d7e4a;
-        }
-
         .delivery-headline {
           font-size: 20px;
           line-height: 1.35;
-          color: #5f4b1b;
+          color: #d4af37;
           font-weight: 800;
-        }
-
-        .delivery-luxe-card.delivered .delivery-headline {
-          color: #14532d;
-          font-size: 22px;
         }
 
         .delivery-copy {
           font-size: 13px;
-          color: #36534a;
+          color: #b8a586;
           line-height: 1.45;
           max-width: 560px;
         }
 
         .delivery-time {
           font-size: 15px;
-          color: #8b7355;
+          color: #d4af37;
           margin-left: 8px;
         }
 
@@ -1543,9 +1731,9 @@ export default function OrderTracking() {
         }
 
         .all-items-luxe {
-          background: linear-gradient(145deg, #f9fbff, #f6f8fc) !important;
-          border: 1px solid #d9e2ee !important;
-          box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+          background: rgba(60,60,70,0.5) !important;
+          border: 1.5px solid #d4af37 !important;
+          box-shadow: 0 12px 30px rgba(212,175,55,0.15) !important;
         }
 
         .items-count-pill {
@@ -1553,12 +1741,12 @@ export default function OrderTracking() {
           align-items: center;
           justify-content: center;
           min-height: 30px;
-          padding: 0 10px;
+          padding: 0 12px;
           border-radius: 999px;
-          background: linear-gradient(120deg, #0f4f89, #238d81);
-          color: #fff;
+          background: linear-gradient(120deg, #d4af37, #f5e6b3);
+          color: #1a1a1a;
           font-size: 12px;
-          font-weight: 700;
+          font-weight: 800;
           letter-spacing: 0.4px;
         }
 
@@ -1574,15 +1762,15 @@ export default function OrderTracking() {
           gap: 10px;
           padding: 10px;
           border-radius: 13px;
-          background: #fff;
-          border: 1px solid #dbe5f2;
+          background: rgba(80,80,90,0.7);
+          border: 1px solid #d4af3744;
           box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .order-item-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+          box-shadow: 0 12px 24px rgba(212,175,55,0.15);
         }
 
         .order-item-image-wrap {
@@ -1590,8 +1778,8 @@ export default function OrderTracking() {
           height: 70px;
           border-radius: 12px;
           overflow: hidden;
-          background: #fff;
-          border: 1px solid #cbd5e1;
+          background: #555;
+          border: 1px solid #666;
           box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
           flex-shrink: 0;
         }
@@ -1602,8 +1790,8 @@ export default function OrderTracking() {
           justify-content: center;
           font-size: 11px;
           font-weight: 600;
-          color: #64748b;
-          background: #f8fafc;
+          color: #aaa;
+          background: #555;
         }
 
         .order-item-image {
@@ -1619,7 +1807,7 @@ export default function OrderTracking() {
 
         .order-item-name {
           margin: 0;
-          color: #111;
+          color: #f8e8c7;
           font-size: 14px;
           font-weight: 700;
           line-height: 1.35;
@@ -1627,21 +1815,21 @@ export default function OrderTracking() {
 
         .order-item-description {
           margin: 5px 0 0;
-          color: #6b7280;
+          color: #b8a586;
           font-size: 12px;
           line-height: 1.35;
         }
 
         .order-item-meta {
           margin: 5px 0 0;
-          color: #475569;
+          color: #8b7355;
           font-size: 12px;
           font-weight: 600;
         }
 
         .order-item-line-total {
           margin: 3px 0 0;
-          color: #14532d;
+          color: #d4af37;
           font-size: 12px;
           font-weight: 700;
         }
@@ -1712,6 +1900,10 @@ export default function OrderTracking() {
             font-size: 24px;
           }
 
+          .finance-method-value {
+            font-size: 30px;
+          }
+
           .timeline-track-wrap {
             padding-left: 16px;
           }
@@ -1731,8 +1923,16 @@ export default function OrderTracking() {
             gap: 3px;
           }
 
+          .timeline-track-wrap::before {
+            left: -13px;
+          }
+
           .timeline-event-card {
             padding: 9px 10px;
+          }
+
+          .timeline-event-time {
+            font-size: 10px;
           }
         }
 

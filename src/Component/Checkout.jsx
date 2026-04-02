@@ -5,6 +5,7 @@ import axios from 'axios'
 import { getUser } from "../Store/ActionCreaters/UserActionCreators"
 import { clearCart, getCart } from "../Store/ActionCreaters/CartActionCreators"
 import BuyerProfile from './BuyerProfile'
+import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import { BASE_URL } from '../constants'
@@ -26,6 +27,7 @@ export default function Checkout() {
 
     const users = useSelector((state) => state.UserStateData)
     const carts = useSelector((state) => (state.CartStateData && state.CartStateData.items) ? state.CartStateData.items : [])
+    const { membershipType } = useMembership()
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -90,7 +92,7 @@ export default function Checkout() {
                 const linePrice = Number(i.price ?? i.product?.finalprice ?? i.product?.price ?? 0)
                 sum += (linePrice * lineQty)
             })
-            const ship = (sum > 0 && sum < 1000) ? 150 : 0
+            const ship = membershipType === 'Elite' ? 0 : ((sum > 0 && sum < 1000) ? 150 : 0)
 
             const savedCouponRaw = localStorage.getItem('appliedCoupon')
             let couponDiscount = 0
@@ -153,6 +155,7 @@ export default function Checkout() {
                 localStorage.setItem('lastPlacedOrder', JSON.stringify(placedOrder))
                 localStorage.removeItem('appliedCoupon')
                 dispatch(clearCart({ userid }))
+                window.dispatchEvent(new Event('membership-updated'))
                 navigate("/confirmation", { state: { order: placedOrder } })
                 return
             }
@@ -166,7 +169,7 @@ export default function Checkout() {
         }
     }
 
-    useEffect(() => { getAPIData() }, [users.length, carts.length])
+    useEffect(() => { getAPIData() }, [users.length, carts.length, membershipType])
 
     return (
         <div className="checkout-page-shell" style={{ minHeight: "100vh" }}>

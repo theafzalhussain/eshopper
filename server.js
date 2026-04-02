@@ -193,6 +193,12 @@ const ALLOWED_ORDER_STATUS = [
     'Refund Initiated',
     'Refund Completed'
 ];
+const getMembershipTypeFromOrders = (totalOrders = 0) => {
+    const orders = Number(totalOrders || 0);
+    if (orders >= 10) return 'Elite';
+    if (orders >= 5) return 'Gold';
+    return 'Silver';
+};
 const normalizeOrderStatus = (s = '') => {
         const v = String(s).trim().toLowerCase();
         if (v === 'ordered') return 'Ordered';
@@ -2056,7 +2062,15 @@ app.post('/api/cart/clear/:userid', async (req, res) => {
     try {
         const userid = String(req.params.userid || '').trim();
         if (!userid) return res.status(400).json({ message: 'userid is required' });
-        await Cart.deleteMany({ userid });
+
+        const clearFilters = [{ userid }];
+        if (mongoose.Types.ObjectId.isValid(userid)) {
+            const userObjectId = new mongoose.Types.ObjectId(userid);
+            clearFilters.push({ user: userObjectId });
+            clearFilters.push({ user: userid });
+        }
+
+        await Cart.deleteMany({ $or: clearFilters });
         return res.json({ result: 'Done' });
     } catch (e) {
         return res.status(500).json({ message: 'Failed to clear cart' });
@@ -2192,6 +2206,11 @@ const placeOrderHandler = async (req, res) => {
             orderDate
         });
 
+        const nextTotalOrders = Number(user.totalOrders || 0) + 1;
+        user.totalOrders = nextTotalOrders;
+        user.membershipType = getMembershipTypeFromOrders(nextTotalOrders);
+        await user.save();
+
         await Checkout.create({
             userid: userId,
             paymentmode: paymentMethod || 'COD',
@@ -2203,7 +2222,14 @@ const placeOrderHandler = async (req, res) => {
             products: cleanProducts
         });
 
-        await Cart.deleteMany({ userid: userId });
+        const clearFilters = [{ userid: String(userId) }];
+        if (mongoose.Types.ObjectId.isValid(String(userId))) {
+            const userObjectId = new mongoose.Types.ObjectId(String(userId));
+            clearFilters.push({ user: userObjectId });
+            clearFilters.push({ user: String(userId) });
+        }
+
+        await Cart.deleteMany({ $or: clearFilters });
 
         let invoiceBuffer = null;
         if (FEATURE_INVOICE_SYSTEM) {
@@ -2335,6 +2361,80 @@ const placeOrderHandler = async (req, res) => {
 
 app.post('/api/place-order', placeOrderHandler);
 app.post('/api/orders', placeOrderHandler);
+
+app.get('/api/membership/check', async (req, res) => {
+    try {
+        const userId = req.query.userId || req.query.id || req.query.userid;
+        if (!userId) {
+            return res.status(400).json({ success: false, message: 'User ID required.' });
+        }
+
+        const user = await User.findById(userId).select('membershipType totalOrders name email');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        // Reconcile legacy users whose totalOrders was not backfilled from historical orders.
+        const storedOrders = Number(user.totalOrders || 0);
+        const actualOrders = await Order.countDocuments({ userid: String(user._id) });
+        const totalOrders = Math.max(storedOrders, Number(actualOrders || 0));
+        const membershipType = getMembershipTypeFromOrders(totalOrders);
+
+        if (totalOrders !== storedOrders || user.membershipType !== membershipType) {
+            user.totalOrders = totalOrders;
+            user.membershipType = membershipType;
+            await user.save();
+        }
+
+        res.json({
+            success: true,
+            userId: user._id,
+            name: user.name,
+            email: user.email,
+            membershipType,
+            totalOrders
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Failed to fetch membership.' });
+    }
+});
+
+app.put('/api/admin/users/:id/membership', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { membershipType } = req.body;
+        if (!id || !membershipType) {
+            return res.status(400).json({ success: false, message: 'User ID and membershipType required.' });
+        }
+
+        const normalizedType = String(membershipType).trim();
+        if (!['Silver', 'Gold', 'Elite'].includes(normalizedType)) {
+            return res.status(400).json({ success: false, message: 'Invalid membership type.' });
+        }
+
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+        user.membershipType = normalizedType;
+        if (normalizedType === 'Elite' && Number(user.totalOrders || 0) < 10) {
+            user.totalOrders = 10;
+        } else if (normalizedType === 'Gold' && Number(user.totalOrders || 0) < 5) {
+            user.totalOrders = 5;
+        }
+        await user.save();
+
+        res.json({
+            success: true,
+            user: {
+                ...user.toJSON(),
+                membershipType: user.membershipType,
+                totalOrders: user.totalOrders
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ success: false, message: 'Failed to update membership.' });
+    }
+});
 
 // ==================== COMPATIBILITY API ALIASES ====================
 // These aliases keep legacy frontend calls working without 404 errors.
