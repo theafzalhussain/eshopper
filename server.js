@@ -2642,7 +2642,7 @@ app.get('/api/orders/:userId', async (req, res) => {
         // 🔴 FETCH FROM ORDER COLLECTION (primary source)
         const orders = await Order.find({ userid: userId })
             .sort({ updatedAt: -1, createdAt: -1 })
-            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
+            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount')
             .lean();
 
         // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
@@ -2656,10 +2656,13 @@ app.get('/api/orders/:userId', async (req, res) => {
                 orders: checkoutOrders.map((item) => ({
                     orderId: item.orderId || `CHECKOUT-${item._id}`,
                     orderStatus: item.orderstatus || 'Order Placed',
+                    totalAmount: Number(item.totalAmount || 0),
+                    shippingAmount: Number(item.shippingAmount || 0),
                     finalAmount: Number(item.finalAmount || 0),
                     paymentStatus: item.paymentstatus || 'Pending',
                     paymentMethod: item.paymentmode || 'COD',
-                    updatedAt: item.updatedAt || new Date()
+                    updatedAt: item.updatedAt || new Date(),
+                    orderItems: Array.isArray(item.products) ? item.products : []
                 }))
             });
         }
@@ -2669,10 +2672,13 @@ app.get('/api/orders/:userId', async (req, res) => {
             orders: orders.map((item) => ({
                 orderId: item.orderId,
                 orderStatus: item.orderStatus || 'Order Placed',
+                totalAmount: Number(item.totalAmount || 0),
+                shippingAmount: Number(item.shippingAmount || 0),
                 finalAmount: Number(item.finalAmount || 0),
                 paymentStatus: item.paymentStatus || 'Pending',
                 paymentMethod: item.paymentMethod || 'COD',
-                updatedAt: item.updatedAt || item.createdAt || new Date()
+                updatedAt: item.updatedAt || item.createdAt || new Date(),
+                orderItems: Array.isArray(item.products) ? item.products : []
             }))
         });
     } catch (e) {

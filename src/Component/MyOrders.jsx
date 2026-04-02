@@ -268,14 +268,16 @@ const CSS = `
 .mop2-prog-track{display:flex;align-items:flex-start;justify-content:space-between;position:relative;padding-top:0;}
 .mop2-prog-line{position:absolute;top:5px;left:5px;right:5px;height:2px;background:rgba(201,168,76,0.1);z-index:0;}
 .mop2-prog-fill{position:absolute;top:5px;left:5px;height:2px;background:linear-gradient(90deg,var(--teal),var(--gold));z-index:1;border-radius:1px;transition:width 0.7s cubic-bezier(.25,.46,.45,.94);}
-.mop2-prog-step{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:2;}
-.mop2-prog-dot{width:12px;height:12px;border-radius:50%;border:2px solid rgba(201,168,76,0.15);background:var(--white);transition:all 0.3s;}
-.mop2-prog-dot.done{background:var(--teal);border-color:var(--teal);box-shadow:0 0 0 3px rgba(26,140,140,0.12);}
+.mop2-prog-step{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:2;}
+.mop2-prog-dot{width:9px;height:9px;border-radius:50%;border:1.5px solid rgba(201,168,76,0.15);background:var(--white);transition:all 0.3s;}
+.mop2-prog-dot.done{background:var(--teal);border-color:var(--teal);box-shadow:0 0 0 2px rgba(26,140,140,0.12);}
 .mop2-prog-dot.cur{background:var(--gold);border-color:var(--gold);animation:curpulse 2.2s infinite;}
-@keyframes curpulse{0%,100%{box-shadow:0 0 0 4px rgba(201,168,76,0.2);}50%{box-shadow:0 0 0 8px rgba(201,168,76,0.05);}}
-.mop2-prog-lbl2{font-size:9px;color:var(--ash);text-align:center;max-width:52px;line-height:1.2;font-weight:500;}
+@keyframes curpulse{0%,100%{box-shadow:0 0 0 3px rgba(201,168,76,0.2);}50%{box-shadow:0 0 0 6px rgba(201,168,76,0.05);}}
+.mop2-prog-lbl2{font-size:8px;color:var(--ash);text-align:center;max-width:48px;line-height:1.15;font-weight:500;}
 .mop2-prog-lbl2.done{color:var(--teal);font-weight:600;}
 .mop2-prog-lbl2.cur{color:var(--gold);font-weight:700;}
+.mop2-prog-time{font-size:8px;color:var(--ash);margin-top:1px;opacity:0.7;}
+.mop2-prog-time.done{color:var(--teal);opacity:0.9;font-weight:600;}
 
 /* ACTIONS */
 .mop2-actions{display:flex;gap:12px;flex-wrap:wrap;}
@@ -341,10 +343,17 @@ const ST = {
 // ═══════════════════════════════════════════════════════════════════
 // PROGRESS
 // ═══════════════════════════════════════════════════════════════════
-function Progress({ status }) {
+function Progress({ status, updatedAt }) {
   const norm   = normalizeStatus(status)
   const curIdx = STEPS.indexOf(norm)
   const pct    = curIdx < 0 ? 0 : Math.round((curIdx / (STEPS.length - 1)) * 100)
+
+  const getDeliveryTime = () => {
+    if (!updatedAt) return ''
+    const dt = new Date(updatedAt)
+    return dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+  }
+
   return (
     <div className="mop2-prog-wrap">
       <div className="mop2-prog-lbl">Order Progress</div>
@@ -352,11 +361,14 @@ function Progress({ status }) {
         <div className="mop2-prog-line" />
         <div className="mop2-prog-fill" style={{ width:`${pct}%` }} />
         {STEPS.map((s, i) => {
-          const done = i < curIdx, cur = i === curIdx
+          const done = i < curIdx, cur = i === curIdx, isDelivered = s === 'Delivered' && done
           return (
             <div className="mop2-prog-step" key={s}>
               <div className={`mop2-prog-dot${done?' done':cur?' cur':''}`} />
               <div className={`mop2-prog-lbl2${done?' done':cur?' cur':''}`}>{s}</div>
+              {isDelivered && (
+                <div className="mop2-prog-time done">{getDeliveryTime()}</div>
+              )}
             </div>
           )
         })}
@@ -402,15 +414,31 @@ function OrderCard({ item, idx, navigate, onWA }) {
 
       {/* BODY */}
       <div className="mop2-card-body">
-        {/* Meta */}
-        <div className="mop2-meta-row">
-          <div className="mop2-meta-cell">
+        {/* Price Breakdown */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1px', marginBottom:'20px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.1)', borderRadius:'6px', overflow:'hidden' }}>
+          {/* Left: Amount Paid & Payment Method */}
+          <div style={{ background:'var(--white)', padding:'16px 18px' }}>
             <div className="mop2-meta-lbl">Amount Paid</div>
             <div className="mop2-meta-val gold">₹{Number(item.finalAmount||0).toLocaleString('en-IN')}</div>
+            <div style={{ marginTop:'12px', paddingTop:'12px', borderTop:'1px solid rgba(201,168,76,0.1)' }}>
+              <div className="mop2-meta-lbl">Payment Method</div>
+              <div className="mop2-meta-val">{item.paymentMethod || 'Cash on Delivery'}</div>
+            </div>
           </div>
-          <div className="mop2-meta-cell">
-            <div className="mop2-meta-lbl">Payment Method</div>
-            <div className="mop2-meta-val">{item.paymentMethod || 'Cash on Delivery'}</div>
+          {/* Right: Subtotal, Shipping, Total */}
+          <div style={{ background:'var(--white)', padding:'16px 18px' }}>
+            <div style={{ marginBottom:'10px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--ash)', fontWeight:'700' }}>Subtotal</span>
+              <span style={{ fontSize:'14px', fontWeight:'600', color:'var(--ink)' }}>₹{Number(item.totalAmount||0).toLocaleString('en-IN')}</span>
+            </div>
+            <div style={{ marginBottom:'10px', paddingBottom:'10px', borderBottom:'1px dashed rgba(201,168,76,0.2)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--ash)', fontWeight:'700' }}>Shipping</span>
+              <span style={{ fontSize:'14px', fontWeight:'600', color:'var(--gold-dk)' }}>₹{Number(item.shippingAmount||0).toLocaleString('en-IN')}</span>
+            </div>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--ash)', fontWeight:'700' }}>Total</span>
+              <span style={{ fontSize:'18px', fontWeight:'700', color:'var(--gold-dk)' }}>₹{Number(item.finalAmount||0).toLocaleString('en-IN')}</span>
+            </div>
           </div>
         </div>
 
@@ -432,7 +460,7 @@ function OrderCard({ item, idx, navigate, onWA }) {
         )}
 
         {/* Progress */}
-        <Progress status={item.orderStatus} />
+        <Progress status={item.orderStatus} updatedAt={item.updatedAt} />
 
         {/* Buttons */}
         <div className="mop2-actions" onClick={e => e.stopPropagation()}>
