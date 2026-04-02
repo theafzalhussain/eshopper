@@ -1,11 +1,12 @@
 // Add item to cart (POST /api/cart)
 exports.addToCart = async (req, res) => {
     try {
-        const { userId, productId, quantity } = req.body;
+        const { userId, productId, quantity, price } = req.body;
         if (!userId || !productId) {
             return res.status(400).json({ success: false, message: 'User ID and Product ID required.' });
         }
         const qty = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
+        const normalizedPrice = Number(price || 0);
         let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
         if (!cart) {
             cart = await Cart.create({ user: new mongoose.Types.ObjectId(userId), items: [] });
@@ -14,8 +15,9 @@ exports.addToCart = async (req, res) => {
         const existingItem = cart.items.find(item => item.product.toString() === productId);
         if (existingItem) {
             existingItem.quantity += qty;
+            if (normalizedPrice > 0) existingItem.price = normalizedPrice;
         } else {
-            cart.items.push({ product: productId, quantity: qty });
+            cart.items.push({ product: productId, quantity: qty, price: normalizedPrice > 0 ? normalizedPrice : 0 });
         }
         await cart.save();
         cart = await Cart.findById(cart._id).populate('items.product');
@@ -30,7 +32,7 @@ exports.addToCart = async (req, res) => {
                 name: item.product?.name || '',
                 color: item.product?.color || '',
                 size: item.product?.size || '',
-                price: item.product?.finalprice || item.product?.price || 0,
+                price: Number(item.price || item.product?.finalprice || item.product?.price || 0),
                 quantity: item.quantity,
                 pic: item.product?.pic1 || '',
             })),
@@ -259,7 +261,7 @@ exports.getCart = async (req, res) => {
                 name: item.product?.name || '',
                 color: item.product?.color || '',
                 size: item.product?.size || '',
-                price: item.product?.finalprice || item.product?.price || 0,
+                price: Number(item.price || item.product?.finalprice || item.product?.price || 0),
                 quantity: item.quantity,
                 pic: item.product?.pic1 || '',
             })),
@@ -366,16 +368,18 @@ exports.getOrderSummary = async (req, res) => {
     try {
         const userId = req.user?._id || req.query.userId;
         if (!userId) return res.status(400).json({ success: false, message: 'User ID required.' });
+        const user = await require('../models/User').findById(userId).select('membershipType totalOrders');
         let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
         if (!cart) return res.json({ success: true, summary: { subtotal: 0, discount: 0, shipping: 0, gst: 0, grandTotal: 0 } });
         let subtotal = 0;
         cart.items.forEach(item => {
-            subtotal += ((item.product?.finalprice || item.product?.price || 0) * item.quantity);
+            subtotal += ((item.price || item.product?.finalprice || item.product?.price || 0) * item.quantity);
         });
         // Luxury logic: 10% discount if subtotal > 2000
         let discount = subtotal > 2000 ? Math.round(subtotal * 0.1) : 0;
-        // Shipping: FREE if subtotal >= 2000, else 150 if subtotal > 0
-        let shipping = subtotal >= 2000 ? 0 : (subtotal > 0 ? 150 : 0);
+        // Shipping: FREE for Elite users, otherwise free if subtotal >= 2000, else 150
+        const isElite = String(user?.membershipType || '').toLowerCase() === 'elite';
+        let shipping = isElite ? 0 : (subtotal >= 2000 ? 0 : (subtotal > 0 ? 150 : 0));
         // GST: 5% on (subtotal - discount)
         let gst = Math.round((subtotal - discount) * 0.05);
         let grandTotal = subtotal - discount + shipping + gst;

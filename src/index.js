@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import App from './Component/App';
 import { Provider } from 'react-redux';
 import Store from "./Store/Store"
+import { MembershipProvider } from './Component/MembershipContext';
 
 // 🔇 GLOBAL ERROR SUPPRESSION FOR HARMLESS THIRD-PARTY ERRORS
 const originalConsoleError = console.error;
@@ -25,7 +26,9 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
    <Provider store={Store}>
-   <App />
+    <MembershipProvider>
+     <App />
+    </MembershipProvider>
    </Provider>
   </React.StrictMode>
 );

@@ -42,6 +42,44 @@ const normalizeStatus = (value = '') => {
   return 'Ordered'
 }
 
+const formatMoney = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`
+
+const resolveItemImage = (item = {}) => {
+  const raw =
+    item?.image ||
+    item?.pic ||
+    item?.pic1 ||
+    item?.thumbnail ||
+    item?.productid?.pic1 ||
+    ''
+
+  if (!raw || typeof raw !== 'string') return ''
+  if (raw.startsWith('http') || raw.startsWith('data:')) return raw
+  return `${BASE_URL}/productimages/${raw}`
+}
+
+const formatDateTimeShort = (value) => {
+  if (!value) return 'Pending'
+  const dt = new Date(value)
+  if (Number.isNaN(dt.getTime())) return 'Pending'
+  return dt.toLocaleString('en-IN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const formatDeliverySchedule = (deliverySchedule = null) => {
+  if (!deliverySchedule) return ''
+  const baseDate = deliverySchedule?.date || deliverySchedule?.estimatedDelivery
+  if (!baseDate) return ''
+  const dateLabel = formatDateTimeShort(baseDate)
+  const timeLabel = deliverySchedule?.time ? ` • ${deliverySchedule.time}` : ''
+  return `${dateLabel}${timeLabel}`
+}
+
 export default function OrderTracking() {
   const { orderId } = useParams()
   const navigate = useNavigate()
@@ -64,23 +102,85 @@ export default function OrderTracking() {
     return []
   }, [order])
 
-  const primaryItem = useMemo(() => orderItems[0] || null, [orderItems])
+  const orderItemsDetailed = useMemo(
+    () => orderItems.map((item, index) => {
+      const quantityVal = Number(item?.quantity || item?.qty || item?.count || 1)
+      const quantity = Number.isFinite(quantityVal) && quantityVal > 0 ? quantityVal : 1
 
-  const primaryImage = useMemo(() => {
-    return (
-      primaryItem?.image ||
-      primaryItem?.pic ||
-      primaryItem?.pic1 ||
-      primaryItem?.thumbnail ||
-      ''
-    )
-  }, [primaryItem])
+      const priceVal = Number(
+        item?.price ||
+        item?.finalprice ||
+        item?.salePrice ||
+        item?.baseprice ||
+        item?.productid?.finalprice ||
+        item?.productid?.baseprice ||
+        0
+      )
+      const unitPrice = Number.isFinite(priceVal) ? priceVal : 0
 
-  const timelineMap = useMemo(() => {
+      const lineTotalVal = Number(item?.totalPrice || item?.total || unitPrice * quantity)
+      const lineTotal = Number.isFinite(lineTotalVal) ? lineTotalVal : unitPrice * quantity
+
+      return {
+        id: String(item?._id || item?.id || item?.productid?._id || index),
+        name: item?.title || item?.name || item?.productName || item?.productid?.name || `Item ${index + 1}`,
+        description: item?.description || item?.productid?.description || '',
+        quantity,
+        unitPrice,
+        lineTotal,
+        image: resolveItemImage(item)
+      }
+    }),
+    [orderItems]
+  )
+
+  const totalItemCount = useMemo(
+    () => orderItemsDetailed.reduce((sum, item) => sum + item.quantity, 0),
+    [orderItemsDetailed]
+  )
+
+  const subtotalAmount = useMemo(() => {
+    const fromOrder = Number(order?.totalAmount)
+    if (Number.isFinite(fromOrder) && fromOrder > 0) return fromOrder
+    return orderItemsDetailed.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0)
+  }, [order?.totalAmount, orderItemsDetailed])
+
+  const shippingAmount = useMemo(() => {
+    const parsed = Number(order?.shippingAmount || 0)
+    return Number.isFinite(parsed) ? parsed : 0
+  }, [order?.shippingAmount])
+
+  const discountAmount = useMemo(() => {
+    const parsed = Number(order?.couponDiscount || 0)
+    return Number.isFinite(parsed) ? parsed : 0
+  }, [order?.couponDiscount])
+
+  const finalAmount = useMemo(() => {
+    const parsed = Number(order?.finalAmount)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+    return Math.max(subtotalAmount + shippingAmount - discountAmount, 0)
+  }, [order?.finalAmount, subtotalAmount, shippingAmount, discountAmount])
+
+  const paymentStatusLabel = useMemo(() => {
+    const raw = String(order?.paymentStatus || '').toLowerCase()
+    if (raw === 'paid') return 'Paid'
+    if (raw === 'pending') return 'Pending'
+    if (raw === 'failed') return 'Failed'
+    return order?.paymentStatus || 'Pending'
+  }, [order?.paymentStatus])
+
+  const timelineEventMap = useMemo(() => {
     const map = {}
     ;(statusTimeline || []).forEach((entry) => {
-      const normalized = normalizeStatus(entry?.status)
-      if (!map[normalized]) map[normalized] = entry?.timestamp
+      const normalized = normalizeStatus(entry?.status || '')
+      const entryTime = new Date(entry?.timestamp || 0).getTime()
+      const existingTime = new Date(map[normalized]?.timestamp || 0).getTime()
+      if (!map[normalized] || entryTime >= existingTime) {
+        map[normalized] = {
+          ...entry,
+          status: normalized
+        }
+      }
     })
     return map
   }, [statusTimeline])
@@ -90,9 +190,10 @@ export default function OrderTracking() {
       step,
       index,
       isReached: index <= activeIndex,
-      timestamp: timelineMap[step]
+      timestamp: timelineEventMap[step]?.timestamp,
+      details: timelineEventMap[step] || null
     })),
-    [activeIndex, timelineMap]
+    [activeIndex, timelineEventMap]
   )
 
   const showStatusToast = (nextStatus) => {
@@ -390,7 +491,9 @@ export default function OrderTracking() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f6f6f4', padding: '100px 16px 40px' }}>
+    <div className="tracking-luxe-page" style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 25%, #1f1f1f 50%, #252525 75%, #1a1a1a 100%)', padding: '100px 16px 40px', position: 'relative', overflow: 'hidden' }}>
+      {/* Premium animated background effect */}
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'radial-gradient(circle at 20% 50%, rgba(212,175,55,0.05) 0%, transparent 50%)', pointerEvents: 'none', zIndex: 0 }} />
       {/* ENHANCED MULTIPLE TOASTS DISPLAY */}
       <div style={{ position: 'fixed', top: 24, right: 20, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {toasts.map((toast, index) => (
@@ -446,123 +549,173 @@ export default function OrderTracking() {
         ))}
       </div>
 
-      <div className="container" style={{ maxWidth: 900 }}>
-        {/* HEADER */}
-        <div className="mb-5 text-center">
-          <h1 className="font-weight-bold mb-2" style={{ fontSize: '32px', letterSpacing: '.5px', color: '#111' }}>
-            ✨ Boutique Luxe Order Tracking
-          </h1>
-          <p className="mb-1" style={{ color: '#333', fontWeight: 700, fontSize: '16px', letterSpacing: '.3px' }}>
-            Order #{orderId}
-          </p>
-          <p style={{ color: '#666', fontSize: '15px' }}>
-            Track your premium order in real-time
-          </p>
+      <div className="container" style={{ maxWidth: 900, position: 'relative', zIndex: 10 }}>
+        {/* LUXURY HEADER */}
+        <div className="mb-5 text-center premium-header">
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="font-weight-bold mb-2 luxury-title"
+            style={{ fontSize: '40px', letterSpacing: '1.2px', color: '#d4af37', textShadow: '0 2px 20px rgba(212,175,55,0.3)', fontFamily: '"Playfair Display", serif' }}
+          >
+            ✨ BOUTIQUE LUXE
+          </motion.h1>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            style={{ height: '3px', width: '120px', background: 'linear-gradient(90deg, #d4af37, rgba(212,175,55,0.3))', margin: '12px auto 16px' }}
+          />
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.5 }}
+            className="mb-1"
+            style={{ color: '#f8e8c7', fontWeight: 700, fontSize: '18px', letterSpacing: '0.3px' }}
+          >
+            Order Tracking #{orderId}
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            style={{ color: '#b8a586', fontSize: '15px', letterSpacing: '0.5px' }}
+          >
+            Premium Real-Time Delivery Experience
+          </motion.p>
         </div>
 
-        {/* MAIN CARD */}
+        {/* MAIN CARD - ULTRA PREMIUM DARK THEME */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="p-4 p-md-5 shadow-lg rounded-3xl bg-white"
-          style={{ 
-            border: '1.5px solid rgba(212,175,55,0.2)',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
-            backdropFilter: 'blur(8px)',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95))',
-            position: 'relative'
+          transition={{ duration: 0.6 }}
+          className="p-4 p-md-5 shadow-lg rounded-3xl bg-white tracking-main-card premium-card"
+          style={{
+            border: '2px solid #d4af37',
+            boxShadow: '0 40px 80px rgba(212,175,55,0.25), 0 0 60px rgba(212,175,55,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(20px)',
+            background: 'linear-gradient(135deg, rgba(35,35,40,0.95) 0%, rgba(40,40,50,0.98) 50%, rgba(35,35,40,0.95) 100%)',
+            position: 'relative',
+            color: '#f8e8c7'
           }}
         >
-          {/* ORDER INFO - PREMIUM LAYOUT WITH ENHANCED DETAILS */}
-          <div className="p-4 rounded-xl mb-4" style={{ background: 'linear-gradient(135deg, #fafaf8, #f9f7f4)', border: '2px solid #d4af37' }}>
+          {/* ORDER INFO - ULTRA PREMIUM DARK LAYOUT */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="p-4 rounded-xl mb-4 order-finance-luxe-card"
+            style={{
+              background: 'linear-gradient(135deg, rgba(60,60,70,0.8) 0%, rgba(55,55,65,0.8) 100%)',
+              border: '1.5px solid #d4af37',
+              boxShadow: '0 20px 50px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.05)'
+            }}
+          >
             <div className="row">
-              <div className="col-md-6 mb-3 mb-md-0">
-                <div className="d-flex flex-column">
-                  <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase' }}>Payment Status</p>
-                  <p className="font-weight-bold mb-3" style={{ fontSize: '14px', color: order?.paymentStatus === 'Paid' ? '#27ae60' : '#ff9500' }}>
-                    {order?.paymentStatus === 'Paid' ? '✅ Paid' : order?.paymentStatus === 'Pending' ? '⏳ Pending' : order?.paymentStatus}
-                  </p>
-                  <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase' }}>Payment Method</p>
-                  <p className="font-weight-bold" style={{ fontSize: '14px', color: '#2c2c2c' }}>
-                    {order?.paymentMethod || 'N/A'}
-                  </p>
+              <div className="col-md-7 mb-3 mb-md-0">
+                <div className="d-flex flex-column payment-core-wrap">
+                  <div className="finance-block">
+                    <p className="finance-kicker" style={{ color: '#d4af37' }}>Payment Status</p>
+                    <span className={`payment-status-chip status-${String(paymentStatusLabel).toLowerCase()}`}>
+                      <span className="chip-dot" />
+                      {paymentStatusLabel === 'Paid' ? 'Paid' : paymentStatusLabel === 'Pending' ? 'Pending' : paymentStatusLabel}
+                    </span>
+                  </div>
+
+                  <div className="finance-block mt-3">
+                    <p className="finance-kicker" style={{ color: '#d4af37' }}>Payment Method</p>
+                    <p className="finance-method-value mb-0" style={{ color: '#d4af37', fontSize: '28px' }}>{order?.paymentMethod || 'N/A'}</p>
+                  </div>
                 </div>
               </div>
-              <div className="col-md-6 text-md-right">
-                <div className="d-flex flex-column align-items-md-end">
-                  {order?.totalAmount && (
-                    <>
-                      <p className="text-muted small mb-1" style={{ fontSize: '11px' }}>Subtotal</p>
-                      <p className="mb-2" style={{ fontSize: '13px', color: '#666' }}>₹{Number(order.totalAmount).toLocaleString('en-IN')}</p>
-                    </>
+              <div className="col-md-5 text-md-right">
+                <div className="d-flex flex-column align-items-md-end finance-amount-panel" style={{ background: 'rgba(70,70,80,0.6)', border: '1.5px solid #d4af37', boxShadow: '0 12px 30px rgba(212,175,55,0.15)' }}>
+                  <div className="finance-amount-row" style={{ color: '#b8a586' }}>
+                    <span>Subtotal</span>
+                    <strong style={{ color: '#f8e8c7' }}>{formatMoney(subtotalAmount)}</strong>
+                  </div>
+                  <div className="finance-amount-row" style={{ color: '#b8a586' }}>
+                    <span>Shipping</span>
+                    <strong style={{ color: '#f8e8c7' }}>{formatMoney(shippingAmount)}</strong>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div className="finance-amount-row discount" style={{ color: '#1f8f54' }}>
+                      <span>Coupon Discount</span>
+                      <strong style={{ color: '#4ade80' }}>- {formatMoney(discountAmount)}</strong>
+                    </div>
                   )}
-                  {order?.shippingAmount > 0 && (
-                    <>
-                      <p className="text-muted small mb-1" style={{ fontSize: '11px' }}>Shipping</p>
-                      <p className="mb-2" style={{ fontSize: '13px', color: '#666' }}>₹{Number(order.shippingAmount).toLocaleString('en-IN')}</p>
-                    </>
-                  )}
-                  {order?.finalAmount && (
-                    <>
-                      <hr style={{ margin: '8px 0', borderColor: '#d4af37', borderWidth: '1.5px' }} />
-                      <p className="text-muted small mb-1" style={{ fontSize: '11px', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount</p>
-                      <p className="font-weight-bold" style={{ fontSize: '22px', background: 'linear-gradient(135deg, #d4af37, #b8860b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                        ₹{Number(order.finalAmount).toLocaleString('en-IN')}
-                      </p>
-                    </>
-                  )}
+                  <div className="finance-amount-row total" style={{ borderTopColor: '#d4af3766' }}>
+                    <span style={{ color: '#b8a586' }}>Total Amount</span>
+                    <strong style={{ background: 'linear-gradient(135deg, #d4af37, #f5e6b3)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{formatMoney(finalAmount)}</strong>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* ESTIMATED DELIVERY - ENHANCED WITH SMART DATE FORMATTING */}
-          {getDeliveryInfo && (
+          {/* DELIVERY SECTION - EXPECTED OR DELIVERED PREMIUM MESSAGE */}
+          {status === 'Delivered' ? (
             <motion.div
-              key={getDeliveryInfo.date} // Key ensures re-render on date change
+              initial={{ opacity: 0, y: 10, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.15, type: 'spring', stiffness: 200 }}
+              className="p-4 rounded-xl mb-4 delivery-luxe-card delivered"
+              style={{ background: 'linear-gradient(135deg, rgba(31,143,84,0.2), rgba(31,143,84,0.1))', border: '1.5px solid #1f8f54', boxShadow: '0 20px 50px rgba(31,143,84,0.2)' }}
+            >
+              <div className="d-flex align-items-start align-items-md-center">
+                <div className="delivery-icon" style={{ background: 'linear-gradient(135deg, rgba(31,143,84,0.3), rgba(79,233,136,0.2))', boxShadow: 'inset 0 0 0 1px rgba(31,143,84,0.5)' }}>✅</div>
+                <div>
+                  <p className="delivery-kicker" style={{ color: '#4ade80' }}>Delivery Completed</p>
+                  <p className="delivery-headline mb-1" style={{ color: '#4ade80', fontSize: '24px' }}>
+                    Your order has been successfully delivered.
+                  </p>
+                  <p className="delivery-copy mb-1" style={{ color: '#b8a586' }}>
+                    Thank you for shopping with Boutique Luxe. We hope your premium experience was exceptional.
+                  </p>
+                  <p className="delivery-meta mb-0" style={{ color: '#8b7355' }}>
+                    Delivered on {new Date(order?.updatedAt || Date.now()).toLocaleDateString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                    {order?.shippingAddress?.city ? ` • Destination: ${order.shippingAddress.city}` : ''}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          ) : getDeliveryInfo ? (
+            <motion.div
+              key={getDeliveryInfo.date}
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-              className="p-4 rounded-xl mb-4"
-              style={{
-                background: 'rgba(255, 255, 255, 0.55)',
-                border: '1.5px solid #D4AF37',
-                boxShadow: '0 12px 30px rgba(212,175,55,0.12)',
-                backdropFilter: 'blur(10px)',
-                WebkitBackdropFilter: 'blur(10px)'
-              }}
+              transition={{ delay: 0.15, type: 'spring', stiffness: 200 }}
+              className="p-4 rounded-xl mb-4 delivery-luxe-card expected"
+              style={{ background: 'linear-gradient(135deg, rgba(30,58,137,0.2), rgba(30,64,175,0.1))', border: '1.5px solid #3b82f6', boxShadow: '0 20px 50px rgba(59,130,246,0.2)' }}
             >
               <div className="d-flex align-items-center">
-                <div style={{ fontSize: '32px', marginRight: '16px' }}>📅</div>
+                <div className="delivery-icon" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.3), rgba(96,165,250,0.2))', boxShadow: 'inset 0 0 0 1px rgba(59,130,246,0.5)' }}>📅</div>
                 <div>
-                  <p className="text-muted small mb-1" style={{ color: '#6b5b2b', fontSize: '11px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                    Expected Delivery
-                  </p>
-                  <p className="font-weight-bold mb-0" style={{ fontSize: '20px', color: '#5f4b1b', lineHeight: '1.3' }}>
+                  <p className="delivery-kicker" style={{ color: '#60a5fa' }}>Expected Delivery</p>
+                  <p className="delivery-headline mb-0" style={{ color: '#60a5fa' }}>
                     {formatDeliveryDate(getDeliveryInfo.date)}
                     {getDeliveryInfo.time && (
-                      <span style={{ fontSize: '16px', color: '#8b7355', marginLeft: '8px' }}>
-                        at {getDeliveryInfo.time}
-                      </span>
+                      <span className="delivery-time"> at {getDeliveryInfo.time}</span>
                     )}
                   </p>
-                  <p style={{ fontSize: '12px', color: '#8b7355', marginTop: '4px', marginBottom: '0' }}>
+                  <p className="delivery-meta mb-0" style={{ color: '#8b7355' }}>
                     {new Date(getDeliveryInfo.date).toLocaleDateString('en-IN', {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric'
                     })}
+                    {order?.shippingAddress?.city ? ` • Delivering to ${order.shippingAddress.city}` : ''}
                   </p>
-                  {order?.shippingAddress?.city && (
-                    <p style={{ fontSize: '12px', color: '#6b5b2b', marginTop: '6px', marginBottom: '0' }}>
-                      📍 Delivering to {order.shippingAddress.city}
-                    </p>
-                  )}
                 </div>
               </div>
             </motion.div>
-          )}
+          ) : null}
 
           {/* LIVE CONNECTED BADGE - WITH PULSE ANIMATION */}
           <div className="d-flex justify-content-center mb-4">
@@ -586,87 +739,78 @@ export default function OrderTracking() {
             </div>
           </div>
 
-          {/* PRODUCT THUMBNAIL */}
-          {primaryItem && (
+          {/* ORDERED ITEMS - SHOW ALL PRODUCTS */}
+          {orderItemsDetailed.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="mb-4 p-3 rounded-lg"
-              style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
+              transition={{ delay: 0.2 }}
+              className="mb-4 p-4 rounded-lg all-items-luxe"
+              style={{ background: 'rgba(60,60,70,0.5)', border: '1.5px solid #d4af37', boxShadow: '0 12px 30px rgba(212,175,55,0.15)' }}
             >
-              <p className="small text-muted mb-2">Ordered Item</p>
-              <div className="d-flex align-items-center">
-                {primaryImage ? (
-                  <div style={{
-                    width: '72px',
-                    height: '72px',
-                    marginRight: '12px',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    background: '#fff',
-                    border: '1px solid #cbd5e1',
-                    boxShadow: '0 8px 24px rgba(15,23,42,0.12)'
-                  }}>
-                    <img 
-                      src={primaryImage}
-                      alt={primaryItem?.title || primaryItem?.name || 'Ordered product'}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </div>
-                ) : (
-                  <div style={{
-                    width: '72px',
-                    height: '72px',
-                    marginRight: '12px',
-                    borderRadius: '12px',
-                    background: '#f8fafc',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid #cbd5e1',
-                    color: '#64748b',
-                    boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
-                    fontSize: '11px',
-                    fontWeight: 600
-                  }}>
-                    No Image
-                  </div>
-                )}
-                <div className="flex-grow-1">
-                  <p className="font-weight-bold small mb-1" style={{ color: '#111', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {primaryItem?.title || primaryItem?.name || 'Order Item'}
-                  </p>
-                  <p className="small text-muted mb-0">
-                    ₹{Number(primaryItem?.price || primaryItem?.finalprice || 0).toLocaleString('en-IN')}
-                    {primaryItem?.quantity && ` × ${primaryItem.quantity}`}
-                  </p>
-                </div>
+              <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap" style={{ gap: '8px' }}>
+                <p className="small mb-0" style={{ letterSpacing: '0.4px', color: '#d4af37', fontWeight: 700 }}>📦 Ordered Items</p>
+                <span className="items-count-pill">{totalItemCount} items</span>
+              </div>
+
+              <div className="order-items-grid">
+                {orderItemsDetailed.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ staggerChildren: 0.05 }}
+                    className="order-item-card"
+                    style={{ background: 'rgba(80,80,90,0.7)', border: '1px solid #d4af3744', color: '#f8e8c7' }}
+                  >
+                    {item.image ? (
+                      <div className="order-item-image-wrap">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="order-item-image"
+                        />
+                      </div>
+                    ) : (
+                      <div className="order-item-image-wrap no-image" style={{ background: '#555' }}>No Image</div>
+                    )}
+                    <div className="order-item-content">
+                      <p className="order-item-name" style={{ color: '#f8e8c7' }}>{item.name}</p>
+                      {item.description ? (
+                        <p className="order-item-description" style={{ color: '#b8a586' }}>{item.description}</p>
+                      ) : null}
+                      <p className="order-item-meta" style={{ color: '#8b7355' }}>
+                        Qty {item.quantity} × {formatMoney(item.unitPrice)}
+                      </p>
+                      <p className="order-item-line-total" style={{ color: '#d4af37' }}>Line Total: {formatMoney(item.lineTotal)}</p>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             </motion.div>
           )}
           <div style={{ position: 'relative', margin: '50px 0 30px' }}>
             {/* Background bar */}
-            <div style={{ height: 10, borderRadius: 99, background: '#e5e7eb', overflow: 'hidden' }} />
+            <div style={{ height: 12, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)' }} />
 
-            {/* Animated progress bar */}
+            {/* Animated progress bar - PREMIUM GRADIENT */}
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progressPercent}%` }}
               transition={{ type: 'spring', stiffness: 60, damping: 15, delay: 0.2 }}
               style={{
-                height: 10,
+                height: 12,
                 borderRadius: 99,
-                background: `linear-gradient(90deg, #7f5f1f, #b48b2a, #d7b15a, #1f8f54)`,
+                background: `linear-gradient(90deg, #d4af37, #f5e6b3, #1f8f54, #4ade80)`,
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                boxShadow: `0 0 20px ${STATUS_COLOR[status]}66`
+                boxShadow: `0 0 30px #d4af37aa, 0 0 60px #d4af3755`,
               }}
             />
           </div>
 
-          {/* STEPPER STEPS */}
+          {/* STEPPER STEPS - GOLD ACCENTS */}
           <div className="stepper-scroll mt-4">
           <div className="d-flex justify-content-between min-stepper-width">
             {STEPS.map((s, i) => {
@@ -680,60 +824,67 @@ export default function OrderTracking() {
                     <div
                       style={{
                         position: 'absolute',
-                        top: 19,
+                        top: 22,
                         left: '50%',
                         width: '50%',
-                        height: 3,
-                        background: i < activeIndex ? STATUS_COLOR[s] : '#e5e7eb',
-                        transition: 'background 0.6s ease'
+                        height: 2,
+                        background: i < activeIndex ? STATUS_COLOR[s] : 'rgba(255,255,255,0.1)',
+                        transition: 'background 0.6s ease',
+                        boxShadow: i < activeIndex ? `0 0 10px ${STATUS_COLOR[s]}88` : 'none'
                       }}
                     />
                   )}
 
-                  {/* Step circle (non-blinking premium style) */}
+                  {/* Step circle */}
                   <motion.div
-                    animate={{ scale: isActive ? 1.06 : 1 }}
+                    animate={{ scale: isActive ? 1.12 : 1 }}
                     transition={{ duration: 0.25, ease: 'easeOut' }}
                     style={{
                       margin: '0 auto',
                       position: 'relative',
                       zIndex: 2 }}
                   >
-                    {/* Main circle */}
                     <div
                       style={{
-                        width: 50,
-                        height: 50,
+                        width: 56,
+                        height: 56,
                         borderRadius: '50%',
-                        background: isDone ? STATUS_COLOR[s] : '#f3f4f6',
-                        border: `3px solid ${isDone ? STATUS_COLOR[s] : '#e5e7eb'}`,
+                        background: isDone ? `linear-gradient(135deg, ${STATUS_COLOR[s]}, ${STATUS_COLOR[s]}dd)` : 'rgba(255,255,255,0.05)',
+                        border: `2.5px solid ${isDone ? STATUS_COLOR[s] : 'rgba(255,255,255,0.2)'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: isDone ? '#fff' : '#9ca3af',
-                        boxShadow: isActive ? `0 8px 25px ${STATUS_COLOR[s]}33` : 'none',
+                        color: isDone ? '#fff' : '#b8a586',
+                        boxShadow: isActive ? `0 0 30px ${STATUS_COLOR[s]}66, inset 0 1px 0 rgba(255,255,255,0.1)` : `0 0 0 1px rgba(255,255,255,0.05)`,
                         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                       }}
                     >
-                      <StepIcon size={20} />
+                      <StepIcon size={22} strokeWidth={2.5} />
                     </div>
                   </motion.div>
 
                   {/* Label */}
                   <motion.div
-                    animate={isActive ? { scale: 1.05 } : { scale: 1 }}
+                    animate={isActive ? { scale: 1.08 } : { scale: 1 }}
                     style={{
-                      marginTop: 12,
-                      fontSize: '13px',
-                      fontWeight: isActive ? '700' : '600',
-                      color: s === 'Shipped' ? '#ca8a04' : (isDone ? STATUS_COLOR[s] : '#9ca3af'),
-                      transition: 'color 0.4s ease'
+                      marginTop: 14,
+                      fontSize: '12px',
+                      fontWeight: isActive ? '800' : '600',
+                      color: isDone ? STATUS_COLOR[s] : '#8b7355',
+                      transition: 'color 0.4s ease',
+                      letterSpacing: '0.5px'
                     }}
                   >
                     {s}
                   </motion.div>
                   {isActive && (
-                    <div style={{ fontSize: '10px', color: '#999', marginTop: '4px' }}>Current</div>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      style={{ fontSize: '9px', color: '#d4af37', marginTop: '3px', fontWeight: 700 }}
+                    >
+                      ◆ Current
+                    </motion.div>
                   )}
                 </div>
               )
@@ -741,26 +892,27 @@ export default function OrderTracking() {
           </div>
           </div>
 
-          {/* STATUS DISPLAY */}
+          {/* STATUS DISPLAY - PREMIUM DARK */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.35 }}
             className="mt-5 p-4 rounded-xl"
             style={{
-              background: `${STATUS_COLOR[status]}0f`,
-              border: `2px solid ${STATUS_COLOR[status]}33`,
-              textAlign: 'center'
+              background: `linear-gradient(135deg, ${STATUS_COLOR[status]}15, ${STATUS_COLOR[status]}08)`,
+              border: `2px solid ${STATUS_COLOR[status]}44`,
+              textAlign: 'center',
+              boxShadow: `0 12px 30px ${STATUS_COLOR[status]}22`
             }}
           >
-            <p className="text-muted small mb-2">Current Status</p>
+            <p className="small mb-2" style={{ color: '#8b7355', letterSpacing: '0.5px', textTransform: 'uppercase', fontSize: '11px', fontWeight: 700 }}>Current Status</p>
             <h3
-              className="font-weight-bold mb-1"
-              style={{ color: status === 'Shipped' ? '#ca8a04' : STATUS_COLOR[status], fontSize: '24px' }}
+              className="font-weight-bold mb-2"
+              style={{ color: status === 'Shipped' ? '#ca8a04' : STATUS_COLOR[status], fontSize: '28px', letterSpacing: '0.5px' }}
             >
               {status}
             </h3>
-            <p className="small text-muted mb-0">
+            <p className="small mb-0" style={{ color: '#b8a586' }}>
               {status === 'Ordered' && '✅ Your order has been placed successfully'}
               {status === 'Packed' && '📦 Your order is being packed with care'}
               {status === 'Shipped' && '🚚 Your order is on its way to you'}
@@ -768,93 +920,288 @@ export default function OrderTracking() {
             </p>
           </motion.div>
 
-          {/* STATUS TIMELINE - ENHANCED WITH ADMIN NOTES AND DELIVERY UPDATES */}
+          {/* STATUS TIMELINE - ULTRA PREMIUM LUXURY WITH DETAILED UPDATES */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35 }}
-            className="mt-5 p-4 rounded-xl"
-            style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}
+            transition={{ delay: 0.4 }}
+            className="mt-5 p-5 rounded-2xl timeline-luxe-shell"
+            style={{
+              background: 'linear-gradient(135deg, rgba(50,50,60,0.7) 0%, rgba(45,45,55,0.7) 100%)',
+              border: '2px solid #d4af37',
+              boxShadow: '0 20px 60px rgba(212,175,55,0.25), inset 0 1px 0 rgba(255,255,255,0.08)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
           >
-            <h5 className="font-weight-bold mb-4" style={{ color: '#111', fontSize: '16px', letterSpacing: '0.5px' }}>
-              📍 Status Timeline
-            </h5>
-            <div style={{ position: 'relative', paddingLeft: '20px' }}>
+            {/* Premium header */}
+            <div style={{ marginBottom: '24px', paddingBottom: '16px', borderBottom: '1.5px solid #d4af3744' }}>
+              <h5 className="timeline-main-title mb-2" style={{ color: '#d4af37', fontSize: '20px', fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                📍 Journey Timeline
+              </h5>
+              <p style={{ color: '#8b7355', fontSize: '12px', margin: 0, letterSpacing: '0.3px' }}>
+                Real-time tracking of your premium order
+              </p>
+            </div>
+
+            <div className="timeline-track-wrap premium-timeline">
               {timelineSteps.map((event, idx) => {
-                const timelineEvent = statusTimeline.find(t => t.status === event.step)
+                const timelineEvent = event.details
+                const statusIcon = STATUS_ICON[event.step]
+                const isCompleted = event.isReached && idx < activeIndex
+                const isCurrent = idx === activeIndex
+
                 return (
                   <motion.div
                     key={event.step}
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={{ opacity: 0, x: -15 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + idx * 0.05 }}
-                    style={{ marginBottom: idx < timelineSteps.length - 1 ? '20px' : 0, position: 'relative' }}
+                    transition={{ delay: 0.45 + idx * 0.08 }}
+                    className={`premium-timeline-event ${event.isReached ? 'reached' : 'pending'} ${isCurrent ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                    style={{
+                      background: isCurrent ? 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.08))' : 'transparent',
+                      borderRadius: '14px',
+                      padding: isCurrent ? '16px' : '12px',
+                      marginBottom: '20px',
+                      transition: 'all 0.3s ease'
+                    }}
                   >
-                    {/* Timeline dot */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: '-28px',
-                        top: '2px',
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        background: event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db',
-                        border: '3px solid white',
-                        boxShadow: `0 0 0 2px ${event.isReached ? (STATUS_COLOR[event.step] || '#d1a84a') : '#d1d5db'}33`
-                      }}
-                    />
-                    {/* Timeline line */}
-                    {idx < timelineSteps.length - 1 && (
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                      {/* Timeline dot with premium styling */}
                       <div
                         style={{
-                          position: 'absolute',
-                          left: '-23px',
-                          top: '12px',
-                          width: '2px',
-                          height: '20px',
-                          background: '#e5e7eb'
+                          position: 'relative',
+                          flexShrink: 0,
+                          width: '56px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
-                      />
-                    )}
-                    <div>
-                      <p className="font-weight-bold small mb-1" style={{ color: '#111', fontSize: '13px' }}>
-                        {event.step}
-                      </p>
-                      <p className="small mb-1" style={{ color: '#6b7280', fontSize: '12px' }}>
-                        {STATUS_SUBTEXT[event.step]}
-                      </p>
+                      >
+                        {/* Animated rings for current status */}
+                        {isCurrent && (
+                          <>
+                            <motion.div
+                              animate={{ scale: [1, 1.3, 1], opacity: [0.8, 0.3, 0.8] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                              style={{
+                                position: 'absolute',
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                border: `2px solid ${STATUS_COLOR[event.step]}`,
+                              }}
+                            />
+                            <motion.div
+                              animate={{ scale: [1, 1.5, 1], opacity: [0.6, 0.1, 0.6] }}
+                              transition={{ duration: 2.5, repeat: Infinity }}
+                              style={{
+                                position: 'absolute',
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                border: `1px solid ${STATUS_COLOR[event.step]}`,
+                              }}
+                            />
+                          </>
+                        )}
 
-                      {/* Enhanced timeline with delivery schedule */}
-                      {timelineEvent?.deliverySchedule && (
-                        <div className="mt-2 p-2 rounded" style={{ background: '#e0f2fe', border: '1px solid #0284c7' }}>
-                          <p className="small mb-0" style={{ color: '#0c4a6e', fontSize: '11px', fontWeight: '600' }}>
-                            📅 Delivery Scheduled: {timelineEvent.deliverySchedule.date}
-                            {timelineEvent.deliverySchedule.time && ` at ${timelineEvent.deliverySchedule.time}`}
+                        {/* Main dot */}
+                        <div
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '50%',
+                            background: event.isReached
+                              ? `linear-gradient(135deg, ${STATUS_COLOR[event.step]}, ${STATUS_COLOR[event.step]}cc)`
+                              : 'rgba(255,255,255,0.08)',
+                            border: `2.5px solid ${event.isReached ? STATUS_COLOR[event.step] : 'rgba(255,255,255,0.15)'}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: event.isReached ? '#fff' : '#b8a586',
+                            boxShadow: isCurrent
+                              ? `0 0 35px ${STATUS_COLOR[event.step]}88, inset 0 1px 0 rgba(255,255,255,0.2)`
+                              : `0 0 0 1px rgba(255,255,255,0.08)`,
+                            position: 'relative',
+                            zIndex: 2,
+                            fontSize: '20px'
+                          }}
+                        >
+                          {statusIcon ? (
+                            <statusIcon size={24} strokeWidth={2} />
+                          ) : (
+                            '✓'
+                          )}
+                        </div>
+
+                        {/* Connector line to next event */}
+                        {idx < timelineSteps.length - 1 && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              width: '2px',
+                              height: '30px',
+                              background: idx < activeIndex ? STATUS_COLOR[event.step] : 'rgba(255,255,255,0.08)',
+                              zIndex: 0,
+                              transition: 'background 0.5s ease'
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Event content */}
+                      <div style={{ flex: 1, paddingTop: '6px' }}>
+                        {/* Status name with badge */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                          <p
+                            className="timeline-step-name"
+                            style={{
+                              color: '#d4af37',
+                              fontSize: '16px',
+                              fontWeight: 800,
+                              margin: 0,
+                              letterSpacing: '0.3px'
+                            }}
+                          >
+                            {event.step}
+                          </p>
+                          {isCurrent && (
+                            <motion.span
+                              animate={{ scale: [1, 1.05, 1] }}
+                              transition={{ duration: 1.5, repeat: Infinity }}
+                              style={{
+                                display: 'inline-block',
+                                background: `linear-gradient(135deg, ${STATUS_COLOR[event.step]}, ${STATUS_COLOR[event.step]}dd)`,
+                                color: '#fff',
+                                padding: '3px 10px',
+                                borderRadius: '999px',
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                letterSpacing: '0.4px',
+                                textTransform: 'uppercase'
+                              }}
+                            >
+                              ◆ Current
+                            </motion.span>
+                          )}
+                          {isCompleted && (
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                background: 'rgba(74, 222, 128, 0.2)',
+                                color: '#4ade80',
+                                padding: '3px 10px',
+                                borderRadius: '999px',
+                                fontSize: '10px',
+                                fontWeight: 800,
+                                letterSpacing: '0.4px',
+                                textTransform: 'uppercase'
+                              }}
+                            >
+                              ✓ Completed
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Description */}
+                        <p
+                          className="timeline-step-text"
+                          style={{
+                            color: '#b8a586',
+                            fontSize: '13px',
+                            margin: '8px 0',
+                            lineHeight: '1.5'
+                          }}
+                        >
+                          {STATUS_SUBTEXT[event.step]}
+                        </p>
+
+                        {/* Timestamp */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '11px', color: '#8b7355' }}>📅</span>
+                          <p
+                            className="timeline-event-time"
+                            style={{
+                              color: '#8b7355',
+                              fontSize: '12px',
+                              margin: 0,
+                              fontWeight: 600,
+                              letterSpacing: '0.2px'
+                            }}
+                          >
+                            {formatDateTimeShort(event.timestamp)}
                           </p>
                         </div>
-                      )}
 
-                      {/* Admin notes */}
-                      {timelineEvent?.adminNote && (
-                        <div className="mt-2 p-2 rounded" style={{ background: '#fef3c7', border: '1px solid #f59e0b' }}>
-                          <p className="small mb-0" style={{ color: '#92400e', fontSize: '11px', fontWeight: '600' }}>
-                            💼 Admin Note: {timelineEvent.adminNote}
-                          </p>
+                        {/* Detailed info chips */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          {/* Delivery schedule */}
+                          {timelineEvent?.deliverySchedule && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.5 }}
+                              className="timeline-info-chip delivery"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(59,130,246,0.1))',
+                                border: '1.5px solid #3b82f6',
+                                color: '#60a5fa',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                lineHeight: '1.5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                            >
+                              <span>🚚</span>
+                              <div>
+                                <div style={{ fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px' }}>
+                                  Delivery Window
+                                </div>
+                                <div>{formatDeliverySchedule(timelineEvent.deliverySchedule)}</div>
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {/* Admin notes */}
+                          {timelineEvent?.adminNote && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.55 }}
+                              className="timeline-info-chip admin"
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(245,158,11,0.25), rgba(245,158,11,0.1))',
+                                border: '1.5px solid #f59e0b',
+                                color: '#fbbf24',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                lineHeight: '1.5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px'
+                              }}
+                            >
+                              <span>💼</span>
+                              <div>
+                                <div style={{ fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3px', marginBottom: '2px' }}>
+                                  Admin Update
+                                </div>
+                                <div>{timelineEvent.adminNote}</div>
+                              </div>
+                            </motion.div>
+                          )}
                         </div>
-                      )}
-
-                      <p className="text-muted small mb-0" style={{ fontSize: '12px' }}>
-                        {event.timestamp
-                          ? new Date(event.timestamp).toLocaleString('en-IN', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })
-                          : 'Pending'}
-                      </p>
+                      </div>
                     </div>
                   </motion.div>
                 )
@@ -868,28 +1215,29 @@ export default function OrderTracking() {
             <div className="row mb-4">
               <div className="col-12">
                 <motion.button
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.02,
-                    boxShadow: '0 20px 40px rgba(15,15,16,0.3)'
+                    boxShadow: '0 25px 50px rgba(212,175,55,0.4)'
                   }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => navigate('/my-orders')}
                   className="btn btn-block rounded-pill"
-                  style={{ 
+                  style={{
                     width: '100%',
                     maxWidth: '400px',
                     margin: '0 auto',
-                    fontWeight: '700', 
-                    fontSize: '15px', 
+                    fontWeight: '700',
+                    fontSize: '15px',
                     padding: '14px 28px',
-                    background: 'linear-gradient(135deg, #0f0f10, #1a1f26)',
-                    color: '#fff',
-                    border: '1.5px solid #2b3138',
+                    background: 'linear-gradient(135deg, #d4af37, #f5e6b3)',
+                    color: '#1a1a1a',
+                    border: '1.5px solid #d4af37',
                     letterSpacing: '0.4px',
-                    boxShadow: '0 10px 30px rgba(15,15,16,0.2)',
+                    boxShadow: '0 12px 30px rgba(212,175,55,0.25)',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer',
-                    display: 'block'
+                    display: 'block',
+                    fontWeight: 800
                   }}
                 >
                   ← Back to My Orders
@@ -901,9 +1249,9 @@ export default function OrderTracking() {
             <div className="d-flex flex-wrap gap-3" style={{ rowGap: '12px' }}>
               {/* Chat Support Button */}
               <motion.button
-                whileHover={{ 
+                whileHover={{
                   scale: 1.03,
-                  boxShadow: '0 16px 36px rgba(37,211,102,0.3)',
+                  boxShadow: '0 20px 45px rgba(37,211,102,0.4)',
                   y: -2
                 }}
                 whileTap={{ scale: 0.95 }}
@@ -918,12 +1266,12 @@ export default function OrderTracking() {
                   background: 'linear-gradient(135deg, #25D366, #1aa84f)',
                   color: '#fff',
                   border: '1.5px solid #1ea952',
-                  fontWeight: '700',
+                  fontWeight: '800',
                   fontSize: '13px',
                   padding: '12px 20px',
                   letterSpacing: '0.3px',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 8px 20px rgba(37,211,102,0.25)',
+                  boxShadow: '0 10px 25px rgba(37,211,102,0.3)',
                   cursor: 'pointer',
                   position: 'relative',
                   overflow: 'hidden'
@@ -938,7 +1286,7 @@ export default function OrderTracking() {
           </div>
 
           {/* FOOTER NOTE */}
-          <p className="text-center text-muted small mt-4 mb-0" style={{ fontSize: '12px' }}>
+          <p className="text-center small mt-4 mb-0" style={{ fontSize: '12px', color: '#8b7355', letterSpacing: '0.3px' }}>
             Updates are live. Last known update: {order?.updatedAt ? new Date(order.updatedAt).toLocaleString() : 'Fetching...'}
           </p>
         </motion.div>
@@ -1026,6 +1374,466 @@ export default function OrderTracking() {
           overflow: hidden;
         }
 
+        .tracking-luxe-page {
+          background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 25%, #1f1f1f 50%, #252525 75%, #1a1a1a 100%);
+        }
+
+        .premium-header {
+          animation: fadeInDown 0.8s ease;
+        }
+
+        .luxury-title {
+          font-size: 40px !important;
+          background: linear-gradient(135deg, #d4af37, #f5e6b3);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .premium-card {
+          border-radius: 28px !important;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .premium-card:hover {
+          box-shadow: 0 50px 100px rgba(212,175,55,0.35), 0 0 80px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+          transform: translateY(-2px);
+        }
+
+        .order-finance-luxe-card {
+          background: linear-gradient(135deg, rgba(60,60,70,0.7) 0%, rgba(55,55,65,0.7) 100%) !important;
+          border: 1.5px solid #d4af37 !important;
+          box-shadow: 0 20px 50px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+          transition: all 0.3s ease;
+        }
+
+        .order-finance-luxe-card:hover {
+          box-shadow: 0 25px 60px rgba(212,175,55,0.3), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+        }
+
+        .payment-core-wrap {
+          height: 100%;
+          justify-content: center;
+          gap: 4px;
+        }
+
+        .finance-block {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .finance-kicker {
+          margin: 0;
+          color: #d4af37;
+          font-size: 11px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          font-weight: 800;
+        }
+
+        .payment-status-chip {
+          margin-top: 6px;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          border-radius: 999px;
+          min-height: 34px;
+          padding: 0 13px;
+          font-size: 13px;
+          font-weight: 800;
+          width: fit-content;
+          border: 1px solid;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .chip-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: currentColor;
+          opacity: 0.9;
+        }
+
+        .payment-status-chip.status-paid {
+          color: #4ade80;
+          background: rgba(31,143,84,0.2);
+          border-color: #1f8f54;
+        }
+
+        .payment-status-chip.status-pending {
+          color: #facc15;
+          background: rgba(245,158,11,0.2);
+          border-color: #f59e0b;
+        }
+
+        .payment-status-chip.status-failed {
+          color: #ef4444;
+          background: rgba(239,68,68,0.2);
+          border-color: #dc2626;
+        }
+
+        .finance-method-value {
+          margin-top: 6px;
+          color: #d4af37 !important;
+          font-size: 28px;
+          line-height: 1.2;
+          font-weight: 800;
+          letter-spacing: 0.01em;
+        }
+          color: #1f2a37;
+          font-size: 36px;
+          line-height: 1.2;
+          font-weight: 800;
+          letter-spacing: 0.01em;
+        }
+
+        .finance-mini-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .finance-mini-item {
+          border: 1px solid #d7e2ef;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.86);
+          padding: 8px 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .finance-mini-item.full {
+          grid-column: 1 / -1;
+        }
+
+        .finance-mini-item span {
+          color: #607087;
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          font-weight: 700;
+        }
+
+        .finance-mini-item strong {
+          color: #1b324f;
+          font-size: 12px;
+          font-weight: 800;
+        }
+
+        .finance-amount-panel {
+          border: 1px solid #ccd8e8;
+          border-radius: 14px;
+          background: #ffffff;
+          padding: 12px;
+          box-shadow: 0 8px 18px rgba(26, 43, 71, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .finance-amount-row {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          color: #4b5e78;
+          font-size: 14px;
+          padding: 6px 0;
+        }
+
+        .finance-amount-row strong {
+          color: #1b2e45;
+          font-weight: 800;
+        }
+
+        .finance-amount-row.discount {
+          color: #166534;
+        }
+
+        .finance-amount-row.total {
+          margin-top: 6px;
+          padding-top: 10px;
+          border-top: 1px dashed #d4af37;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .finance-amount-row.total strong {
+          text-transform: none;
+          letter-spacing: normal;
+          font-size: 30px;
+          background: linear-gradient(135deg, #d4af37, #b8860b);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .timeline-luxe-shell {
+          background: rgba(60,60,70,0.5) !important;
+          border: 1.5px solid #d4af37 !important;
+          box-shadow: 0 12px 30px rgba(212,175,55,0.15) !important;
+        }
+
+        .timeline-main-title {
+          color: #f8e8c7 !important;
+          font-size: 18px !important;
+          letter-spacing: 0.5px !important;
+          font-weight: 800 !important;
+        }
+
+        .timeline-track-wrap {
+          position: relative;
+          padding-left: 20px;
+        }
+
+        .timeline-track-wrap::before {
+          content: '';
+          position: absolute;
+          left: -17px;
+          top: 10px;
+          bottom: 10px;
+          width: 2px;
+          background: rgba(255,255,255,0.1);
+          border-radius: 999px;
+        }
+
+        .timeline-event-card {
+          position: relative;
+          margin-bottom: 20px;
+          border: none;
+          border-radius: 0;
+          background: transparent;
+          padding: 2px 0 2px 6px;
+          box-shadow: none;
+          transition: none;
+        }
+
+        .timeline-event-card.active {
+          background: linear-gradient(90deg, rgba(212, 175, 55, 0.12), transparent 75%);
+        }
+
+        .timeline-dot {
+          position: absolute;
+          left: -28px;
+          top: 9px;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          border: 3px solid #2d2d35;
+          background: #d4af37;
+        }
+
+        .timeline-line {
+          position: absolute;
+          left: -23px;
+          top: 20px;
+          width: 2px;
+          height: calc(100% + 8px);
+          background: rgba(255,255,255,0.08);
+        }
+
+        .timeline-step-name {
+          color: #d4af37 !important;
+          font-size: 14px !important;
+          font-weight: 800 !important;
+        }
+
+        .timeline-step-text {
+          color: #b8a586 !important;
+          font-size: 12px !important;
+          line-height: 1.45 !important;
+        }
+
+        .timeline-info-chip {
+          border-radius: 9px;
+          padding: 8px;
+          font-size: 11px;
+          font-weight: 700;
+          line-height: 1.35;
+        }
+
+        .timeline-event-time {
+          margin-top: 8px;
+          color: #8b7355;
+          font-size: 11px;
+          border-top: 1px dashed #d4af3744;
+          padding-top: 7px;
+        }
+
+        .delivery-luxe-card {
+          border: 1.5px solid #d4af37;
+          box-shadow: 0 12px 30px rgba(212, 175, 55, 0.12);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          background: rgba(255, 255, 255, 0.55);
+        }
+
+        .delivery-luxe-card.delivered {
+          border-color: #1f8f54;
+          background: linear-gradient(135deg, rgba(31,143,84,0.2), rgba(31,143,84,0.1));
+          box-shadow: 0 14px 34px rgba(31,143,84,0.16);
+        }
+
+        .delivery-luxe-card.expected {
+          border-color: #3b82f6;
+          background: linear-gradient(135deg, rgba(30,58,137,0.2), rgba(30,64,175,0.1));
+          box-shadow: 0 20px 50px rgba(59,130,246,0.2);
+        }
+
+        .delivery-icon {
+          width: 54px;
+          height: 54px;
+          border-radius: 14px;
+          margin-right: 14px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 26px;
+          background: linear-gradient(135deg, #d4af37, #f5e6b3);
+          box-shadow: inset 0 0 0 1px rgba(180, 136, 11, 0.2);
+          flex-shrink: 0;
+        }
+
+        .delivery-kicker {
+          color: #d4af37;
+          font-size: 11px;
+          letter-spacing: 0.6px;
+          text-transform: uppercase;
+          margin-bottom: 3px;
+          font-weight: 700;
+        }
+
+        .delivery-headline {
+          font-size: 20px;
+          line-height: 1.35;
+          color: #d4af37;
+          font-weight: 800;
+        }
+
+        .delivery-copy {
+          font-size: 13px;
+          color: #b8a586;
+          line-height: 1.45;
+          max-width: 560px;
+        }
+
+        .delivery-time {
+          font-size: 15px;
+          color: #d4af37;
+          margin-left: 8px;
+        }
+
+        .delivery-meta {
+          font-size: 12px;
+          color: #8b7355;
+          margin-top: 6px;
+        }
+
+        .all-items-luxe {
+          background: rgba(60,60,70,0.5) !important;
+          border: 1.5px solid #d4af37 !important;
+          box-shadow: 0 12px 30px rgba(212,175,55,0.15) !important;
+        }
+
+        .items-count-pill {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 30px;
+          padding: 0 12px;
+          border-radius: 999px;
+          background: linear-gradient(120deg, #d4af37, #f5e6b3);
+          color: #1a1a1a;
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 0.4px;
+        }
+
+        .order-items-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .order-item-card {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 10px;
+          border-radius: 13px;
+          background: rgba(80,80,90,0.7);
+          border: 1px solid #d4af3744;
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .order-item-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 24px rgba(212,175,55,0.15);
+        }
+
+        .order-item-image-wrap {
+          width: 70px;
+          height: 70px;
+          border-radius: 12px;
+          overflow: hidden;
+          background: #555;
+          border: 1px solid #666;
+          box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+          flex-shrink: 0;
+        }
+
+        .order-item-image-wrap.no-image {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 600;
+          color: #aaa;
+          background: #555;
+        }
+
+        .order-item-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .order-item-content {
+          min-width: 0;
+          flex: 1;
+        }
+
+        .order-item-name {
+          margin: 0;
+          color: #f8e8c7;
+          font-size: 14px;
+          font-weight: 700;
+          line-height: 1.35;
+        }
+
+        .order-item-description {
+          margin: 5px 0 0;
+          color: #b8a586;
+          font-size: 12px;
+          line-height: 1.35;
+        }
+
+        .order-item-meta {
+          margin: 5px 0 0;
+          color: #8b7355;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .order-item-line-total {
+          margin: 3px 0 0;
+          color: #d4af37;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
         @media (max-width: 576px) {
           .container {
             padding-left: 0 !important;
@@ -1054,6 +1862,77 @@ export default function OrderTracking() {
           }
           .d-flex.gap-3 {
             gap: 8px !important;
+          }
+
+          .tracking-main-card {
+            border-radius: 20px !important;
+          }
+
+          .delivery-icon {
+            width: 46px;
+            height: 46px;
+            font-size: 22px;
+            margin-right: 10px;
+          }
+
+          .delivery-headline {
+            font-size: 17px;
+          }
+
+          .delivery-luxe-card.delivered .delivery-headline {
+            font-size: 18px;
+          }
+
+          .order-items-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .order-item-image-wrap {
+            width: 60px;
+            height: 60px;
+          }
+
+          .finance-mini-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .finance-amount-row.total strong {
+            font-size: 24px;
+          }
+
+          .finance-method-value {
+            font-size: 30px;
+          }
+
+          .timeline-track-wrap {
+            padding-left: 16px;
+          }
+
+          .timeline-dot {
+            left: -22px;
+            top: 14px;
+          }
+
+          .timeline-line {
+            left: -17px;
+          }
+
+          .timeline-time-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 3px;
+          }
+
+          .timeline-track-wrap::before {
+            left: -13px;
+          }
+
+          .timeline-event-card {
+            padding: 9px 10px;
+          }
+
+          .timeline-event-time {
+            font-size: 10px;
           }
         }
 

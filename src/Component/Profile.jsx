@@ -7,9 +7,10 @@ import { getUser } from "../Store/ActionCreaters/UserActionCreators"
 import { getWishlist } from "../Store/ActionCreaters/WishlistActionCreators"
 import { getCheckout } from "../Store/ActionCreaters/CheckoutActionCreators"
 import BuyerProfile from './BuyerProfile'
+import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BASE_URL } from '../constants'
-import { ArrowRight, ExternalLink, ShoppingBag, Clock3, Heart, ShoppingCart, Package, Lock, Shield } from 'lucide-react'
+import { ArrowRight, ShoppingBag, Clock3, Heart, ShoppingCart, Package, Shield } from 'lucide-react'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
@@ -26,6 +27,7 @@ export default function Profile() {
     const [socketConnected, setSocketConnected] = useState(false)
     var dispatch = useDispatch()
     var navigate = useNavigate()
+    const { membershipType, totalOrders } = useMembership()
 
     function getAPIData() {
         dispatch(getUser())
@@ -244,28 +246,51 @@ export default function Profile() {
                                     <h4 className="font-weight-bold mb-2" style={{ color: '#0A0A0A', fontSize: '24px', letterSpacing: '0.2px' }}>
                                         {user.name?.split(' ')[0]}
                                     </h4>
-                                    
-                                    {/* Elite Member Badge */}
-                                    <motion.div
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        transition={{ delay: 0.4, type: 'spring', stiffness: 300 }}
-                                        style={{
-                                            display: 'inline-block',
-                                            padding: '6px 16px',
-                                            background: 'linear-gradient(135deg, #D4AF37, #b8860b)',
-                                            color: '#fff',
-                                            borderRadius: '20px',
-                                            fontSize: '11px',
-                                            fontWeight: '700',
-                                            letterSpacing: '0.8px',
-                                            textTransform: 'uppercase',
-                                            boxShadow: '0 6px 16px rgba(212,175,55,0.3)',
-                                            marginBottom: '16px'
-                                        }}
-                                    >
-                                        👑 Elite Member
-                                    </motion.div>
+
+                                    {(() => {
+                                        const resolvedTier = String(user.membershipType || membershipType || 'Silver')
+                                        const resolvedOrders = Number(user.totalOrders ?? totalOrders ?? 0)
+                                        const badgeStyles = {
+                                            Elite: {
+                                                background: 'linear-gradient(135deg, #D4AF37, #b8860b)',
+                                                color: '#fff',
+                                                boxShadow: '0 6px 16px rgba(212,175,55,0.3)',
+                                            },
+                                            Gold: {
+                                                background: 'linear-gradient(135deg, #f7d774, #d4af37)',
+                                                color: '#5a4600',
+                                                boxShadow: '0 6px 16px rgba(212,175,55,0.25)',
+                                            },
+                                            Silver: {
+                                                background: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)',
+                                                color: '#334155',
+                                                boxShadow: '0 6px 16px rgba(148,163,184,0.22)',
+                                            },
+                                        }
+
+                                        const styleForTier = badgeStyles[resolvedTier] || badgeStyles.Silver
+
+                                        return (
+                                            <motion.div
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                transition={{ delay: 0.35, type: 'spring', stiffness: 300 }}
+                                                style={{
+                                                    display: 'inline-block',
+                                                    padding: '6px 14px',
+                                                    borderRadius: '20px',
+                                                    fontSize: '11px',
+                                                    fontWeight: '700',
+                                                    letterSpacing: '0.8px',
+                                                    textTransform: 'uppercase',
+                                                    marginBottom: '16px',
+                                                    ...styleForTier,
+                                                }}
+                                            >
+                                                {resolvedTier} Member · {resolvedOrders} Orders
+                                            </motion.div>
+                                        )
+                                    })()}
                                 </motion.div>
                             )}
 
@@ -339,15 +364,12 @@ export default function Profile() {
                     >
                         {/* Account Details Section */}
                         <motion.div 
-                            className="card border-0 shadow-lg rounded-3xl p-5 bg-white mb-4"
+                            className="card border-0 shadow-lg rounded-3xl p-5 bg-white mb-4 profile-details-shell"
                             style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.06)', border: '1px solid rgba(212,175,55,0.08)' }}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.2 }}
                         >
-                            <h5 className="font-weight-bold mb-4" style={{ color: '#0A0A0A', fontSize: '18px', letterSpacing: '0.3px' }}>
-                                📋 Your Profile Information
-                            </h5>
                             {isLoading ? (
                                 <div>
                                     <Skeleton count={5} style={{ marginBottom: '16px', height: '60px' }} />
@@ -622,8 +644,19 @@ export default function Profile() {
 
             {/* --- PREMIUM STYLING --- */}
             <style dangerouslySetInnerHTML={{ __html: `
+                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Jost:wght@300;400;500;600&display=swap');
+
                 .profile-page-luxury {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+                    font-family: 'Jost', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+                }
+
+                .profile-page-luxury h1 {
+                    font-family: 'Playfair Display', serif;
+                    font-weight: 600;
+                }
+
+                .profile-details-shell {
+                    padding: 26px !important;
                 }
                 
                 .rounded-3xl { border-radius: 24px !important; }

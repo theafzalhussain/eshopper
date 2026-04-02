@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Copy } from 'lucide-react';
 import { Package, User, Mail, CreditCard, MapPin, Calendar, ShoppingBag, Clock, AlertCircle } from 'lucide-react';
 import axios from 'axios';
@@ -18,6 +18,45 @@ const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'N/A';
     return date.toLocaleString('en-IN');
+};
+
+const formatAmount = (value) => `INR ${Number(value || 0).toLocaleString('en-IN')}`;
+
+const normalizeProductRow = (product = {}, index = 0) => {
+  const name = product?.name || product?.productName || product?.title || product?.productid?.name || `Product ${index + 1}`;
+  const description = product?.description || product?.productid?.description || '';
+
+  const quantityVal = Number(product?.quantity || product?.qty || product?.count || 1);
+  const quantity = Number.isFinite(quantityVal) && quantityVal > 0 ? quantityVal : 1;
+
+  const priceVal = Number(
+    product?.price ||
+    product?.finalprice ||
+    product?.salePrice ||
+    product?.baseprice ||
+    product?.productid?.finalprice ||
+    product?.productid?.baseprice ||
+    0
+  );
+  const unitPrice = Number.isFinite(priceVal) ? priceVal : 0;
+
+  const lineTotalVal = Number(product?.totalPrice || product?.total || unitPrice * quantity);
+  const lineTotal = Number.isFinite(lineTotalVal) ? lineTotalVal : unitPrice * quantity;
+
+  const imageValue = product?.image || product?.pic1 || product?.productid?.pic1 || '';
+  const imageSrc = typeof imageValue === 'string' && imageValue.length > 0
+    ? (imageValue.startsWith('http') ? imageValue : `${BASE_URL}/productimages/${imageValue}`)
+    : '';
+
+  return {
+    id: String(product?._id || product?.id || product?.productid?._id || index),
+    name,
+    description,
+    quantity,
+    unitPrice,
+    lineTotal,
+    imageSrc
+  };
 };
 
 // Helper function to get date from order with multiple field name attempts
@@ -46,6 +85,26 @@ export default function OrderDetailsDrawer({ open, onClose, order }) {
   const [fullOrderData, setFullOrderData] = useState(null);
   const isAdmin = localStorage.getItem('role')?.toLowerCase() === 'admin';
   const [copied, setCopied] = useState(false);
+
+  const productRows = useMemo(
+    () => (Array.isArray(fullOrderData?.products) ? fullOrderData.products : []).map((p, i) => normalizeProductRow(p, i)),
+    [fullOrderData?.products]
+  );
+
+  const paymentSummary = useMemo(() => {
+    const computedSubtotal = productRows.reduce((sum, p) => sum + Number(p.lineTotal || 0), 0);
+    const subtotal = Number(fullOrderData?.totalAmount ?? computedSubtotal) || 0;
+    const shipping = Number(fullOrderData?.shippingAmount || 0) || 0;
+    const finalAmount = Number(fullOrderData?.finalAmount ?? (subtotal + shipping)) || 0;
+    const itemCount = productRows.reduce((sum, p) => sum + Number(p.quantity || 0), 0);
+
+    return {
+      subtotal,
+      shipping,
+      finalAmount,
+      itemCount
+    };
+  }, [fullOrderData?.totalAmount, fullOrderData?.shippingAmount, fullOrderData?.finalAmount, productRows]);
 
   const resolveOrderPayload = (data) => {
     if (!data) return null;
@@ -194,9 +253,25 @@ export default function OrderDetailsDrawer({ open, onClose, order }) {
                 <ShoppingBag size={18} className="mr-2 text-success" />
                 <span><strong>Status:</strong> {fullOrderData.orderStatus || fullOrderData.orderstatus || 'N/A'}</span>
               </div>
-              <div className="drawer-section d-flex align-items-center">
-                <CreditCard size={18} className="mr-2 text-danger" />
-                <span><strong>Payment:</strong> {fullOrderData.paymentMethod || 'N/A'} ({fullOrderData.paymentStatus || 'N/A'})</span>
+              <div className="drawer-section payment-summary-section">
+                <div className="d-flex align-items-center payment-summary-head">
+                  <CreditCard size={18} className="mr-2 text-danger" />
+                  <span><strong>Payment:</strong> {fullOrderData.paymentMethod || 'N/A'} ({fullOrderData.paymentStatus || 'N/A'})</span>
+                </div>
+                <div className="payment-breakdown-wrap mt-2">
+                  <div className="payment-breakdown-row">
+                    <span>Subtotal</span>
+                    <strong>{formatAmount(paymentSummary.subtotal)}</strong>
+                  </div>
+                  <div className="payment-breakdown-row">
+                    <span>Shipping</span>
+                    <strong>{formatAmount(paymentSummary.shipping)}</strong>
+                  </div>
+                  <div className="payment-breakdown-row grand-total">
+                    <span>Total Amount</span>
+                    <strong>{formatAmount(paymentSummary.finalAmount)}</strong>
+                  </div>
+                </div>
               </div>
               <div className="drawer-section">
                 <MapPin size={18} className="mr-2 text-secondary" />
@@ -209,35 +284,46 @@ export default function OrderDetailsDrawer({ open, onClose, order }) {
                   <br />Phone: {fullOrderData.shippingAddress?.phone}
                 </div>
               </div>
-              <div className="drawer-section">
-                <ShoppingBag size={18} className="mr-2 text-info" />
-                <strong>Products:</strong>
-                <ul className="drawer-products mt-2">
-                  {(Array.isArray(fullOrderData.products) ? fullOrderData.products : []).map((p, i) => {
-                    const productName = p?.name || p?.productName || p?.title || p?.productid?.name || 'Product';
-                    const productDescription = p?.description || p?.productid?.description || '';
-                    const imageValue = p?.image || p?.pic1 || p?.productid?.pic1 || '';
-                    const imageSrc = typeof imageValue === 'string' && imageValue.length > 0
-                      ? (imageValue.startsWith('http') ? imageValue : `${BASE_URL}/productimages/${imageValue}`)
-                      : '';
+              <div className="drawer-section products-summary-section">
+                <div className="products-header-row">
+                  <div className="d-flex align-items-center">
+                    <ShoppingBag size={18} className="mr-2 text-info" />
+                    <strong>Products:</strong>
+                  </div>
+                  <span className="products-count-pill">{paymentSummary.itemCount || productRows.length} items</span>
+                </div>
 
-                    return (
-                      <li key={i} style={{display:'flex',alignItems:'center',marginBottom:8}}>
-                        {imageSrc && (
-                          <img
-                            src={imageSrc}
-                            alt={productName}
-                            style={{width:44,height:44,objectFit:'cover',borderRadius:8,marginRight:12,border:'1.5px solid #eee'}}
-                          />
-                        )}
-                        <div style={{marginLeft:12}}>
-                          <span>{productName}</span>
-                          <span style={{fontSize:12,color:'#b91c1c',marginTop:2}}>{productDescription}</span>
-                        </div>
-                      </li>
-                    );
-                  })}
+                <ul className="drawer-products mt-2">
+                  {productRows.map((product) => (
+                    <li key={product.id} className="drawer-product-item">
+                      {product.imageSrc ? (
+                        <img
+                          src={product.imageSrc}
+                          alt={product.name}
+                          className="drawer-product-image"
+                        />
+                      ) : (
+                        <div className="drawer-product-image drawer-product-image-fallback">No Image</div>
+                      )}
+
+                      <div className="drawer-product-content">
+                        <span className="drawer-product-name">{product.name}</span>
+                        {product.description ? (
+                          <span className="drawer-product-description">{product.description}</span>
+                        ) : null}
+                        <span className="drawer-product-meta">
+                          Qty {product.quantity} x {formatAmount(product.unitPrice)}
+                        </span>
+                        <span className="drawer-product-total">Line Total: {formatAmount(product.lineTotal)}</span>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
+
+                <div className="products-grand-total mt-2">
+                  <span>Grand Total</span>
+                  <strong>{formatAmount(paymentSummary.finalAmount)}</strong>
+                </div>
               </div>
               {/* Payment History Section */}
               {fullOrderData.paymentLogs && Array.isArray(fullOrderData.paymentLogs) && fullOrderData.paymentLogs.length > 0 && (
