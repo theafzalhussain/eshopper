@@ -2374,10 +2374,17 @@ app.get('/api/membership/check', async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
-        // Reconcile legacy users whose totalOrders was not backfilled from historical orders.
+        // Reconcile legacy users by considering both Order and Checkout collections.
         const storedOrders = Number(user.totalOrders || 0);
-        const actualOrders = await Order.countDocuments({ userid: String(user._id) });
-        const totalOrders = Math.max(storedOrders, Number(actualOrders || 0));
+        const [actualOrders, checkoutOrders] = await Promise.all([
+            Order.countDocuments({ userid: String(user._id) }),
+            Checkout.countDocuments({ userid: String(user._id) })
+        ]);
+        const totalOrders = Math.max(
+            storedOrders,
+            Number(actualOrders || 0),
+            Number(checkoutOrders || 0)
+        );
         const membershipType = getMembershipTypeFromOrders(totalOrders);
 
         if (totalOrders !== storedOrders || user.membershipType !== membershipType) {
