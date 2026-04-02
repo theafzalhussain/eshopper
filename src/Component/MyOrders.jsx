@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -340,6 +340,55 @@ const ST = {
   'Delivered':        { bg:'rgba(34,197,94,0.1)',   color:'#4ADE80', border:'rgba(34,197,94,0.22)'  },
 }
 
+const getItemQty = (item = {}) => {
+  const rawQty = Number(item?.quantity ?? item?.qty ?? item?.count ?? item?.orderedQty ?? 1)
+  return Number.isFinite(rawQty) && rawQty > 0 ? rawQty : 1
+}
+
+const asValidDate = (value) => {
+  if (!value) return null
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+  return parsed
+}
+
+const resolveEtaDate = (order = {}) => {
+  const directEta =
+    order?.deliverySchedule?.date ||
+    order?.deliverySchedule?.estimatedDelivery ||
+    order?.deliverySchedule?.scheduledAt ||
+    order?.estimatedDelivery ||
+    order?.estimatedArrival
+
+  const validDirect = asValidDate(directEta)
+  if (validDirect) return validDirect.toISOString()
+
+  // Fallback: derive ETA from lifecycle timestamps when explicit delivery schedule is missing.
+  const base =
+    asValidDate(order?.orderDate) ||
+    asValidDate(order?.createdAt) ||
+    asValidDate(order?.updatedAt)
+
+  if (!base) return null
+
+  const estimated = new Date(base)
+  estimated.setDate(estimated.getDate() + 7)
+  return estimated.toISOString()
+}
+
+const getCountdownText = (dateValue) => {
+  if (!dateValue) return 'ETA unavailable'
+  const eta = new Date(dateValue).getTime()
+  if (Number.isNaN(eta)) return 'ETA unavailable'
+  const diff = eta - Date.now()
+  if (diff <= 0) return 'Expected today'
+  const totalHours = Math.floor(diff / (1000 * 60 * 60))
+  const days = Math.floor(totalHours / 24)
+  const hours = totalHours % 24
+  if (days > 0) return `${days}d ${hours}h remaining`
+  return `${hours}h remaining`
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // PROGRESS
 // ═══════════════════════════════════════════════════════════════════
@@ -380,7 +429,7 @@ function Progress({ status, updatedAt }) {
 // ═══════════════════════════════════════════════════════════════════
 // ORDER CARD
 // ═══════════════════════════════════════════════════════════════════
-function OrderCard({ item, idx, navigate, onWA }) {
+const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onWA, nowTick }, ref) {
   const norm   = normalizeStatus(item.orderStatus)
   const st     = ST[norm] || ST['Ordered']
   const items  = item.orderItems || item.products || []
@@ -389,9 +438,20 @@ function OrderCard({ item, idx, navigate, onWA }) {
   const name   = first.title || first.name || ''
   const price  = Number(first.price || first.finalprice || 0)
   const extras = items.length > 1 ? items.length - 1 : 0
+  const firstQty = getItemQty(first)
+  const totalQty = items.reduce((sum, product) => sum + getItemQty(product), 0)
+  const etaDate = resolveEtaDate(item)
+  const etaLabel = etaDate
+    ? new Date(etaDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+    : 'TBD'
+  const etaCountdown = useMemo(() => {
+    void nowTick
+    return getCountdownText(etaDate)
+  }, [etaDate, nowTick])
 
   return (
     <motion.div
+      ref={ref}
       className="mop2-card"
       initial={{ opacity:0, y:20 }}
       animate={{ opacity:1, y:0 }}
@@ -439,6 +499,10 @@ function OrderCard({ item, idx, navigate, onWA }) {
               <span style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--ash)', fontWeight:'700' }}>Total</span>
               <span style={{ fontSize:'18px', fontWeight:'700', color:'var(--gold-dk)' }}>₹{Number(item.finalAmount||0).toLocaleString('en-IN')}</span>
             </div>
+            <div style={{ marginTop:'8px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--ash)', fontWeight:'700' }}>Total Qty</span>
+              <span style={{ fontSize:'13px', fontWeight:'700', color:'var(--ink)' }}>{totalQty} item{totalQty===1?'':'s'}</span>
+            </div>
           </div>
         </div>
 
@@ -453,9 +517,18 @@ function OrderCard({ item, idx, navigate, onWA }) {
             </div>
             <div>
               <div className="mop2-product-name">{name}</div>
-              <div className="mop2-product-price">₹{price.toLocaleString('en-IN')}</div>
+              <div className="mop2-product-price">₹{price.toLocaleString('en-IN')} · Qty {firstQty}</div>
             </div>
             {extras > 0 && <div className="mop2-more">+{extras} more</div>}
+          </div>
+        )}
+
+        {norm !== 'Delivered' && (
+          <div style={{ marginBottom:'16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:'10px', padding:'9px 12px', border:'1px solid rgba(26,140,140,0.2)', borderRadius:'6px', background:'rgba(26,140,140,0.06)' }}>
+            <span style={{ display:'inline-flex', alignItems:'center', gap:'6px', fontSize:'11px', fontWeight:'700', letterSpacing:'0.08em', textTransform:'uppercase', color:'#0f766e' }}>
+              <Calendar size={12} /> ETA {etaLabel}
+            </span>
+            <span style={{ fontSize:'12px', fontWeight:'700', color:'#115e59' }}>{etaCountdown}</span>
           </div>
         )}
 
@@ -485,7 +558,7 @@ function OrderCard({ item, idx, navigate, onWA }) {
       </div>
     </motion.div>
   )
-}
+})
 
 // ═══════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
@@ -504,6 +577,50 @@ export default function MyOrders() {
   const [to,      setTo]      = useState('')
   const [showAdv, setShowAdv] = useState(false)
   const [liveOn,  setLiveOn]  = useState(false)
+  const [nowTick, setNowTick] = useState(Date.now())
+
+  const fetchOrdersList = useCallback(async ({ silent = false } = {}) => {
+    if (!userId) {
+      setError('Please login')
+      if (!silent) setLoading(false)
+      return
+    }
+
+    try {
+      if (!silent) setLoading(true)
+      const { data } = await axios.get(`${BASE_URL}/api/orders/${userId}`, { timeout: 15000 })
+      setOrders(Array.isArray(data?.orders) ? data.orders : [])
+      setError('')
+    } catch {
+      if (!silent) setError('Unable to load your orders right now')
+    } finally {
+      if (!silent) setLoading(false)
+    }
+  }, [userId])
+
+  const syncOrderDetails = async (orderIdToSync) => {
+    if (!orderIdToSync || !userId) return
+    try {
+      const { data } = await axios.get(`${BASE_URL}/api/order/${encodeURIComponent(orderIdToSync)}?userId=${encodeURIComponent(userId)}`, { timeout: 12000 })
+      if (!data?.orderId) return
+
+      setOrders((prev) => prev.map((o) => {
+        if (o.orderId !== orderIdToSync) return o
+        return {
+          ...o,
+          orderStatus: data.orderStatus || o.orderStatus,
+          updatedAt: data.updatedAt || o.updatedAt,
+          createdAt: data.createdAt || o.createdAt,
+          deliverySchedule: data.deliverySchedule || o.deliverySchedule || null,
+          estimatedArrival: data.estimatedArrival || data.estimatedDelivery || o.estimatedArrival || null,
+          estimatedDelivery: data.estimatedDelivery || data.estimatedArrival || o.estimatedDelivery || null,
+          orderItems: Array.isArray(data.products) ? data.products : (o.orderItems || [])
+        }
+      }))
+    } catch {
+      // Keep UI responsive even if this sync call fails.
+    }
+  }
 
   const openWA = (orderId) => {
     const msg = `Hi Luxe Support, I need assistance with my Order: ${orderId}`
@@ -512,40 +629,64 @@ export default function MyOrders() {
 
   // FETCH
   useEffect(() => {
-    const load = async () => {
-      if (!userId) { setError('Please login'); setLoading(false); return }
-      try {
-        setLoading(true)
-        const { data } = await axios.get(`${BASE_URL}/api/orders/${userId}`, { timeout: 15000 })
-        setOrders(Array.isArray(data?.orders) ? data.orders : [])
-      } catch { setError('Unable to load your orders right now') }
-      finally { setLoading(false) }
-    }
-    load()
-  }, [userId])
+    fetchOrdersList()
+  }, [fetchOrdersList])
 
   // SOCKET
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTick(Date.now())
+    }, 30000)
+    return () => clearInterval(timer)
+  }, [])
+
   useEffect(() => {
     if (!userId) return
     let mounted = true
     const sock = io(BASE_URL, {
-      auth: { userId }, transports: ['websocket','polling'],
+      auth: { userId }, query: { userId }, transports: ['polling','websocket'],
       reconnection:true, reconnectionDelay:1000,
       reconnectionDelayMax:5000, reconnectionAttempts:5
     })
     socketRef.current = sock
     sock.on('connect',    () => { if (mounted) setLiveOn(true)  })
     sock.on('disconnect', () => { if (mounted) setLiveOn(false) })
-    sock.on('statusUpdate', p => {
+
+    const handleRealtimeUpdate = (p = {}) => {
       if (p?.orderId && p?.status && mounted)
         setOrders(prev => prev.map(o =>
           o.orderId === p.orderId
-            ? { ...o, orderStatus:p.status, updatedAt:p.updatedAt||new Date().toISOString() }
+            ? {
+              ...o,
+              orderStatus: p.status,
+              updatedAt: p.updatedAt || new Date().toISOString(),
+              ...(p.deliverySchedule ? { deliverySchedule: { ...(o.deliverySchedule || {}), ...p.deliverySchedule } } : {}),
+              ...((p.deliverySchedule?.date || p.deliverySchedule?.estimatedDelivery || p.deliverySchedule?.scheduledAt || p.estimatedDelivery || p.estimatedArrival)
+                ? {
+                  estimatedDelivery: p.deliverySchedule?.date || p.deliverySchedule?.estimatedDelivery || p.deliverySchedule?.scheduledAt || p.estimatedDelivery || p.estimatedArrival,
+                  estimatedArrival: p.deliverySchedule?.date || p.deliverySchedule?.estimatedDelivery || p.deliverySchedule?.scheduledAt || p.estimatedDelivery || p.estimatedArrival
+                }
+                : {})
+            }
             : o
         ))
-    })
-    return () => { mounted=false; sock.disconnect() }
-  }, [userId])
+
+      if (p?.orderId && mounted) {
+        syncOrderDetails(p.orderId)
+        fetchOrdersList({ silent: true })
+      }
+    }
+
+    sock.on('statusUpdate', handleRealtimeUpdate)
+    sock.on('orderUpdate', handleRealtimeUpdate)
+
+    return () => {
+      mounted=false
+      sock.off('statusUpdate', handleRealtimeUpdate)
+      sock.off('orderUpdate', handleRealtimeUpdate)
+      sock.disconnect()
+    }
+  }, [userId, fetchOrdersList])
 
   // FILTER
   const filtered = useMemo(() => {
@@ -715,7 +856,7 @@ export default function MyOrders() {
             <AnimatePresence mode="popLayout">
               {filtered.map((item, idx) => (
                 <OrderCard key={item.orderId} item={item} idx={idx}
-                  navigate={navigate} onWA={openWA} />
+                  navigate={navigate} onWA={openWA} nowTick={nowTick} />
               ))}
             </AnimatePresence>
           ) : (

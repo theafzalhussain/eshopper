@@ -49,7 +49,19 @@ module.exports = {
             // Sales by category (pie chart)
             const salesByCategory = await Order.aggregate([
                 { $unwind: "$products" },
-                { $group: { _id: "$products.maincategory", value: { $sum: "$products.qty" } } },
+                {
+                    $group: {
+                        _id: "$products.maincategory",
+                        value: {
+                            $sum: {
+                                $ifNull: [
+                                    "$products.qty",
+                                    { $ifNull: ["$products.quantity", 1] }
+                                ]
+                            }
+                        }
+                    }
+                },
                 { $sort: { value: -1 } }
             ]);
 

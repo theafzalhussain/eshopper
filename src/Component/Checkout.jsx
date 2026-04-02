@@ -126,6 +126,23 @@ export default function Checkout() {
 
             setplacingOrder(true)
 
+            const normalizedProducts = cart.map((item) => {
+                const qtyVal = Number(item?.quantity ?? item?.qty ?? item?.count ?? 1)
+                const qty = Number.isFinite(qtyVal) && qtyVal > 0 ? qtyVal : 1
+                const unitPriceVal = Number(item?.price ?? item?.product?.finalprice ?? item?.product?.price ?? 0)
+                const unitPrice = Number.isFinite(unitPriceVal) ? unitPriceVal : 0
+                const productId = item?.productid || item?.product?._id || item?.product?.id || item?._id || item?.id || ''
+
+                return {
+                    ...item,
+                    productid: productId,
+                    qty,
+                    quantity: qty,
+                    price: unitPrice,
+                    total: Number(item?.total ?? item?.lineTotal ?? (qty * unitPrice))
+                }
+            })
+
             const payload = {
                 userId: userid,
                 paymentMethod: mode,
@@ -145,7 +162,7 @@ export default function Checkout() {
                     pin: user?.pin || '',
                     country: 'India'
                 },
-                products: cart
+                products: normalizedProducts
             }
 
             const response = await axios.post(`${BASE_URL}/api/place-order`, payload, { timeout: 20000 })

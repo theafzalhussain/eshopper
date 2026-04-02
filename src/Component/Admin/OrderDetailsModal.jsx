@@ -7,8 +7,24 @@ export default function OrderDetailsModal({ order, open, onClose }) {
   const modalRef = useRef();
 
   if (!open || !order) return null;
-  // Debug: log the order object to see available fields
-  console.log('Order in Modal:', order);
+
+  const items = Array.isArray(order.products) ? order.products : (Array.isArray(order.orderItems) ? order.orderItems : []);
+  const getItemQty = (item = {}) => {
+    const qtyValue = Number(item.quantity ?? item.qty ?? item.count ?? item.orderedQty ?? 1);
+    return Number.isFinite(qtyValue) && qtyValue > 0 ? qtyValue : 1;
+  };
+  const totalQty = items.reduce((sum, item) => sum + getItemQty(item), 0);
+  const shippingAddressText = typeof order.shippingAddress === 'string'
+    ? order.shippingAddress
+    : [
+      order.shippingAddress?.fullName,
+      order.shippingAddress?.phone,
+      order.shippingAddress?.addressline1,
+      order.shippingAddress?.city,
+      order.shippingAddress?.state,
+      order.shippingAddress?.pin,
+      order.shippingAddress?.country
+    ].filter(Boolean).join(', ');
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
@@ -53,18 +69,18 @@ export default function OrderDetailsModal({ order, open, onClose }) {
         </div>
         <div className="order-modal-section">
           <h4>Shipping Address</h4>
-          <div>{order.shippingAddress || order.address || 'N/A'}</div>
+          <div>{shippingAddressText || order.address || 'N/A'}</div>
         </div>
         <div className="order-modal-section">
-          <h4>Items</h4>
+          <h4>Items (Total Qty: {totalQty})</h4>
           <ul className="order-modal-items">
-            {(order.products || order.orderItems || []).length === 0 ? (
+            {items.length === 0 ? (
               <li className="text-muted">No items found</li>
             ) : (
-              (order.products || order.orderItems || []).map((item, idx) => (
+              items.map((item, idx) => (
                 <li key={idx} className="order-modal-item">
                   <img src={item.pic1 || item.image || item.thumbnail || ''} alt="" width={40} height={40} style={{objectFit:'cover',borderRadius:8,marginRight:8}} />
-                  <span>{item.name || item.title || 'N/A'} x {item.qty || item.quantity || 1} <span className="text-muted">₹{item.price || item.amount || 0}</span></span>
+                  <span>{item.name || item.title || 'N/A'} x {getItemQty(item)} <span className="text-muted">₹{item.price || item.amount || 0}</span></span>
                 </li>
               ))
             )}

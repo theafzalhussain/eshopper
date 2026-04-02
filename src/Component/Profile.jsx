@@ -72,7 +72,7 @@ export default function Profile() {
         let mounted = true
         const socket = io(BASE_URL, {
             auth: { userId },
-            transports: ['websocket', 'polling'],
+            transports: ['polling', 'websocket'],
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,

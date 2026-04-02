@@ -400,9 +400,33 @@ app.use(helmet({ contentSecurityPolicy: false }));
 
 // 🔒 RATE LIMITERS
 // 🔒 RATE LIMITERS
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
+const isLocalDevelopment = String(process.env.NODE_ENV || '').toLowerCase() !== 'production';
+
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: Number(process.env.GLOBAL_RATE_LIMIT_MAX || 2000),
+    standardHeaders: true,
+    legacyHeaders: false,
+    // In local dev + realtime UI, these endpoints can burst (React StrictMode/socket refreshes).
+    skip: (req) => {
+        if (isLocalDevelopment) return true;
+
+        if (req.path.startsWith('/socket.io/') || req.method === 'OPTIONS') return true;
+
+        return (
+            req.path.startsWith('/user/') ||
+            req.path === '/product' ||
+            req.path.startsWith('/api/orders/') ||
+            req.path.startsWith('/api/membership/check')
+        );
+    }
+});
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
-app.use(globalLimiter);
+if (!isLocalDevelopment) {
+    app.use(globalLimiter);
+} else {
+    console.log('⚙️ Global rate limiter disabled for local development');
+}
 
 
 // 📊 REQUEST LOGGING MIDDLEWARE (with CORS origin info)
@@ -442,6 +466,37 @@ const INSTAGRAM_URL_DEFAULT = (
     'https://www.instagram.com/theafzal_hussain_786'
 ).trim();
 
+const normalizeQuantityValue = (value, fallback = 1) => {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    return fallback;
+};
+
+const normalizeOrderProducts = (products = []) => {
+    return (Array.isArray(products) ? products : []).map((entry) => {
+        const quantity = normalizeQuantityValue(
+            entry?.qty ??
+            entry?.quantity ??
+            entry?.count ??
+            entry?.orderedQty ??
+            entry?.cartQuantity,
+            1
+        );
+        const priceRaw = Number(entry?.price ?? entry?.finalprice ?? entry?.salePrice ?? 0);
+        const price = Number.isFinite(priceRaw) ? priceRaw : 0;
+        const totalRaw = Number(entry?.total ?? entry?.lineTotal ?? entry?.totalPrice ?? (quantity * price));
+        const total = Number.isFinite(totalRaw) ? totalRaw : (quantity * price);
+
+        return {
+            ...entry,
+            qty: quantity,
+            quantity,
+            price,
+            total
+        };
+    });
+};
+
 const buildInvoiceHtml = ({
     orderId,
     userName,
@@ -457,7 +512,7 @@ const buildInvoiceHtml = ({
     orderStatus,
     pdfType
 }) => {
-    const safeProducts = Array.isArray(products) ? products : [];
+    const safeProducts = normalizeOrderProducts(products);
     const safeAddress = shippingAddress || {};
     const invoiceType = pdfType === 'final' ? 'Tax Invoice' : (pdfType === 'confirmation' ? 'Proforma Invoice' : 'Payment Receipt');
     const invoiceNo = `INV-${String(orderId || '').replace(/[^a-zA-Z0-9]/g, '').slice(-10) || '000000'}`;
@@ -565,7 +620,7 @@ const buildOrderEmailHtml = ({
     estimatedArrival,
     products = []
 }) => {
-    const shortItems = (Array.isArray(products) ? products : []).slice(0, 5);
+    const shortItems = normalizeOrderProducts(products).slice(0, 5);
     const listHtml = shortItems.map((p) => {
         const qty = Number(p.qty || p.quantity || 1);
         const price = Number(p.price || 0);
@@ -614,8 +669,8 @@ const formatAddressForEmail = (shippingAddress = {}) => {
 };
 
 const mapProductsForEmailTemplate = (products = []) => {
-    return (Array.isArray(products) ? products : []).map((p) => {
-        const qty = Number(p.qty || p.quantity || 1);
+    return normalizeOrderProducts(products).map((p) => {
+        const qty = normalizeQuantityValue(p.qty || p.quantity, 1);
         const unitPrice = Number(p.price || p.finalprice || 0);
         const subtotal = Number(p.total || qty * unitPrice);
         const imageUrl =
@@ -2098,16 +2153,30 @@ const placeOrderHandler = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const cleanProducts = products.map((item) => ({
-            productid: item.productid || item.id || item._id || '',
-            name: item.name || 'Product',
-            qty: Number(item.qty || 1),
-            price: Number(item.price || 0),
-            total: Number(item.total || (Number(item.price || 0) * Number(item.qty || 1))),
-            size: item.size || '',
-            color: item.color || '',
-            pic: item.pic || item.pic1 || ''
-        }));
+        const cleanProducts = products.map((item) => {
+            const normalizedQty = Number(
+                item?.qty ??
+                item?.quantity ??
+                item?.count ??
+                item?.orderedQty ??
+                item?.cartQuantity ??
+                1
+            );
+            const safeQty = Number.isFinite(normalizedQty) && normalizedQty > 0 ? normalizedQty : 1;
+            const normalizedPrice = Number(item?.price || 0);
+
+            return {
+                productid: item.productid || item.id || item._id || '',
+                name: item.name || 'Product',
+                qty: safeQty,
+                quantity: safeQty,
+                price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
+                total: Number(item?.total ?? item?.lineTotal ?? (safeQty * (Number.isFinite(normalizedPrice) ? normalizedPrice : 0))),
+                size: item.size || '',
+                color: item.color || '',
+                pic: item.pic || item.pic1 || ''
+            };
+        });
 
         const orderId = await generateOrderId();
         const orderDate = new Date();
@@ -2642,7 +2711,7 @@ app.get('/api/orders/:userId', async (req, res) => {
         // 🔴 FETCH FROM ORDER COLLECTION (primary source)
         const orders = await Order.find({ userid: userId })
             .sort({ updatedAt: -1, createdAt: -1 })
-            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount')
+            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount estimatedArrival deliverySchedule')
             .lean();
 
         // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
@@ -2661,8 +2730,12 @@ app.get('/api/orders/:userId', async (req, res) => {
                     finalAmount: Number(item.finalAmount || 0),
                     paymentStatus: item.paymentstatus || 'Pending',
                     paymentMethod: item.paymentmode || 'COD',
+                    createdAt: item.createdAt || item.updatedAt || new Date(),
                     updatedAt: item.updatedAt || new Date(),
-                    orderItems: Array.isArray(item.products) ? item.products : []
+                    orderItems: normalizeOrderProducts(item.products),
+                    estimatedDelivery: item.estimatedArrival || null,
+                    estimatedArrival: item.estimatedArrival || null,
+                    deliverySchedule: item.deliverySchedule || null
                 }))
             });
         }
@@ -2677,8 +2750,12 @@ app.get('/api/orders/:userId', async (req, res) => {
                 finalAmount: Number(item.finalAmount || 0),
                 paymentStatus: item.paymentStatus || 'Pending',
                 paymentMethod: item.paymentMethod || 'COD',
+                createdAt: item.createdAt || item.updatedAt || new Date(),
                 updatedAt: item.updatedAt || item.createdAt || new Date(),
-                orderItems: Array.isArray(item.products) ? item.products : []
+                orderItems: normalizeOrderProducts(item.products),
+                estimatedDelivery: item.estimatedArrival || null,
+                estimatedArrival: item.estimatedArrival || null,
+                deliverySchedule: item.deliverySchedule || null
             }))
         });
     } catch (e) {
@@ -2738,6 +2815,8 @@ app.get('/api/order/:orderId', async (req, res) => {
             { status: 'Ordered', timestamp: order.orderDate || order.createdAt || new Date() }
         ];
 
+        const normalizedProducts = normalizeOrderProducts(order.products);
+
         return res.json({
             orderId: order.orderId,
             userid: order.userid,
@@ -2750,7 +2829,8 @@ app.get('/api/order/:orderId', async (req, res) => {
             shippingAmount: Number(order.shippingAmount || 0),
             finalAmount: order.finalAmount || 0,
             shippingAddress: order.shippingAddress || {},
-            products: Array.isArray(order.products) ? order.products : [],
+            products: normalizedProducts,
+            deliverySchedule: order.deliverySchedule || null,
             estimatedDelivery: order.estimatedArrival || null,
             estimatedArrival: order.estimatedArrival || null,
             statusHistory: statusHistory,
@@ -2801,7 +2881,7 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
                 totalAmount: Number(order.totalAmount || 0),
                 shippingAmount: Number(order.shippingAmount || 0),
                 shippingAddress: order.shippingAddress || {},
-                products: Array.isArray(order.products) ? order.products : [],
+                products: normalizeOrderProducts(order.products),
                 orderDate: order.orderDate || order.createdAt,
                 orderStatus: order.orderStatus || order.status || 'Ordered',
                 pdfType,
@@ -3131,7 +3211,7 @@ app.get('/api/admin/orders', async (req, res) => {
                 orderStatus: item.orderStatus || 'Order Placed',
                 paymentStatus: item.paymentStatus || 'Pending',
                 finalAmount: Number(item.finalAmount || 0),
-                productCount: Array.isArray(item.products) ? item.products.length : 0,
+                productCount: normalizeOrderProducts(item.products).reduce((sum, product) => sum + Number(product.quantity || 0), 0),
                 updatedAt: item.updatedAt || item.createdAt || new Date()
             }))
         });
@@ -3222,7 +3302,7 @@ app.get('/api/admin/invoices/:orderId/download', async (req, res) => {
             totalAmount: Number(order.totalAmount || 0),
             shippingAmount: Number(order.shippingAmount || 0),
             shippingAddress: order.shippingAddress || {},
-            products: Array.isArray(order.products) ? order.products : [],
+            products: normalizeOrderProducts(order.products),
             orderDate: order.orderDate || order.createdAt,
             orderStatus: order.orderStatus || order.status || 'Ordered',
             pdfType,
@@ -3276,7 +3356,7 @@ app.get('/api/admin/order/:orderId', async (req, res) => {
             shippingAmount: Number(order.shippingAmount || 0),
             finalAmount: Number(order.finalAmount || 0),
             shippingAddress: order.shippingAddress || {},
-            products: Array.isArray(order.products) ? order.products : [],
+            products: normalizeOrderProducts(order.products),
             estimatedArrival: order.estimatedArrival || null,
             orderDate: order.orderDate || order.createdAt,
             createdAt: order.createdAt,
@@ -3291,8 +3371,39 @@ app.get('/api/admin/order/:orderId', async (req, res) => {
 // 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
 const handleOrderStatusUpdate = async (req, res) => {
     try {
-        const { orderId, status, deliverySchedule, adminNote } = req.body;
+        const {
+            orderId,
+            status,
+            deliverySchedule,
+            adminNote,
+            deliveryAgent,
+            riderPhone,
+            locationName,
+            latitude,
+            longitude
+        } = req.body;
         const normalized = normalizeOrderStatus(status);
+        const latNum = Number(latitude);
+        const lngNum = Number(longitude);
+        const hasCoords = Number.isFinite(latNum) && Number.isFinite(lngNum);
+
+        const normalizedDeliverySchedule = deliverySchedule
+            ? {
+                ...deliverySchedule,
+                ...(deliveryAgent ? { deliveryAgent: String(deliveryAgent).trim() } : {}),
+                ...(riderPhone ? { riderPhone: String(riderPhone).trim() } : {}),
+                ...(locationName ? { locationName: String(locationName).trim() } : {}),
+                ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
+            }
+            : ((deliveryAgent || riderPhone || locationName || hasCoords)
+                ? {
+                    scheduledAt: new Date().toISOString(),
+                    ...(deliveryAgent ? { deliveryAgent: String(deliveryAgent).trim() } : {}),
+                    ...(riderPhone ? { riderPhone: String(riderPhone).trim() } : {}),
+                    ...(locationName ? { locationName: String(locationName).trim() } : {}),
+                    ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
+                }
+                : null);
 
         if (!orderId || !normalized) {
             return res.status(400).json({
@@ -3320,8 +3431,8 @@ const handleOrderStatusUpdate = async (req, res) => {
             }
             
             // Create order record from checkout data
-            const estimatedArrival = deliverySchedule?.date
-                ? new Date(deliverySchedule.date)
+            const estimatedArrival = normalizedDeliverySchedule?.date
+                ? new Date(normalizedDeliverySchedule.date)
                 : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Default 7 days
 
             const newOrder = await Order.create({
@@ -3335,15 +3446,20 @@ const handleOrderStatusUpdate = async (req, res) => {
                 totalAmount: checkout.totalAmount,
                 shippingAmount: checkout.shippingAmount,
                 finalAmount: checkout.finalAmount,
-                products: checkout.products || [],
+                products: normalizeOrderProducts(checkout.products),
                 estimatedArrival: estimatedArrival,
-                deliverySchedule: deliverySchedule || null,
+                deliverySchedule: normalizedDeliverySchedule || null,
                 statusHistory: [{
                     status: normalized,
                     timestamp: new Date(),
                     message: `Order status changed to ${normalized}`,
-                    deliverySchedule: deliverySchedule || null,
-                    adminNote: adminNote || null
+                    deliverySchedule: normalizedDeliverySchedule || null,
+                    adminNote: adminNote || null,
+                    deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
+                    riderPhone: normalizedDeliverySchedule?.riderPhone || null,
+                    locationName: normalizedDeliverySchedule?.locationName || null,
+                    latitude: normalizedDeliverySchedule?.latitude || null,
+                    longitude: normalizedDeliverySchedule?.longitude || null
                 }]
             });
             order = newOrder;
@@ -3352,13 +3468,13 @@ const handleOrderStatusUpdate = async (req, res) => {
             order.orderStatus = normalized;
 
             // 🔴 UPDATE DELIVERY SCHEDULE IF PROVIDED
-            if (deliverySchedule) {
-                order.deliverySchedule = deliverySchedule;
+            if (normalizedDeliverySchedule) {
+                order.deliverySchedule = normalizedDeliverySchedule;
                 // Update estimatedArrival if new delivery date provided
-                if (deliverySchedule.date) {
-                    order.estimatedArrival = new Date(deliverySchedule.date);
-                } else if (deliverySchedule.estimatedDelivery) {
-                    order.estimatedArrival = new Date(deliverySchedule.estimatedDelivery);
+                if (normalizedDeliverySchedule.date) {
+                    order.estimatedArrival = new Date(normalizedDeliverySchedule.date);
+                } else if (normalizedDeliverySchedule.estimatedDelivery) {
+                    order.estimatedArrival = new Date(normalizedDeliverySchedule.estimatedDelivery);
                 }
             }
 
@@ -3369,8 +3485,13 @@ const handleOrderStatusUpdate = async (req, res) => {
                     status: normalized,
                     timestamp: new Date(),
                     message: `Order status changed to ${normalized}`,
-                    deliverySchedule: deliverySchedule || null,
-                    adminNote: adminNote || null
+                    deliverySchedule: normalizedDeliverySchedule || null,
+                    adminNote: adminNote || null,
+                    deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
+                    riderPhone: normalizedDeliverySchedule?.riderPhone || null,
+                    locationName: normalizedDeliverySchedule?.locationName || null,
+                    latitude: normalizedDeliverySchedule?.latitude || null,
+                    longitude: normalizedDeliverySchedule?.longitude || null
                 }
             ];
             await order.save();
@@ -3387,8 +3508,13 @@ const handleOrderStatusUpdate = async (req, res) => {
             await order.save();
         }
 
-        // 🔴 SYNC STATUS TO CHECKOUT COLLECTION (prevent data mismatch)
-        await Checkout.updateMany(
+                    deliverySchedule: normalizedDeliverySchedule || null,
+                    adminNote: adminNote || null,
+                    deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
+                    riderPhone: normalizedDeliverySchedule?.riderPhone || null,
+                    locationName: normalizedDeliverySchedule?.locationName || null,
+                    latitude: normalizedDeliverySchedule?.latitude || null,
+                    longitude: normalizedDeliverySchedule?.longitude || null
             { userid: order.userid, totalAmount: order.totalAmount, finalAmount: order.finalAmount },
             { orderstatus: normalized, updatedAt: new Date() }
         ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
@@ -3405,7 +3531,12 @@ const handleOrderStatusUpdate = async (req, res) => {
                 time: order.deliveryTime || null,
                 scheduledAt: order.estimatedArrival
             } : null),
-            adminNote: req.body.adminNote || null
+            adminNote: req.body.adminNote || null,
+            deliveryAgent: order.deliverySchedule?.deliveryAgent || null,
+            riderPhone: order.deliverySchedule?.riderPhone || null,
+            locationName: order.deliverySchedule?.locationName || null,
+            latitude: order.deliverySchedule?.latitude || null,
+            longitude: order.deliverySchedule?.longitude || null
         };
 
         // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
@@ -3440,7 +3571,7 @@ const handleOrderStatusUpdate = async (req, res) => {
                             paymentMethod: order.paymentMethod,
                             paymentStatus: order.paymentStatus,
                             shippingAddress: order.shippingAddress,
-                            products: order.products
+                            products: normalizeOrderProducts(order.products)
                         });
                     })
                     .catch(err => {
@@ -3479,7 +3610,7 @@ const handleOrderStatusUpdate = async (req, res) => {
                                 totalAmount: Number(order.totalAmount || 0),
                                 shippingAmount: Number(order.shippingAmount || 0),
                                 shippingAddress: order.shippingAddress || {},
-                                products: Array.isArray(order.products) ? order.products : [],
+                                products: normalizeOrderProducts(order.products),
                                 orderDate: order.orderDate || order.createdAt,
                                 estimatedArrival: order.estimatedArrival,
                                 orderStatus: 'Delivered',
@@ -3507,7 +3638,7 @@ const handleOrderStatusUpdate = async (req, res) => {
                         totalAmount: Number(order.totalAmount || 0),
                         shippingAmount: Number(order.shippingAmount || 0),
                         shippingAddress: order.shippingAddress || {},
-                        products: Array.isArray(order.products) ? order.products : [],
+                        products: normalizeOrderProducts(order.products),
                         orderDate: order.orderDate || order.createdAt,
                         estimatedArrival: order.estimatedArrival,
                         status: normalized,
@@ -3605,7 +3736,7 @@ app.post('/api/admin/confirm-order', async (req, res) => {
                     totalAmount: order.totalAmount,
                     shippingAmount: order.shippingAmount,
                     shippingAddress: order.shippingAddress,
-                    products: order.products || [],
+                    products: normalizeOrderProducts(order.products),
                     orderDate: order.orderDate || new Date(),
                     estimatedArrival: order.estimatedArrival,
                     deliveryPartner: order.deliveryPartner,
@@ -3635,7 +3766,7 @@ app.post('/api/admin/confirm-order', async (req, res) => {
                     totalAmount: order.totalAmount,
                     shippingAmount: order.shippingAmount,
                     shippingAddress: order.shippingAddress,
-                    products: order.products || [],
+                    products: normalizeOrderProducts(order.products),
                     orderDate: order.orderDate || order.createdAt,
                     estimatedArrival: order.estimatedArrival,
                     invoiceBase64: invoiceBase64,
