@@ -34,18 +34,28 @@ export default function Profile() {
         dispatch(getUser())
         dispatch(getWishlist())
         dispatch(getCheckout())
-        
-        const userId = localStorage.getItem("userid")
-        var data = users.find((item) => item.id === userId)
-        if (data) {
-            setuser(data)
-            setIsLoading(false)
-        }
     }
 
     useEffect(() => {
         getAPIData()
-    }, [users.length, wishlist.length, orders.length])
+    }, [])
+
+    // Update user state whenever users data changes
+    useEffect(() => {
+        const userId = localStorage.getItem("userid")
+        if (!userId) {
+            setIsLoading(false)
+            return
+        }
+        
+        if (users && users.length > 0) {
+            const data = users.find((item) => item.id === userId)
+            if (data) {
+                setuser(data)
+            }
+            setIsLoading(false)
+        }
+    }, [users])
 
     useEffect(() => {
         const fetchRecentOrders = async () => {
