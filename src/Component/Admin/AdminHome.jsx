@@ -215,11 +215,6 @@ export default function AdminHome() {
         return monthStr
     }
 
-    const formattedMonthlyData = dashboardData.monthlyData.map(item => ({
-        ...item,
-        monthLabel: formatMonth(item.month)
-    }))
-
     const fallbackAnalytics = useMemo(() => {
         const safeProducts = Array.isArray(products) ? products : []
         const safeOrders = Array.isArray(orders) ? orders : []
@@ -296,6 +291,41 @@ export default function AdminHome() {
         }
     }, [orders, products])
 
+    const fallbackMonthlyData = useMemo(() => {
+        const safeOrders = Array.isArray(orders) ? orders : []
+        const now = new Date()
+
+        const months = Array.from({ length: 12 }, (_, index) => {
+            const monthDate = new Date(now.getFullYear(), now.getMonth() - 11 + index, 1)
+            return {
+                year: monthDate.getFullYear(),
+                month: monthDate.getMonth() + 1,
+                key: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`
+            }
+        })
+
+        const revenueByMonth = new Map(months.map((m) => [m.key, 0]))
+
+        safeOrders.forEach((order) => {
+            const rawDate = order?.orderDate || order?.createdAt || order?.updatedAt
+            const amount = Number(order?.finalAmount || 0)
+            if (!rawDate || !Number.isFinite(amount) || amount <= 0) return
+
+            const dt = new Date(rawDate)
+            if (Number.isNaN(dt.getTime())) return
+
+            const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`
+            if (!revenueByMonth.has(key)) return
+            revenueByMonth.set(key, (revenueByMonth.get(key) || 0) + amount)
+        })
+
+        return months.map((m) => {
+            const revenue = Number(revenueByMonth.get(m.key) || 0)
+            const target = revenue > 0 ? Math.round(revenue * 1.12) : 0
+            return { month: m.key, revenue, target }
+        })
+    }, [orders])
+
     const isMeaningfulCategoryData = (list = []) => Array.isArray(list) && list.length > 0 && list.some((entry) => {
         const categoryName = String(entry?.name || entry?._id || '').trim().toLowerCase()
         return categoryName && categoryName !== 'uncategorized' && Number(entry?.value || 0) > 0
@@ -315,6 +345,35 @@ export default function AdminHome() {
     const resolvedTopProducts = isMeaningfulTopProducts(dashboardData.topProducts)
         ? dashboardData.topProducts
         : fallbackAnalytics.topProducts
+
+    const resolvedMonthlyData = useMemo(() => {
+        const apiMonthly = Array.isArray(dashboardData.monthlyData) ? dashboardData.monthlyData : []
+        const fallbackMonthly = Array.isArray(fallbackMonthlyData) ? fallbackMonthlyData : []
+        if (!apiMonthly.length) return fallbackMonthly
+
+        const apiNonZeroCount = apiMonthly.filter((item) => Number(item?.revenue || 0) > 0).length
+        if (apiNonZeroCount >= 2) return apiMonthly
+
+        const fallbackMap = new Map(fallbackMonthly.map((item) => [String(item.month), item]))
+        return apiMonthly.map((item) => {
+            const key = String(item?.month || '')
+            const fallbackItem = fallbackMap.get(key)
+            const apiRevenue = Number(item?.revenue || 0)
+            const fallbackRevenue = Number(fallbackItem?.revenue || 0)
+            const revenue = apiRevenue > 0 ? apiRevenue : fallbackRevenue
+            const target = revenue > 0 ? Math.round(revenue * 1.12) : Number(item?.target || fallbackItem?.target || 0)
+            return {
+                ...item,
+                revenue,
+                target
+            }
+        })
+    }, [dashboardData.monthlyData, fallbackMonthlyData])
+
+    const formattedMonthlyData = resolvedMonthlyData.map(item => ({
+        ...item,
+        monthLabel: formatMonth(item.month)
+    }))
 
     return (
         <div className="scc-container" style={{ minHeight: "100vh" }}>
