@@ -48,13 +48,21 @@ export default function Profile() {
             return
         }
         
+        // Check both 'id' and '_id' fields for MongoDB compatibility
         if (users && users.length > 0) {
-            const data = users.find((item) => item.id === userId)
+            const data = users.find((item) => {
+                const itemId = String(item.id || item._id || '')
+                const currentUserId = String(userId)
+                return itemId === currentUserId
+            })
             if (data) {
+                console.log('✅ User data loaded:', { id: data.id || data._id, name: data.name, email: data.email })
                 setuser(data)
+            } else {
+                console.warn('⚠️ User not found in Redux state. Available users:', users.length, 'Looking for:', userId)
             }
-            setIsLoading(false)
         }
+        setIsLoading(false)
     }, [users])
 
     useEffect(() => {
