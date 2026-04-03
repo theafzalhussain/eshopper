@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -12,6 +12,15 @@ import './SystemControlCenter.css';
 // Custom Tooltip for Line Chart
 const CustomLineTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
+    const revenuePoint = payload.find((entry) => entry?.dataKey === 'revenue' || entry?.name === 'Revenue');
+    const targetPoint = payload.find((entry) => entry?.dataKey === 'target' || entry?.name === 'Target');
+    const revenue = Number(revenuePoint?.value || 0);
+    const target = Number(targetPoint?.value || 0);
+    const variance = revenue - target;
+    const achievement = target > 0 ? (revenue / target) * 100 : 0;
+    const orderCount = Number(revenuePoint?.payload?.orderCount || 0);
+    const avgOrderValue = orderCount > 0 ? revenue / orderCount : 0;
+
     return (
       <div style={{
         background: 'rgba(15, 23, 42, 0.95)',
@@ -26,6 +35,19 @@ const CustomLineTooltip = ({ active, payload, label }) => {
             {entry.name}: ₹{entry.value?.toLocaleString('en-IN')}
           </p>
         ))}
+        <div style={{ marginTop: '8px', borderTop: '1px solid rgba(148,163,184,0.2)', paddingTop: '8px' }}>
+          <p style={{ color: variance >= 0 ? '#10B981' : '#F87171', fontSize: '0.78rem', margin: '2px 0' }}>
+            Gap vs Target: {variance >= 0 ? '+' : '-'}₹{Math.abs(variance).toLocaleString('en-IN')}
+          </p>
+          <p style={{ color: '#FCD34D', fontSize: '0.78rem', margin: '2px 0' }}>
+            Achievement: {achievement.toFixed(1)}%
+          </p>
+          {orderCount > 0 && (
+            <p style={{ color: '#67E8F9', fontSize: '0.78rem', margin: '2px 0' }}>
+              Orders: {orderCount} • Avg AOV: ₹{Math.round(avgOrderValue).toLocaleString('en-IN')}
+            </p>
+          )}
+        </div>
       </div>
     );
   }
@@ -72,6 +94,7 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
   });
   const [period, setPeriod] = useState('12M');
   const [isLoading, setIsLoading] = useState(false);
+  const [showRawDebug, setShowRawDebug] = useState(false);
 
   // Fetch chart data
   const fetchChartData = useCallback(async () => {
@@ -128,6 +151,43 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
     monthLabel: formatMonth(item.month)
   }));
 
+  const periodMonthlyData = useMemo(() => {
+    const source = Array.isArray(formattedMonthlyData) ? formattedMonthlyData : [];
+    if (period === '6M') {
+      return source.slice(-6);
+    }
+
+    if (period === 'YTD') {
+      const currentYear = new Date().getFullYear();
+      const ytd = source.filter((item) => String(item?.month || '').startsWith(`${currentYear}-`));
+      return ytd.length ? ytd : source.slice(-6);
+    }
+
+    return source;
+  }, [formattedMonthlyData, period]);
+
+  const monthlyInsights = useMemo(() => {
+    const list = Array.isArray(periodMonthlyData) ? periodMonthlyData : [];
+    const totalRevenue = list.reduce((sum, item) => sum + Number(item?.revenue || 0), 0);
+    const totalTarget = list.reduce((sum, item) => sum + Number(item?.target || 0), 0);
+    const totalOrders = list.reduce((sum, item) => sum + Number(item?.orderCount || 0), 0);
+    const nonZero = list.filter((item) => Number(item?.revenue || 0) > 0);
+
+    const peak = list.reduce((best, item) => (Number(item?.revenue || 0) > Number(best?.revenue || 0) ? item : best), list[0] || null);
+    const low = list.reduce((worst, item) => (Number(item?.revenue || 0) < Number(worst?.revenue || 0) ? item : worst), list[0] || null);
+
+    return {
+      totalRevenue,
+      totalTarget,
+      totalOrders,
+      avgMonthlyRevenue: list.length ? Math.round(totalRevenue / list.length) : 0,
+      achievement: totalTarget > 0 ? (totalRevenue / totalTarget) * 100 : 0,
+      activeMonths: nonZero.length,
+      peak,
+      low
+    };
+  }, [periodMonthlyData]);
+
   // Custom Legend
   const renderCustomLegend = () => (
     <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem' }}>
@@ -166,18 +226,47 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
             </div>
             <h2 className="scc-chart-title">Sales Revenue Trend</h2>
           </div>
-          <div className="scc-chart-period">
-            {['6M', '12M', 'YTD'].map(p => (
-              <button
-                key={p}
-                className={`scc-period-btn ${period === p ? 'scc-period-btn--active' : ''}`}
-                onClick={() => setPeriod(p)}
-              >
-                {p}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div className="scc-chart-period">
+              {['6M', '12M', 'YTD'].map(p => (
+                <button
+                  key={p}
+                  className={`scc-period-btn ${period === p ? 'scc-period-btn--active' : ''}`}
+                  onClick={() => setPeriod(p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowRawDebug((v) => !v)}
+              style={{
+                border: '1px solid rgba(148,163,184,0.35)',
+                background: showRawDebug ? 'rgba(13,148,136,0.2)' : 'rgba(15,23,42,0.4)',
+                color: '#cbd5e1',
+                fontSize: '0.68rem',
+                letterSpacing: '0.08em',
+                borderRadius: '999px',
+                padding: '6px 10px',
+                cursor: 'pointer'
+              }}
+            >
+              RAW JSON
+            </button>
           </div>
         </div>
+
+        {showRawDebug && (
+          <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', background: 'rgba(2,6,23,0.45)', padding: '10px 12px' }}>
+            <div style={{ fontSize: '0.68rem', letterSpacing: '0.08em', color: '#67E8F9', marginBottom: '6px' }}>
+              LIVE MONTHLY DATA ({periodMonthlyData.length} points)
+            </div>
+            <pre style={{ margin: 0, maxHeight: 150, overflow: 'auto', fontSize: '11px', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {JSON.stringify(periodMonthlyData, null, 2)}
+            </pre>
+          </div>
+        )}
 
         {isLoading ? (
           <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -185,7 +274,7 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={formattedMonthlyData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+            <AreaChart data={periodMonthlyData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.4} />
@@ -233,6 +322,34 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
           </ResponsiveContainer>
         )}
         {renderCustomLegend()}
+
+        <div style={{
+          marginTop: '12px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: '10px'
+        }}>
+          <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.08em' }}>TOTAL REVENUE</div>
+            <div style={{ color: '#FCD34D', fontWeight: 700, marginTop: '4px' }}>₹{Math.round(monthlyInsights.totalRevenue || 0).toLocaleString('en-IN')}</div>
+          </div>
+          <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.08em' }}>ACHIEVEMENT</div>
+            <div style={{ color: '#22d3ee', fontWeight: 700, marginTop: '4px' }}>{monthlyInsights.achievement.toFixed(1)}%</div>
+          </div>
+          <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.08em' }}>PEAK MONTH</div>
+            <div style={{ color: '#10B981', fontWeight: 700, marginTop: '4px' }}>
+              {monthlyInsights.peak?.monthLabel || monthlyInsights.peak?.month || 'N/A'}
+            </div>
+            <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>₹{Math.round(monthlyInsights.peak?.revenue || 0).toLocaleString('en-IN')}</div>
+          </div>
+          <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.08em' }}>AVG / MONTH</div>
+            <div style={{ color: '#cbd5e1', fontWeight: 700, marginTop: '4px' }}>₹{Math.round(monthlyInsights.avgMonthlyRevenue || 0).toLocaleString('en-IN')}</div>
+            <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Active Months: {monthlyInsights.activeMonths}</div>
+          </div>
+        </div>
       </motion.div>
 
       {/* Category Distribution - Pie Chart */}
