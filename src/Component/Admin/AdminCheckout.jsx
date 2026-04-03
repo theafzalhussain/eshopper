@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import axios from 'axios'
 import LefNav from './LefNav'
 import { getCheckout, updateCheckout } from '../../Store/ActionCreaters/CheckoutActionCreators'
-import { BASE_URL } from '../../constants'
+import { BASE_URL, SOCKET_TRANSPORTS } from '../../constants'
 import { ShoppingBag, Truck, AlertCircle, ChevronDown, Send } from 'lucide-react'
 import io from 'socket.io-client'
 
@@ -41,7 +41,7 @@ export default function AdminCheckout() {
         const userId = localStorage.getItem('userid');
         const newSocket = io(BASE_URL, {
             auth: { userId },
-            transports: ['websocket', 'polling'],
+            transports: SOCKET_TRANSPORTS,
             reconnection: true,
             reconnectionDelay: 3000,
             reconnectionDelayMax: 10000,

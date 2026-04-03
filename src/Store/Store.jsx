@@ -10,7 +10,8 @@ const Store = configureStore({
     reducer: RootReducer,
     // Modern Toolkit way to handle saga middleware
     middleware: (getDefaultMiddleware) => getDefaultMiddleware({
-        serializableCheck: false // Necessary for FormData handling
+        serializableCheck: false, // Necessary for FormData handling
+        immutableCheck: false
     }).concat(sagaMiddleware)
 })
 

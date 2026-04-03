@@ -7,7 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { getCart } from '../Store/ActionCreaters/CartActionCreators';
 import { useToast } from './ToastNotification';
 import axios from 'axios';
-import { BASE_URL } from '../constants';
+import { BASE_URL, SOCKET_TRANSPORTS } from '../constants';
 import Spinner from './Spinner';
 import io from 'socket.io-client';
 axios.defaults.baseURL = BASE_URL;
@@ -248,7 +248,7 @@ export default function Cart() {
                     reconnectionDelay: 2000,
                     reconnectionDelayMax: 10000,
                     reconnectionAttempts: 2,
-                    transports: ['websocket', 'polling'],
+                    transports: SOCKET_TRANSPORTS,
                     forceNew: false,
                     timeout: 5000
                 });

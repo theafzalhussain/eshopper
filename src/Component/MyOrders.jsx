@@ -3,7 +3,7 @@ import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { io } from 'socket.io-client'
-import { BASE_URL } from '../constants'
+import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import {
   Clock3, PackageSearch, Search, SlidersHorizontal,
   X, ArrowLeft, ChevronRight, MessageCircle,
@@ -644,7 +644,7 @@ export default function MyOrders() {
     if (!userId) return
     let mounted = true
     const sock = io(BASE_URL, {
-      auth: { userId }, query: { userId }, transports: ['websocket', 'polling'],
+      auth: { userId }, query: { userId }, transports: SOCKET_TRANSPORTS,
       reconnection: true, reconnectionDelay: 3000,
       reconnectionDelayMax: 10000, reconnectionAttempts: 3, forceNew: false
     })

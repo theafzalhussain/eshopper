@@ -17,6 +17,7 @@ import axios from 'axios';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import io from 'socket.io-client';
+import { SOCKET_TRANSPORTS } from '../../constants';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
 import OrderActionDrawer from './OrderActionDrawer';
 import { BASE_URL as SHARED_BASE_URL } from '../../constants';
@@ -256,7 +257,7 @@ export default function AdminOrders() {
         const userId = localStorage.getItem('userId') || 'admin-dashboard';
         
         const socket = io(apiBaseUrl, {
-            transports: ['polling', 'websocket'],
+            transports: SOCKET_TRANSPORTS,
             withCredentials: true,
             reconnectionAttempts: 3,
             timeout: 8000,

@@ -9,7 +9,7 @@ import { getCheckout } from "../Store/ActionCreaters/CheckoutActionCreators"
 import BuyerProfile from './BuyerProfile'
 import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BASE_URL } from '../constants'
+import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import { ArrowRight, ShoppingBag, Clock3, Heart, ShoppingCart, Package, Shield, Settings, LayoutGrid, Sparkles, Star } from 'lucide-react'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -91,7 +91,7 @@ export default function Profile() {
         let mounted = true
         const socket = io(BASE_URL, {
             auth: { userId },
-            transports: ['websocket', 'polling'],
+            transports: SOCKET_TRANSPORTS,
             reconnection: true,
             reconnectionDelay: 3000,
             reconnectionDelayMax: 10000,

@@ -4,11 +4,19 @@ const isDev = window.location.hostname === 'localhost' || window.location.hostna
 const PROD_API_URL = "https://eshopper-qtgl.onrender.com";
 const LOCAL_API_URL = "http://localhost:5000";
 const useLocalApi = process.env.REACT_APP_USE_LOCAL_API === 'true';
+const forceWebSocket = process.env.REACT_APP_FORCE_WEBSOCKET === 'true';
 
 // Default behavior: use production API even in local dev unless explicitly opted in.
 export const BASE_URL = process.env.REACT_APP_API_URL || ((isDev && useLocalApi)
   ? LOCAL_API_URL
   : PROD_API_URL);
+
+// Socket transport strategy:
+// - Local dev: polling by default (avoids noisy websocket close warnings in React StrictMode)
+// - Deployed envs: websocket + polling fallback
+export const SOCKET_TRANSPORTS = (isDev && !forceWebSocket)
+  ? ['polling']
+  : ['websocket', 'polling'];
 
 // ===== FRONTEND URLs =====
 // Always use production domain
