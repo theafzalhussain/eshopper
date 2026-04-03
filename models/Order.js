@@ -24,6 +24,10 @@ const orderSchema = new mongoose.Schema({
     },
     products: Array,
     estimatedArrival: Date,
+    deliveryOtp: String,
+    deliveryOtpSentAt: Date,
+    deliveryOtpExpiresAt: Date,
+    deliveryOtpVerifiedAt: Date,
     // 🔴 DELIVERY SCHEDULE FOR REAL-TIME FRONTEND UPDATES
     deliverySchedule: {
         date: Date,
@@ -67,7 +71,10 @@ const orderSchema = new mongoose.Schema({
             riderPhone: String,
             locationName: String,
             latitude: Number,
-            longitude: Number
+            longitude: Number,
+            deliveryOtp: String,
+            deliveryOtpExpiresAt: Date,
+            deliveryOtpVerifiedAt: Date
         }
     ],
     orderDate: { type: Date, default: Date.now }

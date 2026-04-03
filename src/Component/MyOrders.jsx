@@ -8,7 +8,7 @@ import {
   Clock3, PackageSearch, Search, SlidersHorizontal,
   X, ArrowLeft, ChevronRight, MessageCircle,
   MapPin, Calendar, RotateCcw, Package,
-  CreditCard, TrendingUp, CheckCircle2, Truck
+  CreditCard, TrendingUp, CheckCircle2, Truck, KeyRound
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════
@@ -440,6 +440,20 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
   const extras = items.length > 1 ? items.length - 1 : 0
   const firstQty = getItemQty(first)
   const totalQty = items.reduce((sum, product) => sum + getItemQty(product), 0)
+  const outForDeliverySnapshot = useMemo(() => {
+    const history = Array.isArray(item.statusHistory) ? item.statusHistory : []
+    return history.find((entry) => normalizeStatus(entry?.status || '') === 'Out for Delivery') || null
+  }, [item.statusHistory])
+  const deliveryOtpCode = useMemo(() => {
+    const directOtp = String(item.deliveryOtp || '').trim()
+    if (directOtp) return directOtp
+
+    const scheduleOtp = String(item?.deliverySchedule?.deliveryOtp || '').trim()
+    if (scheduleOtp) return scheduleOtp
+
+    const timelineOtp = String(outForDeliverySnapshot?.deliveryOtp || outForDeliverySnapshot?.deliverySchedule?.deliveryOtp || '').trim()
+    return timelineOtp
+  }, [item.deliveryOtp, item?.deliverySchedule?.deliveryOtp, outForDeliverySnapshot])
   const etaDate = resolveEtaDate(item)
   const etaLabel = etaDate
     ? new Date(etaDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -532,6 +546,15 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
           </div>
         )}
 
+        {norm === 'Out for Delivery' && deliveryOtpCode && !item.deliveryOtpVerifiedAt && (
+          <div style={{ marginBottom:'16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:'10px', padding:'10px 12px', border:'1px solid rgba(220,38,38,0.22)', borderRadius:'6px', background:'rgba(220,38,38,0.06)' }}>
+            <span style={{ display:'inline-flex', alignItems:'center', gap:'6px', fontSize:'11px', fontWeight:'700', letterSpacing:'0.08em', textTransform:'uppercase', color:'#b91c1c' }}>
+              <KeyRound size={12} /> Delivery OTP
+            </span>
+            <span style={{ fontSize:'16px', fontWeight:'800', color:'#7f1d1d', letterSpacing:'0.16em' }}>{deliveryOtpCode}</span>
+          </div>
+        )}
+
         {/* Progress */}
         <Progress status={item.orderStatus} updatedAt={item.updatedAt} />
 
@@ -614,7 +637,12 @@ export default function MyOrders() {
           deliverySchedule: data.deliverySchedule || o.deliverySchedule || null,
           estimatedArrival: data.estimatedArrival || data.estimatedDelivery || o.estimatedArrival || null,
           estimatedDelivery: data.estimatedDelivery || data.estimatedArrival || o.estimatedDelivery || null,
-          orderItems: Array.isArray(data.products) ? data.products : (o.orderItems || [])
+          orderItems: Array.isArray(data.products) ? data.products : (o.orderItems || []),
+          statusHistory: Array.isArray(data.statusHistory) ? data.statusHistory : (o.statusHistory || []),
+          deliveryOtp: data.deliveryOtp || o.deliveryOtp || '',
+          deliveryOtpSentAt: data.deliveryOtpSentAt || o.deliveryOtpSentAt || null,
+          deliveryOtpExpiresAt: data.deliveryOtpExpiresAt || o.deliveryOtpExpiresAt || null,
+          deliveryOtpVerifiedAt: data.deliveryOtpVerifiedAt || o.deliveryOtpVerifiedAt || null
         }
       }))
     } catch {
@@ -661,6 +689,18 @@ export default function MyOrders() {
               orderStatus: p.status,
               updatedAt: p.updatedAt || new Date().toISOString(),
               ...(p.deliverySchedule ? { deliverySchedule: { ...(o.deliverySchedule || {}), ...p.deliverySchedule } } : {}),
+              ...(p.deliveryOtp !== undefined || p.deliverySchedule?.deliveryOtp !== undefined
+                ? { deliveryOtp: p.deliveryOtp || p.deliverySchedule?.deliveryOtp || '' }
+                : {}),
+              ...(p.deliveryOtpSentAt !== undefined || p.deliverySchedule?.deliveryOtpSentAt !== undefined
+                ? { deliveryOtpSentAt: p.deliveryOtpSentAt || p.deliverySchedule?.deliveryOtpSentAt || null }
+                : {}),
+              ...(p.deliveryOtpExpiresAt !== undefined || p.deliverySchedule?.deliveryOtpExpiresAt !== undefined
+                ? { deliveryOtpExpiresAt: p.deliveryOtpExpiresAt || p.deliverySchedule?.deliveryOtpExpiresAt || null }
+                : {}),
+              ...(p.deliveryOtpVerifiedAt !== undefined || p.deliverySchedule?.deliveryOtpVerifiedAt !== undefined
+                ? { deliveryOtpVerifiedAt: p.deliveryOtpVerifiedAt || p.deliverySchedule?.deliveryOtpVerifiedAt || null }
+                : {}),
               ...((p.deliverySchedule?.date || p.deliverySchedule?.estimatedDelivery || p.deliverySchedule?.scheduledAt || p.estimatedDelivery || p.estimatedArrival)
                 ? {
                   estimatedDelivery: p.deliverySchedule?.date || p.deliverySchedule?.estimatedDelivery || p.deliverySchedule?.scheduledAt || p.estimatedDelivery || p.estimatedArrival,

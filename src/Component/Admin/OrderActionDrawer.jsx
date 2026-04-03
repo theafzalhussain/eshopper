@@ -3,6 +3,7 @@ import {
     CalendarDays,
     Clock3,
     Compass,
+    KeyRound,
     LocateFixed,
     Package,
     Phone,
@@ -13,7 +14,6 @@ import {
     Truck,
     X
 } from 'lucide-react';
-import axios from 'axios';
 import './OrderActionDrawer.css';
 
 const formatOrderDate = (value) => {
@@ -96,6 +96,8 @@ export default function OrderActionDrawer({
     setLatitude,
     longitude,
     setLongitude,
+    deliveryOtp,
+    setDeliveryOtp,
     onToday,
     onTomorrow,
     onApply
@@ -372,6 +374,30 @@ export default function OrderActionDrawer({
                                 />
                             </div>
                         </div>
+
+                        {status === 'Out for Delivery' && orderView?.deliveryOtp ? (
+                            <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(201,168,76,0.35)', background: 'rgba(201,168,76,0.08)', color: '#7a5a17', fontSize: 12, fontWeight: 600 }}>
+                                Delivery OTP generated: <strong style={{ letterSpacing: '0.14em', fontSize: 14 }}>{orderView.deliveryOtp}</strong>
+                            </div>
+                        ) : null}
+
+                        {status === 'Delivered' && (
+                            <>
+                                <label className="action-field-label">
+                                    <KeyRound size={14} /> Delivery OTP (Customer)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={deliveryOtp}
+                                    onChange={(e) => setDeliveryOtp(String(e.target.value || '').replace(/\D/g, '').slice(0, 6))}
+                                    placeholder="Enter OTP shared by customer"
+                                    disabled={updating}
+                                />
+                                <div style={{ marginTop: -2, marginBottom: 4, fontSize: 11, color: '#7a7f8d', lineHeight: 1.5 }}>
+                                    Delivered status तभी लगेगा jab OTP verify ho.
+                                </div>
+                            </>
+                        )}
 
                         <button
                             type="button"

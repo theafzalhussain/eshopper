@@ -10,7 +10,7 @@ import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import {
   Package, Archive, Truck, MapPin, BadgeCheck, Calendar,
   RefreshCw, Copy, Clock3, Home, Phone, Mail, Sparkles, Gauge, Wallet,
-  FileText, Download, Navigation
+  FileText, Download, Navigation, KeyRound
 } from 'lucide-react'
 
 const STEPS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered']
@@ -49,6 +49,31 @@ const normalizeStatus = (value = '') => {
 }
 
 const formatMoney = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`
+
+const parseFiniteNumber = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const pickAmount = (source = {}, keys = []) => {
+  if (!source || typeof source !== 'object') return 0
+  for (const key of keys) {
+    const parsed = parseFiniteNumber(source?.[key])
+    if (parsed !== null) return parsed
+  }
+  return 0
+}
+
+const hasValue = (value) => value !== null && value !== undefined && String(value).trim() !== ''
+
+const isMeaningfulCoords = (coords = null) => {
+  if (!coords) return false
+  const lat = Number(coords.lat)
+  const lng = Number(coords.lng)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false
+  // Avoid treating empty/default coordinate placeholders as live location.
+  return !(Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001)
+}
 
 const resolveItemImage = (item = {}) => {
   const raw = item?.image || item?.pic || item?.pic1 || item?.thumbnail || item?.productid?.pic1 || ''
@@ -135,14 +160,16 @@ const pickCoords = (source = null) => {
   const lng = Number(lngRaw)
 
   if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    return { lat, lng }
+    const candidate = { lat, lng }
+    return isMeaningfulCoords(candidate) ? candidate : null
   }
 
   if (Array.isArray(source.coordinates) && source.coordinates.length >= 2) {
     const lngVal = Number(source.coordinates[0])
     const latVal = Number(source.coordinates[1])
     if (Number.isFinite(latVal) && Number.isFinite(lngVal)) {
-      return { lat: latVal, lng: lngVal }
+      const candidate = { lat: latVal, lng: lngVal }
+      return isMeaningfulCoords(candidate) ? candidate : null
     }
   }
 
@@ -168,7 +195,11 @@ const getTrackingSnapshot = (order = null, timeline = []) => {
   }
 
   const label = [
+    latestEntry?.deliverySchedule?.locationName,
+    latestEntry?.locationName,
     latestEntry?.deliveryLocation,
+    order?.deliverySchedule?.locationName,
+    order?.locationName,
     order?.deliveryLocation,
     order?.shippingAddress?.city,
     order?.shippingAddress?.state
@@ -177,6 +208,28 @@ const getTrackingSnapshot = (order = null, timeline = []) => {
   return {
     coords,
     label: label || ''
+  }
+}
+
+const getTimelineLocation = (details = {}) => {
+  const schedule = details?.deliverySchedule || {}
+  const label = [
+    schedule?.locationName,
+    details?.locationName,
+    schedule?.address,
+    details?.address
+  ].find(hasValue) || ''
+
+  const candidates = [
+    pickCoords(schedule),
+    pickCoords(details)
+  ].filter(Boolean)
+
+  const coords = candidates.find(isMeaningfulCoords) || null
+
+  return {
+    label,
+    coordsText: coords ? ` [${Number(coords.lat).toFixed(4)}, ${Number(coords.lng).toFixed(4)}]` : ''
   }
 }
 
@@ -513,6 +566,40 @@ const CSS = `
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 700;
+}
+
+.ot-map-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(201,168,76,0.14);
+  background: rgba(201,168,76,0.06);
+}
+
+.ot-map-source-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-dk);
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(201,168,76,0.22);
+  background: rgba(201,168,76,0.08);
+}
+
+.ot-map-source-value {
+  font-size: 12px;
+  color: var(--ink);
+  font-weight: 600;
+  text-align: right;
 }
 
 .ot-map-placeholder {
@@ -1146,16 +1233,58 @@ export default function OrderTracking() {
     return Number.isFinite(parsed) ? parsed : 0
   }, [order?.shippingAmount])
 
-  const discountAmount = useMemo(() => {
+  const couponAmount = useMemo(() => {
     const parsed = Number(order?.couponDiscount || 0)
     return Number.isFinite(parsed) ? parsed : 0
   }, [order?.couponDiscount])
 
+  const discountAmount = useMemo(() => {
+    const parsed = Number(order?.discountAmount || order?.discount || 0)
+    return Number.isFinite(parsed) ? parsed : 0
+  }, [order?.discountAmount, order?.discount])
+
+  const gstAmount = useMemo(() => Math.max(0, pickAmount(order, ['gstAmount', 'gst', 'taxAmount', 'tax'])), [order])
+
+  const extraChargesAmount = useMemo(() => {
+    const aggregate = parseFiniteNumber(
+      order?.extraCharges ??
+      order?.charges ??
+      order?.serviceCharge
+    )
+    if (aggregate !== null) return Math.max(0, aggregate)
+
+    const segmented = [
+      'giftWrapCharge',
+      'protectionCharge',
+      'ecoCharge',
+      'paymentFee',
+      'platformFee',
+      'handlingCharge',
+      'convenienceFee'
+    ].reduce((sum, key) => {
+      const parsed = parseFiniteNumber(order?.[key])
+      return sum + (parsed !== null ? parsed : 0)
+    }, 0)
+
+    return Math.max(0, segmented)
+  }, [order])
+
+  const totalDiscountAmount = useMemo(
+    () => Math.max(0, couponAmount + discountAmount),
+    [couponAmount, discountAmount]
+  )
+
   const finalAmount = useMemo(() => {
     const parsed = Number(order?.finalAmount)
     if (Number.isFinite(parsed) && parsed > 0) return parsed
-    return Math.max(subtotalAmount + shippingAmount - discountAmount, 0)
-  }, [order?.finalAmount, subtotalAmount, shippingAmount, discountAmount])
+    return Math.max(subtotalAmount + shippingAmount + gstAmount + extraChargesAmount - totalDiscountAmount, 0)
+  }, [order?.finalAmount, subtotalAmount, shippingAmount, gstAmount, extraChargesAmount, totalDiscountAmount])
+
+  const billingAdjustmentAmount = useMemo(() => {
+    const expected = subtotalAmount + shippingAmount + gstAmount + extraChargesAmount - totalDiscountAmount
+    const delta = finalAmount - expected
+    return Math.abs(delta) >= 0.5 ? delta : 0
+  }, [subtotalAmount, shippingAmount, gstAmount, extraChargesAmount, totalDiscountAmount, finalAmount])
 
   const paymentStatusLabel = useMemo(() => {
     const raw = String(order?.paymentStatus || '').toLowerCase()
@@ -1182,6 +1311,43 @@ export default function OrderTracking() {
     const paidAt = order?.paidAt || order?.paymentDate || (paymentStatusLabel === 'Paid' ? order?.updatedAt : null)
     return formatDateTimeShort(paidAt)
   }, [order, paymentStatusLabel])
+
+  const outForDeliveryTimelineEntry = useMemo(
+    () => (statusTimeline || []).find((entry) => normalizeStatus(entry?.status || '') === 'Out for Delivery') || null,
+    [statusTimeline]
+  )
+
+  const deliveryOtpCode = useMemo(() => {
+    const directOtp = String(order?.deliveryOtp || '').trim()
+    if (directOtp) return directOtp
+
+    const scheduleOtp = String(order?.deliverySchedule?.deliveryOtp || '').trim()
+    if (scheduleOtp) return scheduleOtp
+
+    const timelineOtp = String(outForDeliveryTimelineEntry?.deliveryOtp || outForDeliveryTimelineEntry?.deliverySchedule?.deliveryOtp || '').trim()
+    return timelineOtp
+  }, [order?.deliveryOtp, order?.deliverySchedule?.deliveryOtp, outForDeliveryTimelineEntry])
+
+  const deliveryOtpExpiresAtLabel = useMemo(
+    () => {
+      const expiry = order?.deliveryOtpExpiresAt || order?.deliverySchedule?.deliveryOtpExpiresAt || outForDeliveryTimelineEntry?.deliveryOtpExpiresAt || outForDeliveryTimelineEntry?.deliverySchedule?.deliveryOtpExpiresAt
+      return expiry ? formatDateTimeShort(expiry) : 'Not available'
+    },
+    [order?.deliveryOtpExpiresAt, order?.deliverySchedule?.deliveryOtpExpiresAt, outForDeliveryTimelineEntry]
+  )
+
+  const deliveryOtpVerifiedAtLabel = useMemo(
+    () => {
+      const verifiedAt = order?.deliveryOtpVerifiedAt || order?.deliverySchedule?.deliveryOtpVerifiedAt || outForDeliveryTimelineEntry?.deliveryOtpVerifiedAt || outForDeliveryTimelineEntry?.deliverySchedule?.deliveryOtpVerifiedAt
+      return verifiedAt ? formatDateTimeShort(verifiedAt) : ''
+    },
+    [order?.deliveryOtpVerifiedAt, order?.deliverySchedule?.deliveryOtpVerifiedAt, outForDeliveryTimelineEntry]
+  )
+
+  const showDeliveryOtpCard = useMemo(
+    () => status === 'Out for Delivery' && deliveryOtpCode.length > 0 && !order?.deliveryOtpVerifiedAt,
+    [status, deliveryOtpCode, order?.deliveryOtpVerifiedAt]
+  )
 
   const timelineEventMap = useMemo(() => {
     const map = {}
@@ -1265,11 +1431,48 @@ export default function OrderTracking() {
   const completedSteps = useMemo(() => Math.max(1, activeIndex + 1), [activeIndex])
   const trackingSnapshot = useMemo(() => getTrackingSnapshot(order, statusTimeline), [order, statusTimeline])
 
+  const latestMapUpdate = useMemo(() => {
+    const latestRelevantEvent = [...(statusTimeline || [])].reverse().find((entry) => {
+      const schedule = entry?.deliverySchedule || {}
+      return Boolean(
+        hasValue(entry?.locationName) ||
+        hasValue(schedule?.locationName) ||
+        hasValue(entry?.deliveryAgent) ||
+        hasValue(schedule?.deliveryAgent) ||
+        hasValue(entry?.riderPhone) ||
+        hasValue(schedule?.riderPhone) ||
+        hasValue(entry?.adminNote) ||
+        pickCoords(entry) ||
+        pickCoords(schedule)
+      )
+    })
+
+    if (!latestRelevantEvent) return null
+
+    const locationInfo = getTimelineLocation(latestRelevantEvent)
+    const hasAdminNote = hasValue(latestRelevantEvent?.adminNote)
+    const hasLiveCoords = Boolean(locationInfo.coordsText)
+
+    return {
+      label: locationInfo.label || (hasLiveCoords ? 'Live coordinates' : 'Live route'),
+      time: formatDateTimeShort(latestRelevantEvent?.timestamp),
+      source: hasAdminNote || locationInfo.label || hasLiveCoords ? 'Admin Live Update' : 'Live Sync',
+      note: latestRelevantEvent?.adminNote || '',
+      coordsText: locationInfo.coordsText || ''
+    }
+  }, [statusTimeline])
+
   const mapEmbedUrl = useMemo(() => {
-    if (!trackingSnapshot?.coords) return ''
-    const { lat, lng } = trackingSnapshot.coords
-    return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.03}%2C${lat - 0.03}%2C${lng + 0.03}%2C${lat + 0.03}&layer=mapnik&marker=${lat}%2C${lng}`
-  }, [trackingSnapshot])
+    if (trackingSnapshot?.coords) {
+      const { lat, lng } = trackingSnapshot.coords
+      return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.03}%2C${lat - 0.03}%2C${lng + 0.03}%2C${lat + 0.03}&layer=mapnik&marker=${lat}%2C${lng}`
+    }
+
+    const query = trackingSnapshot?.label || addressText
+    if (!query) return ''
+
+    return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`
+  }, [trackingSnapshot, addressText])
 
   const mapSearchUrl = useMemo(() => {
     if (trackingSnapshot?.coords) {
@@ -1332,19 +1535,22 @@ export default function OrderTracking() {
       doc.setFontSize(11)
       doc.text(`Subtotal: ${formatMoney(subtotalAmount)}`, 40, tableEnd)
       doc.text(`Shipping: ${shippingAmount > 0 ? formatMoney(shippingAmount) : 'Free'}`, 40, tableEnd + 16)
-      doc.text(`Discount: ${discountAmount > 0 ? `-${formatMoney(discountAmount)}` : 'No Discount'}`, 40, tableEnd + 32)
+      doc.text(`GST: ${formatMoney(gstAmount)}`, 40, tableEnd + 32)
+      doc.text(`Extra Charges: ${formatMoney(extraChargesAmount)}`, 40, tableEnd + 48)
+      doc.text(`Coupon Discount: ${couponAmount > 0 ? `-${formatMoney(couponAmount)}` : formatMoney(0)}`, 40, tableEnd + 64)
+      doc.text(`Other Discount: ${discountAmount > 0 ? `-${formatMoney(discountAmount)}` : formatMoney(0)}`, 40, tableEnd + 80)
       doc.setFontSize(13)
-      doc.text(`Final Amount: ${formatMoney(finalAmount)}`, 40, tableEnd + 54)
+      doc.text(`Final Amount: ${formatMoney(finalAmount)}`, 40, tableEnd + 102)
       doc.setFontSize(10)
-      doc.text(`Shipping Address: ${addressText || 'N/A'}`, 40, tableEnd + 76)
-      doc.text('Generated by ESHOPPER Order Tracking', 40, tableEnd + 96)
+      doc.text(`Shipping Address: ${addressText || 'N/A'}`, 40, tableEnd + 124)
+      doc.text('Generated by ESHOPPER Order Tracking', 40, tableEnd + 144)
 
       return doc.output('blob')
     } catch (err) {
       console.error('Client invoice fallback failed:', err)
       return null
     }
-  }, [addressText, discountAmount, finalAmount, order, orderId, orderItemsDetailed, paymentStatusLabel, shippingAmount, subtotalAmount])
+  }, [addressText, couponAmount, discountAmount, extraChargesAmount, finalAmount, gstAmount, order, orderId, orderItemsDetailed, paymentStatusLabel, shippingAmount, subtotalAmount])
 
   const openInvoice = async (inline = false) => {
     if (!invoiceUrl || invoiceLoading) return
@@ -1531,6 +1737,20 @@ export default function OrderTracking() {
                   ...(payload.longitude != null ? { longitude: payload.longitude } : {})
                 }
               }
+
+              if (payload.deliveryOtp !== undefined || payload?.deliverySchedule?.deliveryOtp !== undefined) {
+                updated.deliveryOtp = payload.deliveryOtp || payload?.deliverySchedule?.deliveryOtp || ''
+              }
+              if (payload.deliveryOtpSentAt !== undefined || payload?.deliverySchedule?.deliveryOtpSentAt !== undefined) {
+                updated.deliveryOtpSentAt = payload.deliveryOtpSentAt || payload?.deliverySchedule?.deliveryOtpSentAt || null
+              }
+              if (payload.deliveryOtpExpiresAt !== undefined || payload?.deliverySchedule?.deliveryOtpExpiresAt !== undefined) {
+                updated.deliveryOtpExpiresAt = payload.deliveryOtpExpiresAt || payload?.deliverySchedule?.deliveryOtpExpiresAt || null
+              }
+              if (payload.deliveryOtpVerifiedAt !== undefined || payload?.deliverySchedule?.deliveryOtpVerifiedAt !== undefined) {
+                updated.deliveryOtpVerifiedAt = payload.deliveryOtpVerifiedAt || payload?.deliverySchedule?.deliveryOtpVerifiedAt || null
+              }
+
               return updated
             })
 
@@ -1543,7 +1763,10 @@ export default function OrderTracking() {
               riderPhone: payload.riderPhone || null,
               locationName: payload.locationName || null,
               latitude: payload.latitude || null,
-              longitude: payload.longitude || null
+              longitude: payload.longitude || null,
+              deliveryOtp: payload.deliveryOtp || payload?.deliverySchedule?.deliveryOtp || null,
+              deliveryOtpExpiresAt: payload.deliveryOtpExpiresAt || payload?.deliverySchedule?.deliveryOtpExpiresAt || null,
+              deliveryOtpVerifiedAt: payload.deliveryOtpVerifiedAt || payload?.deliverySchedule?.deliveryOtpVerifiedAt || null
             }])
           }
         }
@@ -1706,12 +1929,50 @@ export default function OrderTracking() {
                     <div className="ot-fin-extra-row"><span>Total Quantity</span><strong>{totalItemCount} item{totalItemCount === 1 ? '' : 's'}</strong></div>
                     <div className="ot-fin-extra-row"><span>Subtotal</span><strong>{formatMoney(subtotalAmount)}</strong></div>
                     <div className="ot-fin-extra-row"><span>Shipping</span><strong>{shippingAmount > 0 ? formatMoney(shippingAmount) : 'Free'}</strong></div>
-                    <div className="ot-fin-extra-row"><span>Discount</span><strong>{discountAmount > 0 ? `-${formatMoney(discountAmount)}` : 'No Discount'}</strong></div>
+                    <div className="ot-fin-extra-row"><span>GST</span><strong>{formatMoney(gstAmount)}</strong></div>
+                    <div className="ot-fin-extra-row"><span>Charges</span><strong>{formatMoney(extraChargesAmount)}</strong></div>
+                    <div className="ot-fin-extra-row"><span>Coupon ({order?.couponCode || 'N/A'})</span><strong>{couponAmount > 0 ? `-${formatMoney(couponAmount)}` : formatMoney(0)}</strong></div>
+                    <div className="ot-fin-extra-row"><span>Discount</span><strong>{discountAmount > 0 ? `-${formatMoney(discountAmount)}` : formatMoney(0)}</strong></div>
+                    {billingAdjustmentAmount !== 0 && (
+                      <div className="ot-fin-extra-row"><span>Billing Adjustment</span><strong>{billingAdjustmentAmount > 0 ? formatMoney(billingAdjustmentAmount) : `-${formatMoney(Math.abs(billingAdjustmentAmount))}`}</strong></div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </motion.div>
+
+          {showDeliveryOtpCard && (
+            <motion.div className="ot-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'linear-gradient(135deg, rgba(254,242,242,0.88) 0%, rgba(255,255,255,0.95) 100%)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                <div className="ot-label" style={{ marginBottom: 0, color: '#b91c1c' }}>Delivery Verification OTP</div>
+                <div className="ot-chip" style={{ background: 'rgba(220,38,38,0.1)', borderColor: 'rgba(220,38,38,0.28)', color: '#b91c1c' }}>
+                  <KeyRound size={13} /> Share at doorstep only
+                </div>
+              </div>
+              <div style={{ fontSize: '34px', letterSpacing: '0.28em', fontWeight: 800, color: '#7f1d1d', textAlign: 'center', margin: '6px 0 8px' }}>
+                {deliveryOtpCode}
+              </div>
+              <p style={{ margin: 0, textAlign: 'center', fontSize: 13, color: '#7f1d1d' }}>
+                Package receive karne ke baad hi rider ko OTP batayein.
+              </p>
+              <div className="ot-fin-extra" style={{ marginTop: 12 }}>
+                <div className="ot-fin-extra-row"><span>OTP Expires</span><strong>{deliveryOtpExpiresAtLabel}</strong></div>
+                <div className="ot-fin-extra-row"><span>Rider</span><strong>{order?.deliverySchedule?.deliveryAgent || 'Assigned soon'}</strong></div>
+                <div className="ot-fin-extra-row"><span>Rider Phone</span><strong>{order?.deliverySchedule?.riderPhone || 'Pending'}</strong></div>
+              </div>
+            </motion.div>
+          )}
+
+          {status === 'Delivered' && deliveryOtpVerifiedAtLabel && (
+            <motion.div className="ot-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} style={{ borderColor: 'rgba(34,197,94,0.25)', background: 'linear-gradient(135deg, rgba(240,253,244,0.85) 0%, rgba(255,255,255,0.96) 100%)' }}>
+              <div className="ot-label" style={{ color: '#166534' }}>Delivery Verification Completed</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                <div style={{ color: '#166534', fontWeight: 700 }}>Your order was marked delivered only after OTP verification.</div>
+                <div style={{ color: '#166534', fontSize: 12, fontWeight: 700 }}>Verified On: {deliveryOtpVerifiedAtLabel}</div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Delivery Status */}
           {status === 'Delivered' ? (
@@ -1807,6 +2068,24 @@ export default function OrderTracking() {
               {statusTimeline.length > 0 && (
                 <motion.div className="ot-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                   <h3 className="ot-section-title">📍 Journey Timeline</h3>
+                  {latestMapUpdate && (
+                    <div className="ot-map-source" style={{ marginBottom: 14 }}>
+                      <div>
+                        <div className="ot-map-source-label">Timeline Update</div>
+                        <div className="ot-map-source-value">
+                          {latestMapUpdate.label}{latestMapUpdate.coordsText || ''}
+                        </div>
+                        {latestMapUpdate.note ? (
+                          <div className="ot-map-source-value" style={{ marginTop: 4, fontSize: 11, color: '#6b7280', fontWeight: 500 }}>
+                            {latestMapUpdate.note}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="ot-map-source-value" style={{ fontSize: 11, color: 'var(--gold-dk)' }}>
+                        {latestMapUpdate.source} • {latestMapUpdate.time}
+                      </div>
+                    </div>
+                  )}
                   {timelineSteps.map((event, idx) => {
                     const isDone = idx < activeIndex
                     const isActive = idx === activeIndex
@@ -1836,9 +2115,17 @@ export default function OrderTracking() {
                           )}
                           {(event?.details?.deliverySchedule?.locationName || event?.details?.locationName || event?.details?.deliverySchedule?.latitude != null || event?.details?.latitude != null) && (
                             <div className="ot-inline-note" style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.2)', color: '#047857' }}>
-                              Location: {event.details.deliverySchedule?.locationName || event.details.locationName || 'Live coordinates'}
-                              {(event.details.deliverySchedule?.latitude != null || event.details.latitude != null) && (event.details.deliverySchedule?.longitude != null || event.details.longitude != null)
-                                ? ` [${Number(event.details.deliverySchedule?.latitude || event.details.latitude).toFixed(4)}, ${Number(event.details.deliverySchedule?.longitude || event.details.longitude).toFixed(4)}]`
+                              {(() => {
+                                const locationInfo = getTimelineLocation(event?.details || {})
+                                return `Location: ${locationInfo.label || 'Live coordinates'}${locationInfo.coordsText}`
+                              })()}
+                            </div>
+                          )}
+                          {event?.step === 'Out for Delivery' && (event?.details?.deliveryOtp || order?.deliveryOtp) && (
+                            <div className="ot-inline-note" style={{ background: 'rgba(220,38,38,0.08)', borderColor: 'rgba(220,38,38,0.2)', color: '#b91c1c' }}>
+                              Delivery OTP: <strong style={{ letterSpacing: '0.12em' }}>{event?.details?.deliveryOtp || order?.deliveryOtp}</strong>
+                              {event?.details?.deliveryOtpExpiresAt || order?.deliveryOtpExpiresAt
+                                ? ` · Expires: ${formatDateTimeShort(event?.details?.deliveryOtpExpiresAt || order?.deliveryOtpExpiresAt)}`
                                 : ''}
                             </div>
                           )}
@@ -1862,6 +2149,17 @@ export default function OrderTracking() {
                     <div className="ot-map-title"><Navigation size={14} /> Live Delivery Map</div>
                     <div className="ot-map-tag">Premium Route</div>
                   </div>
+                  {latestMapUpdate && (
+                    <div className="ot-map-source">
+                      <div>
+                        <div className="ot-map-source-label">{latestMapUpdate.source}</div>
+                        <div className="ot-map-source-value">{latestMapUpdate.label}{latestMapUpdate.coordsText}</div>
+                      </div>
+                      <div className="ot-map-source-value" style={{ fontSize: 11, color: 'var(--gold-dk)' }}>
+                        {latestMapUpdate.time}
+                      </div>
+                    </div>
+                  )}
                   <div className="ot-map-frame">
                     {mapEmbedUrl ? (
                       <iframe
@@ -1872,7 +2170,7 @@ export default function OrderTracking() {
                         referrerPolicy="no-referrer-when-downgrade"
                       />
                     ) : (
-                      <div className="ot-map-placeholder">Map will appear on live coordinates</div>
+                      <div className="ot-map-placeholder">Map will appear once live address or coordinates are available</div>
                     )}
                   </div>
                   <button className="ot-link-btn" onClick={() => window.open(mapSearchUrl, '_blank', 'noopener,noreferrer')}>
@@ -1944,8 +2242,20 @@ export default function OrderTracking() {
                   <span className="ot-mini-val">{formatMoney(shippingAmount)}</span>
                 </div>
                 <div className="ot-mini-row">
+                  <span className="ot-mini-key">GST</span>
+                  <span className="ot-mini-val">{formatMoney(gstAmount)}</span>
+                </div>
+                <div className="ot-mini-row">
+                  <span className="ot-mini-key">Charges</span>
+                  <span className="ot-mini-val">{formatMoney(extraChargesAmount)}</span>
+                </div>
+                <div className="ot-mini-row">
+                  <span className="ot-mini-key">Coupon ({order?.couponCode || 'N/A'})</span>
+                  <span className="ot-mini-val">{couponAmount > 0 ? `-${formatMoney(couponAmount)}` : formatMoney(0)}</span>
+                </div>
+                <div className="ot-mini-row">
                   <span className="ot-mini-key">Discount</span>
-                  <span className="ot-mini-val">-{formatMoney(discountAmount)}</span>
+                  <span className="ot-mini-val">{discountAmount > 0 ? `-${formatMoney(discountAmount)}` : formatMoney(0)}</span>
                 </div>
                 <div className="ot-mini-row">
                   <span className="ot-mini-key">Final Paid</span>

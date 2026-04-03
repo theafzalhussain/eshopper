@@ -223,6 +223,10 @@ const normalizeOrderStatus = (s = '') => {
 const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'true').toLowerCase() === 'true';
 const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
 const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'true').toLowerCase() === 'true';
+const DELIVERY_OTP_EXPIRY_MINUTES = Math.max(10, Number(process.env.DELIVERY_OTP_EXPIRY_MINUTES || 120));
+
+const hasTextValue = (value = '') => String(value || '').trim().length > 0;
+const generateDeliveryOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
 const DEFAULT_USER_SETTINGS = {
     notifications: {
@@ -884,7 +888,7 @@ const buildTemplatePayload = (status, payload = {}) => {
         carrierWebsiteUrl: process.env.CARRIER_WEBSITE_URL || trackingUrl,
         deliveryDate: formatOrderDate(Date.now()),
         deliveryTimeSlot: payload.deliverySchedule?.time || payload.deliverySlot || 'By 9:00 PM',
-        otp: payload.deliveryOtp || String(orderId).slice(-4) || '0000',
+        otp: payload.deliveryOtp || '',
         deliveryAgent: payload.deliveryAgent || 'Assigned Rider',
         agentContact: payload.agentContact || shippingAddress.phone || '-',
         deliveryLocation: `${shippingAddress.city || ''}${shippingAddress.state ? ', ' + shippingAddress.state : ''}` || 'Your Address',
@@ -1400,6 +1404,40 @@ const generateOrderId = async () => {
     const latestNumber = latestOrder?.orderId ? Number(String(latestOrder.orderId).split('-').pop()) || 0 : 0;
     const nextNumber = latestNumber + 1;
     return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+};
+
+const ensureOutForDeliveryOtp = async (orderDoc = null) => {
+    if (!orderDoc) return null;
+
+    const normalized = normalizeOrderStatus(orderDoc.orderStatus || '');
+    if (normalized !== 'Out for Delivery') return orderDoc;
+
+    const existingOtp = String(orderDoc.deliveryOtp || '').trim();
+    if (existingOtp) return orderDoc;
+
+    const now = new Date();
+    const generatedOtp = generateDeliveryOtpCode();
+    const expiresAt = new Date(now.getTime() + DELIVERY_OTP_EXPIRY_MINUTES * 60000);
+
+    await Order.updateOne(
+        { _id: orderDoc._id },
+        {
+            $set: {
+                deliveryOtp: generatedOtp,
+                deliveryOtpSentAt: now,
+                deliveryOtpExpiresAt: expiresAt,
+                deliveryOtpVerifiedAt: null
+            }
+        }
+    );
+
+    return {
+        ...orderDoc,
+        deliveryOtp: generatedOtp,
+        deliveryOtpSentAt: now,
+        deliveryOtpExpiresAt: expiresAt,
+        deliveryOtpVerifiedAt: null
+    };
 };
 
 const normalizePhoneForWhatsApp = (phone = '') => {
@@ -2828,8 +2866,18 @@ app.get('/api/orders/:userId', async (req, res) => {
         // 🔴 FETCH FROM ORDER COLLECTION (primary source)
         const orders = await Order.find({ userid: userId })
             .sort({ updatedAt: -1, createdAt: -1 })
-            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount estimatedArrival deliverySchedule')
+            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount estimatedArrival deliverySchedule statusHistory deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt')
             .lean();
+
+        const hydratedOrders = await Promise.all(
+            orders.map(async (item) => {
+                try {
+                    return await ensureOutForDeliveryOtp(item);
+                } catch {
+                    return item;
+                }
+            })
+        );
 
         // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
         if (orders.length === 0) {
@@ -2852,14 +2900,19 @@ app.get('/api/orders/:userId', async (req, res) => {
                     orderItems: normalizeOrderProducts(item.products),
                     estimatedDelivery: item.estimatedArrival || null,
                     estimatedArrival: item.estimatedArrival || null,
-                    deliverySchedule: item.deliverySchedule || null
+                    deliverySchedule: item.deliverySchedule || null,
+                    statusHistory: Array.isArray(item.statusHistory) ? item.statusHistory : [],
+                    deliveryOtp: item.deliveryOtp || '',
+                    deliveryOtpSentAt: item.deliveryOtpSentAt || null,
+                    deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
+                    deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null
                 }))
             });
         }
 
         return res.json({
             success: true,
-            orders: orders.map((item) => ({
+            orders: hydratedOrders.map((item) => ({
                 orderId: item.orderId,
                 orderStatus: item.orderStatus || 'Order Placed',
                 totalAmount: Number(item.totalAmount || 0),
@@ -2872,7 +2925,12 @@ app.get('/api/orders/:userId', async (req, res) => {
                 orderItems: normalizeOrderProducts(item.products),
                 estimatedDelivery: item.estimatedArrival || null,
                 estimatedArrival: item.estimatedArrival || null,
-                deliverySchedule: item.deliverySchedule || null
+                deliverySchedule: item.deliverySchedule || null,
+                statusHistory: Array.isArray(item.statusHistory) ? item.statusHistory : [],
+                deliveryOtp: item.deliveryOtp || '',
+                deliveryOtpSentAt: item.deliveryOtpSentAt || null,
+                deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
+                deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null
             }))
         });
     } catch (e) {
@@ -2927,33 +2985,39 @@ app.get('/api/order/:orderId', async (req, res) => {
 
         if (!order) return res.status(404).json({ message: 'Order not found' });
 
+        const ensuredOrder = await ensureOutForDeliveryOtp(order).catch(() => order);
+
         // 📦 Build comprehensive order response
-        const statusHistory = Array.isArray(order.statusHistory) ? order.statusHistory : [
-            { status: 'Ordered', timestamp: order.orderDate || order.createdAt || new Date() }
+        const statusHistory = Array.isArray(ensuredOrder.statusHistory) ? ensuredOrder.statusHistory : [
+            { status: 'Ordered', timestamp: ensuredOrder.orderDate || ensuredOrder.createdAt || new Date() }
         ];
 
-        const normalizedProducts = normalizeOrderProducts(order.products);
+        const normalizedProducts = normalizeOrderProducts(ensuredOrder.products);
 
         return res.json({
-            orderId: order.orderId,
-            userid: order.userid,
-            orderStatus: order.orderStatus || 'Ordered',
-            userName: order.userName || '',
-            userEmail: order.userEmail || '',
-            paymentMethod: order.paymentMethod || 'COD',
-            paymentStatus: order.paymentStatus || 'Pending',
-            totalAmount: Number(order.totalAmount || 0),
-            shippingAmount: Number(order.shippingAmount || 0),
-            finalAmount: order.finalAmount || 0,
-            shippingAddress: order.shippingAddress || {},
+            orderId: ensuredOrder.orderId,
+            userid: ensuredOrder.userid,
+            orderStatus: ensuredOrder.orderStatus || 'Ordered',
+            userName: ensuredOrder.userName || '',
+            userEmail: ensuredOrder.userEmail || '',
+            paymentMethod: ensuredOrder.paymentMethod || 'COD',
+            paymentStatus: ensuredOrder.paymentStatus || 'Pending',
+            totalAmount: Number(ensuredOrder.totalAmount || 0),
+            shippingAmount: Number(ensuredOrder.shippingAmount || 0),
+            finalAmount: ensuredOrder.finalAmount || 0,
+            shippingAddress: ensuredOrder.shippingAddress || {},
             products: normalizedProducts,
-            deliverySchedule: order.deliverySchedule || null,
-            estimatedDelivery: order.estimatedArrival || null,
-            estimatedArrival: order.estimatedArrival || null,
+            deliverySchedule: ensuredOrder.deliverySchedule || null,
+            deliveryOtp: ensuredOrder.deliveryOtp || '',
+            deliveryOtpSentAt: ensuredOrder.deliveryOtpSentAt || null,
+            deliveryOtpExpiresAt: ensuredOrder.deliveryOtpExpiresAt || null,
+            deliveryOtpVerifiedAt: ensuredOrder.deliveryOtpVerifiedAt || null,
+            estimatedDelivery: ensuredOrder.estimatedArrival || null,
+            estimatedArrival: ensuredOrder.estimatedArrival || null,
             statusHistory: statusHistory,
-            createdAt: order.orderDate || order.createdAt || new Date(),
-            orderDate: order.orderDate || order.createdAt,
-            updatedAt: order.updatedAt || order.createdAt || new Date()
+            createdAt: ensuredOrder.orderDate || ensuredOrder.createdAt || new Date(),
+            orderDate: ensuredOrder.orderDate || ensuredOrder.createdAt,
+            updatedAt: ensuredOrder.updatedAt || ensuredOrder.createdAt || new Date()
         });
     } catch (e) {
         console.error('❌ Order fetch error:', e.message);
@@ -3035,8 +3099,18 @@ app.get('/api/admin/orders', async (req, res) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products')
+            .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products deliverySchedule deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt')
             .lean();
+
+        const hydratedOrders = await Promise.all(
+            orders.map(async (item) => {
+                try {
+                    return await ensureOutForDeliveryOtp(item);
+                } catch {
+                    return item;
+                }
+            })
+        );
 
         return res.json({
             success: true,
@@ -3044,7 +3118,7 @@ app.get('/api/admin/orders', async (req, res) => {
             page,
             limit,
             pages: Math.ceil(totalOrders / limit),
-            orders: orders.map((item) => ({
+            orders: hydratedOrders.map((item) => ({
                 orderId: item.orderId,
                 userId: item.userid,
                 userName: item.userName || 'N/A',
@@ -3052,6 +3126,11 @@ app.get('/api/admin/orders', async (req, res) => {
                 orderStatus: item.orderStatus || 'Order Placed',
                 paymentStatus: item.paymentStatus || 'Pending',
                 finalAmount: Number(item.finalAmount || 0),
+                deliverySchedule: item.deliverySchedule || null,
+                deliveryOtp: item.deliveryOtp || '',
+                deliveryOtpSentAt: item.deliveryOtpSentAt || null,
+                deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
+                deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null,
                 productCount: normalizeOrderProducts(item.products).reduce((sum, product) => sum + Number(product.quantity || 0), 0),
                 updatedAt: item.updatedAt || item.createdAt || new Date()
             }))
@@ -3184,24 +3263,30 @@ app.get('/api/admin/order/:orderId', async (req, res) => {
 
         if (!order) return res.status(404).json({ message: 'Order not found' });
 
+        const ensuredOrder = await ensureOutForDeliveryOtp(order).catch(() => order);
+
         return res.json({
             success: true,
-            orderId: order.orderId,
-            userid: order.userid,
-            userName: order.userName || 'N/A',
-            userEmail: order.userEmail || 'N/A',
-            orderStatus: order.orderStatus || 'Ordered',
-            paymentMethod: order.paymentMethod || 'COD',
-            paymentStatus: order.paymentStatus || 'Pending',
-            totalAmount: Number(order.totalAmount || 0),
-            shippingAmount: Number(order.shippingAmount || 0),
-            finalAmount: Number(order.finalAmount || 0),
-            shippingAddress: order.shippingAddress || {},
-            products: normalizeOrderProducts(order.products),
-            estimatedArrival: order.estimatedArrival || null,
-            orderDate: order.orderDate || order.createdAt,
-            createdAt: order.createdAt,
-            updatedAt: order.updatedAt
+            orderId: ensuredOrder.orderId,
+            userid: ensuredOrder.userid,
+            userName: ensuredOrder.userName || 'N/A',
+            userEmail: ensuredOrder.userEmail || 'N/A',
+            orderStatus: ensuredOrder.orderStatus || 'Ordered',
+            paymentMethod: ensuredOrder.paymentMethod || 'COD',
+            paymentStatus: ensuredOrder.paymentStatus || 'Pending',
+            totalAmount: Number(ensuredOrder.totalAmount || 0),
+            shippingAmount: Number(ensuredOrder.shippingAmount || 0),
+            finalAmount: Number(ensuredOrder.finalAmount || 0),
+            shippingAddress: ensuredOrder.shippingAddress || {},
+            products: normalizeOrderProducts(ensuredOrder.products),
+            deliveryOtp: ensuredOrder.deliveryOtp || '',
+            deliveryOtpSentAt: ensuredOrder.deliveryOtpSentAt || null,
+            deliveryOtpExpiresAt: ensuredOrder.deliveryOtpExpiresAt || null,
+            deliveryOtpVerifiedAt: ensuredOrder.deliveryOtpVerifiedAt || null,
+            estimatedArrival: ensuredOrder.estimatedArrival || null,
+            orderDate: ensuredOrder.orderDate || ensuredOrder.createdAt,
+            createdAt: ensuredOrder.createdAt,
+            updatedAt: ensuredOrder.updatedAt
         });
     } catch (e) {
         console.error('❌ Admin order fetch error:', e.message);
@@ -3221,12 +3306,18 @@ const handleOrderStatusUpdate = async (req, res) => {
             riderPhone,
             locationName,
             latitude,
-            longitude
+            longitude,
+            deliveryOtp
         } = req.body;
         const normalized = normalizeOrderStatus(status);
-        const latNum = Number(latitude);
-        const lngNum = Number(longitude);
-        const hasCoords = Number.isFinite(latNum) && Number.isFinite(lngNum);
+        const otpInput = String(deliveryOtp || '').trim();
+        const latRaw = String(latitude ?? '').trim();
+        const lngRaw = String(longitude ?? '').trim();
+        const hasLatValue = latRaw.length > 0;
+        const hasLngValue = lngRaw.length > 0;
+        const latNum = hasLatValue ? Number(latRaw) : NaN;
+        const lngNum = hasLngValue ? Number(lngRaw) : NaN;
+        const hasCoords = hasLatValue && hasLngValue && Number.isFinite(latNum) && Number.isFinite(lngNum);
 
         const normalizedDeliverySchedule = deliverySchedule
             ? {
@@ -3252,6 +3343,30 @@ const handleOrderStatusUpdate = async (req, res) => {
             });
         }
 
+        const validateOutForDeliverySchedule = (schedule = null) => {
+            const riderNameValue = String(schedule?.deliveryAgent || '').trim();
+            const riderPhoneValue = String(schedule?.riderPhone || '').trim();
+            const locationNameValue = String(schedule?.locationName || '').trim();
+            const hasCoordsValue = Number.isFinite(Number(schedule?.latitude)) && Number.isFinite(Number(schedule?.longitude));
+
+            if (!riderNameValue || !riderPhoneValue) {
+                return 'Rider name and rider phone are required for Out for Delivery updates.';
+            }
+
+            if (!locationNameValue && !hasCoordsValue) {
+                return 'Current location name or valid latitude/longitude is required for Out for Delivery updates.';
+            }
+
+            return '';
+        };
+
+        const now = new Date();
+        const shouldGenerateDeliveryOtp = normalized === 'Out for Delivery';
+        const generatedDeliveryOtp = shouldGenerateDeliveryOtp ? generateDeliveryOtpCode() : '';
+        const generatedDeliveryOtpExpiresAt = shouldGenerateDeliveryOtp
+            ? new Date(now.getTime() + DELIVERY_OTP_EXPIRY_MINUTES * 60000)
+            : null;
+
         // 🔴 FIRST: Try to find by orderId (from Order collection)
         let order = await Order.findOne({ orderId });
         
@@ -3265,10 +3380,24 @@ const handleOrderStatusUpdate = async (req, res) => {
         }
 
         if (!order) {
+            if (normalized === 'Delivered') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Delivery OTP is required. Move order to Out for Delivery first to generate OTP.'
+                });
+            }
+
             // Final attempt: Search in Checkout and use userid + order data
             const checkout = await Checkout.findById(orderId).lean();
             if (!checkout) {
                 return res.status(404).json({ message: 'Order not found in any collection' });
+            }
+
+            if (normalized === 'Out for Delivery') {
+                const validationError = validateOutForDeliverySchedule(normalizedDeliverySchedule);
+                if (validationError) {
+                    return res.status(400).json({ success: false, message: validationError });
+                }
             }
             
             // Create order record from checkout data
@@ -3289,6 +3418,10 @@ const handleOrderStatusUpdate = async (req, res) => {
                 finalAmount: checkout.finalAmount,
                 products: normalizeOrderProducts(checkout.products),
                 estimatedArrival: estimatedArrival,
+                deliveryOtp: generatedDeliveryOtp || undefined,
+                deliveryOtpSentAt: generatedDeliveryOtp ? now : null,
+                deliveryOtpExpiresAt: generatedDeliveryOtpExpiresAt,
+                deliveryOtpVerifiedAt: null,
                 deliverySchedule: normalizedDeliverySchedule || null,
                 statusHistory: [{
                     status: normalized,
@@ -3300,12 +3433,27 @@ const handleOrderStatusUpdate = async (req, res) => {
                     riderPhone: normalizedDeliverySchedule?.riderPhone || null,
                     locationName: normalizedDeliverySchedule?.locationName || null,
                     latitude: normalizedDeliverySchedule?.latitude || null,
-                    longitude: normalizedDeliverySchedule?.longitude || null
+                    longitude: normalizedDeliverySchedule?.longitude || null,
+                    deliveryOtp: generatedDeliveryOtp || null,
+                    deliveryOtpExpiresAt: generatedDeliveryOtpExpiresAt || null,
+                    deliveryOtpVerifiedAt: null
                 }]
             });
             order = newOrder;
         } else {
             // Update existing order
+            const previousOrderStatus = String(order.orderStatus || '').trim().toLowerCase();
+
+            if (normalized === 'Out for Delivery') {
+                const effectiveSchedule = normalizedDeliverySchedule
+                    ? { ...(order.deliverySchedule || {}), ...normalizedDeliverySchedule }
+                    : (order.deliverySchedule || null);
+                const validationError = validateOutForDeliverySchedule(effectiveSchedule);
+                if (validationError) {
+                    return res.status(400).json({ success: false, message: validationError });
+                }
+            }
+
             order.orderStatus = normalized;
 
             // 🔴 UPDATE DELIVERY SCHEDULE IF PROVIDED
@@ -3316,6 +3464,53 @@ const handleOrderStatusUpdate = async (req, res) => {
                     order.estimatedArrival = new Date(normalizedDeliverySchedule.date);
                 } else if (normalizedDeliverySchedule.estimatedDelivery) {
                     order.estimatedArrival = new Date(normalizedDeliverySchedule.estimatedDelivery);
+                }
+            }
+
+            if (normalized === 'Out for Delivery') {
+                order.deliveryOtp = generatedDeliveryOtp;
+                order.deliveryOtpSentAt = now;
+                order.deliveryOtpExpiresAt = generatedDeliveryOtpExpiresAt;
+                order.deliveryOtpVerifiedAt = null;
+            }
+
+            if (normalized === 'Delivered') {
+                const alreadyVerifiedDelivery = previousOrderStatus === 'delivered' && Boolean(order.deliveryOtpVerifiedAt);
+                if (alreadyVerifiedDelivery) {
+                    // Allow non-status metadata updates on already verified delivered orders.
+                } else {
+                    const storedDeliveryOtp = String(order.deliveryOtp || '').trim();
+
+                    if (!storedDeliveryOtp) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Delivery OTP not found for this order. Move to Out for Delivery first.'
+                        });
+                    }
+
+                    if (!otpInput) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Delivery OTP is required to mark this order as Delivered.'
+                        });
+                    }
+
+                    const otpExpiryTime = order.deliveryOtpExpiresAt ? new Date(order.deliveryOtpExpiresAt).getTime() : null;
+                    if (otpExpiryTime && otpExpiryTime < Date.now()) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Delivery OTP has expired. Re-run Out for Delivery to generate a fresh OTP.'
+                        });
+                    }
+
+                    if (storedDeliveryOtp !== otpInput) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Invalid delivery OTP. Please verify OTP with customer before marking Delivered.'
+                        });
+                    }
+
+                    order.deliveryOtpVerifiedAt = now;
                 }
             }
 
@@ -3332,7 +3527,10 @@ const handleOrderStatusUpdate = async (req, res) => {
                     riderPhone: normalizedDeliverySchedule?.riderPhone || null,
                     locationName: normalizedDeliverySchedule?.locationName || null,
                     latitude: normalizedDeliverySchedule?.latitude || null,
-                    longitude: normalizedDeliverySchedule?.longitude || null
+                    longitude: normalizedDeliverySchedule?.longitude || null,
+                    deliveryOtp: normalized === 'Out for Delivery' ? order.deliveryOtp || null : null,
+                    deliveryOtpExpiresAt: normalized === 'Out for Delivery' ? order.deliveryOtpExpiresAt || null : null,
+                    deliveryOtpVerifiedAt: normalized === 'Delivered' ? order.deliveryOtpVerifiedAt || null : null
                 }
             ];
             await order.save();
@@ -3380,7 +3578,12 @@ const handleOrderStatusUpdate = async (req, res) => {
             riderPhone: order.deliverySchedule?.riderPhone || null,
             locationName: order.deliverySchedule?.locationName || null,
             latitude: order.deliverySchedule?.latitude || null,
-            longitude: order.deliverySchedule?.longitude || null
+            longitude: order.deliverySchedule?.longitude || null,
+            deliveryOtp: order.deliveryOtp || null,
+            deliveryOtpSentAt: order.deliveryOtpSentAt || null,
+            deliveryOtpExpiresAt: order.deliveryOtpExpiresAt || null,
+            deliveryOtpVerifiedAt: order.deliveryOtpVerifiedAt || null,
+            deliveryOtpRequired: Boolean(order.deliveryOtp && !order.deliveryOtpVerifiedAt && order.orderStatus === 'Out for Delivery')
         };
 
         // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
@@ -3487,6 +3690,11 @@ const handleOrderStatusUpdate = async (req, res) => {
                         estimatedArrival: order.estimatedArrival,
                         status: normalized,
                         orderStatus: normalized,
+                        deliveryOtp: order.deliveryOtp || null,
+                        deliverySchedule: order.deliverySchedule || null,
+                        deliveryAgent: order.deliverySchedule?.deliveryAgent || null,
+                        agentContact: order.deliverySchedule?.riderPhone || null,
+                        deliverySlot: order.deliverySchedule?.time || null,
                         invoiceBase64
                     });
                 })().catch((emailErr) => {

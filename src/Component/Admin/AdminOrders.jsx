@@ -186,6 +186,7 @@ export default function AdminOrders() {
     const [actionLocationName, setActionLocationName] = useState('');
     const [actionLatitude, setActionLatitude] = useState('');
     const [actionLongitude, setActionLongitude] = useState('');
+    const [actionDeliveryOtp, setActionDeliveryOtp] = useState('');
 
     const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const localApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -272,7 +273,23 @@ export default function AdminOrders() {
         const handleStatusUpdate = (payload) => {
             setOrders((prev) => prev.map((order) => (
                 order.orderId === payload.orderId
-                    ? { ...order, orderStatus: payload.status, updatedAt: payload.updatedAt }
+                    ? {
+                        ...order,
+                        orderStatus: payload.status,
+                        updatedAt: payload.updatedAt,
+                        deliverySchedule: {
+                            ...(order.deliverySchedule || {}),
+                            ...(payload.deliverySchedule || {}),
+                            ...(payload.deliveryAgent ? { deliveryAgent: payload.deliveryAgent } : {}),
+                            ...(payload.riderPhone ? { riderPhone: payload.riderPhone } : {}),
+                            ...(payload.locationName ? { locationName: payload.locationName } : {}),
+                            ...(payload.latitude != null ? { latitude: payload.latitude } : {}),
+                            ...(payload.longitude != null ? { longitude: payload.longitude } : {})
+                        },
+                        ...(payload.deliveryOtp !== undefined ? { deliveryOtp: payload.deliveryOtp || '' } : {}),
+                        ...(payload.deliveryOtpExpiresAt !== undefined ? { deliveryOtpExpiresAt: payload.deliveryOtpExpiresAt || null } : {}),
+                        ...(payload.deliveryOtpVerifiedAt !== undefined ? { deliveryOtpVerifiedAt: payload.deliveryOtpVerifiedAt || null } : {})
+                    }
                     : order
             )));
         };
@@ -411,6 +428,7 @@ export default function AdminOrders() {
         setActionLocationName(order.deliverySchedule?.locationName || order.shippingAddress?.city || '');
         setActionLatitude(existingLat === null || existingLat === undefined ? '' : String(existingLat));
         setActionLongitude(existingLng === null || existingLng === undefined ? '' : String(existingLng));
+        setActionDeliveryOtp('');
     };
 
     const closeActionDrawer = () => {
@@ -426,12 +444,15 @@ export default function AdminOrders() {
             const riderName = String(options.riderName || '').trim();
             const riderPhone = String(options.riderPhone || '').trim();
             const locationName = String(options.locationName || '').trim();
+            const deliveryOtp = String(options.deliveryOtp || '').trim();
             const latValue = String(options.latitude || '').trim();
             const lngValue = String(options.longitude || '').trim();
 
-            const latNum = Number(latValue);
-            const lngNum = Number(lngValue);
-            const hasCoords = Number.isFinite(latNum) && Number.isFinite(lngNum);
+            const hasLatValue = latValue.length > 0;
+            const hasLngValue = lngValue.length > 0;
+            const latNum = hasLatValue ? Number(latValue) : NaN;
+            const lngNum = hasLngValue ? Number(lngValue) : NaN;
+            const hasCoords = hasLatValue && hasLngValue && Number.isFinite(latNum) && Number.isFinite(lngNum);
 
             let deliverySchedule = null;
             if (deliveryDate || riderName || riderPhone || locationName || hasCoords) {
@@ -458,7 +479,8 @@ export default function AdminOrders() {
                 !riderName &&
                 !riderPhone &&
                 !locationName &&
-                !hasCoords;
+                !hasCoords &&
+                !deliveryOtp;
 
             const endpoint = shouldUseConfirmEndpoint
                 ? `${apiBaseUrl}/api/admin/confirm-order`
@@ -474,7 +496,8 @@ export default function AdminOrders() {
                     ...(riderName && { deliveryAgent: riderName }),
                     ...(riderPhone && { riderPhone }),
                     ...(locationName && { locationName }),
-                    ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
+                    ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {}),
+                    ...(deliveryOtp && { deliveryOtp })
                 };
 
             const response = await axios.post(
@@ -494,7 +517,8 @@ export default function AdminOrders() {
             }
         } catch (error) {
             console.error('Update failed:', error);
-            showNotification('Failed to update order status', 'error');
+            const serverMessage = error?.response?.data?.message || error?.response?.data?.error;
+            showNotification(serverMessage || 'Failed to update order status', 'error');
             return false;
         } finally {
             setUpdating('');
@@ -514,6 +538,7 @@ export default function AdminOrders() {
         const locationName = String(actionLocationName || '').trim();
         const latitude = String(actionLatitude || '').trim();
         const longitude = String(actionLongitude || '').trim();
+        const deliveryOtp = String(actionDeliveryOtp || '').trim();
 
         const currentRiderName = String(actionOrder?.deliverySchedule?.deliveryAgent || '').trim();
         const currentRiderPhone = String(actionOrder?.deliverySchedule?.riderPhone || '').trim();
@@ -526,8 +551,28 @@ export default function AdminOrders() {
         const changedNote = adminNote.length > 0;
         const changedRider = riderName !== currentRiderName || riderPhone !== currentRiderPhone;
         const changedLocation = locationName !== currentLocationName || latitude !== currentLatitude || longitude !== currentLongitude;
+        const changedOtp = deliveryOtp.length > 0;
+        const needsOutForDeliveryOtpBootstrap =
+            nextStatus === 'Out for Delivery' &&
+            !String(actionOrder?.deliveryOtp || '').trim();
 
-        if (!changedStatus && !changedDate && !changedNote && !changedRider && !changedLocation) {
+        if (nextStatus === 'Out for Delivery') {
+            if (!riderName || !riderPhone) {
+                showNotification('Out for Delivery ke liye rider name aur phone required hai', 'info');
+                return;
+            }
+            if (!locationName && !(latitude && longitude)) {
+                showNotification('Out for Delivery ke liye location name ya latitude/longitude required hai', 'info');
+                return;
+            }
+        }
+
+        if (nextStatus === 'Delivered' && currentStatus !== 'Delivered' && !deliveryOtp) {
+            showNotification('Delivered mark karne ke liye customer delivery OTP enter karo', 'info');
+            return;
+        }
+
+        if (!changedStatus && !changedDate && !changedNote && !changedRider && !changedLocation && !changedOtp && !needsOutForDeliveryOtpBootstrap) {
             showNotification('No action changes to apply for this order', 'info');
             return;
         }
@@ -541,7 +586,8 @@ export default function AdminOrders() {
             locationName,
             latitude,
             longitude,
-            successMessage: (changedDate || changedRider || changedLocation)
+            deliveryOtp,
+            successMessage: (changedDate || changedRider || changedLocation || changedOtp || needsOutForDeliveryOtpBootstrap)
                 ? `Order ${actionOrder.orderId} updated with live delivery details`
                 : `Order ${actionOrder.orderId} status updated`
         });
@@ -958,6 +1004,8 @@ export default function AdminOrders() {
                 setLatitude={setActionLatitude}
                 longitude={actionLongitude}
                 setLongitude={setActionLongitude}
+                deliveryOtp={actionDeliveryOtp}
+                setDeliveryOtp={setActionDeliveryOtp}
                 onToday={() => applyQuickDeliveryPreset(0)}
                 onTomorrow={() => applyQuickDeliveryPreset(1)}
                 onApply={applyOrderAction}
