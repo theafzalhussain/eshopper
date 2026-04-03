@@ -75,6 +75,8 @@
     "build": "react-app-rewired build",
     "fix:order-qty:dry": "node fix-order-quantities.js --dry-run",
     "fix:order-qty": "node fix-order-quantities.js --apply",
+    "fix:user-settings:dry": "node backfill-user-settings.js --dry-run",
+    "fix:user-settings": "node backfill-user-settings.js --apply",
     "test": "react-app-rewired test",
     "eject": "react-scripts eject"
   },

@@ -289,8 +289,8 @@ export default function SystemControlCenter() {
           {/* New Orders Card */}
           <StatsCard
             key="orders"
-            title="Today's Orders"
-            value={metrics.newOrders || 0}
+            title="Total Orders"
+            value={metrics.totalOrders || metrics.newOrders || 0}
             icon={Package}
             percentChange={ordersChange.change}
             trend={ordersChange.trend}
@@ -298,7 +298,7 @@ export default function SystemControlCenter() {
             progress={65}
             reportLink="/admin-orders"
             isLoading={isLoading}
-            subtitle="Orders placed today"
+            subtitle="All orders in database"
           />
         </AnimatePresence>
       </div>

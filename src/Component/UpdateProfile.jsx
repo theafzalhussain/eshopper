@@ -16,20 +16,55 @@ import {
     ShieldCheck,
     RefreshCcw,
     CheckCircle2,
+    Bell,
+    Lock,
+    Eye,
+    EyeOff,
+    MessageSquare,
+    Truck,
+    Sparkles,
 } from 'lucide-react'
 import Spinner from './Spinner'
 import { BASE_URL } from '../constants'
 
+const defaultSettings = {
+    notifications: {
+        orderUpdates: true,
+        deliveryUpdates: true,
+        promotionalEmails: true,
+        priceAlerts: false,
+        wishlistAlerts: true,
+        smsAlerts: false,
+    },
+    privacy: {
+        profileVisibility: 'Private',
+        personalizedRecommendations: true,
+    },
+    security: {
+        twoFactorEnabled: false,
+        loginAlerts: true,
+    },
+    communication: {
+        newsletter: true,
+        whatsappUpdates: false,
+        pushNotifications: true,
+    },
+}
+
 export default function Updateprofile() {
+    const [activeTab, setActiveTab] = useState('personal')
     const [data, setdata] = useState({
         name: "", email: "", phone: "", addressline1: "",
-        pin: "", city: "", state: "", pic: null
+        addressline2: "", landmark: "", pin: "", city: "", state: "", pic: null,
+        deliveryNotes: "", password: "", confirmPassword: "", settings: defaultSettings
     })
     const [initialData, setInitialData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [preview, setPreview] = useState(null)
     const [previewObjectUrl, setPreviewObjectUrl] = useState(null)
     const [showToast, setShowToast] = useState(false)
+    const [toastMessage, setToastMessage] = useState('Profile updated successfully')
+    const [showPassword, setShowPassword] = useState(false)
     
     const users = useSelector((state) => state.UserStateData)
     const dispatch = useDispatch()
@@ -41,11 +76,34 @@ export default function Updateprofile() {
         if (users.length > 0) {
             const current = users.find((item) => (item.id || item._id) === userId)
             if (current) {
+                const currentSettings = current.settings || {}
                 const normalized = {
                     ...current,
                     password: "",
+                    confirmPassword: "",
                     addressline1: current.addressline1 || current.streetAddress || "",
+                    addressline2: current.addressline2 || "",
+                    landmark: current.landmark || "",
+                    deliveryNotes: current.deliveryNotes || "",
                     pin: current.pin || current.postalCode || "",
+                    settings: {
+                        notifications: {
+                            ...defaultSettings.notifications,
+                            ...(currentSettings.notifications || {}),
+                        },
+                        privacy: {
+                            ...defaultSettings.privacy,
+                            ...(currentSettings.privacy || {}),
+                        },
+                        security: {
+                            ...defaultSettings.security,
+                            ...(currentSettings.security || {}),
+                        },
+                        communication: {
+                            ...defaultSettings.communication,
+                            ...(currentSettings.communication || {}),
+                        },
+                    }
                 }
                 setdata(normalized)
                 setInitialData(normalized)
@@ -77,6 +135,19 @@ export default function Updateprofile() {
         setdata({ ...data, [name]: value })
     }
 
+    function updateSetting(section, key, value) {
+        setdata((prev) => ({
+            ...prev,
+            settings: {
+                ...prev.settings,
+                [section]: {
+                    ...prev.settings[section],
+                    [key]: value,
+                },
+            }
+        }))
+    }
+
     function getFile(e) {
         const file = e.target.files[0]
         if (file) {
@@ -98,6 +169,16 @@ export default function Updateprofile() {
 
     async function postData(e) {
         e.preventDefault();
+
+        if (data.password || data.confirmPassword) {
+            if (!data.password || !data.confirmPassword || data.password !== data.confirmPassword) {
+                setToastMessage('Password confirmation does not match')
+                setShowToast(true)
+                setTimeout(() => setShowToast(false), 2200)
+                return
+            }
+        }
+
         setLoading(true);
         
         let formData = new FormData();
@@ -106,9 +187,14 @@ export default function Updateprofile() {
         formData.append("email", data.email);
         formData.append("phone", data.phone);
         formData.append("addressline1", data.addressline1 || "");
+        formData.append("addressline2", data.addressline2 || "");
+        formData.append("landmark", data.landmark || "");
+        formData.append("deliveryNotes", data.deliveryNotes || "");
         formData.append("city", data.city || "");
         formData.append("state", data.state || "");
         formData.append("pin", data.pin || "");
+        formData.append("settings", JSON.stringify(data.settings || defaultSettings));
+        if (data.password) formData.append("password", data.password);
         
         if (data.pic && typeof data.pic !== "string") formData.append("pic", data.pic);
 
@@ -129,6 +215,7 @@ export default function Updateprofile() {
                 if (data?.name) localStorage.setItem("name", data.name)
             } finally {
                 window.dispatchEvent(new Event('profile-updated'))
+                setToastMessage(data.password ? 'Security settings updated successfully' : 'Profile updated successfully')
                 setShowToast(true)
                 setLoading(false);
                 setTimeout(() => {
@@ -145,12 +232,110 @@ export default function Updateprofile() {
             initialData.email !== data.email ||
             initialData.phone !== data.phone ||
             initialData.addressline1 !== data.addressline1 ||
+            initialData.addressline2 !== data.addressline2 ||
+            initialData.landmark !== data.landmark ||
+            initialData.deliveryNotes !== data.deliveryNotes ||
             initialData.city !== data.city ||
             initialData.state !== data.state ||
             initialData.pin !== data.pin ||
+            initialData.password !== data.password ||
+            JSON.stringify(initialData.settings || defaultSettings) !== JSON.stringify(data.settings || defaultSettings) ||
             (data.pic && typeof data.pic !== 'string')
         )
         : false
+
+    const toggleCards = [
+        {
+            section: 'notifications',
+            key: 'orderUpdates',
+            title: 'Order updates',
+            description: 'Get notified when order status changes or is shipped.',
+            icon: Bell,
+        },
+        {
+            section: 'notifications',
+            key: 'deliveryUpdates',
+            title: 'Delivery alerts',
+            description: 'Live ETA and delivery completion notifications.',
+            icon: Truck,
+        },
+        {
+            section: 'notifications',
+            key: 'promotionalEmails',
+            title: 'Promotional emails',
+            description: 'Receive offers, product launches and seasonal deals.',
+            icon: Sparkles,
+        },
+        {
+            section: 'notifications',
+            key: 'priceAlerts',
+            title: 'Price-drop alerts',
+            description: 'Know when wishlist items go on sale.',
+            icon: MessageSquare,
+        },
+        {
+            section: 'notifications',
+            key: 'wishlistAlerts',
+            title: 'Wishlist alerts',
+            description: 'Get stock reminders for saved products.',
+            icon: Bell,
+        },
+        {
+            section: 'communication',
+            key: 'pushNotifications',
+            title: 'Push notifications',
+            description: 'Browser and mobile push updates for key events.',
+            icon: Bell,
+        },
+    ]
+
+    const renderToggleCard = ({ section, key, title, description, icon: Icon }) => {
+        const checked = Boolean(data.settings?.[section]?.[key])
+        return (
+            <button
+                key={`${section}-${key}`}
+                type="button"
+                className={`upd-toggle-card${checked ? ' active' : ''}`}
+                onClick={() => updateSetting(section, key, !checked)}
+            >
+                <div className="upd-toggle-copy">
+                    <span className="upd-toggle-icon"><Icon size={14} /></span>
+                    <div>
+                        <div className="upd-toggle-title">{title}</div>
+                        <div className="upd-toggle-desc">{description}</div>
+                    </div>
+                </div>
+                <span className="upd-toggle-state">{checked ? 'On' : 'Off'}</span>
+            </button>
+        )
+    }
+
+    const tabs = [
+        {
+            id: 'personal',
+            label: 'Personal',
+            icon: User2,
+            summary: 'Name, contact, avatar and delivery address',
+        },
+        {
+            id: 'security',
+            label: 'Security',
+            icon: Lock,
+            summary: 'Password, 2FA and visibility controls',
+        },
+        {
+            id: 'notifications',
+            label: 'Notifications',
+            icon: Bell,
+            summary: 'Order, shipping and promotional alerts',
+        },
+        {
+            id: 'privacy',
+            label: 'Privacy',
+            icon: ShieldCheck,
+            summary: 'Recommendations and communication preferences',
+        },
+    ]
 
     return (
         <>
@@ -162,7 +347,7 @@ export default function Updateprofile() {
 
                 <div className={`upd-toast${showToast ? ' visible' : ''}`}>
                     <CheckCircle2 size={15} />
-                    Profile updated successfully
+                    {toastMessage}
                 </div>
 
                 <div className="container py-5">
@@ -183,7 +368,43 @@ export default function Updateprofile() {
                             <div className="upd-heading-row">
                                 <div className="upd-eyebrow">Account Personalization</div>
                                 <h1 className="upd-title">Update Profile Settings</h1>
-                                <p className="upd-subtitle">Simple, premium profile controls designed for fast checkout and accurate delivery.</p>
+                                <p className="upd-subtitle">Simple, premium profile controls designed for fast checkout, secure access and accurate delivery.</p>
+                            </div>
+
+                            <div className="upd-summary-grid">
+                                <div className="upd-summary-card">
+                                    <div className="upd-summary-label">Security</div>
+                                    <div className="upd-summary-value">{data.settings?.security?.twoFactorEnabled ? '2FA enabled' : 'Password only'}</div>
+                                </div>
+                                <div className="upd-summary-card">
+                                    <div className="upd-summary-label">Privacy</div>
+                                    <div className="upd-summary-value">{data.settings?.privacy?.profileVisibility || 'Private'}</div>
+                                </div>
+                                <div className="upd-summary-card">
+                                    <div className="upd-summary-label">Alerts</div>
+                                    <div className="upd-summary-value">{data.settings?.notifications?.orderUpdates ? 'Order alerts on' : 'Muted'}</div>
+                                </div>
+                            </div>
+
+                            <div className="upd-tab-bar">
+                                {tabs.map((tab) => {
+                                    const TabIcon = tab.icon
+                                    const active = activeTab === tab.id
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            type="button"
+                                            className={`upd-tab-btn${active ? ' active' : ''}`}
+                                            onClick={() => setActiveTab(tab.id)}
+                                        >
+                                            <TabIcon size={14} />
+                                            <span>
+                                                <strong>{tab.label}</strong>
+                                                <small>{tab.summary}</small>
+                                            </span>
+                                        </button>
+                                    )
+                                })}
                             </div>
 
                             <form onSubmit={postData}>
@@ -207,48 +428,199 @@ export default function Updateprofile() {
                                     </section>
 
                                     <section className="upd-card upd-form-card">
-                                        <div className="upd-section-title">Basic Information</div>
+                                        {activeTab === 'personal' && (
+                                            <>
+                                                <div className="upd-section-title">Personal Information</div>
 
-                                        <div className="upd-field-grid two">
-                                            <label className="upd-field">
-                                                <span className="upd-label"><User2 size={14} /> Full Name</span>
-                                                <input type="text" name="name" value={data.name} onChange={getData} required />
-                                            </label>
+                                                <div className="upd-field-grid two">
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><User2 size={14} /> Full Name</span>
+                                                        <input type="text" name="name" value={data.name} onChange={getData} required />
+                                                    </label>
 
-                                            <label className="upd-field">
-                                                <span className="upd-label"><Phone size={14} /> Phone Number</span>
-                                                <input type="text" name="phone" value={data.phone} onChange={getData} placeholder="e.g. +91 98xxxxxx" />
-                                            </label>
-                                        </div>
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><Phone size={14} /> Phone Number</span>
+                                                        <input type="text" name="phone" value={data.phone} onChange={getData} placeholder="e.g. +91 98xxxxxx" />
+                                                    </label>
+                                                </div>
 
-                                        <label className="upd-field">
-                                            <span className="upd-label"><Mail size={14} /> Email Address</span>
-                                            <input type="email" name="email" value={data.email} onChange={getData} placeholder="you@brand.com" />
-                                        </label>
+                                                <label className="upd-field">
+                                                    <span className="upd-label"><Mail size={14} /> Email Address</span>
+                                                    <input type="email" name="email" value={data.email} onChange={getData} placeholder="you@brand.com" />
+                                                </label>
 
-                                        <div className="upd-divider-title">Delivery Address</div>
+                                                <div className="upd-divider-title">Delivery Address</div>
 
-                                        <label className="upd-field">
-                                            <span className="upd-label"><MapPin size={14} /> Street Address</span>
-                                            <input type="text" name="addressline1" value={data.addressline1} onChange={getData} placeholder="House no, street, landmark" />
-                                        </label>
+                                                <label className="upd-field">
+                                                    <span className="upd-label"><MapPin size={14} /> Street Address</span>
+                                                    <input type="text" name="addressline1" value={data.addressline1} onChange={getData} placeholder="House no, street, landmark" />
+                                                </label>
 
-                                        <div className="upd-field-grid three">
-                                            <label className="upd-field">
-                                                <span className="upd-label"><Building2 size={14} /> City</span>
-                                                <input type="text" name="city" value={data.city} onChange={getData} />
-                                            </label>
+                                                <div className="upd-field-grid two">
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><MapPin size={14} /> Address Line 2</span>
+                                                        <input type="text" name="addressline2" value={data.addressline2} onChange={getData} placeholder="Apartment, floor, block" />
+                                                    </label>
 
-                                            <label className="upd-field">
-                                                <span className="upd-label"><MapPin size={14} /> State</span>
-                                                <input type="text" name="state" value={data.state} onChange={getData} />
-                                            </label>
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><MapPin size={14} /> Landmark</span>
+                                                        <input type="text" name="landmark" value={data.landmark} onChange={getData} placeholder="Nearby shop, tower, mall" />
+                                                    </label>
+                                                </div>
 
-                                            <label className="upd-field">
-                                                <span className="upd-label"><MapPin size={14} /> PIN Code</span>
-                                                <input type="text" name="pin" value={data.pin} onChange={getData} placeholder="6-digit PIN" />
-                                            </label>
-                                        </div>
+                                                <div className="upd-field-grid three">
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><Building2 size={14} /> City</span>
+                                                        <input type="text" name="city" value={data.city} onChange={getData} />
+                                                    </label>
+
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><MapPin size={14} /> State</span>
+                                                        <input type="text" name="state" value={data.state} onChange={getData} />
+                                                    </label>
+
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><MapPin size={14} /> PIN Code</span>
+                                                        <input type="text" name="pin" value={data.pin} onChange={getData} placeholder="6-digit PIN" />
+                                                    </label>
+                                                </div>
+
+                                                <label className="upd-field">
+                                                    <span className="upd-label"><Truck size={14} /> Delivery instructions</span>
+                                                    <input
+                                                        type="text"
+                                                        name="deliveryNotes"
+                                                        value={data.deliveryNotes || ''}
+                                                        onChange={getData}
+                                                        placeholder="Gate code, preferred delivery slot or contactless notes"
+                                                    />
+                                                </label>
+                                            </>
+                                        )}
+
+                                        {activeTab === 'security' && (
+                                            <>
+                                                <div className="upd-section-title">Security Center</div>
+
+                                                <div className="upd-field-grid two">
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><Lock size={14} /> New Password</span>
+                                                        <div className="upd-password-wrap">
+                                                            <input
+                                                                type={showPassword ? 'text' : 'password'}
+                                                                name="password"
+                                                                value={data.password}
+                                                                onChange={getData}
+                                                                placeholder="Enter a new password"
+                                                            />
+                                                            <button type="button" className="upd-password-visibility" onClick={() => setShowPassword((prev) => !prev)}>
+                                                                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                            </button>
+                                                        </div>
+                                                    </label>
+
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><Lock size={14} /> Confirm Password</span>
+                                                        <input
+                                                            type={showPassword ? 'text' : 'password'}
+                                                            name="confirmPassword"
+                                                            value={data.confirmPassword}
+                                                            onChange={getData}
+                                                            placeholder="Re-enter new password"
+                                                        />
+                                                    </label>
+                                                </div>
+
+                                                <div className="upd-field-grid two">
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><ShieldCheck size={14} /> Profile Visibility</span>
+                                                        <select value={data.settings?.privacy?.profileVisibility || 'Private'} onChange={(e) => updateSetting('privacy', 'profileVisibility', e.target.value)}>
+                                                            <option value="Private">Private</option>
+                                                            <option value="Orders only">Orders only</option>
+                                                            <option value="Public">Public</option>
+                                                        </select>
+                                                    </label>
+
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><ShieldCheck size={14} /> Two-factor authentication</span>
+                                                        <select value={data.settings?.security?.twoFactorEnabled ? 'on' : 'off'} onChange={(e) => updateSetting('security', 'twoFactorEnabled', e.target.value === 'on')}>
+                                                            <option value="off">Disabled</option>
+                                                            <option value="on">Enabled</option>
+                                                        </select>
+                                                    </label>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {activeTab === 'notifications' && (
+                                            <>
+                                                <div className="upd-section-title">Notification Preferences</div>
+
+                                                <div className="upd-toggle-grid">
+                                                    {toggleCards.map(renderToggleCard)}
+                                                </div>
+
+                                                <div className="upd-field-grid two">
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><MessageSquare size={14} /> Newsletter</span>
+                                                        <select value={data.settings?.communication?.newsletter ? 'on' : 'off'} onChange={(e) => updateSetting('communication', 'newsletter', e.target.value === 'on')}>
+                                                            <option value="on">Subscribed</option>
+                                                            <option value="off">Unsubscribed</option>
+                                                        </select>
+                                                    </label>
+
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><MessageSquare size={14} /> WhatsApp updates</span>
+                                                        <select value={data.settings?.communication?.whatsappUpdates ? 'on' : 'off'} onChange={(e) => updateSetting('communication', 'whatsappUpdates', e.target.value === 'on')}>
+                                                            <option value="off">Disabled</option>
+                                                            <option value="on">Enabled</option>
+                                                        </select>
+                                                    </label>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {activeTab === 'privacy' && (
+                                            <>
+                                                <div className="upd-section-title">Privacy & Communication</div>
+
+                                                <div className="upd-field-grid two">
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><ShieldCheck size={14} /> Personalized recommendations</span>
+                                                        <select value={data.settings?.privacy?.personalizedRecommendations ? 'on' : 'off'} onChange={(e) => updateSetting('privacy', 'personalizedRecommendations', e.target.value === 'on')}>
+                                                            <option value="on">Enabled</option>
+                                                            <option value="off">Disabled</option>
+                                                        </select>
+                                                    </label>
+
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><MessageSquare size={14} /> SMS alerts</span>
+                                                        <select value={data.settings?.notifications?.smsAlerts ? 'on' : 'off'} onChange={(e) => updateSetting('notifications', 'smsAlerts', e.target.value === 'on')}>
+                                                            <option value="off">Disabled</option>
+                                                            <option value="on">Enabled</option>
+                                                        </select>
+                                                    </label>
+                                                </div>
+
+                                                <div className="upd-field-grid two">
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><MessageSquare size={14} /> Push notifications</span>
+                                                        <select value={data.settings?.communication?.pushNotifications ? 'on' : 'off'} onChange={(e) => updateSetting('communication', 'pushNotifications', e.target.value === 'on')}>
+                                                            <option value="on">Enabled</option>
+                                                            <option value="off">Disabled</option>
+                                                        </select>
+                                                    </label>
+
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><MessageSquare size={14} /> Order alerts</span>
+                                                        <select value={data.settings?.notifications?.orderUpdates ? 'on' : 'off'} onChange={(e) => updateSetting('notifications', 'orderUpdates', e.target.value === 'on')}>
+                                                            <option value="on">Enabled</option>
+                                                            <option value="off">Disabled</option>
+                                                        </select>
+                                                    </label>
+                                                </div>
+                                            </>
+                                        )}
 
                                         <div className="upd-action-row">
                                             <button type="button" className="upd-reset-btn" onClick={resetForm} disabled={loading || !hasUnsavedChanges}>
@@ -560,6 +932,183 @@ export default function Updateprofile() {
                     background: #fff;
                 }
 
+                .upd-field select,
+                .upd-field textarea {
+                    width: 100%;
+                    border: 1px solid rgba(201,168,76,0.28);
+                    background: #fcfaf6;
+                    border-radius: 12px;
+                    padding: 12px 12px;
+                    color: #151515;
+                    outline: none;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                }
+
+                .upd-field select:focus,
+                .upd-field textarea:focus {
+                    border-color: #1a8c8c;
+                    box-shadow: 0 0 0 3px rgba(26,140,140,0.14);
+                    background: #fff;
+                }
+
+                .upd-password-wrap {
+                    position: relative;
+                }
+
+                .upd-password-wrap input {
+                    padding-right: 44px;
+                }
+
+                .upd-password-visibility {
+                    position: absolute;
+                    right: 10px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    border: none;
+                    background: transparent;
+                    color: #6b7280;
+                    padding: 4px;
+                    border-radius: 8px;
+                }
+
+                .upd-summary-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    gap: 12px;
+                    margin-bottom: 18px;
+                }
+
+                .upd-tab-bar {
+                    display: grid;
+                    grid-template-columns: repeat(4, minmax(0, 1fr));
+                    gap: 10px;
+                    margin-bottom: 16px;
+                }
+
+                .upd-tab-btn {
+                    border: 1px solid rgba(201,168,76,0.2);
+                    background: #fff;
+                    border-radius: 16px;
+                    padding: 12px 14px;
+                    text-align: left;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 10px;
+                    color: #4b5563;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+                }
+
+                .upd-tab-btn strong {
+                    display: block;
+                    font-size: 13px;
+                    color: #151515;
+                    margin-bottom: 2px;
+                }
+
+                .upd-tab-btn small {
+                    display: block;
+                    font-size: 11px;
+                    line-height: 1.35;
+                    color: #6b7280;
+                }
+
+                .upd-tab-btn.active {
+                    border-color: rgba(26,140,140,0.32);
+                    box-shadow: 0 12px 22px rgba(26,140,140,0.08);
+                    transform: translateY(-1px);
+                }
+
+                .upd-summary-card {
+                    border-radius: 16px;
+                    padding: 14px 16px;
+                    background: linear-gradient(135deg, rgba(26,140,140,0.08), rgba(201,168,76,0.08));
+                    border: 1px solid rgba(201,168,76,0.18);
+                }
+
+                .upd-summary-label {
+                    font-size: 10px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.16em;
+                    color: #8b7c66;
+                    margin-bottom: 6px;
+                    font-weight: 700;
+                }
+
+                .upd-summary-value {
+                    color: #0f6b6b;
+                    font-weight: 700;
+                    font-size: 14px;
+                }
+
+                .upd-toggle-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 12px;
+                    margin-bottom: 14px;
+                }
+
+                .upd-toggle-card {
+                    border: 1px solid rgba(201,168,76,0.2);
+                    background: #fff;
+                    border-radius: 16px;
+                    padding: 14px 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    text-align: left;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+                }
+
+                .upd-toggle-card.active {
+                    border-color: rgba(26,140,140,0.35);
+                    box-shadow: 0 10px 20px rgba(26,140,140,0.08);
+                }
+
+                .upd-toggle-card:hover {
+                    transform: translateY(-1px);
+                }
+
+                .upd-toggle-copy {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 10px;
+                }
+
+                .upd-toggle-icon {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 10px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(26,140,140,0.08);
+                    color: #0f6b6b;
+                    flex: 0 0 auto;
+                }
+
+                .upd-toggle-title {
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: #151515;
+                    margin-bottom: 2px;
+                }
+
+                .upd-toggle-desc {
+                    font-size: 12px;
+                    line-height: 1.45;
+                    color: #6b7280;
+                }
+
+                .upd-toggle-state {
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.14em;
+                    font-weight: 700;
+                    color: #0f6b6b;
+                    flex: 0 0 auto;
+                }
+
                 .upd-action-row {
                     margin-top: 4px;
                     display: flex;
@@ -645,6 +1194,12 @@ export default function Updateprofile() {
 
                 @media (max-width: 992px) {
                     .upd-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .upd-summary-grid,
+                    .upd-tab-bar,
+                    .upd-toggle-grid {
                         grid-template-columns: 1fr;
                     }
 

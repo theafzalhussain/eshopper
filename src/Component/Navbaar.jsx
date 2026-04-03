@@ -250,6 +250,14 @@ export default function Navbaar() {
                                                 <ShoppingCart size={14} className="mr-2" style={{display:'inline'}} /> 
                                                 <span>My Orders</span>
                                             </Link>
+                                            <Link className="dropdown-item premium-dropdown-item" to="/wishlist">
+                                                <i className="icon-heart mr-2"></i>
+                                                <span>Wishlist</span>
+                                            </Link>
+                                            <Link className="dropdown-item premium-dropdown-item" to="/update-profile">
+                                                <i className="icon-settings mr-2"></i>
+                                                <span>Settings</span>
+                                            </Link>
                                             <div className="dropdown-divider"></div>
                                             <button className="dropdown-item premium-dropdown-item logout-item" onClick={logout}>
                                                 <i className="icon-sign-out mr-2"></i>

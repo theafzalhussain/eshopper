@@ -10,7 +10,7 @@ import BuyerProfile from './BuyerProfile'
 import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BASE_URL } from '../constants'
-import { ArrowRight, ShoppingBag, Clock3, Heart, ShoppingCart, Package, Shield } from 'lucide-react'
+import { ArrowRight, ShoppingBag, Clock3, Heart, ShoppingCart, Package, Shield, Settings, LayoutGrid, Sparkles, Star } from 'lucide-react'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
@@ -25,6 +25,7 @@ export default function Profile() {
     const [isLoading, setIsLoading] = useState(true)
     const socketRef = useRef(null)
     const [socketConnected, setSocketConnected] = useState(false)
+    const [activeTab, setActiveTab] = useState('overview')
     var dispatch = useDispatch()
     var navigate = useNavigate()
     const { membershipType, totalOrders } = useMembership()
@@ -146,6 +147,66 @@ export default function Profile() {
         visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
     }
 
+    const profileTabs = [
+        { id: 'overview', label: 'Overview', icon: LayoutGrid },
+        { id: 'wishlist', label: 'Wishlist', icon: Heart },
+        { id: 'orders', label: 'Orders', icon: Package },
+        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'benefits', label: 'Benefits', icon: Sparkles }
+    ]
+
+    const currentWishlist = wishlist.filter(x => x.userid === localStorage.getItem('userid'))
+    const currentOrders = orders.filter(x => x.userid === localStorage.getItem('userid'))
+    const selectedTabMeta = {
+        overview: {
+            title: 'Account Snapshot',
+            subtitle: 'Quick actions and membership overview',
+            cards: [
+                { label: 'Wishlist items', value: currentWishlist.length, tone: '#D4AF37' },
+                { label: 'Total orders', value: currentOrders.length, tone: '#10b981' },
+                { label: 'Member tier', value: String(membershipType || 'Silver'), tone: '#0ea5b7' }
+            ]
+        },
+        wishlist: {
+            title: 'Saved Pieces',
+            subtitle: 'Your most loved products in one place',
+            cards: currentWishlist.slice(0, 3).map((item) => ({
+                label: item.name || 'Wishlist item',
+                value: `₹${Number(item.price || 0).toLocaleString('en-IN')}`,
+                tone: '#D4AF37'
+            }))
+        },
+        orders: {
+            title: 'Recent Orders',
+            subtitle: 'Continue tracking your latest purchases',
+            cards: recentOrders.slice(0, 3).map((item) => ({
+                label: item.orderId || 'Order',
+                value: normalizeStatus(item.orderStatus),
+                tone: getStatusStyles(item.orderStatus).color
+            }))
+        },
+        settings: {
+            title: 'Account Settings',
+            subtitle: 'Profile and account management shortcuts',
+            cards: [
+                { label: 'Edit profile', value: 'Update your personal info', tone: '#17a2b8' },
+                { label: 'Security', value: 'Change password anytime', tone: '#6366f1' },
+                { label: 'Support', value: 'Contact luxury concierge', tone: '#ef4444' }
+            ]
+        },
+        benefits: {
+            title: 'Premium Benefits',
+            subtitle: 'What your membership unlocks',
+            cards: [
+                { label: 'Fast delivery', value: 'Priority shipping', tone: '#10b981' },
+                { label: 'Rewards', value: 'Exclusive offers & perks', tone: '#D4AF37' },
+                { label: 'Assistance', value: 'VIP chat support', tone: '#0ea5b7' }
+            ]
+        }
+    }
+
+    const tabContent = selectedTabMeta[activeTab] || selectedTabMeta.overview
+
     return (
         <div className="profile-page-luxury" style={{ backgroundColor: "#fafaf8", minHeight: "100vh", paddingBottom: "60px" }}>
             {/* --- PREMIUM LUXURY HEADER --- */}
@@ -172,6 +233,73 @@ export default function Profile() {
             </div>
 
             <div className="container">
+                {/* Feature Tabs */}
+                <motion.div
+                    className="mb-4 p-3 p-md-4 rounded-3xl bg-white shadow-lg"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.12, duration: 0.45 }}
+                    style={{ border: '1px solid rgba(212,175,55,0.1)' }}
+                >
+                    <div className="d-flex flex-wrap gap-2 mb-3">
+                        {profileTabs.map((tab) => {
+                            const TabIcon = tab.icon
+                            const active = activeTab === tab.id
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className="btn btn-sm rounded-pill d-inline-flex align-items-center"
+                                    style={{
+                                        padding: '10px 16px',
+                                        border: active ? '1px solid #0A0A0A' : '1px solid rgba(212,175,55,0.18)',
+                                        background: active ? 'linear-gradient(135deg, #0A0A0A, #1f2937)' : '#fff',
+                                        color: active ? '#fff' : '#334155',
+                                        fontWeight: 700,
+                                        letterSpacing: '0.2px',
+                                        boxShadow: active ? '0 10px 24px rgba(10,10,10,0.14)' : 'none'
+                                    }}
+                                >
+                                    <TabIcon size={14} className="mr-2" />
+                                    {tab.label}
+                                </button>
+                            )
+                        })}
+                    </div>
+
+                    <div className="row align-items-stretch">
+                        <div className="col-lg-4 mb-3 mb-lg-0">
+                            <div className="h-100 p-4 rounded-3xl" style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.08), rgba(16,185,129,0.06))', border: '1px solid rgba(212,175,55,0.12)' }}>
+                                <div className="d-flex align-items-center justify-content-between mb-2">
+                                    <div style={{ fontSize: '12px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#64748b', fontWeight: 800 }}>{tabContent.title}</div>
+                                    <Star size={15} color="#D4AF37" />
+                                </div>
+                                <h5 className="font-weight-bold mb-2" style={{ color: '#0A0A0A' }}>{tabContent.subtitle}</h5>
+                                <p className="mb-0" style={{ color: '#64748b', fontSize: '14px' }}>
+                                    Tap through quick ecommerce-style sections: orders, wishlist, settings and benefits.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="col-lg-8">
+                            <div className="row">
+                                {tabContent.cards.map((card, index) => (
+                                    <div className="col-md-4 mb-3" key={`${card.label}-${index}`}>
+                                        <div className="h-100 p-4 rounded-3xl bg-white border" style={{ borderColor: 'rgba(212,175,55,0.12)', boxShadow: '0 12px 30px rgba(0,0,0,0.04)' }}>
+                                            <div style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, marginBottom: '8px' }}>
+                                                {card.label}
+                                            </div>
+                                            <div style={{ fontSize: '18px', fontWeight: 800, color: card.tone || '#0A0A0A' }}>
+                                                {card.value}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+
                 <div className="row">
                     {/* --- LEFT SIDE: PREMIUM PROFILE CARD --- */}
                     <motion.div 

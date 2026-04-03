@@ -23,7 +23,7 @@ export default function Contact() {
     // Get contact info from env
     const brandName = process.env.REACT_APP_BRAND_NAME || "Eshopper";
     const brandSite = process.env.REACT_APP_BRAND_SITE_URL || "https://eshopperr.me";
-    const brandEmail = process.env.REACT_APP_BRAND_EMAIL || "info@eshopper.com";
+    const brandEmail = process.env.REACT_APP_BRAND_EMAIL || "support@eshopperr.me";
     const brandPhone = process.env.REACT_APP_BRAND_PHONE || "+91 8447859784";
     const brandAddress = process.env.REACT_APP_BRAND_ADDRESS || "A-43 Sector 16 Noida, UP, India";
 

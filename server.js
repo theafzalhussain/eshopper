@@ -4,6 +4,7 @@ require('dotenv').config();
 // NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS
 const express = require('express');
 const orderRoutes = require('./routes/orderRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
@@ -151,6 +152,9 @@ if (process.env.SENTRY_DSN) {
 const cartRoutes = require('./routes/cartRoutes');
 app.use('/api', cartRoutes);
 
+// Register admin routes
+app.use('/api/admin', adminRoutes);
+
 // Register promo code endpoint directly (for legacy/compatibility)
 const { applyCoupon } = require('./controllers/cartController');
 app.post('/api/cart/apply-coupon', applyCoupon);
@@ -219,6 +223,55 @@ const normalizeOrderStatus = (s = '') => {
 const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'true').toLowerCase() === 'true';
 const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
 const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'true').toLowerCase() === 'true';
+
+const DEFAULT_USER_SETTINGS = {
+    notifications: {
+        orderUpdates: true,
+        deliveryUpdates: true,
+        promotionalEmails: true,
+        priceAlerts: false,
+        wishlistAlerts: true,
+        smsAlerts: false,
+    },
+    privacy: {
+        profileVisibility: 'Private',
+        personalizedRecommendations: true,
+    },
+    security: {
+        twoFactorEnabled: false,
+        loginAlerts: true,
+    },
+    communication: {
+        newsletter: true,
+        whatsappUpdates: false,
+        pushNotifications: true,
+    },
+};
+
+const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const deepMerge = (baseValue, overrideValue) => {
+    if (!isPlainObject(baseValue) || !isPlainObject(overrideValue)) {
+        return overrideValue === undefined ? baseValue : overrideValue;
+    }
+
+    const merged = { ...baseValue };
+    Object.keys(overrideValue).forEach((key) => {
+        merged[key] = deepMerge(baseValue[key], overrideValue[key]);
+    });
+    return merged;
+};
+
+const normalizeUserSettings = (settings) => deepMerge(DEFAULT_USER_SETTINGS, isPlainObject(settings) ? settings : {});
+
+const normalizeUserDocument = (doc) => {
+    if (!doc) return doc;
+    const plainDoc = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+    return {
+        ...plainDoc,
+        settings: normalizeUserSettings(plainDoc.settings),
+    };
+};
 
 // 🔴 SOCKET.IO AUTHENTICATION MIDDLEWARE
 io.use(async (socket, next) => {
@@ -1876,10 +1929,10 @@ const handle = (path, Model, useUpload = false) => {
                 const id = req.query.id || req.query._id;
                 const doc = await Model.findById(id);
                 if (!doc) return res.status(404).json({ message: 'Not found' });
-                return res.json(doc);
+                return res.json(path === '/user' ? normalizeUserDocument(doc) : doc);
             }
             const docs = await Model.find().sort({ createdAt: -1 });
-            res.json(docs);
+            res.json(path === '/user' ? docs.map((doc) => normalizeUserDocument(doc)) : docs);
         } catch (e) {
             res.status(500).json({ message: 'Failed to fetch', error: e.message });
         }
@@ -1889,7 +1942,7 @@ const handle = (path, Model, useUpload = false) => {
         try {
             const doc = await Model.findById(req.params.id);
             if (!doc) return res.status(404).json({ message: 'Not found' });
-            res.json(doc);
+            res.json(path === '/user' ? normalizeUserDocument(doc) : doc);
         } catch (e) {
             res.status(500).json({ message: 'Failed to fetch', error: e.message });
         }
@@ -1905,9 +1958,20 @@ const handle = (path, Model, useUpload = false) => {
                 if (req.files.pic3) data.pic3 = req.files.pic3[0].path;
                 if (req.files.pic4) data.pic4 = req.files.pic4[0].path;
             }
+            if (path === '/user' && typeof data.settings === 'string') {
+                try {
+                    data.settings = JSON.parse(data.settings);
+                } catch (parseError) {
+                    console.warn('⚠️ Invalid user settings payload on create, ignoring custom settings:', parseError.message);
+                    delete data.settings;
+                }
+            }
+            if (path === '/user') {
+                data.settings = normalizeUserSettings(data.settings);
+            }
             const doc = new Model(data);
             await doc.save();
-            res.status(201).json(doc);
+            res.status(201).json(path === '/user' ? normalizeUserDocument(doc) : doc);
         } catch (e) {
             res.status(400).json({ message: 'Failed to create', error: e.message });
         }
@@ -1921,6 +1985,24 @@ const handle = (path, Model, useUpload = false) => {
                 if (req.files.pic2) upData.pic2 = req.files.pic2[0].path;
                 if (req.files.pic3) upData.pic3 = req.files.pic3[0].path;
                 if (req.files.pic4) upData.pic4 = req.files.pic4[0].path;
+            }
+
+            if (path === '/user' && typeof upData.settings === 'string') {
+                try {
+                    upData.settings = JSON.parse(upData.settings);
+                } catch (parseError) {
+                    console.warn('⚠️ Invalid user settings payload, ignoring custom settings:', parseError.message);
+                    delete upData.settings;
+                }
+            }
+
+            if (path === '/user' && upData.deliveryNotes == null && typeof req.body.deliveryNotes === 'string') {
+                upData.deliveryNotes = req.body.deliveryNotes;
+            }
+
+            if (path === '/user') {
+                const existingUser = await Model.findById(req.params.id);
+                upData.settings = normalizeUserSettings(deepMerge(existingUser?.settings || {}, upData.settings || {}));
             }
             
             if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
@@ -1955,7 +2037,7 @@ const handle = (path, Model, useUpload = false) => {
                 });
             }
 
-            res.json(d);
+            res.json(path === '/user' ? normalizeUserDocument(d) : d);
         } catch (e) { 
             res.status(500).json({ error: e.message }); 
         }
@@ -2918,228 +3000,16 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
     }
 });
 
-// 🔴 PREMIUM ADMIN DASHBOARD ANALYTICS - Safe and Simple Approach
-app.get('/api/admin/dashboard-analytics', async (req, res) => {
-    try {
-        console.log('📊 Dashboard analytics requested');
-        const now = new Date();
-        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-
-        // Initialize response with safe defaults
-        const response = {
-            success: true,
-            metrics: {
-                totalRevenue: 0,
-                newOrders: 0,
-                newCustomers: 0,
-                activeProducts: 0
-            },
-            previousMetrics: {
-                totalRevenue: 0,
-                newOrders: 0,
-                newCustomers: 0
-            },
-            lowStockCount: 0,
-            activeSessions: 0,
-            monthlyData: [],
-            salesByCategory: [],
-            topProducts: []
-        };
-
-        // 1. BASIC COUNTS - Simple and safe
-        try {
-            const [totalOrders, totalUsers, totalProducts] = await Promise.all([
-                Order.countDocuments().catch(() => 0),
-                User.countDocuments().catch(() => 0),
-                Product.countDocuments().catch(() => 0)
-            ]);
-
-            console.log(`📈 Basic counts - Orders: ${totalOrders}, Users: ${totalUsers}, Products: ${totalProducts}`);
-
-            response.metrics.activeProducts = totalProducts;
-        } catch (error) {
-            console.error('❌ Basic counts error:', error.message);
-        }
-
-        // 2. TOTAL REVENUE - Simple calculation
-        try {
-            const orders = await Order.find({
-                orderStatus: { $nin: ['Cancelled', 'cancelled'] }
-            }, 'finalAmount').lean().catch(() => []);
-
-            const totalRevenue = orders.reduce((sum, order) => {
-                const amount = Number(order.finalAmount) || 0;
-                return sum + amount;
-            }, 0);
-
-            response.metrics.totalRevenue = totalRevenue;
-            console.log(`💰 Total revenue calculated: ₹${totalRevenue}`);
-        } catch (error) {
-            console.error('❌ Revenue calculation error:', error.message);
-        }
-
-        // 3. LOW STOCK COUNT - Simple string/number handling
-        try {
-            const products = await Product.find({}, 'stock').lean().catch(() => []);
-
-            let lowStockCount = 0;
-            const lowStockThreshold = 10;
-
-            products.forEach(product => {
-                if (product.stock) {
-                    const stockValue = parseInt(product.stock) || 0;
-                    if (stockValue > 0 && stockValue < lowStockThreshold) {
-                        lowStockCount++;
-                    }
-                }
-            });
-
-            response.lowStockCount = lowStockCount;
-            console.log(`⚠️ Low stock products: ${lowStockCount}`);
-        } catch (error) {
-            console.error('❌ Low stock calculation error:', error.message);
-        }
-
-        // 4. MONTHLY DATA - Simplified
-        try {
-            const monthlyData = [];
-            const baseRevenue = response.metrics.totalRevenue || 100000;
-
-            // Generate last 6 months data
-            for (let i = 5; i >= 0; i--) {
-                const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                const year = monthDate.getFullYear();
-                const month = monthDate.getMonth() + 1;
-
-                // Simple calculation - divide total revenue by months for demo
-                const revenue = Math.floor((baseRevenue / 6) + (Math.random() * baseRevenue * 0.2));
-                const target = Math.floor(revenue * 1.1);
-
-                monthlyData.push({
-                    month: `${year}-${String(month).padStart(2, '0')}`,
-                    revenue,
-                    target
-                });
-            }
-
-            response.monthlyData = monthlyData;
-            console.log(`📈 Generated monthly data for ${monthlyData.length} months`);
-        } catch (error) {
-            console.error('❌ Monthly data error:', error.message);
-        }
-
-        // 5. SALES BY CATEGORY - Simplified
-        try {
-            const products = await Product.find({}, 'maincategory').lean().catch(() => []);
-            const categoryCount = {};
-
-            products.forEach(product => {
-                const category = product.maincategory || 'Uncategorized';
-                categoryCount[category] = (categoryCount[category] || 0) + 1;
-            });
-
-            response.salesByCategory = Object.entries(categoryCount)
-                .map(([category, count]) => ({
-                    _id: category,
-                    value: count
-                }))
-                .sort((a, b) => b.value - a.value)
-                .slice(0, 6);
-
-            console.log(`🥧 Category data: ${response.salesByCategory.length} categories`);
-        } catch (error) {
-            console.error('❌ Category data error:', error.message);
-        }
-
-        // 6. TOP PRODUCTS - Simple approach
-        try {
-            const products = await Product.find({}, 'name pic1 maincategory brand finalprice')
-                .limit(5)
-                .lean()
-                .catch(() => []);
-
-            response.topProducts = products.map((product, index) => ({
-                _id: product._id,
-                name: product.name || 'Unknown Product',
-                pic1: product.pic1,
-                maincategory: product.maincategory || 'Uncategorized',
-                brand: product.brand,
-                finalprice: product.finalprice || 0,
-                totalSold: 50 - (index * 8) // Simulated sales data
-            }));
-
-            console.log(`🏆 Top products: ${response.topProducts.length} items`);
-        } catch (error) {
-            console.error('❌ Top products error:', error.message);
-        }
-
-        // 7. ACTIVE SESSIONS - Approximation
-        response.activeSessions = Math.floor(Math.random() * 25) + 5; // 5-30 random sessions
-
-        console.log('✅ Dashboard analytics response prepared');
-        res.json(response);
-
-    } catch (err) {
-        console.error('❌ Dashboard analytics fatal error:', err.message);
-        console.error('Stack trace:', err.stack);
-
-        // Return safe fallback data
-        res.status(200).json({
-            success: false,
-            message: 'Partial data available',
-            metrics: {
-                totalRevenue: 0,
-                newOrders: 0,
-                newCustomers: 0,
-                activeProducts: 0
-            },
-            previousMetrics: {
-                totalRevenue: 0,
-                newOrders: 0,
-                newCustomers: 0
-            },
-            lowStockCount: 0,
-            activeSessions: 0,
-            monthlyData: [],
-            salesByCategory: [],
-            topProducts: [],
-            error: 'Database query failed, showing fallback data'
-        });
-    }
+// 🔴 ADMIN ANALYTICS/TESING ROUTES (delegate to unified controller payload)
+app.get('/api/admin/dashboard-analytics', (req, res) => {
+    const adminController = require('./controllers/adminController');
+    return adminController.getDashboardAnalytics(req, res);
 });
 
 // 🔴 TEST ENDPOINT FOR DATABASE CONNECTION
-app.get('/api/admin/test-connection', async (req, res) => {
-    try {
-        console.log('📡 Admin dashboard test connection requested');
-
-        // Test database connection
-        const userCount = await User.countDocuments();
-        const productCount = await Product.countDocuments();
-        const orderCount = await Order.countDocuments();
-
-        console.log(`📊 Database counts - Users: ${userCount}, Products: ${productCount}, Orders: ${orderCount}`);
-
-        res.json({
-            success: true,
-            message: 'Database connection successful',
-            counts: {
-                users: userCount,
-                products: productCount,
-                orders: orderCount
-            },
-            timestamp: new Date(),
-            mongoStatus: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
-        });
-    } catch (err) {
-        console.error('❌ Test connection error:', err.message);
-        res.status(500).json({
-            success: false,
-            message: 'Database connection failed',
-            error: err.message
-        });
-    }
+app.get('/api/admin/test-connection', (req, res) => {
+    const adminController = require('./controllers/adminController');
+    return adminController.testConnection(req, res);
 });
 
 // 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
@@ -3508,15 +3378,18 @@ const handleOrderStatusUpdate = async (req, res) => {
             await order.save();
         }
 
-                    deliverySchedule: normalizedDeliverySchedule || null,
-                    adminNote: adminNote || null,
-                    deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
-                    riderPhone: normalizedDeliverySchedule?.riderPhone || null,
-                    locationName: normalizedDeliverySchedule?.locationName || null,
-                    latitude: normalizedDeliverySchedule?.latitude || null,
-                    longitude: normalizedDeliverySchedule?.longitude || null
+        await Checkout.updateMany(
             { userid: order.userid, totalAmount: order.totalAmount, finalAmount: order.finalAmount },
-            { orderstatus: normalized, updatedAt: new Date() }
+            {
+                orderstatus: normalized,
+                updatedAt: new Date(),
+                ...(normalizedDeliverySchedule
+                    ? {
+                        deliverySchedule: normalizedDeliverySchedule,
+                        estimatedArrival: normalizedDeliverySchedule.date || normalizedDeliverySchedule.estimatedDelivery || order.estimatedArrival || null
+                    }
+                    : {})
+            }
         ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
 
         const payload = {

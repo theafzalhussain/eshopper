@@ -36,8 +36,8 @@ export default function DashboardMetrics({ metrics: live }) {
       accent: 'bg-gradient-to-r from-gold to-yellow-400',
     },
     {
-      label: 'New Orders',
-      value: live?.newOrders ?? '-',
+      label: 'Total Orders',
+      value: live?.totalOrders ?? live?.newOrders ?? '-',
       icon: '📦',
       accent: 'bg-gradient-to-r from-gold to-orange-400',
     },

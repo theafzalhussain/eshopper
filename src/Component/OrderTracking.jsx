@@ -71,18 +71,43 @@ const formatDeliverySchedule = (deliverySchedule = null) => {
   return `${dateLabel}${timeLabel}`
 }
 
+const pickAddressField = (address = {}, keys = []) => {
+  for (const key of keys) {
+    const value = address?.[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  }
+  return ''
+}
+
 const formatAddress = (address = {}) => {
-  const parts = [
-    address?.name,
-    address?.phone,
-    address?.line1 || address?.address1 || address?.street,
-    address?.line2 || address?.address2,
-    address?.city,
-    address?.state,
-    address?.pincode || address?.postalCode,
-    address?.country
-  ].filter(Boolean)
+  const fullName = pickAddressField(address, ['fullName', 'name'])
+  const phone = pickAddressField(address, ['phone', 'mobile', 'contactNumber'])
+  const line1 = pickAddressField(address, ['addressline1', 'line1', 'address1', 'street', 'address'])
+  const line2 = pickAddressField(address, ['addressline2', 'line2', 'address2', 'landmark', 'area'])
+  const city = pickAddressField(address, ['city', 'town'])
+  const state = pickAddressField(address, ['state', 'province'])
+  const pin = pickAddressField(address, ['pin', 'pincode', 'postalCode', 'zip'])
+  const country = pickAddressField(address, ['country'])
+
+  const parts = [fullName, phone, line1, line2, [city, state].filter(Boolean).join(', '), pin, country].filter(Boolean)
   return parts.join(', ')
+}
+
+const formatAddressLines = (address = {}) => {
+  const fullName = pickAddressField(address, ['fullName', 'name'])
+  const phone = pickAddressField(address, ['phone', 'mobile', 'contactNumber'])
+  const line1 = pickAddressField(address, ['addressline1', 'line1', 'address1', 'street', 'address'])
+  const line2 = pickAddressField(address, ['addressline2', 'line2', 'address2', 'landmark', 'area'])
+  const city = pickAddressField(address, ['city', 'town'])
+  const state = pickAddressField(address, ['state', 'province'])
+  const pin = pickAddressField(address, ['pin', 'pincode', 'postalCode', 'zip'])
+  const country = pickAddressField(address, ['country'])
+
+  const cityState = [city, state].filter(Boolean).join(', ')
+  const cityStatePin = [cityState, pin].filter(Boolean).join(' - ')
+
+  return [fullName, phone, line1, line2, cityStatePin, country].filter(Boolean)
 }
 
 const getCountdownText = (dateValue) => {
@@ -1015,6 +1040,7 @@ export default function OrderTracking() {
   const { orderId } = useParams()
   const navigate = useNavigate()
   const userId = localStorage.getItem('userid')
+  const supportEmail = 'support@eshopperr.me'
 
   const [status, setStatus] = useState('Ordered')
   const [order, setOrder] = useState(null)
@@ -1232,6 +1258,7 @@ export default function OrderTracking() {
     return getCountdownText(getDeliveryInfo?.date)
   }, [getDeliveryInfo, nowTick])
   const addressText = useMemo(() => formatAddress(order?.shippingAddress || order?.address || {}), [order])
+  const addressLines = useMemo(() => formatAddressLines(order?.shippingAddress || order?.address || {}), [order])
   const completedSteps = useMemo(() => Math.max(1, activeIndex + 1), [activeIndex])
   const trackingSnapshot = useMemo(() => getTrackingSnapshot(order, statusTimeline), [order, statusTimeline])
 
@@ -1326,6 +1353,24 @@ export default function OrderTracking() {
       setCopiedOrderId(false)
     }
   }
+
+  const onEmailSupport = useCallback(() => {
+    const subject = encodeURIComponent('Order Support')
+    const supportLines = [
+      'Hi Support, I need assistance with the following order:',
+      `Order ID: ${orderId || 'N/A'}`,
+      `Customer: ${order?.userName || order?.shippingAddress?.fullName || 'N/A'}`,
+      `Status: ${status || 'N/A'}`,
+      `Payment Status: ${paymentStatusLabel || 'N/A'}`,
+      `Total Amount: ${formatMoney(finalAmount)}`,
+      `Shipping Address: ${addressText || 'N/A'}`,
+      `ETA: ${getDeliveryInfo ? formatDeliveryDate(getDeliveryInfo.date) : 'Pending'}`,
+      '',
+      'Please help me with this order.'
+    ]
+    const body = encodeURIComponent(supportLines.join('\n'))
+    window.location.href = `mailto:${supportEmail}?subject=${subject}&body=${body}`
+  }, [addressText, finalAmount, getDeliveryInfo, order, orderId, paymentStatusLabel, status])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -1767,9 +1812,34 @@ export default function OrderTracking() {
 
               <div className="ot-mini-card">
                 <div className="ot-mini-title"><Home size={14} /> Shipping Address</div>
-                <p style={{ margin: 0, fontSize: 13, color: '#4b5563', lineHeight: 1.55 }}>
-                  {addressText || 'Address not available yet.'}
-                </p>
+                {addressLines.length ? (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {addressLines.map((line, index) => (
+                      <div
+                        key={`${line}-${index}`}
+                        style={{
+                          paddingTop: index === 0 ? 0 : 8,
+                          borderTop: index === 0 ? 'none' : '1px solid rgba(201,168,76,0.08)',
+                          color: index === 0 ? 'var(--ink)' : '#4b5563',
+                          fontSize: index === 0 ? 14 : 13,
+                          fontWeight: index === 0 ? 700 : 500,
+                          lineHeight: 1.55
+                        }}
+                      >
+                        {line}
+                      </div>
+                    ))}
+                    {addressText && addressText !== addressLines.join(', ') && (
+                      <div style={{ marginTop: 2, fontSize: 11, color: '#9ca3af' }}>
+                        Full address captured from the order record.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: 13, color: '#4b5563', lineHeight: 1.55 }}>
+                    Address not available yet.
+                  </p>
+                )}
               </div>
 
               <div className="ot-mini-card">
@@ -1823,7 +1893,7 @@ export default function OrderTracking() {
                   }}>
                     <Phone size={13} /> WhatsApp Support
                   </button>
-                  <button className="ot-ghost-btn" style={{ justifyContent: 'center' }} onClick={() => window.open('mailto:support@eshopper.com?subject=Order%20Support', '_blank')}>
+                  <button className="ot-ghost-btn" type="button" style={{ justifyContent: 'center' }} onClick={onEmailSupport}>
                     <Mail size={13} /> Email Support
                   </button>
                 </div>
