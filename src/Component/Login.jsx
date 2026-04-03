@@ -4,12 +4,16 @@ import { useDispatch } from 'react-redux'
 import { getUser } from '../Store/ActionCreaters/UserActionCreators'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LogIn, User as UserIcon, Lock, Eye, EyeOff, AlertCircle, ChevronRight, Loader2 } from 'lucide-react'
+import { signInWithPopup, getIdToken } from 'firebase/auth'
+import { auth, googleProvider } from '../firebase'
 import { loginAPI } from '../Store/Services'
+import { BASE_URL } from '../constants'
 
 export default function Login() {
     const [data, setdata] = useState({ username: "", password: "" })
     const [showPass, setShowPass] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [googleLoading, setGoogleLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState("")
     const [rememberMe, setRememberMe] = useState(false)
     const [autoLoginAttempted, setAutoLoginAttempted] = useState(false)
@@ -66,6 +70,82 @@ export default function Login() {
         if (errorMsg) setErrorMsg("");
     }
 
+    function persistUserSession(user, shouldRemember = false) {
+        const resolvedId = user.id || user._id || user.uid
+        const resolvedName = user.name || user.displayName || 'User'
+        const resolvedUsername = user.username || (user.email ? user.email.split('@')[0] : resolvedName.split(' ')[0].toLowerCase())
+
+        localStorage.setItem('login', true)
+        localStorage.setItem('name', resolvedName)
+        if (resolvedId) localStorage.setItem('userid', resolvedId)
+        localStorage.setItem('role', user.role || 'User')
+        localStorage.setItem('username', resolvedUsername)
+
+        if (user.pic) {
+            localStorage.setItem('pic', user.pic)
+        } else {
+            localStorage.removeItem('pic')
+        }
+
+        if (shouldRemember) {
+            const userToken = {
+                id: resolvedId,
+                username: resolvedUsername,
+                name: resolvedName,
+                role: user.role || 'User',
+                email: user.email || '',
+                pic: user.pic || ''
+            }
+            localStorage.setItem('userToken', JSON.stringify(userToken))
+        } else {
+            localStorage.removeItem('userToken')
+        }
+    }
+
+    async function handleGoogleLogin() {
+        setGoogleLoading(true)
+        setErrorMsg("")
+
+        try {
+            const result = await signInWithPopup(auth, googleProvider)
+            const firebaseUser = result.user
+            const idToken = await getIdToken(firebaseUser, true)
+
+            const response = await fetch(`${BASE_URL}/api/auth-sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    idToken,
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    name: firebaseUser.displayName,
+                    pic: firebaseUser.photoURL,
+                    provider: 'google'
+                })
+            })
+
+            const user = await response.json()
+
+            if (!response.ok) {
+                throw new Error(user?.message || 'Google sign-in failed')
+            }
+
+            persistUserSession(user, true)
+            navigate(user.role === 'Admin' ? '/admin-home' : '/profile')
+        } catch (err) {
+            console.error('Google login error:', err)
+            if (err.code === 'auth/popup-closed-by-user') {
+                setErrorMsg('Google sign-in was cancelled.')
+            } else if (err.code === 'auth/configuration-not-found' || err.message?.includes('Firebase') || err.message?.includes('not configured')) {
+                setErrorMsg('Google login is not configured. Please contact support or try again later.')
+            } else {
+                setErrorMsg(err.message || 'Google sign-in failed. Please try again.')
+            }
+        } finally {
+            setGoogleLoading(false)
+        }
+    }
+
     async function postData(e) {
         e.preventDefault();
         setLoading(true)
@@ -77,34 +157,15 @@ export default function Login() {
             
             if (user.username) {
                 // --- STANDARD LOGIN SETUP ---
-                localStorage.setItem("login", true);
-                localStorage.setItem("name", user.name);
-                localStorage.setItem("userid", user.id);
-                localStorage.setItem("role", user.role);
-                localStorage.setItem("username", user.username);
-                if (user.pic) {
-                    localStorage.setItem("pic", user.pic);
-                } else {
-                    localStorage.removeItem("pic");
-                }
+                persistUserSession(user, rememberMe)
 
                 // --- REMEMBER ME: SAVE TOKEN & CREDENTIALS ---
                 if (rememberMe) {
-                    const userToken = {
-                        id: user.id,
-                        username: user.username,
-                        name: user.name,
-                        role: user.role,
-                        email: user.email,
-                        pic: user.pic || ''
-                    }
-                    localStorage.setItem("userToken", JSON.stringify(userToken))
                     localStorage.setItem("savedCredentials", JSON.stringify({
                         username: data.username,
                         password: data.password
                     }))
                 } else {
-                    localStorage.removeItem("userToken")
                     localStorage.removeItem("savedCredentials")
                 }
 
@@ -226,6 +287,30 @@ export default function Login() {
                                 )}
                             </motion.button>
                         </form>
+
+                        <div className="social-login-block">
+                            <div className="social-login-divider">
+                                <span>OR CONTINUE WITH</span>
+                            </div>
+
+                            <motion.button
+                                type="button"
+                                onClick={handleGoogleLogin}
+                                whileHover={{ scale: 1.02, y: -1 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="google-login-btn"
+                                disabled={googleLoading}
+                            >
+                                {googleLoading ? (
+                                    <Loader2 size={18} className="google-spinner" />
+                                ) : (
+                                    <span className="google-mark" aria-hidden="true">
+                                        <span className="g-blue">G</span>
+                                    </span>
+                                )}
+                                <span>Sign in with Google</span>
+                            </motion.button>
+                        </div>
 
                         {/* Footer Section */}
                         <div className="login-footer-links text-center">
@@ -404,6 +489,97 @@ export default function Login() {
                     background: #17a2b8;
                     transform: translateY(-3px);
                     box-shadow: 0 15px 30px rgba(23,162,184,0.3);
+                }
+
+                .social-login-block {
+                    margin-top: 18px;
+                }
+
+                .social-login-divider {
+                    margin: 28px 0 18px;
+                    position: relative;
+                    text-align: center;
+                }
+
+                .social-login-divider::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%; left: 0; width: 100%; height: 1px;
+                    background: #e8e8e8;
+                }
+
+                .social-login-divider span {
+                    position: relative;
+                    z-index: 1;
+                    background: rgba(255, 255, 255, 0.92);
+                    padding: 0 14px;
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: 2px;
+                    color: #9aa0a6;
+                }
+
+                .google-login-btn {
+                    width: 100%;
+                    background: #fff;
+                    color: #202124;
+                    border: 1px solid #dadce0;
+                    border-radius: 999px;
+                    padding: 16px 22px;
+                    font-family: 'Montserrat', sans-serif;
+                    font-size: 15px;
+                    font-weight: 700;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 12px;
+                    box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+                    transition: all 0.25s ease;
+                }
+
+                .google-login-btn:hover {
+                    border-color: #c6c8cc;
+                    box-shadow: 0 14px 28px rgba(0,0,0,0.1);
+                    background: #fff;
+                    color: #202124;
+                }
+
+                .google-login-btn:disabled {
+                    opacity: 0.75;
+                    cursor: not-allowed;
+                    transform: none !important;
+                }
+
+                .google-mark {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: conic-gradient(from 0deg, #4285F4 0 25%, #34A853 25% 50%, #FBBC05 50% 75%, #EA4335 75% 100%);
+                    color: #fff;
+                    font-size: 14px;
+                    font-weight: 900;
+                    line-height: 1;
+                }
+
+                .g-blue {
+                    background: #fff;
+                    color: #4285F4;
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-family: Arial, sans-serif;
+                    font-size: 13px;
+                    font-weight: 700;
+                }
+
+                .google-spinner {
+                    animation: rotate 1s linear infinite;
                 }
 
                 .premium-error-alert {
