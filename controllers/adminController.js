@@ -8,42 +8,79 @@ const getNumericQuantity = (value) => {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 };
 
-const buildTopProducts = async (Order) => {
-    const results = await Order.aggregate([
-        { $unwind: '$products' },
-        {
-            $group: {
-                _id: {
-                    productId: { $ifNull: ['$products.productid', '$products.name'] },
-                    name: { $ifNull: ['$products.name', 'Product'] },
-                    pic1: { $ifNull: ['$products.pic1', ''] },
-                    maincategory: { $ifNull: ['$products.maincategory', ''] },
-                    brand: { $ifNull: ['$products.brand', ''] },
-                    finalprice: { $ifNull: ['$products.finalprice', '$products.price'] }
-                },
-                totalSold: {
-                    $sum: {
-                        $ifNull: [
-                            '$products.qty',
-                            { $ifNull: ['$products.quantity', 1] }
-                        ]
-                    }
-                }
-            }
-        },
-        { $sort: { totalSold: -1 } },
-        { $limit: 5 }
-    ]);
+const toCleanText = (value) => (typeof value === 'string' ? value.trim() : '');
 
-    return results.map((item) => ({
-        _id: item._id.productId,
-        name: item._id.name,
-        pic1: item._id.pic1,
-        maincategory: item._id.maincategory,
-        brand: item._id.brand,
-        finalprice: item._id.finalprice,
-        totalSold: item.totalSold
-    }));
+const extractProductId = (productLine = {}) => {
+    const raw = productLine?.productid || productLine?.productId || productLine?.product?._id || productLine?.product;
+    if (!raw) return '';
+    if (typeof raw === 'object') {
+        if (raw._id) return String(raw._id);
+        if (raw.id) return String(raw.id);
+        return '';
+    }
+    return String(raw);
+};
+
+const buildCatalogAnalytics = ({ orders = [], products = [] } = {}) => {
+    const productIndex = new Map((products || []).map((item) => [String(item._id), item]));
+    const categoryTotals = new Map();
+    const topProductMap = new Map();
+
+    (orders || []).forEach((order) => {
+        const lines = Array.isArray(order?.products) ? order.products : [];
+        lines.forEach((line) => {
+            if (!line || typeof line !== 'object') return;
+
+            const qty = getNumericQuantity(line.qty ?? line.quantity ?? line.count);
+            const productId = extractProductId(line);
+            const productDoc = productId ? productIndex.get(productId) : null;
+
+            const name = toCleanText(line.name) || toCleanText(productDoc?.name) || 'Product';
+            const maincategory =
+                toCleanText(line.maincategory) ||
+                toCleanText(productDoc?.maincategory) ||
+                'Uncategorized';
+            const brand = toCleanText(line.brand) || toCleanText(productDoc?.brand) || '';
+            const pic1 =
+                toCleanText(line.pic1) ||
+                toCleanText(line.pic) ||
+                toCleanText(productDoc?.pic1) ||
+                '';
+
+            const linePrice = Number(line.finalprice ?? line.price ?? productDoc?.finalprice ?? productDoc?.baseprice ?? 0);
+            const finalprice = Number.isFinite(linePrice) ? linePrice : 0;
+
+            const topKey = productId || name.toLowerCase();
+            const previous = topProductMap.get(topKey) || {
+                _id: productId || topKey,
+                name,
+                pic1,
+                maincategory,
+                brand,
+                finalprice,
+                totalSold: 0
+            };
+
+            previous.totalSold += qty;
+            if (!previous.pic1 && pic1) previous.pic1 = pic1;
+            if ((!previous.maincategory || previous.maincategory === 'Uncategorized') && maincategory) previous.maincategory = maincategory;
+            if (!previous.brand && brand) previous.brand = brand;
+            if ((!previous.finalprice || previous.finalprice <= 0) && finalprice > 0) previous.finalprice = finalprice;
+            topProductMap.set(topKey, previous);
+
+            categoryTotals.set(maincategory, (categoryTotals.get(maincategory) || 0) + qty);
+        });
+    });
+
+    const topProducts = Array.from(topProductMap.values())
+        .sort((a, b) => b.totalSold - a.totalSold)
+        .slice(0, 5);
+
+    const salesByCategory = Array.from(categoryTotals.entries())
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+
+    return { topProducts, salesByCategory };
 };
 
 const buildDashboardPayload = async () => {
@@ -59,7 +96,7 @@ const buildDashboardPayload = async () => {
     const previousWindowStart = new Date(todayStart);
     previousWindowStart.setDate(previousWindowStart.getDate() - 1);
 
-    const [currentRevenueAgg, previousRevenueAgg, newOrders, previousOrders, newCustomers, previousCustomers, stockProducts, totalOrders] = await Promise.all([
+    const [currentRevenueAgg, previousRevenueAgg, newOrders, previousOrders, newCustomers, previousCustomers, catalogProducts, totalOrders, ordersForCatalog] = await Promise.all([
         Order.aggregate([{ $group: { _id: null, total: { $sum: '$finalAmount' } } }]),
         Order.aggregate([
             { $match: { createdAt: { $gte: yesterdayStart, $lt: todayStart } } },
@@ -69,16 +106,27 @@ const buildDashboardPayload = async () => {
         Order.countDocuments({ createdAt: { $gte: previousWindowStart, $lt: todayStart } }),
         User.countDocuments({ createdAt: { $gte: todayStart } }),
         User.countDocuments({ createdAt: { $gte: previousWindowStart, $lt: todayStart } }),
-        Product.find({}, 'name stock').lean(),
-        Order.countDocuments()
+        Product.find({}, 'name stock maincategory brand finalprice baseprice pic1').lean(),
+        Order.countDocuments(),
+        Order.find({}, 'products').lean()
     ]);
 
     const toStockNumber = (value) => {
         const parsed = Number(value);
-        return Number.isFinite(parsed) ? parsed : 0;
+        return Number.isFinite(parsed) ? parsed : Number.NaN;
     };
 
-    const activeProducts = (stockProducts || []).filter((item) => toStockNumber(item.stock) > 0).length;
+    const isInStock = (value) => {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed > 0;
+        const raw = String(value || '').trim().toLowerCase();
+        if (!raw) return false;
+        if (raw.includes('out of stock') || raw === 'out') return false;
+        if (raw.includes('in stock')) return true;
+        return false;
+    };
+
+    const activeProducts = (catalogProducts || []).filter((item) => isInStock(item.stock)).length;
 
     const months = Array.from({ length: 12 }, (_, index) => {
         const monthDate = new Date(now.getFullYear(), now.getMonth() - 11 + index, 1);
@@ -96,32 +144,18 @@ const buildDashboardPayload = async () => {
         { $sort: { '_id.year': 1, '_id.month': 1 } }
     ]);
 
-    const salesByCategory = await Order.aggregate([
-        { $unwind: '$products' },
-        {
-            $group: {
-                _id: { $ifNull: ['$products.maincategory', 'Uncategorized'] },
-                value: {
-                    $sum: {
-                        $ifNull: [
-                            '$products.qty',
-                            { $ifNull: ['$products.quantity', 1] }
-                        ]
-                    }
-                }
-            }
-        },
-        { $sort: { value: -1 } }
-    ]);
+    const { salesByCategory, topProducts } = buildCatalogAnalytics({
+        orders: ordersForCatalog,
+        products: catalogProducts
+    });
 
     const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5).lean();
     const recentUsers = await User.find().sort({ createdAt: -1 }).limit(3).lean();
-    const lowStockCandidates = (stockProducts || [])
+    const lowStockCandidates = (catalogProducts || [])
         .map((item) => ({ ...item, stockNum: toStockNumber(item.stock) }))
-        .filter((item) => item.stockNum > 0 && item.stockNum <= 10)
+        .filter((item) => Number.isFinite(item.stockNum) && item.stockNum > 0 && item.stockNum <= 10)
         .sort((a, b) => a.stockNum - b.stockNum);
     const lowStock = lowStockCandidates.slice(0, 3);
-    const topProducts = await buildTopProducts(Order);
 
     const previousMetrics = {
         totalRevenue: previousRevenueAgg[0]?.total || 0,
@@ -148,10 +182,7 @@ const buildDashboardPayload = async () => {
             const target = Math.round((monthlyRevenue[0]?.revenue || 100000) * Math.pow(1.1, index));
             return { month: `${year}-${String(month + 1).padStart(2, '0')}`, revenue, target };
         }),
-        salesByCategory: salesByCategory.map((item) => ({
-            name: item._id || 'Uncategorized',
-            value: item.value || 0
-        })),
+        salesByCategory,
         topProducts,
         lowStockCount: lowStockCandidates.length,
         activeSessions: recentUsers.length,
