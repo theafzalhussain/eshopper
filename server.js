@@ -2959,82 +2959,13 @@ app.get('/api/order/:orderId', async (req, res) => {
 });
 
 app.get('/api/order/:orderId/invoice', async (req, res) => {
-    if (!FEATURE_INVOICE_SYSTEM) {
-        return res.status(410).json({ message: 'Invoice system is currently disabled' });
-    }
-    try {
-        const { orderId } = req.params;
-        const userId = String(req.query.userId || '').trim();
-        const disposition = String(req.query.disposition || 'attachment').toLowerCase() === 'inline' ? 'inline' : 'attachment';
-
-        if (!orderId || !userId) {
-            return res.status(400).json({ message: 'orderId and userId are required' });
-        }
-
-        const order = await Order.findOne({ orderId, userid: userId }).lean();
-        if (!order) return res.status(404).json({ message: 'Order not found' });
-
-        try {
-            // Map status -> PDF variant
-            const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-            const isDelivered = orderStatus === 'delivered';
-            const isConfirmed = orderStatus === 'confirmed' || orderStatus === 'ordered';
-            const pdfType = isDelivered ? 'final' : (isConfirmed ? 'confirmation' : 'receipt');
-            
-            console.log(`📄 Generating ${pdfType} invoice for order ${orderId}...`);
-            
-            const pdfBuffer = await generateInvoicePdfBuffer({
-                orderId: order.orderId,
-                userName: order.userName,
-                userEmail: order.userEmail,
-                paymentMethod: order.paymentMethod,
-                paymentStatus: order.paymentStatus,
-                finalAmount: Number(order.finalAmount || 0),
-                totalAmount: Number(order.totalAmount || 0),
-                shippingAmount: Number(order.shippingAmount || 0),
-                shippingAddress: order.shippingAddress || {},
-                products: normalizeOrderProducts(order.products),
-                orderDate: order.orderDate || order.createdAt,
-                orderStatus: order.orderStatus || order.status || 'Ordered',
-                pdfType,
-                isDelivered: isDelivered
-            });
-
-            if (!pdfBuffer || pdfBuffer.length < 500) {
-                console.error(`❌ Invoice generation failed for ${orderId} - empty PDF (${pdfBuffer?.length || 0} bytes)`);
-                return res.status(500).json({ message: 'Invoice generation failed - empty result. Please try again.' });
-            }
-
-            const fileName = isDelivered
-                ? `TaxInvoice-${order.orderId}.pdf`
-                : (isConfirmed ? `Confirmation-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`);
-            
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
-            res.setHeader('Content-Length', String(pdfBuffer.length));
-            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-            res.setHeader('Pragma', 'no-cache');
-            res.setHeader('Expires', '0');
-            
-            console.log(`✅ Invoice generated successfully: ${fileName} (${pdfBuffer.length} bytes)`);
-            return res.send(pdfBuffer);
-        } catch (pdfErr) {
-            console.error(`❌ PDF generation error for order ${orderId}:`, pdfErr.message, pdfErr.code);
-            if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
-            
-            const errorMsg = pdfErr.message.includes('ENOSPC') 
-                ? 'Server disk/memory full - try again later'
-                : pdfErr.message.includes('timeout')
-                ? 'Invoice generation took too long - please retry'
-                : 'Failed to generate invoice PDF';
-            
-            return res.status(503).json({ message: errorMsg });
-        }
-    } catch (e) {
-        console.error('❌ Invoice endpoint error:', e.message, e.stack);
-        if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ message: 'Invoice service error - please contact support' });
-    }
+    // 🔴 TEMPORARY: Invoice system disabled on Render free tier due to Puppeteer memory limits
+    // This will be re-enabled when upgrading to paid tier or implementing serverless PDF
+    return res.status(503).json({ 
+        success: false,
+        message: 'Invoice generation is temporarily unavailable. Our team is working on optimization. Please check back soon or contact support.',
+        status: 'maintenance'
+    });
 });
 
 // 🔴 ADMIN ANALYTICS/TESING ROUTES (delegate to unified controller payload)

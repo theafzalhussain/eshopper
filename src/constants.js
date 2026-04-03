@@ -26,8 +26,8 @@ export const API_ENDPOINTS = {
   LOGIN: "/login",
   
   // User
-  USER: "/user",
-  USER_PROFILE: "/user/:id",
+  USER: "/api/user",
+  USER_PROFILE: "/api/user/:id",
   
   // Products
   PRODUCT: "/product",
