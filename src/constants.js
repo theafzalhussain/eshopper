@@ -1,9 +1,14 @@
 // ===== API BASE URL =====
 // Use env first so Vercel can control API target per environment.
 const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-export const BASE_URL = process.env.REACT_APP_API_URL || (isDev
-  ? "http://localhost:5000"
-  : "https://eshopper-qtgl.onrender.com");
+const PROD_API_URL = "https://eshopper-qtgl.onrender.com";
+const LOCAL_API_URL = "http://localhost:5000";
+const useLocalApi = process.env.REACT_APP_USE_LOCAL_API === 'true';
+
+// Default behavior: use production API even in local dev unless explicitly opted in.
+export const BASE_URL = process.env.REACT_APP_API_URL || ((isDev && useLocalApi)
+  ? LOCAL_API_URL
+  : PROD_API_URL);
 
 // ===== FRONTEND URLs =====
 // Always use production domain
@@ -74,6 +79,7 @@ export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // Required Vercel Environment Variables (in .env.local):
 // - REACT_APP_API_URL: Your production API URL (https://eshopper-qtgl.onrender.com)
+// - REACT_APP_USE_LOCAL_API: true only when you want localhost backend during dev
 // - REACT_APP_FRONTEND_URL: Your frontend URL (https://eshopperr.me)
 // - REACT_APP_BRAND_LOGO_URL: Final ESHOPPER logo URL
 // - REACT_APP_BRAND_WATERMARK_URL: Watermark logo URL (keep same as logo unless needed)
