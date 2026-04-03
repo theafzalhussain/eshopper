@@ -220,6 +220,102 @@ export default function AdminHome() {
         monthLabel: formatMonth(item.month)
     }))
 
+    const fallbackAnalytics = useMemo(() => {
+        const safeProducts = Array.isArray(products) ? products : []
+        const safeOrders = Array.isArray(orders) ? orders : []
+
+        const productMap = new Map(
+            safeProducts.map((product) => [String(product.id || product._id || ''), product])
+        )
+
+        const categoryTotals = new Map()
+        const topProductsMap = new Map()
+
+        const extractLines = (order) => {
+            const candidates = [order?.products, order?.items, order?.orderItems]
+            const lines = []
+            candidates.forEach((list) => {
+                if (!Array.isArray(list)) return
+                list.forEach((line) => {
+                    if (line && typeof line === 'object') lines.push(line)
+                })
+            })
+            return lines
+        }
+
+        safeOrders.forEach((order) => {
+            const lines = extractLines(order)
+            lines.forEach((line) => {
+                const rawQty = Number(line.qty ?? line.quantity ?? line.count ?? 1)
+                const qty = Number.isFinite(rawQty) && rawQty > 0 ? rawQty : 1
+
+                const productIdRaw = line.productid || line.productId || line.product?._id || line.product || line._id || line.id
+                const productId = typeof productIdRaw === 'object'
+                    ? String(productIdRaw._id || productIdRaw.id || '')
+                    : String(productIdRaw || '')
+
+                const productDoc = productMap.get(productId)
+
+                const name = String(line.name || productDoc?.name || 'Product')
+                const maincategory = String(line.maincategory || productDoc?.maincategory || 'Uncategorized')
+                const brand = String(line.brand || productDoc?.brand || '')
+                const pic1 = String(line.pic1 || line.pic || productDoc?.pic1 || '')
+
+                const rawPrice = Number(line.finalprice ?? line.price ?? productDoc?.finalprice ?? productDoc?.baseprice ?? 0)
+                const finalprice = Number.isFinite(rawPrice) ? rawPrice : 0
+
+                const key = productId || name.toLowerCase()
+                const previous = topProductsMap.get(key) || {
+                    _id: productId || key,
+                    name,
+                    pic1,
+                    maincategory,
+                    brand,
+                    finalprice,
+                    totalSold: 0
+                }
+
+                previous.totalSold += qty
+                if (!previous.pic1 && pic1) previous.pic1 = pic1
+                if ((!previous.maincategory || previous.maincategory === 'Uncategorized') && maincategory) previous.maincategory = maincategory
+                if (!previous.brand && brand) previous.brand = brand
+                if ((!previous.finalprice || previous.finalprice <= 0) && finalprice > 0) previous.finalprice = finalprice
+
+                topProductsMap.set(key, previous)
+                categoryTotals.set(maincategory, (categoryTotals.get(maincategory) || 0) + qty)
+            })
+        })
+
+        return {
+            topProducts: Array.from(topProductsMap.values())
+                .sort((a, b) => b.totalSold - a.totalSold)
+                .slice(0, 5),
+            salesByCategory: Array.from(categoryTotals.entries())
+                .map(([name, value]) => ({ name, value }))
+                .sort((a, b) => b.value - a.value)
+        }
+    }, [orders, products])
+
+    const isMeaningfulCategoryData = (list = []) => Array.isArray(list) && list.length > 0 && list.some((entry) => {
+        const categoryName = String(entry?.name || entry?._id || '').trim().toLowerCase()
+        return categoryName && categoryName !== 'uncategorized' && Number(entry?.value || 0) > 0
+    })
+
+    const isMeaningfulTopProducts = (list = []) => Array.isArray(list) && list.length > 0 && list.some((entry) => {
+        const hasImage = Boolean(String(entry?.pic1 || '').trim())
+        const categoryName = String(entry?.maincategory || '').trim().toLowerCase()
+        const hasCategory = Boolean(categoryName && categoryName !== 'uncategorized')
+        return hasImage || hasCategory
+    })
+
+    const resolvedSalesByCategory = isMeaningfulCategoryData(dashboardData.salesByCategory)
+        ? dashboardData.salesByCategory
+        : fallbackAnalytics.salesByCategory
+
+    const resolvedTopProducts = isMeaningfulTopProducts(dashboardData.topProducts)
+        ? dashboardData.topProducts
+        : fallbackAnalytics.topProducts
+
     return (
         <div className="scc-container" style={{ minHeight: "100vh" }}>
             {/* Premium Sidebar */}
@@ -386,11 +482,11 @@ export default function AdminHome() {
                         {/* Charts Section */}
                         <PremiumCharts
                             monthlyData={formattedMonthlyData}
-                            salesByCategory={dashboardData.salesByCategory}
+                            salesByCategory={resolvedSalesByCategory}
                         />
 
                         {/* Top Products Section */}
-                        <TopProducts />
+                        <TopProducts topProducts={resolvedTopProducts} />
 
                         {/* Last Updated */}
                         {lastUpdated && (

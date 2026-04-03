@@ -5,9 +5,9 @@ import { getSocket } from './socket';
 import { BASE_URL } from '../../constants';
 import './SystemControlCenter.css';
 
-export default function TopProducts() {
-  const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+export default function TopProducts({ topProducts = [] }) {
+  const [products, setProducts] = useState(Array.isArray(topProducts) ? topProducts : []);
+  const [isLoading, setIsLoading] = useState(!(Array.isArray(topProducts) && topProducts.length > 0));
 
   const fetchTopProducts = useCallback(async () => {
     try {
@@ -23,6 +23,12 @@ export default function TopProducts() {
   }, []);
 
   useEffect(() => {
+    if (Array.isArray(topProducts) && topProducts.length > 0) {
+      setProducts(topProducts);
+      setIsLoading(false);
+      return undefined;
+    }
+
     fetchTopProducts();
 
     const socket = getSocket('admin-dashboard');
@@ -31,7 +37,7 @@ export default function TopProducts() {
     return () => {
       socket.off('dashboardUpdate', fetchTopProducts);
     };
-  }, [fetchTopProducts]);
+  }, [fetchTopProducts, topProducts]);
 
   const getRankClass = (rank) => {
     return `scc-product-rank scc-product-rank--${rank}`;

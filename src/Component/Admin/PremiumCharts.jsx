@@ -285,7 +285,7 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
                   outerRadius={100}
                   paddingAngle={3}
                   dataKey="value"
-                  nameKey="_id"
+                  nameKey="name"
                   animationBegin={0}
                   animationDuration={1200}
                 >
