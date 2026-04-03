@@ -2649,8 +2649,11 @@ app.get('/api/user', async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         const { password, otp, otpExpires, failedAttempts, lockUntil, ...safeUser } = user.toJSON();
-        res.json(safeUser);
+        // Add 'id' field for frontend compatibility (frontend expects both id and _id)
+        const userWithId = { ...safeUser, id: safeUser._id };
+        res.json(userWithId);
     } catch (e) {
+        console.error('❌ GetUser error:', e.message);
         res.status(500).json({ message: 'Failed to fetch user' });
     }
 });

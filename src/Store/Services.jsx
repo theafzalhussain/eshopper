@@ -173,7 +173,11 @@ export const loginAPI = (d) => fastAPI(API_ENDPOINTS.LOGIN, "POST", d);
 export const resetPasswordAPI = (d) => fastAPI(API_ENDPOINTS.RESET_PASSWORD, "POST", d);
 export const forgetPasswordAPI = (d) => fastAPI(API_ENDPOINTS.RESET_PASSWORD, "POST", d);
 
-export const getUserAPI = () => fastAPI(API_ENDPOINTS.USER);
+export const getUserAPI = () => {
+    const userid = localStorage.getItem("userid");
+    const endpoint = userid ? `${API_ENDPOINTS.USER}?id=${userid}` : API_ENDPOINTS.USER;
+    return fastAPI(endpoint);
+};
 export const getSingleUserAPI = (id) => fastAPI(`${API_ENDPOINTS.USER}/${id}`);
 export const createUserAPI = (d) => fastAPI(API_ENDPOINTS.USER, "POST", d);
 export const updateUserAPI = (d) => fastAPI(`${API_ENDPOINTS.USER}/${getID(d)}`, "PUT", d);
