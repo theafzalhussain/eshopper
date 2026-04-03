@@ -95,6 +95,7 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
   const [period, setPeriod] = useState('12M');
   const [isLoading, setIsLoading] = useState(false);
   const [showRawDebug, setShowRawDebug] = useState(false);
+  const [showCategoryDebug, setShowCategoryDebug] = useState(false);
 
   // Fetch chart data
   const fetchChartData = useCallback(async () => {
@@ -187,6 +188,34 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
       low
     };
   }, [periodMonthlyData]);
+
+  const categoryInsights = useMemo(() => {
+    const source = Array.isArray(chartData.category) ? chartData.category : [];
+    const normalized = source
+      .map((item) => {
+        const name = String(item?.name || item?._id || 'Unknown').trim() || 'Unknown';
+        const valueRaw = Number(item?.value || 0);
+        const value = Number.isFinite(valueRaw) && valueRaw > 0 ? valueRaw : 0;
+        return { ...item, name, value };
+      })
+      .filter((item) => item.value > 0)
+      .sort((a, b) => b.value - a.value);
+
+    const total = normalized.reduce((sum, item) => sum + item.value, 0);
+    const dominant = normalized[0] || null;
+    const dominantShare = total > 0 && dominant ? (dominant.value / total) * 100 : 0;
+    const topThreeUnits = normalized.slice(0, 3).reduce((sum, item) => sum + item.value, 0);
+    const concentration = total > 0 ? (topThreeUnits / total) * 100 : 0;
+
+    return {
+      list: normalized,
+      total,
+      categoryCount: normalized.length,
+      dominant,
+      dominantShare,
+      concentration
+    };
+  }, [chartData.category]);
 
   // Custom Legend
   const renderCustomLegend = () => (
@@ -374,28 +403,57 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
             </div>
             <h2 className="scc-chart-title">Category Distribution</h2>
           </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            color: 'var(--slate-text)',
-            fontSize: '0.75rem'
-          }}>
-            <Calendar size={14} />
-            <span>This Month</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              color: 'var(--slate-text)',
+              fontSize: '0.75rem'
+            }}>
+              <Calendar size={14} />
+              <span>This Month</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCategoryDebug((v) => !v)}
+              style={{
+                border: '1px solid rgba(148,163,184,0.35)',
+                background: showCategoryDebug ? 'rgba(13,148,136,0.2)' : 'rgba(15,23,42,0.4)',
+                color: '#cbd5e1',
+                fontSize: '0.68rem',
+                letterSpacing: '0.08em',
+                borderRadius: '999px',
+                padding: '6px 10px',
+                cursor: 'pointer'
+              }}
+            >
+              RAW JSON
+            </button>
           </div>
         </div>
+
+        {showCategoryDebug && (
+          <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', background: 'rgba(2,6,23,0.45)', padding: '10px 12px' }}>
+            <div style={{ fontSize: '0.68rem', letterSpacing: '0.08em', color: '#67E8F9', marginBottom: '6px' }}>
+              CATEGORY RAW DATA ({categoryInsights.list.length} categories)
+            </div>
+            <pre style={{ margin: 0, maxHeight: 140, overflow: 'auto', fontSize: '11px', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {JSON.stringify(categoryInsights.list, null, 2)}
+            </pre>
+          </div>
+        )}
 
         {isLoading ? (
           <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--teal-primary)' }} />
           </div>
-        ) : chartData.category.length > 0 ? (
+        ) : categoryInsights.list.length > 0 ? (
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <ResponsiveContainer width="60%" height={300}>
               <PieChart>
                 <Pie
-                  data={chartData.category}
+                  data={categoryInsights.list}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -406,7 +464,7 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
                   animationBegin={0}
                   animationDuration={1200}
                 >
-                  {chartData.category.map((entry, index) => (
+                  {categoryInsights.list.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={CHART_COLORS[index % CHART_COLORS.length]}
@@ -421,9 +479,11 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
 
             {/* Legend */}
             <div style={{ width: '40%', paddingLeft: '1rem' }}>
-              {chartData.category.slice(0, 5).map((item, index) => (
+              {categoryInsights.list.slice(0, 5).map((item, index) => {
+                const share = categoryInsights.total > 0 ? (item.value / categoryInsights.total) * 100 : 0;
+                return (
                 <motion.div
-                  key={item._id || index}
+                  key={item.name || item._id || index}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
@@ -443,14 +503,19 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
                       background: CHART_COLORS[index % CHART_COLORS.length]
                     }} />
                     <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 500 }}>
-                      {item._id || item.name || 'Unknown'}
+                      {item.name || item._id || 'Unknown'}
                     </span>
                   </div>
-                  <span style={{ color: CHART_COLORS[index % CHART_COLORS.length], fontWeight: 600, fontSize: '0.8rem' }}>
-                    {item.value}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <span style={{ color: CHART_COLORS[index % CHART_COLORS.length], fontWeight: 600, fontSize: '0.8rem' }}>
+                      {item.value}
+                    </span>
+                    <span style={{ color: '#94A3B8', fontSize: '0.68rem' }}>
+                      {share.toFixed(1)}%
+                    </span>
+                  </div>
                 </motion.div>
-              ))}
+              )})}
             </div>
           </div>
         ) : (
@@ -464,6 +529,33 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
             No category data available
           </div>
         )}
+
+        <div style={{
+          marginTop: '12px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: '10px'
+        }}>
+          <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.08em' }}>TOTAL UNITS</div>
+            <div style={{ color: '#FCD34D', fontWeight: 700, marginTop: '4px' }}>{categoryInsights.total.toLocaleString('en-IN')}</div>
+          </div>
+          <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.08em' }}>DOMINANT CATEGORY</div>
+            <div style={{ color: '#22d3ee', fontWeight: 700, marginTop: '4px' }}>
+              {categoryInsights.dominant?.name || 'N/A'}
+            </div>
+            <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{categoryInsights.dominantShare.toFixed(1)}% share</div>
+          </div>
+          <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.08em' }}>CATEGORY COUNT</div>
+            <div style={{ color: '#10B981', fontWeight: 700, marginTop: '4px' }}>{categoryInsights.categoryCount}</div>
+          </div>
+          <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: '10px', padding: '10px' }}>
+            <div style={{ fontSize: '0.65rem', color: '#94a3b8', letterSpacing: '0.08em' }}>TOP-3 CONCENTRATION</div>
+            <div style={{ color: '#cbd5e1', fontWeight: 700, marginTop: '4px' }}>{categoryInsights.concentration.toFixed(1)}%</div>
+          </div>
+        </div>
       </motion.div>
     </div>
   );
