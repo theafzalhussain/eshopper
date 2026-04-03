@@ -49,12 +49,13 @@ const getAuthToken = () => {
 
 // Rate limiting: Track API calls to prevent 429 errors
 const rateLimiter = new Map();
-const MAX_CALLS_PER_MINUTE = 50;
+const MAX_CALLS_PER_MINUTE = 200;
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 
 const checkRateLimit = (endpoint) => {
     const now = Date.now();
-    const key = endpoint.split('/')[0]; // Group by endpoint type
+    // Normalize endpoint key so "/api/cart?x=1" and "/api/cart" are grouped correctly.
+    const key = endpoint.split('?')[0].split('/').filter(Boolean)[0] || 'root';
 
     if (!rateLimiter.has(key)) {
         rateLimiter.set(key, { count: 0, resetTime: now + RATE_LIMIT_WINDOW });
@@ -82,6 +83,7 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
     const isFD = data instanceof FormData;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    let responseText = "";
 
     try {
         // Check rate limit before making request
@@ -98,12 +100,12 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
             signal: controller.signal
         });
 
-        const text = await res.text();
+        responseText = await res.text();
 
         // Handle successful responses
         if (res.ok) {
             // Only parse as JSON if response is ok and has content
-            const responseData = text ? JSON.parse(text) : { result: "Done" };
+            const responseData = responseText ? JSON.parse(responseText) : { result: "Done" };
             return responseData;
         }
 
@@ -111,10 +113,10 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
         let errorData;
         try {
             // Try to parse as JSON first
-            errorData = text ? JSON.parse(text) : {};
+            errorData = responseText ? JSON.parse(responseText) : {};
         } catch {
             // If not JSON, treat as plain text error
-            errorData = { message: text || `HTTP ${res.status} Error` };
+            errorData = { message: responseText || `HTTP ${res.status} Error` };
         }
 
         // Special handling for 429 (Rate Limited)
@@ -151,14 +153,26 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
         throw error;
 
     } catch (err) {
+        const errorMessage = String(err?.message || '');
+        const isTimeoutError = err?.name === "AbortError" || errorMessage.includes("timeout");
+        const isTransientNetworkError = errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError") || errorMessage.includes("Load failed");
+
+        // Retry transient failures (cold starts, temporary network hiccups)
+        if ((isTimeoutError || isTransientNetworkError) && retryCount < 2) {
+            const retryDelay = 2000 * (retryCount + 1);
+            console.warn(`🔁 Retrying ${endpoint} in ${retryDelay}ms due to transient error:`, errorMessage);
+            await delay(retryDelay);
+            return fastAPI(endpoint, method, data, retryCount + 1);
+        }
+
         if (err.name === "AbortError") {
             throw new Error(`Request timeout (${REQUEST_TIMEOUT}ms) for ${endpoint}`);
         }
 
         // Log the exact error for debugging
-        if (err.message.includes("JSON")) {
+        if (errorMessage.includes("JSON")) {
             console.error(`📝 JSON Parse Error on ${endpoint}:`, err);
-            console.error(`📝 Raw response text:`, text);
+            console.error(`📝 Raw response text:`, responseText);
         }
 
         throw err;
@@ -173,11 +187,7 @@ export const loginAPI = (d) => fastAPI(API_ENDPOINTS.LOGIN, "POST", d);
 export const resetPasswordAPI = (d) => fastAPI(API_ENDPOINTS.RESET_PASSWORD, "POST", d);
 export const forgetPasswordAPI = (d) => fastAPI(API_ENDPOINTS.RESET_PASSWORD, "POST", d);
 
-export const getUserAPI = () => {
-    const userid = localStorage.getItem("userid");
-    const endpoint = userid ? `${API_ENDPOINTS.USER}?id=${userid}` : API_ENDPOINTS.USER;
-    return fastAPI(endpoint);
-};
+export const getUserAPI = () => fastAPI(API_ENDPOINTS.USER);
 export const getSingleUserAPI = (id) => fastAPI(`${API_ENDPOINTS.USER}/${id}`);
 export const createUserAPI = (d) => fastAPI(API_ENDPOINTS.USER, "POST", d);
 export const updateUserAPI = (d) => fastAPI(`${API_ENDPOINTS.USER}/${getID(d)}`, "PUT", d);

@@ -26,8 +26,8 @@ export const API_ENDPOINTS = {
   LOGIN: "/login",
   
   // User
-  USER: "/api/user",
-  USER_PROFILE: "/api/user/:id",
+  USER: "/user",
+  USER_PROFILE: "/user/:id",
   
   // Products
   PRODUCT: "/product",
@@ -51,7 +51,7 @@ export const API_ENDPOINTS = {
 };
 
 // ===== TIMEOUT SETTINGS =====
-export const REQUEST_TIMEOUT = 30000; // 30 seconds (helps with cold starts)
+export const REQUEST_TIMEOUT = 90000; // 90 seconds (Render free tier cold starts can exceed 50s)
 export const OTP_EXPIRY_TIME = 10 * 60 * 1000; // 10 minutes
 
 // ===== UI CONSTANTS =====
