@@ -1354,7 +1354,7 @@ export default function OrderTracking() {
     }
   }
 
-  const onEmailSupport = useCallback(() => {
+  const supportMailtoUrl = useMemo(() => {
     const subject = encodeURIComponent('Order Support')
     const supportLines = [
       'Hi Support, I need assistance with the following order:',
@@ -1369,7 +1369,7 @@ export default function OrderTracking() {
       'Please help me with this order.'
     ]
     const body = encodeURIComponent(supportLines.join('\n'))
-    window.location.href = `mailto:${supportEmail}?subject=${subject}&body=${body}`
+    return `mailto:${supportEmail}?subject=${subject}&body=${body}`
   }, [addressText, finalAmount, getDeliveryInfo, order, orderId, paymentStatusLabel, status])
 
   useEffect(() => {
@@ -1893,9 +1893,9 @@ export default function OrderTracking() {
                   }}>
                     <Phone size={13} /> WhatsApp Support
                   </button>
-                  <button className="ot-ghost-btn" type="button" style={{ justifyContent: 'center' }} onClick={onEmailSupport}>
+                  <a className="ot-ghost-btn" href={supportMailtoUrl} style={{ justifyContent: 'center', textDecoration: 'none' }}>
                     <Mail size={13} /> Email Support
-                  </button>
+                  </a>
                 </div>
               </div>
             </div>
