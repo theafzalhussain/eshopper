@@ -233,6 +233,42 @@ const getTimelineLocation = (details = {}) => {
   }
 }
 
+const isValidStoredId = (value) => {
+  const normalized = String(value ?? '').trim()
+  if (!normalized) return false
+  if (normalized.toLowerCase() === 'undefined' || normalized.toLowerCase() === 'null') return false
+  return true
+}
+
+const pickStoredUserId = () => {
+  if (typeof window === 'undefined') return ''
+
+  const stores = [window.localStorage, window.sessionStorage]
+  const keys = ['userid', 'userId', 'id', '_id']
+
+  for (const store of stores) {
+    if (!store) continue
+    for (const key of keys) {
+      const candidate = store.getItem(key)
+      if (isValidStoredId(candidate)) return String(candidate).trim()
+    }
+
+    for (const key of ['user', 'userData', 'authUser']) {
+      const raw = store.getItem(key)
+      if (!raw) continue
+      try {
+        const parsed = JSON.parse(raw)
+        const candidate = parsed?.id || parsed?._id || parsed?.userId || parsed?.userid
+        if (isValidStoredId(candidate)) return String(candidate).trim()
+      } catch {
+        // Ignore malformed localStorage payloads.
+      }
+    }
+  }
+
+  return ''
+}
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
 
@@ -1128,7 +1164,7 @@ const CSS = `
 export default function OrderTracking() {
   const { orderId } = useParams()
   const navigate = useNavigate()
-  const userId = localStorage.getItem('userid')
+  const userId = useMemo(() => pickStoredUserId(), [])
   const supportEmail = 'support@eshopperr.me'
   const useServerInvoice = process.env.REACT_APP_USE_SERVER_INVOICE === 'true'
 
@@ -1592,16 +1628,24 @@ export default function OrderTracking() {
     setError('')
     try {
       const { data } = await axios.get(`${BASE_URL}/api/order/${orderId}?userId=${userId}`, { timeout: 15000 })
-      setOrder(data)
-      const initialStatus = normalizeStatus(data?.orderStatus)
+      const payload = data?.order && typeof data.order === 'object' ? data.order : data
+      if (!payload || typeof payload !== 'object') {
+        throw new Error('Invalid order response')
+      }
+
+      setOrder(payload)
+      const initialStatus = normalizeStatus(payload?.orderStatus)
       setStatus(initialStatus)
-      if (Array.isArray(data?.statusHistory) && data.statusHistory.length) {
-        setStatusTimeline(data.statusHistory)
+      if (Array.isArray(payload?.statusHistory) && payload.statusHistory.length) {
+        setStatusTimeline(payload.statusHistory)
       } else {
-        setStatusTimeline([{ status: initialStatus, timestamp: data?.updatedAt || data?.createdAt || new Date().toISOString() }])
+        setStatusTimeline([{ status: initialStatus, timestamp: payload?.updatedAt || payload?.createdAt || new Date().toISOString() }])
       }
     } catch (e) {
-      const errorMsg = e.response?.status === 404 ? 'Order not found.' : 'Failed to load order.'
+      const backendMessage = String(e?.response?.data?.message || '').trim()
+      const errorMsg = e.response?.status === 404
+        ? 'Order not found.'
+        : (backendMessage || 'Failed to load order.')
       setError(errorMsg)
     } finally {
       if (!silent) setLoading(false)
