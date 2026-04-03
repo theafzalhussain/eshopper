@@ -433,6 +433,9 @@ export default function AdminOrders() {
 
     const closeActionDrawer = () => {
         if (updating) return;
+        if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
         setActionOrder(null);
     };
 
@@ -593,6 +596,9 @@ export default function AdminOrders() {
         });
 
         if (ok) {
+            if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+            }
             setActionOrder(null);
         }
     };

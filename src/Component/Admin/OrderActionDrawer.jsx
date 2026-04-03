@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import {
     CalendarDays,
     Clock3,
@@ -173,10 +174,14 @@ export default function OrderActionDrawer({
 
     const totalAmount = Number(orderView.finalAmount || orderView.totalAmount || 0);
 
+    if (!open) {
+        return null;
+    }
+
     return (
-        <div className={`order-action-drawer-root${open ? ' open' : ''}`}>
+        <div className="order-action-drawer-root open">
             <div className="order-action-overlay" onClick={onClose} />
-            <aside className="order-action-panel" aria-hidden={!open}>
+            <aside className="order-action-panel" role="dialog" aria-modal="true" aria-label="Update order status panel">
                 <button type="button" className="order-action-close" onClick={onClose} disabled={updating}>
                     <X size={20} />
                 </button>
