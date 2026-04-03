@@ -2,7 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
     CalendarDays,
     Clock3,
+    Compass,
+    LocateFixed,
     Package,
+    Phone,
+    Route,
     ShoppingBag,
     Sparkles,
     StickyNote,
@@ -82,6 +86,16 @@ export default function OrderActionDrawer({
     setDeliveryTime,
     adminNote,
     setAdminNote,
+    riderName,
+    setRiderName,
+    riderPhone,
+    setRiderPhone,
+    locationName,
+    setLocationName,
+    latitude,
+    setLatitude,
+    longitude,
+    setLongitude,
     onToday,
     onTomorrow,
     onApply
@@ -296,6 +310,68 @@ export default function OrderActionDrawer({
                             placeholder="Add internal note for status update..."
                             disabled={updating}
                         />
+
+                        <label className="action-field-label">
+                            <Truck size={14} /> Rider Name
+                        </label>
+                        <input
+                            type="text"
+                            value={riderName}
+                            onChange={(e) => setRiderName(e.target.value)}
+                            placeholder="Assigned rider name"
+                            disabled={updating}
+                        />
+
+                        <label className="action-field-label">
+                            <Phone size={14} /> Rider Phone
+                        </label>
+                        <input
+                            type="text"
+                            value={riderPhone}
+                            onChange={(e) => setRiderPhone(e.target.value)}
+                            placeholder="Rider contact number"
+                            disabled={updating}
+                        />
+
+                        <label className="action-field-label">
+                            <Route size={14} /> Current Location
+                        </label>
+                        <input
+                            type="text"
+                            value={locationName}
+                            onChange={(e) => setLocationName(e.target.value)}
+                            placeholder="Area / landmark"
+                            disabled={updating}
+                        />
+
+                        <div className="geo-grid">
+                            <div>
+                                <label className="action-field-label">
+                                    <Compass size={14} /> Latitude
+                                </label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={latitude}
+                                    onChange={(e) => setLatitude(e.target.value)}
+                                    placeholder="28.6139"
+                                    disabled={updating}
+                                />
+                            </div>
+                            <div>
+                                <label className="action-field-label">
+                                    <LocateFixed size={14} /> Longitude
+                                </label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={longitude}
+                                    onChange={(e) => setLongitude(e.target.value)}
+                                    placeholder="77.2090"
+                                    disabled={updating}
+                                />
+                            </div>
+                        </div>
 
                         <button
                             type="button"

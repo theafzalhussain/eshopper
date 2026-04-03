@@ -30,7 +30,12 @@ const orderSchema = new mongoose.Schema({
         time: String,
         scheduledAt: Date,
         estimatedDays: Number,
-        estimatedDelivery: Date
+        estimatedDelivery: Date,
+        deliveryAgent: String,
+        riderPhone: String,
+        locationName: String,
+        latitude: Number,
+        longitude: Number
     },
     // Admin notes/comments for this order
     orderNotes: [
@@ -50,9 +55,19 @@ const orderSchema = new mongoose.Schema({
                 time: String,
                 scheduledAt: Date,
                 estimatedDays: Number,
-                estimatedDelivery: Date
+                estimatedDelivery: Date,
+                deliveryAgent: String,
+                riderPhone: String,
+                locationName: String,
+                latitude: Number,
+                longitude: Number
             },
-            adminNote: String
+            adminNote: String,
+            deliveryAgent: String,
+            riderPhone: String,
+            locationName: String,
+            latitude: Number,
+            longitude: Number
         }
     ],
     orderDate: { type: Date, default: Date.now }

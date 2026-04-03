@@ -17,7 +17,6 @@ import {
 } from 'lucide-react'
 
 const css = `
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500;600&display=swap');
 .bpx-membership-badge {
     display: inline-flex;
     align-items: center;
@@ -66,7 +65,7 @@ const css = `
 }
 
 .bpx-root {
-    font-family: 'Jost', sans-serif;
+    font-family: inherit;
     color: var(--ink);
 }
 
@@ -101,9 +100,8 @@ const css = `
     opacity: 0.5;
 }
 .bpx-header-title {
-    font-family: 'Playfair Display', serif;
     font-size: 22px;
-    font-weight: 400;
+    font-weight: 700;
     color: var(--ink);
     letter-spacing: -0.01em;
     margin: 0;
@@ -117,7 +115,7 @@ const css = `
     background: transparent;
     border: 1px solid var(--border);
     border-radius: 3px;
-    font-family: 'Jost', sans-serif;
+    font-family: inherit;
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.14em;
@@ -243,7 +241,7 @@ const css = `
     color: var(--white);
     border: none;
     border-radius: 4px;
-    font-family: 'Jost', sans-serif;
+    font-family: inherit;
     font-size: 12px;
     font-weight: 600;
     letter-spacing: 0.18em;

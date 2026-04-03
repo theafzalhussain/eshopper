@@ -109,7 +109,7 @@
             <tr>
               <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" /></td>
               <td><strong>{{name}}</strong><br><span style="color:#b4bac6;">Size: {{size}}</span><br><span style="color:#b4bac6;">Color: {{color}}</span></td>
-              <td>{{quantity}}</td>
+              <td>{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
               <td>INR {{subtotal}}</td>
             </tr>
             {{/each}}

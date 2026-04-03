@@ -57,7 +57,7 @@
         <table class="items" role="presentation">
           <tr><th>Product</th><th>Qty</th><th>Price</th></tr>
           {{#each products}}
-          <tr><td>{{this.name}}</td><td>{{this.qty}}</td><td>INR {{this.price}}</td></tr>
+          <tr><td>{{this.name}}</td><td>{{#if this.quantity}}{{this.quantity}}{{else}}{{this.qty}}{{/if}}</td><td>INR {{this.price}}</td></tr>
           {{/each}}
         </table>
         <div class="totals">

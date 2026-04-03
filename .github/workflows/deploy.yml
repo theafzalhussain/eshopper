@@ -52,8 +52,7 @@ jobs:
     steps:
       - name: Trigger Render webhook
         env:
-          RENDER_SECRET_NAME: RENDER_DEPLOY_HOOK
-          RENDER_DEPLOY_HOOK: ${{ secrets[env.RENDER_SECRET_NAME] }}
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
           MANUAL_RENDER_DEPLOY_HOOK: ${{ github.event.inputs.render_deploy_hook || '' }}
         run: |
           if [ -n "$RENDER_DEPLOY_HOOK" ]; then
@@ -87,6 +86,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Deploy to Vercel (CLI)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -94,8 +102,8 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "Skipping Vercel: required secrets are missing"
-            exit 0
+            echo "Vercel secrets are missing. Set VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID."
+            exit 1
           fi
 
           echo "Vercel deploy branch: ${{ github.ref_name }}"

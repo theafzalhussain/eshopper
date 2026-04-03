@@ -180,6 +180,11 @@ export default function AdminOrders() {
     const [actionDeliveryDate, setActionDeliveryDate] = useState('');
     const [actionDeliveryTime, setActionDeliveryTime] = useState('By 9:00 PM');
     const [actionAdminNote, setActionAdminNote] = useState('');
+    const [actionRiderName, setActionRiderName] = useState('');
+    const [actionRiderPhone, setActionRiderPhone] = useState('');
+    const [actionLocationName, setActionLocationName] = useState('');
+    const [actionLatitude, setActionLatitude] = useState('');
+    const [actionLongitude, setActionLongitude] = useState('');
 
     const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const localApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -251,7 +256,7 @@ export default function AdminOrders() {
         const userId = localStorage.getItem('userId') || 'admin-dashboard';
         
         const socket = io(apiBaseUrl, {
-            transports: ['websocket'],
+            transports: ['polling', 'websocket'],
             withCredentials: true,
             reconnectionAttempts: 3,
             timeout: 8000,
@@ -393,11 +398,18 @@ export default function AdminOrders() {
     };
 
     const openActionDrawer = (order = {}) => {
+        const existingLat = order.deliverySchedule?.latitude ?? order?.currentLocation?.latitude ?? '';
+        const existingLng = order.deliverySchedule?.longitude ?? order?.currentLocation?.longitude ?? '';
         setActionOrder(order);
         setActionStatus(normalizeStatus(order.orderStatus || 'Pending'));
         setActionDeliveryDate(getDeliveryDateValue(order));
         setActionDeliveryTime(order.deliverySchedule?.time || 'By 9:00 PM');
         setActionAdminNote('');
+        setActionRiderName(order.deliverySchedule?.deliveryAgent || '');
+        setActionRiderPhone(order.deliverySchedule?.riderPhone || '');
+        setActionLocationName(order.deliverySchedule?.locationName || order.shippingAddress?.city || '');
+        setActionLatitude(existingLat === null || existingLat === undefined ? '' : String(existingLat));
+        setActionLongitude(existingLng === null || existingLng === undefined ? '' : String(existingLng));
     };
 
     const closeActionDrawer = () => {
@@ -410,24 +422,42 @@ export default function AdminOrders() {
             setUpdating(orderId);
             const deliveryDate = String(options.deliveryDate || '').trim();
             const deliveryTime = String(options.deliveryTime || '').trim() || 'By 9:00 PM';
+            const riderName = String(options.riderName || '').trim();
+            const riderPhone = String(options.riderPhone || '').trim();
+            const locationName = String(options.locationName || '').trim();
+            const latValue = String(options.latitude || '').trim();
+            const lngValue = String(options.longitude || '').trim();
+
+            const latNum = Number(latValue);
+            const lngNum = Number(lngValue);
+            const hasCoords = Number.isFinite(latNum) && Number.isFinite(lngNum);
 
             let deliverySchedule = null;
-            if (deliveryDate) {
+            if (deliveryDate || riderName || riderPhone || locationName || hasCoords) {
                 const deliveryDateObj = new Date(`${deliveryDate}T00:00:00`);
-                if (!Number.isNaN(deliveryDateObj.getTime())) {
-                    deliverySchedule = {
-                        date: deliveryDateObj.toISOString(),
-                        time: deliveryTime,
-                        scheduledAt: new Date().toISOString(),
-                        estimatedDelivery: deliveryDateObj.toISOString()
-                    };
+                deliverySchedule = {
+                    time: deliveryTime,
+                    scheduledAt: new Date().toISOString(),
+                    ...(riderName && { deliveryAgent: riderName }),
+                    ...(riderPhone && { riderPhone }),
+                    ...(locationName && { locationName }),
+                    ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
+                };
+
+                if (deliveryDate && !Number.isNaN(deliveryDateObj.getTime())) {
+                    deliverySchedule.date = deliveryDateObj.toISOString();
+                    deliverySchedule.estimatedDelivery = deliveryDateObj.toISOString();
                 }
             }
 
             const shouldUseConfirmEndpoint =
                 newStatus === 'Confirmed' &&
                 !deliverySchedule &&
-                !options.adminNote;
+                !options.adminNote &&
+                !riderName &&
+                !riderPhone &&
+                !locationName &&
+                !hasCoords;
 
             const endpoint = shouldUseConfirmEndpoint
                 ? `${apiBaseUrl}/api/admin/confirm-order`
@@ -439,7 +469,11 @@ export default function AdminOrders() {
                     orderId,
                     status: newStatus,
                     ...(deliverySchedule && { deliverySchedule }),
-                    ...(options.adminNote && { adminNote: options.adminNote })
+                    ...(options.adminNote && { adminNote: options.adminNote }),
+                    ...(riderName && { deliveryAgent: riderName }),
+                    ...(riderPhone && { riderPhone }),
+                    ...(locationName && { locationName }),
+                    ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
                 };
 
             const response = await axios.post(
@@ -474,12 +508,25 @@ export default function AdminOrders() {
         const nextStatus = normalizeStatus(actionStatus || currentStatus);
         const nextDeliveryDate = String(actionDeliveryDate || '').trim();
         const adminNote = String(actionAdminNote || '').trim();
+        const riderName = String(actionRiderName || '').trim();
+        const riderPhone = String(actionRiderPhone || '').trim();
+        const locationName = String(actionLocationName || '').trim();
+        const latitude = String(actionLatitude || '').trim();
+        const longitude = String(actionLongitude || '').trim();
+
+        const currentRiderName = String(actionOrder?.deliverySchedule?.deliveryAgent || '').trim();
+        const currentRiderPhone = String(actionOrder?.deliverySchedule?.riderPhone || '').trim();
+        const currentLocationName = String(actionOrder?.deliverySchedule?.locationName || '').trim();
+        const currentLatitude = String(actionOrder?.deliverySchedule?.latitude ?? '').trim();
+        const currentLongitude = String(actionOrder?.deliverySchedule?.longitude ?? '').trim();
 
         const changedStatus = nextStatus !== currentStatus;
         const changedDate = nextDeliveryDate !== String(currentDeliveryDate || '').trim();
         const changedNote = adminNote.length > 0;
+        const changedRider = riderName !== currentRiderName || riderPhone !== currentRiderPhone;
+        const changedLocation = locationName !== currentLocationName || latitude !== currentLatitude || longitude !== currentLongitude;
 
-        if (!changedStatus && !changedDate && !changedNote) {
+        if (!changedStatus && !changedDate && !changedNote && !changedRider && !changedLocation) {
             showNotification('No action changes to apply for this order', 'info');
             return;
         }
@@ -488,8 +535,13 @@ export default function AdminOrders() {
             deliveryDate: nextDeliveryDate,
             deliveryTime: actionDeliveryTime,
             adminNote,
-            successMessage: changedDate
-                ? `Order ${actionOrder.orderId} updated with delivery schedule`
+            riderName,
+            riderPhone,
+            locationName,
+            latitude,
+            longitude,
+            successMessage: (changedDate || changedRider || changedLocation)
+                ? `Order ${actionOrder.orderId} updated with live delivery details`
                 : `Order ${actionOrder.orderId} status updated`
         });
 
@@ -895,6 +947,16 @@ export default function AdminOrders() {
                 setDeliveryTime={setActionDeliveryTime}
                 adminNote={actionAdminNote}
                 setAdminNote={setActionAdminNote}
+                riderName={actionRiderName}
+                setRiderName={setActionRiderName}
+                riderPhone={actionRiderPhone}
+                setRiderPhone={setActionRiderPhone}
+                locationName={actionLocationName}
+                setLocationName={setActionLocationName}
+                latitude={actionLatitude}
+                setLatitude={setActionLatitude}
+                longitude={actionLongitude}
+                setLongitude={setActionLongitude}
                 onToday={() => applyQuickDeliveryPreset(0)}
                 onTomorrow={() => applyQuickDeliveryPreset(1)}
                 onApply={applyOrderAction}

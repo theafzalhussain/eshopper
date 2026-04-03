@@ -4,6 +4,7 @@ require('dotenv').config();
 // NOW REQUIRE EXPRESS AND OTHER FRAMEWORKS
 const express = require('express');
 const orderRoutes = require('./routes/orderRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
@@ -151,6 +152,9 @@ if (process.env.SENTRY_DSN) {
 const cartRoutes = require('./routes/cartRoutes');
 app.use('/api', cartRoutes);
 
+// Register admin routes
+app.use('/api/admin', adminRoutes);
+
 // Register promo code endpoint directly (for legacy/compatibility)
 const { applyCoupon } = require('./controllers/cartController');
 app.post('/api/cart/apply-coupon', applyCoupon);
@@ -219,6 +223,55 @@ const normalizeOrderStatus = (s = '') => {
 const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'true').toLowerCase() === 'true';
 const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
 const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'true').toLowerCase() === 'true';
+
+const DEFAULT_USER_SETTINGS = {
+    notifications: {
+        orderUpdates: true,
+        deliveryUpdates: true,
+        promotionalEmails: true,
+        priceAlerts: false,
+        wishlistAlerts: true,
+        smsAlerts: false,
+    },
+    privacy: {
+        profileVisibility: 'Private',
+        personalizedRecommendations: true,
+    },
+    security: {
+        twoFactorEnabled: false,
+        loginAlerts: true,
+    },
+    communication: {
+        newsletter: true,
+        whatsappUpdates: false,
+        pushNotifications: true,
+    },
+};
+
+const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const deepMerge = (baseValue, overrideValue) => {
+    if (!isPlainObject(baseValue) || !isPlainObject(overrideValue)) {
+        return overrideValue === undefined ? baseValue : overrideValue;
+    }
+
+    const merged = { ...baseValue };
+    Object.keys(overrideValue).forEach((key) => {
+        merged[key] = deepMerge(baseValue[key], overrideValue[key]);
+    });
+    return merged;
+};
+
+const normalizeUserSettings = (settings) => deepMerge(DEFAULT_USER_SETTINGS, isPlainObject(settings) ? settings : {});
+
+const normalizeUserDocument = (doc) => {
+    if (!doc) return doc;
+    const plainDoc = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+    return {
+        ...plainDoc,
+        settings: normalizeUserSettings(plainDoc.settings),
+    };
+};
 
 // 🔴 SOCKET.IO AUTHENTICATION MIDDLEWARE
 io.use(async (socket, next) => {
@@ -400,9 +453,33 @@ app.use(helmet({ contentSecurityPolicy: false }));
 
 // 🔒 RATE LIMITERS
 // 🔒 RATE LIMITERS
-const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
+const isLocalDevelopment = String(process.env.NODE_ENV || '').toLowerCase() !== 'production';
+
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: Number(process.env.GLOBAL_RATE_LIMIT_MAX || 2000),
+    standardHeaders: true,
+    legacyHeaders: false,
+    // In local dev + realtime UI, these endpoints can burst (React StrictMode/socket refreshes).
+    skip: (req) => {
+        if (isLocalDevelopment) return true;
+
+        if (req.path.startsWith('/socket.io/') || req.method === 'OPTIONS') return true;
+
+        return (
+            req.path.startsWith('/user/') ||
+            req.path === '/product' ||
+            req.path.startsWith('/api/orders/') ||
+            req.path.startsWith('/api/membership/check')
+        );
+    }
+});
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
-app.use(globalLimiter);
+if (!isLocalDevelopment) {
+    app.use(globalLimiter);
+} else {
+    console.log('⚙️ Global rate limiter disabled for local development');
+}
 
 
 // 📊 REQUEST LOGGING MIDDLEWARE (with CORS origin info)
@@ -442,6 +519,37 @@ const INSTAGRAM_URL_DEFAULT = (
     'https://www.instagram.com/theafzal_hussain_786'
 ).trim();
 
+const normalizeQuantityValue = (value, fallback = 1) => {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    return fallback;
+};
+
+const normalizeOrderProducts = (products = []) => {
+    return (Array.isArray(products) ? products : []).map((entry) => {
+        const quantity = normalizeQuantityValue(
+            entry?.qty ??
+            entry?.quantity ??
+            entry?.count ??
+            entry?.orderedQty ??
+            entry?.cartQuantity,
+            1
+        );
+        const priceRaw = Number(entry?.price ?? entry?.finalprice ?? entry?.salePrice ?? 0);
+        const price = Number.isFinite(priceRaw) ? priceRaw : 0;
+        const totalRaw = Number(entry?.total ?? entry?.lineTotal ?? entry?.totalPrice ?? (quantity * price));
+        const total = Number.isFinite(totalRaw) ? totalRaw : (quantity * price);
+
+        return {
+            ...entry,
+            qty: quantity,
+            quantity,
+            price,
+            total
+        };
+    });
+};
+
 const buildInvoiceHtml = ({
     orderId,
     userName,
@@ -457,7 +565,7 @@ const buildInvoiceHtml = ({
     orderStatus,
     pdfType
 }) => {
-    const safeProducts = Array.isArray(products) ? products : [];
+    const safeProducts = normalizeOrderProducts(products);
     const safeAddress = shippingAddress || {};
     const invoiceType = pdfType === 'final' ? 'Tax Invoice' : (pdfType === 'confirmation' ? 'Proforma Invoice' : 'Payment Receipt');
     const invoiceNo = `INV-${String(orderId || '').replace(/[^a-zA-Z0-9]/g, '').slice(-10) || '000000'}`;
@@ -565,7 +673,7 @@ const buildOrderEmailHtml = ({
     estimatedArrival,
     products = []
 }) => {
-    const shortItems = (Array.isArray(products) ? products : []).slice(0, 5);
+    const shortItems = normalizeOrderProducts(products).slice(0, 5);
     const listHtml = shortItems.map((p) => {
         const qty = Number(p.qty || p.quantity || 1);
         const price = Number(p.price || 0);
@@ -614,8 +722,8 @@ const formatAddressForEmail = (shippingAddress = {}) => {
 };
 
 const mapProductsForEmailTemplate = (products = []) => {
-    return (Array.isArray(products) ? products : []).map((p) => {
-        const qty = Number(p.qty || p.quantity || 1);
+    return normalizeOrderProducts(products).map((p) => {
+        const qty = normalizeQuantityValue(p.qty || p.quantity, 1);
         const unitPrice = Number(p.price || p.finalprice || 0);
         const subtotal = Number(p.total || qty * unitPrice);
         const imageUrl =
@@ -1821,10 +1929,10 @@ const handle = (path, Model, useUpload = false) => {
                 const id = req.query.id || req.query._id;
                 const doc = await Model.findById(id);
                 if (!doc) return res.status(404).json({ message: 'Not found' });
-                return res.json(doc);
+                return res.json(path === '/user' ? normalizeUserDocument(doc) : doc);
             }
             const docs = await Model.find().sort({ createdAt: -1 });
-            res.json(docs);
+            res.json(path === '/user' ? docs.map((doc) => normalizeUserDocument(doc)) : docs);
         } catch (e) {
             res.status(500).json({ message: 'Failed to fetch', error: e.message });
         }
@@ -1834,7 +1942,7 @@ const handle = (path, Model, useUpload = false) => {
         try {
             const doc = await Model.findById(req.params.id);
             if (!doc) return res.status(404).json({ message: 'Not found' });
-            res.json(doc);
+            res.json(path === '/user' ? normalizeUserDocument(doc) : doc);
         } catch (e) {
             res.status(500).json({ message: 'Failed to fetch', error: e.message });
         }
@@ -1850,9 +1958,20 @@ const handle = (path, Model, useUpload = false) => {
                 if (req.files.pic3) data.pic3 = req.files.pic3[0].path;
                 if (req.files.pic4) data.pic4 = req.files.pic4[0].path;
             }
+            if (path === '/user' && typeof data.settings === 'string') {
+                try {
+                    data.settings = JSON.parse(data.settings);
+                } catch (parseError) {
+                    console.warn('⚠️ Invalid user settings payload on create, ignoring custom settings:', parseError.message);
+                    delete data.settings;
+                }
+            }
+            if (path === '/user') {
+                data.settings = normalizeUserSettings(data.settings);
+            }
             const doc = new Model(data);
             await doc.save();
-            res.status(201).json(doc);
+            res.status(201).json(path === '/user' ? normalizeUserDocument(doc) : doc);
         } catch (e) {
             res.status(400).json({ message: 'Failed to create', error: e.message });
         }
@@ -1866,6 +1985,24 @@ const handle = (path, Model, useUpload = false) => {
                 if (req.files.pic2) upData.pic2 = req.files.pic2[0].path;
                 if (req.files.pic3) upData.pic3 = req.files.pic3[0].path;
                 if (req.files.pic4) upData.pic4 = req.files.pic4[0].path;
+            }
+
+            if (path === '/user' && typeof upData.settings === 'string') {
+                try {
+                    upData.settings = JSON.parse(upData.settings);
+                } catch (parseError) {
+                    console.warn('⚠️ Invalid user settings payload, ignoring custom settings:', parseError.message);
+                    delete upData.settings;
+                }
+            }
+
+            if (path === '/user' && upData.deliveryNotes == null && typeof req.body.deliveryNotes === 'string') {
+                upData.deliveryNotes = req.body.deliveryNotes;
+            }
+
+            if (path === '/user') {
+                const existingUser = await Model.findById(req.params.id);
+                upData.settings = normalizeUserSettings(deepMerge(existingUser?.settings || {}, upData.settings || {}));
             }
             
             if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
@@ -1900,7 +2037,7 @@ const handle = (path, Model, useUpload = false) => {
                 });
             }
 
-            res.json(d);
+            res.json(path === '/user' ? normalizeUserDocument(d) : d);
         } catch (e) { 
             res.status(500).json({ error: e.message }); 
         }
@@ -2098,16 +2235,30 @@ const placeOrderHandler = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        const cleanProducts = products.map((item) => ({
-            productid: item.productid || item.id || item._id || '',
-            name: item.name || 'Product',
-            qty: Number(item.qty || 1),
-            price: Number(item.price || 0),
-            total: Number(item.total || (Number(item.price || 0) * Number(item.qty || 1))),
-            size: item.size || '',
-            color: item.color || '',
-            pic: item.pic || item.pic1 || ''
-        }));
+        const cleanProducts = products.map((item) => {
+            const normalizedQty = Number(
+                item?.qty ??
+                item?.quantity ??
+                item?.count ??
+                item?.orderedQty ??
+                item?.cartQuantity ??
+                1
+            );
+            const safeQty = Number.isFinite(normalizedQty) && normalizedQty > 0 ? normalizedQty : 1;
+            const normalizedPrice = Number(item?.price || 0);
+
+            return {
+                productid: item.productid || item.id || item._id || '',
+                name: item.name || 'Product',
+                qty: safeQty,
+                quantity: safeQty,
+                price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
+                total: Number(item?.total ?? item?.lineTotal ?? (safeQty * (Number.isFinite(normalizedPrice) ? normalizedPrice : 0))),
+                size: item.size || '',
+                color: item.color || '',
+                pic: item.pic || item.pic1 || ''
+            };
+        });
 
         const orderId = await generateOrderId();
         const orderDate = new Date();
@@ -2374,10 +2525,17 @@ app.get('/api/membership/check', async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
-        // Reconcile legacy users whose totalOrders was not backfilled from historical orders.
+        // Reconcile legacy users by considering both Order and Checkout collections.
         const storedOrders = Number(user.totalOrders || 0);
-        const actualOrders = await Order.countDocuments({ userid: String(user._id) });
-        const totalOrders = Math.max(storedOrders, Number(actualOrders || 0));
+        const [actualOrders, checkoutOrders] = await Promise.all([
+            Order.countDocuments({ userid: String(user._id) }),
+            Checkout.countDocuments({ userid: String(user._id) })
+        ]);
+        const totalOrders = Math.max(
+            storedOrders,
+            Number(actualOrders || 0),
+            Number(checkoutOrders || 0)
+        );
         const membershipType = getMembershipTypeFromOrders(totalOrders);
 
         if (totalOrders !== storedOrders || user.membershipType !== membershipType) {
@@ -2635,7 +2793,7 @@ app.get('/api/orders/:userId', async (req, res) => {
         // 🔴 FETCH FROM ORDER COLLECTION (primary source)
         const orders = await Order.find({ userid: userId })
             .sort({ updatedAt: -1, createdAt: -1 })
-            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt')
+            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount estimatedArrival deliverySchedule')
             .lean();
 
         // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
@@ -2649,10 +2807,17 @@ app.get('/api/orders/:userId', async (req, res) => {
                 orders: checkoutOrders.map((item) => ({
                     orderId: item.orderId || `CHECKOUT-${item._id}`,
                     orderStatus: item.orderstatus || 'Order Placed',
+                    totalAmount: Number(item.totalAmount || 0),
+                    shippingAmount: Number(item.shippingAmount || 0),
                     finalAmount: Number(item.finalAmount || 0),
                     paymentStatus: item.paymentstatus || 'Pending',
                     paymentMethod: item.paymentmode || 'COD',
-                    updatedAt: item.updatedAt || new Date()
+                    createdAt: item.createdAt || item.updatedAt || new Date(),
+                    updatedAt: item.updatedAt || new Date(),
+                    orderItems: normalizeOrderProducts(item.products),
+                    estimatedDelivery: item.estimatedArrival || null,
+                    estimatedArrival: item.estimatedArrival || null,
+                    deliverySchedule: item.deliverySchedule || null
                 }))
             });
         }
@@ -2662,10 +2827,17 @@ app.get('/api/orders/:userId', async (req, res) => {
             orders: orders.map((item) => ({
                 orderId: item.orderId,
                 orderStatus: item.orderStatus || 'Order Placed',
+                totalAmount: Number(item.totalAmount || 0),
+                shippingAmount: Number(item.shippingAmount || 0),
                 finalAmount: Number(item.finalAmount || 0),
                 paymentStatus: item.paymentStatus || 'Pending',
                 paymentMethod: item.paymentMethod || 'COD',
-                updatedAt: item.updatedAt || item.createdAt || new Date()
+                createdAt: item.createdAt || item.updatedAt || new Date(),
+                updatedAt: item.updatedAt || item.createdAt || new Date(),
+                orderItems: normalizeOrderProducts(item.products),
+                estimatedDelivery: item.estimatedArrival || null,
+                estimatedArrival: item.estimatedArrival || null,
+                deliverySchedule: item.deliverySchedule || null
             }))
         });
     } catch (e) {
@@ -2725,6 +2897,8 @@ app.get('/api/order/:orderId', async (req, res) => {
             { status: 'Ordered', timestamp: order.orderDate || order.createdAt || new Date() }
         ];
 
+        const normalizedProducts = normalizeOrderProducts(order.products);
+
         return res.json({
             orderId: order.orderId,
             userid: order.userid,
@@ -2737,7 +2911,8 @@ app.get('/api/order/:orderId', async (req, res) => {
             shippingAmount: Number(order.shippingAmount || 0),
             finalAmount: order.finalAmount || 0,
             shippingAddress: order.shippingAddress || {},
-            products: Array.isArray(order.products) ? order.products : [],
+            products: normalizedProducts,
+            deliverySchedule: order.deliverySchedule || null,
             estimatedDelivery: order.estimatedArrival || null,
             estimatedArrival: order.estimatedArrival || null,
             statusHistory: statusHistory,
@@ -2788,7 +2963,7 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
                 totalAmount: Number(order.totalAmount || 0),
                 shippingAmount: Number(order.shippingAmount || 0),
                 shippingAddress: order.shippingAddress || {},
-                products: Array.isArray(order.products) ? order.products : [],
+                products: normalizeOrderProducts(order.products),
                 orderDate: order.orderDate || order.createdAt,
                 orderStatus: order.orderStatus || order.status || 'Ordered',
                 pdfType,
@@ -2825,228 +3000,16 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
     }
 });
 
-// 🔴 PREMIUM ADMIN DASHBOARD ANALYTICS - Safe and Simple Approach
-app.get('/api/admin/dashboard-analytics', async (req, res) => {
-    try {
-        console.log('📊 Dashboard analytics requested');
-        const now = new Date();
-        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-
-        // Initialize response with safe defaults
-        const response = {
-            success: true,
-            metrics: {
-                totalRevenue: 0,
-                newOrders: 0,
-                newCustomers: 0,
-                activeProducts: 0
-            },
-            previousMetrics: {
-                totalRevenue: 0,
-                newOrders: 0,
-                newCustomers: 0
-            },
-            lowStockCount: 0,
-            activeSessions: 0,
-            monthlyData: [],
-            salesByCategory: [],
-            topProducts: []
-        };
-
-        // 1. BASIC COUNTS - Simple and safe
-        try {
-            const [totalOrders, totalUsers, totalProducts] = await Promise.all([
-                Order.countDocuments().catch(() => 0),
-                User.countDocuments().catch(() => 0),
-                Product.countDocuments().catch(() => 0)
-            ]);
-
-            console.log(`📈 Basic counts - Orders: ${totalOrders}, Users: ${totalUsers}, Products: ${totalProducts}`);
-
-            response.metrics.activeProducts = totalProducts;
-        } catch (error) {
-            console.error('❌ Basic counts error:', error.message);
-        }
-
-        // 2. TOTAL REVENUE - Simple calculation
-        try {
-            const orders = await Order.find({
-                orderStatus: { $nin: ['Cancelled', 'cancelled'] }
-            }, 'finalAmount').lean().catch(() => []);
-
-            const totalRevenue = orders.reduce((sum, order) => {
-                const amount = Number(order.finalAmount) || 0;
-                return sum + amount;
-            }, 0);
-
-            response.metrics.totalRevenue = totalRevenue;
-            console.log(`💰 Total revenue calculated: ₹${totalRevenue}`);
-        } catch (error) {
-            console.error('❌ Revenue calculation error:', error.message);
-        }
-
-        // 3. LOW STOCK COUNT - Simple string/number handling
-        try {
-            const products = await Product.find({}, 'stock').lean().catch(() => []);
-
-            let lowStockCount = 0;
-            const lowStockThreshold = 10;
-
-            products.forEach(product => {
-                if (product.stock) {
-                    const stockValue = parseInt(product.stock) || 0;
-                    if (stockValue > 0 && stockValue < lowStockThreshold) {
-                        lowStockCount++;
-                    }
-                }
-            });
-
-            response.lowStockCount = lowStockCount;
-            console.log(`⚠️ Low stock products: ${lowStockCount}`);
-        } catch (error) {
-            console.error('❌ Low stock calculation error:', error.message);
-        }
-
-        // 4. MONTHLY DATA - Simplified
-        try {
-            const monthlyData = [];
-            const baseRevenue = response.metrics.totalRevenue || 100000;
-
-            // Generate last 6 months data
-            for (let i = 5; i >= 0; i--) {
-                const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                const year = monthDate.getFullYear();
-                const month = monthDate.getMonth() + 1;
-
-                // Simple calculation - divide total revenue by months for demo
-                const revenue = Math.floor((baseRevenue / 6) + (Math.random() * baseRevenue * 0.2));
-                const target = Math.floor(revenue * 1.1);
-
-                monthlyData.push({
-                    month: `${year}-${String(month).padStart(2, '0')}`,
-                    revenue,
-                    target
-                });
-            }
-
-            response.monthlyData = monthlyData;
-            console.log(`📈 Generated monthly data for ${monthlyData.length} months`);
-        } catch (error) {
-            console.error('❌ Monthly data error:', error.message);
-        }
-
-        // 5. SALES BY CATEGORY - Simplified
-        try {
-            const products = await Product.find({}, 'maincategory').lean().catch(() => []);
-            const categoryCount = {};
-
-            products.forEach(product => {
-                const category = product.maincategory || 'Uncategorized';
-                categoryCount[category] = (categoryCount[category] || 0) + 1;
-            });
-
-            response.salesByCategory = Object.entries(categoryCount)
-                .map(([category, count]) => ({
-                    _id: category,
-                    value: count
-                }))
-                .sort((a, b) => b.value - a.value)
-                .slice(0, 6);
-
-            console.log(`🥧 Category data: ${response.salesByCategory.length} categories`);
-        } catch (error) {
-            console.error('❌ Category data error:', error.message);
-        }
-
-        // 6. TOP PRODUCTS - Simple approach
-        try {
-            const products = await Product.find({}, 'name pic1 maincategory brand finalprice')
-                .limit(5)
-                .lean()
-                .catch(() => []);
-
-            response.topProducts = products.map((product, index) => ({
-                _id: product._id,
-                name: product.name || 'Unknown Product',
-                pic1: product.pic1,
-                maincategory: product.maincategory || 'Uncategorized',
-                brand: product.brand,
-                finalprice: product.finalprice || 0,
-                totalSold: 50 - (index * 8) // Simulated sales data
-            }));
-
-            console.log(`🏆 Top products: ${response.topProducts.length} items`);
-        } catch (error) {
-            console.error('❌ Top products error:', error.message);
-        }
-
-        // 7. ACTIVE SESSIONS - Approximation
-        response.activeSessions = Math.floor(Math.random() * 25) + 5; // 5-30 random sessions
-
-        console.log('✅ Dashboard analytics response prepared');
-        res.json(response);
-
-    } catch (err) {
-        console.error('❌ Dashboard analytics fatal error:', err.message);
-        console.error('Stack trace:', err.stack);
-
-        // Return safe fallback data
-        res.status(200).json({
-            success: false,
-            message: 'Partial data available',
-            metrics: {
-                totalRevenue: 0,
-                newOrders: 0,
-                newCustomers: 0,
-                activeProducts: 0
-            },
-            previousMetrics: {
-                totalRevenue: 0,
-                newOrders: 0,
-                newCustomers: 0
-            },
-            lowStockCount: 0,
-            activeSessions: 0,
-            monthlyData: [],
-            salesByCategory: [],
-            topProducts: [],
-            error: 'Database query failed, showing fallback data'
-        });
-    }
+// 🔴 ADMIN ANALYTICS/TESING ROUTES (delegate to unified controller payload)
+app.get('/api/admin/dashboard-analytics', (req, res) => {
+    const adminController = require('./controllers/adminController');
+    return adminController.getDashboardAnalytics(req, res);
 });
 
 // 🔴 TEST ENDPOINT FOR DATABASE CONNECTION
-app.get('/api/admin/test-connection', async (req, res) => {
-    try {
-        console.log('📡 Admin dashboard test connection requested');
-
-        // Test database connection
-        const userCount = await User.countDocuments();
-        const productCount = await Product.countDocuments();
-        const orderCount = await Order.countDocuments();
-
-        console.log(`📊 Database counts - Users: ${userCount}, Products: ${productCount}, Orders: ${orderCount}`);
-
-        res.json({
-            success: true,
-            message: 'Database connection successful',
-            counts: {
-                users: userCount,
-                products: productCount,
-                orders: orderCount
-            },
-            timestamp: new Date(),
-            mongoStatus: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
-        });
-    } catch (err) {
-        console.error('❌ Test connection error:', err.message);
-        res.status(500).json({
-            success: false,
-            message: 'Database connection failed',
-            error: err.message
-        });
-    }
+app.get('/api/admin/test-connection', (req, res) => {
+    const adminController = require('./controllers/adminController');
+    return adminController.testConnection(req, res);
 });
 
 // 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
@@ -3118,7 +3081,7 @@ app.get('/api/admin/orders', async (req, res) => {
                 orderStatus: item.orderStatus || 'Order Placed',
                 paymentStatus: item.paymentStatus || 'Pending',
                 finalAmount: Number(item.finalAmount || 0),
-                productCount: Array.isArray(item.products) ? item.products.length : 0,
+                productCount: normalizeOrderProducts(item.products).reduce((sum, product) => sum + Number(product.quantity || 0), 0),
                 updatedAt: item.updatedAt || item.createdAt || new Date()
             }))
         });
@@ -3209,7 +3172,7 @@ app.get('/api/admin/invoices/:orderId/download', async (req, res) => {
             totalAmount: Number(order.totalAmount || 0),
             shippingAmount: Number(order.shippingAmount || 0),
             shippingAddress: order.shippingAddress || {},
-            products: Array.isArray(order.products) ? order.products : [],
+            products: normalizeOrderProducts(order.products),
             orderDate: order.orderDate || order.createdAt,
             orderStatus: order.orderStatus || order.status || 'Ordered',
             pdfType,
@@ -3263,7 +3226,7 @@ app.get('/api/admin/order/:orderId', async (req, res) => {
             shippingAmount: Number(order.shippingAmount || 0),
             finalAmount: Number(order.finalAmount || 0),
             shippingAddress: order.shippingAddress || {},
-            products: Array.isArray(order.products) ? order.products : [],
+            products: normalizeOrderProducts(order.products),
             estimatedArrival: order.estimatedArrival || null,
             orderDate: order.orderDate || order.createdAt,
             createdAt: order.createdAt,
@@ -3278,8 +3241,39 @@ app.get('/api/admin/order/:orderId', async (req, res) => {
 // 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
 const handleOrderStatusUpdate = async (req, res) => {
     try {
-        const { orderId, status, deliverySchedule, adminNote } = req.body;
+        const {
+            orderId,
+            status,
+            deliverySchedule,
+            adminNote,
+            deliveryAgent,
+            riderPhone,
+            locationName,
+            latitude,
+            longitude
+        } = req.body;
         const normalized = normalizeOrderStatus(status);
+        const latNum = Number(latitude);
+        const lngNum = Number(longitude);
+        const hasCoords = Number.isFinite(latNum) && Number.isFinite(lngNum);
+
+        const normalizedDeliverySchedule = deliverySchedule
+            ? {
+                ...deliverySchedule,
+                ...(deliveryAgent ? { deliveryAgent: String(deliveryAgent).trim() } : {}),
+                ...(riderPhone ? { riderPhone: String(riderPhone).trim() } : {}),
+                ...(locationName ? { locationName: String(locationName).trim() } : {}),
+                ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
+            }
+            : ((deliveryAgent || riderPhone || locationName || hasCoords)
+                ? {
+                    scheduledAt: new Date().toISOString(),
+                    ...(deliveryAgent ? { deliveryAgent: String(deliveryAgent).trim() } : {}),
+                    ...(riderPhone ? { riderPhone: String(riderPhone).trim() } : {}),
+                    ...(locationName ? { locationName: String(locationName).trim() } : {}),
+                    ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
+                }
+                : null);
 
         if (!orderId || !normalized) {
             return res.status(400).json({
@@ -3307,8 +3301,8 @@ const handleOrderStatusUpdate = async (req, res) => {
             }
             
             // Create order record from checkout data
-            const estimatedArrival = deliverySchedule?.date
-                ? new Date(deliverySchedule.date)
+            const estimatedArrival = normalizedDeliverySchedule?.date
+                ? new Date(normalizedDeliverySchedule.date)
                 : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Default 7 days
 
             const newOrder = await Order.create({
@@ -3322,15 +3316,20 @@ const handleOrderStatusUpdate = async (req, res) => {
                 totalAmount: checkout.totalAmount,
                 shippingAmount: checkout.shippingAmount,
                 finalAmount: checkout.finalAmount,
-                products: checkout.products || [],
+                products: normalizeOrderProducts(checkout.products),
                 estimatedArrival: estimatedArrival,
-                deliverySchedule: deliverySchedule || null,
+                deliverySchedule: normalizedDeliverySchedule || null,
                 statusHistory: [{
                     status: normalized,
                     timestamp: new Date(),
                     message: `Order status changed to ${normalized}`,
-                    deliverySchedule: deliverySchedule || null,
-                    adminNote: adminNote || null
+                    deliverySchedule: normalizedDeliverySchedule || null,
+                    adminNote: adminNote || null,
+                    deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
+                    riderPhone: normalizedDeliverySchedule?.riderPhone || null,
+                    locationName: normalizedDeliverySchedule?.locationName || null,
+                    latitude: normalizedDeliverySchedule?.latitude || null,
+                    longitude: normalizedDeliverySchedule?.longitude || null
                 }]
             });
             order = newOrder;
@@ -3339,13 +3338,13 @@ const handleOrderStatusUpdate = async (req, res) => {
             order.orderStatus = normalized;
 
             // 🔴 UPDATE DELIVERY SCHEDULE IF PROVIDED
-            if (deliverySchedule) {
-                order.deliverySchedule = deliverySchedule;
+            if (normalizedDeliverySchedule) {
+                order.deliverySchedule = normalizedDeliverySchedule;
                 // Update estimatedArrival if new delivery date provided
-                if (deliverySchedule.date) {
-                    order.estimatedArrival = new Date(deliverySchedule.date);
-                } else if (deliverySchedule.estimatedDelivery) {
-                    order.estimatedArrival = new Date(deliverySchedule.estimatedDelivery);
+                if (normalizedDeliverySchedule.date) {
+                    order.estimatedArrival = new Date(normalizedDeliverySchedule.date);
+                } else if (normalizedDeliverySchedule.estimatedDelivery) {
+                    order.estimatedArrival = new Date(normalizedDeliverySchedule.estimatedDelivery);
                 }
             }
 
@@ -3356,8 +3355,13 @@ const handleOrderStatusUpdate = async (req, res) => {
                     status: normalized,
                     timestamp: new Date(),
                     message: `Order status changed to ${normalized}`,
-                    deliverySchedule: deliverySchedule || null,
-                    adminNote: adminNote || null
+                    deliverySchedule: normalizedDeliverySchedule || null,
+                    adminNote: adminNote || null,
+                    deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
+                    riderPhone: normalizedDeliverySchedule?.riderPhone || null,
+                    locationName: normalizedDeliverySchedule?.locationName || null,
+                    latitude: normalizedDeliverySchedule?.latitude || null,
+                    longitude: normalizedDeliverySchedule?.longitude || null
                 }
             ];
             await order.save();
@@ -3374,10 +3378,18 @@ const handleOrderStatusUpdate = async (req, res) => {
             await order.save();
         }
 
-        // 🔴 SYNC STATUS TO CHECKOUT COLLECTION (prevent data mismatch)
         await Checkout.updateMany(
             { userid: order.userid, totalAmount: order.totalAmount, finalAmount: order.finalAmount },
-            { orderstatus: normalized, updatedAt: new Date() }
+            {
+                orderstatus: normalized,
+                updatedAt: new Date(),
+                ...(normalizedDeliverySchedule
+                    ? {
+                        deliverySchedule: normalizedDeliverySchedule,
+                        estimatedArrival: normalizedDeliverySchedule.date || normalizedDeliverySchedule.estimatedDelivery || order.estimatedArrival || null
+                    }
+                    : {})
+            }
         ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
 
         const payload = {
@@ -3392,7 +3404,12 @@ const handleOrderStatusUpdate = async (req, res) => {
                 time: order.deliveryTime || null,
                 scheduledAt: order.estimatedArrival
             } : null),
-            adminNote: req.body.adminNote || null
+            adminNote: req.body.adminNote || null,
+            deliveryAgent: order.deliverySchedule?.deliveryAgent || null,
+            riderPhone: order.deliverySchedule?.riderPhone || null,
+            locationName: order.deliverySchedule?.locationName || null,
+            latitude: order.deliverySchedule?.latitude || null,
+            longitude: order.deliverySchedule?.longitude || null
         };
 
         // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
@@ -3427,7 +3444,7 @@ const handleOrderStatusUpdate = async (req, res) => {
                             paymentMethod: order.paymentMethod,
                             paymentStatus: order.paymentStatus,
                             shippingAddress: order.shippingAddress,
-                            products: order.products
+                            products: normalizeOrderProducts(order.products)
                         });
                     })
                     .catch(err => {
@@ -3466,7 +3483,7 @@ const handleOrderStatusUpdate = async (req, res) => {
                                 totalAmount: Number(order.totalAmount || 0),
                                 shippingAmount: Number(order.shippingAmount || 0),
                                 shippingAddress: order.shippingAddress || {},
-                                products: Array.isArray(order.products) ? order.products : [],
+                                products: normalizeOrderProducts(order.products),
                                 orderDate: order.orderDate || order.createdAt,
                                 estimatedArrival: order.estimatedArrival,
                                 orderStatus: 'Delivered',
@@ -3494,7 +3511,7 @@ const handleOrderStatusUpdate = async (req, res) => {
                         totalAmount: Number(order.totalAmount || 0),
                         shippingAmount: Number(order.shippingAmount || 0),
                         shippingAddress: order.shippingAddress || {},
-                        products: Array.isArray(order.products) ? order.products : [],
+                        products: normalizeOrderProducts(order.products),
                         orderDate: order.orderDate || order.createdAt,
                         estimatedArrival: order.estimatedArrival,
                         status: normalized,
@@ -3592,7 +3609,7 @@ app.post('/api/admin/confirm-order', async (req, res) => {
                     totalAmount: order.totalAmount,
                     shippingAmount: order.shippingAmount,
                     shippingAddress: order.shippingAddress,
-                    products: order.products || [],
+                    products: normalizeOrderProducts(order.products),
                     orderDate: order.orderDate || new Date(),
                     estimatedArrival: order.estimatedArrival,
                     deliveryPartner: order.deliveryPartner,
@@ -3622,7 +3639,7 @@ app.post('/api/admin/confirm-order', async (req, res) => {
                     totalAmount: order.totalAmount,
                     shippingAmount: order.shippingAmount,
                     shippingAddress: order.shippingAddress,
-                    products: order.products || [],
+                    products: normalizeOrderProducts(order.products),
                     orderDate: order.orderDate || order.createdAt,
                     estimatedArrival: order.estimatedArrival,
                     invoiceBase64: invoiceBase64,
