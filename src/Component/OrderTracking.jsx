@@ -1395,11 +1395,12 @@ export default function OrderTracking() {
       if (!mounted) return
 
       socketRef = io(BASE_URL, {
-        transports: ['polling', 'websocket'],
+        transports: ['websocket', 'polling'],
         reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        reconnectionAttempts: 5,
+        reconnectionDelay: 3000,
+        reconnectionDelayMax: 10000,
+        reconnectionAttempts: 3,
+        forceNew: false,
         auth: { userId }
       })
 

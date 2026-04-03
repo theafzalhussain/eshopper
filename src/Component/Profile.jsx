@@ -91,11 +91,12 @@ export default function Profile() {
         let mounted = true
         const socket = io(BASE_URL, {
             auth: { userId },
-            transports: ['polling', 'websocket'],
+            transports: ['websocket', 'polling'],
             reconnection: true,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            reconnectionAttempts: 5
+            reconnectionDelay: 3000,
+            reconnectionDelayMax: 10000,
+            reconnectionAttempts: 3,
+            forceNew: false
         })
 
         socketRef.current = socket

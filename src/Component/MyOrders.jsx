@@ -644,9 +644,9 @@ export default function MyOrders() {
     if (!userId) return
     let mounted = true
     const sock = io(BASE_URL, {
-      auth: { userId }, query: { userId }, transports: ['polling','websocket'],
-      reconnection:true, reconnectionDelay:1000,
-      reconnectionDelayMax:5000, reconnectionAttempts:5
+      auth: { userId }, query: { userId }, transports: ['websocket', 'polling'],
+      reconnection: true, reconnectionDelay: 3000,
+      reconnectionDelayMax: 10000, reconnectionAttempts: 3, forceNew: false
     })
     socketRef.current = sock
     sock.on('connect',    () => { if (mounted) setLiveOn(true)  })

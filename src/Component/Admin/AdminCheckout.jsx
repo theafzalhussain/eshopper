@@ -39,7 +39,15 @@ export default function AdminCheckout() {
     // 🔄 Socket.io setup for real-time updates
     useEffect(() => {
         const userId = localStorage.getItem('userid');
-        const newSocket = io(BASE_URL, { auth: { userId } });
+        const newSocket = io(BASE_URL, {
+            auth: { userId },
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 3000,
+            reconnectionDelayMax: 10000,
+            reconnectionAttempts: 3,
+            forceNew: false
+        });
         setSocket(newSocket);
 
         newSocket.on('statusUpdate', (payload) => {
