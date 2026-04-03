@@ -650,18 +650,50 @@ const buildInvoiceHtml = ({
 };
 
 const generateInvoicePdfBuffer = async (invoiceData) => {
-    const html = buildInvoiceHtml(invoiceData || {});
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
     try {
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 45000 });
-        const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' } });
-        return Buffer.from(pdf);
-    } finally {
-        await browser.close();
+        const html = buildInvoiceHtml(invoiceData || {});
+        
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--single-process' // Render free tier memory constraint
+            ]
+        });
+        
+        try {
+            const page = await browser.newPage();
+            // Set smaller viewport to reduce memory
+            await page.setViewport({ width: 800, height: 1000 });
+            
+            await page.setContent(html, { 
+                waitUntil: 'networkidle0', 
+                timeout: 30000 // Reduced from 45s
+            });
+            
+            const pdf = await page.pdf({ 
+                format: 'A4', 
+                printBackground: true, 
+                margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' }
+            });
+            
+            return Buffer.from(pdf);
+        } catch (pageErr) {
+            console.error('❌ Puppeteer page error:', pageErr.message);
+            throw new Error(`PDF page generation failed: ${pageErr.message}`);
+        } finally {
+            try {
+                await browser.close();
+            } catch (closeErr) {
+                console.warn('⚠️ Browser close warning:', closeErr.message);
+            }
+        }
+    } catch (err) {
+        console.error('❌ Invoice PDF generation error:', err.message);
+        throw err;
     }
 };
 
@@ -2942,16 +2974,14 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
         const order = await Order.findOne({ orderId, userid: userId }).lean();
         if (!order) return res.status(404).json({ message: 'Order not found' });
 
-        // Generate invoice with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
-
         try {
             // Map status -> PDF variant
             const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
             const isDelivered = orderStatus === 'delivered';
             const isConfirmed = orderStatus === 'confirmed' || orderStatus === 'ordered';
             const pdfType = isDelivered ? 'final' : (isConfirmed ? 'confirmation' : 'receipt');
+            
+            console.log(`📄 Generating ${pdfType} invoice for order ${orderId}...`);
             
             const pdfBuffer = await generateInvoicePdfBuffer({
                 orderId: order.orderId,
@@ -2967,18 +2997,18 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
                 orderDate: order.orderDate || order.createdAt,
                 orderStatus: order.orderStatus || order.status || 'Ordered',
                 pdfType,
-                isDelivered: isDelivered  // Auto-detect: Receipt or Tax Invoice
+                isDelivered: isDelivered
             });
 
-            clearTimeout(timeoutId);
-
             if (!pdfBuffer || pdfBuffer.length < 500) {
-                return res.status(500).json({ message: 'Invoice generation failed - empty PDF' });
+                console.error(`❌ Invoice generation failed for ${orderId} - empty PDF (${pdfBuffer?.length || 0} bytes)`);
+                return res.status(500).json({ message: 'Invoice generation failed - empty result. Please try again.' });
             }
 
             const fileName = isDelivered
                 ? `TaxInvoice-${order.orderId}.pdf`
                 : (isConfirmed ? `Confirmation-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`);
+            
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
             res.setHeader('Content-Length', String(pdfBuffer.length));
@@ -2986,17 +3016,24 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
             
+            console.log(`✅ Invoice generated successfully: ${fileName} (${pdfBuffer.length} bytes)`);
             return res.send(pdfBuffer);
         } catch (pdfErr) {
-            clearTimeout(timeoutId);
-            console.error(`❌ PDF generation failed for order ${orderId}:`, pdfErr.message);
+            console.error(`❌ PDF generation error for order ${orderId}:`, pdfErr.message, pdfErr.code);
             if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
-            return res.status(500).json({ message: 'Failed to generate invoice - please try again' });
+            
+            const errorMsg = pdfErr.message.includes('ENOSPC') 
+                ? 'Server disk/memory full - try again later'
+                : pdfErr.message.includes('timeout')
+                ? 'Invoice generation took too long - please retry'
+                : 'Failed to generate invoice PDF';
+            
+            return res.status(503).json({ message: errorMsg });
         }
     } catch (e) {
         console.error('❌ Invoice endpoint error:', e.message, e.stack);
         if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ message: 'Invoice generation error' });
+        return res.status(500).json({ message: 'Invoice service error - please contact support' });
     }
 });
 
