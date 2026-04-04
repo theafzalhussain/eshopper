@@ -46,6 +46,7 @@ export default function Cart() {
     const [deliveryPincode, setDeliveryPincode] = useState('');
     const [deliveryEstimateMsg, setDeliveryEstimateMsg] = useState('');
     const [deliveryEstimateError, setDeliveryEstimateError] = useState('');
+    const [deliveryLoading, setDeliveryLoading] = useState(false);
     const userId = localStorage.getItem("userid");
     const [userMissing, setUserMissing] = useState(false);
     const totalDiscount = Number(baseDiscount) + Number(couponDiscount);
@@ -202,6 +203,7 @@ export default function Cart() {
             return;
         }
         try {
+            setDeliveryLoading(true);
             setDeliveryEstimateError('');
             const res = await axios.post('/api/cart/delivery-estimate', {
                 userId,
@@ -209,11 +211,14 @@ export default function Cart() {
             });
             const label = res?.data?.estimate?.label || res?.data?.message || '';
             setDeliveryEstimateMsg(label);
+            setDeliveryPincode(''); // Clear input field after successful check
             if (label) toast.success(label);
         } catch (err) {
             const msg = err?.response?.data?.message || 'Could not fetch delivery estimate.';
             setDeliveryEstimateError(msg);
             setDeliveryEstimateMsg('');
+        } finally {
+            setDeliveryLoading(false);
         }
     }
 
@@ -636,16 +641,25 @@ export default function Cart() {
                                             placeholder="Enter pincode"
                                             maxLength={6}
                                             value={deliveryPincode}
+                                            disabled={deliveryLoading}
                                             onChange={(e) => {
                                                 const onlyDigits = e.target.value.replace(/\D/g, '').slice(0, 6);
                                                 setDeliveryPincode(onlyDigits);
                                                 setDeliveryEstimateError('');
                                             }}
                                         />
-                                        <button type="button" className="btn premium-delivery-btn" onClick={applyDeliveryEstimate}>Check</button>
+                                        <button 
+                                            type="button" 
+                                            className="btn premium-delivery-btn" 
+                                            onClick={applyDeliveryEstimate}
+                                            disabled={deliveryLoading || !deliveryPincode || deliveryPincode.length < 6}
+                                            style={{ opacity: (deliveryLoading || !deliveryPincode || deliveryPincode.length < 6) ? 0.6 : 1 }}
+                                        >
+                                            {deliveryLoading ? 'Checking...' : 'Check'}
+                                        </button>
                                     </div>
-                                    {deliveryEstimateMsg && <div className="premium-delivery-result mt-2">{deliveryEstimateMsg}</div>}
-                                    {deliveryEstimateError && <div className="small text-danger mt-2">{deliveryEstimateError}</div>}
+                                    {deliveryEstimateMsg && <div className="premium-delivery-result mt-2">✓ {deliveryEstimateMsg}</div>}
+                                    {deliveryEstimateError && <div className="small text-danger mt-2">✗ {deliveryEstimateError}</div>}
                                 </div>
                                 {/* Coupon Input */}
                                 <div className="input-group mb-3 premium-coupon-group">
