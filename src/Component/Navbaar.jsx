@@ -491,7 +491,8 @@ export default function Navbaar() {
 
             {/* --- CUSTOM CSS FOR LUXURY & RESPONSIVENESS --- */}
             <style dangerouslySetInnerHTML={{ __html: `
-                .header-main { position: relative; z-index: 1050; width: 100%; background: #fff; }
+                .header-main { position: relative; z-index: 1050; width: 100%; background: #fff; overflow-x: clip; }
+                body { overflow-x: hidden; }
                 .top-premium-ribbon { 
                     height: 40px; 
                     background: linear-gradient(90deg, #0a0a0a 0%, #1a1025 40%, #301035 70%, #000 100%);
@@ -787,16 +788,18 @@ export default function Navbaar() {
                     }
                     .mobile-profile-menu {
                         position: fixed !important;
-                        left: 12px;
-                        right: 12px;
-                        top: 78px;
-                        width: auto !important;
+                        left: 50%;
+                        right: auto;
+                        transform: translateX(-50%);
+                        top: 74px;
+                        width: calc(100vw - 24px) !important;
                         min-width: 0 !important;
                         max-width: none !important;
-                        max-height: calc(100vh - 96px);
+                        max-height: calc(100vh - 92px);
                         overflow-y: auto;
                         margin-top: 0 !important;
                         z-index: 10020;
+                        -webkit-overflow-scrolling: touch;
                     }
                 }
                 
@@ -812,10 +815,9 @@ export default function Navbaar() {
                         max-width: none;
                     }
                     .mobile-profile-menu {
-                        left: 8px;
-                        right: 8px;
-                        top: 72px;
-                        max-height: calc(100vh - 88px);
+                        top: 68px;
+                        width: calc(100vw - 16px) !important;
+                        max-height: calc(100vh - 84px);
                     }
                 }
 
