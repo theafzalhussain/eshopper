@@ -10,8 +10,10 @@ export default function Navbaar() {
     const navigate = useNavigate()
     const dispatch = useDispatch()
     const location = useLocation()
+    const profileDropdownRef = useRef(null)
     const [isScrolled, setIsScrolled] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
     const [profilePic, setProfilePic] = useState(localStorage.getItem('pic') || '')
     const [cartAnimation, setCartAnimation] = useState(false)
     const role = localStorage.getItem("role")
@@ -47,7 +49,23 @@ export default function Navbaar() {
     // Close mobile menu on route change
     useEffect(() => {
         setIsMobileMenuOpen(false)
+        setIsProfileMenuOpen(false)
     }, [location.pathname])
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+                setIsProfileMenuOpen(false)
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        document.addEventListener('touchstart', handleClickOutside)
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+            document.removeEventListener('touchstart', handleClickOutside)
+        }
+    }, [])
 
     // Prevent body scroll when menu is open
     useEffect(() => {
@@ -211,8 +229,13 @@ export default function Navbaar() {
                                     </AnimatePresence>
                                 </Link>
                                 {localStorage.getItem("login") ? (
-                                    <div className="dropdown d-inline premium-dropdown-wrapper">
-                                        <button className="btn-user premium-user-btn" data-toggle="dropdown">
+                                    <div className="premium-dropdown-wrapper" ref={profileDropdownRef}>
+                                        <button
+                                            type="button"
+                                            className="btn-user premium-user-btn"
+                                            onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                                            aria-expanded={isProfileMenuOpen}
+                                        >
                                             <div className="user-avatar">
                                                 {profilePic ? (
                                                     <img src={profilePic} alt={name || 'User'} className="nav-user-img" />
@@ -225,45 +248,56 @@ export default function Navbaar() {
                                                 <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                                             </svg>
                                         </button>
-                                        <div className="dropdown-menu dropdown-menu-right premium-dropdown-menu">
-                                            <div className="dropdown-header-custom">
-                                                <div className="user-info-header">
-                                                    <div className="user-avatar-large">
-                                                        {profilePic ? (
-                                                            <img src={profilePic} alt={name || 'User'} className="nav-user-img" />
-                                                        ) : (
-                                                            <User size={24} className="text-info" />
-                                                        )}
+
+                                        <AnimatePresence>
+                                            {isProfileMenuOpen && (
+                                                <motion.div
+                                                    className="dropdown-menu dropdown-menu-right premium-dropdown-menu show"
+                                                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                                                    transition={{ duration: 0.18 }}
+                                                >
+                                                    <div className="dropdown-header-custom">
+                                                        <div className="user-info-header">
+                                                            <div className="user-avatar-large">
+                                                                {profilePic ? (
+                                                                    <img src={profilePic} alt={name || 'User'} className="nav-user-img" />
+                                                                ) : (
+                                                                    <User size={24} className="text-info" />
+                                                                )}
+                                                            </div>
+                                                            <div className="user-details">
+                                                                <h6 className="mb-0">{name}</h6>
+                                                                <small className="text-muted">Premium Member</small>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="user-details">
-                                                        <h6 className="mb-0">{name}</h6>
-                                                        <small className="text-muted">Premium Member</small>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="dropdown-divider"></div>
-                                            <Link className="dropdown-item premium-dropdown-item" to="/profile">
-                                                <i className="icon-vcard mr-2"></i> 
-                                                <span>My Profile</span>
-                                            </Link>
-                                            <Link className="dropdown-item premium-dropdown-item" to="/my-orders">
-                                                <ShoppingCart size={14} className="mr-2" style={{display:'inline'}} /> 
-                                                <span>My Orders</span>
-                                            </Link>
-                                            <Link className="dropdown-item premium-dropdown-item" to="/wishlist">
-                                                <i className="icon-heart mr-2"></i>
-                                                <span>Wishlist</span>
-                                            </Link>
-                                            <Link className="dropdown-item premium-dropdown-item" to="/update-profile">
-                                                <i className="icon-settings mr-2"></i>
-                                                <span>Settings</span>
-                                            </Link>
-                                            <div className="dropdown-divider"></div>
-                                            <button className="dropdown-item premium-dropdown-item logout-item" onClick={logout}>
-                                                <i className="icon-sign-out mr-2"></i>
-                                                <span>Logout</span>
-                                            </button>
-                                        </div>
+                                                    <div className="dropdown-divider"></div>
+                                                    <Link className="dropdown-item premium-dropdown-item" to="/profile" onClick={() => setIsProfileMenuOpen(false)}>
+                                                        <i className="icon-vcard mr-2"></i>
+                                                        <span>My Profile</span>
+                                                    </Link>
+                                                    <Link className="dropdown-item premium-dropdown-item" to="/my-orders" onClick={() => setIsProfileMenuOpen(false)}>
+                                                        <ShoppingCart size={14} className="mr-2" style={{display:'inline'}} />
+                                                        <span>My Orders</span>
+                                                    </Link>
+                                                    <Link className="dropdown-item premium-dropdown-item" to="/wishlist" onClick={() => setIsProfileMenuOpen(false)}>
+                                                        <i className="icon-heart mr-2"></i>
+                                                        <span>Wishlist</span>
+                                                    </Link>
+                                                    <Link className="dropdown-item premium-dropdown-item" to="/update-profile" onClick={() => setIsProfileMenuOpen(false)}>
+                                                        <i className="icon-settings mr-2"></i>
+                                                        <span>Settings</span>
+                                                    </Link>
+                                                    <div className="dropdown-divider"></div>
+                                                    <button className="dropdown-item premium-dropdown-item logout-item" onClick={logout}>
+                                                        <i className="icon-sign-out mr-2"></i>
+                                                        <span>Logout</span>
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                 ) : <Link to="/login" className="btn btn-dark rounded-pill px-4 btn-sm font-weight-bold shadow-sm">LOGIN</Link>}
                             </div>
@@ -271,6 +305,75 @@ export default function Navbaar() {
 
                         {/* --- MOBILE MENU TOGGLE (Visible on Mobile Only) --- */}
                         <div className="mobile-menu-toggle d-lg-none d-flex align-items-center">
+                            {localStorage.getItem("login") && (
+                                <div className="premium-dropdown-wrapper mobile-profile-wrapper mr-3" ref={profileDropdownRef}>
+                                    <button
+                                        type="button"
+                                        className="btn-user premium-user-btn mobile-profile-btn"
+                                        onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                                        aria-expanded={isProfileMenuOpen}
+                                    >
+                                        <div className="user-avatar mobile-avatar">
+                                            {profilePic ? (
+                                                <img src={profilePic} alt={name || 'User'} className="nav-user-img" />
+                                            ) : (
+                                                <User size={16} className="text-info" />
+                                            )}
+                                        </div>
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {isProfileMenuOpen && (
+                                            <motion.div
+                                                className="dropdown-menu premium-dropdown-menu mobile-profile-menu show"
+                                                initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                                                transition={{ duration: 0.18 }}
+                                            >
+                                                <div className="dropdown-header-custom">
+                                                    <div className="user-info-header">
+                                                        <div className="user-avatar-large">
+                                                            {profilePic ? (
+                                                                <img src={profilePic} alt={name || 'User'} className="nav-user-img" />
+                                                            ) : (
+                                                                <User size={24} className="text-info" />
+                                                            )}
+                                                        </div>
+                                                        <div className="user-details">
+                                                            <h6 className="mb-0">{name}</h6>
+                                                            <small className="text-muted">Premium Member</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="dropdown-divider"></div>
+                                                <Link className="dropdown-item premium-dropdown-item" to="/profile" onClick={() => setIsProfileMenuOpen(false)}>
+                                                    <i className="icon-vcard mr-2"></i>
+                                                    <span>My Profile</span>
+                                                </Link>
+                                                <Link className="dropdown-item premium-dropdown-item" to="/my-orders" onClick={() => setIsProfileMenuOpen(false)}>
+                                                    <ShoppingCart size={14} className="mr-2" style={{display:'inline'}} />
+                                                    <span>My Orders</span>
+                                                </Link>
+                                                <Link className="dropdown-item premium-dropdown-item" to="/wishlist" onClick={() => setIsProfileMenuOpen(false)}>
+                                                    <i className="icon-heart mr-2"></i>
+                                                    <span>Wishlist</span>
+                                                </Link>
+                                                <Link className="dropdown-item premium-dropdown-item" to="/update-profile" onClick={() => setIsProfileMenuOpen(false)}>
+                                                    <i className="icon-settings mr-2"></i>
+                                                    <span>Settings</span>
+                                                </Link>
+                                                <div className="dropdown-divider"></div>
+                                                <button className="dropdown-item premium-dropdown-item logout-item" onClick={logout}>
+                                                    <i className="icon-sign-out mr-2"></i>
+                                                    <span>Logout</span>
+                                                </button>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            )}
+
                             <Link to="/cart" className="text-dark mr-3 position-relative" title="Shopping Cart">
                                 <motion.div
                                     whileHover={{ scale: 1.1 }}
@@ -448,6 +551,7 @@ export default function Navbaar() {
                 
                 /* === ULTRA PREMIUM DROPDOWN === */
                 .premium-dropdown-wrapper { position: relative; }
+                .mobile-profile-wrapper { position: relative; z-index: 10001; }
                 .premium-user-btn {
                     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
                     border: 1px solid #e9ecef;
@@ -501,11 +605,13 @@ export default function Navbaar() {
                     box-shadow: 0 20px 60px rgba(0,0,0,0.12) !important;
                     padding: 0 !important;
                     min-width: 280px;
+                    max-width: min(360px, calc(100vw - 32px));
                     margin-top: 12px !important;
                     background: rgba(255,255,255,0.98);
                     backdrop-filter: blur(20px);
                     animation: slideDownFade 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
                     overflow: hidden;
+                    z-index: 10002;
                 }
                 @keyframes slideDownFade {
                     from {
@@ -666,6 +772,22 @@ export default function Navbaar() {
                     .logo-tagline { font-size: 6px; }
                     .ribbon-text { font-size: 9px !important; }
                     .top-premium-ribbon { height: 35px; }
+                    .mobile-profile-btn {
+                        padding: 6px 10px;
+                        min-width: 40px;
+                        border-radius: 50px;
+                    }
+                    .mobile-avatar {
+                        width: 30px;
+                        height: 30px;
+                    }
+                    .mobile-profile-menu {
+                        position: absolute;
+                        right: 0;
+                        top: 52px;
+                        min-width: min(320px, calc(100vw - 24px));
+                        margin-top: 0 !important;
+                    }
                 }
                 
                 @media (max-width: 575px) {
@@ -675,6 +797,9 @@ export default function Navbaar() {
                     .logo-e { width: 28px; height: 28px; font-size: 16px; }
                     .logo-tagline { font-size: 5px; }
                     .navbar { padding: 8px 0 !important; }
+                    .premium-dropdown-menu {
+                        min-width: min(300px, calc(100vw - 20px));
+                    }
                 }
 
                 @media (max-width: 375px) {
