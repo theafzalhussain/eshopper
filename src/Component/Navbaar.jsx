@@ -863,23 +863,35 @@ export default function Navbaar() {
                         height: 30px;
                     }
                     .mobile-profile-wrapper {
-                        position: relative;
+                        position: static;
                         flex-shrink: 0;
                     }
                     .mobile-profile-menu {
                         position: fixed !important;
-                        left: max(8px, env(safe-area-inset-left));
-                        right: max(8px, env(safe-area-inset-right));
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
                         transform: none;
-                        top: calc(64px + env(safe-area-inset-top));
-                        width: auto !important;
+                        top: calc(56px + env(safe-area-inset-top));
+                        width: 100vw !important;
                         min-width: 0 !important;
-                        max-width: none !important;
-                        max-height: calc(100dvh - 84px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                        max-width: 100vw !important;
+                        height: calc(100dvh - 56px - env(safe-area-inset-top));
+                        max-height: none;
                         overflow-y: auto;
                         margin-top: 0 !important;
                         z-index: 10020;
                         -webkit-overflow-scrolling: touch;
+                        border-radius: 16px 16px 0 0 !important;
+                        background: rgba(255,255,255,0.995);
+                        box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.18) !important;
+                        padding-bottom: calc(16px + env(safe-area-inset-bottom));
+                    }
+                    .mobile-profile-menu .dropdown-header-custom {
+                        position: sticky;
+                        top: 0;
+                        z-index: 1;
+                        backdrop-filter: blur(10px);
                     }
                 }
 
@@ -911,11 +923,9 @@ export default function Navbaar() {
                         max-width: none;
                     }
                     .mobile-profile-menu {
-                        top: calc(60px + env(safe-area-inset-top));
-                        left: max(6px, env(safe-area-inset-left));
-                        right: max(6px, env(safe-area-inset-right));
-                        width: auto !important;
-                        max-height: calc(100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                        top: calc(52px + env(safe-area-inset-top));
+                        height: calc(100dvh - 52px - env(safe-area-inset-top));
+                        border-radius: 14px 14px 0 0 !important;
                     }
                 }
 
