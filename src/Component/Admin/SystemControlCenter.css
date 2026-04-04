@@ -626,17 +626,59 @@
   }
 
   .scc-product-item {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 0.75rem;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .scc-product-img {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .scc-product-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .scc-product-name {
+    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .scc-product-category {
+    font-size: 0.65rem;
+  }
+
+  .scc-product-sales {
+    flex-shrink: 0;
+    min-width: 50px;
+  }
+
+  .scc-product-count {
+    font-size: 0.9rem;
+  }
+
+  .scc-product-label {
+    font-size: 0.65rem;
   }
 
   .scc-product-pricing {
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    min-width: 70px;
+  }
+
+  .scc-product-pricing > div:first-child {
+    font-size: 0.75rem;
+  }
+
+  .scc-product-pricing > div:last-child {
+    font-size: 0.6rem;
   }
 }
 
@@ -687,6 +729,73 @@
 
   .scc-charts-container {
     padding: 1.25rem;
+  }
+
+  /* Top 5 Best Sellers - Tablet Responsive */
+  .scc-product-item {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .scc-product-img {
+    width: 45px;
+    height: 45px;
+    flex-shrink: 0;
+  }
+
+  .scc-product-pricing {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    min-width: 80px;
+  }
+}
+
+/* Extra Small Mobile - Highly Optimized */
+@media (max-width: 500px) {
+  .scc-product-item {
+    padding: 0.5rem !important;
+    gap: 0.4rem !important;
+  }
+
+  .scc-product-img {
+    width: 35px !important;
+    height: 35px !important;
+  }
+
+  .scc-product-name {
+    font-size: 0.75rem !important;
+  }
+
+  .scc-product-category {
+    font-size: 0.6rem !important;
+  }
+
+  .scc-product-count {
+    font-size: 0.85rem !important;
+  }
+
+  .scc-product-sales {
+    min-width: 45px !important;
+  }
+
+  .scc-product-pricing {
+    min-width: 55px !important;
+  }
+
+  .scc-product-pricing > div:first-child {
+    font-size: 0.7rem !important;
+  }
+
+  .scc-product-pricing > div:last-child {
+    font-size: 0.55rem !important;
+  }
+
+  .scc-top-products {
+    padding: 1rem !important;
   }
 }
 
@@ -748,6 +857,67 @@
 
   .scc-chart-period {
     flex-wrap: wrap;
+  }
+
+  /* Top 5 Best Sellers - Mobile Responsive */
+  .scc-top-products {
+    padding: 1rem;
+  }
+
+  .scc-product-item {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .scc-product-img {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .scc-product-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .scc-product-name {
+    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .scc-product-category {
+    font-size: 0.65rem;
+  }
+
+  .scc-product-sales {
+    flex-shrink: 0;
+    min-width: 50px;
+  }
+
+  .scc-product-count {
+    font-size: 0.9rem;
+  }
+
+  .scc-product-label {
+    font-size: 0.65rem;
+  }
+
+  .scc-product-pricing {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    min-width: 70px;
+  }
+
+  .scc-product-pricing > div:first-child {
+    font-size: 0.75rem;
+  }
+
+  .scc-product-pricing > div:last-child {
+    font-size: 0.6rem;
   }
 }
 
