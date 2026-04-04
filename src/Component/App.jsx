@@ -7,6 +7,8 @@ import ChatBot from './ChatBot'
 import Home from './Home'
 import About from './About'
 import Contact from './Contact'
+import Faq from './Faq'
+import ReturnPolicy from './ReturnPolicy'
 import Shop from './Shop'
 import Cart from './Cart'
 import Wishlist from './Wishlist'
@@ -69,6 +71,8 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/faq" element={<Faq />} />
+          <Route path="/return-policy" element={<ReturnPolicy />} />
           <Route path="/shop/:maincat" element={<Shop />} />
           <Route path="/single-product/:id" element={<SingleProductPage />} />
           <Route path="/login" element={<Login />} />

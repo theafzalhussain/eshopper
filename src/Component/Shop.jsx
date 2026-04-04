@@ -7,6 +7,7 @@ import { getMaincategory } from '../Store/ActionCreaters/MaincategoryActionCreat
 import { getSubcategory } from '../Store/ActionCreaters/SubcategoryActionCreators';
 import { getBrand } from '../Store/ActionCreaters/BrandActionCreators';
 import { getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
+import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
 import { motion, AnimatePresence } from 'framer-motion';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 
@@ -85,6 +86,7 @@ export default function Shop() {
     var subcategory = useSelector((state) => state.SubcategoryStateData)
     var brand = useSelector((state) => state.BrandStateData)
     var cart = useSelector((state) => state.CartStateData)
+    var wishlist = useSelector((state) => state.WishlistStateData)
 
     // --- LOAD DATA ---
     useEffect(() => {
@@ -93,6 +95,7 @@ export default function Shop() {
         dispatch(getSubcategory())
         dispatch(getBrand())
         dispatch(getCart())
+        dispatch(getWishlist())
     }, [dispatch])
 
     useEffect(() => { setmc(maincat) }, [maincat])
@@ -144,6 +147,39 @@ export default function Shop() {
             
             toast.success(`✓ Added to bag! (${currentCount} item)`);
         }
+    }
+
+    const isInWishlist = (productId) => {
+        const userId = localStorage.getItem('userid')
+        return (wishlist || []).some((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId))
+    }
+
+    function addToWishlistFromCard(p) {
+        if (!localStorage.getItem('login')) {
+            navigate('/login')
+            return
+        }
+
+        const userId = localStorage.getItem('userid')
+        const productId = p.id || p._id
+        const existing = (wishlist || []).find((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId))
+
+        if (existing) {
+            dispatch(deleteWishlist({ id: existing.id || existing._id }))
+            toast.info('Removed from wishlist')
+            return
+        }
+
+        dispatch(addWishlist({
+            userid: userId,
+            productid: productId,
+            name: p.name,
+            color: p.color,
+            size: p.size,
+            price: Number(p.finalprice || 0),
+            pic: p.pic1,
+        }))
+        toast.success('Added to wishlist')
     }
 
     // --- SMART FILTERING LOGIC (For Fast Loading) ---
@@ -222,7 +258,7 @@ export default function Shop() {
                                 <h5 className="font-weight-bold mb-4">Search & Filter</h5>
                                 
                                 {/* Search Bar */}
-                                <div className="input-group mb-4 shadow-sm rounded-pill overflow-hidden border">
+                                <div className="input-group mb-4 shop-search-group rounded-pill overflow-hidden border">
                                     <div className="input-group-prepend">
                                         <span className="input-group-text bg-white border-0"><i className="icon-search"></i></span>
                                     </div>
@@ -232,7 +268,7 @@ export default function Shop() {
                                 {/* Main Category */}
                                 <div className="mb-4">
                                     <p className="small font-weight-bold text-uppercase text-info mb-2">Category</p>
-                                    <select className="form-control custom-select-sm" value={mc} onChange={(e) => setmc(e.target.value)}>
+                                    <select className="form-control custom-select-sm shop-filter-select" value={mc} onChange={(e) => setmc(e.target.value)}>
                                         <option value="All">All Categories</option>
                                         {maincategory.map((item, i) => <option key={i} value={item.name}>{item.name}</option>)}
                                     </select>
@@ -253,7 +289,7 @@ export default function Shop() {
                                 {/* Brands */}
                                 <div className="mb-4">
                                     <p className="small font-weight-bold text-uppercase text-info mb-2">Brands</p>
-                                    <select className="form-control" onChange={(e) => setbr(e.target.value)}>
+                                    <select className="form-control shop-filter-select" onChange={(e) => setbr(e.target.value)}>
                                         <option value="All">All Brands</option>
                                         {brand.map((item, i) => <option key={i} value={item.name}>{item.name}</option>)}
                                     </select>
@@ -304,6 +340,21 @@ export default function Shop() {
                                                 <div className="premium-badge">{item.discount}% OFF</div>
                                             )}
 
+                                            <button
+                                                type="button"
+                                                className={`wishlist-heart-btn ${isInWishlist(item.id) ? 'active' : ''}`}
+                                                onClick={(e) => {
+                                                    e.preventDefault()
+                                                    addToWishlistFromCard(item)
+                                                }}
+                                                title={isInWishlist(item.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                                                aria-label={isInWishlist(item.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" role="presentation">
+                                                    <path d="M12 21s-6.7-4.4-9.3-7.9C.7 10.2 1.5 6.9 4.4 5.3c2.3-1.2 4.6-.4 6 1.4 1.4-1.8 3.7-2.6 6-1.4 2.9 1.6 3.7 4.9 1.7 7.8C18.7 16.6 12 21 12 21z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                            </button>
+
                                             <Link to={`/single-product/${item.id}`} className="img-wrap">
                                                 <motion.img 
                                                     src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 500, crop: 'fill' })} 
@@ -322,7 +373,7 @@ export default function Shop() {
                                                     transition={{ duration: 0.3 }}
                                                 >
                                                     <motion.span 
-                                                        className="btn btn-white btn-sm px-4 rounded-pill"
+                                                        className="btn btn-white btn-sm px-4 rounded-pill view-detail-pill"
                                                         whileHover={{ scale: 1.05 }}
                                                         whileTap={{ scale: 0.95 }}
                                                     >
@@ -354,58 +405,6 @@ export default function Shop() {
                                                 <p className="product-category-shop mb-2">
                                                     {item.maincategory} • {item.subcategory}
                                                 </p>
-                                                
-                                                {/* Premium Features Badges */}
-                                                <div className="premium-features-badges mb-2 d-flex flex-wrap gap-1">
-                                                    {item.discount > 0 && (
-                                                        <span className="feature-chip save-badge" style={{
-                                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                                            color: 'white',
-                                                            fontSize: '11px',
-                                                            fontWeight: '600',
-                                                            padding: '4px 8px',
-                                                            borderRadius: '4px'
-                                                        }}>
-                                                            Save {item.discount}%
-                                                        </span>
-                                                    )}
-                                                    {item.finalprice >= 999 && (
-                                                        <span className="feature-chip shipping-badge" style={{
-                                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                                            color: 'white',
-                                                            fontSize: '11px',
-                                                            fontWeight: '600',
-                                                            padding: '4px 8px',
-                                                            borderRadius: '4px'
-                                                        }}>
-                                                            Free Shipping
-                                                        </span>
-                                                    )}
-                                                    <span className="feature-chip fabric-badge" style={{
-                                                        background: '#f8f9fa',
-                                                        color: '#333',
-                                                        fontSize: '11px',
-                                                        fontWeight: '600',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        border: '1px solid #e0e0e0'
-                                                    }}>
-                                                        Premium Fabric
-                                                    </span>
-                                                    {item.stock === "In Stock" && (
-                                                        <span className="feature-chip stock-badge" style={{
-                                                            background: '#d4edda',
-                                                            color: '#155724',
-                                                            fontSize: '11px',
-                                                            fontWeight: '600',
-                                                            padding: '4px 8px',
-                                                            borderRadius: '4px',
-                                                            border: '1px solid #c3e6cb'
-                                                        }}>
-                                                            In Stock
-                                                        </span>
-                                                    )}
-                                                </div>
 
                                                 {normalizeColors(item.color).length > 0 && (
                                                     <div className="color-options-shop mb-2">
@@ -429,7 +428,10 @@ export default function Shop() {
                                                 
                                                 {/* Size Selection - Smaller */}
                                                 <div className="product-size-selector-shop mb-2">
-                                                    <label className="size-label-shop">Size</label>
+                                                    <div className="size-header-shop">
+                                                        <label className="size-label-shop">Size</label>
+                                                        {selectedSizes[item.id] && <span className="size-selected-pill">{selectedSizes[item.id]}</span>}
+                                                    </div>
                                                     <div className="size-options-shop">
                                                         {AVAILABLE_SIZES.map((s) => (
                                                             <motion.button
@@ -448,10 +450,10 @@ export default function Shop() {
                                                 {/* Price and Cart */}
                                                 <div className="d-flex align-items-center justify-content-between mb-2">
                                                     <div className="d-flex align-items-center flex-wrap">
-                                                        <span className="h5 font-weight-bold text-dark mb-0" style={{ fontSize: '18px' }}>₹{item.finalprice}</span>
+                                                        <span className="price-current-shop mb-0">₹{item.finalprice}</span>
                                                         {item.baseprice > item.finalprice && (
                                                             <>
-                                                                <del className="text-muted small ml-2">₹{item.baseprice}</del>
+                                                                <del className="price-original-shop ml-2">₹{item.baseprice}</del>
                                                                 <span className="ml-2 px-2 py-1" style={{
                                                                     background: '#ffebee',
                                                                     color: '#c62828',
@@ -558,8 +560,17 @@ export default function Shop() {
                 
                 .card-overlay {
                     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                    background: rgba(0,0,0,0.15); display: flex; align-items: center;
+                    background: linear-gradient(145deg, rgba(10,25,47,0.18), rgba(255,255,255,0.06)); display: flex; align-items: center;
                     justify-content: center; opacity: 0; transition: 0.3s;
+                    backdrop-filter: blur(5px);
+                }
+
+                .view-detail-pill {
+                    background: rgba(255,255,255,0.3) !important;
+                    border: 1px solid rgba(255,255,255,0.58) !important;
+                    color: #ffffff !important;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 8px 18px rgba(0,0,0,0.18);
                 }
                 
                 .premium-badge {
@@ -577,6 +588,67 @@ export default function Shop() {
                 
                 .gap-2 { gap: 10px; }
                 .btn-white { background: white; color: black; border: none; font-weight: bold; }
+
+                .shop-filter-panel {
+                    border: 1px solid #e8edf2 !important;
+                    box-shadow: 0 8px 26px rgba(15,23,42,0.05) !important;
+                }
+                .shop-search-group {
+                    border: 1px solid #e2e8f0;
+                    box-shadow: none !important;
+                }
+                .shop-filter-select {
+                    border: 1px solid #dbe3ec;
+                    border-radius: 10px;
+                    height: 40px;
+                    font-size: 13px;
+                    color: #1f2937;
+                    background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+                    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                }
+                .shop-filter-select:focus {
+                    border-color: #17a2b8;
+                    box-shadow: 0 0 0 3px rgba(23,162,184,0.12);
+                }
+
+                .wishlist-heart-btn {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    z-index: 12;
+                    width: 34px;
+                    height: 34px;
+                    border-radius: 999px;
+                    border: 1px solid rgba(255,255,255,0.55);
+                    background: rgba(255,255,255,0.72);
+                    backdrop-filter: blur(8px);
+                    color: #334155;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+                }
+                .wishlist-heart-btn svg {
+                    width: 16px;
+                    height: 16px;
+                }
+                .wishlist-heart-btn:hover {
+                    transform: translateY(-1px) scale(1.05);
+                    color: #e11d48;
+                    background: rgba(255,255,255,0.9);
+                }
+                .wishlist-heart-btn.active {
+                    color: #e11d48;
+                    background: rgba(255,255,255,0.96);
+                    border-color: rgba(225,29,72,0.32);
+                    box-shadow: 0 8px 16px rgba(225,29,72,0.2);
+                }
+                .wishlist-heart-btn.active svg path {
+                    fill: currentColor !important;
+                    stroke: currentColor !important;
+                }
 
                 .product-brand-shop {
                     font-size: 9px;
@@ -609,30 +681,6 @@ export default function Shop() {
                     letter-spacing: 0.2px;
                 }
                 
-                /* Premium Features Badges */
-                .premium-features-badges {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 4px;
-                }
-                .feature-chip {
-                    display: inline-block;
-                    padding: 3px 8px;
-                    background: linear-gradient(135deg, rgba(23, 162, 184, 0.1) 0%, rgba(23, 162, 184, 0.05) 100%);
-                    border: 1px solid rgba(23, 162, 184, 0.3);
-                    color: #17a2b8;
-                    border-radius: 12px;
-                    font-size: 9px;
-                    font-weight: 700;
-                    letter-spacing: 0.3px;
-                    line-height: 1;
-                }
-                .feature-chip.stock {
-                    background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(40, 167, 69, 0.05) 100%);
-                    color: #28a745;
-                    border-color: rgba(40, 167, 69, 0.3);
-                }
-
                 .color-options-shop {
                     display: flex;
                     align-items: center;
@@ -673,50 +721,102 @@ export default function Shop() {
                 .product-size-selector-shop {
                     display: flex;
                     flex-direction: column;
-                    gap: 4px;
+                    gap: 6px;
+                    opacity: 0;
+                    transform: translateY(6px);
+                    max-height: 0;
+                    overflow: hidden;
+                    pointer-events: none;
+                    margin-bottom: 0 !important;
+                    padding: 8px;
+                    border-radius: 10px;
+                    border: 1px solid #e7edf4;
+                    background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+                    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95);
+                    transition: opacity 0.22s ease, transform 0.22s ease, max-height 0.22s ease, margin-bottom 0.22s ease;
+                }
+                .product-card-premium:hover .product-size-selector-shop,
+                .product-card-premium:focus-within .product-size-selector-shop {
+                    opacity: 1;
+                    transform: translateY(0);
+                    max-height: 132px;
+                    pointer-events: auto;
+                    margin-bottom: 8px !important;
+                }
+                .size-header-shop {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
                 }
                 .size-label-shop {
                     font-size: 9px;
-                    font-weight: 700;
-                    color: #333;
+                    font-weight: 800;
+                    color: #0f172a;
                     text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    margin-bottom: 2px;
+                    letter-spacing: 0.7px;
+                    margin-bottom: 0;
+                }
+                .size-selected-pill {
+                    font-size: 9px;
+                    font-weight: 700;
+                    letter-spacing: 0.6px;
+                    color: #0f766e;
+                    border: 1px solid rgba(15,118,110,0.25);
+                    background: rgba(15,118,110,0.08);
+                    border-radius: 999px;
+                    padding: 3px 8px;
+                    line-height: 1;
                 }
                 .size-options-shop {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 3px;
+                    display: grid;
+                    grid-template-columns: repeat(5, minmax(0, 1fr));
+                    gap: 6px;
                 }
                 .size-btn-shop {
-                    padding: 4px 8px;
-                    background: #f8f9fa;
-                    border: 2px solid #e9ecef;
-                    border-radius: 5px;
+                    height: 30px;
+                    min-width: 30px;
+                    padding: 0;
+                    background: #ffffff;
+                    border: 1px solid #d9e2ec;
+                    border-radius: 999px;
                     font-size: 10px;
-                    font-weight: 600;
+                    font-weight: 700;
                     letter-spacing: 0.4px;
                     cursor: pointer;
                     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                    color: #333;
-                    flex: 1;
-                    min-width: 32px;
+                    color: #334155;
                     text-align: center;
                     position: relative;
                 }
                 .size-btn-shop:hover {
                     border-color: #17a2b8;
                     color: #17a2b8;
-                    background: rgba(23, 162, 184, 0.08);
+                    background: rgba(23, 162, 184, 0.06);
                     transform: translateY(-1px);
-                    box-shadow: 0 2px 6px rgba(23, 162, 184, 0.15);
+                    box-shadow: 0 4px 10px rgba(23, 162, 184, 0.14);
                 }
                 .size-btn-shop.active {
-                    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+                    background: linear-gradient(135deg, #111827 0%, #0f172a 70%, #17a2b8 100%);
                     color: #fff;
-                    border-color: #17a2b8;
-                    box-shadow: 0 3px 12px rgba(23, 162, 184, 0.35);
-                    font-weight: 700;
+                    border-color: #111827;
+                    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.28);
+                    font-weight: 800;
+                }
+
+                .price-current-shop {
+                    font-size: 20px;
+                    font-weight: 900;
+                    color: #0f172a;
+                    letter-spacing: -0.01em;
+                    line-height: 1;
+                }
+                .price-original-shop {
+                    font-size: 16px;
+                    font-weight: 500;
+                    color: #9ca3af;
+                    text-decoration-thickness: 1.5px;
+                    text-decoration-color: #cbd5e1;
                 }
                 
                 /* Add to Bag Button - Premium */
@@ -751,9 +851,9 @@ export default function Shop() {
                     transition: left 0.5s;
                 }
                 .btn-add-bag:hover {
-                    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-                    transform: translateY(-2px);
-                    box-shadow: 0 10px 20px rgba(23, 162, 184, 0.35);
+                    background: linear-gradient(135deg, #111827 0%, #0f172a 100%);
+                    transform: translateY(-1px);
+                    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.24);
                 }
                 .btn-add-bag:hover::before {
                     left: 100%;
@@ -870,7 +970,8 @@ export default function Shop() {
                 
                 /* Responsive */
                 @media (max-width: 1200px) {
-                    .size-btn-shop { padding: 4px 7px; font-size: 9px; }
+                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+                    .size-btn-shop { height: 28px; font-size: 9px; }
                                 .btn-add-bag { padding: 8px 10px; font-size: 11px; min-height: 32px; }
                                 .product-name-shop { font-size: 12px; }
                                 .product-category-shop { font-size: 9px; }
@@ -896,7 +997,8 @@ export default function Shop() {
                     .shop-toolbar select { width: 100%; }
                     .product-card-premium { border-radius: 14px; }
                     .img-wrap { border-radius: 14px 14px 0 0; }
-                    .size-btn-shop { padding: 4px 6px; font-size: 9px; min-width: 30px; }
+                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+                    .size-btn-shop { height: 28px; font-size: 9px; min-width: 0; }
                                 .btn-add-bag { padding: 8px 10px; font-size: 11px; min-height: 32px; }
                     .size-label-shop { font-size: 8px; }
                     .toast-notification { font-size: 13px; padding: 12px 20px; }
@@ -910,13 +1012,20 @@ export default function Shop() {
                         transform: translateY(-4px);
                     }
                     .size-options-shop { gap: 2px; }
-                    .size-btn-shop { padding: 4px 6px; font-size: 8px; flex: 0 1 calc(50% - 1px); min-width: 28px; }
+                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+                    .size-btn-shop { height: 26px; font-size: 8px; min-width: 0; }
                     .btn-add-bag { padding: 8px 10px; font-size: 10px; min-height: 32px; }
                     .cart-count-badge-shop { font-size: 9px; padding: 4px 8px; margin-top: 4px; }
                     .toast-notification { font-size: 12px; padding: 10px 18px; top: 20px; }
-                    .feature-chip { font-size: 8px; padding: 2px 6px; }
                     .product-name-shop { font-size: 12px; }
                     .product-category-shop { font-size: 10px; }
+                    .product-size-selector-shop {
+                        opacity: 1;
+                        transform: none;
+                        max-height: none;
+                        pointer-events: auto;
+                        margin-bottom: 8px !important;
+                    }
                 }
                 
                 @media (max-width: 575px) {
@@ -933,14 +1042,14 @@ export default function Shop() {
                     .shop-main-area .row > div { padding-left: 6px; padding-right: 6px; }
                     .product-card-premium { border-radius: 12px; margin-bottom: 12px; border: 1px solid #f0f0f0; }
                     .img-wrap { border-radius: 12px 12px 0 0; }
-                    .size-btn-shop { padding: 4px 5px; font-size: 8px; flex: 0 1 calc(33.33% - 2px); }
+                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+                    .size-btn-shop { height: 25px; font-size: 8px; }
                     .size-label-shop { font-size: 8px; margin-bottom: 2px; }
                     .btn-add-bag { padding: 8px 10px; font-size: 10px; min-height: 32px; }
                     .premium-badge { padding: 5px 10px; font-size: 9px; top: 10px; left: 10px; }
                     .product-card-premium .p-3,
                     .product-card-premium .p-md-3,
                     .product-card-premium .p-md-4 { padding: 10px !important; }
-                    .feature-chip { font-size: 7px; padding: 2px 5px; }
                     .product-name-shop { font-size: 12px; }
                     .product-category-shop { font-size: 9px; }
                     .color-dot { width: 14px; height: 14px; }
@@ -952,7 +1061,8 @@ export default function Shop() {
                     .hero-wrap p { font-size: 12px; }
                     .shop-toolbar { gap: 8px; }
                     .shop-toolbar select { height: 32px; font-size: 11px; }
-                    .size-btn-shop { flex: 0 1 calc(50% - 1px); font-size: 8px; }
+                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
+                    .size-btn-shop { height: 24px; font-size: 8px; }
                                 .btn-add-bag { padding: 7px 10px; font-size: 9px; min-height: 30px; }
                     .premium-badge { font-size: 8px; padding: 4px 8px; }
                 }

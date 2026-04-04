@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import { useSelector, useDispatch } from 'react-redux';
 import { getCart } from '../Store/ActionCreaters/CartActionCreators';
+import { GET_CART_RED } from '../Store/Constant';
 import { useToast } from './ToastNotification';
 import axios from 'axios';
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants';
@@ -22,6 +23,11 @@ export default function Cart() {
         ? cartRaw.filter((item, idx, arr) =>
             item && item._id && arr.findIndex(i => i && i._id === item._id) === idx)
         : [];
+    const savedRaw = cartState && cartState.savedItems ? cartState.savedItems : [];
+    const savedItems = Array.isArray(savedRaw)
+        ? savedRaw.filter((item, idx, arr) =>
+            item && item._id && arr.findIndex(i => i && i._id === item._id) === idx)
+        : [];
     const [removingIds, setRemovingIds] = useState([]);
     const toast = useToast();
     const [subtotal, setSubtotal] = useState(0);
@@ -35,6 +41,11 @@ export default function Cart() {
     const [availableCoupons, setAvailableCoupons] = useState([]);
     const [loading, setLoading] = useState(true);
     const [movingIds, setMovingIds] = useState([]);
+    const [savingIds, setSavingIds] = useState([]);
+    const [savedActionIds, setSavedActionIds] = useState([]);
+    const [deliveryPincode, setDeliveryPincode] = useState('');
+    const [deliveryEstimateMsg, setDeliveryEstimateMsg] = useState('');
+    const [deliveryEstimateError, setDeliveryEstimateError] = useState('');
     const userId = localStorage.getItem("userid");
     const [userMissing, setUserMissing] = useState(false);
     const totalDiscount = Number(baseDiscount) + Number(couponDiscount);
@@ -59,6 +70,10 @@ export default function Cart() {
         try {
             // Redux fetch
             await dispatch(getCart());
+            const cartRes = await axios.get(`/api/cart?userId=${userId}`);
+            const persistedDelivery = cartRes?.data?.cart?.deliveryEstimate || {};
+            setDeliveryPincode(String(persistedDelivery.pincode || ''));
+            setDeliveryEstimateMsg(String(persistedDelivery.label || ''));
             const summaryRes = await axios.get(`/api/cart/order-summary?userId=${userId}`);
             const s = summaryRes.data.summary || {};
             setSubtotal(s.subtotal || 0);
@@ -91,6 +106,115 @@ export default function Cart() {
             setGst(0);
         }
         setLoading(false);
+    }
+
+    async function refreshSummaryOnly() {
+        if (!userId) return;
+        try {
+            const summaryRes = await axios.get(`/api/cart/order-summary?userId=${userId}`);
+            const s = summaryRes.data.summary || {};
+            setSubtotal(s.subtotal || 0);
+            setBaseDiscount(s.discount || 0);
+            setShipping(s.shipping || 0);
+            setGst(s.gst || 0);
+        } catch (e) {
+            // Keep existing totals on transient failure to avoid UI flicker.
+        }
+    }
+
+    function syncCartFromResponse(responseData) {
+        const cartData = responseData?.cart;
+        if (!cartData) return;
+        dispatch({ type: GET_CART_RED, data: cartData });
+        const persistedDelivery = cartData?.deliveryEstimate || {};
+        setDeliveryPincode(String(persistedDelivery.pincode || ''));
+        setDeliveryEstimateMsg(String(persistedDelivery.label || ''));
+    }
+
+    async function saveForLater(item) {
+        const itemId = item._id || item.id;
+        if (!userId) {
+            toast.error('Please login first.');
+            return;
+        }
+        setSavingIds((prev) => [...prev, itemId]);
+        try {
+            const res = await axios.post(`/api/cart/save-for-later/${itemId}`, { userId });
+            syncCartFromResponse(res.data);
+            await refreshSummaryOnly();
+            toast.success('Item saved for later.');
+        } catch (e) {
+            toast.error(e?.response?.data?.message || 'Failed to save item for later.');
+        } finally {
+            setSavingIds((prev) => prev.filter((id) => id !== itemId));
+        }
+    }
+
+    async function moveSavedToCart(item) {
+        const itemId = item._id || item.id;
+        if (!userId) {
+            toast.error('Please login first.');
+            return;
+        }
+        setSavedActionIds((prev) => [...prev, itemId]);
+        try {
+            const res = await axios.post(`/api/cart/move-saved-to-cart/${itemId}`, { userId });
+            syncCartFromResponse(res.data);
+            await refreshSummaryOnly();
+            toast.success('Saved item moved to cart.');
+        } catch (e) {
+            toast.error(e?.response?.data?.message || 'Failed to move item to cart.');
+        } finally {
+            setSavedActionIds((prev) => prev.filter((id) => id !== itemId));
+        }
+    }
+
+    async function removeSavedItem(item) {
+        const itemId = item._id || item.id;
+        if (!userId) {
+            toast.error('Please login first.');
+            return;
+        }
+        setSavedActionIds((prev) => [...prev, itemId]);
+        try {
+            const res = await axios.delete(`/api/cart/remove-saved-item/${itemId}`, {
+                params: { userId },
+                data: { userId }
+            });
+            syncCartFromResponse(res.data);
+            await refreshSummaryOnly();
+            toast.info('Saved item removed.');
+        } catch (e) {
+            toast.error(e?.response?.data?.message || 'Failed to remove saved item.');
+        } finally {
+            setSavedActionIds((prev) => prev.filter((id) => id !== itemId));
+        }
+    }
+
+    async function applyDeliveryEstimate() {
+        if (!userId) {
+            setDeliveryEstimateError('Please login to check delivery estimate.');
+            return;
+        }
+        if (!/^\d{6}$/.test(String(deliveryPincode || '').trim())) {
+            setDeliveryEstimateError('Please enter a valid 6-digit pincode.');
+            setDeliveryEstimateMsg('');
+            return;
+        }
+        try {
+            setDeliveryEstimateError('');
+            const res = await axios.post('/api/cart/delivery-estimate', {
+                userId,
+                pincode: String(deliveryPincode).trim(),
+            });
+            const label = res?.data?.estimate?.label || res?.data?.message || '';
+            setDeliveryEstimateMsg(label);
+            if (label) toast.success(label);
+        } catch (err) {
+            const msg = err?.response?.data?.message || 'Could not fetch delivery estimate.';
+            setDeliveryEstimateError(msg);
+            setDeliveryEstimateMsg('');
+        }
     }
 
     async function updateQty(item, op) {
@@ -321,7 +445,7 @@ export default function Cart() {
                                 <div className="col-5">PRODUCT</div>
                                 <div className="col-2 text-center">PRICE</div>
                                 <div className="col-3 text-center">QUANTITY</div>
-                                <div className="col-2 text-right">TOTAL</div>
+                                <div className="col-2 text-right premium-total-head">TOTAL</div>
                             </div>
                             <AnimatePresence>
                                 {cart.map((item) => {
@@ -351,9 +475,14 @@ export default function Cart() {
                                             onClick={() => removeProduct(itemId)}
                                             className="btn btn-link p-0 premium-x-btn premium-x-top"
                                             title="Remove"
-                                            disabled={isMoving}
+                                            disabled={isMoving || savingIds.includes(itemId)}
                                         >
-                                            <svg width="24" height="24" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#fff4f4"/><path d="M7 7l6 6M13 7l-6 6" stroke="#d9534f" strokeWidth="2" strokeLinecap="round"/></svg>
+                                            <svg className="premium-trash-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                                <path d="M3 6h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                                <path d="M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                                <path d="M19 6l-1 14a1 1 0 01-1 1H7a1 1 0 01-1-1L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                                <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                            </svg>
                                         </button>
                                         <div className="d-flex align-items-center premium-cart-grid">
                                             {/* Product Image - Fixed Aspect Ratio, Fully Rounded */}
@@ -377,12 +506,22 @@ export default function Cart() {
                                                         key={itemId + '-wishlist'}
                                                         onClick={() => moveToWishlist(item)}
                                                         className="btn btn-sm premium-wishlist-btn mr-2"
-                                                        disabled={isMoving}
+                                                        disabled={isMoving || savingIds.includes(itemId)}
                                                     >
                                                         {isMoving ? 'Moving...' : 'Move to Wishlist'}
                                                     </button>
-                                                    <span className="badge premium-id-pill px-2 py-1" key={itemId + '-badge'}>SKU: {itemId}</span>
+                                                    <button
+                                                        key={itemId + '-save-later'}
+                                                        onClick={() => saveForLater(item)}
+                                                        className="btn btn-sm premium-save-btn mr-2"
+                                                        disabled={isMoving || savingIds.includes(itemId)}
+                                                    >
+                                                        {savingIds.includes(itemId) ? 'Saving...' : 'Save for Later'}
+                                                    </button>
                                                 </div>
+                                                {deliveryEstimateMsg && (
+                                                    <div className="small mt-2 premium-item-delivery">{deliveryEstimateMsg}</div>
+                                                )}
                                             </div>
                                             {/* Quantity & Price */}
                                             <div className="cart-qtyprice-col d-flex flex-column align-items-center justify-content-center">
@@ -392,7 +531,7 @@ export default function Cart() {
                                                     <span className="mx-2 font-weight-bold premium-qty-count" style={{ minWidth: "30px" }} key={itemId + '-qty'}>{itemQty}</span>
                                                     <button key={itemId + '-inc'} onClick={() => updateQty(item, "inc")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn" disabled={isMoving}>+</button>
                                                     </div>
-                                                    <div className="font-weight-bold text-info premium-live-price" key={itemId + '-price'}>₹{itemTotal}</div>
+                                                    <div className="premium-live-price premium-total-price" key={itemId + '-price'}>₹{itemTotal}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -400,6 +539,58 @@ export default function Cart() {
                                     )
                                 })}
                             </AnimatePresence>
+                            {savedItems.length > 0 && (
+                                <div className="saved-items-wrap mt-4">
+                                    <h5 className="saved-items-title mb-3">Saved for Later ({savedItems.length})</h5>
+                                    {savedItems.map((item) => {
+                                        const itemId = item._id || item.id;
+                                        const itemName = item.name || item.product?.name || 'Product';
+                                        const itemColor = item.color || item.product?.color || 'N/A';
+                                        const itemSize = item.size || item.product?.size || 'N/A';
+                                        const itemPic = item.pic || item.product?.pic1 || '/assets/images/noimage.png';
+                                        const itemQty = Number(item.quantity ?? item.qty ?? 1);
+                                        const itemPrice = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0);
+                                        const isSavedBusy = savedActionIds.includes(itemId);
+
+                                        return (
+                                            <div key={itemId} className="saved-item-row d-flex align-items-center justify-content-between p-3 mb-2">
+                                                <div className="d-flex align-items-center min-w-0">
+                                                    <div className="saved-item-thumb mr-3">
+                                                        <img
+                                                            src={optimizeCloudinaryUrlAdvanced(itemPic, { maxWidth: 180, crop: 'fill' })}
+                                                            loading="lazy"
+                                                            alt=""
+                                                        />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="font-weight-bold text-dark text-truncate">{itemName}</div>
+                                                        <div className="small text-muted text-truncate">{itemColor} | Size: {itemSize} | Qty: {itemQty}</div>
+                                                        <div className="small font-weight-bold premium-total-price">₹{itemPrice * itemQty}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="d-flex align-items-center saved-action-row">
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm premium-move-cart-btn mr-2"
+                                                        onClick={() => moveSavedToCart(item)}
+                                                        disabled={isSavedBusy}
+                                                    >
+                                                        {isSavedBusy ? 'Moving...' : 'Move to Cart'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm premium-remove-saved-btn"
+                                                        onClick={() => removeSavedItem(item)}
+                                                        disabled={isSavedBusy}
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                             <div className="mt-4">
                                 <Link to="/shop/All" className="btn btn-outline-dark rounded-pill px-4 btn-sm">← Back to Shop</Link>
                             </div>
@@ -409,32 +600,52 @@ export default function Cart() {
                             <div className="card border-0 p-4 bg-white sticky-top premium-summary-card" style={{ top: "100px", border: "1px solid #eee" }}>
                                 <h5 className="font-weight-bold mb-4" style={{ color: "#B8860B", letterSpacing: 1 }}>Order Summary</h5>
                                 <div className="d-flex justify-content-between mb-2">
-                                    <span className="text-muted">Subtotal (MRP)</span>
-                                    <span className="font-weight-bold" style={{ color: "#B8860B" }}>₹{subtotal}</span>
+                                    <span className="text-muted premium-summary-label">Subtotal (MRP)</span>
+                                    <span className="font-weight-bold premium-summary-amount" style={{ color: "#B8860B" }}>₹{subtotal}</span>
                                 </div>
                                 <div className="d-flex justify-content-between mb-2">
-                                    <span className="text-muted">Instant Discount</span>
-                                    <span className="text-success font-weight-bold" style={{ color: "#B8860B" }}>-₹{totalDiscount}</span>
+                                    <span className="text-muted premium-summary-label">Instant Discount</span>
+                                    <span className="text-success font-weight-bold premium-summary-amount" style={{ color: "#B8860B" }}>-₹{totalDiscount}</span>
                                 </div>
                                 {couponApplied && couponDiscount > 0 && (
                                     <div className="d-flex justify-content-between mb-2">
-                                        <span className="text-muted">Coupon ({coupon.toUpperCase()})</span>
-                                        <span className="text-success font-weight-bold">-₹{couponDiscount}</span>
+                                        <span className="text-muted premium-summary-label">Coupon ({coupon.toUpperCase()})</span>
+                                        <span className="text-success font-weight-bold premium-summary-amount">-₹{couponDiscount}</span>
                                     </div>
                                 )}
                                 <div className="d-flex justify-content-between mb-2">
-                                    <span className="text-muted">Shipping Fee</span>
-                                    <span className={shipping === 0 ? "text-success font-weight-bold" : "font-weight-bold"} style={{ color: shipping === 0 ? "#B8860B" : undefined }}>
+                                    <span className="text-muted premium-summary-label">Shipping Fee</span>
+                                    <span className={`${shipping === 0 ? "text-success" : ""} font-weight-bold premium-summary-amount`} style={{ color: shipping === 0 ? "#B8860B" : undefined }}>
                                         {shipping === 0 ? "FREE" : `₹${shipping}`}
                                     </span>
                                 </div>
                                 <div className="d-flex justify-content-between mb-2">
-                                    <span className="text-muted">GST/Tax (5%)</span>
-                                    <span className="font-weight-bold" style={{ color: "#B8860B" }}>₹{gst}</span>
+                                    <span className="text-muted premium-summary-label">GST/Tax (5%)</span>
+                                    <span className="font-weight-bold premium-summary-amount" style={{ color: "#B8860B" }}>₹{gst}</span>
                                 </div>
                                 <div className="d-flex justify-content-between mb-3 border-top pt-3">
-                                    <h5 className="font-weight-bold">Grand Total</h5>
-                                    <h5 className="font-weight-bold" style={{ color: "#B8860B" }}>₹{subtotal - totalDiscount + shipping + gst}</h5>
+                                    <h5 className="font-weight-bold premium-grand-label">Grand Total</h5>
+                                    <h5 className="font-weight-bold premium-grand-amount" style={{ color: "#B8860B" }}>₹{subtotal - totalDiscount + shipping + gst}</h5>
+                                </div>
+                                <div className="premium-delivery-box mb-3">
+                                    <div className="premium-delivery-title mb-2">Estimated Delivery</div>
+                                    <div className="d-flex premium-delivery-row">
+                                        <input
+                                            type="text"
+                                            className="form-control premium-delivery-input"
+                                            placeholder="Enter pincode"
+                                            maxLength={6}
+                                            value={deliveryPincode}
+                                            onChange={(e) => {
+                                                const onlyDigits = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                                setDeliveryPincode(onlyDigits);
+                                                setDeliveryEstimateError('');
+                                            }}
+                                        />
+                                        <button type="button" className="btn premium-delivery-btn" onClick={applyDeliveryEstimate}>Check</button>
+                                    </div>
+                                    {deliveryEstimateMsg && <div className="premium-delivery-result mt-2">{deliveryEstimateMsg}</div>}
+                                    {deliveryEstimateError && <div className="small text-danger mt-2">{deliveryEstimateError}</div>}
                                 </div>
                                 {/* Coupon Input */}
                                 <div className="input-group mb-3 premium-coupon-group">
@@ -469,19 +680,38 @@ export default function Cart() {
                                 <Link to="/checkout" className="btn btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold premium-checkout-btn mt-2 sticky-mobile-checkout" style={{ background: "linear-gradient(90deg, #B8860B 0%, #f6e27a 100%)", color: "#222", border: "none", letterSpacing: 1 }}>
                                     {`PROCEED TO CHECKOUT (${itemCount} item${itemCount !== 1 ? 's' : ''})`}
                                 </Link>
-                                {/* Security Badges */}
-                                <div className="text-center mt-4">
-                                    <div className="d-flex flex-column align-items-center">
-                                        <div className="d-flex align-items-center mb-2">
-                                            <img src="https://cdn-icons-png.flaticon.com/512/3064/3064197.png" alt="secure" width="28" height="28" style={{marginRight:8}} />
-                                            <span className="small font-weight-bold text-success">Secure Checkout</span>
-                                        </div>
-                                        <div className="d-flex align-items-center">
-                                            <img src="https://cdn-icons-png.flaticon.com/512/190/190411.png" alt="original" width="28" height="28" style={{marginRight:8}} />
-                                            <span className="small font-weight-bold text-primary">100% Original Products</span>
-                                        </div>
+                                <div className="premium-trust-wrap mt-4">
+                                    <div className="premium-trust-item">
+                                        <span className="premium-trust-icon premium-trust-icon-secure" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" role="presentation">
+                                                <path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                                <path d="M9.6 11.8l1.7 1.8 3.2-3.3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </span>
+                                        <span className="small font-weight-bold">Secure Checkout</span>
                                     </div>
-                                    <img src="https://www.paypalobjects.com/webstatic/mktg/logo/AM_mc_vs_dc_ae.jpg" width="100%" style={{ opacity: 0.6, filter: "grayscale(1)" }} alt="" />
+                                    <div className="premium-trust-item">
+                                        <span className="premium-trust-icon premium-trust-icon-return" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" role="presentation">
+                                                <path d="M10 7L6 11l4 4" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                                <path d="M7 11h7a4 4 0 010 8h-2" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </span>
+                                        <span className="small font-weight-bold">7-Day Easy Returns</span>
+                                    </div>
+                                    <div className="premium-trust-item">
+                                        <span className="premium-trust-icon premium-trust-icon-ship" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" role="presentation">
+                                                <path d="M3 7h11v8H3V7zm11 3h3l3 3v2h-6v-5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                                <circle cx="8" cy="17" r="1.8" stroke="currentColor" strokeWidth="1.6" />
+                                                <circle cx="18" cy="17" r="1.8" stroke="currentColor" strokeWidth="1.6" />
+                                            </svg>
+                                        </span>
+                                        <span className="small font-weight-bold">Free Shipping</span>
+                                    </div>
+                                </div>
+                                <div className="text-center mt-3">
+                                    <img src="https://www.paypalobjects.com/webstatic/mktg/logo/AM_mc_vs_dc_ae.jpg" width="100%" style={{ opacity: 0.6, filter: "grayscale(1)" }} alt="payment-methods" />
                                 </div>
                             </div>
                         </div>
@@ -573,24 +803,165 @@ export default function Cart() {
                 .cart-qtyprice-col { min-width: 140px; margin-right: 8px; }
                 .premium-wishlist-btn { border: 1px solid #b9963a; color: #7a5c1f; background: linear-gradient(90deg, #fff8e1, #fef3c7); border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 700; }
                 .premium-wishlist-btn:hover { background: #f9edc8; color: #5f4717; }
+                .premium-save-btn { border: 1px solid #cbd5e1; color: #334155; background: #f8fafc; border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 700; }
+                .premium-save-btn:hover { background: #eef2f7; color: #0f172a; }
                 .premium-id-pill { background: linear-gradient(120deg, #f3f4f6, #e9ecef); color: #556; border: 1px dashed #c8ced7; border-radius: 999px; font-weight: 700; font-size: 11px; }
                 .premium-id-pill { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
-                .premium-x-btn svg { transition: box-shadow 0.2s; border-radius: 50%; }
-                .premium-x-btn:hover svg { box-shadow: 0 2px 8px #f8d7da; background: #fff0f0; }
+                .premium-trash-icon { color: #a8b0bb; transition: color 0.2s ease, transform 0.2s ease; }
+                .premium-x-btn:hover .premium-trash-icon { color: #dc2626; transform: scale(1.05); }
                 .premium-x-top { position: absolute; top: 12px; right: 12px; z-index: 5; }
                 .premium-qty-wrap { background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e5eaf0; border-radius: 999px; padding: 4px 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.9); }
                 .premium-qty-line { gap: 8px; }
                 .premium-qty-count { text-align: center; color: #1f2937; }
                 .premium-live-price { font-size: 1.2rem; line-height: 1; }
+                .premium-total-price { font-weight: 800 !important; color: #10a4c5 !important; }
+                .premium-total-head { color: #1f2937; letter-spacing: 0.4px; }
+                .premium-item-delivery { color: #047857; font-weight: 600; }
                 .premium-qty-btn { width: 30px; height: 30px; font-size: 19px; background: #ffffff; color: #333; }
                 .premium-qty-btn:hover { background: #e2e6ea; }
-                .premium-wishlist-btn:disabled, .premium-qty-btn:disabled, .premium-x-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+                .premium-wishlist-btn:disabled, .premium-save-btn:disabled, .premium-qty-btn:disabled, .premium-x-btn:disabled, .premium-move-cart-btn:disabled, .premium-remove-saved-btn:disabled { opacity: 0.55; cursor: not-allowed; }
                 .premium-summary-card {
                     border-radius: 1.4rem !important;
                     border: 1px solid #e7ebf0 !important;
                     box-shadow: 0 18px 32px rgba(15, 23, 42, 0.08) !important;
                     background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
                 }
+                .premium-summary-label { font-weight: 700; color: #475569 !important; }
+                .premium-summary-amount { font-size: 1rem; font-weight: 800 !important; color: #111827; }
+                .premium-grand-label, .premium-grand-amount { font-size: 1.2rem; font-weight: 800 !important; }
+                .premium-delivery-box {
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 10px;
+                    background: #fbfdff;
+                }
+                .premium-delivery-title {
+                    color: #334155;
+                    font-weight: 700;
+                    font-size: 0.85rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.4px;
+                }
+                .premium-delivery-row { gap: 8px; }
+                .premium-delivery-input {
+                    border: 1px solid #dbe3eb;
+                    border-radius: 10px;
+                    font-size: 0.92rem;
+                }
+                .premium-delivery-btn {
+                    border: 1px solid #0ea5b7;
+                    color: #0f172a;
+                    background: #e6fbff;
+                    border-radius: 10px;
+                    font-weight: 700;
+                    min-width: 86px;
+                }
+                .premium-delivery-btn:hover { background: #cff7ff; }
+                .premium-delivery-result {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    border-radius: 999px;
+                    padding: 7px 12px;
+                    border: 1px solid rgba(16, 185, 129, 0.32);
+                    background: linear-gradient(135deg, rgba(16,185,129,0.16) 0%, rgba(184,134,11,0.12) 100%);
+                    color: #047857;
+                    font-size: 12px;
+                    font-weight: 800;
+                    letter-spacing: 0.01em;
+                }
+                .premium-delivery-result::before {
+                    content: '✓';
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 999px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 11px;
+                    color: #fff;
+                    background: #059669;
+                    box-shadow: 0 3px 8px rgba(5,150,105,0.28);
+                }
+                .premium-trust-wrap {
+                    border-top: 1px solid #edf2f7;
+                    padding-top: 14px;
+                    display: grid;
+                    gap: 10px;
+                }
+                .premium-trust-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    color: #1f2937;
+                    border: 1px solid #e6ebf2;
+                    border-radius: 12px;
+                    padding: 8px 10px;
+                    background: linear-gradient(120deg, #ffffff 0%, #f8fafc 100%);
+                    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.05);
+                }
+                .premium-trust-icon {
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 999px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: linear-gradient(135deg, #fff8e1 0%, #e6fbff 100%);
+                    border: 1px solid #d7e2ef;
+                    font-size: 15px;
+                    color: #475569;
+                }
+                .premium-trust-icon svg {
+                    width: 16px;
+                    height: 16px;
+                    display: block;
+                }
+                .premium-trust-icon-secure { color: #0f766e; }
+                .premium-trust-icon-return { color: #b45309; }
+                .premium-trust-icon-ship { color: #2563eb; }
+                .premium-trust-item .small {
+                    letter-spacing: 0.01em;
+                }
+                .saved-items-wrap {
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 14px;
+                    background: #f8fafc;
+                }
+                .saved-items-title { color: #334155; font-weight: 800; }
+                .saved-item-row {
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    background: #ffffff;
+                }
+                .saved-item-thumb {
+                    width: 56px;
+                    height: 56px;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    border: 1px solid #e5e7eb;
+                    flex: 0 0 56px;
+                }
+                .saved-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+                .premium-move-cart-btn {
+                    border: 1px solid #0ea5b7;
+                    color: #0f172a;
+                    background: #e6fbff;
+                    border-radius: 999px;
+                    font-size: 12px;
+                    font-weight: 700;
+                }
+                .premium-move-cart-btn:hover { background: #ccf7ff; }
+                .premium-remove-saved-btn {
+                    border: 1px solid #d1d5db;
+                    color: #475569;
+                    background: #f8fafc;
+                    border-radius: 999px;
+                    font-size: 12px;
+                    font-weight: 700;
+                }
+                .premium-remove-saved-btn:hover { color: #b91c1c; border-color: #fecaca; background: #fff1f2; }
                 .premium-coupon-group input { border-radius: 50px 0 0 50px !important; }
                 .premium-coupon-group .btn { border-radius: 0 50px 50px 0 !important; }
                 .premium-coupon-chip {
@@ -614,11 +985,16 @@ export default function Cart() {
                     .cart-action-row { flex-wrap: wrap; gap: 6px; }
                     .premium-id-pill { max-width: 140px; }
                     .premium-wishlist-btn { padding: 4px 10px; font-size: 11px; }
+                    .premium-save-btn { padding: 4px 10px; font-size: 11px; }
                     .cart-qtyprice-col { margin-top: 6px; }
                     .premium-qty-line { width: 100%; justify-content: center; }
                     .cart-premium-intro { padding: 12px; }
                     .intro-title { font-size: 1rem; }
                     .intro-value { font-size: 0.85rem; padding: 7px 12px; }
+                    .saved-item-row { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+                    .saved-action-row { width: 100%; }
+                    .premium-delivery-row { flex-direction: column; }
+                    .premium-delivery-btn { width: 100%; }
                 }
             `}} />
         </div>

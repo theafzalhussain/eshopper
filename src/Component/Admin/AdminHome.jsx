@@ -398,7 +398,7 @@ export default function AdminHome() {
                                 <h1 className="scc-title">System Control Center</h1>
                                 <p className="scc-subtitle">Enterprise Analytics Dashboard</p>
                             </div>
-                            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <div className="scc-header-actions">
                                 {isLive && (
                                     <div className="scc-live-indicator">
                                         <span className="scc-live-dot" />

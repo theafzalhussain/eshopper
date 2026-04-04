@@ -20,6 +20,14 @@ router.put('/cart/update-quantity/:itemId', cartController.updateQuantity);
 // Remove an item from cart
 router.delete('/cart/remove-item/:itemId', cartController.removeItem);
 
+// Save-for-later cart actions
+router.post('/cart/save-for-later/:itemId', cartController.saveForLater);
+router.post('/cart/move-saved-to-cart/:itemId', cartController.moveSavedToCart);
+router.delete('/cart/remove-saved-item/:itemId', cartController.removeSavedItem);
+
+// Delivery estimate by pincode
+router.post('/cart/delivery-estimate', cartController.setDeliveryEstimate);
+
 // Get order summary for current cart
 router.get('/cart/order-summary', cartController.getOrderSummary);
 

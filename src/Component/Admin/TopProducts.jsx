@@ -135,12 +135,7 @@ export default function TopProducts({ topProducts = [] }) {
                 <div className="scc-product-label">Units Sold</div>
               </div>
 
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-end',
-                minWidth: '80px'
-              }}>
+              <div className="scc-product-pricing">
                 <div style={{
                   color: '#D4AF37',
                   fontWeight: 700,

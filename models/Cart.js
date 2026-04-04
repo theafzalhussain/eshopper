@@ -9,6 +9,18 @@ const cartSchema = new mongoose.Schema({
             price: { type: Number, default: 0 },
         }
     ],
+    savedItems: [
+        {
+            product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+            quantity: { type: Number, default: 1 },
+            price: { type: Number, default: 0 },
+            savedAt: { type: Date, default: Date.now },
+        }
+    ],
+    deliveryEstimate: {
+        pincode: { type: String, default: '' },
+        estimatedDate: { type: Date, default: null },
+    },
     createdAt: { type: Date, default: Date.now }
 });
 

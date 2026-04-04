@@ -255,7 +255,7 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
             </div>
             <h2 className="scc-chart-title">Sales Revenue Trend</h2>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div className="scc-chart-tools">
             <div className="scc-chart-period">
               {['6M', '12M', 'YTD'].map(p => (
                 <button
@@ -449,36 +449,38 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
             <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--teal-primary)' }} />
           </div>
         ) : categoryInsights.list.length > 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <ResponsiveContainer width="60%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryInsights.list}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={3}
-                  dataKey="value"
-                  nameKey="name"
-                  animationBegin={0}
-                  animationDuration={1200}
-                >
-                  {categoryInsights.list.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={CHART_COLORS[index % CHART_COLORS.length]}
-                      stroke="rgba(15, 23, 42, 0.8)"
-                      strokeWidth={2}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomPieTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="scc-pie-layout">
+            <div className="scc-pie-canvas">
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={categoryInsights.list}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={3}
+                    dataKey="value"
+                    nameKey="name"
+                    animationBegin={0}
+                    animationDuration={1200}
+                  >
+                    {categoryInsights.list.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={CHART_COLORS[index % CHART_COLORS.length]}
+                        stroke="rgba(15, 23, 42, 0.8)"
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomPieTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
 
             {/* Legend */}
-            <div style={{ width: '40%', paddingLeft: '1rem' }}>
+            <div className="scc-pie-legend">
               {categoryInsights.list.slice(0, 5).map((item, index) => {
                 const share = categoryInsights.total > 0 ? (item.value / categoryInsights.total) * 100 : 0;
                 return (

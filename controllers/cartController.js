@@ -20,24 +20,8 @@ exports.addToCart = async (req, res) => {
             cart.items.push({ product: productId, quantity: qty, price: normalizedPrice > 0 ? normalizedPrice : 0 });
         }
         await cart.save();
-        cart = await Cart.findById(cart._id).populate('items.product');
-        // Map cart items to frontend-friendly format
-        const mappedCart = {
-            _id: cart._id,
-            user: cart.user,
-            items: cart.items.map(item => ({
-                _id: item._id,
-                productid: item.product?._id || item.product,
-                userid: cart.user,
-                name: item.product?.name || '',
-                color: item.product?.color || '',
-                size: item.product?.size || '',
-                price: Number(item.price || item.product?.finalprice || item.product?.price || 0),
-                quantity: item.quantity,
-                pic: item.product?.pic1 || '',
-            })),
-            createdAt: cart.createdAt
-        };
+        cart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
+        const mappedCart = mapCartForClient(cart);
         res.json({ success: true, cart: mappedCart });
     } catch (err) {
         console.error('[ERROR] /api/cart (addToCart):', err);
@@ -223,6 +207,61 @@ async function ensureDefaultCoupons() {
     await Coupon.insertMany(DEFAULT_COUPONS);
 }
 
+const formatDeliveryLabel = (dateValue) => {
+    if (!dateValue) return '';
+    const dt = new Date(dateValue);
+    if (Number.isNaN(dt.getTime())) return '';
+    const label = new Intl.DateTimeFormat('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+    }).format(dt);
+    return `Delivery by ${label}`;
+};
+
+const buildMockDeliveryDate = (pincode = '') => {
+    const digits = String(pincode).replace(/\D/g, '').split('').map(Number);
+    const sum = digits.reduce((acc, val) => acc + Number(val || 0), 0);
+    const etaDays = 2 + (sum % 5);
+    const result = new Date();
+    result.setHours(0, 0, 0, 0);
+    result.setDate(result.getDate() + etaDays);
+    return result;
+};
+
+const mapCartItem = (item, userId) => ({
+    _id: item._id,
+    productid: item.product?._id || item.product,
+    userid: userId,
+    name: item.product?.name || '',
+    color: item.product?.color || '',
+    size: item.product?.size || '',
+    price: Number(item.price || item.product?.finalprice || item.product?.price || 0),
+    quantity: Number(item.quantity || 1),
+    pic: item.product?.pic1 || '',
+});
+
+const mapCartForClient = (cart) => {
+    if (!cart) return null;
+    const deliveryEstimateLabel = formatDeliveryLabel(cart.deliveryEstimate?.estimatedDate);
+    return {
+        _id: cart._id,
+        user: cart.user,
+        items: Array.isArray(cart.items) ? cart.items.map((item) => mapCartItem(item, cart.user)) : [],
+        savedItems: Array.isArray(cart.savedItems) ? cart.savedItems.map((item) => ({
+            ...mapCartItem(item, cart.user),
+            savedAt: item.savedAt || null,
+        })) : [],
+        deliveryEstimate: {
+            pincode: cart.deliveryEstimate?.pincode || '',
+            estimatedDate: cart.deliveryEstimate?.estimatedDate || null,
+            label: deliveryEstimateLabel,
+        },
+        deliveryEstimateLabel,
+        createdAt: cart.createdAt,
+    };
+};
+
 // Get cart for current user (expects req.user or req.query.userId)
 exports.getCart = async (req, res) => {
     try {
@@ -234,7 +273,7 @@ exports.getCart = async (req, res) => {
         }
         let cart;
         try {
-            cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+            cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product').populate('savedItems.product');
         } catch (dbErr) {
             console.error('[ERROR] /api/cart: Invalid userId or DB error:', dbErr);
             return res.status(400).json({ success: false, message: 'Invalid userId or database error.' });
@@ -243,30 +282,14 @@ exports.getCart = async (req, res) => {
             // Auto-create cart for new user
             try {
                 cart = await Cart.create({ user: new mongoose.Types.ObjectId(userId), items: [] });
-                cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+                cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product').populate('savedItems.product');
                 console.log(`[INFO] /api/cart: Created new cart for userId ${userId}`);
             } catch (createErr) {
                 console.error('[ERROR] /api/cart: Failed to create cart:', createErr);
                 return res.status(500).json({ success: false, message: 'Failed to create cart for user.' });
             }
         }
-        // Map cart items to frontend-friendly format
-        const mappedCart = cart ? {
-            _id: cart._id,
-            user: cart.user,
-            items: cart.items.map(item => ({
-                _id: item._id,
-                productid: item.product?._id || item.product,
-                userid: cart.user,
-                name: item.product?.name || '',
-                color: item.product?.color || '',
-                size: item.product?.size || '',
-                price: Number(item.price || item.product?.finalprice || item.product?.price || 0),
-                quantity: item.quantity,
-                pic: item.product?.pic1 || '',
-            })),
-            createdAt: cart.createdAt
-        } : null;
+        const mappedCart = mapCartForClient(cart);
         res.json({ success: true, cart: mappedCart });
     } catch (err) {
         console.error('[DEBUG] /api/cart error:', err);
@@ -296,23 +319,8 @@ exports.updateQuantity = async (req, res) => {
         }
         item.quantity = quantity;
         await cart.save();
-        cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
-        const mappedCart = cart ? {
-            _id: cart._id,
-            user: cart.user,
-            items: cart.items.map(item => ({
-                _id: item._id,
-                productid: item.product?._id || item.product,
-                userid: cart.user,
-                name: item.product?.name || '',
-                color: item.product?.color || '',
-                size: item.product?.size || '',
-                price: item.product?.finalprice || item.product?.price || 0,
-                quantity: item.quantity,
-                pic: item.product?.pic1 || '',
-            })),
-            createdAt: cart.createdAt
-        } : null;
+        cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product').populate('savedItems.product');
+        const mappedCart = mapCartForClient(cart);
         res.json({ success: true, cart: mappedCart });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Failed to update quantity.' });
@@ -360,6 +368,166 @@ exports.removeItem = async (req, res) => {
     } catch (err) {
         console.error('[ERROR] /api/cart/remove-item:', err);
         res.status(500).json({ success: false, message: 'Failed to remove item.', error: err.message });
+    }
+};
+
+exports.saveForLater = async (req, res) => {
+    try {
+        const userId = req.user?._id || req.body?.userId || req.body?.userid || req.query?.userId || req.query?.userid;
+        const { itemId } = req.params;
+        if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+            return res.status(400).json({ success: false, message: 'Valid user id required.' });
+        }
+        if (!itemId || !mongoose.Types.ObjectId.isValid(String(itemId))) {
+            return res.status(400).json({ success: false, message: 'Valid item id required.' });
+        }
+
+        const cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+        if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
+
+        let srcItem = cart.items.id(itemId);
+        if (!srcItem && mongoose.Types.ObjectId.isValid(String(itemId))) {
+            srcItem = cart.items.find((entry) => String(entry.product) === String(itemId));
+        }
+        if (!srcItem) return res.status(404).json({ success: false, message: 'Cart item not found.' });
+
+        const existingSaved = cart.savedItems.find((entry) => String(entry.product) === String(srcItem.product));
+        if (existingSaved) {
+            existingSaved.quantity += Number(srcItem.quantity || 1);
+            if (Number(srcItem.price || 0) > 0) existingSaved.price = Number(srcItem.price || 0);
+        } else {
+            cart.savedItems.push({
+                product: srcItem.product,
+                quantity: Number(srcItem.quantity || 1),
+                price: Number(srcItem.price || 0),
+                savedAt: new Date(),
+            });
+        }
+
+        srcItem.deleteOne();
+        await cart.save();
+
+        const freshCart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
+        return res.json({ success: true, message: 'Item saved for later.', cart: mapCartForClient(freshCart) });
+    } catch (err) {
+        console.error('[ERROR] /api/cart/save-for-later:', err);
+        return res.status(500).json({ success: false, message: 'Failed to save item for later.' });
+    }
+};
+
+exports.moveSavedToCart = async (req, res) => {
+    try {
+        const userId = req.user?._id || req.body?.userId || req.body?.userid || req.query?.userId || req.query?.userid;
+        const { itemId } = req.params;
+        if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+            return res.status(400).json({ success: false, message: 'Valid user id required.' });
+        }
+        if (!itemId || !mongoose.Types.ObjectId.isValid(String(itemId))) {
+            return res.status(400).json({ success: false, message: 'Valid saved item id required.' });
+        }
+
+        const cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+        if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
+
+        let savedItem = cart.savedItems.id(itemId);
+        if (!savedItem && mongoose.Types.ObjectId.isValid(String(itemId))) {
+            savedItem = cart.savedItems.find((entry) => String(entry.product) === String(itemId));
+        }
+        if (!savedItem) return res.status(404).json({ success: false, message: 'Saved item not found.' });
+
+        const existingCartItem = cart.items.find((entry) => String(entry.product) === String(savedItem.product));
+        if (existingCartItem) {
+            existingCartItem.quantity += Number(savedItem.quantity || 1);
+            if (Number(savedItem.price || 0) > 0) existingCartItem.price = Number(savedItem.price || 0);
+        } else {
+            cart.items.push({
+                product: savedItem.product,
+                quantity: Number(savedItem.quantity || 1),
+                price: Number(savedItem.price || 0),
+            });
+        }
+
+        savedItem.deleteOne();
+        await cart.save();
+
+        const freshCart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
+        return res.json({ success: true, message: 'Saved item moved to cart.', cart: mapCartForClient(freshCart) });
+    } catch (err) {
+        console.error('[ERROR] /api/cart/move-saved-to-cart:', err);
+        return res.status(500).json({ success: false, message: 'Failed to move saved item to cart.' });
+    }
+};
+
+exports.removeSavedItem = async (req, res) => {
+    try {
+        const userId = req.user?._id || req.body?.userId || req.body?.userid || req.query?.userId || req.query?.userid;
+        const { itemId } = req.params;
+        if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+            return res.status(400).json({ success: false, message: 'Valid user id required.' });
+        }
+        if (!itemId || !mongoose.Types.ObjectId.isValid(String(itemId))) {
+            return res.status(400).json({ success: false, message: 'Valid saved item id required.' });
+        }
+
+        const cart = await Cart.findOneAndUpdate(
+            { user: new mongoose.Types.ObjectId(userId), 'savedItems._id': new mongoose.Types.ObjectId(itemId) },
+            { $pull: { savedItems: { _id: new mongoose.Types.ObjectId(itemId) } } },
+            { new: true }
+        ).populate('items.product').populate('savedItems.product');
+
+        if (!cart) {
+            return res.status(404).json({ success: false, message: 'Saved item not found.' });
+        }
+
+        return res.json({ success: true, message: 'Saved item removed.', cart: mapCartForClient(cart) });
+    } catch (err) {
+        console.error('[ERROR] /api/cart/remove-saved-item:', err);
+        return res.status(500).json({ success: false, message: 'Failed to remove saved item.' });
+    }
+};
+
+exports.setDeliveryEstimate = async (req, res) => {
+    try {
+        const userId = req.user?._id || req.body?.userId || req.body?.userid || req.query?.userId || req.query?.userid;
+        const { pincode } = req.body || {};
+        const normalizedPincode = String(pincode || '').trim();
+
+        if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+            return res.status(400).json({ success: false, message: 'Valid user id required.' });
+        }
+        if (!/^\d{6}$/.test(normalizedPincode)) {
+            return res.status(400).json({ success: false, message: 'Please enter a valid 6-digit pincode.' });
+        }
+
+        const estimatedDate = buildMockDeliveryDate(normalizedPincode);
+
+        let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+        if (!cart) {
+            cart = await Cart.create({ user: new mongoose.Types.ObjectId(userId), items: [] });
+        }
+
+        cart.deliveryEstimate = {
+            pincode: normalizedPincode,
+            estimatedDate,
+        };
+        await cart.save();
+
+        const freshCart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
+        const label = formatDeliveryLabel(estimatedDate);
+
+        return res.json({
+            success: true,
+            message: label,
+            estimate: {
+                pincode: normalizedPincode,
+                estimatedDate,
+                label,
+            },
+            cart: mapCartForClient(freshCart),
+        });
+    } catch (err) {
+        console.error('[ERROR] /api/cart/delivery-estimate:', err);
+        return res.status(500).json({ success: false, message: 'Failed to fetch delivery estimate.' });
     }
 };
 

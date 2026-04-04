@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 export default function Footer() {
   return (
     <>
@@ -27,10 +28,10 @@ export default function Footer() {
               <div className="ftco-footer-widget mb-4 ml-md-5">
                 <h2 className="ftco-heading-2">Menu</h2>
                 <ul className="list-unstyled">
-                  <li><a href="#" className="py-2 d-block">Shop</a></li>
-                  <li><a href="#" className="py-2 d-block">About</a></li>
-                  <li><a href="#" className="py-2 d-block">Journal</a></li>
-                  <li><a href="#" className="py-2 d-block">Contact Us</a></li>
+                  <li><Link to="/about" className="py-2 d-block">About</Link></li>
+                  <li><Link to="/contact" className="py-2 d-block">Contact Us</Link></li>
+                  <li><Link to="/faq" className="py-2 d-block">FAQs</Link></li>
+                  <li><Link to="/return-policy" className="py-2 d-block">Return Policy</Link></li>
                 </ul>
               </div>
             </div>
@@ -39,14 +40,14 @@ export default function Footer() {
                 <h2 className="ftco-heading-2">Help</h2>
                 <div className="d-flex">
                   <ul className="list-unstyled mr-l-5 pr-l-3 mr-4">
-                    <li><a href="#" className="py-2 d-block">Shipping Information</a></li>
-                    <li><a href="#" className="py-2 d-block">Returns &amp; Exchange</a></li>
-                    <li><a href="#" className="py-2 d-block">Terms &amp; Conditions</a></li>
-                    <li><a href="#" className="py-2 d-block">Privacy Policy</a></li>
+                    <li><Link to="/faq" className="py-2 d-block">Shipping Information</Link></li>
+                    <li><Link to="/return-policy" className="py-2 d-block">Returns &amp; Exchange</Link></li>
+                    <li><Link to="/return-policy" className="py-2 d-block">Terms &amp; Conditions</Link></li>
+                    <li><Link to="/return-policy" className="py-2 d-block">Privacy Policy</Link></li>
                   </ul>
                   <ul className="list-unstyled">
-                    <li><a href="#" className="py-2 d-block">FAQs</a></li>
-                    <li><a href="#" className="py-2 d-block">Contact</a></li>
+                    <li><Link to="/faq" className="py-2 d-block">FAQs</Link></li>
+                    <li><Link to="/contact" className="py-2 d-block">Contact</Link></li>
                   </ul>
                 </div>
               </div>
