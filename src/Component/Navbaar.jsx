@@ -496,7 +496,7 @@ export default function Navbaar() {
                     z-index: 1050;
                     width: 100%;
                     background: #fff;
-                    overflow-x: clip;
+                    overflow: visible;
                     isolation: isolate;
                     transition: box-shadow 0.25s ease, background 0.25s ease;
                 }
@@ -512,12 +512,14 @@ export default function Navbaar() {
                     background: rgba(255,255,255,0.97) !important;
                     backdrop-filter: saturate(180%) blur(14px);
                     transition: padding 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+                    overflow: visible;
                 }
                 .navbar .container {
                     width: min(1320px, 100%);
                     max-width: 1320px;
                     padding-left: clamp(12px, 2.2vw, 28px);
                     padding-right: clamp(12px, 2.2vw, 28px);
+                    overflow: visible;
                 }
                 .dot-blink { width: 6px; height: 6px; background: #28a745; border-radius: 50%; animation: blink 2s infinite; }
                 @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
@@ -604,7 +606,7 @@ export default function Navbaar() {
                 .badge-admin-pill { background: #ff4757; color: #fff !important; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 50px; text-decoration: none; }
                 
                 /* === ULTRA PREMIUM DROPDOWN === */
-                .premium-dropdown-wrapper { position: relative; }
+                .premium-dropdown-wrapper { position: relative; overflow: visible; }
                 .mobile-profile-wrapper { position: relative; z-index: 10001; }
                 .premium-user-btn {
                     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
@@ -657,6 +659,10 @@ export default function Navbaar() {
 
                 /* DROPDOWN MENU */
                 .premium-dropdown-menu {
+                    position: absolute;
+                    top: calc(100% + 8px);
+                    right: 0;
+                    left: auto;
                     border: none !important;
                     border-radius: 20px !important;
                     box-shadow: 0 20px 60px rgba(0,0,0,0.12) !important;
@@ -669,6 +675,7 @@ export default function Navbaar() {
                     animation: slideDownFade 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
                     overflow: hidden;
                     z-index: 10002;
+                    transform-origin: top right;
                 }
                 .premium-dropdown-menu.show {
                     display: block !important;
@@ -822,6 +829,7 @@ export default function Navbaar() {
                 
                 .navbar-right-box {
                     position: relative;
+                    overflow: visible;
                 }
                 
                 .navbar-right-box a:hover .cart-badge-premium {
@@ -870,6 +878,20 @@ export default function Navbaar() {
                         margin-top: 0 !important;
                         z-index: 10020;
                         -webkit-overflow-scrolling: touch;
+                    }
+                }
+
+                @media (min-width: 992px) and (max-width: 1199px) {
+                    .premium-dropdown-wrapper .premium-dropdown-menu:not(.mobile-profile-menu) {
+                        position: fixed !important;
+                        top: calc(64px + env(safe-area-inset-top));
+                        right: max(10px, env(safe-area-inset-right));
+                        left: auto;
+                        width: min(320px, calc(100vw - 20px));
+                        min-width: 0;
+                        max-height: calc(100vh - 84px - env(safe-area-inset-top));
+                        overflow-y: auto;
+                        margin-top: 0 !important;
                     }
                 }
                 
