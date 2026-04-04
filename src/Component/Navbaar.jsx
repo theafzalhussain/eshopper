@@ -781,12 +781,22 @@ export default function Navbaar() {
                         width: 30px;
                         height: 30px;
                     }
+                    .mobile-profile-wrapper {
+                        position: relative;
+                        flex-shrink: 0;
+                    }
                     .mobile-profile-menu {
-                        position: absolute;
-                        right: 0;
-                        top: 52px;
-                        min-width: min(320px, calc(100vw - 24px));
+                        position: fixed !important;
+                        left: 12px;
+                        right: 12px;
+                        top: 78px;
+                        width: auto !important;
+                        min-width: 0 !important;
+                        max-width: none !important;
+                        max-height: calc(100vh - 96px);
+                        overflow-y: auto;
                         margin-top: 0 !important;
+                        z-index: 10020;
                     }
                 }
                 
@@ -798,7 +808,14 @@ export default function Navbaar() {
                     .logo-tagline { font-size: 5px; }
                     .navbar { padding: 8px 0 !important; }
                     .premium-dropdown-menu {
-                        min-width: min(300px, calc(100vw - 20px));
+                        min-width: 0;
+                        max-width: none;
+                    }
+                    .mobile-profile-menu {
+                        left: 8px;
+                        right: 8px;
+                        top: 72px;
+                        max-height: calc(100vh - 88px);
                     }
                 }
 
