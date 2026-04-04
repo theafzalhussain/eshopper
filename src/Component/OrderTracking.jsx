@@ -1310,17 +1310,85 @@ export default function OrderTracking() {
     [couponAmount, discountAmount]
   )
 
+  const computedFinalWithoutInference = useMemo(
+    () => Math.max(subtotalAmount + shippingAmount + gstAmount + extraChargesAmount - totalDiscountAmount, 0),
+    [subtotalAmount, shippingAmount, gstAmount, extraChargesAmount, totalDiscountAmount]
+  )
+
   const finalAmount = useMemo(() => {
     const parsed = Number(order?.finalAmount)
     if (Number.isFinite(parsed) && parsed > 0) return parsed
-    return Math.max(subtotalAmount + shippingAmount + gstAmount + extraChargesAmount - totalDiscountAmount, 0)
-  }, [order?.finalAmount, subtotalAmount, shippingAmount, gstAmount, extraChargesAmount, totalDiscountAmount])
+    return computedFinalWithoutInference
+  }, [order?.finalAmount, computedFinalWithoutInference])
+
+  const inferredBreakdown = useMemo(() => {
+    const explicitBreakdownTotal = gstAmount + extraChargesAmount + totalDiscountAmount
+    const hasExplicitBreakdown = explicitBreakdownTotal > 0
+    if (hasExplicitBreakdown) {
+      return {
+        applied: false,
+        gst: gstAmount,
+        charges: extraChargesAmount,
+        discount: discountAmount,
+        coupon: couponAmount
+      }
+    }
+
+    const base = subtotalAmount + shippingAmount
+    const delta = finalAmount - base
+    const expectedGst = Math.max(0, Math.round(subtotalAmount * 0.05))
+
+    let inferredGst = 0
+    let inferredCharges = 0
+    let inferredDiscount = 0
+    const inferredCoupon = couponAmount
+
+    if (delta > 0) {
+      inferredGst = Math.min(expectedGst, delta)
+      inferredCharges = Math.max(0, delta - inferredGst)
+    } else if (delta < 0) {
+      inferredDiscount = Math.abs(delta)
+    }
+
+    return {
+      applied: inferredGst > 0 || inferredCharges > 0 || inferredDiscount > 0,
+      gst: inferredGst,
+      charges: inferredCharges,
+      discount: inferredDiscount,
+      coupon: inferredCoupon
+    }
+  }, [subtotalAmount, shippingAmount, finalAmount, gstAmount, extraChargesAmount, totalDiscountAmount, discountAmount, couponAmount])
+
+  const displayGstAmount = useMemo(
+    () => (inferredBreakdown.applied ? inferredBreakdown.gst : gstAmount),
+    [inferredBreakdown, gstAmount]
+  )
+
+  const displayExtraChargesAmount = useMemo(
+    () => (inferredBreakdown.applied ? inferredBreakdown.charges : extraChargesAmount),
+    [inferredBreakdown, extraChargesAmount]
+  )
+
+  const displayCouponAmount = useMemo(
+    () => (inferredBreakdown.applied ? inferredBreakdown.coupon : couponAmount),
+    [inferredBreakdown, couponAmount]
+  )
+
+  const displayDiscountAmount = useMemo(
+    () => (inferredBreakdown.applied ? inferredBreakdown.discount : discountAmount),
+    [inferredBreakdown, discountAmount]
+  )
+
+  const displayTotalDiscountAmount = useMemo(
+    () => Math.max(0, displayCouponAmount + displayDiscountAmount),
+    [displayCouponAmount, displayDiscountAmount]
+  )
 
   const billingAdjustmentAmount = useMemo(() => {
-    const expected = subtotalAmount + shippingAmount + gstAmount + extraChargesAmount - totalDiscountAmount
+    const expected = subtotalAmount + shippingAmount + displayGstAmount + displayExtraChargesAmount - displayTotalDiscountAmount
     const delta = finalAmount - expected
     return Math.abs(delta) >= 0.5 ? delta : 0
-  }, [subtotalAmount, shippingAmount, gstAmount, extraChargesAmount, totalDiscountAmount, finalAmount])
+  }, [subtotalAmount, shippingAmount, displayGstAmount, displayExtraChargesAmount, displayTotalDiscountAmount, finalAmount])
 
   const paymentStatusLabel = useMemo(() => {
     const raw = String(order?.paymentStatus || '').toLowerCase()
@@ -1571,10 +1639,10 @@ export default function OrderTracking() {
       doc.setFontSize(11)
       doc.text(`Subtotal: ${formatMoney(subtotalAmount)}`, 40, tableEnd)
       doc.text(`Shipping: ${shippingAmount > 0 ? formatMoney(shippingAmount) : 'Free'}`, 40, tableEnd + 16)
-      doc.text(`GST: ${formatMoney(gstAmount)}`, 40, tableEnd + 32)
-      doc.text(`Extra Charges: ${formatMoney(extraChargesAmount)}`, 40, tableEnd + 48)
-      doc.text(`Coupon Discount: ${couponAmount > 0 ? `-${formatMoney(couponAmount)}` : formatMoney(0)}`, 40, tableEnd + 64)
-      doc.text(`Other Discount: ${discountAmount > 0 ? `-${formatMoney(discountAmount)}` : formatMoney(0)}`, 40, tableEnd + 80)
+      doc.text(`GST: ${formatMoney(displayGstAmount)}`, 40, tableEnd + 32)
+      doc.text(`Extra Charges: ${formatMoney(displayExtraChargesAmount)}`, 40, tableEnd + 48)
+      doc.text(`Coupon Discount: ${displayCouponAmount > 0 ? `-${formatMoney(displayCouponAmount)}` : formatMoney(0)}`, 40, tableEnd + 64)
+      doc.text(`Other Discount: ${displayDiscountAmount > 0 ? `-${formatMoney(displayDiscountAmount)}` : formatMoney(0)}`, 40, tableEnd + 80)
       doc.setFontSize(13)
       doc.text(`Final Amount: ${formatMoney(finalAmount)}`, 40, tableEnd + 102)
       doc.setFontSize(10)
@@ -1586,7 +1654,7 @@ export default function OrderTracking() {
       console.error('Client invoice fallback failed:', err)
       return null
     }
-  }, [addressText, couponAmount, discountAmount, extraChargesAmount, finalAmount, gstAmount, order, orderId, orderItemsDetailed, paymentStatusLabel, shippingAmount, subtotalAmount])
+  }, [addressText, displayCouponAmount, displayDiscountAmount, displayExtraChargesAmount, finalAmount, displayGstAmount, order, orderId, orderItemsDetailed, paymentStatusLabel, shippingAmount, subtotalAmount])
 
   const openInvoice = async (inline = false) => {
     if (!invoiceUrl || invoiceLoading) return
@@ -1973,10 +2041,10 @@ export default function OrderTracking() {
                     <div className="ot-fin-extra-row"><span>Total Quantity</span><strong>{totalItemCount} item{totalItemCount === 1 ? '' : 's'}</strong></div>
                     <div className="ot-fin-extra-row"><span>Subtotal</span><strong>{formatMoney(subtotalAmount)}</strong></div>
                     <div className="ot-fin-extra-row"><span>Shipping</span><strong>{shippingAmount > 0 ? formatMoney(shippingAmount) : 'Free'}</strong></div>
-                    <div className="ot-fin-extra-row"><span>GST</span><strong>{formatMoney(gstAmount)}</strong></div>
-                    <div className="ot-fin-extra-row"><span>Charges</span><strong>{formatMoney(extraChargesAmount)}</strong></div>
-                    <div className="ot-fin-extra-row"><span>Coupon ({order?.couponCode || 'N/A'})</span><strong>{couponAmount > 0 ? `-${formatMoney(couponAmount)}` : formatMoney(0)}</strong></div>
-                    <div className="ot-fin-extra-row"><span>Discount</span><strong>{discountAmount > 0 ? `-${formatMoney(discountAmount)}` : formatMoney(0)}</strong></div>
+                    <div className="ot-fin-extra-row"><span>GST</span><strong>{formatMoney(displayGstAmount)}</strong></div>
+                    <div className="ot-fin-extra-row"><span>Charges</span><strong>{formatMoney(displayExtraChargesAmount)}</strong></div>
+                    <div className="ot-fin-extra-row"><span>Coupon ({order?.couponCode || 'N/A'})</span><strong>{displayCouponAmount > 0 ? `-${formatMoney(displayCouponAmount)}` : formatMoney(0)}</strong></div>
+                    <div className="ot-fin-extra-row"><span>Discount</span><strong>{displayDiscountAmount > 0 ? `-${formatMoney(displayDiscountAmount)}` : formatMoney(0)}</strong></div>
                     {billingAdjustmentAmount !== 0 && (
                       <div className="ot-fin-extra-row"><span>Billing Adjustment</span><strong>{billingAdjustmentAmount > 0 ? formatMoney(billingAdjustmentAmount) : `-${formatMoney(Math.abs(billingAdjustmentAmount))}`}</strong></div>
                     )}

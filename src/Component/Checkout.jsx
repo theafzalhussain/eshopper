@@ -44,7 +44,18 @@ export default function Checkout() {
     const ecoCharge = ecoPackaging ? 19 : 0
     const paymentFee = paymentMeta.fee
     const preDiscountTotal = subtotal + shipping + gst + giftWrapCharge + protectionCharge + ecoCharge + paymentFee
-    const totalSavings = Number(appliedCoupon.discount || 0) + (shipping === 0 && subtotal > 0 ? 150 : 0)
+    const instantDiscount = useMemo(() => {
+        return cart.reduce((acc, item) => {
+            const qty = Number(item?.quantity ?? item?.qty ?? 1)
+            const safeQty = Number.isFinite(qty) && qty > 0 ? qty : 1
+            const sellingPrice = Number(item?.price ?? item?.product?.finalprice ?? item?.product?.price ?? 0)
+            const originalPrice = Number(item?.mrp ?? item?.originalPrice ?? item?.product?.mrp ?? item?.product?.price ?? sellingPrice)
+            if (!Number.isFinite(sellingPrice) || !Number.isFinite(originalPrice)) return acc
+            if (originalPrice <= sellingPrice) return acc
+            return acc + ((originalPrice - sellingPrice) * safeQty)
+        }, 0)
+    }, [cart])
+    const totalSavings = Number(appliedCoupon.discount || 0) + instantDiscount + (shipping === 0 && subtotal > 0 ? 150 : 0)
 
     const final = useMemo(() => {
         return Math.max(
@@ -148,9 +159,17 @@ export default function Checkout() {
                 paymentMethod: mode,
                 totalAmount: subtotal,
                 shippingAmount: shipping,
+                gstAmount: gst,
                 finalAmount: final,
                 couponCode: appliedCoupon.code || undefined,
                 couponDiscount: Number(appliedCoupon.discount || 0),
+                discountAmount: Number(instantDiscount || 0),
+                giftWrapCharge,
+                protectionCharge,
+                ecoCharge,
+                paymentFee,
+                extraCharges: giftWrapCharge + protectionCharge + ecoCharge + paymentFee,
+                preDiscountTotal,
                 notes: orderNotes,
                 deliverySlot,
                 shippingAddress: {
@@ -367,6 +386,9 @@ export default function Checkout() {
                                     {showPriceDetails ? (
                                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
                                             <div className="price-row"><span>Items Subtotal</span><strong>₹{subtotal}</strong></div>
+                                            {instantDiscount > 0 ? (
+                                                <div className="price-row text-success"><span>Instant Discount</span><strong>-₹{instantDiscount}</strong></div>
+                                            ) : null}
                                             <div className="price-row"><span>Shipping</span><strong>{shipping === 0 ? "FREE" : `₹${shipping}`}</strong></div>
                                             <div className="price-row"><span>GST (5%)</span><strong>₹{gst}</strong></div>
                                             <div className="price-row"><span>Payment Fee ({paymentMeta.label})</span><strong>{paymentFee ? `₹${paymentFee}` : 'FREE'}</strong></div>

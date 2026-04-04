@@ -563,6 +563,15 @@ const buildInvoiceHtml = ({
     finalAmount,
     totalAmount,
     shippingAmount,
+    couponDiscount,
+    discountAmount,
+    gstAmount,
+    giftWrapCharge,
+    protectionCharge,
+    ecoCharge,
+    paymentFee,
+    extraCharges,
+    preDiscountTotal,
     shippingAddress,
     products,
     orderDate,
@@ -574,6 +583,19 @@ const buildInvoiceHtml = ({
     const invoiceType = pdfType === 'final' ? 'Tax Invoice' : (pdfType === 'confirmation' ? 'Proforma Invoice' : 'Payment Receipt');
     const invoiceNo = `INV-${String(orderId || '').replace(/[^a-zA-Z0-9]/g, '').slice(-10) || '000000'}`;
     const orderDateStr = new Date(orderDate || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const safeSubtotal = Number(totalAmount || 0);
+    const safeShipping = Number(shippingAmount || 0);
+    const safeCouponDiscount = Math.max(0, Number(couponDiscount || 0));
+    const safeBaseDiscount = Math.max(0, Number(discountAmount || 0));
+    const safeGst = Math.max(0, Number(gstAmount || 0));
+    const segmentedCharges = Math.max(0,
+        Number(giftWrapCharge || 0) +
+        Number(protectionCharge || 0) +
+        Number(ecoCharge || 0) +
+        Number(paymentFee || 0)
+    );
+    const safeExtraCharges = Math.max(0, Number(extraCharges || segmentedCharges));
+    const safePreDiscount = Number(preDiscountTotal || (safeSubtotal + safeShipping + safeGst + safeExtraCharges));
 
     const rows = safeProducts.map((p, idx) => {
         const qty = Number(p.qty || p.quantity || 1);
@@ -642,8 +664,13 @@ const buildInvoiceHtml = ({
                         <tbody>${rows}</tbody>
                     </table>
                     <div class="totals">
-                        <div class="row"><span>Subtotal</span><strong>₹${Number(totalAmount || 0).toLocaleString('en-IN')}</strong></div>
-                        <div class="row"><span>Shipping</span><strong>${Number(shippingAmount || 0) === 0 ? 'FREE' : `₹${Number(shippingAmount || 0).toLocaleString('en-IN')}`}</strong></div>
+                        <div class="row"><span>Subtotal</span><strong>₹${safeSubtotal.toLocaleString('en-IN')}</strong></div>
+                        <div class="row"><span>Shipping</span><strong>${safeShipping === 0 ? 'FREE' : `₹${safeShipping.toLocaleString('en-IN')}`}</strong></div>
+                        <div class="row"><span>GST</span><strong>${safeGst === 0 ? '₹0' : `₹${safeGst.toLocaleString('en-IN')}`}</strong></div>
+                        <div class="row"><span>Extra Charges</span><strong>${safeExtraCharges === 0 ? '₹0' : `₹${safeExtraCharges.toLocaleString('en-IN')}`}</strong></div>
+                        <div class="row"><span>Pre-discount Total</span><strong>₹${safePreDiscount.toLocaleString('en-IN')}</strong></div>
+                        <div class="row"><span>Instant Discount</span><strong>${safeBaseDiscount > 0 ? `-₹${safeBaseDiscount.toLocaleString('en-IN')}` : '₹0'}</strong></div>
+                        <div class="row"><span>Coupon Discount</span><strong>${safeCouponDiscount > 0 ? `-₹${safeCouponDiscount.toLocaleString('en-IN')}` : '₹0'}</strong></div>
                         <div class="grand"><span>Grand Total</span><span>₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span></div>
                     </div>
                 </div>
@@ -1392,7 +1419,7 @@ const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts
 const Cart = require('./models/Cart');
 const Coupon = require('./models/Coupon');
 const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
-const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, products: Array }, opts));
+const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, couponCode: { type: String, default: '' }, couponDiscount: { type: Number, default: 0 }, discountAmount: { type: Number, default: 0 }, gstAmount: { type: Number, default: 0 }, giftWrapCharge: { type: Number, default: 0 }, protectionCharge: { type: Number, default: 0 }, ecoCharge: { type: Number, default: 0 }, paymentFee: { type: Number, default: 0 }, extraCharges: { type: Number, default: 0 }, preDiscountTotal: { type: Number, default: 0 }, products: Array }, opts));
 const Order = require('./models/Order');
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
@@ -2292,6 +2319,14 @@ const placeOrderHandler = async (req, res) => {
             finalAmount,
             totalAmount,
             shippingAmount,
+            gstAmount,
+            discountAmount,
+            giftWrapCharge,
+            protectionCharge,
+            ecoCharge,
+            paymentFee,
+            extraCharges,
+            preDiscountTotal,
             shippingAddress,
             products,
             couponCode,
@@ -2337,6 +2372,15 @@ const placeOrderHandler = async (req, res) => {
 
         const total = Number(totalAmount ?? cleanProducts.reduce((sum, item) => sum + item.total, 0));
         const shipping = Number(shippingAmount ?? ((total > 0 && total < 1000) ? 150 : 0));
+        const gst = Math.max(0, Number(gstAmount || 0));
+        const baseDiscount = Math.max(0, Number(discountAmount || 0));
+        const safeGiftWrapCharge = Math.max(0, Number(giftWrapCharge || 0));
+        const safeProtectionCharge = Math.max(0, Number(protectionCharge || 0));
+        const safeEcoCharge = Math.max(0, Number(ecoCharge || 0));
+        const safePaymentFee = Math.max(0, Number(paymentFee || 0));
+        const computedExtraCharges = safeGiftWrapCharge + safeProtectionCharge + safeEcoCharge + safePaymentFee;
+        const safeExtraCharges = Math.max(0, Number(extraCharges ?? computedExtraCharges));
+        const safePreDiscountTotal = Math.max(0, Number(preDiscountTotal ?? (total + shipping + gst + safeExtraCharges)));
         let validCouponCode = '';
         let validCouponDiscount = 0;
 
@@ -2416,6 +2460,14 @@ const placeOrderHandler = async (req, res) => {
             finalAmount: payable,
             couponCode: validCouponCode,
             couponDiscount: validCouponDiscount,
+            discountAmount: baseDiscount,
+            gstAmount: gst,
+            giftWrapCharge: safeGiftWrapCharge,
+            protectionCharge: safeProtectionCharge,
+            ecoCharge: safeEcoCharge,
+            paymentFee: safePaymentFee,
+            extraCharges: safeExtraCharges,
+            preDiscountTotal: safePreDiscountTotal,
             shippingAddress: addressPayload,
             products: cleanProducts,
             estimatedArrival,
@@ -2440,6 +2492,16 @@ const placeOrderHandler = async (req, res) => {
             totalAmount: total,
             shippingAmount: shipping,
             finalAmount: payable,
+            couponCode: validCouponCode,
+            couponDiscount: validCouponDiscount,
+            discountAmount: baseDiscount,
+            gstAmount: gst,
+            giftWrapCharge: safeGiftWrapCharge,
+            protectionCharge: safeProtectionCharge,
+            ecoCharge: safeEcoCharge,
+            paymentFee: safePaymentFee,
+            extraCharges: safeExtraCharges,
+            preDiscountTotal: safePreDiscountTotal,
             products: cleanProducts
         });
 
@@ -2464,6 +2526,15 @@ const placeOrderHandler = async (req, res) => {
                     finalAmount: payable,
                     totalAmount: total,
                     shippingAmount: shipping,
+                    couponDiscount: validCouponDiscount,
+                    discountAmount: baseDiscount,
+                    gstAmount: gst,
+                    giftWrapCharge: safeGiftWrapCharge,
+                    protectionCharge: safeProtectionCharge,
+                    ecoCharge: safeEcoCharge,
+                    paymentFee: safePaymentFee,
+                    extraCharges: safeExtraCharges,
+                    preDiscountTotal: safePreDiscountTotal,
                     shippingAddress: addressPayload,
                     products: cleanProducts,
                     orderDate,
@@ -2866,7 +2937,7 @@ app.get('/api/orders/:userId', async (req, res) => {
         // 🔴 FETCH FROM ORDER COLLECTION (primary source)
         const orders = await Order.find({ userid: userId })
             .sort({ updatedAt: -1, createdAt: -1 })
-            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount estimatedArrival deliverySchedule statusHistory deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt')
+            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount estimatedArrival deliverySchedule statusHistory deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt couponCode couponDiscount discountAmount gstAmount giftWrapCharge protectionCharge ecoCharge paymentFee extraCharges preDiscountTotal')
             .lean();
 
         const hydratedOrders = await Promise.all(
@@ -2893,6 +2964,16 @@ app.get('/api/orders/:userId', async (req, res) => {
                     totalAmount: Number(item.totalAmount || 0),
                     shippingAmount: Number(item.shippingAmount || 0),
                     finalAmount: Number(item.finalAmount || 0),
+                    couponCode: item.couponCode || '',
+                    couponDiscount: Number(item.couponDiscount || 0),
+                    discountAmount: Number(item.discountAmount || 0),
+                    gstAmount: Number(item.gstAmount || 0),
+                    giftWrapCharge: Number(item.giftWrapCharge || 0),
+                    protectionCharge: Number(item.protectionCharge || 0),
+                    ecoCharge: Number(item.ecoCharge || 0),
+                    paymentFee: Number(item.paymentFee || 0),
+                    extraCharges: Number(item.extraCharges || 0),
+                    preDiscountTotal: Number(item.preDiscountTotal || 0),
                     paymentStatus: item.paymentstatus || 'Pending',
                     paymentMethod: item.paymentmode || 'COD',
                     createdAt: item.createdAt || item.updatedAt || new Date(),
@@ -2918,6 +2999,16 @@ app.get('/api/orders/:userId', async (req, res) => {
                 totalAmount: Number(item.totalAmount || 0),
                 shippingAmount: Number(item.shippingAmount || 0),
                 finalAmount: Number(item.finalAmount || 0),
+                couponCode: item.couponCode || '',
+                couponDiscount: Number(item.couponDiscount || 0),
+                discountAmount: Number(item.discountAmount || 0),
+                gstAmount: Number(item.gstAmount || 0),
+                giftWrapCharge: Number(item.giftWrapCharge || 0),
+                protectionCharge: Number(item.protectionCharge || 0),
+                ecoCharge: Number(item.ecoCharge || 0),
+                paymentFee: Number(item.paymentFee || 0),
+                extraCharges: Number(item.extraCharges || 0),
+                preDiscountTotal: Number(item.preDiscountTotal || 0),
                 paymentStatus: item.paymentStatus || 'Pending',
                 paymentMethod: item.paymentMethod || 'COD',
                 createdAt: item.createdAt || item.updatedAt || new Date(),
@@ -3005,6 +3096,16 @@ app.get('/api/order/:orderId', async (req, res) => {
             totalAmount: Number(ensuredOrder.totalAmount || 0),
             shippingAmount: Number(ensuredOrder.shippingAmount || 0),
             finalAmount: ensuredOrder.finalAmount || 0,
+            couponCode: ensuredOrder.couponCode || '',
+            couponDiscount: Number(ensuredOrder.couponDiscount || 0),
+            discountAmount: Number(ensuredOrder.discountAmount || 0),
+            gstAmount: Number(ensuredOrder.gstAmount || 0),
+            giftWrapCharge: Number(ensuredOrder.giftWrapCharge || 0),
+            protectionCharge: Number(ensuredOrder.protectionCharge || 0),
+            ecoCharge: Number(ensuredOrder.ecoCharge || 0),
+            paymentFee: Number(ensuredOrder.paymentFee || 0),
+            extraCharges: Number(ensuredOrder.extraCharges || 0),
+            preDiscountTotal: Number(ensuredOrder.preDiscountTotal || 0),
             shippingAddress: ensuredOrder.shippingAddress || {},
             products: normalizedProducts,
             deliverySchedule: ensuredOrder.deliverySchedule || null,
@@ -3221,6 +3322,15 @@ app.get('/api/admin/invoices/:orderId/download', async (req, res) => {
             finalAmount: Number(order.finalAmount || 0),
             totalAmount: Number(order.totalAmount || 0),
             shippingAmount: Number(order.shippingAmount || 0),
+            couponDiscount: Number(order.couponDiscount || 0),
+            discountAmount: Number(order.discountAmount || 0),
+            gstAmount: Number(order.gstAmount || 0),
+            giftWrapCharge: Number(order.giftWrapCharge || 0),
+            protectionCharge: Number(order.protectionCharge || 0),
+            ecoCharge: Number(order.ecoCharge || 0),
+            paymentFee: Number(order.paymentFee || 0),
+            extraCharges: Number(order.extraCharges || 0),
+            preDiscountTotal: Number(order.preDiscountTotal || 0),
             shippingAddress: order.shippingAddress || {},
             products: normalizeOrderProducts(order.products),
             orderDate: order.orderDate || order.createdAt,
