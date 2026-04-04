@@ -69,13 +69,16 @@ export default function Navbaar() {
 
     // Prevent body scroll when menu is open
     useEffect(() => {
-        if (isMobileMenuOpen) {
+        const mobileViewport = typeof window !== 'undefined' ? window.innerWidth < 992 : false
+        const shouldLock = isMobileMenuOpen || (isProfileMenuOpen && mobileViewport)
+
+        if (shouldLock) {
             document.body.style.overflow = 'hidden'
         } else {
             document.body.style.overflow = 'unset'
         }
         return () => { document.body.style.overflow = 'unset' }
-    }, [isMobileMenuOpen])
+    }, [isMobileMenuOpen, isProfileMenuOpen])
 
     useEffect(() => {
         const loadUserProfilePic = async () => {
@@ -115,6 +118,20 @@ export default function Navbaar() {
 
     const logout = () => { localStorage.clear(); navigate("/login") }
     const isActive = (path) => location.pathname === path
+    const toggleMobileMenu = () => {
+        setIsMobileMenuOpen((prev) => {
+            const next = !prev
+            if (next) setIsProfileMenuOpen(false)
+            return next
+        })
+    }
+    const toggleProfileMenu = () => {
+        setIsProfileMenuOpen((prev) => {
+            const next = !prev
+            if (next) setIsMobileMenuOpen(false)
+            return next
+        })
+    }
 
     return (
         <header className={`header-main ${isScrolled ? 'header-fixed' : ''}`}>
@@ -310,7 +327,7 @@ export default function Navbaar() {
                                     <button
                                         type="button"
                                         className="btn-user premium-user-btn mobile-profile-btn"
-                                        onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                                        onClick={toggleProfileMenu}
                                         aria-expanded={isProfileMenuOpen}
                                     >
                                         <div className="user-avatar mobile-avatar">
@@ -324,12 +341,23 @@ export default function Navbaar() {
 
                                     <AnimatePresence>
                                         {isProfileMenuOpen && (
+                                            <>
+                                            <motion.button
+                                                type="button"
+                                                aria-label="Close profile menu"
+                                                className="mobile-profile-backdrop"
+                                                onClick={() => setIsProfileMenuOpen(false)}
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.18 }}
+                                            />
                                             <motion.div
                                                 className="dropdown-menu premium-dropdown-menu mobile-profile-menu show"
-                                                initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                                                initial={{ opacity: 0, y: 22, scale: 0.99 }}
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                                                transition={{ duration: 0.18 }}
+                                                exit={{ opacity: 0, y: 18, scale: 0.99 }}
+                                                transition={{ duration: 0.2 }}
                                             >
                                                 <div className="dropdown-header-custom">
                                                     <div className="user-info-header">
@@ -369,6 +397,7 @@ export default function Navbaar() {
                                                     <span>Logout</span>
                                                 </button>
                                             </motion.div>
+                                            </>
                                         )}
                                     </AnimatePresence>
                                 </div>
@@ -418,7 +447,7 @@ export default function Navbaar() {
                             </Link>
                             <button 
                                 className="hamburger-btn" 
-                                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                                onClick={toggleMobileMenu}
                                 aria-label="Toggle Menu"
                             >
                                 {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
@@ -777,6 +806,9 @@ export default function Navbaar() {
                     background: none; border: none; cursor: pointer; padding: 8px;
                     display: flex; align-items: center; justify-content: center;
                     color: #111; transition: 0.3s;
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 10px;
                 }
                 .hamburger-btn:hover { color: #17a2b8; }
                 .hamburger-btn:active { transform: scale(0.96); }
@@ -788,8 +820,21 @@ export default function Navbaar() {
                 /* 📱 MOBILE MENU OVERLAY */
                 .mobile-menu-overlay {
                     position: fixed; top: 0; right: 0; bottom: 0; left: 0;
-                    background: rgba(0,0,0,0.95); z-index: 9999;
+                    background: rgba(0,0,0,0.95); z-index: 10030;
                     overflow-y: auto; backdrop-filter: blur(10px);
+                }
+                .mobile-profile-backdrop {
+                    position: fixed;
+                    top: 0;
+                    right: 0;
+                    bottom: 0;
+                    left: 0;
+                    border: 0;
+                    margin: 0;
+                    padding: 0;
+                    background: rgba(15, 23, 42, 0.42);
+                    backdrop-filter: blur(2px);
+                    z-index: 10018;
                 }
                 .mobile-menu-content {
                     padding: calc(68px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
@@ -880,7 +925,7 @@ export default function Navbaar() {
                         max-height: none;
                         overflow-y: auto;
                         margin-top: 0 !important;
-                        z-index: 10020;
+                        z-index: 10021;
                         -webkit-overflow-scrolling: touch;
                         border-radius: 16px 16px 0 0 !important;
                         background: rgba(255,255,255,0.995);
