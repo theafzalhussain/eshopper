@@ -3127,13 +3127,58 @@ app.get('/api/order/:orderId', async (req, res) => {
 });
 
 app.get('/api/order/:orderId/invoice', async (req, res) => {
-    // 🔴 TEMPORARY: Invoice system disabled on Render free tier due to Puppeteer memory limits
-    // This will be re-enabled when upgrading to paid tier or implementing serverless PDF
-    return res.status(503).json({ 
-        success: false,
-        message: 'Invoice generation is temporarily unavailable. Our team is working on optimization. Please check back soon or contact support.',
-        status: 'maintenance'
-    });
+    try {
+        const { orderId } = req.params;
+        const userId = String(req.query.userId || '').trim();
+        const disposition = String(req.query.disposition || '').toLowerCase() === 'inline' ? 'inline' : 'attachment';
+
+        if (!orderId || !userId) {
+            return res.status(400).json({ success: false, message: 'orderId and userId are required' });
+        }
+
+        const order = await Order.findOne({ orderId, userid: userId }).lean();
+        if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+        const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+        const isDelivered = orderStatus === 'delivered';
+        const pdfType = isDelivered ? 'final' : 'receipt';
+
+        const pdfBuffer = await generateInvoicePdfBuffer({
+            orderId: order.orderId,
+            userName: order.userName,
+            userEmail: order.userEmail,
+            paymentMethod: order.paymentMethod,
+            paymentStatus: order.paymentStatus,
+            finalAmount: Number(order.finalAmount || 0),
+            totalAmount: Number(order.totalAmount || 0),
+            shippingAmount: Number(order.shippingAmount || 0),
+            couponDiscount: Number(order.couponDiscount || 0),
+            discountAmount: Number(order.discountAmount || 0),
+            gstAmount: Number(order.gstAmount || 0),
+            giftWrapCharge: Number(order.giftWrapCharge || 0),
+            protectionCharge: Number(order.protectionCharge || 0),
+            ecoCharge: Number(order.ecoCharge || 0),
+            paymentFee: Number(order.paymentFee || 0),
+            extraCharges: Number(order.extraCharges || 0),
+            preDiscountTotal: Number(order.preDiscountTotal || 0),
+            shippingAddress: order.shippingAddress || {},
+            products: normalizeOrderProducts(order.products),
+            orderDate: order.orderDate || order.createdAt,
+            orderStatus: order.orderStatus || order.status || 'Ordered',
+            pdfType,
+            isDelivered
+        });
+
+        const fileName = isDelivered ? `TaxInvoice-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
+        res.setHeader('Content-Length', String(pdfBuffer.length));
+        return res.send(pdfBuffer);
+    } catch (e) {
+        console.error('❌ User invoice download error:', e.message);
+        if (process.env.SENTRY_DSN) Sentry.captureException(e);
+        return res.status(500).json({ success: false, message: 'Failed to generate invoice' });
+    }
 });
 
 // 🔴 ADMIN ANALYTICS/TESING ROUTES (delegate to unified controller payload)

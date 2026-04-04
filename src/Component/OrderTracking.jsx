@@ -1166,7 +1166,6 @@ export default function OrderTracking() {
   const navigate = useNavigate()
   const userId = useMemo(() => pickStoredUserId(), [])
   const supportEmail = 'support@eshopperr.me'
-  const useServerInvoice = process.env.REACT_APP_USE_SERVER_INVOICE === 'true'
 
   const [status, setStatus] = useState('Ordered')
   const [order, setOrder] = useState(null)
@@ -1661,17 +1660,6 @@ export default function OrderTracking() {
 
     setInvoiceLoading(true)
     try {
-      if (!useServerInvoice) {
-        const fallbackBlob = buildClientInvoiceBlob()
-        if (fallbackBlob) {
-          openBlobPdf(fallbackBlob, inline)
-          pushToast('🧾 Invoice Ready', inline ? 'Invoice preview opened (backup mode)' : 'Invoice download started (backup mode)', 2400)
-        } else {
-          pushToast('❌ Invoice Error', 'Unable to prepare invoice right now', 2400)
-        }
-        return
-      }
-
       const target = inline ? `${invoiceUrl}&disposition=inline` : invoiceUrl
       const response = await axios.get(target, { responseType: 'blob', timeout: 120000 })
       const blob = new Blob([response.data], { type: 'application/pdf' })
