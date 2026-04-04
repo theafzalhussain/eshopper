@@ -537,7 +537,7 @@ export default function Navbaar() {
                     background: rgba(255,255,255,0.985) !important;
                     box-shadow: 0 6px 20px rgba(0,0,0,0.05);
                 }
-                @keyframes slideInNav { from {transform:translateY(-100%)} to {transform:translateY(0)} }
+                @keyframes slideInNav { from {opacity:0} to {opacity:1} }
 
                 /* 🔥 LOGO STYLING */
                 .logo-wrapper { display: flex; align-items: center; gap: 8px; }
@@ -676,6 +676,8 @@ export default function Navbaar() {
                     overflow: hidden;
                     z-index: 10002;
                     transform-origin: top right;
+                    max-height: min(520px, 70dvh);
+                    overflow-y: auto;
                 }
                 .premium-dropdown-menu.show {
                     display: block !important;
@@ -866,14 +868,14 @@ export default function Navbaar() {
                     }
                     .mobile-profile-menu {
                         position: fixed !important;
-                        left: 50%;
-                        right: auto;
-                        transform: translateX(-50%);
+                        left: max(8px, env(safe-area-inset-left));
+                        right: max(8px, env(safe-area-inset-right));
+                        transform: none;
                         top: calc(64px + env(safe-area-inset-top));
-                        width: calc(100vw - 24px) !important;
+                        width: auto !important;
                         min-width: 0 !important;
                         max-width: none !important;
-                        max-height: calc(100vh - 84px - env(safe-area-inset-top));
+                        max-height: calc(100dvh - 84px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
                         overflow-y: auto;
                         margin-top: 0 !important;
                         z-index: 10020;
@@ -885,11 +887,13 @@ export default function Navbaar() {
                     .premium-dropdown-wrapper .premium-dropdown-menu:not(.mobile-profile-menu) {
                         position: fixed !important;
                         top: calc(64px + env(safe-area-inset-top));
+                        left: max(10px, env(safe-area-inset-left));
                         right: max(10px, env(safe-area-inset-right));
-                        left: auto;
-                        width: min(320px, calc(100vw - 20px));
+                        width: auto;
                         min-width: 0;
-                        max-height: calc(100vh - 84px - env(safe-area-inset-top));
+                        max-width: 360px;
+                        margin-left: auto;
+                        max-height: calc(100dvh - 84px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
                         overflow-y: auto;
                         margin-top: 0 !important;
                     }
@@ -908,8 +912,10 @@ export default function Navbaar() {
                     }
                     .mobile-profile-menu {
                         top: calc(60px + env(safe-area-inset-top));
-                        width: calc(100vw - 16px) !important;
-                        max-height: calc(100vh - 74px - env(safe-area-inset-top));
+                        left: max(6px, env(safe-area-inset-left));
+                        right: max(6px, env(safe-area-inset-right));
+                        width: auto !important;
+                        max-height: calc(100dvh - 74px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
                     }
                 }
 
