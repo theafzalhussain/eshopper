@@ -491,12 +491,31 @@ export default function Navbaar() {
 
             {/* --- CUSTOM CSS FOR LUXURY & RESPONSIVENESS --- */}
             <style dangerouslySetInnerHTML={{ __html: `
-                .header-main { position: relative; z-index: 1050; width: 100%; background: #fff; overflow-x: clip; }
+                .header-main {
+                    position: relative;
+                    z-index: 1050;
+                    width: 100%;
+                    background: #fff;
+                    overflow-x: clip;
+                    isolation: isolate;
+                }
                 body { overflow-x: hidden; }
                 .top-premium-ribbon { 
-                    height: 40px; 
+                    height: 40px;
                     background: linear-gradient(90deg, #0a0a0a 0%, #1a1025 40%, #301035 70%, #000 100%);
                     font-size: 11px;
+                }
+                .navbar {
+                    width: 100%;
+                    padding: 10px 0 !important;
+                    background: rgba(255,255,255,0.97) !important;
+                    backdrop-filter: saturate(180%) blur(14px);
+                }
+                .navbar .container {
+                    width: min(1320px, 100%);
+                    max-width: 1320px;
+                    padding-left: clamp(12px, 2.2vw, 28px);
+                    padding-right: clamp(12px, 2.2vw, 28px);
                 }
                 .dot-blink { width: 6px; height: 6px; background: #28a745; border-radius: 50%; animation: blink 2s infinite; }
                 @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
@@ -527,9 +546,10 @@ export default function Navbaar() {
                     display: inline-block;
                 }
                 .premium-nav-link { 
-                    font-size: 13px !important; font-weight: 700 !important; 
+                    font-size: 12px !important; font-weight: 700 !important;
                     text-transform: uppercase; color: #333 !important; 
-                    text-decoration: none; padding: 8px 16px;
+                    letter-spacing: 0.45px;
+                    text-decoration: none; padding: 8px 12px;
                     position: relative;
                     transition: all 0.3s ease;
                     display: inline-block;
@@ -557,12 +577,12 @@ export default function Navbaar() {
                     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
                     border: 1px solid #e9ecef;
                     border-radius: 50px;
-                    padding: 8px 16px;
+                    padding: 7px 14px;
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 8px;
                     font-weight: 700;
-                    font-size: 13px;
+                    font-size: 12px;
                     color: #111;
                     cursor: pointer;
                     transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
@@ -613,6 +633,9 @@ export default function Navbaar() {
                     animation: slideDownFade 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
                     overflow: hidden;
                     z-index: 10002;
+                }
+                .premium-dropdown-menu.show {
+                    display: block !important;
                 }
                 @keyframes slideDownFade {
                     from {
@@ -711,6 +734,10 @@ export default function Navbaar() {
                     color: #111; transition: 0.3s;
                 }
                 .hamburger-btn:hover { color: #17a2b8; }
+                .mobile-menu-toggle {
+                    gap: 4px;
+                    min-height: 40px;
+                }
 
                 /* 📱 MOBILE MENU OVERLAY */
                 .mobile-menu-overlay {
@@ -719,12 +746,13 @@ export default function Navbaar() {
                     overflow-y: auto; backdrop-filter: blur(10px);
                 }
                 .mobile-menu-content {
-                    padding: 80px 30px 30px; min-height: 100vh;
+                    padding: calc(68px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
+                    min-height: 100vh;
                     display: flex; flex-direction: column; justify-content: space-between;
                 }
                 .mobile-nav { display: flex; flex-direction: column; gap: 0; }
                 .mobile-nav-link {
-                    color: #fff; font-size: 28px; font-weight: 800;
+                    color: #fff; font-size: clamp(18px, 5vw, 28px); font-weight: 800;
                     text-transform: uppercase; padding: 20px 0;
                     border-bottom: 1px solid rgba(255,255,255,0.1);
                     transition: 0.3s; text-decoration: none; display: block;
@@ -768,6 +796,11 @@ export default function Navbaar() {
 
                 /* 📱 MOBILE RESPONSIVE */
                 @media (max-width: 991px) {
+                    .navbar .container {
+                        max-width: 100%;
+                        padding-left: 12px;
+                        padding-right: 12px;
+                    }
                     .logo-brand-name { font-size: 16px; letter-spacing: 2px; }
                     .logo-e { width: 32px; height: 32px; font-size: 18px; }
                     .logo-tagline { font-size: 6px; }
@@ -791,11 +824,11 @@ export default function Navbaar() {
                         left: 50%;
                         right: auto;
                         transform: translateX(-50%);
-                        top: 74px;
+                        top: calc(64px + env(safe-area-inset-top));
                         width: calc(100vw - 24px) !important;
                         min-width: 0 !important;
                         max-width: none !important;
-                        max-height: calc(100vh - 92px);
+                        max-height: calc(100vh - 84px - env(safe-area-inset-top));
                         overflow-y: auto;
                         margin-top: 0 !important;
                         z-index: 10020;
@@ -805,7 +838,7 @@ export default function Navbaar() {
                 
                 @media (max-width: 575px) {
                     .mobile-nav-link { font-size: 20px; padding: 15px 0; }
-                    .mobile-menu-content { padding: 60px 20px 20px; }
+                    .mobile-menu-content { padding: calc(62px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom)); }
                     .logo-brand-name { font-size: 14px; letter-spacing: 1.5px; }
                     .logo-e { width: 28px; height: 28px; font-size: 16px; }
                     .logo-tagline { font-size: 5px; }
@@ -815,9 +848,9 @@ export default function Navbaar() {
                         max-width: none;
                     }
                     .mobile-profile-menu {
-                        top: 68px;
+                        top: calc(60px + env(safe-area-inset-top));
                         width: calc(100vw - 16px) !important;
-                        max-height: calc(100vh - 84px);
+                        max-height: calc(100vh - 74px - env(safe-area-inset-top));
                     }
                 }
 
