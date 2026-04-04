@@ -498,6 +498,7 @@ export default function Navbaar() {
                     background: #fff;
                     overflow-x: clip;
                     isolation: isolate;
+                    transition: box-shadow 0.25s ease, background 0.25s ease;
                 }
                 body { overflow-x: hidden; }
                 .top-premium-ribbon { 
@@ -510,6 +511,7 @@ export default function Navbaar() {
                     padding: 10px 0 !important;
                     background: rgba(255,255,255,0.97) !important;
                     backdrop-filter: saturate(180%) blur(14px);
+                    transition: padding 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
                 }
                 .navbar .container {
                     width: min(1320px, 100%);
@@ -520,7 +522,19 @@ export default function Navbaar() {
                 .dot-blink { width: 6px; height: 6px; background: #28a745; border-radius: 50%; animation: blink 2s infinite; }
                 @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
                 
-                .header-fixed { position: fixed; top: 0; left: 0; width: 100%; animation: slideInNav 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; }
+                .header-fixed {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    animation: slideInNav 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+                    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.09);
+                }
+                .header-fixed .navbar {
+                    padding: 7px 0 !important;
+                    background: rgba(255,255,255,0.985) !important;
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+                }
                 @keyframes slideInNav { from {transform:translateY(-100%)} to {transform:translateY(0)} }
 
                 /* 🔥 LOGO STYLING */
@@ -530,10 +544,25 @@ export default function Navbaar() {
                     display: flex; align-items: center; justify-content: center;
                     font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800;
                     border-radius: 4px; border-right: 3px solid #17a2b8;
+                    transition: width 0.25s ease, height 0.25s ease, font-size 0.25s ease;
                 }
                 .logo-text-box { display: flex; flex-direction: column; line-height: 1; }
-                .logo-brand-name { font-weight: 800; letter-spacing: 3px; font-size: 20px; color: #111; }
-                .logo-tagline { font-size: 8px; letter-spacing: 2px; color: #17a2b8; font-weight: 700; margin-top: 2px; }
+                .logo-brand-name { font-weight: 800; letter-spacing: 3px; font-size: 20px; color: #111; transition: font-size 0.25s ease, letter-spacing 0.25s ease; }
+                .logo-tagline { font-size: 8px; letter-spacing: 2px; color: #17a2b8; font-weight: 700; margin-top: 2px; transition: font-size 0.25s ease, letter-spacing 0.25s ease; }
+
+                .header-fixed .logo-e {
+                    width: 34px;
+                    height: 34px;
+                    font-size: 20px;
+                }
+                .header-fixed .logo-brand-name {
+                    font-size: 18px;
+                    letter-spacing: 2.2px;
+                }
+                .header-fixed .logo-tagline {
+                    font-size: 7px;
+                    letter-spacing: 1.7px;
+                }
 
                 /* DESKTOP NAV */
                 .navbar-nav {
@@ -554,6 +583,10 @@ export default function Navbaar() {
                     transition: all 0.3s ease;
                     display: inline-block;
                     white-space: nowrap;
+                }
+                .premium-nav-link:hover {
+                    color: #0f8ea4 !important;
+                    transform: translateY(-1px);
                 }
                 .premium-nav-link::after {
                     content: '';
@@ -592,6 +625,9 @@ export default function Navbaar() {
                     transform: translateY(-2px);
                     box-shadow: 0 6px 20px rgba(23, 162, 184, 0.15);
                     border-color: #17a2b8;
+                }
+                .header-fixed .premium-user-btn {
+                    padding: 6px 12px;
                 }
                 .user-avatar {
                     width: 32px;
@@ -734,6 +770,7 @@ export default function Navbaar() {
                     color: #111; transition: 0.3s;
                 }
                 .hamburger-btn:hover { color: #17a2b8; }
+                .hamburger-btn:active { transform: scale(0.96); }
                 .mobile-menu-toggle {
                     gap: 4px;
                     min-height: 40px;
