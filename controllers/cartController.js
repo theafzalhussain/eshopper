@@ -229,6 +229,67 @@ const buildMockDeliveryDate = (pincode = '') => {
     return result;
 };
 
+// Validate pincode using real India Post API with strict checks
+const validatePincodeWithAPI = async (pincode) => {
+    try {
+        const normalized = String(pincode).trim();
+        
+        // Reject dummy/placeholder pincodes
+        if (/^0+$/.test(normalized) || /^1+$/.test(normalized) || /^9+$/.test(normalized)) {
+            console.log(`Rejected dummy pincode: ${normalized}`);
+            return false;
+        }
+        
+        console.log(`Starting validation for pincode: ${normalized}`);
+        
+        // Call India Post API with simple timeout
+        let response;
+        try {
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('API timeout')), 6000)
+            );
+            const fetchPromise = fetch(`https://api.postalpincode.in/pincode/${normalized}`);
+            response = await Promise.race([fetchPromise, timeoutPromise]);
+        } catch (timeoutErr) {
+            console.error(`Pincode ${normalized}: API timeout or failed`);
+            return false;
+        }
+        
+        if (!response.ok) {
+            console.error(`Pincode ${normalized}: API returned status ${response.status}`);
+            return false;
+        }
+        
+        const data = await response.json();
+        console.log(`API Response for ${normalized}:`, data);
+        
+        // Strict validation: must have Status "Success"
+        if (!Array.isArray(data) || data.length === 0) {
+            console.log(`Pincode ${normalized}: No data in response`);
+            return false;
+        }
+        
+        const result = data[0];
+        
+        // Check if status is Success AND has actual location data
+        const isValid = result?.Status === 'Success' && 
+                       result?.PostOffice && 
+                       Array.isArray(result.PostOffice) && 
+                       result.PostOffice.length > 0;
+        
+        console.log(`Pincode ${normalized} validation: ${isValid ? 'VALID ✓' : 'INVALID ✗'}`, {
+            Status: result?.Status,
+            PostOffices: result?.PostOffice?.length || 0,
+            District: result?.PostOffice?.[0]?.District
+        });
+        
+        return isValid;
+    } catch (error) {
+        console.error(`Pincode validation error for ${pincode}:`, error.message);
+        return false;
+    }
+};
+
 const mapCartItem = (item, userId) => ({
     _id: item._id,
     productid: item.product?._id || item.product,
@@ -492,13 +553,28 @@ exports.setDeliveryEstimate = async (req, res) => {
         const { pincode } = req.body || {};
         const normalizedPincode = String(pincode || '').trim();
 
+        console.log(`[DELIVERY] Request for pincode: ${normalizedPincode}, userId: ${userId}`);
+
         if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+            console.log(`[DELIVERY] Invalid userId`);
             return res.status(400).json({ success: false, message: 'Valid user id required.' });
         }
         if (!/^\d{6}$/.test(normalizedPincode)) {
+            console.log(`[DELIVERY] Invalid pincode format: ${normalizedPincode}`);
             return res.status(400).json({ success: false, message: 'Please enter a valid 6-digit pincode.' });
         }
 
+        // Validate pincode with real data
+        console.log(`[DELIVERY] Validating pincode: ${normalizedPincode}`);
+        const isValidPincode = await validatePincodeWithAPI(normalizedPincode);
+        console.log(`[DELIVERY] Pincode validation result: ${isValidPincode}`);
+        
+        if (!isValidPincode) {
+            console.log(`[DELIVERY] Pincode ${normalizedPincode} is INVALID - rejecting`);
+            return res.status(400).json({ success: false, message: 'This pincode does not exist. Please enter a valid pincode.' });
+        }
+
+        console.log(`[DELIVERY] Pincode ${normalizedPincode} is VALID - generating delivery date`);
         const estimatedDate = buildMockDeliveryDate(normalizedPincode);
 
         let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
