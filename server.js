@@ -964,7 +964,7 @@ const sendOrderPlacedEmail = async (payload = {}) => {
     const attachments = [];
     if (payload.invoiceBase64) {
         attachments.push({
-            filename: `Receipt-${payload.orderId || 'order'}.pdf`,
+                filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
             content: payload.invoiceBase64,
             contentType: 'application/pdf'
         });
@@ -980,7 +980,7 @@ const sendOrderConfirmationEmail = async (payload = {}) => {
     const attachments = [];
     if (payload.invoiceBase64) {
         attachments.push({
-            filename: `Confirmation-${payload.orderId || 'order'}.pdf`,
+                filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
             content: payload.invoiceBase64,
             contentType: 'application/pdf'
         });
@@ -998,9 +998,8 @@ const sendOrderStatusEmail = async (payload = {}) => {
     });
     const attachments = [];
     if (payload.invoiceBase64) {
-        const isDelivered = String(payload.status || '').trim().toLowerCase() === 'delivered';
         attachments.push({
-            filename: isDelivered ? `TaxInvoice-${payload.orderId || 'order'}.pdf` : `Invoice-${payload.orderId || 'order'}.pdf`,
+            filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
             content: payload.invoiceBase64,
             contentType: 'application/pdf'
         });
@@ -3141,7 +3140,7 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
 
         const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
         const isDelivered = orderStatus === 'delivered';
-        const pdfType = isDelivered ? 'final' : 'receipt';
+        const pdfType = 'final';
 
         const pdfBuffer = await generateInvoicePdfBuffer({
             orderId: order.orderId,
@@ -3169,7 +3168,7 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
             isDelivered
         });
 
-        const fileName = isDelivered ? `TaxInvoice-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`;
+        const fileName = `TaxInvoice-${order.orderId}.pdf`;
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
         res.setHeader('Content-Length', String(pdfBuffer.length));

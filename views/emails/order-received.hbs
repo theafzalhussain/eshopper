@@ -136,6 +136,7 @@
             <table role="presentation">
               <tr><td>Subtotal</td><td align="right">INR {{subtotal}}</td></tr>
               <tr><td>Shipping</td><td align="right">INR {{shippingCharges}}</td></tr>
+              <tr><td>GST (Included)</td><td align="right">INR {{gst}}</td></tr>
               <tr><td>Total Amount</td><td align="right">INR {{totalAmount}}</td></tr>
               <tr class="final"><td>Total Paid</td><td align="right">INR {{totalPaid}}</td></tr>
             </table>
@@ -155,7 +156,7 @@
           </div>
 
           <a class="btn btn-primary" href="{{trackingUrl}}">VIEW ORDER STATUS</a>
-          <a class="btn btn-secondary" href="{{myOrdersUrl}}">OPEN MY ORDERS</a>
+          <a class="btn btn-secondary" href="{{invoiceDownloadUrl}}">DOWNLOAD TAX INVOICE</a>
         </div>
       </td></tr>
 
@@ -177,7 +178,7 @@
 
       <tr><td class="foot">
         <div>Eshopper Luxe, {{companyAddress}}</div>
-        <div>* This is an order receipt, not a Tax Invoice. Tax Invoice will be provided upon delivery.</div>
+        <div>* Your premium tax invoice is available from the invoice download link above.</div>
         <div><a href="{{helpCenterUrl}}" style="color:#d4b75a;text-decoration:none;">Help Center</a> | <a href="{{brandSiteUrl}}" style="color:#d4b75a;text-decoration:none;">Website</a></div>
       </td></tr>
     </table>

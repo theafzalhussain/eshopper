@@ -460,7 +460,7 @@ export default function Confirmation() {
           <div className='hero-actions'>
             <button className='hero-btn' onClick={handleCopyOrderId}>{copied ? 'Copied' : 'Copy Order ID'}</button>
             <button className='hero-btn' onClick={handleRefreshStatus}>{refreshing ? 'Refreshing...' : 'Refresh Status'}</button>
-            <button className='hero-btn' onClick={handlePremiumInvoice}>Premium Invoice</button>
+            <button className='hero-btn' onClick={handlePremiumInvoice}>View Tax Invoice</button>
             <button className='hero-btn' onClick={() => navigate(`/order-tracking/${encodeURIComponent(order.orderId || '')}`)}>Track Live</button>
           </div>
         </motion.section>
