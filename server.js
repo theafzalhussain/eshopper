@@ -5,6 +5,7 @@ require('dotenv').config();
 const express = require('express');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const cartRoutes = require('./routes/cartRoutes');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
@@ -32,11 +33,141 @@ const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: process.env.FRONTEND_URL || true,
-        credentials: true
+        origin(origin, callback) {
+            if (!origin) return callback(null, true);
+            if (isTrustedOrigin(origin)) return callback(null, true);
+            return callback(new Error('Socket CORS policy: Unauthorized origin'));
+        },
+        credentials: true,
+        methods: ['GET', 'POST']
     }
 });
 app.set('io', io);
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.set('trust proxy', 1);
+
+const allowedOrigins = [
+    String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, ''),
+    'https://eshopperr.me',
+    'https://www.eshopperr.me',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001'
+].filter(Boolean);
+
+const extraAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+const isVercelPreviewOrigin = (origin = '') => /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
+const isTrustedOrigin = (origin = '') => allowedOrigins.includes(origin) || extraAllowedOrigins.includes(origin) || isVercelPreviewOrigin(origin);
+
+const corsOptions = {
+    origin(origin, callback) {
+        if (!origin) return callback(null, true);
+        if (isTrustedOrigin(origin)) return callback(null, true);
+        return callback(new Error('CORS policy: Unauthorized origin'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-admin-secret'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+let firebaseAdminReady = false;
+
+try {
+    let firebaseCredentials = null;
+    if (process.env.FIREBASE_CONFIG_JSON) {
+        firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
+    } else {
+        const localPath = path.join(__dirname, 'firebase-admin.json');
+        if (fs.existsSync(localPath)) {
+            firebaseCredentials = require('./firebase-admin.json');
+        }
+    }
+
+    if (
+        firebaseCredentials &&
+        firebaseCredentials.project_id &&
+        firebaseCredentials.private_key &&
+        firebaseCredentials.client_email
+    ) {
+        if (!admin.apps.length) {
+            admin.initializeApp({
+                credential: admin.credential.cert(firebaseCredentials),
+                projectId: firebaseCredentials.project_id
+            });
+        }
+        firebaseAdminReady = true;
+        console.log('Firebase Admin initialized');
+    } else {
+        console.warn('Firebase Admin credentials missing; auth-sync route will stay disabled');
+    }
+} catch (firebaseInitErr) {
+    console.warn('Firebase Admin init skipped:', firebaseInitErr.message);
+}
+
+const ALLOWED_ORDER_STATUS = [
+    'Order Placed',
+    'Ordered',
+    'Confirmed',
+    'Packed',
+    'Shipped',
+    'Out for Delivery',
+    'Delivered',
+    'Return Initiated',
+    'Return Completed',
+    'Refund Initiated',
+    'Refund Completed'
+];
+
+const getMembershipTypeFromOrders = (totalOrders = 0) => {
+    const orders = Number(totalOrders || 0);
+    if (orders >= 10) return 'Elite';
+    if (orders >= 5) return 'Gold';
+    return 'Silver';
+};
+
+const normalizeOrderStatus = (status = '') => {
+    const value = String(status || '').trim().toLowerCase();
+    if (value === 'ordered') return 'Ordered';
+    if (value === 'order placed') return 'Order Placed';
+    if (value === 'confirmed') return 'Confirmed';
+    if (value === 'packed') return 'Packed';
+    if (value === 'shipped') return 'Shipped';
+    if (value === 'out for delivery') return 'Out for Delivery';
+    if (value === 'delivered') return 'Delivered';
+    if (value === 'return initiated') return 'Return Initiated';
+    if (value === 'return completed') return 'Return Completed';
+    if (value === 'refund initiated') return 'Refund Initiated';
+    if (value === 'refund completed') return 'Refund Completed';
+    return null;
+};
+
+const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'true').toLowerCase() === 'true';
+const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
+const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'true').toLowerCase() === 'true';
+const DELIVERY_OTP_EXPIRY_MINUTES = Math.max(10, Number(process.env.DELIVERY_OTP_EXPIRY_MINUTES || 120));
+
+const generateDeliveryOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
+
+const maskEmail = (email = '') => {
+    const clean = String(email || '').trim();
+    const parts = clean.split('@');
+    if (parts.length !== 2) return clean;
+    const [local, domain] = parts;
+    if (local.length <= 2) return `${local.charAt(0) || '*'}***@${domain}`;
+    return `${local.slice(0, 2)}***@${domain}`;
+};
 
 const buildInvoiceHtmlLegacy = async ({
     orderId,
@@ -583,6 +714,9 @@ io.on('connection', (socket) => {
 
 
 
+app.use('/api', cartRoutes);
+app.use('/api/admin', adminRoutes);
+
 // Register order routes (fixes missing /api/admin/delete-orders)
 app.use(orderRoutes);
 
@@ -649,6 +783,14 @@ const BRAND_LOGO_FALLBACK_URL = process.env.BRAND_LOGO_FALLBACK_URL || `${BRAND_
 const BRAND_LOGO_EMAIL_URL = process.env.BRAND_LOGO_EMAIL_URL || BRAND_LOGO_PRIMARY_URL;
 const BRAND_LOGO_PDF_SRC = BRAND_LOGO_PRIMARY_URL;
 const FRONTEND_PUBLIC_URL = (process.env.FRONTEND_URL || BRAND_SITE_URL).trim().replace(/\/$/, '');
+const API_PUBLIC_URL = (
+    process.env.API_PUBLIC_URL ||
+    process.env.BACKEND_PUBLIC_URL ||
+    process.env.BACKEND_URL ||
+    ((String(process.env.NODE_ENV || '').toLowerCase() !== 'production')
+        ? `http://localhost:${process.env.PORT || 5000}`
+        : BRAND_SITE_URL)
+).trim().replace(/\/$/, '');
 const SUPPORT_EMAIL_DEFAULT = (process.env.SUPPORT_EMAIL || process.env.BRAND_EMAIL || 'support@eshopperr.me').trim();
 const SUPPORT_PHONE_DEFAULT = (process.env.SUPPORT_PHONE || process.env.BRAND_PHONE || '+91 8447859784').trim();
 const INSTAGRAM_URL_DEFAULT = (
@@ -1170,11 +1312,11 @@ const mapProductsForEmailTemplate = (products = []) => {
 };
 
 const DELIVERY_PROGRESS_STEP_META = [
-    { label: 'Placed', icon: '&#128722;' },
+    { label: 'Placed', icon: '&#9679;' },
     { label: 'Confirmed', icon: '&#10003;' },
-    { label: 'Packed', icon: '&#128230;' },
-    { label: 'Shipped', icon: '&#128666;' },
-    { label: 'Delivered', icon: '&#127873;' }
+    { label: 'Packed', icon: '&#9632;' },
+    { label: 'Shipped', icon: '&#10148;' },
+    { label: 'Delivered', icon: '&#10003;' }
 ];
 
 const resolveProgressStage = (statusValue = '') => {
@@ -1222,7 +1364,7 @@ const buildInvoiceUrl = (orderId, userId, type = 'placed') => {
     const safeOrderId = encodeURIComponent(String(orderId || '').trim());
     const safeUserId = encodeURIComponent(String(userId || '').trim());
     const safeType = encodeURIComponent(String(type || 'placed').trim().toLowerCase());
-    return `${BRAND_SITE_URL}/api/order/${safeOrderId}/invoice?userId=${safeUserId}&type=${safeType}&disposition=inline`;
+    return `${API_PUBLIC_URL}/api/order/${safeOrderId}/invoice?userId=${safeUserId}&type=${safeType}&disposition=inline`;
 };
 
 const buildTemplatePayload = (status, payload = {}) => {
@@ -1381,7 +1523,7 @@ const sendOrderPlacedEmail = async (payload = {}) => {
 const sendOrderConfirmationEmail = async (payload = {}) => {
     const toEmail = String(payload.toEmail || '').trim();
     if (!toEmail) return { skipped: true, reason: 'missing-email' };
-    const subject = `🎉 Order Confirmed - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`;
+    const subject = `Order Confirmed - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`;
     const html = await renderTemplateEmailHtml('Confirmed', payload);
     const attachments = [];
     if (payload.invoiceBase64) {
@@ -1400,13 +1542,13 @@ const sendOrderStatusEmail = async (payload = {}) => {
     const statusText = String(payload.status || 'Update').trim();
     const statusLower = statusText.toLowerCase();
     const subject = statusLower === 'packed'
-        ? `📦 Order Packed with Care - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`
+        ? `Order Packed with Care - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`
         : statusLower === 'shipped'
-            ? `🚚 Order Shipped - Track Your Package | ${payload.orderId || 'ESHOPPER'}`
+            ? `Order Shipped - Track Your Package | ${payload.orderId || 'ESHOPPER'}`
             : statusLower === 'out for delivery'
-                ? `⏰ Arriving Today! - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`
+                ? `Arriving Today - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`
                 : statusLower === 'delivered'
-                    ? `🎉 Delivered Successfully - ${payload.orderId || 'ESHOPPER'} | Rate Your Experience`
+                    ? `Delivered Successfully - ${payload.orderId || 'ESHOPPER'} | Rate Your Experience`
             : `Order ${statusText || 'Update'} • ${payload.orderId || 'ESHOPPER'}`;
     const html = await renderTemplateEmailHtml(payload.status || 'Update', {
         ...payload,
@@ -1708,7 +1850,7 @@ const sendAdminAlert = async ({ title, details, category = 'system', data = {} }
         await sendTransactionalEmail({
             toEmail: adminEmail,
             toName: 'Admin',
-            subject: `⚠️ ${safeTitle}`,
+            subject: `${safeTitle}`,
             htmlContent: html,
             textContent: `${safeTitle}\n${safeDetails}`
         });
@@ -2524,6 +2666,56 @@ app.post('/api/login-2fa', authLimiter, async (req, res) => {
         return res.status(500).json({ message: '2FA verification failed. Please try again.' });
     }
 });
+
+const DEFAULT_USER_SETTINGS = {
+    notifications: {
+        orderUpdates: true,
+        deliveryUpdates: true,
+        promotionalEmails: true,
+        priceAlerts: false,
+        wishlistAlerts: true,
+        smsAlerts: false
+    },
+    privacy: {
+        profileVisibility: 'Private',
+        personalizedRecommendations: true
+    },
+    security: {
+        twoFactorEnabled: false,
+        loginAlerts: true
+    },
+    communication: {
+        newsletter: true,
+        whatsappUpdates: false,
+        pushNotifications: true
+    }
+};
+
+const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+const deepMerge = (baseValue, overrideValue) => {
+    if (!isPlainObject(baseValue) || !isPlainObject(overrideValue)) {
+        return overrideValue === undefined ? baseValue : overrideValue;
+    }
+
+    const merged = { ...baseValue };
+    Object.keys(overrideValue).forEach((key) => {
+        merged[key] = deepMerge(baseValue[key], overrideValue[key]);
+    });
+    return merged;
+};
+
+const normalizeUserSettings = (settings) => deepMerge(DEFAULT_USER_SETTINGS, isPlainObject(settings) ? settings : {});
+
+const normalizeUserDocument = (doc) => {
+    if (!doc) return doc;
+    const plainDoc = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+    return {
+        ...plainDoc,
+        deliveryInstructions: plainDoc.deliveryNotes || plainDoc.deliveryInstructions || '',
+        settings: normalizeUserSettings(plainDoc.settings)
+    };
+};
 
 const handle = (path, Model, useUpload = false) => {
     // GET all or by query
@@ -3646,11 +3838,18 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
         const disposition = String(req.query.disposition || '').toLowerCase() === 'inline' ? 'inline' : 'attachment';
         const requestedType = String(req.query.type || '').trim().toLowerCase();
 
-        if (!orderId || !userId) {
-            return res.status(400).json({ success: false, message: 'orderId and userId are required' });
+        if (!orderId) {
+            return res.status(400).json({ success: false, message: 'orderId is required' });
         }
 
-        const order = await Order.findOne({ orderId, userid: userId }).lean();
+        let order = null;
+        if (userId) {
+            order = await Order.findOne({ orderId, userid: userId }).lean();
+        }
+        if (!order) {
+            // Fallback for legacy invoice links that may not include userId.
+            order = await Order.findOne({ orderId }).lean();
+        }
         if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
         const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
@@ -4329,9 +4528,10 @@ const handleOrderStatusUpdate = async (req, res) => {
                     const resolvedUserName = order.userName || userDoc?.name || 'Customer';
                     let invoiceBase64 = null;
 
-                    // Delivered status should carry final tax invoice attachment.
-                    if (FEATURE_INVOICE_SYSTEM && normalized === 'Delivered') {
+                    // Confirmed and Delivered statuses should carry invoice attachments.
+                    if (FEATURE_INVOICE_SYSTEM && (normalized === 'Confirmed' || normalized === 'Delivered')) {
                         try {
+                            const invoiceTypeForStatus = normalized === 'Confirmed' ? 'confirmation' : 'final';
                             const invoiceBuffer = await generateInvoicePdfBuffer({
                                 orderId: order.orderId,
                                 userName: resolvedUserName,
@@ -4345,9 +4545,9 @@ const handleOrderStatusUpdate = async (req, res) => {
                                 products: normalizeOrderProducts(order.products),
                                 orderDate: order.orderDate || order.createdAt,
                                 estimatedArrival: order.estimatedArrival,
-                                orderStatus: 'Delivered',
-                                pdfType: 'final',
-                                isDelivered: true
+                                orderStatus: normalized,
+                                pdfType: invoiceTypeForStatus,
+                                isDelivered: normalized === 'Delivered'
                             });
 
                             if (invoiceBuffer) {

@@ -15,6 +15,10 @@ const DEFAULT_THEME_TOKENS_PARTIAL = `:root {
     --progress-a: #34d399;
     --progress-b: #60a5fa;
     --progress-c: #a78bfa;
+    --btn-size: 14px;
+    --btn-radius: 9px;
+    --btn-py: 10px;
+    --btn-px: 14px;
 }
 
 body {
@@ -22,6 +26,97 @@ body {
     color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+}
+
+.hero .t,
+.hero h1,
+.hero h2 {
+    font-size: 34px !important;
+    line-height: 1.12 !important;
+}
+
+.title {
+    font-size: 30px !important;
+    line-height: 1.15 !important;
+}
+
+.heading {
+    font-size: 22px !important;
+}
+
+.progress-head {
+    font-size: 16px !important;
+}
+
+.btn,
+.btn-sm,
+.smallbtn,
+.btn-inst,
+.btn-ref,
+.btn-review,
+.line,
+.chat,
+.call,
+.contact a,
+.support a,
+.cta a {
+    font-size: var(--btn-size) !important;
+    line-height: 1.3 !important;
+    border-radius: var(--btn-radius) !important;
+    padding: var(--btn-py) var(--btn-px) !important;
+    min-width: 0 !important;
+}
+
+.hero .icon,
+.hero .ok,
+.crown,
+.pgrid .i,
+.egrid .i,
+.stars {
+    font-size: 24px !important;
+    line-height: 1 !important;
+}
+
+.status {
+    letter-spacing: 0.3px;
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+}
+
+@media only screen and (max-width: 620px) {
+    .hero .t,
+    .hero h1,
+    .hero h2 {
+        font-size: 27px !important;
+    }
+
+    .title {
+        font-size: 24px !important;
+    }
+
+    .heading {
+        font-size: 19px !important;
+    }
+
+    .progress-head {
+        font-size: 14px !important;
+    }
+
+    .btn,
+    .btn-sm,
+    .smallbtn,
+    .btn-inst,
+    .btn-ref,
+    .btn-review,
+    .line,
+    .chat,
+    .call,
+    .contact a,
+    .support a,
+    .cta a {
+        font-size: 13px !important;
+        padding: 9px 12px !important;
+    }
 }`;
 
 const registerTemplatePartials = () => {

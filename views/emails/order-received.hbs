@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Order Received - {{orderId}}</title>
   <style>
+    {{> theme_tokens}}
     body { margin:0; padding:0; background:#050608; font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif; color:#f4f4f4; }
     table { border-collapse:collapse; }
     img { max-width:100%; height:auto; border:0; display:block; }
@@ -13,41 +14,41 @@
     .head { padding:16px 20px; background:linear-gradient(120deg,#151515,#262117); }
     .brand { height:28px; vertical-align:middle; }
     .orderid { float:right; text-align:right; color:#f4d163; font-size:12px; letter-spacing:0.3px; }
-    .orderid strong { color:#ffffff; display:block; font-size:34px; margin-top:3px; }
+    .orderid strong { color:#ffffff; display:block; font-size:22px; margin-top:3px; }
     .hero { background:#dfbe3f; color:#ffffff; text-align:center; padding:16px 10px; }
-    .hero .ok { font-size:45px; line-height:1; font-weight:700; }
-    .hero .label { font-size:42px; font-weight:800; letter-spacing:0.6px; line-height:1.04; margin-top:6px; }
-    .hero .date { font-size:24px; margin-top:8px; }
+    .hero .ok { font-size:30px; line-height:1; font-weight:700; }
+    .hero .label { font-size:30px; font-weight:800; letter-spacing:0.6px; line-height:1.04; margin-top:6px; }
+    .hero .date { font-size:14px; margin-top:8px; }
     .section { padding:20px 22px; border-top:1px solid #20242b; }
-    .title { margin:0 0 8px 0; font-size:43px; line-height:1.1; text-align:center; }
-    .subtitle { margin:0; text-align:center; color:#c7ccd4; font-size:32px; line-height:1.42; }
-    .verify { display:inline-block; margin-top:14px; background:#0d3119; border:1px solid #0f7d3c; color:#7cffaf; border-radius:8px; padding:10px 15px; font-size:26px; font-weight:700; }
+    .title { margin:0 0 8px 0; font-size:32px; line-height:1.1; text-align:center; }
+    .subtitle { margin:0; text-align:center; color:#c7ccd4; font-size:16px; line-height:1.5; }
+    .verify { display:inline-block; margin-top:14px; background:#0d3119; border:1px solid #0f7d3c; color:#7cffaf; border-radius:8px; padding:8px 12px; font-size:14px; font-weight:700; }
     .panel { border:1px solid #2a2f39; border-radius:12px; padding:14px; background:#0f1115; }
-    .panel h3 { margin:0 0 12px 0; color:#e8c450; font-size:32px; }
+    .panel h3 { margin:0 0 12px 0; color:#e8c450; font-size:20px; }
     .items { width:100%; border:1px solid #303542; border-radius:10px; overflow:hidden; }
     .items th { text-align:left; color:#e7c44b; font-size:12px; padding:10px; border-bottom:1px solid #2a2f3a; background:#11141a; }
-    .items td { padding:12px 10px; color:#eef0f4; font-size:30px; border-bottom:1px solid #292d37; vertical-align:top; }
+    .items td { padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top; }
     .items tr:last-child td { border-bottom:none; }
     .thumb { width:82px; height:82px; object-fit:cover; border-radius:8px; border:1px solid #343946; }
-    .muted { color:#9ba3b2; font-size:26px; line-height:1.3; }
+    .muted { color:#9ba3b2; font-size:12px; line-height:1.3; }
     .cards { width:100%; margin-top:14px; }
     .cards td { width:50%; vertical-align:top; }
     .box { border:1px solid #6f5b20; border-radius:12px; background:linear-gradient(120deg,#1f1b12,#14161b); padding:14px; margin-right:7px; min-height:160px; }
     .box2 { border:1px solid #37404c; border-radius:12px; background:#0f1116; padding:14px; margin-left:7px; min-height:160px; }
-    .k { margin:0 0 8px 0; font-size:24px; color:#e8c450; font-weight:700; letter-spacing:0.3px; }
-    .v { margin:0; color:#e4e6eb; font-size:31px; line-height:1.38; }
+    .k { margin:0 0 8px 0; font-size:12px; color:#e8c450; font-weight:700; letter-spacing:0.3px; }
+    .v { margin:0; color:#e4e6eb; font-size:14px; line-height:1.5; }
     .pending { color:#11a64e; }
     .totals { margin-top:14px; border:1px solid #323844; border-radius:12px; padding:14px; }
-    .totals td { font-size:28px; color:#d6d9df; padding:6px 0; }
+    .totals td { font-size:14px; color:#d6d9df; padding:6px 0; }
     .totals .amount { text-align:right; }
-    .totals .final td { color:#e8c450; font-size:40px; font-weight:800; padding-top:10px; }
+    .totals .final td { color:#e8c450; font-size:22px; font-weight:800; padding-top:10px; }
     .cta { margin-top:15px; text-align:center; }
-    .cta a { display:inline-block; min-width:280px; background:#dfbe3f; color:#171717; text-decoration:none; font-weight:800; letter-spacing:0.3px; border-radius:9px; padding:13px 18px; font-size:30px; }
+    .cta a { display:inline-block; min-width:220px; background:#dfbe3f; color:#171717; text-decoration:none; font-weight:800; letter-spacing:0.3px; border-radius:9px; padding:10px 14px; font-size:14px; }
     .note { margin:10px 0 0 0; text-align:center; color:#868d9a; font-size:12px; font-style:italic; }
     .concierge { background:#2a220b; text-align:center; padding:20px 20px 18px; border-top:1px solid #7b6421; }
-    .concierge .crown { font-size:40px; }
-    .concierge .h { margin:8px 0 6px 0; color:#d7b148; font-size:42px; font-weight:700; }
-    .concierge .p { margin:0 auto; max-width:500px; color:#d1b56d; font-size:30px; line-height:1.4; }
+    .concierge .crown { font-size:24px; }
+    .concierge .h { margin:8px 0 6px 0; color:#d7b148; font-size:24px; font-weight:700; }
+    .concierge .p { margin:0 auto; max-width:500px; color:#d1b56d; font-size:14px; line-height:1.5; }
     .support { width:100%; margin-top:14px; }
     .support td { width:50%; }
     .support a { display:block; text-align:center; text-decoration:none; border-radius:8px; padding:11px 8px; font-weight:700; font-size:13px; letter-spacing:0.3px; text-transform:uppercase; }
@@ -63,20 +64,20 @@
       .hero .label { font-size:33px; }
       .hero .date { font-size:17px; }
       .section { padding:16px 12px; }
-      .title { font-size:41px; }
+      .title { font-size:28px; }
       .subtitle { font-size:17px; }
       .verify { font-size:15px; }
-      .panel h3 { font-size:28px; }
+      .panel h3 { font-size:20px; }
       .items td { font-size:18px; }
       .muted { font-size:15px; }
-      .k { font-size:22px; }
+      .k { font-size:12px; }
       .v { font-size:14px; }
       .cards td { display:block; width:100%; }
       .box,.box2 { margin:0 0 10px 0; }
       .totals td { font-size:15px; }
-      .totals .final td { font-size:35px; }
+      .totals .final td { font-size:20px; }
       .cta a { min-width:100%; font-size:16px; box-sizing:border-box; }
-      .concierge .h { font-size:35px; }
+      .concierge .h { font-size:22px; }
       .concierge .p { font-size:17px; }
       .support td { display:block; width:100%; }
       .wa,.mail { margin:0 0 10px 0; }
@@ -129,7 +130,7 @@
             <tr>
               <td>
                 <div class="box">
-                  <p class="k">&#128205; SHIPPING TO</p>
+                  <p class="k">SHIPPING ADDRESS</p>
                   <p class="v"><strong>{{shippingName}}</strong><br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>{{shippingPhone}}</p>
                 </div>
               </td>
@@ -151,13 +152,13 @@
           </div>
 
           <div class="cta"><a href="{{trackingUrl}}">VIEW ORDER STATUS</a></div>
-           <a class="cta" href="{{placedInvoiceUrl}}" style="margin-top:10px;background:#2f6fed;">VIEW INVOICE</a>
+          <div class="cta"><a href="{{placedInvoiceUrl}}" style="margin-top:10px;background:#2f6fed;color:#ffffff;">VIEW INVOICE</a></div>
           <p class="note">* This is an order receipt, not a Tax Invoice. Tax Invoice will be provided upon delivery.</p>
         </div>
       </td></tr>
 
       <tr><td class="concierge">
-        <div class="crown">&#128081;</div>
+        <div class="crown">&#9671;</div>
         <p class="h">Personal Concierge</p>
         <p class="p">Our dedicated team is here to assist with any questions about your order. Reach out anytime!</p>
         <table class="support" role="presentation">

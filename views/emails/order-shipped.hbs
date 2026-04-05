@@ -86,21 +86,21 @@
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} shipped. Track your package now.</div>
   <table class="wrap" role="presentation" width="100%"><tr><td>
     <table class="card" role="presentation" align="center">
-      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">&#128666; ON THE WAY</span></td></tr>
-      <tr><td class="hero"><div class="icon">&#128640;</div><div class="t">YOUR ORDER IS SHIPPED!</div><div class="s">Track your luxury package in real-time</div></td></tr>
+      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">ON THE WAY</span></td></tr>
+      <tr><td class="hero"><div class="icon">&#10148;</div><div class="t">YOUR ORDER IS SHIPPED</div><div class="s">Track your luxury package in real-time</div></td></tr>
 
       <tr><td class="section">
-        <h2 class="title">Exciting News, {{customerName}}! &#127881;</h2>
+        <h2 class="title">Exciting News, {{customerName}}</h2>
         <p class="sub">Your luxury package has left our warehouse and is now en route to you. Track your delivery in real-time using the details below.</p>
       </td></tr>
 
       <tr><td class="cta-strip">
-        <a class="btn btn-primary" href="{{liveTrackingUrl}}">&#128269; TRACK PACKAGE NOW</a>
+        <a class="btn btn-primary" href="{{liveTrackingUrl}}">TRACK PACKAGE NOW</a>
       </td></tr>
 
       <tr><td class="section">
         <div class="box">
-          <h3 class="heading">&#128230; SHIPMENT INFORMATION</h3>
+          <h3 class="heading">SHIPMENT INFORMATION</h3>
           <table class="summary" role="presentation" width="100%">
             <tr><td class="k">Courier Partner</td><td class="v">{{courierPartner}}</td></tr>
             <tr><td class="k">AWB Tracking Number</td><td class="v"><span class="awb">{{trackingNumber}}</span></td></tr>
@@ -121,7 +121,7 @@
             <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
           </div>
 
-          <div class="items-title">&#128230; WHAT'S IN YOUR PACKAGE</div>
+          <div class="items-title">WHAT'S IN YOUR PACKAGE</div>
           <table class="items" role="presentation" width="100%">
             {{#each items}}
             <tr>
@@ -133,8 +133,8 @@
           </table>
 
           <div class="addr">
-            <h4>&#128205; DELIVERING TO</h4>
-            <p><strong>{{shippingName}}</strong><br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>&#128222; {{shippingPhone}}</p>
+            <h4>DELIVERING TO</h4>
+            <p><strong>{{shippingName}}</strong><br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>{{shippingPhone}}</p>
           </div>
 
           <div class="tips">
