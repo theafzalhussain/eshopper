@@ -18,6 +18,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import io from 'socket.io-client';
 import { SOCKET_TRANSPORTS } from '../../constants';
+import LefNav from './LefNav';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
 import OrderActionDrawer from './OrderActionDrawer';
 import { BASE_URL as SHARED_BASE_URL } from '../../constants';
@@ -154,6 +155,42 @@ const inDateRange = (updatedAt, fromDate, toDate) => {
     return true;
 };
 
+const parseValidDate = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+};
+
+const getOrderDateForFiltering = (order = {}) => {
+    // Date filters should match what admin sees in "Updated" timeline.
+    const source = [
+        order.updatedAt,
+        order.createdAt,
+        order.orderDate,
+        order.placedAt
+    ];
+
+    for (const candidate of source) {
+        const parsed = parseValidDate(candidate);
+        if (parsed) return parsed;
+    }
+
+    return new Date();
+};
+
+const normalizePaymentStatus = (order = {}) => {
+    const raw = String(order.paymentStatus || '').trim().toLowerCase();
+    const method = String(order.paymentMethod || '').trim().toLowerCase();
+
+    if (method.includes('cod') || raw === 'cod') return 'cod';
+    if (raw.includes('paid') || raw === 'success' || raw === 'completed') return 'paid';
+    if (raw.includes('fail') || raw.includes('cancel') || raw === 'declined') return 'failed';
+    if (raw.includes('pending') || raw.includes('unpaid')) return 'pending';
+
+    return raw || 'pending';
+};
+
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -171,6 +208,7 @@ export default function AdminOrders() {
     const [updating, setUpdating] = useState('');
     const [bulkStatus, setBulkStatus] = useState('Confirmed');
     const [bulkUpdating, setBulkUpdating] = useState(false);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
     const [notification, setNotification] = useState(null);
     const [selectedOrders, setSelectedOrders] = useState(new Set());
     const [selectAll, setSelectAll] = useState(false);
@@ -340,15 +378,36 @@ export default function AdminOrders() {
 
     const filteredOrders = useMemo(
         () => normalizedOrders.filter((order) => {
-            const passesDate = inDateRange(order.updatedAt, fromDate, toDate);
+            const query = String(search || '').trim().toLowerCase();
+            const orderDate = getOrderDateForFiltering(order);
+            const passesDate = inDateRange(orderDate, fromDate, toDate);
             if (!passesDate) return false;
+
+            if (query) {
+                const idText = String(order.orderId || '').toLowerCase();
+                const nameText = String(order.userName || '').toLowerCase();
+                const emailText = String(order.userEmail || '').toLowerCase();
+                const matchesSearch = idText.includes(query) || nameText.includes(query) || emailText.includes(query);
+                if (!matchesSearch) return false;
+            }
+
+            if (selectedStatus) {
+                const normalized = normalizeStatus(order.orderStatus || 'Pending');
+                if (normalized !== selectedStatus) return false;
+            }
+
+            if (paymentStatus !== 'All') {
+                const normalizedPayment = normalizePaymentStatus(order);
+                if (normalizedPayment !== String(paymentStatus).toLowerCase()) return false;
+            }
+
             if (!actualOnly) return true;
 
             const hasActualName = order.userName && order.userName !== 'N/A' && !isGenericCustomerName(order.userName);
             const hasActualEmail = order.userEmail && order.userEmail !== 'N/A';
             return hasActualName || hasActualEmail;
         }),
-        [normalizedOrders, fromDate, toDate, actualOnly]
+        [normalizedOrders, search, selectedStatus, paymentStatus, fromDate, toDate, actualOnly]
     );
 
     const applyDatePreset = (preset) => {
@@ -380,7 +439,7 @@ export default function AdminOrders() {
 
         const weekStart = toInputDateValue(now);
         const weekEndDate = new Date(now);
-        weekEndDate.setDate(now.getDate() + 7);
+        weekEndDate.setDate(now.getDate() + 6);
         const weekEnd = toInputDateValue(weekEndDate);
         setFromDate(weekStart);
         setToDate(weekEnd);
@@ -648,6 +707,44 @@ export default function AdminOrders() {
         fetchOrders();
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedOrders.size === 0) {
+            showNotification('Select at least one order first', 'info');
+            return;
+        }
+
+        const orderIds = Array.from(selectedOrders);
+        const confirmed = window.confirm(
+            `Delete ${orderIds.length} selected order(s)? This action cannot be undone.`
+        );
+        if (!confirmed) return;
+
+        try {
+            setBulkDeleting(true);
+            const response = await axios.post(
+                `${apiBaseUrl}/api/admin/delete-orders`,
+                { orderIds },
+                { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} }
+            );
+
+            if (response.data?.success) {
+                const deleted = Number(response.data?.deletedCount || 0);
+                showNotification(`Bulk delete done: ${deleted} order(s) removed`, 'success');
+                setSelectedOrders(new Set());
+                setSelectAll(false);
+                fetchOrders();
+            } else {
+                showNotification('Bulk delete failed', 'error');
+            }
+        } catch (error) {
+            console.error('Bulk delete failed:', error);
+            const message = error?.response?.data?.message || 'Failed to delete selected orders';
+            showNotification(message, 'error');
+        } finally {
+            setBulkDeleting(false);
+        }
+    };
+
     const exportCsv = () => {
         if (filteredOrders.length === 0) {
             showNotification('No orders available for export', 'info');
@@ -716,6 +813,8 @@ export default function AdminOrders() {
     }, [filteredOrders, selectedOrders]);
 
     return (
+        <>
+        <LefNav />
         <div className="admin-orders-page premium-layout-keep">
             <div className="orders-toolbar-panel">
                 <div className="filter-grid">
@@ -765,7 +864,13 @@ export default function AdminOrders() {
 
                     <div className="filter-item">
                         <label>Payment Status</label>
-                        <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)}>
+                        <select
+                            value={paymentStatus}
+                            onChange={(e) => {
+                                setPaymentStatus(e.target.value);
+                                setPage(1);
+                            }}
+                        >
                             {PAYMENT_STATUSES.map((status) => (
                                 <option key={status} value={status}>{status}</option>
                             ))}
@@ -881,8 +986,11 @@ export default function AdminOrders() {
                             <option key={status} value={status}>{status}</option>
                         ))}
                     </select>
-                    <button onClick={handleBulkUpdate} disabled={bulkUpdating}>
+                    <button onClick={handleBulkUpdate} disabled={bulkUpdating || bulkDeleting}>
                         {bulkUpdating ? <Loader2 size={14} className="spin" /> : <Package size={14} />} Bulk Update Selected
+                    </button>
+                    <button className="bulk-delete-btn" onClick={handleBulkDelete} disabled={bulkUpdating || bulkDeleting}>
+                        {bulkDeleting ? <Loader2 size={14} className="spin" /> : <span>🗑</span>} Bulk Delete Selected
                     </button>
                 </div>
             </div>
@@ -981,6 +1089,15 @@ export default function AdminOrders() {
                 open={Boolean(detailOrder)}
                 onClose={() => setDetailOrder(null)}
                 order={detailOrder}
+                onOrderRemoved={(removedOrderId) => {
+                    setDetailOrder(null);
+                    setSelectedOrders((prev) => {
+                        const next = new Set(prev);
+                        next.delete(removedOrderId);
+                        return next;
+                    });
+                    fetchOrders();
+                }}
             />
 
             <OrderActionDrawer
@@ -1017,5 +1134,6 @@ export default function AdminOrders() {
                 onApply={applyOrderAction}
             />
         </div>
+        </>
     );
 }

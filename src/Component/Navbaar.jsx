@@ -10,7 +10,8 @@ export default function Navbaar() {
     const navigate = useNavigate()
     const dispatch = useDispatch()
     const location = useLocation()
-    const profileDropdownRef = useRef(null)
+    const desktopProfileDropdownRef = useRef(null)
+    const mobileProfileDropdownRef = useRef(null)
     const [isScrolled, setIsScrolled] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
@@ -54,7 +55,11 @@ export default function Navbaar() {
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+            const target = event.target
+            const insideDesktop = desktopProfileDropdownRef.current && desktopProfileDropdownRef.current.contains(target)
+            const insideMobile = mobileProfileDropdownRef.current && mobileProfileDropdownRef.current.contains(target)
+
+            if (!insideDesktop && !insideMobile) {
                 setIsProfileMenuOpen(false)
             }
         }
@@ -246,7 +251,7 @@ export default function Navbaar() {
                                     </AnimatePresence>
                                 </Link>
                                 {localStorage.getItem("login") ? (
-                                    <div className="premium-dropdown-wrapper" ref={profileDropdownRef}>
+                                    <div className="premium-dropdown-wrapper" ref={desktopProfileDropdownRef}>
                                         <button
                                             type="button"
                                             className="btn-user premium-user-btn"
@@ -323,7 +328,7 @@ export default function Navbaar() {
                         {/* --- MOBILE MENU TOGGLE (Visible on Mobile Only) --- */}
                         <div className="mobile-menu-toggle d-lg-none d-flex align-items-center">
                             {localStorage.getItem("login") && (
-                                <div className="premium-dropdown-wrapper mobile-profile-wrapper mr-3" ref={profileDropdownRef}>
+                                <div className="premium-dropdown-wrapper mobile-profile-wrapper mr-3" ref={mobileProfileDropdownRef}>
                                     <button
                                         type="button"
                                         className="btn-user premium-user-btn mobile-profile-btn"
@@ -460,12 +465,21 @@ export default function Navbaar() {
                         {isMobileMenuOpen && (
                             <motion.div 
                                 className="mobile-menu-overlay"
-                                initial={{ x: '100%' }}
-                                animate={{ x: 0 }}
-                                exit={{ x: '100%' }}
-                                transition={{ type: 'tween', duration: 0.3 }}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2 }}
                             >
-                                <div className="mobile-menu-content">
+                                <motion.div
+                                    className="mobile-menu-content"
+                                    initial={{ y: 24, opacity: 0.96 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    exit={{ y: 24, opacity: 0.96 }}
+                                    transition={{ duration: 0.22 }}
+                                >
+                                    <div className="mobile-sheet-top" aria-hidden="true">
+                                        <span className="mobile-sheet-handle" />
+                                    </div>
                                     <nav className="mobile-nav">
                                         <Link to="/" className={`mobile-nav-link ${isActive('/')?'active':''}`}>
                                             <span>Home</span>
@@ -489,7 +503,7 @@ export default function Navbaar() {
                                     <div className="mobile-menu-footer">
                                         {localStorage.getItem("login") ? (
                                             <>
-                                                <Link to="/profile" className="btn btn-outline-dark btn-block mb-3 py-3 font-weight-bold">
+                                                <Link to="/profile" className="mobile-footer-btn mobile-footer-btn-profile">
                                                     {profilePic ? (
                                                         <img src={profilePic} alt={name || 'User'} className="mobile-user-img mr-2" />
                                                     ) : (
@@ -497,21 +511,21 @@ export default function Navbaar() {
                                                     )}
                                                     {name}
                                                 </Link>
-                                                <Link to="/my-orders" className="btn btn-outline-info btn-block mb-3 py-3 font-weight-bold">
+                                                <Link to="/my-orders" className="mobile-footer-btn mobile-footer-btn-orders">
                                                     <ShoppingCart size={18} className="mr-2" style={{display:'inline'}} />
                                                     My Orders
                                                 </Link>
-                                                <button onClick={logout} className="btn btn-danger btn-block py-3 font-weight-bold">
+                                                <button onClick={logout} className="mobile-footer-btn mobile-footer-btn-logout">
                                                     LOGOUT
                                                 </button>
                                             </>
                                         ) : (
-                                            <Link to="/login" className="btn btn-dark btn-block py-3 font-weight-bold">
+                                            <Link to="/login" className="mobile-footer-btn mobile-footer-btn-login">
                                                 LOGIN
                                             </Link>
                                         )}
                                     </div>
-                                </div>
+                                </motion.div>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -529,17 +543,27 @@ export default function Navbaar() {
                     isolation: isolate;
                     transition: box-shadow 0.25s ease, background 0.25s ease;
                 }
+                .header-main::after {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    height: 1px;
+                    background: linear-gradient(90deg, rgba(15,23,42,0), rgba(212,175,55,0.7), rgba(15,23,42,0));
+                    pointer-events: none;
+                }
                 body { overflow-x: hidden; }
                 .top-premium-ribbon { 
                     height: 40px;
-                    background: linear-gradient(90deg, #0a0a0a 0%, #1a1025 40%, #301035 70%, #000 100%);
+                    background: linear-gradient(90deg, #06080c 0%, #111827 35%, #35220b 68%, #080a0f 100%);
                     font-size: 11px;
                 }
                 .navbar {
                     width: 100%;
                     padding: 10px 0 !important;
-                    background: rgba(255,255,255,0.97) !important;
-                    backdrop-filter: saturate(180%) blur(14px);
+                    background: linear-gradient(120deg, rgba(255,255,255,0.95), rgba(255,250,240,0.93)) !important;
+                    backdrop-filter: saturate(190%) blur(16px);
                     transition: padding 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
                     overflow: visible;
                 }
@@ -563,23 +587,26 @@ export default function Navbaar() {
                 }
                 .header-fixed .navbar {
                     padding: 7px 0 !important;
-                    background: rgba(255,255,255,0.985) !important;
-                    box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+                    background: linear-gradient(120deg, rgba(255,255,255,0.98), rgba(255,252,246,0.96)) !important;
+                    box-shadow: 0 10px 26px rgba(15,23,42,0.08);
                 }
                 @keyframes slideInNav { from {opacity:0} to {opacity:1} }
 
                 /* 🔥 LOGO STYLING */
                 .logo-wrapper { display: flex; align-items: center; gap: 8px; }
                 .logo-e {
-                    background: #111; color: #fff; width: 38px; height: 38px;
+                    background: linear-gradient(145deg, #0f172a 0%, #1e293b 55%, #0f172a 100%);
+                    color: #fff; width: 38px; height: 38px;
                     display: flex; align-items: center; justify-content: center;
                     font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800;
-                    border-radius: 4px; border-right: 3px solid #17a2b8;
+                    border-radius: 4px;
+                    border-right: 3px solid #d4af37;
+                    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
                     transition: width 0.25s ease, height 0.25s ease, font-size 0.25s ease;
                 }
                 .logo-text-box { display: flex; flex-direction: column; line-height: 1; }
                 .logo-brand-name { font-weight: 800; letter-spacing: 3px; font-size: 20px; color: #111; transition: font-size 0.25s ease, letter-spacing 0.25s ease; }
-                .logo-tagline { font-size: 8px; letter-spacing: 2px; color: #17a2b8; font-weight: 700; margin-top: 2px; transition: font-size 0.25s ease, letter-spacing 0.25s ease; }
+                .logo-tagline { font-size: 8px; letter-spacing: 2px; color: #9a7b1f; font-weight: 700; margin-top: 2px; transition: font-size 0.25s ease, letter-spacing 0.25s ease; }
 
                 .header-fixed .logo-e {
                     width: 34px;
@@ -616,7 +643,7 @@ export default function Navbaar() {
                     white-space: nowrap;
                 }
                 .premium-nav-link:hover {
-                    color: #0f8ea4 !important;
+                    color: #8b6a12 !important;
                     transform: translateY(-1px);
                 }
                 .premium-nav-link::after {
@@ -626,20 +653,20 @@ export default function Navbaar() {
                     left: 0;
                     width: 0;
                     height: 2px;
-                    background: #17a2b8;
+                    background: linear-gradient(90deg, #d4af37, #f4d16c);
                     transition: width 0.3s ease;
                 }
                 .premium-nav-link:hover::after,
                 .active-link::after { width: 100%; }
-                .active-link { color: #17a2b8 !important; }
+                .active-link { color: #8b6a12 !important; }
                 .badge-admin-pill { background: #ff4757; color: #fff !important; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 50px; text-decoration: none; }
                 
                 /* === ULTRA PREMIUM DROPDOWN === */
                 .premium-dropdown-wrapper { position: relative; overflow: visible; }
                 .mobile-profile-wrapper { position: relative; z-index: 10001; }
                 .premium-user-btn {
-                    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-                    border: 1px solid #e9ecef;
+                    background: linear-gradient(135deg, #ffffff 0%, #fff9ec 100%);
+                    border: 1px solid rgba(212, 175, 55, 0.28);
                     border-radius: 50px;
                     padding: 7px 14px;
                     display: flex;
@@ -650,12 +677,12 @@ export default function Navbaar() {
                     color: #111;
                     cursor: pointer;
                     transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                    box-shadow: 0 4px 16px rgba(15,23,42,0.08), inset 0 1px 0 rgba(255,255,255,0.75);
                 }
                 .premium-user-btn:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(23, 162, 184, 0.15);
-                    border-color: #17a2b8;
+                    box-shadow: 0 10px 24px rgba(124, 90, 16, 0.2);
+                    border-color: rgba(212, 175, 55, 0.55);
                 }
                 .header-fixed .premium-user-btn {
                     padding: 6px 12px;
@@ -663,13 +690,14 @@ export default function Navbaar() {
                 .user-avatar {
                     width: 32px;
                     height: 32px;
-                    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+                    background: linear-gradient(135deg, #1e293b 0%, #0f172a 70%, #7c5a10 100%);
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     color: white !important;
                     overflow: hidden;
+                    box-shadow: 0 3px 8px rgba(15,23,42,0.28);
                 }
                 .nav-user-img {
                     width: 100%;
@@ -699,7 +727,7 @@ export default function Navbaar() {
                     min-width: 280px;
                     max-width: min(360px, calc(100vw - 32px));
                     margin-top: 12px !important;
-                    background: rgba(255,255,255,0.98);
+                    background: linear-gradient(160deg, rgba(255,255,255,0.99), rgba(255,251,241,0.97));
                     backdrop-filter: blur(20px);
                     animation: slideDownFade 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
                     overflow: hidden;
@@ -724,7 +752,7 @@ export default function Navbaar() {
 
                 .dropdown-header-custom {
                     padding: 20px;
-                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    background: linear-gradient(135deg, #1f2937 0%, #111827 58%, #7c5a10 100%);
                     border-bottom: 1px solid rgba(0,0,0,0.05);
                 }
                 .user-info-header {
@@ -755,13 +783,13 @@ export default function Navbaar() {
                 }
                 .user-details h6 {
                     font-weight: 800;
-                    color: #111;
+                    color: #fff;
                     font-size: 14px;
                 }
                 .user-details small {
                     font-size: 11px;
                     font-weight: 600;
-                    color: #17a2b8;
+                    color: #f4d16c;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
                 }
@@ -779,8 +807,8 @@ export default function Navbaar() {
                     text-decoration: none !important;
                 }
                 .premium-dropdown-item:hover {
-                    background: #f8f9fa !important;
-                    color: #17a2b8 !important;
+                    background: linear-gradient(90deg, rgba(212,175,55,0.12), rgba(212,175,55,0.02)) !important;
+                    color: #7c5a10 !important;
                     padding-left: 24px !important;
                 }
                 .premium-dropdown-item i,
@@ -803,14 +831,19 @@ export default function Navbaar() {
                 
                 /* 🍔 HAMBURGER BUTTON */
                 .hamburger-btn {
-                    background: none; border: none; cursor: pointer; padding: 8px;
+                    background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,247,228,0.95)); border: 1px solid rgba(212,175,55,0.34); cursor: pointer; padding: 8px;
                     display: flex; align-items: center; justify-content: center;
-                    color: #111; transition: 0.3s;
+                    color: #1f2937; transition: 0.3s;
                     width: 44px;
                     height: 44px;
                     border-radius: 10px;
+                    box-shadow: 0 8px 18px rgba(15,23,42,0.14);
                 }
-                .hamburger-btn:hover { color: #17a2b8; }
+                .hamburger-btn:hover {
+                    color: #7c5a10;
+                    transform: translateY(-1px);
+                    box-shadow: 0 12px 26px rgba(15,23,42,0.2);
+                }
                 .hamburger-btn:active { transform: scale(0.96); }
                 .mobile-menu-toggle {
                     gap: 4px;
@@ -819,9 +852,20 @@ export default function Navbaar() {
 
                 /* 📱 MOBILE MENU OVERLAY */
                 .mobile-menu-overlay {
-                    position: fixed; top: 0; right: 0; bottom: 0; left: 0;
-                    background: rgba(0,0,0,0.95); z-index: 10030;
-                    overflow-y: auto; backdrop-filter: blur(10px);
+                    position: fixed !important;
+                    top: 0;
+                    right: 0;
+                    bottom: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100dvh;
+                    min-height: 100dvh;
+                    background: radial-gradient(circle at 15% 10%, rgba(212,175,55,0.2), rgba(0,0,0,0.96) 45%), linear-gradient(120deg, rgba(0,0,0,0.95), rgba(10,10,10,0.98));
+                    z-index: 10030;
+                    overflow: hidden;
+                    backdrop-filter: blur(10px);
+                    display: flex;
+                    align-items: stretch;
                 }
                 .mobile-profile-backdrop {
                     position: fixed;
@@ -837,21 +881,146 @@ export default function Navbaar() {
                     z-index: 10018;
                 }
                 .mobile-menu-content {
+                    width: 100%;
+                    height: 100dvh;
+                    min-height: 100dvh;
                     padding: calc(68px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
-                    min-height: 100vh;
-                    display: flex; flex-direction: column; justify-content: space-between;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    overflow-y: auto;
+                    overscroll-behavior: contain;
+                    -webkit-overflow-scrolling: touch;
+                    position: relative;
+                }
+                .mobile-menu-content::before {
+                    content: '';
+                    position: absolute;
+                    top: 4px;
+                    right: -28px;
+                    width: 150px;
+                    height: 150px;
+                    border-radius: 999px;
+                    background: radial-gradient(circle, rgba(212,175,55,0.22), rgba(212,175,55,0));
+                    pointer-events: none;
+                }
+                .mobile-sheet-top {
+                    position: sticky;
+                    top: calc(-56px - env(safe-area-inset-top));
+                    display: flex;
+                    justify-content: center;
+                    padding: calc(10px + env(safe-area-inset-top)) 0 8px;
+                    margin: 0 -24px 8px;
+                    background: linear-gradient(to bottom, rgba(0,0,0,0.85), rgba(0,0,0,0));
+                    z-index: 2;
+                    pointer-events: none;
+                }
+                .mobile-sheet-handle {
+                    width: 46px;
+                    height: 5px;
+                    border-radius: 999px;
+                    background: rgba(255,255,255,0.7);
+                    box-shadow: 0 1px 0 rgba(255,255,255,0.35) inset;
                 }
                 .mobile-nav { display: flex; flex-direction: column; gap: 0; }
                 .mobile-nav-link {
                     color: #fff; font-size: clamp(18px, 5vw, 28px); font-weight: 800;
                     text-transform: uppercase; padding: 20px 0;
-                    border-bottom: 1px solid rgba(255,255,255,0.1);
+                    border-bottom: 1px solid rgba(255,255,255,0.14);
                     transition: 0.3s; text-decoration: none; display: block;
+                    animation: mobileLinkIn 0.42s ease both;
                 }
                 .mobile-nav-link:hover, .mobile-nav-link.active {
-                    color: #17a2b8; padding-left: 15px;
+                    color: #f4d16c; padding-left: 15px;
+                }
+                .mobile-nav .mobile-nav-link:nth-child(1) { animation-delay: 0.06s; }
+                .mobile-nav .mobile-nav-link:nth-child(2) { animation-delay: 0.11s; }
+                .mobile-nav .mobile-nav-link:nth-child(3) { animation-delay: 0.16s; }
+                .mobile-nav .mobile-nav-link:nth-child(4) { animation-delay: 0.21s; }
+                .mobile-nav .mobile-nav-link:nth-child(5) { animation-delay: 0.26s; }
+                @keyframes mobileLinkIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
                 .mobile-menu-footer { padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); }
+                .mobile-footer-btn {
+                    width: 100%;
+                    min-height: 52px;
+                    border-radius: 999px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    font-size: 13px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.55px;
+                    text-decoration: none !important;
+                    border: 1px solid transparent;
+                    margin-bottom: 12px;
+                    transition: transform 0.22s ease, box-shadow 0.24s ease, filter 0.24s ease, border-color 0.22s ease;
+                    animation: footerCtaIn 0.38s ease both;
+                    backdrop-filter: blur(7px);
+                }
+                .mobile-footer-btn:last-child {
+                    margin-bottom: 0;
+                }
+                .mobile-footer-btn:hover {
+                    transform: translateY(-2px);
+                    filter: brightness(1.02);
+                    text-decoration: none !important;
+                }
+                .mobile-footer-btn:active {
+                    transform: scale(0.985);
+                }
+                .mobile-footer-btn-profile {
+                    color: #eef5ff !important;
+                    background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(30,41,59,0.9));
+                    border-color: rgba(255,255,255,0.2);
+                    box-shadow: 0 10px 24px rgba(2,6,23,0.34), inset 0 1px 0 rgba(255,255,255,0.16);
+                }
+                .mobile-footer-btn-profile:hover {
+                    color: #ffffff !important;
+                    border-color: rgba(244,209,108,0.45);
+                    box-shadow: 0 12px 28px rgba(2,6,23,0.38), 0 0 0 1px rgba(244,209,108,0.2) inset;
+                }
+                .mobile-footer-btn-orders {
+                    color: #0d2533 !important;
+                    background: linear-gradient(135deg, #f8eebf, #f4d16c 55%, #e5b93f);
+                    border-color: rgba(255, 222, 120, 0.6);
+                    box-shadow: 0 12px 30px rgba(212,175,55,0.35), inset 0 1px 0 rgba(255,255,255,0.6);
+                }
+                .mobile-footer-btn-orders:hover {
+                    color: #072938 !important;
+                    box-shadow: 0 15px 34px rgba(212,175,55,0.4), 0 0 0 1px rgba(255,255,255,0.45) inset;
+                }
+                .mobile-footer-btn-logout {
+                    color: #fff !important;
+                    background: linear-gradient(135deg, #ff5a6a 0%, #f43f5e 55%, #dc2626 100%);
+                    border-color: rgba(255,170,178,0.48);
+                    box-shadow: 0 10px 26px rgba(244,63,94,0.36), inset 0 1px 0 rgba(255,255,255,0.4);
+                }
+                .mobile-footer-btn-logout:hover {
+                    color: #fff !important;
+                    box-shadow: 0 14px 30px rgba(244,63,94,0.46);
+                }
+                .mobile-footer-btn-login {
+                    color: #fff !important;
+                    background: linear-gradient(135deg, #111827 0%, #0f172a 100%);
+                    border-color: rgba(255,255,255,0.2);
+                    box-shadow: 0 10px 24px rgba(2,6,23,0.35);
+                }
+                .mobile-footer-btn-login:hover {
+                    color: #fff !important;
+                    box-shadow: 0 14px 30px rgba(2,6,23,0.46);
+                }
+                .mobile-menu-footer .mobile-footer-btn:nth-child(1) { animation-delay: 0.08s; }
+                .mobile-menu-footer .mobile-footer-btn:nth-child(2) { animation-delay: 0.13s; }
+                .mobile-menu-footer .mobile-footer-btn:nth-child(3) { animation-delay: 0.18s; }
+                @keyframes footerCtaIn {
+                    from { opacity: 0; transform: translateY(9px) scale(0.99); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
 
                 .cart-badge { position: absolute; top: -5px; right: -8px; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #fff; }
                 
@@ -959,6 +1128,9 @@ export default function Navbaar() {
                 @media (max-width: 575px) {
                     .mobile-nav-link { font-size: 20px; padding: 15px 0; }
                     .mobile-menu-content { padding: calc(62px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom)); }
+                    .mobile-sheet-top {
+                        margin: 0 -16px 8px;
+                    }
                     .logo-brand-name { font-size: 14px; letter-spacing: 1.5px; }
                     .logo-e { width: 28px; height: 28px; font-size: 16px; }
                     .logo-tagline { font-size: 5px; }
@@ -971,6 +1143,11 @@ export default function Navbaar() {
                         top: calc(52px + env(safe-area-inset-top));
                         height: calc(100dvh - 52px - env(safe-area-inset-top));
                         border-radius: 14px 14px 0 0 !important;
+                    }
+                    .mobile-footer-btn {
+                        min-height: 48px;
+                        font-size: 12px;
+                        letter-spacing: 0.45px;
                     }
                 }
 

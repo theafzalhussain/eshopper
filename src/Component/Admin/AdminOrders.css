@@ -4,6 +4,14 @@
   padding: 1rem;
 }
 
+@media (min-width: 992px) {
+  .admin-orders-page.premium-layout-keep {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    padding: 1.1rem 1rem 1rem;
+  }
+}
+
 .orders-toolbar-panel {
   background: linear-gradient(145deg, #f9fbfe 0%, #eef3fa 100%);
   border: 1px solid #ced8e8;
@@ -265,6 +273,14 @@
 
 .bulk-row button:disabled {
   opacity: 0.65;
+}
+
+.bulk-row .bulk-delete-btn {
+  background: linear-gradient(90deg, #b4232f, #dc3545);
+}
+
+.bulk-row .bulk-delete-btn:hover {
+  filter: brightness(1.05);
 }
 
 .orders-notification {

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { TicketPercent, Plus, Trash2, Power, Save } from 'lucide-react'
+import { TicketPercent, Plus, Trash2, Power, Save, Pencil } from 'lucide-react'
 import axios from 'axios'
 import LefNav from './LefNav'
 import { BASE_URL } from '../../constants'
@@ -27,6 +27,7 @@ export default function AdminCoupon() {
     const [saving, setSaving] = useState(false)
     const [form, setForm] = useState(initialForm)
     const [error, setError] = useState('')
+    const [editingCouponId, setEditingCouponId] = useState('')
 
     const sortedCoupons = useMemo(() => {
         return [...coupons].sort((a, b) => String(a.code || '').localeCompare(String(b.code || '')))
@@ -51,7 +52,7 @@ export default function AdminCoupon() {
         setSaving(true)
         setError('')
         try {
-            await axios.post(`${BASE_URL}/coupon`, {
+            const payload = {
                 ...form,
                 code: String(form.code || '').trim().toUpperCase(),
                 value: Number(form.value || 0),
@@ -62,13 +63,56 @@ export default function AdminCoupon() {
                 firstOrderOnly: Boolean(form.firstOrderOnly),
                 startsAt: form.startsAt || null,
                 expiresAt: form.expiresAt || null,
-            })
+            }
+
+            if (editingCouponId) {
+                await axios.put(`${BASE_URL}/coupon/${editingCouponId}`, payload)
+            } else {
+                await axios.post(`${BASE_URL}/coupon`, payload)
+            }
+
             setForm(initialForm)
+            setEditingCouponId('')
             await fetchCoupons()
         } catch (e) {
-            setError(e?.response?.data?.message || e?.response?.data?.error || 'Failed to create coupon.')
+            setError(e?.response?.data?.message || e?.response?.data?.error || `Failed to ${editingCouponId ? 'update' : 'create'} coupon.`)
         }
         setSaving(false)
+    }
+
+    function toDateTimeLocal(value) {
+        if (!value) return ''
+        const dt = new Date(value)
+        if (Number.isNaN(dt.getTime())) return ''
+        const tz = dt.getTimezoneOffset() * 60000
+        return new Date(dt.getTime() - tz).toISOString().slice(0, 16)
+    }
+
+    function startEditingCoupon(item) {
+        setError('')
+        setEditingCouponId(String(item.id || item._id || ''))
+        setForm({
+            code: item.code || '',
+            title: item.title || '',
+            description: item.description || '',
+            type: item.type || 'flat',
+            value: Number(item.value || 0),
+            minCartValue: Number(item.minCartValue || 0),
+            maxDiscount: Number(item.maxDiscount || 0),
+            perUserOnce: Boolean(item.perUserOnce),
+            totalUsageCap: Number(item.totalUsageCap || 0),
+            firstOrderOnly: Boolean(item.firstOrderOnly),
+            isActive: Boolean(item.isActive),
+            startsAt: toDateTimeLocal(item.startsAt),
+            expiresAt: toDateTimeLocal(item.expiresAt),
+        })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    function cancelEditing() {
+        setEditingCouponId('')
+        setForm(initialForm)
+        setError('')
     }
 
     async function toggleActive(item) {
@@ -118,7 +162,7 @@ export default function AdminCoupon() {
                     )}
 
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className='bg-white shadow-xl rounded-3xl p-5 border-0 premium-form-card mb-5'>
-                        <h4 className='font-weight-bold mb-4'>📝 Create New Coupon</h4>
+                        <h4 className='font-weight-bold mb-4'>{editingCouponId ? '✏️ Edit Coupon' : '📝 Create New Coupon'}</h4>
                         <form onSubmit={createCoupon}>
                             {/* SECTION 1: Basic Information */}
                             <div className='premium-form-section mb-5'>
@@ -312,15 +356,15 @@ export default function AdminCoupon() {
                                     className='btn btn-primary btn-lg px-5 rounded-pill d-inline-flex align-items-center premium-btn-create' 
                                     disabled={saving}
                                 >
-                                    {saving ? <Save size={18} className='mr-2' /> : <Plus size={18} className='mr-2' />}
-                                    {saving ? 'Creating...' : 'Create Coupon'}
+                                    {saving ? <Save size={18} className='mr-2' /> : (editingCouponId ? <Save size={18} className='mr-2' /> : <Plus size={18} className='mr-2' />)}
+                                    {saving ? (editingCouponId ? 'Updating...' : 'Creating...') : (editingCouponId ? 'Update Coupon' : 'Create Coupon')}
                                 </button>
                                 <button 
                                     type='button' 
                                     className='btn btn-outline-secondary btn-lg px-4 rounded-pill'
-                                    onClick={() => setForm(initialForm)}
+                                    onClick={editingCouponId ? cancelEditing : (() => setForm(initialForm))}
                                 >
-                                    Reset Form
+                                    {editingCouponId ? 'Cancel Edit' : 'Reset Form'}
                                 </button>
                             </div>
                         </form>
@@ -375,6 +419,13 @@ export default function AdminCoupon() {
                                                     title='Toggle Active Status'
                                                 >
                                                     <Power size={16} />
+                                                </button>
+                                                <button
+                                                    className='btn btn-sm btn-outline-primary rounded-circle mr-2 premium-btn-icon'
+                                                    onClick={() => startEditingCoupon(c)}
+                                                    title='Edit Coupon'
+                                                >
+                                                    <Pencil size={16} />
                                                 </button>
                                                 <button 
                                                     className='btn btn-sm btn-outline-danger rounded-circle premium-btn-icon' 

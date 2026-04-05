@@ -37,6 +37,7 @@ export default function Cart() {
     const [gst, setGst] = useState(0);
     const [coupon, setCoupon] = useState("");
     const [couponApplied, setCouponApplied] = useState(false);
+    const [appliedCouponCode, setAppliedCouponCode] = useState("");
     const [couponError, setCouponError] = useState("");
     const [availableCoupons, setAvailableCoupons] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -73,7 +74,7 @@ export default function Cart() {
             await dispatch(getCart());
             const cartRes = await axios.get(`/api/cart?userId=${userId}`);
             const persistedDelivery = cartRes?.data?.cart?.deliveryEstimate || {};
-            setDeliveryPincode(String(persistedDelivery.pincode || ''));
+            setDeliveryPincode('');
             setDeliveryEstimateMsg(String(persistedDelivery.label || ''));
             const summaryRes = await axios.get(`/api/cart/order-summary?userId=${userId}`);
             const s = summaryRes.data.summary || {};
@@ -128,7 +129,7 @@ export default function Cart() {
         if (!cartData) return;
         dispatch({ type: GET_CART_RED, data: cartData });
         const persistedDelivery = cartData?.deliveryEstimate || {};
-        setDeliveryPincode(String(persistedDelivery.pincode || ''));
+        setDeliveryPincode('');
         setDeliveryEstimateMsg(String(persistedDelivery.label || ''));
     }
 
@@ -314,18 +315,22 @@ export default function Cart() {
     }
 
     async function handleApplyCoupon() {
-        if (!coupon || couponApplied) return;
+        const normalizedCoupon = String(coupon || '').trim().toUpperCase();
+        if (!normalizedCoupon) return;
         setCouponError("");
         try {
-            const res = await axios.post('/api/cart/apply-coupon', { userId, coupon });
+            const replacingExisting = couponApplied && appliedCouponCode && appliedCouponCode !== normalizedCoupon;
+            const res = await axios.post('/api/cart/apply-coupon', { userId, coupon: normalizedCoupon });
             if (res.data && res.data.success) {
                 setCouponDiscount(res.data.discount || 0);
                 setCouponApplied(true);
+                setAppliedCouponCode(normalizedCoupon);
+                setCoupon('');
                 setCouponError("");
-                toast.success('Coupon applied successfully!');
+                toast.success(replacingExisting ? 'Previous coupon replaced successfully!' : 'Coupon applied successfully!');
                 localStorage.setItem('appliedCoupon', JSON.stringify({
                     userId,
-                    code: String(coupon).trim().toUpperCase(),
+                    code: normalizedCoupon,
                     discount: Number(res.data.discount || 0)
                 }));
             } else {
@@ -353,8 +358,9 @@ export default function Cart() {
             try {
                 const parsed = JSON.parse(savedCouponRaw);
                 if (parsed && String(parsed.userId) === String(userId) && parsed.code) {
-                    setCoupon(String(parsed.code));
+                    setCoupon('');
                     setCouponApplied(true);
+                    setAppliedCouponCode(String(parsed.code));
                     setCouponDiscount(Number(parsed.discount || 0));
                 }
             } catch (e) {
@@ -614,7 +620,7 @@ export default function Cart() {
                                 </div>
                                 {couponApplied && couponDiscount > 0 && (
                                     <div className="d-flex justify-content-between mb-2">
-                                        <span className="text-muted premium-summary-label">Coupon ({coupon.toUpperCase()})</span>
+                                        <span className="text-muted premium-summary-label">Coupon ({appliedCouponCode || 'APPLIED'})</span>
                                         <span className="text-success font-weight-bold premium-summary-amount">-₹{couponDiscount}</span>
                                     </div>
                                 )}
@@ -663,10 +669,10 @@ export default function Cart() {
                                 </div>
                                 {/* Coupon Input */}
                                 <div className="input-group mb-3 premium-coupon-group">
-                                    <input type="text" className="form-control" placeholder="Apply Coupon" value={coupon} onChange={e => setCoupon(e.target.value)} disabled={couponApplied}
+                                    <input type="text" className="form-control" placeholder="Apply Coupon" value={coupon} onChange={e => { setCoupon(e.target.value); setCouponError(''); }}
                                         style={{ border: "1px solid #eee", borderRight: 0, borderRadius: "50px 0 0 50px" }} />
                                     <div className="input-group-append">
-                                        <button className="btn" style={{ border: "1px solid #eee", borderLeft: 0, borderRadius: "0 50px 50px 0", background: "#B8860B", color: "#fff" }} type="button" onClick={handleApplyCoupon} disabled={couponApplied || !coupon.trim()}>Apply</button>
+                                        <button className="btn" style={{ border: "1px solid #eee", borderLeft: 0, borderRadius: "0 50px 50px 0", background: "#B8860B", color: "#fff" }} type="button" onClick={handleApplyCoupon} disabled={!coupon.trim()}>Apply</button>
                                     </div>
                                 </div>
                                 {availableCoupons.length > 0 && (
@@ -678,7 +684,6 @@ export default function Cart() {
                                                     key={c.code}
                                                     type="button"
                                                     className="btn btn-sm premium-coupon-chip"
-                                                    disabled={couponApplied}
                                                     title={c.description || c.title || c.code}
                                                     onClick={() => setCoupon(c.code)}
                                                 >

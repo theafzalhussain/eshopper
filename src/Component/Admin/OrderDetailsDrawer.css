@@ -39,12 +39,16 @@
     border-radius: 0 !important;
     left: 0;
     right: 0;
+    height: 100dvh;
   }
   .drawer-content {
     padding: 0 !important;
+    height: 100dvh;
+    min-height: 100dvh;
   }
   .drawer-body-scroll {
     padding: 18px 6px 18px 6px !important;
+    max-height: calc(100dvh - 86px);
   }
 
   .drawer-product-image {
@@ -60,12 +64,16 @@
     border-radius: 0 !important;
     left: 0;
     right: 0;
+    height: 100dvh;
   }
   .drawer-content {
     padding: 0 !important;
+    height: 100dvh;
+    min-height: 100dvh;
   }
   .drawer-body-scroll {
     padding: 18px 6px 18px 6px !important;
+    max-height: calc(100dvh - 82px);
   }
 
   .products-header-row {
@@ -139,6 +147,71 @@
   box-shadow: 0 4px 18px 0 rgba(100,100,200,0.08);
   transform: translateY(-2px) scale(1.01);
   z-index: 2;
+}
+
+.drawer-remove-btn {
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 14px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 52%, #06b6d4 100%);
+  background-size: 160% 160%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.34), inset 0 1px 0 rgba(255,255,255,0.22);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.drawer-remove-btn::before {
+  content: '';
+  position: absolute;
+  inset: -35%;
+  background: conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(255,255,255,0.5) 42deg, rgba(255,255,255,0) 75deg);
+  opacity: 0;
+  transform: rotate(0deg);
+  transition: opacity 0.18s ease;
+}
+
+.drawer-remove-btn > svg {
+  position: relative;
+  z-index: 1;
+}
+
+.drawer-remove-btn:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 12px 28px rgba(79, 70, 229, 0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+  filter: saturate(1.1);
+  animation: removeBtnGradient 1.2s ease infinite;
+}
+
+.drawer-remove-btn:hover:not(:disabled)::before {
+  opacity: 0.9;
+  animation: removeBtnShimmer 1s linear infinite;
+}
+
+.drawer-remove-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.drawer-remove-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  animation: none;
+}
+
+@keyframes removeBtnGradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+@keyframes removeBtnShimmer {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 /* Premium Table Look */
 .admin-orders-table {
@@ -221,7 +294,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 .btn-view-details-premium {
-  background: #fff;
+  background:  #f5f8ff;
   color: #2563eb;
   border: 1.5px solid #2563eb;
   border-radius: 16px;
@@ -264,6 +337,7 @@
   backdrop-filter: blur(16px) saturate(1.2);
   border-left: 1.5px solid rgba(180,180,200,0.13);
   animation: drawer-slide-in 0.5s cubic-bezier(.4,0,.2,1);
+  pointer-events: none;
 }
 .order-details-drawer.open {
   transform: translateX(0);
@@ -304,16 +378,20 @@
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.18);
-  z-index: 1199;
+  z-index: 0;
+  pointer-events: auto;
 }
 .drawer-content {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
   border-radius: 0 0 18px 18px;
   position: relative;
   padding: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: auto;
 }
 .drawer-header-gradient {
   background: linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%);
@@ -329,6 +407,9 @@
   flex: 1;
   overflow-y: auto;
   padding: 32px 28px 24px 28px;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 /* Attractive View Details Button */
 .btn-view-details-plain {
@@ -433,6 +514,20 @@
 
 .payment-breakdown-row strong {
   color: #12263c;
+}
+
+.payment-breakdown-row.breakdown-negative {
+  color: #b42318;
+}
+
+.payment-breakdown-row.breakdown-negative strong {
+  color: #c21f2f;
+}
+
+.payment-breakdown-row .coupon-label {
+  font-size: 0.75rem;
+  color: #516176;
+  font-weight: 700;
 }
 
 .payment-breakdown-row.grand-total {

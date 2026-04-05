@@ -30,6 +30,19 @@ export default function Profile() {
     var navigate = useNavigate()
     const { membershipType, totalOrders } = useMembership()
 
+    async function loadLatestUserProfile() {
+        const userId = localStorage.getItem("userid")
+        if (!userId) return
+        try {
+            const res = await axios.get(`${BASE_URL}/api/user/${userId}`, { timeout: 12000 })
+            if (res?.data && typeof res.data === 'object') {
+                setuser(res.data)
+            }
+        } catch (e) {
+            // Keep Redux-derived fallback if direct fetch fails.
+        }
+    }
+
     function getAPIData() {
         dispatch(getUser())
         dispatch(getWishlist())
@@ -38,7 +51,18 @@ export default function Profile() {
 
     useEffect(() => {
         getAPIData()
+        loadLatestUserProfile()
     }, [])
+
+    useEffect(() => {
+        const handleProfileUpdated = () => {
+            loadLatestUserProfile()
+            dispatch(getUser())
+        }
+
+        window.addEventListener('profile-updated', handleProfileUpdated)
+        return () => window.removeEventListener('profile-updated', handleProfileUpdated)
+    }, [dispatch])
 
     // Update user state whenever users data changes
     useEffect(() => {
@@ -57,7 +81,18 @@ export default function Profile() {
             })
             if (data) {
                 console.log('✅ User data loaded:', { id: data.id || data._id, name: data.name, email: data.email })
-                setuser(data)
+                setuser((prev) => ({
+                    ...data,
+                    // Preserve latest optional address fields when Redux payload is stale.
+                    addressline2: data.addressline2 || data.addressLine2 || prev.addressline2 || prev.addressLine2 || '',
+                    landmark: data.landmark || data.deliveryLandmark || prev.landmark || prev.deliveryLandmark || '',
+                    deliveryNotes:
+                        data.deliveryNotes ||
+                        data.deliveryInstructions ||
+                        prev.deliveryNotes ||
+                        prev.deliveryInstructions ||
+                        '',
+                }))
             } else {
                 console.warn('⚠️ User not found in Redux state. Available users:', users.length, 'Looking for:', userId)
             }

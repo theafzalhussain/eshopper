@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
-import { getUser, updateUser } from '../Store/ActionCreaters/UserActionCreators'
+import { getUser } from '../Store/ActionCreaters/UserActionCreators'
 import { motion } from 'framer-motion'
 import {
     Save,
@@ -84,7 +84,7 @@ export default function Updateprofile() {
                     addressline1: current.addressline1 || current.streetAddress || "",
                     addressline2: current.addressline2 || "",
                     landmark: current.landmark || "",
-                    deliveryNotes: current.deliveryNotes || "",
+                    deliveryNotes: current.deliveryNotes || current.deliveryInstructions || "",
                     pin: current.pin || current.postalCode || "",
                     settings: {
                         notifications: {
@@ -190,6 +190,7 @@ export default function Updateprofile() {
         formData.append("addressline2", data.addressline2 || "");
         formData.append("landmark", data.landmark || "");
         formData.append("deliveryNotes", data.deliveryNotes || "");
+        formData.append("deliveryInstructions", data.deliveryNotes || "");
         formData.append("city", data.city || "");
         formData.append("state", data.state || "");
         formData.append("pin", data.pin || "");
@@ -198,32 +199,42 @@ export default function Updateprofile() {
         
         if (data.pic && typeof data.pic !== "string") formData.append("pic", data.pic);
 
-        dispatch(updateUser(formData));
+        try {
+            const userId = localStorage.getItem("userid")
+            if (!userId) throw new Error('User session missing. Please login again.')
 
-        setTimeout(async () => {
-            try {
-                const userId = localStorage.getItem("userid")
-                if (userId) {
-                    const res = await fetch(`${BASE_URL}/user/${userId}`)
-                    if (res.ok) {
-                        const latestUser = await res.json()
-                        if (latestUser?.name) localStorage.setItem("name", latestUser.name)
-                        if (latestUser?.pic) localStorage.setItem("pic", latestUser.pic)
-                    }
-                }
-            } catch (_) {
-                if (data?.name) localStorage.setItem("name", data.name)
-            } finally {
-                window.dispatchEvent(new Event('profile-updated'))
-                setToastMessage(data.password ? 'Security settings updated successfully' : 'Profile updated successfully')
-                setShowToast(true)
-                setLoading(false);
-                setTimeout(() => {
-                    setShowToast(false)
-                    navigate("/profile")
-                }, 900)
+            const updateRes = await fetch(`${BASE_URL}/user/${userId}`, {
+                method: 'PUT',
+                body: formData
+            })
+
+            if (!updateRes.ok) {
+                const errText = await updateRes.text()
+                throw new Error(errText || 'Failed to update profile')
             }
-        }, 2500);
+
+            const latestUser = await updateRes.json()
+            if (latestUser?.name) localStorage.setItem("name", latestUser.name)
+            if (latestUser?.pic) localStorage.setItem("pic", latestUser.pic)
+
+            // Keep Redux list in sync for other components.
+            dispatch(getUser())
+
+            window.dispatchEvent(new Event('profile-updated'))
+            setToastMessage(data.password ? 'Security settings updated successfully' : 'Profile updated successfully')
+            setShowToast(true)
+            setTimeout(() => {
+                setShowToast(false)
+                navigate("/profile")
+            }, 900)
+        } catch (error) {
+            console.error('Profile update failed:', error)
+            setToastMessage('Profile update failed. Please try again.')
+            setShowToast(true)
+            setTimeout(() => setShowToast(false), 2200)
+        } finally {
+            setLoading(false)
+        }
     }
 
     const hasUnsavedChanges = initialData

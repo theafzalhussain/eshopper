@@ -273,8 +273,18 @@ const normalizeUserDocument = (doc) => {
     const plainDoc = typeof doc.toObject === 'function' ? doc.toObject() : doc;
     return {
         ...plainDoc,
+        deliveryInstructions: plainDoc.deliveryNotes || plainDoc.deliveryInstructions || '',
         settings: normalizeUserSettings(plainDoc.settings),
     };
+};
+
+const maskEmail = (email = '') => {
+    const clean = String(email || '').trim();
+    const parts = clean.split('@');
+    if (parts.length !== 2) return clean;
+    const [local, domain] = parts;
+    if (local.length <= 2) return `${local.charAt(0) || '*'}***@${domain}`;
+    return `${local.slice(0, 2)}***@${domain}`;
 };
 
 // 🔴 SOCKET.IO AUTHENTICATION MIDDLEWARE
@@ -1976,6 +1986,31 @@ app.post('/login', authLimiter, async (req, res) => {
 
             // ✅ PASSWORD EXISTS - COMPARE PASSWORDS
             if (await bcrypt.compare(req.body.password, user.password)) {
+                const twoFactorEnabled = Boolean(user?.settings?.security?.twoFactorEnabled);
+                const normalizedEmail = String(user.email || '').trim().toLowerCase();
+
+                if (twoFactorEnabled) {
+                    if (!normalizedEmail) {
+                        return res.status(400).json({
+                            message: '2FA is enabled but no verified email is available for this account.'
+                        });
+                    }
+
+                    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+                    await OTPRecord.findOneAndUpdate(
+                        { email: normalizedEmail },
+                        { email: normalizedEmail, otp, createdAt: new Date() },
+                        { upsert: true, new: true }
+                    );
+
+                    await sendMail(normalizedEmail, otp);
+                    return res.json({
+                        requiresTwoFactor: true,
+                        message: `Verification code sent to ${maskEmail(normalizedEmail)}`,
+                        maskedEmail: maskEmail(normalizedEmail)
+                    });
+                }
+
                 // ✅ LOGIN SUCCESS - RESET FAILED ATTEMPTS
                 user.failedAttempts = 0;
                 user.lockUntil = undefined;
@@ -2014,6 +2049,73 @@ app.post('/login', authLimiter, async (req, res) => {
     } catch (e) { 
         console.error("❌ Login Error:", e.message);
         res.status(500).json({ message: "Something went wrong." }); 
+    }
+});
+
+app.post('/api/login-2fa', authLimiter, async (req, res) => {
+    try {
+        const searchTerm = String(req.body.username || '').toLowerCase().trim();
+        const plainPassword = String(req.body.password || '');
+        const otp = String(req.body.otp || '').trim();
+
+        if (!searchTerm || !plainPassword || !otp) {
+            return res.status(400).json({ message: 'Username, password and OTP are required.' });
+        }
+
+        const user = await User.findOne({ $or: [{ username: searchTerm }, { email: searchTerm }] });
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        if (user.lockUntil && Date.now() < user.lockUntil) {
+            const minutesRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
+            return res.status(403).json({
+                message: `Account temporarily locked. Try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.`,
+                remainingMinutes: minutesRemaining
+            });
+        }
+
+        const passwordOk = await bcrypt.compare(plainPassword, user.password || '');
+        if (!passwordOk) {
+            user.failedAttempts = (user.failedAttempts || 0) + 1;
+            if (user.failedAttempts >= 5) {
+                user.lockUntil = new Date(Date.now() + 15 * 60000);
+            }
+            await user.save();
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        if (!Boolean(user?.settings?.security?.twoFactorEnabled)) {
+            user.failedAttempts = 0;
+            user.lockUntil = undefined;
+            user.lastLogin = new Date();
+            await user.save();
+            const { password: _pw, otp: _otp, otpExpires: _exp, failedAttempts: _fa, lockUntil: _lu, ...safeUser } = user.toJSON();
+            return res.json(safeUser);
+        }
+
+        const normalizedEmail = String(user.email || '').trim().toLowerCase();
+        if (!normalizedEmail) {
+            return res.status(400).json({ message: 'No verified email found for this account.' });
+        }
+
+        const otpRecord = await OTPRecord.findOne({ email: normalizedEmail, otp });
+        if (!otpRecord) {
+            return res.status(400).json({ message: 'Invalid or expired OTP code.' });
+        }
+
+        await OTPRecord.deleteMany({ email: normalizedEmail });
+
+        user.failedAttempts = 0;
+        user.lockUntil = undefined;
+        user.lastLogin = new Date();
+        await user.save();
+
+        const { password: _pw, otp: _otp, otpExpires: _exp, failedAttempts: _fa, lockUntil: _lu, ...safeUser } = user.toJSON();
+        return res.json(safeUser);
+    } catch (e) {
+        console.error('❌ Login 2FA Error:', e.message);
+        return res.status(500).json({ message: '2FA verification failed. Please try again.' });
     }
 });
 
@@ -2062,6 +2164,9 @@ const handle = (path, Model, useUpload = false) => {
                     delete data.settings;
                 }
             }
+            if (path === '/user' && data.deliveryNotes == null && typeof data.deliveryInstructions === 'string') {
+                data.deliveryNotes = data.deliveryInstructions;
+            }
             if (path === '/user') {
                 data.settings = normalizeUserSettings(data.settings);
             }
@@ -2094,6 +2199,9 @@ const handle = (path, Model, useUpload = false) => {
 
             if (path === '/user' && upData.deliveryNotes == null && typeof req.body.deliveryNotes === 'string') {
                 upData.deliveryNotes = req.body.deliveryNotes;
+            }
+            if (path === '/user' && upData.deliveryNotes == null && typeof req.body.deliveryInstructions === 'string') {
+                upData.deliveryNotes = req.body.deliveryInstructions;
             }
 
             if (path === '/user') {
@@ -3430,6 +3538,16 @@ app.get('/api/admin/order/:orderId', async (req, res) => {
             paymentStatus: ensuredOrder.paymentStatus || 'Pending',
             totalAmount: Number(ensuredOrder.totalAmount || 0),
             shippingAmount: Number(ensuredOrder.shippingAmount || 0),
+            preDiscountTotal: Number(ensuredOrder.preDiscountTotal || 0),
+            discountAmount: Number(ensuredOrder.discountAmount || 0),
+            couponCode: String(ensuredOrder.couponCode || ''),
+            couponDiscount: Number(ensuredOrder.couponDiscount || 0),
+            gstAmount: Number(ensuredOrder.gstAmount || 0),
+            giftWrapCharge: Number(ensuredOrder.giftWrapCharge || 0),
+            protectionCharge: Number(ensuredOrder.protectionCharge || 0),
+            ecoCharge: Number(ensuredOrder.ecoCharge || 0),
+            paymentFee: Number(ensuredOrder.paymentFee || 0),
+            extraCharges: Number(ensuredOrder.extraCharges || 0),
             finalAmount: Number(ensuredOrder.finalAmount || 0),
             shippingAddress: ensuredOrder.shippingAddress || {},
             products: normalizeOrderProducts(ensuredOrder.products),

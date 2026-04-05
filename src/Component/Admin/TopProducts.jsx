@@ -95,7 +95,7 @@ export default function TopProducts({ topProducts = [] }) {
           <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--teal-primary)' }} />
         </div>
       ) : products.length > 0 ? (
-        <div>
+        <div className="scc-products-scroll-wrap">
           {products.map((product, index) => (
             <motion.div
               key={product._id || index}

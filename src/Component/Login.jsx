@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { getUser } from '../Store/ActionCreaters/UserActionCreators'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LogIn, User as UserIcon, Lock, Eye, EyeOff, AlertCircle, ChevronRight, Loader2 } from 'lucide-react'
+import { LogIn, User as UserIcon, Lock, Eye, EyeOff, AlertCircle, ChevronRight, Loader2, ShieldCheck } from 'lucide-react'
 import { signInWithPopup, getIdToken } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
-import { loginAPI } from '../Store/Services'
+import { loginAPI, login2FAAPI } from '../Store/Services'
 import { BASE_URL } from '../constants'
 
 export default function Login() {
@@ -15,6 +15,9 @@ export default function Login() {
     const [loading, setLoading] = useState(false)
     const [googleLoading, setGoogleLoading] = useState(false)
     const [errorMsg, setErrorMsg] = useState("")
+    const [twoFactorRequired, setTwoFactorRequired] = useState(false)
+    const [otpCode, setOtpCode] = useState('')
+    const [otpHint, setOtpHint] = useState('')
     const [rememberMe, setRememberMe] = useState(false)
     const [autoLoginAttempted, setAutoLoginAttempted] = useState(false)
     
@@ -68,6 +71,11 @@ export default function Login() {
     function getData(e) {
         setdata({ ...data, [e.target.name]: e.target.value })
         if (errorMsg) setErrorMsg("");
+        if (twoFactorRequired) {
+            setTwoFactorRequired(false)
+            setOtpCode('')
+            setOtpHint('')
+        }
     }
 
     function persistUserSession(user, shouldRemember = false) {
@@ -152,8 +160,17 @@ export default function Login() {
         setErrorMsg("");
         
         try {
-            const user = await loginAPI(data)
+            const user = twoFactorRequired
+                ? await login2FAAPI({ username: data.username, password: data.password, otp: otpCode })
+                : await loginAPI(data)
             setLoading(false)
+
+            if (user?.requiresTwoFactor) {
+                setTwoFactorRequired(true)
+                setOtpHint(user?.message || 'Verification code sent to your email.')
+                setErrorMsg('')
+                return
+            }
             
             if (user.username) {
                 // --- STANDARD LOGIN SETUP ---
@@ -240,7 +257,7 @@ export default function Login() {
                                 <label>LOGIN IDENTITY</label>
                                 <div className="input-box">
                                     <UserIcon size={18} className="icon" />
-                                    <input type="text" name="username" placeholder="Username or Email" value={data.username} onChange={getData} required />
+                                    <input type="text" name="username" placeholder="Username or Email" value={data.username} onChange={getData} required disabled={twoFactorRequired} />
                                 </div>
                                 <div className="input-hint">You can use your username or registered email</div>
                             </div>
@@ -252,12 +269,47 @@ export default function Login() {
                                 </div>
                                 <div className="input-box">
                                     <Lock size={18} className="icon" />
-                                    <input type={showPass ? "text" : "password"} name="password" placeholder="••••••••" value={data.password} onChange={getData} required />
+                                    <input type={showPass ? "text" : "password"} name="password" placeholder="••••••••" value={data.password} onChange={getData} required disabled={twoFactorRequired} />
                                     <button type="button" className="eye-toggle" onClick={() => setShowPass(!showPass)}>
                                         {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </div>
                             </div>
+
+                            {twoFactorRequired && (
+                                <div className="input-field-wrap">
+                                    <label>2FA VERIFICATION CODE</label>
+                                    <div className="input-box">
+                                        <ShieldCheck size={18} className="icon" />
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            maxLength={6}
+                                            placeholder="Enter 6-digit OTP"
+                                            value={otpCode}
+                                            onChange={(e) => {
+                                                const clean = e.target.value.replace(/\D/g, '').slice(0, 6)
+                                                setOtpCode(clean)
+                                            }}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="input-hint">{otpHint || 'A verification code has been sent to your email.'}</div>
+                                    <button
+                                        type="button"
+                                        className="twofactor-back-btn"
+                                        onClick={() => {
+                                            setTwoFactorRequired(false)
+                                            setOtpCode('')
+                                            setOtpHint('')
+                                            setErrorMsg('')
+                                        }}
+                                    >
+                                        Back to password login
+                                    </button>
+                                </div>
+                            )}
 
                             {/* --- REMEMBER ME CHECKBOX --- */}
                             <div className="remember-me-wrapper mb-4">
@@ -282,6 +334,8 @@ export default function Login() {
                             >
                                 {loading ? (
                                     <><Loader2 className="spinner mr-2" size={20} /> SYNCHRONIZING...</>
+                                ) : twoFactorRequired ? (
+                                    <><ShieldCheck size={20} className="mr-2" /> VERIFY & SIGN IN <ChevronRight size={18} className="ml-auto" /></>
                                 ) : (
                                     <><LogIn size={20} className="mr-2" /> ENTER PORTAL <ChevronRight size={18} className="ml-auto" /></>
                                 )}
@@ -431,6 +485,19 @@ export default function Login() {
                     margin-top: 6px;
                     margin-left: 4px;
                     font-weight: 500;
+                }
+
+                .twofactor-back-btn {
+                    margin-top: 10px;
+                    border: 0;
+                    background: transparent;
+                    color: #0f8ea4;
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: 0.6px;
+                    text-transform: uppercase;
+                    cursor: pointer;
+                    padding: 0;
                 }
 
                 .eye-toggle { border: none; background: transparent; color: #bbb; cursor: pointer; }

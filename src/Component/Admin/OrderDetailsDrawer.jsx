@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Copy } from 'lucide-react';
-import { Package, User, Mail, CreditCard, MapPin, Calendar, ShoppingBag, Clock, AlertCircle } from 'lucide-react';
+import { Package, User, Mail, CreditCard, MapPin, Calendar, ShoppingBag, Clock, AlertCircle, X } from 'lucide-react';
 import axios from 'axios';
 import './OrderDetailsDrawer.css';
 import { BASE_URL } from '../../constants';
@@ -21,6 +21,42 @@ const formatDateTime = (dateString) => {
 };
 
 const formatAmount = (value) => `INR ${Number(value || 0).toLocaleString('en-IN')}`;
+const toNumber = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const resolveProductImageSrc = (product = {}) => {
+  const candidates = [
+    product?.image,
+    product?.pic,
+    product?.pic1,
+    product?.pic2,
+    product?.thumbnail,
+    product?.imageUrl,
+    product?.image_url,
+    product?.product?.image,
+    product?.product?.pic,
+    product?.product?.pic1,
+    product?.productid?.image,
+    product?.productid?.pic,
+    product?.productid?.pic1
+  ];
+
+  const raw = candidates.find((item) => typeof item === 'string' && item.trim().length > 0);
+  if (!raw) return '';
+
+  const clean = String(raw).trim().replace(/\\/g, '/');
+  if (/^https?:\/\//i.test(clean) || clean.startsWith('data:image/')) return clean;
+
+  // Supports values like: "productimages/file.jpg", "/productimages/file.jpg", "uploads/..."
+  const normalizedPath = clean.startsWith('/') ? clean : `/${clean}`;
+  if (normalizedPath.startsWith('/productimages/') || normalizedPath.startsWith('/uploads/')) {
+    return `${BASE_URL}${normalizedPath}`;
+  }
+
+  return `${BASE_URL}/productimages/${clean.replace(/^\/+/, '')}`;
+};
 
 const normalizeProductRow = (product = {}, index = 0) => {
   const name = product?.name || product?.productName || product?.title || product?.productid?.name || `Product ${index + 1}`;
@@ -43,10 +79,7 @@ const normalizeProductRow = (product = {}, index = 0) => {
   const lineTotalVal = Number(product?.totalPrice || product?.total || unitPrice * quantity);
   const lineTotal = Number.isFinite(lineTotalVal) ? lineTotalVal : unitPrice * quantity;
 
-  const imageValue = product?.image || product?.pic1 || product?.productid?.pic1 || '';
-  const imageSrc = typeof imageValue === 'string' && imageValue.length > 0
-    ? (imageValue.startsWith('http') ? imageValue : `${BASE_URL}/productimages/${imageValue}`)
-    : '';
+  const imageSrc = resolveProductImageSrc(product);
 
   return {
     id: String(product?._id || product?.id || product?.productid?._id || index),
@@ -76,7 +109,7 @@ const getOrderDate = (order, type = 'created') => {
     return null;
 };
 
-export default function OrderDetailsDrawer({ open, onClose, order }) {
+export default function OrderDetailsDrawer({ open, onClose, order, onOrderRemoved }) {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -93,18 +126,58 @@ export default function OrderDetailsDrawer({ open, onClose, order }) {
 
   const paymentSummary = useMemo(() => {
     const computedSubtotal = productRows.reduce((sum, p) => sum + Number(p.lineTotal || 0), 0);
-    const subtotal = Number(fullOrderData?.totalAmount ?? computedSubtotal) || 0;
-    const shipping = Number(fullOrderData?.shippingAmount || 0) || 0;
-    const finalAmount = Number(fullOrderData?.finalAmount ?? (subtotal + shipping)) || 0;
+    const subtotal = toNumber(fullOrderData?.totalAmount ?? computedSubtotal);
+    const shipping = toNumber(fullOrderData?.shippingAmount || 0);
+    const gstAmount = Math.max(0, toNumber(fullOrderData?.gstAmount || 0));
+    const discountAmount = Math.max(0, toNumber(fullOrderData?.discountAmount || 0));
+    const couponDiscount = Math.max(0, toNumber(fullOrderData?.couponDiscount || 0));
+    const giftWrapCharge = Math.max(0, toNumber(fullOrderData?.giftWrapCharge || 0));
+    const protectionCharge = Math.max(0, toNumber(fullOrderData?.protectionCharge || 0));
+    const ecoCharge = Math.max(0, toNumber(fullOrderData?.ecoCharge || 0));
+    const paymentFee = Math.max(0, toNumber(fullOrderData?.paymentFee || 0));
+    const segmentedCharges = giftWrapCharge + protectionCharge + ecoCharge + paymentFee;
+    const rawExtraCharges = Math.max(0, toNumber(fullOrderData?.extraCharges || 0));
+    const otherCharges = rawExtraCharges > 0
+      ? Math.max(0, segmentedCharges > 0 && rawExtraCharges >= segmentedCharges ? rawExtraCharges - segmentedCharges : rawExtraCharges)
+      : 0;
+    const preDiscountRaw = Math.max(0, toNumber(fullOrderData?.preDiscountTotal || 0));
+    const preDiscountTotal = preDiscountRaw > 0 ? preDiscountRaw : Math.max(0, subtotal + discountAmount + couponDiscount);
+    const finalAmount = toNumber(fullOrderData?.finalAmount ?? (subtotal + shipping + gstAmount + segmentedCharges + otherCharges - discountAmount - couponDiscount));
+    const couponCode = String(fullOrderData?.couponCode || '').trim();
     const itemCount = productRows.reduce((sum, p) => sum + Number(p.quantity || 0), 0);
 
     return {
+      preDiscountTotal,
       subtotal,
       shipping,
+      gstAmount,
+      discountAmount,
+      couponCode,
+      couponDiscount,
+      giftWrapCharge,
+      protectionCharge,
+      ecoCharge,
+      paymentFee,
+      otherCharges,
       finalAmount,
       itemCount
     };
-  }, [fullOrderData?.totalAmount, fullOrderData?.shippingAmount, fullOrderData?.finalAmount, productRows]);
+  }, [
+    fullOrderData?.totalAmount,
+    fullOrderData?.shippingAmount,
+    fullOrderData?.gstAmount,
+    fullOrderData?.discountAmount,
+    fullOrderData?.couponCode,
+    fullOrderData?.couponDiscount,
+    fullOrderData?.giftWrapCharge,
+    fullOrderData?.protectionCharge,
+    fullOrderData?.ecoCharge,
+    fullOrderData?.paymentFee,
+    fullOrderData?.extraCharges,
+    fullOrderData?.preDiscountTotal,
+    fullOrderData?.finalAmount,
+    productRows
+  ]);
 
   const resolveOrderPayload = (data) => {
     if (!data) return null;
@@ -208,6 +281,17 @@ export default function OrderDetailsDrawer({ open, onClose, order }) {
         <div className="drawer-header-gradient d-flex align-items-center mb-0">
           <Package size={32} className="mr-2 text-gradient" />
           <h2 className="mb-0 font-weight-bold">Order Details</h2>
+          {isAdmin ? (
+            <button
+              type="button"
+              className="drawer-remove-btn ml-auto"
+              onClick={onClose}
+              title="Close details"
+              aria-label="Close details"
+            >
+              <X size={16} />
+            </button>
+          ) : null}
         </div>
         <div className="drawer-body-scroll">
           {loading ? (
@@ -259,6 +343,12 @@ export default function OrderDetailsDrawer({ open, onClose, order }) {
                   <span><strong>Payment:</strong> {fullOrderData.paymentMethod || 'N/A'} ({fullOrderData.paymentStatus || 'N/A'})</span>
                 </div>
                 <div className="payment-breakdown-wrap mt-2">
+                  {paymentSummary.preDiscountTotal > 0 ? (
+                    <div className="payment-breakdown-row">
+                      <span>MRP Total</span>
+                      <strong>{formatAmount(paymentSummary.preDiscountTotal)}</strong>
+                    </div>
+                  ) : null}
                   <div className="payment-breakdown-row">
                     <span>Subtotal</span>
                     <strong>{formatAmount(paymentSummary.subtotal)}</strong>
@@ -267,8 +357,61 @@ export default function OrderDetailsDrawer({ open, onClose, order }) {
                     <span>Shipping</span>
                     <strong>{formatAmount(paymentSummary.shipping)}</strong>
                   </div>
+                  {paymentSummary.gstAmount > 0 ? (
+                    <div className="payment-breakdown-row">
+                      <span>GST</span>
+                      <strong>{formatAmount(paymentSummary.gstAmount)}</strong>
+                    </div>
+                  ) : null}
+                  {paymentSummary.giftWrapCharge > 0 ? (
+                    <div className="payment-breakdown-row">
+                      <span>Gift Wrap</span>
+                      <strong>{formatAmount(paymentSummary.giftWrapCharge)}</strong>
+                    </div>
+                  ) : null}
+                  {paymentSummary.protectionCharge > 0 ? (
+                    <div className="payment-breakdown-row">
+                      <span>Protection</span>
+                      <strong>{formatAmount(paymentSummary.protectionCharge)}</strong>
+                    </div>
+                  ) : null}
+                  {paymentSummary.ecoCharge > 0 ? (
+                    <div className="payment-breakdown-row">
+                      <span>Eco Charge</span>
+                      <strong>{formatAmount(paymentSummary.ecoCharge)}</strong>
+                    </div>
+                  ) : null}
+                  {paymentSummary.paymentFee > 0 ? (
+                    <div className="payment-breakdown-row">
+                      <span>Payment Fee</span>
+                      <strong>{formatAmount(paymentSummary.paymentFee)}</strong>
+                    </div>
+                  ) : null}
+                  {paymentSummary.otherCharges > 0 ? (
+                    <div className="payment-breakdown-row">
+                      <span>Other Charges</span>
+                      <strong>{formatAmount(paymentSummary.otherCharges)}</strong>
+                    </div>
+                  ) : null}
+                  {paymentSummary.discountAmount > 0 ? (
+                    <div className="payment-breakdown-row breakdown-negative">
+                      <span>Instant Discount</span>
+                      <strong>-{formatAmount(paymentSummary.discountAmount)}</strong>
+                    </div>
+                  ) : null}
+                  {paymentSummary.couponDiscount > 0 ? (
+                    <div className="payment-breakdown-row breakdown-negative">
+                      <span>
+                        Coupon Discount
+                        {paymentSummary.couponCode ? (
+                          <small className="coupon-label"> ({paymentSummary.couponCode})</small>
+                        ) : null}
+                      </span>
+                      <strong>-{formatAmount(paymentSummary.couponDiscount)}</strong>
+                    </div>
+                  ) : null}
                   <div className="payment-breakdown-row grand-total">
-                    <span>Total Amount</span>
+                    <span>Payable Total</span>
                     <strong>{formatAmount(paymentSummary.finalAmount)}</strong>
                   </div>
                 </div>

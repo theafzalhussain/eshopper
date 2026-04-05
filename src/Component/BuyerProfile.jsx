@@ -342,7 +342,18 @@ export default function BuyerProfile({ user = {} }) {
     }
 
     const streetAddress = user.streetAddress || user.addressline1 || ''
+    const addressLine2 = user.addressline2 || user.addressLine2 || user.address_line2 || ''
+    const landmark = user.landmark || user.deliveryLandmark || user.land_mark || ''
+    const deliveryInstructions =
+        user.deliveryNotes ||
+        user.deliveryInstructions ||
+        user.deliveryInstruction ||
+        user.delivery_instructions ||
+        ''
     const postalCode = user.postalCode || user.pin || ''
+    const hasAddressLine2 = Boolean(String(addressLine2 || '').trim())
+    const hasLandmark = Boolean(String(landmark || '').trim())
+    const hasDeliveryInstructions = Boolean(String(deliveryInstructions || '').trim())
     const resolvedMembershipType = String(user.membershipType || ctxMembershipType || 'Silver')
     const resolvedTotalOrders = Number(user.totalOrders ?? ctxTotalOrders ?? 0)
     const tierClass = resolvedMembershipType.toLowerCase()
@@ -385,6 +396,9 @@ export default function BuyerProfile({ user = {} }) {
                     <Field icon={Mail} label="Email Address" value={user.email} copyable onCopied={showCopiedToast} />
                     <Field icon={Phone} label="Phone Number" value={user.phone} copyable onCopied={showCopiedToast} />
                     <Field icon={MapPin} label="Street Address" value={streetAddress} full />
+                    {hasAddressLine2 && <Field icon={MapPin} label="Address Line 2" value={addressLine2} full />}
+                    {hasLandmark && <Field icon={Building2} label="Landmark" value={landmark} full />}
+                    {hasDeliveryInstructions && <Field icon={MapPin} label="Delivery Instructions" value={deliveryInstructions} full />}
                     <Field icon={Building2} label="City" value={user.city} />
                     <Field icon={Map} label="State" value={user.state} />
                     <Field icon={Hash} label="Postal Code" value={postalCode} copyable onCopied={showCopiedToast} />
