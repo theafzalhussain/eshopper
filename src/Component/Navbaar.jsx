@@ -408,12 +408,13 @@ export default function Navbaar() {
                                 </div>
                             )}
 
-                            <Link to="/cart" className="text-dark mr-3 position-relative" title="Shopping Cart">
+                            <Link to="/cart" className="mobile-cart-link position-relative" title="Shopping Cart">
                                 <motion.div
+                                    className="mobile-cart-btn"
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.95 }}
                                 >
-                                    <ShoppingCart size={20} />
+                                    <ShoppingCart size={22} />
                                 </motion.div>
                                 
                                 {/* Premium Cart Badge - Mobile */}
@@ -427,8 +428,8 @@ export default function Navbaar() {
                                             transition={{ type: 'spring', stiffness: 380, damping: 15 }}
                                             style={{
                                                 position: 'absolute',
-                                                top: '-5px',
-                                                right: '-8px',
+                                                top: '-4px',
+                                                right: '-6px',
                                                 width: '20px',
                                                 height: '20px',
                                                 borderRadius: '50%',
@@ -477,6 +478,14 @@ export default function Navbaar() {
                                     exit={{ y: 24, opacity: 0.96 }}
                                     transition={{ duration: 0.22 }}
                                 >
+                                    <button
+                                        type="button"
+                                        className="mobile-menu-close-btn"
+                                        onClick={toggleMobileMenu}
+                                        aria-label="Close menu"
+                                    >
+                                        <X size={22} />
+                                    </button>
                                     <div className="mobile-sheet-top" aria-hidden="true">
                                         <span className="mobile-sheet-handle" />
                                     </div>
@@ -850,6 +859,34 @@ export default function Navbaar() {
                     min-height: 40px;
                 }
 
+                .mobile-cart-link {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-right: 10px;
+                    color: #1f2937;
+                    text-decoration: none !important;
+                    flex-shrink: 0;
+                }
+                .mobile-cart-btn {
+                    width: 42px;
+                    height: 42px;
+                    border-radius: 50px;
+                    border: 1px solid rgba(212,175,55,0.34);
+                    background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,247,228,0.95));
+                    box-shadow: 0 8px 18px rgba(15,23,42,0.14);
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #1f2937;
+                    transition: transform 0.3s, box-shadow 0.3s, color 0.3s;
+                }
+                .mobile-cart-link:hover .mobile-cart-btn {
+                    color: #7c5a10;
+                    transform: translateY(-1px);
+                    box-shadow: 0 12px 26px rgba(15,23,42,0.2);
+                }
+
                 /* 📱 MOBILE MENU OVERLAY */
                 .mobile-menu-overlay {
                     position: fixed !important;
@@ -892,6 +929,28 @@ export default function Navbaar() {
                     overscroll-behavior: contain;
                     -webkit-overflow-scrolling: touch;
                     position: relative;
+                }
+                .mobile-menu-close-btn {
+                    position: absolute;
+                    top: calc(10px + env(safe-area-inset-top));
+                    right: 16px;
+                    width: 42px;
+                    height: 42px;
+                    border-radius: 50%;
+                    border: 1px solid rgba(255,255,255,0.16);
+                    background: rgba(17, 24, 39, 0.88);
+                    color: #fff;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+                    z-index: 3;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+                }
+                .mobile-menu-close-btn:hover {
+                    transform: translateY(-1px);
+                    background: rgba(31, 41, 55, 0.94);
+                    box-shadow: 0 14px 28px rgba(0,0,0,0.34);
                 }
                 .mobile-menu-content::before {
                     content: '';
@@ -1080,6 +1139,13 @@ export default function Navbaar() {
                         position: static;
                         flex-shrink: 0;
                     }
+                    .mobile-cart-link {
+                        margin-right: 8px;
+                    }
+                    .mobile-cart-btn {
+                        width: 40px;
+                        height: 40px;
+                    }
                     .mobile-profile-menu {
                         position: fixed !important;
                         left: 0;
@@ -1131,10 +1197,20 @@ export default function Navbaar() {
                     .mobile-sheet-top {
                         margin: 0 -16px 8px;
                     }
+                    .mobile-menu-close-btn {
+                        right: 12px;
+                        width: 40px;
+                        height: 40px;
+                    }
                     .logo-brand-name { font-size: 14px; letter-spacing: 1.5px; }
                     .logo-e { width: 28px; height: 28px; font-size: 16px; }
                     .logo-tagline { font-size: 5px; }
                     .navbar { padding: 8px 0 !important; }
+                    .mobile-cart-btn {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50px;
+                    }
                     .premium-dropdown-menu {
                         min-width: 0;
                         max-width: none;

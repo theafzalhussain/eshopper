@@ -43,16 +43,6 @@
     .next{margin-top:14px;border:1px solid #343844;border-radius:12px;padding:14px;background:#111317;}
     .next h4{margin:0 0 10px;color:#efcb4a;font-size:34px;text-align:center;}
     .next p{margin:0;text-align:center;color:#c8cdd7;font-size:17px;line-height:1.55;}
-    .steps{width:100%;margin-top:14px;}
-    .steps td{text-align:center;width:25%;padding:8px 4px;}
-    .steps .dot{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:999px;font-size:22px;font-weight:700;}
-    .steps .done{background:#21ba51;color:#eafff1;}
-    .steps .active{background:#9a6de0;color:#ffffff;}
-    .steps .pending{background:#1c212a;color:#9ca6b7;border:1px dashed #5f6878;}
-    .steps .lbl{font-size:11px;letter-spacing:.4px;margin-top:6px;font-weight:700;text-transform:uppercase;}
-    .steps .lbl.done{color:#3fde77;}
-    .steps .lbl.active{color:#c89cff;}
-    .steps .lbl.pending{color:#8f98aa;}
     .addr{margin-top:14px;border:1px solid #343844;border-radius:12px;padding:14px;}
     .addr .h{margin:0 0 8px;color:#efcb4a;font-size:13px;font-weight:700;letter-spacing:.3px;}
     .addr .v{margin:0;color:#e8eaee;font-size:16px;line-height:1.5;}
@@ -75,7 +65,6 @@
       .inspect{width:120px;height:120px;padding-top:16px;}
       .egrid td{display:block;width:100%;border-right:none;border-top:1px solid #1b6a3d;}
       .egrid tr td:first-child{border-top:none;}
-      .steps td{display:inline-block;width:24%;}
       .btn{font-size:21px;}
       .btn-row td{display:block;width:100%;}
       .wa,.insta{margin:0 0 10px 0;}
@@ -122,12 +111,18 @@
             <p>Your package will leave our warehouse within <strong>24-48 hours</strong>. You'll receive a <span style="color:#b88eff;">tracking link via email &amp; SMS</span> as soon as it's dispatched.</p>
           </div>
 
-          <table class="steps" role="presentation"><tr>
-            <td><span class="dot done">&#10003;</span><div class="lbl done">Placed</div></td>
-            <td><span class="dot done">&#10003;</span><div class="lbl done">Confirmed</div></td>
-            <td><span class="dot active">3</span><div class="lbl active">Packed</div></td>
-            <td><span class="dot pending">4</span><div class="lbl pending">Shipped</div></td>
-          </tr></table>
+          <div class="progress-track">
+            <div class="progress-head">DELIVERY PROGRESS</div>
+            <table class="progress-grid" role="presentation"><tr>
+              {{#each progressSteps}}
+              <td>
+                <span class="p-icon {{state}}">{{{icon}}}</span>
+                <div class="p-label {{state}}">{{label}}</div>
+              </td>
+              {{/each}}
+            </tr></table>
+            <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+          </div>
 
           <div class="addr">
             <p class="h">SHIPPING ADDRESS</p>

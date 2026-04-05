@@ -10,6 +10,11 @@
   --progress-a: #34d399;
   --progress-b: #60a5fa;
   --progress-c: #a78bfa;
+  --progress-track-border: #2d3543;
+  --progress-dot-border: #3d4760;
+  --progress-label: #9da8be;
+  --progress-label-active: #93cbff;
+  --progress-label-done: #7ee5a5;
   --btn-size: 14px;
   --btn-radius: 9px;
   --btn-py: 10px;
@@ -54,12 +59,41 @@ body {
 }
 
 .progress-track {
+  margin-top: 14px !important;
+  border: 1px solid var(--progress-track-border) !important;
+  border-radius: 14px !important;
+  padding: 14px 10px !important;
   background: linear-gradient(140deg, var(--panel-bg-a), var(--panel-bg-b), var(--panel-bg-c));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .progress-head {
   color: var(--gold-accent);
+  margin: 0 0 10px !important;
+  text-align: center !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+}
+
+.progress-grid {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+}
+
+.progress-grid td {
+  width: 20% !important;
+  text-align: center !important;
+  vertical-align: top !important;
+  padding: 4px 2px !important;
+}
+
+.p-bar {
+  margin-top: 10px !important;
+  height: 5px !important;
+  background: #293141 !important;
+  border-radius: 999px !important;
+  overflow: hidden !important;
 }
 
 .p-fill {
@@ -68,6 +102,12 @@ body {
 }
 
 .p-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--progress-dot-border) !important;
+  background: #1a2130 !important;
+  margin: 0 auto !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -87,15 +127,39 @@ body {
 }
 
 .p-icon.done {
+  background: linear-gradient(120deg, #31c66c, #24a64f) !important;
+  border-color: #67db92 !important;
   color: #ffffff;
 }
 
 .p-icon.active {
+  background: linear-gradient(120deg, #4caeff, #2f8fe2) !important;
+  border-color: #88d0ff !important;
+  box-shadow: 0 0 0 3px rgba(76, 174, 255, 0.2) !important;
   color: #ffffff;
 }
 
 .p-icon.pending {
+  background: #1b212d !important;
+  border-style: dashed !important;
   color: #94a3b8;
+}
+
+.p-label {
+  margin-top: 7px !important;
+  font-size: 11px !important;
+  letter-spacing: 0.4px !important;
+  font-weight: 700 !important;
+  color: var(--progress-label) !important;
+  text-transform: uppercase;
+}
+
+.p-label.done {
+  color: var(--progress-label-done) !important;
+}
+
+.p-label.active {
+  color: var(--progress-label-active) !important;
 }
 
 .btn,
@@ -117,15 +181,53 @@ body {
 .contact a,
 .support a,
 .cta a {
+  text-align: center !important;
+  text-decoration: none !important;
+  font-weight: 700 !important;
   font-size: var(--btn-size) !important;
   line-height: 1.3 !important;
   border-radius: var(--btn-radius) !important;
   padding: var(--btn-py) var(--btn-px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 6px 16px rgba(8, 12, 22, 0.28) !important;
   min-width: 0 !important;
 }
 
 .btn {
+  display: block !important;
+  width: 100% !important;
+  max-width: 330px !important;
+  box-sizing: border-box !important;
+  margin: 12px auto 0 auto !important;
+}
+
+.btn-sm,
+.smallbtn,
+.line,
+.chat,
+.call,
+.contact a,
+.support a {
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.btn-inst,
+.btn-ref,
+.btn-review,
+.cta a {
+  display: inline-block !important;
+}
+
+.btn-row {
+  width: 100% !important;
   margin-top: 12px !important;
+}
+
+.btn-row td {
+  width: 50% !important;
+  vertical-align: top !important;
 }
 
 .hero .icon,
@@ -189,6 +291,20 @@ body {
     font-size: 16px;
   }
 
+  .p-icon {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .p-label {
+    font-size: 10px !important;
+    letter-spacing: 0.2px !important;
+  }
+
+  .progress-track {
+    padding: 12px 8px !important;
+  }
+
   .btn,
   .btn-sm,
   .smallbtn,
@@ -203,5 +319,10 @@ body {
   .cta a {
     font-size: 13px !important;
     padding: 9px 12px !important;
+  }
+
+  .btn-row td {
+    display: block !important;
+    width: 100% !important;
   }
 }

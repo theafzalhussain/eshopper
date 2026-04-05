@@ -397,6 +397,7 @@ export default function Contact() {
                     border: 1px solid #e8ddc4;
                     box-shadow: 0 20px 36px rgba(17, 17, 17, 0.16);
                     background: #fff;
+                    margin-top: 20px;
                 }
                 .map-premium-shell::before {
                     content: '';
@@ -507,6 +508,18 @@ export default function Contact() {
                 }
                 @media (max-width: 767px) {
                     .compact-contact-hero { min-height: 180px; }
+                    .contact-info {
+                        margin-bottom: 1.5rem !important;
+                    }
+                    .contact-info > [class*='col-'] {
+                        margin-bottom: 12px;
+                    }
+                    .contact-info > [class*='col-']:last-child {
+                        margin-bottom: 0;
+                    }
+                    .contact-info .info {
+                        padding: 18px !important;
+                    }
                     .quick-action-grid { grid-template-columns: 1fr; gap: 8px; }
                     .contact-form { padding: 18px !important; }
                     .map-top-badge {

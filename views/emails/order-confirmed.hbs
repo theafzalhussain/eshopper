@@ -94,6 +94,19 @@
         <h2 class="title">Hi {{customerName}}!</h2>
         <p class="sub">Your order has been confirmed and is now being prepared by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.</p>
         <div class="arrival"><div class="h">EXPECTED ARRIVAL</div><div class="d">{{expectedArrival}}</div><div class="s">3-5 Business Days</div></div>
+
+        <div class="progress-track">
+          <div class="progress-head">DELIVERY PROGRESS</div>
+          <table class="progress-grid" role="presentation"><tr>
+            {{#each progressSteps}}
+            <td>
+              <span class="p-icon {{state}}">{{{icon}}}</span>
+              <div class="p-label {{state}}">{{label}}</div>
+            </td>
+            {{/each}}
+          </tr></table>
+          <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+        </div>
       </td></tr>
 
       <tr><td class="promise">

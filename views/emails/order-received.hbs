@@ -103,6 +103,19 @@
         <h2 class="title">Hi {{customerName}},</h2>
         <p class="subtitle">Your luxury selection is now in our queue. We are verifying your items and preparing them for dispatch.</p>
         <div class="verify">&#10003; Payment Received &amp; Verified</div>
+
+        <div class="progress-track" style="margin-top:16px;">
+          <div class="progress-head">DELIVERY PROGRESS</div>
+          <table class="progress-grid" role="presentation"><tr>
+            {{#each progressSteps}}
+            <td>
+              <span class="p-icon {{state}}">{{{icon}}}</span>
+              <div class="p-label {{state}}">{{label}}</div>
+            </td>
+            {{/each}}
+          </tr></table>
+          <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+        </div>
       </td></tr>
 
       <tr><td class="section">
