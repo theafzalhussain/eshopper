@@ -374,9 +374,9 @@ export default function BuyerProfile({ user = {} }) {
                     <Field icon={Mail} label="Email Address" value={user.email} copyable onCopied={showCopiedToast} />
                     <Field icon={Phone} label="Phone Number" value={user.phone} copyable onCopied={showCopiedToast} />
                     <Field icon={MapPin} label="Street Address" value={streetAddress} full />
-                    {hasAddressLine2 && <Field icon={MapPin} label="Address Line 2" value={addressLine2} full />}
-                    {hasLandmark && <Field icon={Building2} label="Landmark" value={landmark} full />}
-                    {hasDeliveryInstructions && <Field icon={MapPin} label="Delivery Instructions" value={deliveryInstructions} full />}
+                    {hasAddressLine2 ? <Field icon={MapPin} label="Address Line 2" value={addressLine2} full /> : null}
+                    {hasLandmark ? <Field icon={Building2} label="Landmark" value={landmark} full /> : null}
+                    {hasDeliveryInstructions ? <Field icon={MapPin} label="Delivery Instructions" value={deliveryInstructions} full /> : null}
                     <Field icon={Building2} label="City" value={user.city} />
                     <Field icon={Map} label="State" value={user.state} />
                     <Field icon={Hash} label="Postal Code" value={postalCode} copyable onCopied={showCopiedToast} />

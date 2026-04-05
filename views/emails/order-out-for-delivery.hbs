@@ -6,17 +6,18 @@
   <title>Out For Delivery - {{orderId}}</title>
   <style>
     {{> theme_tokens}}
-    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
+    body{margin:0;padding:0;background:#050608;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
     table{border-collapse:collapse;}
-    .wrap{width:100%;background:#0a0a0a;padding:20px 8px;}
+    img{max-width:100%;height:auto;border:0;display:block;}
+    .wrap{width:100%;background:#050608;padding:16px 6px;}
     .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
-    .top{padding:18px 20px;background:linear-gradient(120deg,#301d0b,#5a2d03,#7a3c08);}
-    .logo{height:34px;vertical-align:middle;}
+    .top{padding:16px 20px;background:linear-gradient(120deg,#2a1909,#4b2807,#67340a);}
+    .logo{height:28px;vertical-align:middle;}
     .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#fff2df;border:1px solid #ffc15a;background:#ffb638;padding:7px 12px;border-radius:999px;}
-    .hero{background:#ffad22;color:#fff;text-align:center;padding:24px 12px;}
+    .hero{background:#ffad22;color:#fff;text-align:center;padding:28px 12px;}
     .hero .icon{font-size:48px;line-height:1;}
-    .hero .t{font-size:50px;font-weight:800;line-height:1;margin-top:6px;}
-    .hero .s{font-size:16px;opacity:.96;margin-top:8px;}
+    .hero .t{font-size:48px;font-weight:800;line-height:1;margin-top:8px;letter-spacing:.4px;}
+    .hero .s{font-size:14px;opacity:.96;margin-top:8px;}
     .section{padding:22px 20px;border-top:1px solid #272a30;}
     .delivery{border:1px solid #e59116;background:#3a1f05;border-radius:14px;padding:14px;text-align:center;}
     .delivery .h{color:#ffbf59;font-size:30px;font-weight:800;}
@@ -27,6 +28,7 @@
     .security{margin-top:14px;background:#3a0f0f;border:2px solid #b12b2b;border-radius:12px;padding:14px;}
     .security h4{margin:0 0 8px;color:#ff584f;font-size:32px;}
     .security p{margin:0;color:#ffd8d5;line-height:1.6;font-size:19px;}
+    .security .n{margin-top:8px;color:#c5a3a0;font-size:12px;font-style:italic;}
     .box{margin-top:14px;border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;}
     .heading{color:#ffb12f;font-size:32px;margin:0 0 12px;}
     .summary{width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;}
@@ -67,6 +69,7 @@
     .wa{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:#25d366;color:#0f1712;text-decoration:none;font-weight:700;font-size:15px;}
     .insta{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;font-weight:700;font-size:15px;}
     .foot{padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;}
+    .foot a{color:#d4b75a;text-decoration:none;}
     @media only screen and (max-width:620px){
       .status{float:none;display:inline-block;margin-top:8px;}
       .hero .t{font-size:38px;}
@@ -86,21 +89,22 @@
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} is out for delivery and arriving today.</div>
   <table class="wrap" role="presentation" width="100%"><tr><td>
     <table class="card" role="presentation" align="center">
-      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">OUT FOR DELIVERY</span></td></tr>
+      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">&#128666; OUT FOR DELIVERY</span></td></tr>
       <tr><td class="hero"><div class="icon">&#127873;</div><div class="t">IT'S ARRIVING TODAY!</div><div class="s">Your luxury package is just minutes away</div></td></tr>
 
       <tr><td class="section">
-        <div class="delivery"><div class="h">DELIVERY IN PROGRESS</div><div class="d">TODAY</div><div class="s">Expected by {{deliveryTimeSlot}}</div></div>
-        <h2 class="title">Hi {{customerName}}!</h2>
+        <div class="delivery"><div class="h">&#9200; DELIVERY IN PROGRESS</div><div class="d">TODAY</div><div class="s">Expected by {{deliveryTimeSlot}}</div></div>
+        <h2 class="title">Hi {{customerName}}! &#10024;</h2>
         <p class="sub">Your luxury package is out for delivery and will reach you today. Our delivery partner is on the way to your doorstep.</p>
 
         <div class="security">
-          <h4>SECURITY FIRST!</h4>
+          <h4>&#128274; SECURITY FIRST!</h4>
           <p>Please share the OTP or verification code only when you receive the package in perfect condition.<br><strong>OTP: {{otp}}</strong></p>
+          <div class="n">Never share OTP before inspecting the package</div>
         </div>
 
         <div class="box">
-          <h3 class="heading">YOUR DELIVERY PARTNER</h3>
+          <h3 class="heading">&#128663; YOUR DELIVERY PARTNER</h3>
           <table class="summary" role="presentation" width="100%">
             <tr><td class="k">Courier Partner</td><td class="v">{{courierPartner}}</td></tr>
             <tr><td class="k">Tracking ID</td><td class="v">{{trackingNumber}}</td></tr>
@@ -122,18 +126,18 @@
           </div>
 
           <div class="loc">
-            <h4>DELIVERY LOCATION</h4>
-            <p><strong>{{shippingName}}</strong><br>{{shippingAddress}}<br>{{shippingPhone}}</p>
+            <h4>&#128205; DELIVERY LOCATION</h4>
+            <p><strong>{{shippingName}}</strong><br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>&#128222; {{shippingPhone}}</p>
           </div>
 
           <div class="live">
             <div style="font-size:48px;">&#128506;</div>
             <div style="color:#c9d0de;font-size:22px;">Live tracking map</div>
-            <a class="btn btn-track" href="{{liveTrackingUrl}}">TRACK LIVE LOCATION</a>
+            <a class="btn btn-track" href="{{liveTrackingUrl}}">&#128666; Track Live Location</a>
           </div>
 
           <table class="btn-row" role="presentation"><tr>
-            <td><a class="btn-sm change" href="{{helpCenterUrl}}">Change Address</a></td>
+            <td><a class="btn-sm change" href="{{helpCenterUrl}}">&#128172; Change Address</a></td>
             <td><a class="btn-sm call" href="tel:{{supportPhone}}">Call Support</a></td>
           </tr></table>
 
@@ -147,7 +151,7 @@
             </ul>
           </div>
 
-          <div class="ins">100% AUTHENTIC AND INSURED - All deliveries are fully insured during transit.</div>
+          <div class="ins">&#128737; 100% AUTHENTIC AND INSURED - All deliveries are fully insured during transit.</div>
         </div>
       </td></tr>
 
@@ -158,8 +162,9 @@
       </td></tr>
 
       <tr><td class="foot">
-        <div>eShopper Luxe, {{companyAddress}}</div>
-        <div>Out-for-delivery updates are generated from backend real-time delivery workflow.</div>
+        <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
+        <div>{{companyAddress}}</div>
+        <div><a href="{{privacyPolicyUrl}}">Privacy</a> &nbsp; | &nbsp; <a href="{{termsUrl}}">Terms</a></div>
       </td></tr>
     </table>
   </td></tr></table>

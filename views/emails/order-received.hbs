@@ -5,181 +5,173 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Order Received - {{orderId}}</title>
   <style>
-    {{> theme_tokens}}
-    body { margin:0; padding:0; background:#0a0a0a; font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif; color:#f5f5f5; }
+    body { margin:0; padding:0; background:#050608; font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif; color:#f4f4f4; }
     table { border-collapse:collapse; }
-    .wrap { width:100%; background:#0a0a0a; padding:20px 8px; }
-    .card { width:100%; max-width:640px; margin:0 auto; background:#131416; border:1px solid #23262b; border-radius:18px; overflow:hidden; }
-    .top { padding:18px 20px; background:linear-gradient(120deg,#1b1b1b,#272317); }
-    .logo { height:34px; vertical-align:middle; }
-    .status { float:right; display:inline-block; font-size:12px; font-weight:700; color:#f5cc3f; border:1px solid #7a6424; background:#2b2413; padding:7px 12px; border-radius:999px; }
-    .hero { background:#e0bf3f; color:#fff; text-align:center; padding:24px 12px; }
-    .hero h1 { margin:0; font-size:42px; line-height:1; }
-    .hero .t { margin-top:8px; font-size:42px; letter-spacing:1px; font-weight:800; }
-    .hero .s { margin-top:7px; font-size:15px; opacity:0.95; }
-    .section { padding:22px 20px; border-top:1px solid #272a30; }
-    .title { margin:0 0 12px; font-size:34px; line-height:1.08; }
-    .sub { color:#cfd2d8; font-size:18px; line-height:1.6; margin:0; }
-    .badge { display:inline-block; margin-top:18px; background:#063e1f; border:1px solid #0f7f3e; color:#6ef0a6; border-radius:10px; padding:10px 16px; font-size:15px; font-weight:700; }
-    .box { border:1px solid #333742; border-radius:12px; padding:16px; background:#111317; }
-    .heading { color:#f0c84a; font-size:28px; margin:0 0 14px; }
-    .items { width:100%; border:1px solid #363a45; border-radius:10px; overflow:hidden; }
-    .items th { text-align:left; font-size:13px; color:#efcb4a; background:#13161b; padding:10px; border-bottom:1px solid #2d313a; }
-    .items td { padding:12px 10px; font-size:15px; color:#eceef2; border-bottom:1px solid #2c3039; vertical-align:top; }
+    img { max-width:100%; height:auto; border:0; display:block; }
+    .wrapper { width:100%; background:#050608; padding:16px 6px; }
+    .frame { width:100%; max-width:650px; margin:0 auto; background:#0d0f12; border:1px solid #1f2229; border-radius:18px; overflow:hidden; }
+    .head { padding:16px 20px; background:linear-gradient(120deg,#151515,#262117); }
+    .brand { height:28px; vertical-align:middle; }
+    .orderid { float:right; text-align:right; color:#f4d163; font-size:12px; letter-spacing:0.3px; }
+    .orderid strong { color:#ffffff; display:block; font-size:34px; margin-top:3px; }
+    .hero { background:#dfbe3f; color:#ffffff; text-align:center; padding:16px 10px; }
+    .hero .ok { font-size:45px; line-height:1; font-weight:700; }
+    .hero .label { font-size:42px; font-weight:800; letter-spacing:0.6px; line-height:1.04; margin-top:6px; }
+    .hero .date { font-size:24px; margin-top:8px; }
+    .section { padding:20px 22px; border-top:1px solid #20242b; }
+    .title { margin:0 0 8px 0; font-size:43px; line-height:1.1; text-align:center; }
+    .subtitle { margin:0; text-align:center; color:#c7ccd4; font-size:32px; line-height:1.42; }
+    .verify { display:inline-block; margin-top:14px; background:#0d3119; border:1px solid #0f7d3c; color:#7cffaf; border-radius:8px; padding:10px 15px; font-size:26px; font-weight:700; }
+    .panel { border:1px solid #2a2f39; border-radius:12px; padding:14px; background:#0f1115; }
+    .panel h3 { margin:0 0 12px 0; color:#e8c450; font-size:32px; }
+    .items { width:100%; border:1px solid #303542; border-radius:10px; overflow:hidden; }
+    .items th { text-align:left; color:#e7c44b; font-size:12px; padding:10px; border-bottom:1px solid #2a2f3a; background:#11141a; }
+    .items td { padding:12px 10px; color:#eef0f4; font-size:30px; border-bottom:1px solid #292d37; vertical-align:top; }
     .items tr:last-child td { border-bottom:none; }
-    .thumb { width:70px; height:70px; object-fit:cover; border-radius:8px; border:1px solid #3a3e48; }
-    .grid { width:100%; margin-top:14px; }
-    .grid td { width:50%; vertical-align:top; }
-    .mini { border:1px solid #594b1c; background:#1a1915; border-radius:12px; padding:14px; margin-right:8px; }
-    .mini2 { border:1px solid #323744; background:#101216; border-radius:12px; padding:14px; margin-left:8px; }
-    .k { font-size:13px; color:#efcb4a; margin-bottom:8px; font-weight:700; letter-spacing:0.5px; }
-    .v { color:#e7e9ed; font-size:16px; line-height:1.45; }
-    .totals { margin-top:14px; border:1px solid #343844; border-radius:12px; padding:16px; }
-    .totals table { width:100%; }
-    .totals td { padding:5px 0; color:#d5d9e2; font-size:16px; }
-    .totals .final td { border-top:1px solid #2c3140; padding-top:10px; color:#efcb4a; font-size:33px; font-weight:800; }
-    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
-    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
-    .progress-grid{width:100%;}
-    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
-    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;font-size:18px;border:1px solid #3a404d;background:#1b212d;}
-    .p-icon.done{background:#2ea94b;border-color:#55d372;}
-    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;box-shadow:0 0 0 3px rgba(47,143,226,0.22);}
-    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
-    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
-    .p-label.done{color:#5fda7f;}
-    .p-label.active{color:#7bc6ff;}
-    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
-    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
-    .btn { display:block; text-align:center; text-decoration:none; font-weight:800; border-radius:10px; padding:14px 12px; font-size:24px; margin-top:14px; }
-    .btn-primary { background:#e0bf3f; color:#1a1a1a; }
-    .btn-secondary { background:#0f131a; color:#d7e6ff; border:1px solid #30598d; }
-    .btn-row { width:100%; margin-top:14px; }
-    .btn-row td { width:50%; }
-    .btn-sm { display:block; text-align:center; text-decoration:none; font-weight:700; border-radius:10px; padding:11px 8px; font-size:15px; }
-    .wa { background:#1ed66d; color:#0f1712; margin-right:8px; }
-    .mail { background:#0f131a; color:#cfe2ff; border:1px solid #315a8e; margin-left:8px; }
-    .call { background:#0f131a; color:#ffe09c; border:1px solid #7a6126; margin-right:8px; }
-    .insta { background:linear-gradient(90deg,#ff8d3a,#d84ee4); color:#fff; margin-left:8px; }
-    .foot { text-align:center; color:#9ea4b2; font-size:12px; padding:18px 14px 24px; border-top:1px solid #272a30; line-height:1.7; }
+    .thumb { width:82px; height:82px; object-fit:cover; border-radius:8px; border:1px solid #343946; }
+    .muted { color:#9ba3b2; font-size:26px; line-height:1.3; }
+    .cards { width:100%; margin-top:14px; }
+    .cards td { width:50%; vertical-align:top; }
+    .box { border:1px solid #6f5b20; border-radius:12px; background:linear-gradient(120deg,#1f1b12,#14161b); padding:14px; margin-right:7px; min-height:160px; }
+    .box2 { border:1px solid #37404c; border-radius:12px; background:#0f1116; padding:14px; margin-left:7px; min-height:160px; }
+    .k { margin:0 0 8px 0; font-size:24px; color:#e8c450; font-weight:700; letter-spacing:0.3px; }
+    .v { margin:0; color:#e4e6eb; font-size:31px; line-height:1.38; }
+    .pending { color:#11a64e; }
+    .totals { margin-top:14px; border:1px solid #323844; border-radius:12px; padding:14px; }
+    .totals td { font-size:28px; color:#d6d9df; padding:6px 0; }
+    .totals .amount { text-align:right; }
+    .totals .final td { color:#e8c450; font-size:40px; font-weight:800; padding-top:10px; }
+    .cta { margin-top:15px; text-align:center; }
+    .cta a { display:inline-block; min-width:280px; background:#dfbe3f; color:#171717; text-decoration:none; font-weight:800; letter-spacing:0.3px; border-radius:9px; padding:13px 18px; font-size:30px; }
+    .note { margin:10px 0 0 0; text-align:center; color:#868d9a; font-size:12px; font-style:italic; }
+    .concierge { background:#2a220b; text-align:center; padding:20px 20px 18px; border-top:1px solid #7b6421; }
+    .concierge .crown { font-size:40px; }
+    .concierge .h { margin:8px 0 6px 0; color:#d7b148; font-size:42px; font-weight:700; }
+    .concierge .p { margin:0 auto; max-width:500px; color:#d1b56d; font-size:30px; line-height:1.4; }
+    .support { width:100%; margin-top:14px; }
+    .support td { width:50%; }
+    .support a { display:block; text-align:center; text-decoration:none; border-radius:8px; padding:11px 8px; font-weight:700; font-size:13px; letter-spacing:0.3px; text-transform:uppercase; }
+    .wa { margin-right:7px; background:#12d362; color:#0d1a12; }
+    .mail { margin-left:7px; background:#0f1116; color:#d8e7ff; border:1px solid #2d5e95; }
+    .footer { text-align:center; color:#a3a9b5; font-size:12px; padding:18px 16px 24px; line-height:1.6; }
+    .footer a { color:#d4b75a; text-decoration:none; }
     @media only screen and (max-width:620px){
-      .status { float:none; display:inline-block; margin-top:8px; }
-      .hero h1,.hero .t { font-size:34px; }
-      .title { font-size:28px; }
-      .sub { font-size:16px; }
-      .grid td { display:block; width:100%; }
-      .mini,.mini2 { margin:0 0 10px 0; }
-      .p-icon{width:32px;height:32px;font-size:16px;}
-      .p-label{font-size:10px;}
-      .btn { font-size:21px; }
-      .btn-row td { display:block; width:100%; }
+      .head { padding:14px 14px; }
+      .brand { height:24px; }
+      .orderid { float:none; display:block; text-align:left; margin-top:8px; }
+      .hero .ok { font-size:36px; }
+      .hero .label { font-size:33px; }
+      .hero .date { font-size:17px; }
+      .section { padding:16px 12px; }
+      .title { font-size:41px; }
+      .subtitle { font-size:17px; }
+      .verify { font-size:15px; }
+      .panel h3 { font-size:28px; }
+      .items td { font-size:18px; }
+      .muted { font-size:15px; }
+      .k { font-size:22px; }
+      .v { font-size:14px; }
+      .cards td { display:block; width:100%; }
+      .box,.box2 { margin:0 0 10px 0; }
+      .totals td { font-size:15px; }
+      .totals .final td { font-size:35px; }
+      .cta a { min-width:100%; font-size:16px; box-sizing:border-box; }
+      .concierge .h { font-size:35px; }
+      .concierge .p { font-size:17px; }
+      .support td { display:block; width:100%; }
       .wa,.mail { margin:0 0 10px 0; }
     }
   </style>
 </head>
 <body>
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order Received - {{orderId}}. Your premium order is now in processing.</div>
-  <table class="wrap" role="presentation" width="100%"><tr><td>
-    <table class="card" role="presentation" align="center">
-      <tr><td class="top">
-        <img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" />
-        <span class="status">ORDER RECEIVED</span>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order Received - {{orderId}}. Your order is now in processing.</div>
+  <table class="wrapper" role="presentation" width="100%"><tr><td>
+    <table class="frame" role="presentation" align="center">
+      <tr><td class="head">
+        <img src="{{logoUrl}}" alt="eShopper Luxe" class="brand" />
+        <div class="orderid">ORDER ID<strong>{{orderId}}</strong></div>
       </td></tr>
 
       <tr><td class="hero">
-        <h1>&#10003;</h1>
-        <div class="t">ORDER RECEIVED</div>
-        <div class="s">{{orderDate}}</div>
+        <div class="ok">&#10003;</div>
+        <div class="label">ORDER RECEIVED</div>
+        <div class="date">{{orderDate}}</div>
       </td></tr>
 
       <tr><td class="section" style="text-align:center;">
         <h2 class="title">Hi {{customerName}},</h2>
-        <p class="sub">Your luxury selection is now in our queue. We are verifying your items and preparing them for dispatch.</p>
-        <div class="badge">Payment Received &amp; Verified</div>
+        <p class="subtitle">Your luxury selection is now in our queue. We are verifying your items and preparing them for dispatch.</p>
+        <div class="verify">&#10003; Payment Received &amp; Verified</div>
       </td></tr>
 
       <tr><td class="section">
-        <div class="box">
-          <h3 class="heading">ORDER SUMMARY</h3>
-          <table class="items" role="presentation" width="100%">
+        <div class="panel">
+          <h3>ORDER SUMMARY</h3>
+          <table class="items" role="presentation">
             <tr>
               <th>ITEM</th><th>DETAILS</th><th>QTY</th><th>PRICE</th>
             </tr>
             {{#each items}}
             <tr>
               <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" /></td>
-              <td><strong>{{name}}</strong><br><span style="color:#b4bac6;">Size: {{size}}</span><br><span style="color:#b4bac6;">Color: {{color}}</span></td>
+              <td>
+                <strong>{{name}}</strong><br>
+                <span class="muted">Size: {{size}}</span><br>
+                <span class="muted">Color: {{color}}</span>
+              </td>
               <td>{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
               <td>INR {{subtotal}}</td>
             </tr>
             {{/each}}
           </table>
 
-          <table class="grid" role="presentation">
+          <table class="cards" role="presentation">
             <tr>
               <td>
-                <div class="mini">
-                  <div class="k">SHIPPING TO</div>
-                  <div class="v">{{shippingName}}<br>{{shippingAddress}}<br>{{shippingPhone}}</div>
+                <div class="box">
+                  <p class="k">&#128205; SHIPPING TO</p>
+                  <p class="v"><strong>{{shippingName}}</strong><br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>{{shippingPhone}}</p>
                 </div>
               </td>
               <td>
-                <div class="mini2">
-                  <div class="k">PAYMENT METHOD</div>
-                  <div class="v">{{paymentMethod}}<br>Status: {{paymentStatus}}<br>Txn: {{transactionId}}</div>
+                <div class="box2">
+                  <p class="k">PAYMENT METHOD</p>
+                  <p class="v">{{paymentMethod}}<br>Status: <span class="pending">{{paymentStatus}}</span></p>
                 </div>
               </td>
             </tr>
           </table>
 
           <div class="totals">
-            <table role="presentation">
-              <tr><td>Subtotal</td><td align="right">INR {{subtotal}}</td></tr>
-              <tr><td>Shipping</td><td align="right">INR {{shippingCharges}}</td></tr>
-              <tr><td>GST (Included)</td><td align="right">INR {{gst}}</td></tr>
-              <tr><td>Total Amount</td><td align="right">INR {{totalAmount}}</td></tr>
-              <tr class="final"><td>Total Paid</td><td align="right">INR {{totalPaid}}</td></tr>
+            <table role="presentation" width="100%">
+              <tr><td>Subtotal</td><td class="amount">INR {{subtotal}}</td></tr>
+              <tr><td>Shipping</td><td class="amount">INR {{shippingCharges}}</td></tr>
+              <tr class="final"><td>Total Amount</td><td class="amount">INR {{totalAmount}}</td></tr>
             </table>
           </div>
 
-          <div class="progress-track">
-            <div class="progress-head">DELIVERY PROGRESS</div>
-            <table class="progress-grid" role="presentation"><tr>
-              {{#each progressSteps}}
-              <td>
-                <span class="p-icon {{state}}">{{{icon}}}</span>
-                <div class="p-label {{state}}">{{label}}</div>
-              </td>
-              {{/each}}
-            </tr></table>
-            <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
-          </div>
-
-          <a class="btn btn-primary" href="{{trackingUrl}}">VIEW ORDER STATUS</a>
-          <a class="btn btn-secondary" href="{{invoiceDownloadUrl}}">DOWNLOAD TAX INVOICE</a>
+          <div class="cta"><a href="{{trackingUrl}}">VIEW ORDER STATUS</a></div>
+           <a class="cta" href="{{placedInvoiceUrl}}" style="margin-top:10px;background:#2f6fed;">VIEW INVOICE</a>
+          <p class="note">* This is an order receipt, not a Tax Invoice. Tax Invoice will be provided upon delivery.</p>
         </div>
       </td></tr>
 
-      <tr><td class="section" style="background:#27200a;text-align:center;">
-        <div style="font-size:40px;">&#128081;</div>
-        <div style="font-size:44px;font-weight:800;color:#efcb4a;">Personal Concierge</div>
-        <div style="font-size:18px;color:#d1b56a;line-height:1.6;margin-top:8px;">Our dedicated team is here to assist with any questions about your order. Reach out anytime!</div>
-        <table class="btn-row" role="presentation">
+      <tr><td class="concierge">
+        <div class="crown">&#128081;</div>
+        <p class="h">Personal Concierge</p>
+        <p class="p">Our dedicated team is here to assist with any questions about your order. Reach out anytime!</p>
+        <table class="support" role="presentation">
           <tr>
-            <td><a class="btn-sm wa" href="{{whatsappUrl}}">WhatsApp Support</a></td>
-            <td><a class="btn-sm mail" href="mailto:{{supportEmail}}">Email Us</a></td>
-          </tr>
-          <tr>
-            <td><a class="btn-sm call" href="tel:{{supportPhone}}">Call Us</a></td>
-            <td><a class="btn-sm insta" href="{{instagramUrl}}">Instagram</a></td>
+            <td><a class="wa" href="{{whatsappUrl}}">WhatsApp Support</a></td>
+            <td><a class="mail" href="mailto:{{supportEmail}}">Email Us</a></td>
           </tr>
         </table>
       </td></tr>
 
-      <tr><td class="foot">
-        <div>Eshopper Luxe, {{companyAddress}}</div>
-        <div>* Your premium tax invoice is available from the invoice download link above.</div>
-        <div><a href="{{helpCenterUrl}}" style="color:#d4b75a;text-decoration:none;">Help Center</a> | <a href="{{brandSiteUrl}}" style="color:#d4b75a;text-decoration:none;">Website</a></div>
+      <tr><td class="footer">
+        <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
+        <div>{{companyAddress}}</div>
+        <div><a href="{{privacyPolicyUrl}}">Privacy Policy</a> &nbsp; | &nbsp; <a href="{{termsUrl}}">Terms of Service</a></div>
       </td></tr>
     </table>
   </td></tr></table>

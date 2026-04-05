@@ -6,20 +6,21 @@
   <title>Delivered - {{orderId}}</title>
   <style>
     {{> theme_tokens}}
-    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
+    body{margin:0;padding:0;background:#050608;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
     table{border-collapse:collapse;}
-    .wrap{width:100%;background:#0a0a0a;padding:20px 8px;}
+    img{max-width:100%;height:auto;border:0;display:block;}
+    .wrap{width:100%;background:#050608;padding:16px 6px;}
     .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
-    .top{padding:18px 20px;background:linear-gradient(120deg,#093722,#0e4f2f,#0c6d3d);}
-    .logo{height:34px;vertical-align:middle;}
+    .top{padding:16px 20px;background:linear-gradient(120deg,#093722,#0e4f2f,#0c6d3d);}
+    .logo{height:28px;vertical-align:middle;}
     .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#eafff0;border:1px solid #72db8f;background:#54bf6d;padding:7px 12px;border-radius:999px;}
-    .hero{background:#65c36f;color:#fff;text-align:center;padding:24px 12px;}
+    .hero{background:#65c36f;color:#fff;text-align:center;padding:28px 12px;}
     .hero .icon{font-size:48px;line-height:1;}
-    .hero .t{font-size:50px;font-weight:800;line-height:1;margin-top:6px;}
-    .hero .s{font-size:16px;opacity:.96;margin-top:8px;}
+    .hero .t{font-size:48px;font-weight:800;line-height:1;margin-top:8px;}
+    .hero .s{font-size:14px;opacity:.96;margin-top:8px;}
     .section{padding:22px 20px;border-top:1px solid #272a30;}
-    .title{margin:0 0 10px;font-size:46px;line-height:1.08;text-align:center;}
-    .sub{text-align:center;color:#d6dae2;font-size:18px;line-height:1.62;margin:0;}
+    .title{margin:0 0 10px;font-size:44px;line-height:1.08;text-align:center;}
+    .sub{text-align:center;color:#d6dae2;font-size:17px;line-height:1.62;margin:0;}
     .confirm{margin:18px auto 0;max-width:360px;background:#064124;border:1px solid #0f8245;color:#75f2a9;border-radius:12px;padding:12px;text-align:center;font-size:20px;font-weight:700;}
     .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
     .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
@@ -73,8 +74,9 @@
     .insta{background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;margin-right:8px;}
     .wa{background:#25d366;color:#0f1712;margin-left:8px;}
     .help{margin-top:14px;text-align:center;border-top:1px solid #31353f;padding-top:14px;}
-    .help a{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:#151922;color:#7cf0a5;border:1px solid #2b7a45;text-decoration:none;font-weight:700;font-size:15px;}
+    .help .line{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:#151922;color:#7cf0a5;border:1px solid #2b7a45;text-decoration:none;font-weight:700;font-size:15px;}
     .foot{padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;}
+    .foot a{color:#d4b75a;text-decoration:none;}
     @media only screen and (max-width:620px){
       .status{float:none;display:inline-block;margin-top:8px;}
       .hero .t{font-size:38px;}
@@ -93,13 +95,13 @@
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Delivered successfully - {{orderId}}. Your tax invoice is ready.</div>
   <table class="wrap" role="presentation" width="100%"><tr><td>
     <table class="card" role="presentation" align="center">
-      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">DELIVERED</span></td></tr>
-      <tr><td class="hero"><div class="icon">&#127881;</div><div class="t">DELIVERED!</div><div class="s">Your luxury package has arrived safely</div></td></tr>
+      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">&#10003; DELIVERED</span></td></tr>
+      <tr><td class="hero"><div class="icon">&#127881;</div><div class="t">DELIVERED!</div><div class="s">Your luxury package has arrived safely &#10024;</div></td></tr>
 
       <tr><td class="section">
-        <h2 class="title">Thank You, {{customerName}}</h2>
-        <p class="sub">We hope you love your luxury purchase! Your order {{orderId}} was delivered on {{deliveredOn}}.</p>
-        <div class="confirm">DELIVERY CONFIRMED - Received by: {{receivedBy}}</div>
+        <h2 class="title">Thank You, {{customerName}}! &#128591;</h2>
+        <p class="sub">We hope you love your luxury purchase! Your order <strong style="color:#e0bf3f;">{{orderId}}</strong> was delivered on <strong style="color:#35c769;">{{deliveredOn}}</strong>.</p>
+        <div class="confirm">&#128230; DELIVERY CONFIRMED<br><span style="font-size:16px;color:#d6f7e4;font-weight:600;">Received by: {{receivedBy}}</span></div>
         <div class="progress-track">
           <div class="progress-head">DELIVERY PROGRESS</div>
           <table class="progress-grid" role="presentation"><tr>
@@ -116,28 +118,29 @@
 
       <tr><td class="section">
         <div class="invoice">
-          <h3>Your Tax Invoice is Ready</h3>
+          <h3>&#128196;</h3>
+          <h3 style="font-size:42px;">Your Tax Invoice is Ready</h3>
           <p>Download your official GST invoice for warranty, return, and tax purposes.</p>
-          <a class="btn btn-gold" href="{{invoiceDownloadUrl}}">DOWNLOAD TAX INVOICE</a>
+          <a class="btn btn-gold" href="{{finalInvoiceUrl}}">&#11015; DOWNLOAD TAX INVOICE</a>
         </div>
 
         <div class="review">
-          <h4>How was your experience?</h4>
+          <h4>How was your experience? &#11088;</h4>
           <p>Rate your order and help us serve you better</p>
           <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-          <a class="btn-review" href="{{reviewUrl}}">Write a Review</a>
+          <a class="btn-review" href="{{reviewUrl}}">&#128221; Write a Review</a>
         </div>
       </td></tr>
 
       <tr><td class="section">
         <div class="box">
-          <h3 class="heading">WHAT YOU RECEIVED</h3>
+          <h3 class="heading">&#128230; WHAT YOU RECEIVED</h3>
           <table class="items" role="presentation" width="100%">
             <tr><th>ITEM</th><th>DETAILS</th><th>QTY</th><th>PRICE</th></tr>
             {{#each items}}
             <tr>
               <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" /></td>
-              <td><strong>{{name}}</strong><br><span style="color:#b4bac6;">{{size}} | {{color}}</span></td>
+              <td><strong>{{name}}</strong><br><span style="color:#b4bac6;">Fashion</span></td>
               <td>{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
               <td>INR {{subtotal}}</td>
             </tr>
@@ -146,36 +149,43 @@
           </table>
 
           <div class="ref">
-            <h4>Love Your Purchase? Share the Luxury!</h4>
-            <p>Refer a friend to eShopper Luxe and you both get 10% OFF on your next luxe purchase.</p>
-            <a class="btn-ref" href="{{referralShareUrl}}">Share and Earn 10% Off</a><br>
+            <h4>&#127873;</h4>
+            <h4 style="font-size:42px;">Love Your Purchase? Share the Luxury!</h4>
+            <p>Refer a friend to eShopper Luxe and you both get <strong>10% OFF</strong> on your next luxe purchase! &#128142;</p>
+            <a class="btn-ref" href="{{referralShareUrl}}">&#128107; Share and Earn 10% Off</a><br>
+            <div style="margin-top:12px;color:#d0b7e6;font-size:15px;">Your Personal Referral Code</div>
             <span class="rcode">{{referralCode}}</span>
           </div>
 
           <div class="info">
-            <h4>Important Information</h4>
+            <h4>&#128203; Important Information</h4>
             <table class="igrid" role="presentation"><tr>
-              <td><div class="ibox"><div class="t">7-Day Returns</div><div class="d">Easy returns within 7 days if not satisfied.</div></div></td>
-              <td><div class="ibox"><div class="t">Warranty</div><div class="d">Keep your tax invoice safe for warranty claims.</div></div></td>
+              <td><div class="ibox"><div class="t">&#128257; 7-Day Returns</div><div class="d">Easy returns within 7 days if not satisfied.</div></div></td>
+              <td><div class="ibox"><div class="t">&#128737; Warranty</div><div class="d">Keep your tax invoice safe for warranty claims.</div></div></td>
             </tr></table>
           </div>
 
           <div class="social">
-            <h4>Stay Connected with eShopper Luxe</h4>
+            <h4>Stay Connected with eShopper Luxe &#10024;</h4>
             <p>Follow us for exclusive deals, luxury collections, and styling tips.</p>
             <table class="btn-row" role="presentation"><tr>
-              <td><a class="btn-sm insta" href="{{instagramUrl}}">Follow on Instagram</a></td>
-              <td><a class="btn-sm wa" href="{{whatsappUrl}}">Join WhatsApp</a></td>
+              <td><a class="btn-sm insta" href="{{instagramUrl}}">&#128247; Follow on Instagram</a></td>
+              <td><a class="btn-sm wa" href="{{whatsappUrl}}">&#128172; Join WhatsApp</a></td>
             </tr></table>
           </div>
 
-          <div class="help"><a href="mailto:{{supportEmail}}">{{supportEmail}}</a><a href="tel:{{supportPhone}}">{{supportPhone}}</a></div>
+          <div class="help">
+            <div style="color:#d5d9e2;font-size:16px;margin-bottom:6px;">Need Help? Contact Us Anytime &#128172;</div>
+            <a class="line" href="mailto:{{supportEmail}}">&#128231; {{supportEmail}}</a>
+            <a class="line" href="tel:{{supportPhone}}">&#128222; {{supportPhone}}</a>
+          </div>
         </div>
       </td></tr>
 
       <tr><td class="foot">
-        <div>eShopper Luxe, {{companyAddress}}</div>
-        <div>This email is generated from backend delivery confirmation and invoice workflow.</div>
+        <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
+        <div>{{companyAddress}}</div>
+        <div><a href="{{privacyPolicyUrl}}">Privacy Policy</a> &nbsp; | &nbsp; <a href="{{termsUrl}}">Terms of Service</a> &nbsp; | &nbsp; <a href="{{returnPolicyUrl}}">Return Policy</a></div>
       </td></tr>
     </table>
   </td></tr></table>

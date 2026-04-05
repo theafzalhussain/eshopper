@@ -11,6 +11,7 @@ const About = lazy(() => import('./About'))
 const Contact = lazy(() => import('./Contact'))
 const Faq = lazy(() => import('./Faq'))
 const ReturnPolicy = lazy(() => import('./ReturnPolicy'))
+const Terms = lazy(() => import('./Terms'))
 const Shop = lazy(() => import('./Shop'))
 const Cart = lazy(() => import('./Cart'))
 const Wishlist = lazy(() => import('./Wishlist'))
@@ -80,7 +81,9 @@ export default function App() {
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/faq" element={<Faq />} />
+            <Route path="/privacy-policy" element={<ReturnPolicy />} />
             <Route path="/return-policy" element={<ReturnPolicy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/shop/:maincat" element={<Shop />} />
             <Route path="/single-product/:id" element={<SingleProductPage />} />
             <Route path="/login" element={<Login />} />

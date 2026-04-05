@@ -217,14 +217,33 @@ export default function Updateprofile() {
             const latestUser = (latestUserRaw && typeof latestUserRaw === 'object' && latestUserRaw.user && typeof latestUserRaw.user === 'object')
                 ? latestUserRaw.user
                 : latestUserRaw
-            if (latestUser?.name) localStorage.setItem("name", latestUser.name)
-            if (latestUser?.pic) localStorage.setItem("pic", latestUser.pic)
-            localStorage.setItem('profile_cache', JSON.stringify(latestUser))
+
+            const mergedUpdatedUser = {
+                ...(latestUser && typeof latestUser === 'object' ? latestUser : {}),
+                id: localStorage.getItem("userid"),
+                _id: latestUser?._id || latestUser?.id || localStorage.getItem("userid"),
+                name: data.name || '',
+                email: data.email || '',
+                phone: data.phone || '',
+                addressline1: data.addressline1 || '',
+                addressline2: data.addressline2 || '',
+                landmark: data.landmark || '',
+                deliveryNotes: data.deliveryNotes || '',
+                deliveryInstructions: data.deliveryNotes || '',
+                city: data.city || '',
+                state: data.state || '',
+                pin: data.pin || '',
+                settings: data.settings || defaultSettings,
+            }
+
+            if (mergedUpdatedUser?.name) localStorage.setItem("name", mergedUpdatedUser.name)
+            if (mergedUpdatedUser?.pic) localStorage.setItem("pic", mergedUpdatedUser.pic)
+            localStorage.setItem('profile_cache', JSON.stringify(mergedUpdatedUser))
 
             // Keep Redux list in sync for other components.
             dispatch(getUser())
 
-            window.dispatchEvent(new CustomEvent('profile-updated', { detail: latestUser }))
+            window.dispatchEvent(new CustomEvent('profile-updated', { detail: mergedUpdatedUser }))
             setToastMessage(data.password ? 'Security settings updated successfully' : 'Profile updated successfully')
             setShowToast(true)
             setTimeout(() => {

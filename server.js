@@ -23,291 +23,416 @@ const path = require('path');
 const handlebars = require('handlebars');
 const Sentry = require('@sentry/node');
 const puppeteer = require('puppeteer');
+const { jsPDF } = require('jspdf');
+require('jspdf-autotable');
+const QRCode = require('qrcode');
 const { sendOrderStatus, registerTemplatePartials } = require('./mailController');
 
-let firebaseAdminReady = false;
-
-try {
-    let firebaseCredentials;
-
-    // PRODUCTION (Render): Use environment variable JSON string
-    if (process.env.FIREBASE_CONFIG_JSON) {
-        console.log('📱 Loading Firebase Admin from Render environment variable...');
-        firebaseCredentials = JSON.parse(process.env.FIREBASE_CONFIG_JSON);
-        console.log(`✅ Firebase config parsed successfully for project: ${firebaseCredentials.project_id}`);
-    } 
-    // LOCAL DEVELOPMENT: Check for firebase-admin.json file
-    else {
-        const localPath = path.join(__dirname, 'firebase-admin.json');
-        if (fs.existsSync(localPath)) {
-            console.log('📂 Loading Firebase Admin from local file...');
-            firebaseCredentials = require('./firebase-admin.json');
-            console.log(`✅ Firebase config loaded from file for project: ${firebaseCredentials.project_id}`);
-        } else {
-            throw new Error('Firebase credentials not found. Set FIREBASE_CONFIG_JSON environment variable or add firebase-admin.json locally.');
-        }
-    }
-
-    // Validate required fields
-    if (!firebaseCredentials.project_id || !firebaseCredentials.private_key || !firebaseCredentials.client_email) {
-        throw new Error('Invalid Firebase credentials: Missing required fields (project_id, private_key, client_email)');
-    }
-
-    // Initialize Firebase Admin SDK
-    admin.initializeApp({
-        credential: admin.credential.cert(firebaseCredentials),
-        projectId: firebaseCredentials.project_id,
-    });
-    firebaseAdminReady = true;
-
-    console.log('✅ Firebase Admin SDK initialized successfully');
-    console.log(`🔐 Project ID: ${firebaseCredentials.project_id}`);
-    console.log(`📧 Service Account: ${firebaseCredentials.client_email}`);
-
-} catch (err) {
-    console.error('❌ Firebase Admin SDK initialization failed');
-    console.error('   Error:', err.message);
-    console.error('');
-    console.error('📋 Setup Instructions:');
-    console.error('   PRODUCTION (Render):');
-    console.error('   1. Go to Render Dashboard → Your Service → Environment');
-    console.error('   2. Add: FIREBASE_CONFIG_JSON');
-    console.error('   3. Value: Paste the entire firebase-admin.json content as a single-line JSON string');
-    console.error('');
-    console.error('   LOCAL DEVELOPMENT:');
-    console.error('   1. Place firebase-admin.json in project root');
-    console.error('   2. Ensure it is in .gitignore');
-    console.error('');
-    console.error('⚠️ Continuing without Firebase Admin. Firebase auth-sync route will be unavailable until credentials are fixed.');
-}
-
-
 const app = express();
-
-// 🟢 FIX: Parse JSON body before any routes
-app.use(express.json());
-
-// 🔒 TRUST PROXY - MUST BE BEFORE CORS (fixes X-Forwarded-For errors from Render/Cloudflare)
-// 🔒 TRUST PROXY (Render/Production ke liye)
-app.set('trust proxy', 1);
-
-const allowedOrigins = [
-    'https://eshopperr.me',
-    'https://www.eshopperr.me',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-].filter(Boolean);
-
-const extraAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-
-const isVercelPreviewOrigin = (origin = '') => /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
-const isTrustedOrigin = (origin = '') => allowedOrigins.includes(origin) || extraAllowedOrigins.includes(origin) || isVercelPreviewOrigin(origin);
-
-// 🔒 CORS - Robust production config
-const corsOptions = {
-    origin: function(origin, callback) {
-        if (!origin) {
-            console.log('[CORS] No Origin header, allowing request (likely server-to-server or curl)');
-            return callback(null, true);
-        }
-        if (isTrustedOrigin(origin)) {
-            console.log(`[CORS] Allowed origin: ${origin}`);
-            return callback(null, true);
-        }
-        console.error(`[CORS] Blocked origin: ${origin}`);
-        callback(new Error('CORS policy: Unauthorized origin'));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept", "x-admin-secret"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-};
-
-// Apply CORS before any routes or middleware
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
-
-// INITIALIZE SENTRY v10 (EARLY INITIALIZATION)
-if (process.env.SENTRY_DSN) {
-    Sentry.init({
-        dsn: process.env.SENTRY_DSN,
-        environment: process.env.NODE_ENV || 'production',
-        tracesSampleRate: 0.1,
-        integrations: [
-            new Sentry.Integrations.Http({ tracing: true })
-        ]
-    });
-    console.log('✅ Sentry initialized for error tracking');
-} else {
-    console.log('⚠️  Sentry DSN not configured - error tracking disabled');
-}
-
-// Register cart routes
-const cartRoutes = require('./routes/cartRoutes');
-app.use('/api', cartRoutes);
-
-// Register admin routes
-app.use('/api/admin', adminRoutes);
-
-// Register promo code endpoint directly (for legacy/compatibility)
-const { applyCoupon } = require('./controllers/cartController');
-app.post('/api/cart/apply-coupon', applyCoupon);
-
-// 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
-const httpServer = http.createServer(app); // 🔴 CREATE HTTP SERVER + SOCKET.IO (after app is defined)
+const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: function(origin, callback) {
-            if (!origin || isTrustedOrigin(origin)) {
-                callback(null, true);
-            } else {
-                callback(new Error('CORS policy violation'), false);
-            }
-        },
-        credentials: true,
-        methods: ["GET", "POST"],
-        allowedHeaders: ["Content-Type"]
-    },
-    transports: ['websocket', 'polling'],
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    reconnectionAttempts: 5
+        origin: process.env.FRONTEND_URL || true,
+        credentials: true
+    }
 });
-// Rename io to socketio to avoid shadowing
-const socketio = io;
-app.set('io', socketio);
+app.set('io', io);
 
-const ALLOWED_ORDER_STATUS = [
-    'Order Placed',
-    'Ordered',
-    'Confirmed',
-    'Packed',
-    'Shipped',
-    'Out for Delivery',
-    'Delivered',
-    'Return Initiated',
-    'Return Completed',
-    'Refund Initiated',
-    'Refund Completed'
-];
-const getMembershipTypeFromOrders = (totalOrders = 0) => {
-    const orders = Number(totalOrders || 0);
-    if (orders >= 10) return 'Elite';
-    if (orders >= 5) return 'Gold';
-    return 'Silver';
-};
-const normalizeOrderStatus = (s = '') => {
-        const v = String(s).trim().toLowerCase();
-        if (v === 'ordered') return 'Ordered';
-        if (v === 'order placed') return 'Order Placed';
-        if (v === 'confirmed') return 'Confirmed';
-        if (v === 'packed') return 'Packed';
-        if (v === 'shipped') return 'Shipped';
-        if (v === 'out for delivery') return 'Out for Delivery';
-        if (v === 'delivered') return 'Delivered';
-        if (v === 'return initiated') return 'Return Initiated';
-        if (v === 'return completed') return 'Return Completed';
-        if (v === 'refund initiated') return 'Refund Initiated';
-        if (v === 'refund completed') return 'Refund Completed';
-        return null;
-};
+const buildInvoiceHtmlLegacy = async ({
+    orderId,
+    userName,
+    userEmail,
+    paymentMethod,
+    paymentStatus,
+    finalAmount,
+    totalAmount,
+    shippingAmount,
+    couponDiscount,
+    discountAmount,
+    gstAmount,
+    giftWrapCharge,
+    protectionCharge,
+    ecoCharge,
+    paymentFee,
+    extraCharges,
+    preDiscountTotal,
+    shippingAddress,
+    products,
+    orderDate,
+    orderStatus,
+    pdfType,
+    trackingUrl,
+    statusUpdatedAt,
+    deliveryProofNote,
+    signedBy
+}) => {
+    const safeProducts = normalizeOrderProducts(products);
+    const safeAddress = shippingAddress || {};
+    const pdfKind = String(pdfType || 'placed').toLowerCase();
+    const invoiceTitle = pdfKind === 'final' ? 'Final Tax Invoice' : (pdfKind === 'confirmation' ? 'Order Confirmation Invoice' : 'Order Placed Invoice');
+    const invoiceNo = `INV-${String(orderId || '').replace(/[^a-zA-Z0-9]/g, '').slice(-10) || '000000'}`;
+    const dateLabel = new Date(orderDate || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const safeSubtotal = Number(totalAmount || 0);
+    const safeShipping = Number(shippingAmount || 0);
+    const safeCouponDiscount = Math.max(0, Number(couponDiscount || 0));
+    const safeBaseDiscount = Math.max(0, Number(discountAmount || 0));
+    const safeGst = Math.max(0, Number(gstAmount || 0));
+    const safeExtraCharges = Math.max(0, Number(extraCharges || (Number(giftWrapCharge || 0) + Number(protectionCharge || 0) + Number(ecoCharge || 0) + Number(paymentFee || 0))));
+    const safePreDiscount = Number(preDiscountTotal || (safeSubtotal + safeShipping + safeGst + safeExtraCharges));
+    const companyAddress = process.env.COMPANY_ADDRESS || 'Eshopper Luxe, New Delhi, India';
+    const companyGstin = process.env.COMPANY_GSTIN || '09XXXXXX1234X1Z5';
+    const companyCin = process.env.COMPANY_CIN || 'U51909UP2020PTC123456';
+    const supportEmail = SUPPORT_EMAIL_DEFAULT;
+    const supportPhone = SUPPORT_PHONE_DEFAULT;
+    const orderTrackingUrl = trackingUrl || `${BRAND_SITE_URL}/order-tracking/${encodeURIComponent(String(orderId || '').trim())}`;
+    const paymentMethodLabel = String(paymentMethod || 'COD').toUpperCase();
+    const paymentStatusLabel = String(paymentStatus || 'Pending');
+    const statusStamp = formatOrderDate(statusUpdatedAt || orderDate || Date.now());
+    const signatureName = signedBy || safeAddress.fullName || userName || 'Authorized Receiver';
+    const proofText = deliveryProofNote || `Delivered to ${signatureName} on ${statusStamp}`;
 
-// Feature toggles for clean baseline (disable until tested).
-const FEATURE_EMAIL_NOTIFICATIONS = String(process.env.FEATURE_EMAIL_NOTIFICATIONS || 'true').toLowerCase() === 'true';
-const FEATURE_WHATSAPP_NOTIFICATIONS = String(process.env.FEATURE_WHATSAPP_NOTIFICATIONS || 'false').toLowerCase() === 'true';
-const FEATURE_INVOICE_SYSTEM = String(process.env.FEATURE_INVOICE_SYSTEM || 'true').toLowerCase() === 'true';
-const DELIVERY_OTP_EXPIRY_MINUTES = Math.max(10, Number(process.env.DELIVERY_OTP_EXPIRY_MINUTES || 120));
+    const summaryRows = [
+        ['Subtotal', `₹${safeSubtotal.toLocaleString('en-IN')}`],
+        ['Shipping', safeShipping === 0 ? 'FREE' : `₹${safeShipping.toLocaleString('en-IN')}`],
+        ['GST', `₹${safeGst.toLocaleString('en-IN')}`],
+        ['Extra Charges', safeExtraCharges === 0 ? '₹0' : `₹${safeExtraCharges.toLocaleString('en-IN')}`],
+        ['Instant Discount', safeBaseDiscount > 0 ? `-₹${safeBaseDiscount.toLocaleString('en-IN')}` : '₹0'],
+        ['Coupon Discount', safeCouponDiscount > 0 ? `-₹${safeCouponDiscount.toLocaleString('en-IN')}` : '₹0']
+    ];
 
-const hasTextValue = (value = '') => String(value || '').trim().length > 0;
-const generateDeliveryOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
-
-const DEFAULT_USER_SETTINGS = {
-    notifications: {
-        orderUpdates: true,
-        deliveryUpdates: true,
-        promotionalEmails: true,
-        priceAlerts: false,
-        wishlistAlerts: true,
-        smsAlerts: false,
-    },
-    privacy: {
-        profileVisibility: 'Private',
-        personalizedRecommendations: true,
-    },
-    security: {
-        twoFactorEnabled: false,
-        loginAlerts: true,
-    },
-    communication: {
-        newsletter: true,
-        whatsappUpdates: false,
-        pushNotifications: true,
-    },
-};
-
-const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-
-const deepMerge = (baseValue, overrideValue) => {
-    if (!isPlainObject(baseValue) || !isPlainObject(overrideValue)) {
-        return overrideValue === undefined ? baseValue : overrideValue;
+    let qrDataUrl = '';
+    try {
+        qrDataUrl = await QRCode.toDataURL(orderTrackingUrl, {
+            margin: 1,
+            width: 220,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#0f172a', light: '#ffffff' }
+        });
+    } catch (qrErr) {
+        console.warn('⚠️ QR generation failed:', qrErr.message);
     }
 
-    const merged = { ...baseValue };
-    Object.keys(overrideValue).forEach((key) => {
-        merged[key] = deepMerge(baseValue[key], overrideValue[key]);
-    });
-    return merged;
+    const rows = safeProducts.map((p, idx) => {
+        const qty = Number(p.qty || p.quantity || 1);
+        const price = Number(p.price || 0);
+        const lineTotal = Number(p.total || qty * price);
+        const name = String(p.name || 'Product');
+        const sku = String(p.productid || p._id || p.id || '').slice(0, 14);
+        return `
+            <tr>
+                <td>${idx + 1}</td>
+                <td><strong>${name}</strong><br/><span style="color:#64748b;font-size:11px;">SKU: ${sku || 'N/A'}</span></td>
+                <td>${qty}</td>
+                <td>₹${price.toLocaleString('en-IN')}</td>
+                <td>₹${lineTotal.toLocaleString('en-IN')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <style>
+                body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; margin: 0; padding: 20px; background: #f4f7fb; }
+                img { max-width: 100%; height: auto; border: 0; display: block; }
+                .card { max-width: 980px; margin: 0 auto; background: #fff; border: 1px solid #dbe4ef; border-radius: 16px; overflow: hidden; box-shadow: 0 16px 50px rgba(15, 23, 42, 0.08); }
+                .hero { background: linear-gradient(120deg, ${pdfKind === 'final' ? '#062f1b' : pdfKind === 'confirmation' ? '#0f2315' : '#1f2430'}, #111827); color: #fff; padding: 18px; display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+                .hero h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .2px; }
+                .hero p { margin: 0; color: #cbd5e1; font-size: 12px; line-height: 1.45; }
+                .chip { display:inline-block;padding:5px 10px;border-radius:999px;background:${pdfKind === 'final' ? '#14532d' : pdfKind === 'confirmation' ? '#166534' : '#1d4ed8'};color:#fff;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase; margin-top: 6px; }
+                .meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 14px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+                .meta .box { background: #fff; border: 1px solid #dbe4ef; border-radius: 12px; padding: 10px; }
+                .label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.4px; }
+                .val { font-size: 13px; font-weight: 700; color: #0f172a; line-height: 1.5; }
+                .body { padding: 16px 18px 18px; }
+                .section { margin-top: 14px; border: 1px solid #dbe4ef; border-radius: 14px; overflow: hidden; }
+                .section .titlebar { padding: 12px 14px; background: linear-gradient(90deg, #0f172a, #1e293b); color: #fff; font-size: 13px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; }
+                .section .content { padding: 14px; background: #fff; }
+                .pill-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+                .pill { border: 1px solid #dbe4ef; border-radius: 12px; padding: 10px; background: #f8fafc; }
+                .pill .k { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 4px; }
+                .pill .v { font-size: 13px; font-weight: 700; color: #0f172a; }
+                .legal { font-size: 11px; color: #475569; line-height: 1.6; }
+                .proof { margin-top: 10px; padding: 12px; border-radius: 12px; background: linear-gradient(120deg,#f8fafc,#eef2ff); border: 1px solid #cbd5e1; }
+                .proof strong { color: #0f172a; }
+                .qr-wrap { display:flex; gap:14px; align-items:center; padding: 14px; border: 1px solid #dbe4ef; border-radius: 14px; background: #f8fafc; }
+                .qr-box { width: 120px; min-width: 120px; height: 120px; border-radius: 12px; background: #fff; border: 1px solid #dbe4ef; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+                .qr-box img { width: 100%; height: 100%; object-fit: contain; }
+                .qr-meta { flex:1; }
+                .qr-meta .t { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+                .qr-meta .d { font-size: 12px; color: #475569; line-height: 1.55; }
+                .totals { margin-top: 14px; margin-left: auto; width: 340px; border: 1px solid #dbe4ef; border-radius: 12px; padding: 10px; background: #f8fafc; }
+                .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; }
+                .grand { display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 900; color: ${pdfKind === 'final' ? '#16a34a' : pdfKind === 'confirmation' ? '#4ade80' : '#2563eb'}; border-top: 1px dashed #94a3b8; padding-top: 8px; margin-top: 8px; }
+                .footer { margin-top: 14px; padding: 12px 14px 18px; border-top: 1px solid #e2e8f0; color: #475569; font-size: 11px; line-height: 1.7; }
+                .footer-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+                .footer-card { border: 1px solid #dbe4ef; border-radius: 12px; padding: 10px; background: #fff; }
+                .footer-card .k { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 4px; }
+                .footer-card .v { font-size: 12px; color: #0f172a; line-height: 1.5; font-weight: 600; }
+                .signbox { display:flex;justify-content:space-between;align-items:flex-end;gap:12px; margin-top: 12px; }
+                .signline { width: 180px; border-top: 1px solid #0f172a; margin-top: 34px; padding-top: 6px; font-size: 12px; color: #475569; }
+                .disclaimer { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #f1f5f9; border: 1px dashed #94a3b8; color: #334155; font-size: 11px; line-height: 1.6; }
+                table { width: 100%; border-collapse: collapse; }
+                th { text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; padding: 9px 7px; letter-spacing: 0.4px; }
+                td { border-bottom: 1px solid #e2e8f0; padding: 10px 7px; font-size: 13px; vertical-align: top; }
+                .item-table { margin-top: 12px; }
+                @media print { body { background: #fff; } .card { box-shadow: none; } }
+                @media only screen and (max-width: 720px) {
+                    body { padding: 10px; }
+                    .hero { flex-direction: column; }
+                    .meta { grid-template-columns: 1fr; }
+                    .pill-grid { grid-template-columns: 1fr; }
+                    .totals { width: 100%; box-sizing: border-box; }
+                    .qr-wrap { flex-direction: column; align-items: flex-start; }
+                    .qr-box { width: 100%; max-width: 180px; height: 180px; }
+                    .footer-grid { grid-template-columns: 1fr; }
+                    .signbox { flex-direction: column; align-items: flex-start; }
+                    .signline { width: 100%; max-width: 220px; }
+                    .body { padding: 12px; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="hero">
+                    <div>
+                        <h1>${invoiceTitle}</h1>
+                        <p>Order ID: ${orderId || 'N/A'}</p>
+                        <p>Invoice No: ${invoiceNo}</p>
+                        <span class="chip">${pdfKind === 'final' ? 'Delivered' : pdfKind === 'confirmation' ? 'Confirmed' : 'Placed'}</span>
+                    </div>
+                    <div style="text-align:right;min-width:160px;">
+                        <img src="${BRAND_LOGO_PDF_SRC}" alt="brand" style="width:130px;background:#fff;border-radius:10px;padding:4px;margin-left:auto;" />
+                        <p style="margin-top:8px;">${BRAND_SITE_URL}</p>
+                    </div>
+                </div>
+                <div class="meta">
+                    <div class="box"><div class="label">Customer</div><div class="val">${userName || 'Customer'}<br/>${userEmail || '-'}</div></div>
+                    <div class="box"><div class="label">Order Date</div><div class="val">${dateLabel}<br/>Status: ${orderStatus || (pdfKind === 'final' ? 'Delivered' : pdfKind === 'confirmation' ? 'Confirmed' : 'Ordered')}</div></div>
+                    <div class="box"><div class="label">Payment</div><div class="val">${paymentMethodLabel}<br/>${paymentStatusLabel}</div></div>
+                </div>
+                <div class="body">
+                    <div class="section">
+                        <div class="titlebar">${pdfKind === 'placed' ? 'Proforma Summary' : pdfKind === 'confirmation' ? 'Payment Overview' : 'Legal & GST Information'}</div>
+                        <div class="content">
+                            <div class="pill-grid">
+                                <div class="pill"><div class="k">Invoice Type</div><div class="v">${invoiceTitle}</div></div>
+                                <div class="pill"><div class="k">Payment Mode</div><div class="v">${paymentMethodLabel}</div></div>
+                                <div class="pill"><div class="k">Payment Status</div><div class="v">${paymentStatusLabel}</div></div>
+                            </div>
+                            <div style="margin-top:12px;" class="legal">
+                                <strong>Billing Address</strong><br/>
+                                ${safeAddress.fullName || '-'} • ${safeAddress.phone || '-'}<br/>
+                                ${safeAddress.addressline1 || '-'}<br/>
+                                ${safeAddress.city || '-'}, ${safeAddress.state || '-'} ${safeAddress.pin || '-'}<br/>
+                                ${safeAddress.country || 'India'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="item-table">
+                        <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+
+                    <div class="section">
+                        <div class="titlebar">${pdfKind === 'placed' ? 'Order Summary' : pdfKind === 'confirmation' ? 'Payment Breakdown' : 'Tax Breakdown'}</div>
+                        <div class="content">
+                            ${summaryRows.map(([label, value]) => `<div class="row"><span>${label}</span><strong>${value}</strong></div>`).join('')}
+                            <div class="grand"><span>Grand Total</span><span>₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span></div>
+                        </div>
+                    </div>
+
+                    ${pdfKind === 'placed' ? `
+                    <div class="section">
+                        <div class="titlebar">Proforma Notes</div>
+                        <div class="content">
+                            <div class="disclaimer">This is a proforma invoice generated at order placement. It is not a tax invoice. Final GST invoice will be issued only after delivery and completion.</div>
+                            <div class="proof" style="margin-top:12px;"><strong>Next Step:</strong> Your order is under processing. Use the QR or tracking link below to follow updates in real time.</div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${pdfKind === 'confirmation' ? `
+                    <div class="section">
+                        <div class="titlebar">Payment Confirmation</div>
+                        <div class="content">
+                            <div class="disclaimer">Payment has been verified and the order is now in the fulfillment queue. Please keep this confirmation invoice for your records until delivery.</div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${pdfKind === 'final' ? `
+                    <div class="section">
+                        <div class="titlebar">Final Tax Invoice & Delivery Proof</div>
+                        <div class="content">
+                            <div class="legal">
+                                <strong>Company:</strong> ${companyAddress}<br/>
+                                <strong>GSTIN:</strong> ${companyGstin}<br/>
+                                <strong>CIN:</strong> ${companyCin}<br/>
+                                <strong>Support:</strong> ${supportEmail} | ${supportPhone}
+                            </div>
+                            <div class="proof">
+                                <strong>Delivery Proof:</strong> ${proofText}<br/>
+                                <strong>Received By:</strong> ${signatureName}<br/>
+                                <strong>Order Tracking:</strong> ${orderTrackingUrl}
+                            </div>
+                            <div class="signbox">
+                                <div class="legal"><strong>Authorized Signature</strong><br/>This invoice is electronically generated and valid without a physical seal.</div>
+                                <div class="signline">Signature / Stamp</div>
+                            </div>
+                            <div class="disclaimer">This final tax invoice reflects the completed delivery and should be retained for warranty, returns, tax, and compliance records.</div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="section">
+                        <div class="titlebar">Track & Verify</div>
+                        <div class="content">
+                            <div class="qr-wrap">
+                                <div class="qr-box">${qrDataUrl ? `<img src="${qrDataUrl}" alt="tracking qr" />` : `<div style="padding:10px;text-align:center;font-size:12px;color:#475569;">QR unavailable<br/>${orderTrackingUrl}</div>`}</div>
+                                <div class="qr-meta">
+                                    <div class="t">Scan to track order</div>
+                                    <div class="d">This QR opens your live order tracking page. It is included so customers can quickly verify shipment, delivery, and invoice status from any device.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        <div class="footer-grid">
+                            <div class="footer-card"><div class="k">Company</div><div class="v">${companyAddress}</div></div>
+                            <div class="footer-card"><div class="k">Contact</div><div class="v">${supportEmail}<br/>${supportPhone}</div></div>
+                            <div class="footer-card"><div class="k">Policy</div><div class="v">Returns, taxes, and billing records are governed by standard eShopper Luxe policies.</div></div>
+                        </div>
+                        <div style="margin-top:10px;">
+                            GSTIN: ${companyGstin} | CIN: ${companyCin}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
 };
 
-const normalizeUserSettings = (settings) => deepMerge(DEFAULT_USER_SETTINGS, isPlainObject(settings) ? settings : {});
+const generateInvoicePdfBufferLegacy = async (invoiceData) => {
+    const buildFallbackPdf = (data = {}) => {
+        const safeProducts = normalizeOrderProducts(data.products || []);
+        const safeAddress = data.shippingAddress || {};
+        const pdfKind = String(data.pdfType || 'placed').toLowerCase();
+        const invoiceTitle = pdfKind === 'final' ? 'Final Tax Invoice' : (pdfKind === 'confirmation' ? 'Order Confirmation Invoice' : 'Order Placed Invoice');
+        const orderDateStr = formatOrderDate(data.orderDate || Date.now());
+        const subtotal = Number(data.totalAmount || 0);
+        const shipping = Number(data.shippingAmount || 0);
+        const gst = Math.max(0, Number(data.gstAmount || 0));
+        const extraCharges = Math.max(0, Number(data.extraCharges || 0));
+        const finalAmount = Number(data.finalAmount || 0);
+        const companyAddress = process.env.COMPANY_ADDRESS || 'Eshopper Luxe, New Delhi, India';
+        const companyGstin = process.env.COMPANY_GSTIN || '09XXXXXX1234X1Z5';
+        const companyCin = process.env.COMPANY_CIN || 'U51909UP2020PTC123456';
+        const supportEmail = SUPPORT_EMAIL_DEFAULT;
+        const supportPhone = SUPPORT_PHONE_DEFAULT;
 
-const normalizeUserDocument = (doc) => {
-    if (!doc) return doc;
-    const plainDoc = typeof doc.toObject === 'function' ? doc.toObject() : doc;
-    return {
-        ...plainDoc,
-        deliveryInstructions: plainDoc.deliveryNotes || plainDoc.deliveryInstructions || '',
-        settings: normalizeUserSettings(plainDoc.settings),
-    };
-};
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text(invoiceTitle, 40, 44);
 
-const maskEmail = (email = '') => {
-    const clean = String(email || '').trim();
-    const parts = clean.split('@');
-    if (parts.length !== 2) return clean;
-    const [local, domain] = parts;
-    if (local.length <= 2) return `${local.charAt(0) || '*'}***@${domain}`;
-    return `${local.slice(0, 2)}***@${domain}`;
-};
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Order ID: ${data.orderId || 'N/A'}`, 40, 64);
+        doc.text(`Date: ${orderDateStr}`, 40, 79);
+        doc.text(`Status: ${data.orderStatus || (pdfKind === 'final' ? 'Delivered' : pdfKind === 'confirmation' ? 'Confirmed' : 'Ordered')}`, 40, 94);
 
-// 🔴 SOCKET.IO AUTHENTICATION MIDDLEWARE
-io.use(async (socket, next) => {
-    try {
-        const userId = socket.handshake.auth?.userId || socket.handshake.query?.userId;
-        if (!userId) return next(new Error('Unauthorized: userId missing'));
+        doc.setFont('helvetica', 'bold');
+        doc.text('Bill To', 40, 122);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(data.userName || 'Customer'), 40, 138);
+        doc.text(String(data.userEmail || '-'), 40, 153);
+        doc.text(String(safeAddress.phone || '-'), 40, 168);
+        doc.text(String(safeAddress.addressline1 || '-'), 40, 183);
+        doc.text(`${safeAddress.city || '-'}, ${safeAddress.state || '-'} ${safeAddress.pin || '-'}`, 40, 198);
 
-        // Allow admin-dashboard connections without user validation
-        if (userId === 'admin-dashboard') {
-            socket.data.userId = 'admin-dashboard';
-            socket.data.isAdmin = true;
-            return next();
+        const rows = safeProducts.map((p) => {
+            const qty = Number(p.qty || p.quantity || 1);
+            const price = Number(p.price || 0);
+            const lineTotal = Number(p.total || qty * price);
+            return [String(p.name || 'Product'), String(qty), `INR ${price.toLocaleString('en-IN')}`, `INR ${lineTotal.toLocaleString('en-IN')}`];
+        });
+
+        if (typeof doc.autoTable === 'function') {
+            doc.autoTable({
+                startY: 225,
+                head: [['Item', 'Qty', 'Unit Price', 'Line Total']],
+                body: rows.length > 0 ? rows : [['No items found', '-', '-', '-']],
+                styles: { fontSize: 9, cellPadding: 6 },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] }
+            });
         }
 
-        const userExists = await User.exists({ _id: String(userId) });
-        if (!userExists) return next(new Error('Unauthorized: invalid user'));
-        socket.data.userId = String(userId);
-        return next();
-    } catch (e) {
-        return next(new Error('Unauthorized'));
+        const summaryStartY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 22 : 280;
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Subtotal: INR ${subtotal.toLocaleString('en-IN')}`, 360, summaryStartY);
+        doc.text(`Shipping: INR ${shipping.toLocaleString('en-IN')}`, 360, summaryStartY + 16);
+        doc.text(`GST: INR ${gst.toLocaleString('en-IN')}`, 360, summaryStartY + 32);
+        doc.text(`Extra Charges: INR ${extraCharges.toLocaleString('en-IN')}`, 360, summaryStartY + 48);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Grand Total: INR ${finalAmount.toLocaleString('en-IN')}`, 360, summaryStartY + 68);
+
+        if (pdfKind === 'final') {
+            doc.setFont('helvetica', 'bold');
+            doc.text('Company Details', 40, summaryStartY + 120);
+            doc.setFont('helvetica', 'normal');
+            doc.text(companyAddress, 40, summaryStartY + 136, { maxWidth: 240 });
+            doc.text(`GSTIN: ${companyGstin}`, 40, summaryStartY + 156);
+            doc.text(`CIN: ${companyCin}`, 40, summaryStartY + 172);
+            doc.text(`Support: ${supportEmail} | ${supportPhone}`, 40, summaryStartY + 188, { maxWidth: 240 });
+        }
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text('Generated by eShopper Luxe billing service', 40, 810);
+        return Buffer.from(doc.output('arraybuffer'));
+    };
+
+    let browser = null;
+    try {
+        const html = await buildInvoiceHtmlLegacy(invoiceData || {});
+        browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote']
+        });
+
+        try {
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1100, height: 1600 });
+            await page.setContent(html, { waitUntil: 'networkidle2', timeout: 30000 });
+            const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' } });
+            return Buffer.from(pdf);
+        } catch (pageErr) {
+            console.error('❌ Puppeteer page error:', pageErr.message);
+            console.warn('⚠️ Falling back to jsPDF invoice renderer...');
+            return buildFallbackPdf(invoiceData || {});
+        } finally {
+            try {
+                if (browser) await browser.close();
+            } catch (closeErr) {
+                console.warn('⚠️ Browser close warning:', closeErr.message);
+            }
+        }
+    } catch (err) {
+        console.error('❌ Invoice PDF generation error:', err.message);
+        try {
+            console.warn('⚠️ Using jsPDF fallback after launch/runtime failure...');
+            return buildFallbackPdf(invoiceData || {});
+        } catch (fallbackErr) {
+            throw new Error(`Invoice PDF failed: ${err.message}; fallback failed: ${fallbackErr.message}`);
+        }
     }
-});
+    };
 
 // 🔴 SOCKET.IO CONNECTION & ROOM SETUP
 io.on('connection', (socket) => {
@@ -564,7 +689,7 @@ const normalizeOrderProducts = (products = []) => {
     });
 };
 
-const buildInvoiceHtml = ({
+const buildInvoiceHtml = async ({
     orderId,
     userName,
     userEmail,
@@ -586,26 +711,60 @@ const buildInvoiceHtml = ({
     products,
     orderDate,
     orderStatus,
-    pdfType
+    pdfType,
+    trackingUrl,
+    statusUpdatedAt,
+    deliveryProofNote,
+    signedBy
 }) => {
     const safeProducts = normalizeOrderProducts(products);
     const safeAddress = shippingAddress || {};
-    const invoiceType = pdfType === 'final' ? 'Tax Invoice' : (pdfType === 'confirmation' ? 'Proforma Invoice' : 'Payment Receipt');
+    const pdfKind = String(pdfType || 'placed').toLowerCase();
+    const invoiceTitle = pdfKind === 'final'
+        ? 'Final Tax Invoice'
+        : (pdfKind === 'confirmation'
+            ? 'Order Confirmation Invoice'
+            : 'Order Placed Invoice');
     const invoiceNo = `INV-${String(orderId || '').replace(/[^a-zA-Z0-9]/g, '').slice(-10) || '000000'}`;
-    const orderDateStr = new Date(orderDate || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const dateLabel = new Date(orderDate || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     const safeSubtotal = Number(totalAmount || 0);
     const safeShipping = Number(shippingAmount || 0);
     const safeCouponDiscount = Math.max(0, Number(couponDiscount || 0));
     const safeBaseDiscount = Math.max(0, Number(discountAmount || 0));
     const safeGst = Math.max(0, Number(gstAmount || 0));
-    const segmentedCharges = Math.max(0,
-        Number(giftWrapCharge || 0) +
-        Number(protectionCharge || 0) +
-        Number(ecoCharge || 0) +
-        Number(paymentFee || 0)
-    );
-    const safeExtraCharges = Math.max(0, Number(extraCharges || segmentedCharges));
+    const safeExtraCharges = Math.max(0, Number(extraCharges || (Number(giftWrapCharge || 0) + Number(protectionCharge || 0) + Number(ecoCharge || 0) + Number(paymentFee || 0))));
     const safePreDiscount = Number(preDiscountTotal || (safeSubtotal + safeShipping + safeGst + safeExtraCharges));
+    const companyAddress = process.env.COMPANY_ADDRESS || 'Eshopper Luxe, New Delhi, India';
+    const companyGstin = process.env.COMPANY_GSTIN || '09XXXXXX1234X1Z5';
+    const companyCin = process.env.COMPANY_CIN || 'U51909UP2020PTC123456';
+    const supportEmail = SUPPORT_EMAIL_DEFAULT;
+    const supportPhone = SUPPORT_PHONE_DEFAULT;
+    const orderTrackingUrl = trackingUrl || `${BRAND_SITE_URL}/order-tracking/${encodeURIComponent(String(orderId || '').trim())}`;
+    const paymentMethodLabel = String(paymentMethod || 'COD').toUpperCase();
+    const paymentStatusLabel = String(paymentStatus || 'Pending');
+    const statusStamp = formatOrderDate(statusUpdatedAt || orderDate || Date.now());
+    const signatureName = signedBy || safeAddress.fullName || userName || 'Authorized Receiver';
+    const proofText = deliveryProofNote || `Delivered to ${signatureName} on ${statusStamp}`;
+    const invoiceSummaryRows = [
+        ['Subtotal', `₹${safeSubtotal.toLocaleString('en-IN')}`],
+        ['Shipping', safeShipping === 0 ? 'FREE' : `₹${safeShipping.toLocaleString('en-IN')}`],
+        ['GST', `₹${safeGst.toLocaleString('en-IN')}`],
+        ['Extra Charges', safeExtraCharges === 0 ? '₹0' : `₹${safeExtraCharges.toLocaleString('en-IN')}`],
+        ['Instant Discount', safeBaseDiscount > 0 ? `-₹${safeBaseDiscount.toLocaleString('en-IN')}` : '₹0'],
+        ['Coupon Discount', safeCouponDiscount > 0 ? `-₹${safeCouponDiscount.toLocaleString('en-IN')}` : '₹0']
+    ];
+
+    let qrDataUrl = '';
+    try {
+        qrDataUrl = await QRCode.toDataURL(orderTrackingUrl, {
+            margin: 1,
+            width: 220,
+            errorCorrectionLevel: 'M',
+            color: { dark: '#0f172a', light: '#ffffff' }
+        });
+    } catch (qrErr) {
+        console.warn('⚠️ QR generation failed:', qrErr.message);
+    }
 
     const rows = safeProducts.map((p, idx) => {
         const qty = Number(p.qty || p.quantity || 1);
@@ -630,58 +789,182 @@ const buildInvoiceHtml = ({
         <head>
             <meta charset="utf-8" />
             <style>
-                body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; padding: 20px; background: #f8fafc; }
-                .card { max-width: 980px; margin: 0 auto; background: #fff; border: 1px solid #dbe4ef; border-radius: 14px; overflow: hidden; }
-                .hero { background: linear-gradient(120deg, #0f172a, #1e293b); color: #fff; padding: 18px; display: flex; justify-content: space-between; gap: 16px; }
-                .hero h1 { margin: 0 0 5px; font-size: 22px; }
-                .hero p { margin: 0; color: #cbd5e1; font-size: 12px; }
+                body { font-family: 'Segoe UI', Arial, sans-serif; color: #0f172a; margin: 0; padding: 20px; background: #f4f7fb; }
+                img { max-width: 100%; height: auto; border: 0; display: block; }
+                .card { max-width: 980px; margin: 0 auto; background: #fff; border: 1px solid #dbe4ef; border-radius: 16px; overflow: hidden; box-shadow: 0 16px 50px rgba(15, 23, 42, 0.08); }
+                .hero { background: linear-gradient(120deg, ${pdfKind === 'final' ? '#062f1b' : pdfKind === 'confirmation' ? '#0f2315' : '#1f2430'}, #111827); color: #fff; padding: 18px; display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+                .hero h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .2px; }
+                .hero p { margin: 0; color: #cbd5e1; font-size: 12px; line-height: 1.45; }
+                .chip { display:inline-block;padding:5px 10px;border-radius:999px;background:${pdfKind === 'final' ? '#14532d' : pdfKind === 'confirmation' ? '#166534' : '#1d4ed8'};color:#fff;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase; margin-top: 6px; }
                 .meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 14px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
-                .meta .box { background: #fff; border: 1px solid #dbe4ef; border-radius: 10px; padding: 10px; }
-                .label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.4px; }
+                .meta .box { background: #fff; border: 1px solid #dbe4ef; border-radius: 12px; padding: 10px; }
+                .label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 4px; letter-spacing: 0.4px; }
                 .val { font-size: 13px; font-weight: 700; color: #0f172a; line-height: 1.5; }
-                .body { padding: 14px 18px 18px; }
+                .body { padding: 16px 18px 18px; }
+                .section { margin-top: 14px; border: 1px solid #dbe4ef; border-radius: 14px; overflow: hidden; }
+                .section .titlebar { padding: 12px 14px; background: linear-gradient(90deg, #0f172a, #1e293b); color: #fff; font-size: 13px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; }
+                .section .content { padding: 14px; background: #fff; }
+                .pill-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+                .pill { border: 1px solid #dbe4ef; border-radius: 12px; padding: 10px; background: #f8fafc; }
+                .pill .k { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 4px; }
+                .pill .v { font-size: 13px; font-weight: 700; color: #0f172a; }
+                .legal { font-size: 11px; color: #475569; line-height: 1.6; }
+                .proof { margin-top: 10px; padding: 12px; border-radius: 12px; background: linear-gradient(120deg,#f8fafc,#eef2ff); border: 1px solid #cbd5e1; }
+                .proof strong { color: #0f172a; }
+                .qr-wrap { display:flex; gap:14px; align-items:center; padding: 14px; border: 1px solid #dbe4ef; border-radius: 14px; background: #f8fafc; }
+                .qr-box { width: 120px; min-width: 120px; height: 120px; border-radius: 12px; background: #fff; border: 1px solid #dbe4ef; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+                .qr-box img { width: 100%; height: 100%; object-fit: contain; }
+                .qr-meta { flex:1; }
+                .qr-meta .t { font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+                .qr-meta .d { font-size: 12px; color: #475569; line-height: 1.55; }
+                .totals { margin-top: 14px; margin-left: auto; width: 340px; border: 1px solid #dbe4ef; border-radius: 12px; padding: 10px; background: #f8fafc; }
+                .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; }
+                .grand { display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 900; color: ${pdfKind === 'final' ? '#16a34a' : pdfKind === 'confirmation' ? '#4ade80' : '#2563eb'}; border-top: 1px dashed #94a3b8; padding-top: 8px; margin-top: 8px; }
+                .footer { margin-top: 14px; padding: 12px 14px 18px; border-top: 1px solid #e2e8f0; color: #475569; font-size: 11px; line-height: 1.7; }
+                .footer strong { color: #0f172a; }
+                .footer-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+                .footer-card { border: 1px solid #dbe4ef; border-radius: 12px; padding: 10px; background: #fff; }
+                .footer-card .k { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 4px; }
+                .footer-card .v { font-size: 12px; color: #0f172a; line-height: 1.5; font-weight: 600; }
+                .signbox { display:flex;justify-content:space-between;align-items:flex-end;gap:12px; margin-top: 12px; }
+                .signline { width: 180px; border-top: 1px solid #0f172a; margin-top: 34px; padding-top: 6px; font-size: 12px; color: #475569; }
+                .disclaimer { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #f1f5f9; border: 1px dashed #94a3b8; color: #334155; font-size: 11px; line-height: 1.6; }
                 table { width: 100%; border-collapse: collapse; }
                 th { text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; padding: 9px 7px; letter-spacing: 0.4px; }
                 td { border-bottom: 1px solid #e2e8f0; padding: 10px 7px; font-size: 13px; vertical-align: top; }
-                .totals { margin-top: 14px; margin-left: auto; width: 340px; border: 1px solid #dbe4ef; border-radius: 10px; padding: 10px; background: #f8fafc; }
-                .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; }
-                .grand { display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 900; color: #0284c7; border-top: 1px dashed #94a3b8; padding-top: 8px; margin-top: 8px; }
+                .item-table { margin-top: 12px; }
+                @media print { body { background: #fff; } .card { box-shadow: none; } }
+                @media only screen and (max-width: 720px) {
+                    body { padding: 10px; }
+                    .hero { flex-direction: column; }
+                    .meta { grid-template-columns: 1fr; }
+                    .pill-grid { grid-template-columns: 1fr; }
+                    .totals { width: 100%; box-sizing: border-box; }
+                    .qr-wrap { flex-direction: column; align-items: flex-start; }
+                    .qr-box { width: 100%; max-width: 180px; height: 180px; }
+                    .footer-grid { grid-template-columns: 1fr; }
+                    .signbox { flex-direction: column; align-items: flex-start; }
+                    .signline { width: 100%; max-width: 220px; }
+                    .body { padding: 12px; }
+                }
             </style>
         </head>
         <body>
             <div class="card">
                 <div class="hero">
                     <div>
-                        <h1>${invoiceType}</h1>
+                        <h1>${invoiceTitle}</h1>
                         <p>Order ID: ${orderId || 'N/A'}</p>
                         <p>Invoice No: ${invoiceNo}</p>
+                        <span class="chip">${pdfKind === 'final' ? 'Delivered' : pdfKind === 'confirmation' ? 'Confirmed' : 'Placed'}</span>
                     </div>
-                    <div style="text-align:right;">
-                        <img src="${BRAND_LOGO_PDF_SRC}" alt="brand" style="width:130px;background:#fff;border-radius:8px;padding:4px;" />
-                        <p>${BRAND_SITE_URL}</p>
+                    <div style="text-align:right;min-width:160px;">
+                        <img src="${BRAND_LOGO_PDF_SRC}" alt="brand" style="width:130px;background:#fff;border-radius:10px;padding:4px;margin-left:auto;" />
+                        <p style="margin-top:8px;">${BRAND_SITE_URL}</p>
                     </div>
                 </div>
                 <div class="meta">
                     <div class="box"><div class="label">Customer</div><div class="val">${userName || 'Customer'}<br/>${userEmail || '-'}</div></div>
-                    <div class="box"><div class="label">Order Date</div><div class="val">${orderDateStr}<br/>Status: ${orderStatus || 'Ordered'}</div></div>
-                    <div class="box"><div class="label">Payment</div><div class="val">${paymentMethod || 'COD'}<br/>${paymentStatus || 'Pending'}</div></div>
+                    <div class="box"><div class="label">Order Date</div><div class="val">${dateLabel}<br/>Status: ${orderStatus || (pdfKind === 'final' ? 'Delivered' : pdfKind === 'confirmation' ? 'Confirmed' : 'Ordered')}</div></div>
+                    <div class="box"><div class="label">Payment</div><div class="val">${paymentMethodLabel}<br/>${paymentStatusLabel}</div></div>
                 </div>
                 <div class="body">
-                    <div class="label">Shipping Address</div>
-                    <div class="val" style="margin-bottom:12px;">${safeAddress.fullName || '-'} • ${safeAddress.phone || '-'}<br/>${safeAddress.addressline1 || '-'}, ${safeAddress.city || '-'}, ${safeAddress.state || '-'} ${safeAddress.pin || '-'}</div>
-                    <table>
+                    <div class="section">
+                        <div class="titlebar">${pdfKind === 'placed' ? 'Proforma Summary' : pdfKind === 'confirmation' ? 'Payment Overview' : 'Legal & GST Information'}</div>
+                        <div class="content">
+                            <div class="pill-grid">
+                                <div class="pill"><div class="k">Invoice Type</div><div class="v">${invoiceTitle}</div></div>
+                                <div class="pill"><div class="k">Payment Mode</div><div class="v">${paymentMethodLabel}</div></div>
+                                <div class="pill"><div class="k">Payment Status</div><div class="v">${paymentStatusLabel}</div></div>
+                            </div>
+                            <div style="margin-top:12px;" class="legal">
+                                <strong>Billing Address</strong><br/>
+                                ${safeAddress.fullName || '-'} • ${safeAddress.phone || '-'}<br/>
+                                ${safeAddress.addressline1 || '-'}<br/>
+                                ${safeAddress.city || '-'}, ${safeAddress.state || '-'} ${safeAddress.pin || '-'}<br/>
+                                ${safeAddress.country || 'India'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="item-table">
                         <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead>
                         <tbody>${rows}</tbody>
                     </table>
-                    <div class="totals">
-                        <div class="row"><span>Subtotal</span><strong>₹${safeSubtotal.toLocaleString('en-IN')}</strong></div>
-                        <div class="row"><span>Shipping</span><strong>${safeShipping === 0 ? 'FREE' : `₹${safeShipping.toLocaleString('en-IN')}`}</strong></div>
-                        <div class="row"><span>GST</span><strong>${safeGst === 0 ? '₹0' : `₹${safeGst.toLocaleString('en-IN')}`}</strong></div>
-                        <div class="row"><span>Extra Charges</span><strong>${safeExtraCharges === 0 ? '₹0' : `₹${safeExtraCharges.toLocaleString('en-IN')}`}</strong></div>
-                        <div class="row"><span>Pre-discount Total</span><strong>₹${safePreDiscount.toLocaleString('en-IN')}</strong></div>
-                        <div class="row"><span>Instant Discount</span><strong>${safeBaseDiscount > 0 ? `-₹${safeBaseDiscount.toLocaleString('en-IN')}` : '₹0'}</strong></div>
-                        <div class="row"><span>Coupon Discount</span><strong>${safeCouponDiscount > 0 ? `-₹${safeCouponDiscount.toLocaleString('en-IN')}` : '₹0'}</strong></div>
-                        <div class="grand"><span>Grand Total</span><span>₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span></div>
+
+                    <div class="section">
+                        <div class="titlebar">${pdfKind === 'placed' ? 'Order Summary' : pdfKind === 'confirmation' ? 'Payment Breakdown' : 'Tax Breakdown'}</div>
+                        <div class="content">
+                            ${invoiceSummaryRows.map(([label, value]) => `<div class="row"><span>${label}</span><strong>${value}</strong></div>`).join('')}
+                            <div class="grand"><span>Grand Total</span><span>₹${Number(finalAmount || 0).toLocaleString('en-IN')}</span></div>
+                        </div>
+                    </div>
+
+                    ${pdfKind === 'placed' ? `
+                    <div class="section">
+                        <div class="titlebar">Proforma Notes</div>
+                        <div class="content">
+                            <div class="disclaimer">This is a proforma invoice generated at order placement. It is not a tax invoice. Final GST invoice will be issued only after delivery and completion.</div>
+                            <div class="proof" style="margin-top:12px;"><strong>Next Step:</strong> Your order is under processing. Use the QR or tracking link below to follow updates in real time.</div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${pdfKind === 'confirmation' ? `
+                    <div class="section">
+                        <div class="titlebar">Payment Confirmation</div>
+                        <div class="content">
+                            <div class="disclaimer">Payment has been verified and the order is now in the fulfillment queue. Please keep this confirmation invoice for your records until delivery.</div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${pdfKind === 'final' ? `
+                    <div class="section">
+                        <div class="titlebar">Final Tax Invoice & Delivery Proof</div>
+                        <div class="content">
+                            <div class="legal">
+                                <strong>Company:</strong> ${companyAddress}<br/>
+                                <strong>GSTIN:</strong> ${companyGstin}<br/>
+                                <strong>CIN:</strong> ${companyCin}<br/>
+                                <strong>Support:</strong> ${supportEmail} | ${supportPhone}
+                            </div>
+                            <div class="proof">
+                                <strong>Delivery Proof:</strong> ${proofText}<br/>
+                                <strong>Received By:</strong> ${signatureName}<br/>
+                                <strong>Order Tracking:</strong> ${orderTrackingUrl}
+                            </div>
+                            <div class="signbox">
+                                <div class="legal"><strong>Authorized Signature</strong><br/>This invoice is electronically generated and valid without a physical seal.</div>
+                                <div class="signline">Signature / Stamp</div>
+                            </div>
+                            <div class="disclaimer">This final tax invoice reflects the completed delivery and should be retained for warranty, returns, tax, and compliance records.</div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="section">
+                        <div class="titlebar">Track & Verify</div>
+                        <div class="content">
+                            <div class="qr-wrap">
+                                <div class="qr-box">${qrDataUrl ? `<img src="${qrDataUrl}" alt="tracking qr" />` : `<div style="padding:10px;text-align:center;font-size:12px;color:#475569;">QR unavailable<br/>${orderTrackingUrl}</div>`}</div>
+                                <div class="qr-meta">
+                                    <div class="t">Scan to track order</div>
+                                    <div class="d">This QR opens your live order tracking page. It is included so customers can quickly verify shipment, delivery, and invoice status from any device.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        <div class="footer-grid">
+                            <div class="footer-card"><div class="k">Company</div><div class="v">${companyAddress}</div></div>
+                            <div class="footer-card"><div class="k">Contact</div><div class="v">${supportEmail}<br/>${supportPhone}</div></div>
+                            <div class="footer-card"><div class="k">Policy</div><div class="v">Returns, taxes, and billing records are governed by standard eShopper Luxe policies.</div></div>
+                        </div>
+                        <div style="margin-top:10px;">
+                            GSTIN: ${companyGstin} | CIN: ${companyCin}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -691,50 +974,118 @@ const buildInvoiceHtml = ({
 };
 
 const generateInvoicePdfBuffer = async (invoiceData) => {
-    try {
-        const html = buildInvoiceHtml(invoiceData || {});
-        
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--single-process' // Render free tier memory constraint
-            ]
+    const buildFallbackPdf = (data = {}) => {
+        const safeProducts = normalizeOrderProducts(data.products || []);
+        const safeAddress = data.shippingAddress || {};
+        const pdfKind = String(data.pdfType || 'placed').toLowerCase();
+        const invoiceTitle = pdfKind === 'final' ? 'Final Tax Invoice' : (pdfKind === 'confirmation' ? 'Order Confirmation Invoice' : 'Order Placed Invoice');
+        const orderDateStr = formatOrderDate(data.orderDate || Date.now());
+        const subtotal = Number(data.totalAmount || 0);
+        const shipping = Number(data.shippingAmount || 0);
+        const gst = Math.max(0, Number(data.gstAmount || 0));
+        const extraCharges = Math.max(0, Number(data.extraCharges || 0));
+        const finalAmount = Number(data.finalAmount || 0);
+        const companyAddress = process.env.COMPANY_ADDRESS || 'Eshopper Luxe, New Delhi, India';
+        const companyGstin = process.env.COMPANY_GSTIN || '09XXXXXX1234X1Z5';
+        const companyCin = process.env.COMPANY_CIN || 'U51909UP2020PTC123456';
+        const supportEmail = SUPPORT_EMAIL_DEFAULT;
+        const supportPhone = SUPPORT_PHONE_DEFAULT;
+
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text(invoiceTitle, 40, 44);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Order ID: ${data.orderId || 'N/A'}`, 40, 64);
+        doc.text(`Date: ${orderDateStr}`, 40, 79);
+        doc.text(`Status: ${data.orderStatus || (pdfKind === 'final' ? 'Delivered' : pdfKind === 'confirmation' ? 'Confirmed' : 'Ordered')}`, 40, 94);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text('Bill To', 40, 122);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(data.userName || 'Customer'), 40, 138);
+        doc.text(String(data.userEmail || '-'), 40, 153);
+        doc.text(String(safeAddress.phone || '-'), 40, 168);
+        doc.text(String(safeAddress.addressline1 || '-'), 40, 183);
+        doc.text(`${safeAddress.city || '-'}, ${safeAddress.state || '-'} ${safeAddress.pin || '-'}`, 40, 198);
+
+        const rows = safeProducts.map((p) => {
+            const qty = Number(p.qty || p.quantity || 1);
+            const price = Number(p.price || 0);
+            const lineTotal = Number(p.total || qty * price);
+            return [String(p.name || 'Product'), String(qty), `INR ${price.toLocaleString('en-IN')}`, `INR ${lineTotal.toLocaleString('en-IN')}`];
         });
-        
+
+        if (typeof doc.autoTable === 'function') {
+            doc.autoTable({
+                startY: 225,
+                head: [['Item', 'Qty', 'Unit Price', 'Line Total']],
+                body: rows.length > 0 ? rows : [['No items found', '-', '-', '-']],
+                styles: { fontSize: 9, cellPadding: 6 },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255] }
+            });
+        }
+
+        const summaryStartY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 22 : 280;
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Subtotal: INR ${subtotal.toLocaleString('en-IN')}`, 360, summaryStartY);
+        doc.text(`Shipping: INR ${shipping.toLocaleString('en-IN')}`, 360, summaryStartY + 16);
+        doc.text(`GST: INR ${gst.toLocaleString('en-IN')}`, 360, summaryStartY + 32);
+        doc.text(`Extra Charges: INR ${extraCharges.toLocaleString('en-IN')}`, 360, summaryStartY + 48);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Grand Total: INR ${finalAmount.toLocaleString('en-IN')}`, 360, summaryStartY + 68);
+
+        if (pdfKind === 'final') {
+            doc.setFont('helvetica', 'bold');
+            doc.text('Company Details', 40, summaryStartY + 120);
+            doc.setFont('helvetica', 'normal');
+            doc.text(companyAddress, 40, summaryStartY + 136, { maxWidth: 240 });
+            doc.text(`GSTIN: ${companyGstin}`, 40, summaryStartY + 156);
+            doc.text(`CIN: ${companyCin}`, 40, summaryStartY + 172);
+            doc.text(`Support: ${supportEmail} | ${supportPhone}`, 40, summaryStartY + 188, { maxWidth: 240 });
+        }
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text('Generated by eShopper Luxe billing service', 40, 810);
+        return Buffer.from(doc.output('arraybuffer'));
+    };
+
+    let browser = null;
+    try {
+        const html = await buildInvoiceHtml(invoiceData || {});
+        browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--no-zygote']
+        });
+
         try {
             const page = await browser.newPage();
-            // Set smaller viewport to reduce memory
-            await page.setViewport({ width: 800, height: 1000 });
-            
-            await page.setContent(html, { 
-                waitUntil: 'networkidle0', 
-                timeout: 30000 // Reduced from 45s
-            });
-            
-            const pdf = await page.pdf({ 
-                format: 'A4', 
-                printBackground: true, 
-                margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' }
-            });
-            
+            await page.setViewport({ width: 1100, height: 1600 });
+            await page.setContent(html, { waitUntil: 'networkidle2', timeout: 30000 });
+            const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '8mm', bottom: '10mm', left: '8mm' } });
             return Buffer.from(pdf);
         } catch (pageErr) {
             console.error('❌ Puppeteer page error:', pageErr.message);
-            throw new Error(`PDF page generation failed: ${pageErr.message}`);
+            console.warn('⚠️ Falling back to jsPDF invoice renderer...');
+            return buildFallbackPdf(invoiceData || {});
         } finally {
             try {
-                await browser.close();
+                if (browser) await browser.close();
             } catch (closeErr) {
                 console.warn('⚠️ Browser close warning:', closeErr.message);
             }
         }
     } catch (err) {
         console.error('❌ Invoice PDF generation error:', err.message);
-        throw err;
+        try {
+            console.warn('⚠️ Using jsPDF fallback after launch/runtime failure...');
+            return buildFallbackPdf(invoiceData || {});
+        } catch (fallbackErr) {
+            throw new Error(`Invoice PDF failed: ${err.message}; fallback failed: ${fallbackErr.message}`);
+        }
     }
 };
 
@@ -867,6 +1218,13 @@ const buildDeliveryProgress = (statusValue = '') => {
     };
 };
 
+const buildInvoiceUrl = (orderId, userId, type = 'placed') => {
+    const safeOrderId = encodeURIComponent(String(orderId || '').trim());
+    const safeUserId = encodeURIComponent(String(userId || '').trim());
+    const safeType = encodeURIComponent(String(type || 'placed').trim().toLowerCase());
+    return `${BRAND_SITE_URL}/api/order/${safeOrderId}/invoice?userId=${safeUserId}&type=${safeType}&disposition=inline`;
+};
+
 const buildTemplatePayload = (status, payload = {}) => {
     const normStatus = String(status || payload.status || '').trim();
     const products = mapProductsForEmailTemplate(payload.products || []);
@@ -883,10 +1241,36 @@ const buildTemplatePayload = (status, payload = {}) => {
     const helpCenterUrl = payload.helpCenterUrl || `${FRONTEND_PUBLIC_URL}/contact`;
     const shopUrl = payload.shopUrl || `${FRONTEND_PUBLIC_URL}/shop`;
     const deliveryProgress = buildDeliveryProgress(normStatus || payload.orderStatus || payload.status);
+    const statusTimestamp = payload.statusUpdatedAt || payload.updatedAt || payload.deliveryOtpVerifiedAt || payload.orderDate || Date.now();
 
-    const taxInvoiceUrl = payload.taxInvoiceUrl || (userId
-        ? `${BRAND_SITE_URL}/api/order/${encodeURIComponent(orderId)}/invoice?userId=${encodeURIComponent(userId)}`
-        : myOrdersUrl);
+    const invoiceType = (() => {
+        const statusText = String(normStatus || payload.orderStatus || payload.status || '').toLowerCase();
+        if (statusText.includes('delivered')) return 'final';
+        if (statusText.includes('confirmed')) return 'confirmation';
+        return 'placed';
+    })();
+
+    const invoiceUrl = payload.invoiceDownloadUrl || payload.taxInvoiceUrl || (userId ? buildInvoiceUrl(orderId, userId, invoiceType) : myOrdersUrl);
+    const finalInvoiceUrl = payload.finalInvoiceUrl || (userId ? buildInvoiceUrl(orderId, userId, 'final') : myOrdersUrl);
+    const confirmationInvoiceUrl = payload.confirmationInvoiceUrl || (userId ? buildInvoiceUrl(orderId, userId, 'confirmation') : myOrdersUrl);
+    const placedInvoiceUrl = payload.placedInvoiceUrl || (userId ? buildInvoiceUrl(orderId, userId, 'placed') : myOrdersUrl);
+
+    const shippingAddressLine1 = [
+        shippingAddress.addressline1,
+        shippingAddress.addressline2
+    ].filter(Boolean).join(', ') || shippingAddress.addressline1 || '-';
+
+    const shippingAddressLine2 = [
+        shippingAddress.landmark,
+        shippingAddress.area,
+        shippingAddress.city
+    ].filter(Boolean).join(', ') || shippingAddress.city || '-';
+
+    const shippingAddressLine3 = [
+        shippingAddress.state,
+        shippingAddress.pin,
+        shippingAddress.country || 'India'
+    ].filter(Boolean).join(', ');
 
     return {
         status: normStatus,
@@ -905,6 +1289,9 @@ const buildTemplatePayload = (status, payload = {}) => {
         finalAmount: Number(payload.finalAmount || payload.totalAmount || 0),
         shippingName: shippingAddress.fullName || customerName,
         shippingAddress: formatAddressForEmail(shippingAddress),
+        shippingAddressLine1,
+        shippingAddressLine2,
+        shippingAddressLine3,
         shippingPhone: shippingAddress.phone || payload.userPhone || '-',
         paymentMethod: payload.paymentMethod || 'COD',
         transactionId: payload.transactionId || orderId,
@@ -914,35 +1301,44 @@ const buildTemplatePayload = (status, payload = {}) => {
         whatsappUrl: process.env.WHATSAPP_SUPPORT_URL || 'https://wa.me/919999999999',
         supportEmail: SUPPORT_EMAIL_DEFAULT,
         totalItems,
-        packedOn: formatOrderDate(Date.now()),
+        packedOn: formatOrderDate(statusTimestamp),
         packageWeight: payload.packageWeight || `${Math.max(0.3, (totalItems * 0.25)).toFixed(1)} kg`,
         trackingUrl,
         courierPartner: payload.courierPartner || payload.deliveryPartner || 'Eshopper Express',
         trackingNumber: payload.trackingNumber || orderId,
-        shippedOn: formatOrderDate(Date.now()),
+        shippedOn: formatOrderDate(statusTimestamp),
         expectedDelivery: expectedArrival,
         liveTrackingUrl: trackingUrl,
         carrierWebsiteUrl: process.env.CARRIER_WEBSITE_URL || trackingUrl,
-        deliveryDate: formatOrderDate(Date.now()),
+        deliveryDate: formatOrderDate(statusTimestamp),
         deliveryTimeSlot: payload.deliverySchedule?.time || payload.deliverySlot || 'By 9:00 PM',
         otp: payload.deliveryOtp || '',
         deliveryAgent: payload.deliveryAgent || 'Assigned Rider',
         agentContact: payload.agentContact || shippingAddress.phone || '-',
         deliveryLocation: `${shippingAddress.city || ''}${shippingAddress.state ? ', ' + shippingAddress.state : ''}` || 'Your Address',
-        deliveredOn: formatOrderDate(Date.now()),
+        deliveredOn: formatOrderDate(statusTimestamp),
         receivedBy: payload.receivedBy || shippingAddress.fullName || customerName,
-        taxInvoiceUrl,
+        taxInvoiceUrl: finalInvoiceUrl,
+        placedInvoiceUrl,
+        confirmationInvoiceUrl,
+        finalInvoiceUrl,
         reviewUrl: payload.reviewUrl || `${BRAND_SITE_URL}/my-orders`,
         referralCode,
         referralShareUrl: payload.referralShareUrl || `${BRAND_SITE_URL}/signup?ref=${encodeURIComponent(referralCode)}`,
         instagramUrl: INSTAGRAM_URL_DEFAULT,
         brandSiteUrl: FRONTEND_PUBLIC_URL,
+        privacyPolicyUrl: payload.privacyPolicyUrl || `${FRONTEND_PUBLIC_URL}/privacy-policy`,
+        termsUrl: payload.termsUrl || `${FRONTEND_PUBLIC_URL}/terms`,
+        returnPolicyUrl: payload.returnPolicyUrl || `${FRONTEND_PUBLIC_URL}/return-policy`,
+        unsubscribeUrl: payload.unsubscribeUrl || `${FRONTEND_PUBLIC_URL}/contact`,
         myOrdersUrl,
         helpCenterUrl,
         shopUrl,
         supportPhone: SUPPORT_PHONE_DEFAULT,
         supportWhatsAppLabel: process.env.SUPPORT_WHATSAPP_LABEL || 'Chat on WhatsApp',
-        invoiceDownloadUrl: payload.invoiceDownloadUrl || taxInvoiceUrl,
+        companyGstin: process.env.COMPANY_GSTIN || '09XXXXXX1234X1Z5',
+        companyCin: process.env.COMPANY_CIN || 'U51909UP2020PTC123456',
+        invoiceDownloadUrl: invoiceUrl,
         progressSteps: deliveryProgress.steps,
         progressPercent: deliveryProgress.percent,
         progressStage: deliveryProgress.stage
@@ -969,7 +1365,7 @@ const renderTemplateEmailHtml = async (status, payload = {}) => {
 const sendOrderPlacedEmail = async (payload = {}) => {
     const toEmail = String(payload.toEmail || '').trim();
     if (!toEmail) return { skipped: true, reason: 'missing-email' };
-    const subject = `Order Placed • ${payload.orderId || 'ESHOPPER'}`;
+    const subject = `Order Received - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`;
     const html = await renderTemplateEmailHtml('Order Placed', payload);
     const attachments = [];
     if (payload.invoiceBase64) {
@@ -985,7 +1381,7 @@ const sendOrderPlacedEmail = async (payload = {}) => {
 const sendOrderConfirmationEmail = async (payload = {}) => {
     const toEmail = String(payload.toEmail || '').trim();
     if (!toEmail) return { skipped: true, reason: 'missing-email' };
-    const subject = `Order Confirmed • ${payload.orderId || 'ESHOPPER'}`;
+    const subject = `🎉 Order Confirmed - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`;
     const html = await renderTemplateEmailHtml('Confirmed', payload);
     const attachments = [];
     if (payload.invoiceBase64) {
@@ -1001,7 +1397,17 @@ const sendOrderConfirmationEmail = async (payload = {}) => {
 const sendOrderStatusEmail = async (payload = {}) => {
     const toEmail = String(payload.toEmail || '').trim();
     if (!toEmail) return { skipped: true, reason: 'missing-email' };
-    const subject = `Order ${payload.status || 'Update'} • ${payload.orderId || 'ESHOPPER'}`;
+    const statusText = String(payload.status || 'Update').trim();
+    const statusLower = statusText.toLowerCase();
+    const subject = statusLower === 'packed'
+        ? `📦 Order Packed with Care - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`
+        : statusLower === 'shipped'
+            ? `🚚 Order Shipped - Track Your Package | ${payload.orderId || 'ESHOPPER'}`
+            : statusLower === 'out for delivery'
+                ? `⏰ Arriving Today! - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`
+                : statusLower === 'delivered'
+                    ? `🎉 Delivered Successfully - ${payload.orderId || 'ESHOPPER'} | Rate Your Experience`
+            : `Order ${statusText || 'Update'} • ${payload.orderId || 'ESHOPPER'}`;
     const html = await renderTemplateEmailHtml(payload.status || 'Update', {
         ...payload,
         estimatedArrival: payload.estimatedDelivery || payload.estimatedArrival
@@ -2646,7 +3052,7 @@ const placeOrderHandler = async (req, res) => {
                     products: cleanProducts,
                     orderDate,
                     orderStatus: 'Order Placed',
-                    pdfType: 'receipt',
+                    pdfType: 'placed',
                     isDelivered: false
                 });
             } catch (invoiceError) {
@@ -3238,6 +3644,7 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
         const { orderId } = req.params;
         const userId = String(req.query.userId || '').trim();
         const disposition = String(req.query.disposition || '').toLowerCase() === 'inline' ? 'inline' : 'attachment';
+        const requestedType = String(req.query.type || '').trim().toLowerCase();
 
         if (!orderId || !userId) {
             return res.status(400).json({ success: false, message: 'orderId and userId are required' });
@@ -3248,7 +3655,13 @@ app.get('/api/order/:orderId/invoice', async (req, res) => {
 
         const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
         const isDelivered = orderStatus === 'delivered';
-        const pdfType = 'final';
+        const pdfType = requestedType === 'final'
+            ? 'final'
+            : requestedType === 'confirmation'
+                ? 'confirmation'
+                : requestedType === 'placed'
+                    ? 'placed'
+                    : (isDelivered ? 'final' : (orderStatus.includes('confirm') ? 'confirmation' : 'placed'));
 
         const pdfBuffer = await generateInvoicePdfBuffer({
             orderId: order.orderId,
@@ -3967,6 +4380,7 @@ const handleOrderStatusUpdate = async (req, res) => {
                         deliveryAgent: order.deliverySchedule?.deliveryAgent || null,
                         agentContact: order.deliverySchedule?.riderPhone || null,
                         deliverySlot: order.deliverySchedule?.time || null,
+                        statusUpdatedAt: new Date(),
                         invoiceBase64
                     });
                 })().catch((emailErr) => {

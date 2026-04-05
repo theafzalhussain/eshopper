@@ -6,68 +6,76 @@
   <title>Order Packed - {{orderId}}</title>
   <style>
     {{> theme_tokens}}
-    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
+    body{margin:0;padding:0;background:#050608;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
     table{border-collapse:collapse;}
-    .wrap{width:100%;background:#0a0a0a;padding:20px 8px;}
+    img{max-width:100%;height:auto;border:0;display:block;}
+    .wrap{width:100%;background:#050608;padding:16px 6px;}
     .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
-    .top{padding:18px 20px;background:linear-gradient(120deg,#1a1726,#2b1f44,#43266d);}
-    .logo{height:34px;vertical-align:middle;}
+    .top{padding:16px 20px;background:linear-gradient(120deg,#1a1726,#251d3b,#2d244b);}
+    .logo{height:28px;vertical-align:middle;}
     .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#f2e9ff;border:1px solid #ad7cf1;background:#8e62cf;padding:7px 12px;border-radius:999px;}
-    .hero{background:#9a6de0;color:#fff;text-align:center;padding:24px 12px;}
+    .hero{background:#9a6de0;color:#fff;text-align:center;padding:26px 12px;}
     .hero .icon{font-size:48px;line-height:1;}
-    .hero .t{font-size:50px;font-weight:800;line-height:1;margin-top:6px;}
-    .hero .s{font-size:16px;opacity:.96;margin-top:8px;}
+    .hero .t{font-size:48px;font-weight:800;line-height:1;margin-top:6px;letter-spacing:.6px;}
+    .hero .s{font-size:14px;opacity:.96;margin-top:8px;}
     .section{padding:22px 20px;border-top:1px solid #272a30;}
-    .title{margin:0 0 10px;font-size:46px;line-height:1.08;text-align:center;}
-    .sub{text-align:center;color:#d6dae2;font-size:18px;line-height:1.62;margin:0;}
-    .inspect{margin:18px auto 0;max-width:260px;background:#04461d;border:2px solid #13a949;color:#70ef9f;border-radius:999px;padding:14px 16px;font-weight:700;text-align:center;font-size:18px;}
+    .title{margin:0 0 10px;font-size:44px;line-height:1.08;text-align:center;}
+    .sub{text-align:center;color:#d6dae2;font-size:17px;line-height:1.62;margin:0;}
+    .inspect-wrap{text-align:center;margin-top:18px;}
+    .inspect{display:inline-block;width:130px;height:130px;border-radius:999px;background:radial-gradient(circle at 35% 30%,#0b6a29,#08481f);border:3px solid #0ca53f;color:#71f19f;text-align:center;padding-top:18px;box-sizing:border-box;}
+    .inspect .ok{font-size:54px;line-height:1;color:#dcffe9;}
+    .inspect .txt{font-size:12px;font-weight:700;letter-spacing:.4px;line-height:1.3;margin-top:8px;}
     .box{border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;}
-    .heading{color:#bf8fff;font-size:33px;margin:0 0 14px;}
+    .heading{color:#bf8fff;font-size:32px;margin:0 0 14px;}
     .summary{width:100%;border:1px solid #343844;border-radius:12px;overflow:hidden;}
     .summary td{padding:12px 10px;border-bottom:1px solid #2d313a;font-size:16px;color:#e7e9ed;}
     .summary tr:last-child td{border-bottom:none;}
     .summary .k{color:#bfc3ce;}
     .summary .v{color:#ffffff;font-weight:700;text-align:right;}
+    .weight{color:#bf8fff !important;}
     .eco{margin-top:14px;background:#003118;border:1px solid #0b8b42;border-radius:12px;padding:14px;}
     .eco h4{margin:0 0 12px;text-align:center;color:#18ca64;font-size:32px;}
     .egrid{width:100%;}
     .egrid td{width:25%;text-align:center;color:#d6e8dd;padding:8px 4px;border-right:1px solid #1b6a3d;vertical-align:top;}
     .egrid td:last-child{border-right:none;}
-    .egrid .i{font-size:28px;display:block;}
-    .egrid .t{font-size:16px;line-height:1.4;margin-top:6px;}
+    .egrid .i{font-size:30px;display:block;}
+    .egrid .t{font-size:15px;line-height:1.4;margin-top:6px;}
     .next{margin-top:14px;border:1px solid #343844;border-radius:12px;padding:14px;background:#111317;}
-    .next h4{margin:0 0 10px;color:#efcb4a;font-size:30px;text-align:center;}
+    .next h4{margin:0 0 10px;color:#efcb4a;font-size:34px;text-align:center;}
     .next p{margin:0;text-align:center;color:#c8cdd7;font-size:17px;line-height:1.55;}
-    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
-    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
-    .progress-grid{width:100%;}
-    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
-    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;font-size:18px;border:1px solid #3a404d;background:#1b212d;}
-    .p-icon.done{background:#2ea94b;border-color:#55d372;}
-    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;box-shadow:0 0 0 3px rgba(47,143,226,0.22);}
-    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
-    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
-    .p-label.done{color:#5fda7f;}
-    .p-label.active{color:#7bc6ff;}
-    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
-    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
+    .steps{width:100%;margin-top:14px;}
+    .steps td{text-align:center;width:25%;padding:8px 4px;}
+    .steps .dot{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:999px;font-size:22px;font-weight:700;}
+    .steps .done{background:#21ba51;color:#eafff1;}
+    .steps .active{background:#9a6de0;color:#ffffff;}
+    .steps .pending{background:#1c212a;color:#9ca6b7;border:1px dashed #5f6878;}
+    .steps .lbl{font-size:11px;letter-spacing:.4px;margin-top:6px;font-weight:700;text-transform:uppercase;}
+    .steps .lbl.done{color:#3fde77;}
+    .steps .lbl.active{color:#c89cff;}
+    .steps .lbl.pending{color:#8f98aa;}
+    .addr{margin-top:14px;border:1px solid #343844;border-radius:12px;padding:14px;}
+    .addr .h{margin:0 0 8px;color:#efcb4a;font-size:13px;font-weight:700;letter-spacing:.3px;}
+    .addr .v{margin:0;color:#e8eaee;font-size:16px;line-height:1.5;}
     .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;}
     .btn-primary{background:#9b6ee3;color:#fff;}
+    .tip{margin:10px 0 0;text-align:center;color:#9ba1ad;font-size:13px;font-style:italic;}
+    .qs{margin:16px 0 8px;text-align:center;color:#f0f2f6;font-size:16px;}
     .btn-row{width:100%;margin-top:12px;}
     .btn-row td{width:50%;}
     .btn-sm{display:block;text-align:center;text-decoration:none;font-weight:700;border-radius:10px;padding:11px 8px;font-size:16px;}
     .wa{background:#1ed66d;color:#0f1712;margin-right:8px;}
     .insta{background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;margin-left:8px;}
     .foot{padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;}
+    .foot a{color:#d4b75a;text-decoration:none;}
     @media only screen and (max-width:620px){
       .status{float:none;display:inline-block;margin-top:8px;}
       .hero .t{font-size:38px;}
       .title{font-size:34px;}
       .sub{font-size:16px;}
+      .inspect{width:120px;height:120px;padding-top:16px;}
       .egrid td{display:block;width:100%;border-right:none;border-top:1px solid #1b6a3d;}
       .egrid tr td:first-child{border-top:none;}
-      .p-icon{width:32px;height:32px;font-size:16px;}
-      .p-label{font-size:10px;}
+      .steps td{display:inline-block;width:24%;}
       .btn{font-size:21px;}
       .btn-row td{display:block;width:100%;}
       .wa,.insta{margin:0 0 10px 0;}
@@ -84,7 +92,9 @@
       <tr><td class="section">
         <h2 class="title">Hi {{customerName}}!</h2>
         <p class="sub">Great news! Your order has been sanitized, quality-checked, and carefully packed in our signature eco-friendly luxe box. Your premium items are protected and ready for their journey!</p>
-        <div class="inspect">QUALITY INSPECTED</div>
+        <div class="inspect-wrap">
+          <div class="inspect"><div class="ok">&#10003;</div><div class="txt">QUALITY<br>INSPECTED</div></div>
+        </div>
       </td></tr>
 
       <tr><td class="section">
@@ -94,7 +104,7 @@
             <tr><td class="k">Order ID</td><td class="v">{{orderId}}</td></tr>
             <tr><td class="k">Total Items</td><td class="v">{{totalItems}}</td></tr>
             <tr><td class="k">Packed On</td><td class="v">{{packedOn}}</td></tr>
-            <tr><td class="k">Package Weight</td><td class="v">{{packageWeight}}</td></tr>
+            <tr><td class="k">Package Weight</td><td class="v weight">~{{packageWeight}}</td></tr>
           </table>
 
           <div class="eco">
@@ -108,30 +118,25 @@
           </div>
 
           <div class="next">
-            <h4>WHAT'S NEXT?</h4>
-            <p>Your package will leave our warehouse within 24-48 hours. You'll receive a tracking link via email and SMS as soon as it's dispatched.</p>
+            <h4>&#128204; WHAT'S NEXT?</h4>
+            <p>Your package will leave our warehouse within <strong>24-48 hours</strong>. You'll receive a <span style="color:#b88eff;">tracking link via email &amp; SMS</span> as soon as it's dispatched.</p>
           </div>
 
-          <div class="progress-track">
-            <div class="progress-head">DELIVERY PROGRESS</div>
-            <table class="progress-grid" role="presentation"><tr>
-              {{#each progressSteps}}
-              <td>
-                <span class="p-icon {{state}}">{{{icon}}}</span>
-                <div class="p-label {{state}}">{{label}}</div>
-              </td>
-              {{/each}}
-            </tr></table>
-            <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+          <table class="steps" role="presentation"><tr>
+            <td><span class="dot done">&#10003;</span><div class="lbl done">Placed</div></td>
+            <td><span class="dot done">&#10003;</span><div class="lbl done">Confirmed</div></td>
+            <td><span class="dot active">&#128230;</span><div class="lbl active">Packed</div></td>
+            <td><span class="dot pending">&#128667;</span><div class="lbl pending">Shipped</div></td>
+          </tr></table>
+
+          <div class="addr">
+            <p class="h">&#128205; SHIPPING ADDRESS</p>
+            <p class="v">{{shippingName}}<br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>Phone: {{shippingPhone}}</p>
           </div>
 
-          <table class="summary" role="presentation" width="100%" style="margin-top:14px;">
-            <tr><td class="k">SHIPPING ADDRESS</td><td class="v">{{shippingName}}</td></tr>
-            <tr><td class="k">Address</td><td class="v">{{shippingAddress}}</td></tr>
-            <tr><td class="k">Phone</td><td class="v">{{shippingPhone}}</td></tr>
-          </table>
-
-          <a class="btn btn-primary" href="{{trackingUrl}}">TRACK PACKAGE</a>
+          <a class="btn btn-primary" href="{{trackingUrl}}">&#128269; TRACK PACKAGE</a>
+          <p class="tip">&#128161; Pro Tip: Enable notifications to get real-time updates!</p>
+          <p class="qs">Have Questions?</p>
           <table class="btn-row" role="presentation"><tr>
             <td><a class="btn-sm wa" href="{{whatsappUrl}}">WhatsApp Support</a></td>
             <td><a class="btn-sm insta" href="{{instagramUrl}}">Instagram</a></td>
@@ -140,8 +145,9 @@
       </td></tr>
 
       <tr><td class="foot">
-        <div>eShopper Luxe, {{companyAddress}}</div>
-        <div>This is a package update email generated from live backend fulfillment timeline.</div>
+        <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
+        <div>{{companyAddress}}</div>
+        <div><a href="{{privacyPolicyUrl}}">Privacy</a> &nbsp; | &nbsp; <a href="{{termsUrl}}">Terms</a></div>
       </td></tr>
     </table>
   </td></tr></table>

@@ -58,10 +58,18 @@ export default function Profile() {
     var wishlist = useSelector((state) => state.WishlistStateData)
     var orders = useSelector((state) => state.CheckoutStateData)
     
-    var [user, setuser] = useState(() => {
+    const cachedProfileAtBoot = (() => {
         try {
             const cached = localStorage.getItem('profile_cache')
-            return cached ? JSON.parse(cached) : {}
+            return cached ? JSON.parse(cached) : null
+        } catch (e) {
+            return null
+        }
+    })()
+
+    var [user, setuser] = useState(() => {
+        try {
+            return cachedProfileAtBoot || {}
         } catch (e) {
             return {}
         }
@@ -72,7 +80,7 @@ export default function Profile() {
     const socketRef = useRef(null)
     const [socketConnected, setSocketConnected] = useState(false)
     const [activeTab, setActiveTab] = useState('overview')
-    const hasFreshProfileRef = useRef(false)
+    const hasFreshProfileRef = useRef(Boolean(cachedProfileAtBoot && Object.keys(cachedProfileAtBoot).length))
     var dispatch = useDispatch()
     var navigate = useNavigate()
     const { membershipType, totalOrders } = useMembership()
