@@ -5,13 +5,14 @@ import { motion } from 'framer-motion'
 import {
     Users, ShoppingBag, DollarSign, Package, ShieldCheck, Mail, Phone,
     Edit3, TrendingUp, TrendingDown, AlertTriangle, Activity,
-    ArrowRight, RefreshCw, Zap
+    ArrowRight, RefreshCw, Zap, PlusCircle, ClipboardList, BarChart3
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getSocket } from './socket'
 import SystemControlCenter from './SystemControlCenter'
 import PremiumCharts from './PremiumCharts'
 import TopProducts from './TopProducts'
+import RecentActivityFeed from './RecentActivityFeed'
 import './SystemControlCenter.css'
 
 // ActionCreators for live database connectivity
@@ -105,11 +106,17 @@ export default function AdminHome() {
         salesByCategory: [],
         topProducts: [],
         lowStockCount: 0,
-        activeSessions: 0
+        activeSessions: 0,
+        activity: {
+            recentOrders: [],
+            recentUsers: [],
+            lowStock: []
+        }
     })
     const [isLoading, setIsLoading] = useState(true)
     const [lastUpdated, setLastUpdated] = useState(null)
     const [isLive, setIsLive] = useState(true)
+    const [systemHealth, setSystemHealth] = useState({ api: false, database: false })
 
     // Test database connection
     const testConnection = useCallback(async () => {
@@ -143,14 +150,34 @@ export default function AdminHome() {
                 salesByCategory: data.salesByCategory || [],
                 topProducts: data.topProducts || [],
                 lowStockCount: data.lowStockCount || 0,
-                activeSessions: data.activeSessions || 0
+                activeSessions: data.activeSessions || 0,
+                activity: data.activity || {
+                    recentOrders: [],
+                    recentUsers: [],
+                    lowStock: []
+                }
             })
             setLastUpdated(new Date())
+            setSystemHealth((prev) => ({ ...prev, api: true }))
             setIsLoading(false)
         } catch (error) {
             console.error('❌ Dashboard fetch error:', error)
             console.error('🔍 Check if backend server is running at:', BASE_URL)
+            setSystemHealth((prev) => ({ ...prev, api: false }))
             setIsLoading(false)
+        }
+    }, [])
+
+    const checkDatabaseHealth = useCallback(async () => {
+        try {
+            const response = await fetch(`${BASE_URL}/api/admin/test-connection`)
+            if (!response.ok) throw new Error('DB health check failed')
+            const data = await response.json()
+            const online = String(data?.mongoStatus || '').toLowerCase().includes('connect')
+                || Boolean(data?.isConnected)
+            setSystemHealth((prev) => ({ ...prev, database: online }))
+        } catch (error) {
+            setSystemHealth((prev) => ({ ...prev, database: false }))
         }
     }, [])
 
@@ -160,6 +187,7 @@ export default function AdminHome() {
         dispatch(getCheckout())
         dispatch(getContact())
         fetchDashboardData()
+        checkDatabaseHealth()
 
         // Socket.io real-time updates
         const socket = getSocket('admin-dashboard')
@@ -169,13 +197,15 @@ export default function AdminHome() {
         socket.on('newOrder', fetchDashboardData)
 
         const interval = setInterval(fetchDashboardData, 30000)
+        const healthInterval = setInterval(checkDatabaseHealth, 45000)
 
         return () => {
             socket.off('dashboardUpdate', fetchDashboardData)
             socket.off('newOrder', fetchDashboardData)
             clearInterval(interval)
+            clearInterval(healthInterval)
         }
-    }, [dispatch, fetchDashboardData])
+    }, [dispatch, fetchDashboardData, checkDatabaseHealth])
 
     useEffect(() => {
         const currentUserId = localStorage.getItem("userid")
@@ -399,6 +429,19 @@ export default function AdminHome() {
                                 <p className="scc-subtitle">Enterprise Analytics Dashboard</p>
                             </div>
                             <div className="scc-header-actions">
+                                <div className="scc-system-health-widget">
+                                    <p className="scc-system-health-title">System Health</p>
+                                    <div className="scc-health-row">
+                                        <span className={`scc-health-dot ${systemHealth.api ? 'is-online' : 'is-offline'}`} />
+                                        <span>API</span>
+                                        <strong>{systemHealth.api ? 'Online' : 'Offline'}</strong>
+                                    </div>
+                                    <div className="scc-health-row">
+                                        <span className={`scc-health-dot ${systemHealth.database ? 'is-online' : 'is-offline'}`} />
+                                        <span>Database</span>
+                                        <strong>{systemHealth.database ? 'Online' : 'Offline'}</strong>
+                                    </div>
+                                </div>
                                 {isLive && (
                                     <div className="scc-live-indicator">
                                         <span className="scc-live-dot" />
@@ -431,6 +474,26 @@ export default function AdminHome() {
                                     <RefreshCw size={20} />
                                 </motion.button>
                             </div>
+                        </motion.div>
+
+                        <motion.div
+                            className="scc-quick-actions"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.12 }}
+                        >
+                            <Link to="/admin-add-product" className="scc-quick-action-btn">
+                                <PlusCircle size={16} />
+                                <span>Add Product</span>
+                            </Link>
+                            <Link to="/admin-orders" className="scc-quick-action-btn">
+                                <ClipboardList size={16} />
+                                <span>View Orders</span>
+                            </Link>
+                            <Link to="/admin-home" className="scc-quick-action-btn scc-quick-action-btn--ghost">
+                                <BarChart3 size={16} />
+                                <span>Analytics</span>
+                            </Link>
                         </motion.div>
 
                         {/* Admin Profile Card - Compact */}
@@ -542,6 +605,14 @@ export default function AdminHome() {
                         <PremiumCharts
                             monthlyData={formattedMonthlyData}
                             salesByCategory={resolvedSalesByCategory}
+                        />
+
+                        <RecentActivityFeed
+                            orders={orders}
+                            products={products}
+                            lowStockCount={dashboardData.lowStockCount}
+                            activityData={dashboardData.activity}
+                            isConnected={Boolean(systemHealth.api && systemHealth.database)}
                         />
 
                         {/* Top Products Section */}

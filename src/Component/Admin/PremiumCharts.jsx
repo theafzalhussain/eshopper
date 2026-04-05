@@ -23,11 +23,12 @@ const CustomLineTooltip = ({ active, payload, label }) => {
 
     return (
       <div style={{
-        background: 'rgba(15, 23, 42, 0.95)',
-        border: '1px solid rgba(212, 175, 55, 0.3)',
-        borderRadius: '12px',
+        background: 'rgba(8, 18, 28, 0.96)',
+        border: '1px solid rgba(45, 212, 191, 0.25)',
+        borderRadius: '14px',
         padding: '12px 16px',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
+        boxShadow: '0 18px 34px rgba(2, 8, 23, 0.45)',
+        minWidth: '220px'
       }}>
         <p style={{ color: '#94A3B8', fontSize: '0.75rem', marginBottom: '8px' }}>{label}</p>
         {payload.map((entry, index) => (
@@ -39,7 +40,7 @@ const CustomLineTooltip = ({ active, payload, label }) => {
           <p style={{ color: variance >= 0 ? '#10B981' : '#F87171', fontSize: '0.78rem', margin: '2px 0' }}>
             Gap vs Target: {variance >= 0 ? '+' : '-'}₹{Math.abs(variance).toLocaleString('en-IN')}
           </p>
-          <p style={{ color: '#FCD34D', fontSize: '0.78rem', margin: '2px 0' }}>
+          <p style={{ color: '#2DD4BF', fontSize: '0.78rem', margin: '2px 0' }}>
             Achievement: {achievement.toFixed(1)}%
           </p>
           {orderCount > 0 && (
@@ -59,7 +60,7 @@ const CustomPieTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     return (
       <div style={{
-        background: 'rgba(15, 23, 42, 0.95)',
+        background: 'rgba(8, 18, 28, 0.96)',
         border: '1px solid rgba(13, 148, 136, 0.3)',
         borderRadius: '12px',
         padding: '12px 16px',
@@ -94,8 +95,6 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
   });
   const [period, setPeriod] = useState('12M');
   const [isLoading, setIsLoading] = useState(false);
-  const [showRawDebug, setShowRawDebug] = useState(false);
-  const [showCategoryDebug, setShowCategoryDebug] = useState(false);
 
   // Fetch chart data
   const fetchChartData = useCallback(async () => {
@@ -221,11 +220,11 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
   const renderCustomLegend = () => (
     <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginTop: '1rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#D4AF37' }} />
+        <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#3B82F6' }} />
         <span style={{ color: '#94A3B8', fontSize: '0.8rem' }}>Revenue</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#0D9488', opacity: 0.6 }} />
+        <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#14B8A6', opacity: 0.7 }} />
         <span style={{ color: '#94A3B8', fontSize: '0.8rem' }}>Target</span>
       </div>
     </div>
@@ -267,35 +266,8 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => setShowRawDebug((v) => !v)}
-              style={{
-                border: '1px solid rgba(148,163,184,0.35)',
-                background: showRawDebug ? 'rgba(13,148,136,0.2)' : 'rgba(15,23,42,0.4)',
-                color: '#cbd5e1',
-                fontSize: '0.68rem',
-                letterSpacing: '0.08em',
-                borderRadius: '999px',
-                padding: '6px 10px',
-                cursor: 'pointer'
-              }}
-            >
-              RAW JSON
-            </button>
           </div>
         </div>
-
-        {showRawDebug && (
-          <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', background: 'rgba(2,6,23,0.45)', padding: '10px 12px' }}>
-            <div style={{ fontSize: '0.68rem', letterSpacing: '0.08em', color: '#67E8F9', marginBottom: '6px' }}>
-              LIVE MONTHLY DATA ({periodMonthlyData.length} points)
-            </div>
-            <pre style={{ margin: 0, maxHeight: 150, overflow: 'auto', fontSize: '11px', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {JSON.stringify(periodMonthlyData, null, 2)}
-            </pre>
-          </div>
-        )}
 
         {isLoading ? (
           <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -306,15 +278,15 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
             <AreaChart data={periodMonthlyData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.02} />
                 </linearGradient>
                 <linearGradient id="targetGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0D9488" stopOpacity={0.2} />
+                  <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.26} />
                   <stop offset="95%" stopColor="#0D9488" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
+              <CartesianGrid strokeDasharray="2 4" stroke="rgba(148, 163, 184, 0.14)" vertical={false} />
               <XAxis
                 dataKey="monthLabel"
                 stroke="#64748B"
@@ -331,7 +303,7 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
               <Area
                 type="monotone"
                 dataKey="target"
-                stroke="#0D9488"
+                stroke="#14B8A6"
                 strokeWidth={2}
                 strokeDasharray="5 5"
                 fill="url(#targetGradient)"
@@ -340,12 +312,12 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="#D4AF37"
+                stroke="#3B82F6"
                 strokeWidth={3}
                 fill="url(#revenueGradient)"
                 name="Revenue"
-                dot={{ r: 4, fill: '#D4AF37', strokeWidth: 2, stroke: '#1E293B' }}
-                activeDot={{ r: 8, fill: '#D4AF37', stroke: '#fff', strokeWidth: 2 }}
+                dot={{ r: 3, fill: '#3B82F6', strokeWidth: 2, stroke: '#1E293B' }}
+                activeDot={{ r: 7, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -414,35 +386,8 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
               <Calendar size={14} />
               <span>This Month</span>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowCategoryDebug((v) => !v)}
-              style={{
-                border: '1px solid rgba(148,163,184,0.35)',
-                background: showCategoryDebug ? 'rgba(13,148,136,0.2)' : 'rgba(15,23,42,0.4)',
-                color: '#cbd5e1',
-                fontSize: '0.68rem',
-                letterSpacing: '0.08em',
-                borderRadius: '999px',
-                padding: '6px 10px',
-                cursor: 'pointer'
-              }}
-            >
-              RAW JSON
-            </button>
           </div>
         </div>
-
-        {showCategoryDebug && (
-          <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.25)', borderRadius: '10px', background: 'rgba(2,6,23,0.45)', padding: '10px 12px' }}>
-            <div style={{ fontSize: '0.68rem', letterSpacing: '0.08em', color: '#67E8F9', marginBottom: '6px' }}>
-              CATEGORY RAW DATA ({categoryInsights.list.length} categories)
-            </div>
-            <pre style={{ margin: 0, maxHeight: 140, overflow: 'auto', fontSize: '11px', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {JSON.stringify(categoryInsights.list, null, 2)}
-            </pre>
-          </div>
-        )}
 
         {isLoading ? (
           <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

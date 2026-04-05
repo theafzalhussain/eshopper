@@ -292,9 +292,31 @@ export default function Contact() {
                     display: flex; align-items: center; justify-content: center;
                     font-size: 24px;
                 }
+                .contact-info .info {
+                    position: relative;
+                    overflow: hidden;
+                    border-radius: 22px !important;
+                    border: 1px solid #e8ddc4 !important;
+                    box-shadow: 0 20px 36px rgba(17, 17, 17, 0.16) !important;
+                    background: #fff;
+                    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+                }
+                .contact-info .info::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    border-radius: 22px;
+                    pointer-events: none;
+                    border: 2px solid transparent;
+                    background: linear-gradient(135deg, rgba(201,168,76,0.54), rgba(255,255,255,0)) border-box;
+                    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+                    -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+                }
                 .hover-info:hover {
                     transform: translateY(-5px);
-                    box-shadow: 0 15px 30px rgba(0,0,0,0.08) !important;
+                    border-color: #dec68f !important;
+                    box-shadow: 0 24px 40px rgba(17,17,17,0.2) !important;
                 }
                 .quick-action-grid {
                     display: grid;

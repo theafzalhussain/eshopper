@@ -110,25 +110,28 @@ const css = `
 .bpx-edit-btn {
     display: flex;
     align-items: center;
-    gap: 7px;
-    padding: 9px 20px;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 3px;
+    justify-content: center;
+    gap: 8px;
+    min-width: 150px;
+    padding: 10px 16px;
+    background: #fffdf8;
+    border: 1px solid rgba(201,168,76,0.28);
+    border-radius: 4px;
     font-family: inherit;
     font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
+    font-weight: 700;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--ash);
+    color: #9a9490;
     cursor: pointer;
     transition: all 0.22s ease;
     text-decoration: none;
 }
 .bpx-edit-btn:hover {
-    border-color: var(--teal);
-    color: var(--teal);
-    background: rgba(26,140,140,0.05);
+    color: #7e7668;
+    border-color: rgba(201,168,76,0.46);
+    background: #ffffff;
+    box-shadow: 0 8px 16px rgba(21,17,10,0.08);
 }
 
 .bpx-fields {
@@ -144,12 +147,13 @@ const css = `
 
 .bpx-field {
     position: relative;
-    background: var(--smoke);
-    border: 1px solid transparent;
-    border-radius: 6px;
+    background: #fff;
+    border: 1px solid #e8ddc4;
+    border-radius: 14px;
     padding: 14px 16px 14px 44px;
     transition: border-color 0.2s, box-shadow 0.2s;
     overflow: hidden;
+    box-shadow: 0 14px 24px rgba(21,17,10,0.08);
 }
 .bpx-field::before {
     content: '';
@@ -161,11 +165,23 @@ const css = `
     background: linear-gradient(180deg, var(--gold) 0%, transparent 100%);
     opacity: 0;
     transition: opacity 0.2s;
-    border-radius: 6px 0 0 6px;
+    border-radius: 14px 0 0 14px;
+}
+.bpx-field::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    pointer-events: none;
+    border: 2px solid transparent;
+    background: linear-gradient(135deg, rgba(201,168,76,0.54), rgba(255,255,255,0)) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
 }
 .bpx-field:hover {
-    border-color: var(--border);
-    box-shadow: var(--shadow-soft);
+    border-color: #dec68f;
+    box-shadow: 0 20px 34px rgba(17,17,17,0.14);
 }
 .bpx-field:hover::before { opacity: 1; }
 
@@ -229,44 +245,6 @@ const css = `
 .bpx-verify-icon { color: var(--teal); flex-shrink: 0; }
 .bpx-verify-text { font-size: 12px; color: var(--ink); }
 .bpx-verify-text strong { color: var(--teal); font-weight: 600; }
-
-.bpx-update-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 16px 32px;
-    background: var(--teal);
-    color: var(--white);
-    border: none;
-    border-radius: 4px;
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: background 0.25s, transform 0.15s, box-shadow 0.25s;
-    position: relative;
-    overflow: hidden;
-    text-decoration: none;
-}
-.bpx-update-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
-    pointer-events: none;
-}
-.bpx-update-btn:hover {
-    background: var(--teal-dk);
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px rgba(26,140,140,0.32);
-    color: var(--white);
-    text-decoration: none;
-}
-.bpx-update-btn:active { transform: translateY(0); }
 
 .bpx-divider {
     border: none;
@@ -403,20 +381,6 @@ export default function BuyerProfile({ user = {} }) {
                     <Field icon={Map} label="State" value={user.state} />
                     <Field icon={Hash} label="Postal Code" value={postalCode} copyable onCopied={showCopiedToast} />
                 </div>
-
-                <hr className="bpx-divider" />
-
-                <motion.button
-                    className="bpx-update-btn"
-                    onClick={() => navigate('/update-profile')}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                >
-                    Update Profile Information
-                </motion.button>
             </div>
         </>
     )

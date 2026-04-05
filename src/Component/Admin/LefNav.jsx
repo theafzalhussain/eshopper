@@ -4,15 +4,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
     Home, Users, Layers, Grid, Tag,
     ShoppingBag, MessageSquare, Send, CheckSquare, Package, TicketPercent,
-    Menu, X, ChevronRight, LayoutDashboard
+    Menu, X, LayoutDashboard, Moon, Sun
 } from 'lucide-react'
 
 export default function LefNav() {
     const location = useLocation()
     const [isMobileOpen, setIsMobileOpen] = useState(false)
     const [isCollapsed, setIsCollapsed] = useState(false)
-    const [hoveredItem, setHoveredItem] = useState(null)
     const [isMobile, setIsMobile] = useState(false)
+    const [sidebarTheme, setSidebarTheme] = useState(() => localStorage.getItem('admin_sidebar_theme') || 'light')
 
     const isActive = (path) => location.pathname === path
 
@@ -42,18 +42,22 @@ export default function LefNav() {
         return () => window.removeEventListener('resize', handleResize)
     }, [])
 
+    useEffect(() => {
+        localStorage.setItem('admin_sidebar_theme', sidebarTheme)
+    }, [sidebarTheme])
+
     const menuItems = [
-        { name: "Dashboard", path: "/admin-home", icon: Home, gradient: "from-blue-500 to-cyan-500" },
-        { name: "Users", path: "/admin-user", icon: Users, gradient: "from-purple-500 to-pink-500" },
-        { name: "Orders", path: "/admin-orders", icon: Package, gradient: "from-orange-500 to-red-500" },
-        { name: "Main Categories", path: "/admin-maincategory", icon: Layers, gradient: "from-green-500 to-teal-500" },
-        { name: "Sub Categories", path: "/admin-subcategory", icon: Grid, gradient: "from-indigo-500 to-purple-500" },
-        { name: "Brands", path: "/admin-brand", icon: Tag, gradient: "from-pink-500 to-rose-500" },
-        { name: "Products", path: "/admin-product", icon: ShoppingBag, gradient: "from-yellow-500 to-orange-500" },
-        { name: "Coupons", path: "/admin-coupon", icon: TicketPercent, gradient: "from-amber-500 to-yellow-500" },
-        { name: "Contact", path: "/admin-contact", icon: MessageSquare, gradient: "from-cyan-500 to-blue-500" },
-        { name: "Newsletters", path: "/admin-newsletter", icon: Send, gradient: "from-violet-500 to-purple-500" },
-        { name: "Checkouts", path: "/admin-checkout", icon: CheckSquare, gradient: "from-emerald-500 to-green-500" },
+        { name: "Dashboard", path: "/admin-home", icon: Home },
+        { name: "Users", path: "/admin-user", icon: Users },
+        { name: "Orders", path: "/admin-orders", icon: Package },
+        { name: "Main Categories", path: "/admin-maincategory", icon: Layers },
+        { name: "Sub Categories", path: "/admin-subcategory", icon: Grid },
+        { name: "Brands", path: "/admin-brand", icon: Tag },
+        { name: "Products", path: "/admin-product", icon: ShoppingBag },
+        { name: "Coupons", path: "/admin-coupon", icon: TicketPercent },
+        { name: "Contact", path: "/admin-contact", icon: MessageSquare },
+        { name: "Newsletters", path: "/admin-newsletter", icon: Send },
+        { name: "Checkouts", path: "/admin-checkout", icon: CheckSquare },
     ]
 
     const sidebarVariants = {
@@ -99,7 +103,7 @@ export default function LefNav() {
                 variants={sidebarVariants}
                 initial={isMobile ? "closed" : "open"}
                 animate={isMobile ? (isMobileOpen ? "open" : "closed") : "open"}
-                className={`premium-admin-sidebar ${isMobileOpen ? 'mobile-open' : ''} ${isCollapsed ? 'collapsed' : ''}`}
+                className={`premium-admin-sidebar ${isMobileOpen ? 'mobile-open' : ''} ${isCollapsed ? 'collapsed' : ''} ${sidebarTheme === 'dark' ? 'theme-dark' : ''}`}
             >
                 {/* Sidebar Header */}
                 <div className="premium-sidebar-header">
@@ -121,6 +125,14 @@ export default function LefNav() {
                             </motion.div>
                         )}
                     </motion.div>
+                    <button
+                        type="button"
+                        className="premium-theme-toggle"
+                        onClick={() => setSidebarTheme((prev) => prev === 'dark' ? 'light' : 'dark')}
+                    >
+                        {sidebarTheme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                        <span>{sidebarTheme === 'dark' ? 'Light' : 'Dark'}</span>
+                    </button>
                 </div>
 
                 {/* Navigation Items */}
@@ -136,8 +148,6 @@ export default function LefNav() {
                                 variants={itemVariants}
                                 initial="hidden"
                                 animate="visible"
-                                onHoverStart={() => setHoveredItem(index)}
-                                onHoverEnd={() => setHoveredItem(null)}
                             >
                                 <Link
                                     to={item.path}
@@ -146,10 +156,10 @@ export default function LefNav() {
                                     {/* Icon Container with Gradient */}
                                     <motion.div
                                         className={`premium-icon-wrapper ${active ? 'active-icon' : ''}`}
-                                        whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.1 }}
-                                        transition={{ duration: 0.5 }}
+                                        whileHover={{ scale: 1.05 }}
+                                        transition={{ duration: 0.2 }}
                                     >
-                                        <div className={`premium-icon-gradient bg-gradient-to-br ${item.gradient}`}>
+                                        <div className="premium-icon-chip">
                                             <Icon size={20} strokeWidth={2.5} />
                                         </div>
                                     </motion.div>
@@ -173,18 +183,6 @@ export default function LefNav() {
                                             initial={false}
                                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                         />
-                                    )}
-
-                                    {/* Hover Arrow */}
-                                    {!isCollapsed && hoveredItem === index && (
-                                        <motion.div
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0 }}
-                                            className="premium-hover-arrow"
-                                        >
-                                            <ChevronRight size={18} />
-                                        </motion.div>
                                     )}
                                 </Link>
                             </motion.div>
@@ -282,9 +280,9 @@ export default function LefNav() {
                     left: 0;
                     height: calc(100vh - 110px); /* Full height minus header */
                     width: 260px;
-                    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-                    border-right: 1px solid rgba(226, 232, 240, 0.8);
-                    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.06);
+                    background: rgba(248, 250, 252, 0.96);
+                    border-right: 1px solid rgba(203, 213, 225, 0.6);
+                    box-shadow: 2px 0 18px rgba(15, 23, 42, 0.08);
                     display: flex;
                     flex-direction: column;
                     z-index: 1040; /* Below header z-index of 1050 */
@@ -302,7 +300,7 @@ export default function LefNav() {
                 }
 
                 .premium-admin-sidebar::-webkit-scrollbar-thumb {
-                    background: linear-gradient(180deg, #667eea, #764ba2);
+                    background: #94a3b8;
                     border-radius: 10px;
                 }
 
@@ -340,7 +338,28 @@ export default function LefNav() {
                 .premium-sidebar-header {
                     padding: 24px 20px;
                     border-bottom: 1px solid rgba(226, 232, 240, 0.6);
-                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+                    background: rgba(248, 250, 252, 0.7);
+                }
+
+                .premium-theme-toggle {
+                    margin-top: 12px;
+                    border: 1px solid rgba(148, 163, 184, 0.35);
+                    background: rgba(241, 245, 249, 0.9);
+                    color: #0f172a;
+                    border-radius: 999px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    padding: 6px 10px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    cursor: pointer;
+                    transition: all 0.25s ease;
+                }
+
+                .premium-theme-toggle:hover {
+                    border-color: rgba(20, 184, 166, 0.55);
+                    transform: translateY(-1px);
                 }
 
                 .premium-logo-container {
@@ -352,23 +371,20 @@ export default function LefNav() {
                 .premium-logo-icon {
                     width: 48px;
                     height: 48px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    border-radius: 14px;
+                    background: #0f172a;
+                    border-radius: 12px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     color: white;
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
                 }
 
                 .premium-logo-text h3 {
                     font-size: 18px;
                     font-weight: 700;
                     margin: 0;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
+                    color: #0f172a;
                     letter-spacing: 0.5px;
                 }
 
@@ -397,7 +413,7 @@ export default function LefNav() {
                     padding: 14px 16px;
                     border-radius: 12px;
                     text-decoration: none;
-                    color: #475569;
+                    color: #334155;
                     font-weight: 500;
                     font-size: 14px;
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -405,22 +421,21 @@ export default function LefNav() {
                 }
 
                 .premium-nav-item:hover {
-                    background: linear-gradient(90deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
-                    color: #667eea;
-                    transform: translateX(6px);
-                    box-shadow: 0 2px 12px rgba(102, 126, 234, 0.15);
-                }
-
-                .premium-nav-item.active {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);
+                    background: rgba(15, 23, 42, 0.06);
+                    color: #0f172a;
                     transform: translateX(2px);
                 }
 
+                .premium-nav-item.active {
+                    background: rgba(15, 23, 42, 0.1);
+                    color: #0f172a;
+                    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+                    transform: translateX(0);
+                }
+
                 .premium-nav-item.active:hover {
-                    transform: translateX(6px);
-                    box-shadow: 0 6px 24px rgba(102, 126, 234, 0.45);
+                    transform: translateX(2px);
+                    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.15);
                 }
 
                 /* Icon Wrapper */
@@ -432,27 +447,25 @@ export default function LefNav() {
                     flex-shrink: 0;
                 }
 
-                .premium-icon-gradient {
+                .premium-icon-chip {
                     width: 36px;
                     height: 36px;
                     border-radius: 10px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    color: white;
+                    color: #0f172a;
+                    background: rgba(15, 23, 42, 0.08);
                     transition: all 0.3s ease;
-                    opacity: 0.85;
                 }
 
-                .premium-nav-item:hover .premium-icon-gradient {
-                    opacity: 1;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                .premium-nav-item:hover .premium-icon-chip {
+                    background: rgba(15, 23, 42, 0.12);
                 }
 
-                .premium-nav-item.active .premium-icon-gradient {
-                    background: rgba(255, 255, 255, 0.2) !important;
-                    backdrop-filter: blur(10px);
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                .premium-nav-item.active .premium-icon-chip {
+                    background: #0f172a;
+                    color: #ffffff;
                 }
 
                 /* Nav Text */
@@ -471,24 +484,16 @@ export default function LefNav() {
                     transform: translateY(-50%);
                     width: 4px;
                     height: 70%;
-                    background: white;
+                    background: #14b8a6;
                     border-radius: 0 4px 4px 0;
-                    box-shadow: 0 2px 8px rgba(255, 255, 255, 0.5);
-                }
-
-                /* Hover Arrow */
-                .premium-hover-arrow {
-                    margin-left: auto;
-                    display: flex;
-                    align-items: center;
-                    color: currentColor;
+                    box-shadow: 0 0 10px rgba(20, 184, 166, 0.45);
                 }
 
                 /* Sidebar Footer */
                 .premium-sidebar-footer {
                     padding: 20px;
                     border-top: 1px solid rgba(226, 232, 240, 0.6);
-                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+                    background: rgba(248, 250, 252, 0.65);
                 }
 
                 .premium-footer-content {
@@ -500,7 +505,7 @@ export default function LefNav() {
                 .premium-footer-accent {
                     width: 4px;
                     height: 40px;
-                    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+                    background: linear-gradient(180deg, #0f172a 0%, #14b8a6 100%);
                     border-radius: 2px;
                 }
 
@@ -541,6 +546,55 @@ export default function LefNav() {
                 .premium-admin-sidebar.collapsed .premium-hover-arrow,
                 .premium-admin-sidebar.collapsed .premium-footer-text {
                     display: none;
+                }
+
+                .premium-admin-sidebar.theme-dark {
+                    background: rgba(15, 23, 42, 0.96);
+                    border-right: 1px solid rgba(51, 65, 85, 0.85);
+                    box-shadow: 2px 0 22px rgba(2, 6, 23, 0.45);
+                }
+
+                .premium-admin-sidebar.theme-dark .premium-sidebar-header,
+                .premium-admin-sidebar.theme-dark .premium-sidebar-footer {
+                    background: rgba(15, 23, 42, 0.72);
+                    border-color: rgba(51, 65, 85, 0.75);
+                }
+
+                .premium-admin-sidebar.theme-dark .premium-logo-text h3,
+                .premium-admin-sidebar.theme-dark .premium-nav-item,
+                .premium-admin-sidebar.theme-dark .premium-footer-text p {
+                    color: #e2e8f0;
+                }
+
+                .premium-admin-sidebar.theme-dark .premium-logo-text span,
+                .premium-admin-sidebar.theme-dark .premium-footer-text span {
+                    color: #94a3b8;
+                }
+
+                .premium-admin-sidebar.theme-dark .premium-nav-item:hover {
+                    background: rgba(148, 163, 184, 0.14);
+                    color: #f8fafc;
+                }
+
+                .premium-admin-sidebar.theme-dark .premium-nav-item.active {
+                    background: rgba(20, 184, 166, 0.18);
+                    box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.3);
+                }
+
+                .premium-admin-sidebar.theme-dark .premium-icon-chip {
+                    background: rgba(148, 163, 184, 0.2);
+                    color: #e2e8f0;
+                }
+
+                .premium-admin-sidebar.theme-dark .premium-nav-item.active .premium-icon-chip {
+                    background: #14b8a6;
+                    color: #042f2e;
+                }
+
+                .premium-admin-sidebar.theme-dark .premium-theme-toggle {
+                    background: rgba(15, 23, 42, 0.8);
+                    border-color: rgba(71, 85, 105, 0.8);
+                    color: #e2e8f0;
                 }
 
                 /* Smooth Transitions */

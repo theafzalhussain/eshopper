@@ -83,8 +83,7 @@ export default function Checkout() {
     const timelineSteps = useMemo(() => ([
         { title: 'Order Review', eta: 'Within 30 min' },
         { title: 'Packed by Team', eta: 'Today' },
-        { title: 'Out for Delivery', eta: 'In 2-3 days' },
-        { title: 'Delivered to You', eta: estimatedDelivery }
+        { title: 'Delivered', eta: estimatedDelivery }
     ]), [estimatedDelivery])
 
     function getAPIData() {
@@ -233,15 +232,23 @@ export default function Checkout() {
                         <div className="card border-0 shadow-sm rounded-2xl p-4 bg-white h-100 checkout-panel">
                             <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                 <h4 className="font-weight-bold mb-0">Delivery Details</h4>
-                                <span className="verified-pill">Verified Account</span>
+                                <div className="d-flex align-items-center gap-2">
+                                    <button type="button" className="address-edit-link" onClick={() => navigate('/update-profile')}>
+                                        Edit address
+                                    </button>
+                                    <span className="verified-pill">Verified Account</span>
+                                </div>
                             </div>
                             <BuyerProfile user={user} />
 
-                            <div className="premium-extras mt-4">
-                                <h6 className="font-weight-bold mb-3">Enhance Your Delivery</h6>
-                                <label className="extra-row">
+                            <div className="premium-extras mt-4 shipping-options-card">
+                                <div className="shipping-options-head mb-3">
+                                    <h6 className="shipping-options-title mb-1">Shipping Options</h6>
+                                    <p className="shipping-options-subtitle mb-0">Choose add-ons for safer and premium delivery.</p>
+                                </div>
+                                <label className="extra-row shipping-option-row">
                                     <span>
-                                        <strong>Delivery Protection</strong>
+                                        <strong>🛡 Delivery Protection</strong>
                                         <small>Covers damage and loss in transit</small>
                                     </span>
                                     <span className="d-flex align-items-center gap-2">
@@ -249,9 +256,9 @@ export default function Checkout() {
                                         <input type="checkbox" checked={deliveryProtection} onChange={(e) => setDeliveryProtection(e.target.checked)} />
                                     </span>
                                 </label>
-                                <label className="extra-row">
+                                <label className="extra-row shipping-option-row mb-0">
                                     <span>
-                                        <strong>Luxury Gift Wrap</strong>
+                                        <strong>🎁 Gift Wrapping</strong>
                                         <small>Premium wrapping with message card</small>
                                     </span>
                                     <span className="d-flex align-items-center gap-2">
@@ -259,7 +266,7 @@ export default function Checkout() {
                                         <input type="checkbox" checked={giftWrap} onChange={(e) => setGiftWrap(e.target.checked)} />
                                     </span>
                                 </label>
-                                <label className="extra-row mb-0">
+                                <label className="extra-row mb-0 mt-2">
                                     <span>
                                         <strong>Eco Packaging</strong>
                                         <small>Plastic-free sustainable packaging</small>
@@ -281,6 +288,25 @@ export default function Checkout() {
                                     onChange={(e) => setOrderNotes(e.target.value)}
                                 />
                             </div>
+
+                            <motion.h5 className="font-weight-bold mb-3 mt-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14, duration: 0.3 }}>Payment Methods</motion.h5>
+                            <motion.div className="mb-3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.3 }}>
+                                <button type="button" className={`payment-selector ${mode === 'UPI' ? 'is-selected' : ''}`} onClick={() => setMode('UPI')}>
+                                    <span className="payment-radio" />
+                                    <span className="payment-copy"><strong>UPI / Wallet</strong><small>Recommended • Zero fee</small></span>
+                                    <span className="pay-badge">FAST</span>
+                                </button>
+                                <button type="button" className={`payment-selector ${mode === 'Card' ? 'is-selected' : ''}`} onClick={() => setMode('Card')}>
+                                    <span className="payment-radio" />
+                                    <span className="payment-copy"><strong>Cards / NetBanking</strong><small>Secured by 256-bit encryption</small></span>
+                                    <span className="pay-badge">₹49</span>
+                                </button>
+                                <button type="button" className={`payment-selector ${mode === 'COD' ? 'is-selected' : ''}`} onClick={() => setMode('COD')}>
+                                    <span className="payment-radio" />
+                                    <span className="payment-copy"><strong>Cash on Delivery</strong><small>Pay at doorstep</small></span>
+                                    <span className="pay-badge">₹39</span>
+                                </button>
+                            </motion.div>
 
                             <motion.div className="mt-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24, duration: 0.3 }}>
                                 <h6 className="font-weight-bold mb-2">Select Delivery Slot</h6>
@@ -417,22 +443,6 @@ export default function Checkout() {
                                 </motion.div>
                             </motion.div>
 
-                            <motion.h5 className="font-weight-bold mb-3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14, duration: 0.3 }}>Payment Method</motion.h5>
-                            <motion.div className="mb-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.3 }}>
-                                <button type="button" className={`payment-option premium-pay-option ${mode === 'UPI' ? 'premium-pay-active' : ''}`} onClick={() => setMode('UPI')}>
-                                    <span className="pay-left-wrap"><span className="pay-icon upi-icon"><svg viewBox="0 0 64 28" width="44" height="18" aria-hidden="true"><rect x="1" y="1" width="62" height="26" rx="6" fill="#ffffff" stroke="#9ae6b4"/><path d="M10 20 L16 8 L22 20" stroke="#0f766e" strokeWidth="2.5" fill="none"/><path d="M28 8 V20 M28 14 H37" stroke="#0284c7" strokeWidth="2.5"/><path d="M44 8 H55 V20 H44 Z" fill="#f59e0b" opacity="0.18"/><text x="45" y="17" fontSize="8" fill="#9a3412" fontWeight="700">UPI</text></svg></span><span><input type="radio" checked={mode === "UPI"} readOnly className="mr-2" /><strong>UPI / Wallet</strong><small>Recommended • Zero fee</small></span></span>
-                                    <span className="pay-badge">FAST</span>
-                                </button>
-                                <button type="button" className={`payment-option premium-pay-option ${mode === 'Card' ? 'premium-pay-active' : ''}`} onClick={() => setMode('Card')}>
-                                    <span className="pay-left-wrap"><span className="pay-icon card-icon"><svg viewBox="0 0 92 26" width="62" height="18" aria-hidden="true"><rect x="1" y="1" width="90" height="24" rx="6" fill="#fff" stroke="#fdba74"/><text x="9" y="17" fontSize="10" fill="#1d4ed8" fontWeight="800">VISA</text><circle cx="61" cy="13" r="7" fill="#f97316" opacity="0.85"/><circle cx="69" cy="13" r="7" fill="#fb7185" opacity="0.75"/></svg></span><span><input type="radio" checked={mode === "Card"} readOnly className="mr-2" /><strong>Cards / NetBanking</strong><small>Secured by 256-bit encryption</small></span></span>
-                                    <span className="pay-badge">₹49</span>
-                                </button>
-                                <button type="button" className={`payment-option premium-pay-option ${mode === 'COD' ? 'premium-pay-active' : ''}`} onClick={() => setMode('COD')}>
-                                    <span className="pay-left-wrap"><span className="pay-icon cod-icon"><svg viewBox="0 0 64 24" width="44" height="16" aria-hidden="true"><rect x="1" y="1" width="62" height="22" rx="6" fill="#eef2ff" stroke="#c7d2fe"/><text x="14" y="16" fontSize="10" fill="#3730a3" fontWeight="800">COD</text></svg></span><span><input type="radio" checked={mode === "COD"} readOnly className="mr-2" /><strong>Cash on Delivery</strong><small>Pay at doorstep</small></span></span>
-                                    <span className="pay-badge">₹39</span>
-                                </button>
-                            </motion.div>
-
                             <motion.div className="trust-grid mb-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.3 }}>
                                 <div>Secure Checkout</div>
                                 <div>Easy Returns</div>
@@ -440,7 +450,7 @@ export default function Checkout() {
                             </motion.div>
 
                             <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.99 }} onClick={placeOrder} disabled={placingOrder || cart.length === 0} className="btn btn-info btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold premium-place-btn">
-                                {placingOrder ? 'PLACING ORDER...' : `PLACE ORDER • ₹${final}`}
+                                {placingOrder ? 'Placing Order...' : `Place Order - ₹${final.toLocaleString('en-IN')}`}
                             </motion.button>
                         </div>
                     </motion.div>
@@ -495,6 +505,31 @@ export default function Checkout() {
                     color: #0f766e;
                     font-size: 12px;
                     font-weight: 700;
+                }
+                .address-edit-link {
+                    border: 1px solid #bae6fd;
+                    background: linear-gradient(90deg, #f0f9ff, #ecfeff);
+                    color: #0e7490;
+                    font-size: 12px;
+                    font-weight: 800;
+                    letter-spacing: 0.2px;
+                    border-radius: 999px;
+                    padding: 6px 12px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all 0.22s ease;
+                }
+                .address-edit-link::before {
+                    content: '✎';
+                    font-size: 12px;
+                    line-height: 1;
+                }
+                .address-edit-link:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 8px 16px rgba(14, 116, 144, 0.16);
+                    border-color: #67e8f9;
+                    color: #0f766e;
                 }
                 .rounded-2xl { border-radius: 25px !important; }
                 .rounded-xl { border-radius: 15px !important; }
@@ -671,12 +706,12 @@ export default function Checkout() {
                     font-size: 1.2rem;
                     font-weight: 800;
                 }
-                .premium-pay-option {
+                .payment-selector {
                     width: 100%;
-                    border-color: rgba(148, 163, 184, 0.4) !important;
-                    background: linear-gradient(130deg, rgba(255,255,255,0.84), rgba(248,250,252,0.62));
-                    backdrop-filter: blur(8px);
+                    border: 1.5px solid rgba(148, 163, 184, 0.35);
+                    background: #ffffff;
                     display: flex;
+                    gap: 12px;
                     justify-content: space-between;
                     align-items: center;
                     text-align: left;
@@ -684,58 +719,46 @@ export default function Checkout() {
                     border-radius: 14px;
                     margin-bottom: 10px;
                     cursor: pointer;
+                    transition: all 0.2s ease;
                 }
-                .pay-left-wrap {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
+                .payment-selector:hover {
+                    border-color: #67e8f9;
+                    background: #f8fbff;
                 }
-                .pay-icon {
-                    min-width: 52px;
-                    height: 36px;
-                    border-radius: 10px;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 11px;
-                    font-weight: 900;
-                    letter-spacing: 0.3px;
-                    border: 1px solid #cbd5e1;
-                    background: #fff;
-                    color: #0f172a;
+                .payment-selector.is-selected {
+                    border-color: #0891b2;
+                    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.16);
+                    background: linear-gradient(130deg, rgba(240, 249, 255, 0.85), rgba(224, 242, 254, 0.66));
                 }
-                .upi-icon {
-                    background: linear-gradient(90deg, #ecfeff, #cffafe);
-                    color: #0e7490;
-                    border-color: #99f6e4;
-                }
-                .card-icon {
-                    gap: 4px;
-                    background: linear-gradient(90deg, #fff7ed, #ffedd5);
-                    border-color: #fed7aa;
-                }
-                .card-icon em {
-                    font-style: normal;
-                    font-size: 9px;
-                    font-weight: 900;
-                    background: #fff;
+                .payment-radio {
+                    width: 18px;
+                    height: 18px;
                     border-radius: 999px;
-                    padding: 1px 5px;
-                    border: 1px solid #fdba74;
-                    color: #9a3412;
+                    border: 2px solid #94a3b8;
+                    position: relative;
+                    flex-shrink: 0;
                 }
-                .cod-icon {
-                    background: linear-gradient(90deg, #eef2ff, #e0e7ff);
-                    border-color: #c7d2fe;
-                    color: #3730a3;
+                .payment-selector.is-selected .payment-radio {
+                    border-color: #0891b2;
                 }
-                .premium-pay-option strong { display: block; }
-                .premium-pay-option small { display: block; color: #64748b; }
-                .premium-pay-active {
-                    border-color: #38bdf8 !important;
-                    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
-                    background: linear-gradient(130deg, rgba(240, 249, 255, 0.9), rgba(224, 242, 254, 0.72));
+                .payment-selector.is-selected .payment-radio::after {
+                    content: '';
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 999px;
+                    background: #0891b2;
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
                 }
+                .payment-copy {
+                    display: flex;
+                    flex-direction: column;
+                    flex: 1;
+                }
+                .payment-copy strong { display: block; }
+                .payment-copy small { display: block; color: #64748b; }
                 .pay-badge {
                     font-size: 11px;
                     font-weight: 800;
@@ -750,6 +773,27 @@ export default function Checkout() {
                     border-radius: 14px;
                     padding: 14px;
                     background: #f8fafc;
+                }
+                .shipping-options-card {
+                    background: linear-gradient(140deg, #f8fafc, #f1f5f9);
+                    border-color: #d9e2ec;
+                }
+                .shipping-options-head {
+                    border-bottom: 1px dashed #cbd5e1;
+                    padding-bottom: 8px;
+                }
+                .shipping-options-title {
+                    font-size: 1rem;
+                    font-weight: 800;
+                    color: #0f172a;
+                    letter-spacing: 0.2px;
+                }
+                .shipping-options-subtitle {
+                    font-size: 12px;
+                    color: #64748b;
+                }
+                .shipping-option-row {
+                    padding: 12px 0;
                 }
                 .extra-row {
                     display: flex;
@@ -887,6 +931,7 @@ export default function Checkout() {
                     background: linear-gradient(90deg, #0ea5b7, #0284c7) !important;
                     border: none !important;
                     letter-spacing: 0.6px;
+                    font-size: 1.02rem;
                 }
                 .premium-place-btn:hover {
                     transform: translateY(-1px);
@@ -905,11 +950,8 @@ export default function Checkout() {
                     .delivery-slot-grid { grid-template-columns: 1fr; }
                     .luxury-info-grid { grid-template-columns: 1fr; }
                     .extra-row { align-items: flex-start; }
-                    .payment-option input { margin-top: 3px; }
                     .payable-hero { flex-direction: column; align-items: flex-start; }
                     .payable-hero h3 { font-size: 1.7rem; }
-                    .pay-left-wrap { align-items: flex-start; }
-                    .pay-icon { min-width: 46px; height: 32px; }
                 }
             `}} />
         </div>

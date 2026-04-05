@@ -213,14 +213,18 @@ export default function Updateprofile() {
                 throw new Error(errText || 'Failed to update profile')
             }
 
-            const latestUser = await updateRes.json()
+            const latestUserRaw = await updateRes.json()
+            const latestUser = (latestUserRaw && typeof latestUserRaw === 'object' && latestUserRaw.user && typeof latestUserRaw.user === 'object')
+                ? latestUserRaw.user
+                : latestUserRaw
             if (latestUser?.name) localStorage.setItem("name", latestUser.name)
             if (latestUser?.pic) localStorage.setItem("pic", latestUser.pic)
+            localStorage.setItem('profile_cache', JSON.stringify(latestUser))
 
             // Keep Redux list in sync for other components.
             dispatch(getUser())
 
-            window.dispatchEvent(new Event('profile-updated'))
+            window.dispatchEvent(new CustomEvent('profile-updated', { detail: latestUser }))
             setToastMessage(data.password ? 'Security settings updated successfully' : 'Profile updated successfully')
             setShowToast(true)
             setTimeout(() => {
@@ -800,11 +804,26 @@ export default function Updateprofile() {
                 }
 
                 .upd-card {
+                    position: relative;
+                    overflow: hidden;
                     background: #fff;
-                    border: 1px solid rgba(201,168,76,0.23);
+                    border: 1px solid #e8ddc4;
                     border-radius: 18px;
-                    box-shadow: 0 12px 24px rgba(21,17,10,0.08);
+                    box-shadow: 0 20px 36px rgba(17, 17, 17, 0.16);
                     padding: 16px;
+                }
+
+                .upd-card::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    border-radius: 18px;
+                    pointer-events: none;
+                    border: 2px solid transparent;
+                    background: linear-gradient(135deg, rgba(201,168,76,0.54), rgba(255,255,255,0)) border-box;
+                    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+                    -webkit-mask-composite: xor;
+                    mask-composite: exclude;
                 }
 
                 .upd-card-title {
@@ -928,13 +947,14 @@ export default function Updateprofile() {
 
                 .upd-field input {
                     width: 100%;
-                    border: 1px solid rgba(201,168,76,0.28);
-                    background: #fcfaf6;
+                    border: 1px solid #e8ddc4;
+                    background: #fff;
                     border-radius: 12px;
                     padding: 12px 12px;
                     color: #151515;
                     outline: none;
                     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                    box-shadow: 0 10px 18px rgba(21,17,10,0.07);
                 }
 
                 .upd-field input:focus {
@@ -946,13 +966,14 @@ export default function Updateprofile() {
                 .upd-field select,
                 .upd-field textarea {
                     width: 100%;
-                    border: 1px solid rgba(201,168,76,0.28);
-                    background: #fcfaf6;
+                    border: 1px solid #e8ddc4;
+                    background: #fff;
                     border-radius: 12px;
                     padding: 12px 12px;
                     color: #151515;
                     outline: none;
                     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                    box-shadow: 0 10px 18px rgba(21,17,10,0.07);
                 }
 
                 .upd-field select:focus,

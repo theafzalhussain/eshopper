@@ -14,18 +14,65 @@ import { ArrowRight, ShoppingBag, Clock3, Heart, ShoppingCart, Package, Shield, 
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
+function normalizeProfileUserPayload(rawUser = {}, prevUser = {}) {
+    const source = (rawUser && typeof rawUser === 'object' && rawUser.user && typeof rawUser.user === 'object')
+        ? rawUser.user
+        : rawUser
+
+    const pickMapped = (keys = []) => {
+        for (const key of keys) {
+            if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined && source[key] !== null) {
+                return source[key]
+            }
+        }
+        for (const key of keys) {
+            if (Object.prototype.hasOwnProperty.call(prevUser, key) && prevUser[key] !== undefined && prevUser[key] !== null) {
+                return prevUser[key]
+            }
+        }
+        return ''
+    }
+
+    const merged = { ...prevUser, ...source }
+    return {
+        ...merged,
+        id: pickMapped(['id', '_id']),
+        _id: pickMapped(['_id', 'id']),
+        name: pickMapped(['name']),
+        username: pickMapped(['username', 'userName']),
+        email: pickMapped(['email']),
+        phone: pickMapped(['phone']),
+        pic: pickMapped(['pic', 'avatar']),
+        addressline1: pickMapped(['addressline1', 'streetAddress', 'address']),
+        addressline2: pickMapped(['addressline2', 'addressLine2', 'address_line2']),
+        landmark: pickMapped(['landmark', 'deliveryLandmark', 'land_mark']),
+        city: pickMapped(['city']),
+        state: pickMapped(['state']),
+        pin: pickMapped(['pin', 'postalCode', 'zipCode', 'pincode']),
+        deliveryNotes: pickMapped(['deliveryNotes', 'deliveryInstructions', 'deliveryInstruction']),
+    }
+}
+
 export default function Profile() {
     var users = useSelector((state) => state.UserStateData)
     var wishlist = useSelector((state) => state.WishlistStateData)
     var orders = useSelector((state) => state.CheckoutStateData)
     
-    var [user, setuser] = useState({})
+    var [user, setuser] = useState(() => {
+        try {
+            const cached = localStorage.getItem('profile_cache')
+            return cached ? JSON.parse(cached) : {}
+        } catch (e) {
+            return {}
+        }
+    })
     const [recentOrders, setRecentOrders] = useState([])
     const [loadingRecent, setLoadingRecent] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const socketRef = useRef(null)
     const [socketConnected, setSocketConnected] = useState(false)
     const [activeTab, setActiveTab] = useState('overview')
+    const hasFreshProfileRef = useRef(false)
     var dispatch = useDispatch()
     var navigate = useNavigate()
     const { membershipType, totalOrders } = useMembership()
@@ -34,12 +81,30 @@ export default function Profile() {
         const userId = localStorage.getItem("userid")
         if (!userId) return
         try {
-            const res = await axios.get(`${BASE_URL}/api/user/${userId}`, { timeout: 12000 })
+            const res = await axios.get(`${BASE_URL}/user/${userId}`, { timeout: 12000 })
             if (res?.data && typeof res.data === 'object') {
-                setuser(res.data)
+                hasFreshProfileRef.current = true
+                setuser((prev) => {
+                    const normalized = normalizeProfileUserPayload(res.data, prev)
+                    localStorage.setItem('profile_cache', JSON.stringify(normalized))
+                    return normalized
+                })
             }
         } catch (e) {
-            // Keep Redux-derived fallback if direct fetch fails.
+            // Compatibility fallback for older deployed APIs.
+            try {
+                const fallbackRes = await axios.get(`${BASE_URL}/api/user/${userId}`, { timeout: 12000 })
+                if (fallbackRes?.data && typeof fallbackRes.data === 'object') {
+                    hasFreshProfileRef.current = true
+                    setuser((prev) => {
+                        const normalized = normalizeProfileUserPayload(fallbackRes.data, prev)
+                        localStorage.setItem('profile_cache', JSON.stringify(normalized))
+                        return normalized
+                    })
+                }
+            } catch (fallbackErr) {
+                // Keep Redux-derived fallback if direct fetch fails.
+            }
         }
     }
 
@@ -55,7 +120,16 @@ export default function Profile() {
     }, [])
 
     useEffect(() => {
-        const handleProfileUpdated = () => {
+        const handleProfileUpdated = (event) => {
+            const freshUser = event?.detail
+            if (freshUser && typeof freshUser === 'object') {
+                hasFreshProfileRef.current = true
+                setuser((prev) => {
+                    const normalized = normalizeProfileUserPayload(freshUser, prev)
+                    localStorage.setItem('profile_cache', JSON.stringify(normalized))
+                    return normalized
+                })
+            }
             loadLatestUserProfile()
             dispatch(getUser())
         }
@@ -71,28 +145,26 @@ export default function Profile() {
             setIsLoading(false)
             return
         }
+
+        if (hasFreshProfileRef.current) {
+            setIsLoading(false)
+            return
+        }
         
         // Check both 'id' and '_id' fields for MongoDB compatibility
         if (users && users.length > 0) {
             const data = users.find((item) => {
-                const itemId = String(item.id || item._id || '')
+                const itemId = String(item.id || item._id || item.userid || '')
                 const currentUserId = String(userId)
                 return itemId === currentUserId
             })
             if (data) {
                 console.log('✅ User data loaded:', { id: data.id || data._id, name: data.name, email: data.email })
-                setuser((prev) => ({
-                    ...data,
-                    // Preserve latest optional address fields when Redux payload is stale.
-                    addressline2: data.addressline2 || data.addressLine2 || prev.addressline2 || prev.addressLine2 || '',
-                    landmark: data.landmark || data.deliveryLandmark || prev.landmark || prev.deliveryLandmark || '',
-                    deliveryNotes:
-                        data.deliveryNotes ||
-                        data.deliveryInstructions ||
-                        prev.deliveryNotes ||
-                        prev.deliveryInstructions ||
-                        '',
-                }))
+                setuser((prev) => {
+                    const normalized = normalizeProfileUserPayload(data, prev)
+                    localStorage.setItem('profile_cache', JSON.stringify(normalized))
+                    return normalized
+                })
             } else {
                 console.warn('⚠️ User not found in Redux state. Available users:', users.length, 'Looking for:', userId)
             }
