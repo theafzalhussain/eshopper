@@ -15,6 +15,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const axios = require('axios');
+const crypto = require('crypto');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -1976,53 +1977,249 @@ const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts
 const Cart = require('./models/Cart');
 const Coupon = require('./models/Coupon');
 const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
-const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, couponCode: { type: String, default: '' }, couponDiscount: { type: Number, default: 0 }, discountAmount: { type: Number, default: 0 }, gstAmount: { type: Number, default: 0 }, giftWrapCharge: { type: Number, default: 0 }, protectionCharge: { type: Number, default: 0 }, ecoCharge: { type: Number, default: 0 }, paymentFee: { type: Number, default: 0 }, extraCharges: { type: Number, default: 0 }, preDiscountTotal: { type: Number, default: 0 }, products: Array }, opts));
+const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, paidAt: { type: Date, default: null }, razorpayOrderId: { type: String, default: '' }, razorpayPaymentId: { type: String, default: '' }, razorpaySignature: { type: String, default: '' }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, couponCode: { type: String, default: '' }, couponDiscount: { type: Number, default: 0 }, discountAmount: { type: Number, default: 0 }, gstAmount: { type: Number, default: 0 }, giftWrapCharge: { type: Number, default: 0 }, protectionCharge: { type: Number, default: 0 }, ecoCharge: { type: Number, default: 0 }, paymentFee: { type: Number, default: 0 }, extraCharges: { type: Number, default: 0 }, preDiscountTotal: { type: Number, default: 0 }, products: Array }, opts));
 const Order = require('./models/Order');
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+const FooterConfig = mongoose.model('FooterConfig', new mongoose.Schema({
+    brand: {
+        name: { type: String, default: 'eShopper Boutique Luxe' },
+        tagline: { type: String, default: 'Trusted Premium Commerce Experience' }
+    },
+    contact: {
+        email: { type: String, default: SUPPORT_EMAIL_DEFAULT },
+        phone: { type: String, default: SUPPORT_PHONE_DEFAULT },
+        address: { type: String, default: 'Eshopper Boutique Luxe, New Delhi, India' }
+    },
+    socialLinks: {
+        instagram: { type: String, default: 'https://instagram.com' },
+        facebook: { type: String, default: 'https://facebook.com' },
+        x: { type: String, default: 'https://x.com' },
+        youtube: { type: String, default: 'https://youtube.com' },
+        linkedin: { type: String, default: 'https://linkedin.com' }
+    },
+    trustBadges: {
+        type: [String],
+        default: ['Secure Payments', 'Verified Support', 'Premium Quality', 'Fast Delivery Network']
+    },
+    userFeatures: {
+        type: [{
+            title: { type: String, default: '' },
+            subtitle: { type: String, default: '' }
+        }],
+        default: [
+            { title: 'Live Order Tracking', subtitle: 'Real-time status updates after every order event' },
+            { title: 'Secure Payments', subtitle: 'Protected checkout with verified payment security' },
+            { title: 'Priority Support', subtitle: 'Fast help on WhatsApp and email whenever needed' },
+            { title: 'Premium Drops', subtitle: 'Early alerts for new launches and exclusive deals' }
+        ]
+    }
+}, opts));
+
+const RAZORPAY_KEY_ID = String(process.env.RAZORPAY_KEY_ID || '').trim();
+const RAZORPAY_KEY_SECRET = String(process.env.RAZORPAY_KEY_SECRET || '').trim();
+
+const buildRazorpayReceipt = (userId, prefix = 'eshopper') => {
+    const safeUserId = String(userId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'guest';
+    return `${prefix}_${safeUserId}_${Date.now()}`;
+};
+
+const getRazorpayConfigPayload = () => ({
+    keyId: RAZORPAY_KEY_ID,
+    currency: 'INR',
+    enabled: Boolean(RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET)
+});
+
+const createRazorpayOrder = async ({ amount, currency = 'INR', receipt, paymentMethod }) => {
+    if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+        const error = new Error('Razorpay credentials are not configured');
+        error.status = 500;
+        throw error;
+    }
+
+    const orderAmount = Math.max(1, Math.round(Number(amount || 0) * 100));
+    const response = await axios.post('https://api.razorpay.com/v1/orders', {
+        amount: orderAmount,
+        currency,
+        receipt: receipt || buildRazorpayReceipt(paymentMethod || 'payment'),
+        payment_capture: 1,
+        notes: {
+            paymentMethod: String(paymentMethod || 'Razorpay')
+        }
+    }, {
+        auth: {
+            username: RAZORPAY_KEY_ID,
+            password: RAZORPAY_KEY_SECRET
+        },
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        timeout: 20000
+    });
+
+    return response.data;
+};
+
+const verifyRazorpaySignature = ({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) => {
+    if (!RAZORPAY_KEY_SECRET) {
+        return { verified: false, message: 'Razorpay credentials are not configured' };
+    }
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return { verified: false, message: 'Missing Razorpay payment details' };
+    }
+
+    const expectedSignature = crypto
+        .createHmac('sha256', RAZORPAY_KEY_SECRET)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+        return { verified: false, message: 'Invalid Razorpay signature' };
+    }
+
+    return { verified: true };
+};
+
+const DEFAULT_FOOTER_CONFIG = {
+    brand: {
+        name: 'eShopper Boutique Luxe',
+        tagline: 'Trusted Premium Commerce Experience'
+    },
+    contact: {
+        email: SUPPORT_EMAIL_DEFAULT,
+        phone: SUPPORT_PHONE_DEFAULT,
+        address: process.env.COMPANY_ADDRESS || 'Eshopper Boutique Luxe, New Delhi, India'
+    },
+    socialLinks: {
+        instagram: process.env.SOCIAL_INSTAGRAM_URL || 'https://instagram.com',
+        facebook: process.env.SOCIAL_FACEBOOK_URL || 'https://facebook.com',
+        x: process.env.SOCIAL_X_URL || 'https://x.com',
+        youtube: process.env.SOCIAL_YOUTUBE_URL || 'https://youtube.com',
+        linkedin: process.env.SOCIAL_LINKEDIN_URL || 'https://linkedin.com'
+    },
+    trustBadges: [
+        'Secure Payments',
+        'Verified Support',
+        'Premium Quality',
+        'Fast Delivery Network'
+    ],
+    userFeatures: [
+        { title: 'Live Order Tracking', subtitle: 'Real-time status updates after every order event' },
+        { title: 'Secure Payments', subtitle: 'Protected checkout with verified payment security' },
+        { title: 'Priority Support', subtitle: 'Fast help on WhatsApp and email whenever needed' },
+        { title: 'Premium Drops', subtitle: 'Early alerts for new launches and exclusive deals' }
+    ]
+};
+
+const sanitizeFooterConfigInput = (payload = {}) => {
+    const body = payload && typeof payload === 'object' ? payload : {};
+
+    const toStringSafe = (value, fallback = '') => {
+        const text = String(value ?? '').trim();
+        return text || fallback;
+    };
+
+    const trustBadges = Array.isArray(body.trustBadges)
+        ? body.trustBadges.map((item) => toStringSafe(item)).filter(Boolean).slice(0, 8)
+        : [];
+
+    const userFeatures = Array.isArray(body.userFeatures)
+        ? body.userFeatures
+            .map((item) => ({
+                title: toStringSafe(item?.title),
+                subtitle: toStringSafe(item?.subtitle)
+            }))
+            .filter((item) => item.title || item.subtitle)
+            .slice(0, 8)
+        : [];
+
+    return {
+        brand: {
+            name: toStringSafe(body?.brand?.name, DEFAULT_FOOTER_CONFIG.brand.name),
+            tagline: toStringSafe(body?.brand?.tagline, DEFAULT_FOOTER_CONFIG.brand.tagline)
+        },
+        contact: {
+            email: toStringSafe(body?.contact?.email, DEFAULT_FOOTER_CONFIG.contact.email),
+            phone: toStringSafe(body?.contact?.phone, DEFAULT_FOOTER_CONFIG.contact.phone),
+            address: toStringSafe(body?.contact?.address, DEFAULT_FOOTER_CONFIG.contact.address)
+        },
+        socialLinks: {
+            instagram: toStringSafe(body?.socialLinks?.instagram, DEFAULT_FOOTER_CONFIG.socialLinks.instagram),
+            facebook: toStringSafe(body?.socialLinks?.facebook, DEFAULT_FOOTER_CONFIG.socialLinks.facebook),
+            x: toStringSafe(body?.socialLinks?.x, DEFAULT_FOOTER_CONFIG.socialLinks.x),
+            youtube: toStringSafe(body?.socialLinks?.youtube, DEFAULT_FOOTER_CONFIG.socialLinks.youtube),
+            linkedin: toStringSafe(body?.socialLinks?.linkedin, DEFAULT_FOOTER_CONFIG.socialLinks.linkedin)
+        },
+        trustBadges: trustBadges.length ? trustBadges : DEFAULT_FOOTER_CONFIG.trustBadges,
+        userFeatures: userFeatures.length ? userFeatures : DEFAULT_FOOTER_CONFIG.userFeatures
+    };
+};
 
 app.get('/api/footer-data', async (req, res) => {
     try {
-        const [productsCount, categoriesCount, usersCount, subscribersCount] = await Promise.all([
+        const [productsCount, categoriesCount, usersCount, subscribersCount, footerConfigDoc] = await Promise.all([
             Product.countDocuments({}),
             Maincategory.countDocuments({}),
             User.countDocuments({}),
-            Newslatter.countDocuments({})
+            Newslatter.countDocuments({}),
+            FooterConfig.findOne({}).lean()
         ]);
 
+        const dbConfig = sanitizeFooterConfigInput(footerConfigDoc || {});
+
         res.json({
-            brand: {
-                name: 'eShopper Boutique Luxe',
-                tagline: 'Trusted Premium Commerce Experience'
-            },
-            contact: {
-                email: SUPPORT_EMAIL_DEFAULT,
-                phone: SUPPORT_PHONE_DEFAULT,
-                address: process.env.COMPANY_ADDRESS || 'Eshopper Boutique Luxe, New Delhi, India'
-            },
-            socialLinks: {
-                instagram: process.env.SOCIAL_INSTAGRAM_URL || 'https://instagram.com',
-                facebook: process.env.SOCIAL_FACEBOOK_URL || 'https://facebook.com',
-                x: process.env.SOCIAL_X_URL || 'https://x.com',
-                youtube: process.env.SOCIAL_YOUTUBE_URL || 'https://youtube.com',
-                linkedin: process.env.SOCIAL_LINKEDIN_URL || 'https://linkedin.com'
-            },
+            brand: dbConfig.brand,
+            contact: dbConfig.contact,
+            socialLinks: dbConfig.socialLinks,
             stats: {
                 products: productsCount,
                 categories: categoriesCount,
                 members: usersCount,
                 subscribers: subscribersCount
             },
-            trustBadges: [
-                'Secure Payments',
-                'Verified Support',
-                'Premium Quality',
-                'Fast Delivery Network'
-            ]
+            trustBadges: dbConfig.trustBadges,
+            userFeatures: dbConfig.userFeatures
         });
     } catch (e) {
         console.error('❌ Footer data error:', e.message);
         res.status(500).json({ message: 'Failed to load footer data.' });
+    }
+});
+
+app.get('/api/admin/footer-config', async (req, res) => {
+    try {
+        const adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
+        if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const footerConfigDoc = await FooterConfig.findOne({}).lean();
+        return res.json({ success: true, config: sanitizeFooterConfigInput(footerConfigDoc || {}) });
+    } catch (e) {
+        console.error('❌ Admin footer config fetch error:', e.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch footer config' });
+    }
+});
+
+app.put('/api/admin/footer-config', async (req, res) => {
+    try {
+        const adminSecret = req.headers['x-admin-secret'] || req.body?.adminSecret || req.query.adminSecret;
+        if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
+            return res.status(403).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const sanitizedConfig = sanitizeFooterConfigInput(req.body || {});
+        const updated = await FooterConfig.findOneAndUpdate(
+            {},
+            { $set: sanitizedConfig },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        ).lean();
+
+        return res.json({ success: true, message: 'Footer config updated', config: sanitizeFooterConfigInput(updated || {}) });
+    } catch (e) {
+        console.error('❌ Admin footer config update error:', e.message);
+        return res.status(500).json({ success: false, message: 'Failed to update footer config' });
     }
 });
 
@@ -3105,6 +3302,11 @@ const placeOrderHandler = async (req, res) => {
         const {
             userId,
             paymentMethod,
+            paymentStatus,
+            paidAt,
+            razorpayOrderId,
+            razorpayPaymentId,
+            razorpaySignature,
             finalAmount,
             totalAmount,
             shippingAmount,
@@ -3242,7 +3444,11 @@ const placeOrderHandler = async (req, res) => {
             userName: user.name || '',
             userEmail: user.email || '',
             paymentMethod: paymentMethod || 'COD',
-            paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+            paymentStatus: paymentStatus || ((paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid'),
+            paidAt: paidAt || (((paymentMethod || 'COD') === 'COD') ? null : new Date()),
+            razorpayOrderId: razorpayOrderId || '',
+            razorpayPaymentId: razorpayPaymentId || '',
+            razorpaySignature: razorpaySignature || '',
             orderStatus: 'Order Placed',
             totalAmount: total,
             shippingAmount: shipping,
@@ -3277,7 +3483,11 @@ const placeOrderHandler = async (req, res) => {
             userid: userId,
             paymentmode: paymentMethod || 'COD',
             orderstatus: 'Order Placed',
-            paymentstatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+            paymentstatus: paymentStatus || ((paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid'),
+            razorpayOrderId: razorpayOrderId || '',
+            razorpayPaymentId: razorpayPaymentId || '',
+            razorpaySignature: razorpaySignature || '',
+            paidAt: paidAt || (((paymentMethod || 'COD') === 'COD') ? null : new Date()),
             totalAmount: total,
             shippingAmount: shipping,
             finalAmount: payable,
@@ -3442,6 +3652,50 @@ const placeOrderHandler = async (req, res) => {
 
 app.post('/api/place-order', placeOrderHandler);
 app.post('/api/orders', placeOrderHandler);
+
+app.get('/api/razorpay/config', (req, res) => {
+    return res.json({ success: true, ...getRazorpayConfigPayload() });
+});
+
+app.post('/api/razorpay/create-order', async (req, res) => {
+    try {
+        const amountRaw = req.body?.amount;
+        const amount = Number(amountRaw);
+        const currency = String(req.body?.currency || 'INR').toUpperCase();
+        const paymentMethod = String(req.body?.paymentMethod || 'Razorpay');
+        const receipt = String(req.body?.receipt || buildRazorpayReceipt(req.body?.userId || 'payment'));
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid payment amount. Please refresh checkout and try again.',
+                meta: {
+                    receivedAmount: amountRaw
+                }
+            });
+        }
+
+        const order = await createRazorpayOrder({ amount, currency, receipt, paymentMethod });
+        return res.json({ success: true, order, keyId: RAZORPAY_KEY_ID, currency });
+    } catch (error) {
+        console.error('❌ Razorpay create-order error:', error.message);
+        return res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to create Razorpay order' });
+    }
+});
+
+app.post('/api/razorpay/verify-payment', (req, res) => {
+    try {
+        const result = verifyRazorpaySignature(req.body || {});
+        if (!result.verified) {
+            return res.status(400).json({ success: false, message: result.message });
+        }
+
+        return res.json({ success: true, message: 'Payment verified successfully' });
+    } catch (error) {
+        console.error('❌ Razorpay verify-payment error:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to verify Razorpay payment' });
+    }
+});
 
 app.get('/api/membership/check', async (req, res) => {
     try {

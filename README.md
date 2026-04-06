@@ -68,3 +68,34 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Razorpay Payment Setup
+
+The checkout flow supports Razorpay for `UPI` and `Card / NetBanking` payments. `COD` still uses the existing direct order path.
+
+### Required environment variables
+
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+
+Keep both values in the backend environment only. Do not expose the secret to the frontend.
+
+### How it works
+
+1. The frontend loads the Razorpay checkout script when a paid payment method is selected.
+2. The backend creates a Razorpay order using the final checkout amount.
+3. Razorpay returns `order_id`, `payment_id`, and `signature`.
+4. The backend verifies the signature before the order is placed.
+5. The order record stores the Razorpay references for tracking and audit.
+
+### Test mode checklist
+
+- Use Razorpay test credentials.
+- Make sure the backend server is running with the payment env vars set.
+- Test one UPI flow and one card flow from the checkout page.
+- Confirm the order appears in order tracking with the payment reference.
+
+### Notes
+
+- If Razorpay checkout does not open, verify that the browser can load `https://checkout.razorpay.com/v1/checkout.js`.
+- If payment verification fails, rotate the secret if it has been exposed and recheck the signature logic.

@@ -5,11 +5,15 @@ const PROD_API_URL = "https://eshopper-qtgl.onrender.com";
 const LOCAL_API_URL = "http://localhost:5000";
 const useLocalApi = process.env.REACT_APP_USE_LOCAL_API === 'true';
 const forceWebSocket = process.env.REACT_APP_FORCE_WEBSOCKET === 'true';
+const configuredProdApiUrl = process.env.REACT_APP_BASE_URL || process.env.REACT_APP_API_URL || PROD_API_URL;
+const configuredLocalApiUrl = process.env.REACT_APP_LOCAL_API_URL || LOCAL_API_URL;
+const configuredDevApiUrl = process.env.REACT_APP_API_URL || configuredLocalApiUrl;
 
-// Default behavior: use production API even in local dev unless explicitly opted in.
-export const BASE_URL = process.env.REACT_APP_API_URL || ((isDev && useLocalApi)
-  ? LOCAL_API_URL
-  : PROD_API_URL);
+// Dev behavior: prefer REACT_APP_API_URL/localhost by default so local data loads reliably.
+// Production behavior: use configured production API URL.
+export const BASE_URL = isDev
+  ? (useLocalApi ? configuredLocalApiUrl : configuredDevApiUrl)
+  : configuredProdApiUrl;
 
 // Socket transport strategy:
 // - Local dev: polling by default (avoids noisy websocket close warnings in React StrictMode)
@@ -58,11 +62,15 @@ export const API_ENDPOINTS = {
   WISHLIST: "/wishlist",
   CHECKOUT: "/checkout",
   PLACE_ORDER: "/api/place-order",
+  RAZORPAY_CONFIG: "/api/razorpay/config",
+  RAZORPAY_CREATE_ORDER: "/api/razorpay/create-order",
+  RAZORPAY_VERIFY_PAYMENT: "/api/razorpay/verify-payment",
   
   // Other
   CONTACT: "/contact",
   NEWSLETTER: "/newslatter",
-  FOOTER_DATA: "/api/footer-data"
+  FOOTER_DATA: "/api/footer-data",
+  ADMIN_FOOTER_CONFIG: "/api/admin/footer-config"
 };
 
 // ===== TIMEOUT SETTINGS =====

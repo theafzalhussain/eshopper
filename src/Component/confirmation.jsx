@@ -308,16 +308,55 @@ export default function Confirmation() {
           .brand {
             text-align: right;
           }
-          .brand img {
-            width: 150px;
-            max-width: 100%;
-            display: block;
+          .brandmark {
+            display: inline-table;
+            border-collapse: collapse;
             margin-left: auto;
             margin-bottom: 8px;
-            object-fit: contain;
-            background: #ffffff;
-            border-radius: 8px;
-            padding: 4px;
+          }
+          .brandmark td {
+            padding: 0;
+            vertical-align: top;
+          }
+          .brandmark-e-cell {
+            padding-right: 8px !important;
+          }
+          .brandmark-e {
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 55%, #0f172a 100%);
+            color: #fff;
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 21px;
+            font-weight: 800;
+            border-radius: 4px;
+            border-right: 3px solid #d4af37;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+            line-height: 34px;
+          }
+          .brandmark-text {
+            display: table-cell;
+            line-height: 1;
+          }
+          .brandmark-name {
+            display: block;
+            font-weight: 800;
+            letter-spacing: 2.4px;
+            font-size: 18px;
+            color: #f5f7fb;
+            line-height: 1;
+          }
+          .brandmark-tag {
+            display: block;
+            font-size: 7px;
+            letter-spacing: 1.8px;
+            color: #d4af37;
+            font-weight: 700;
+            margin-top: 2px;
+            line-height: 1.1;
           }
           .brand .site {
             font-size: 12px;
@@ -434,7 +473,7 @@ export default function Confirmation() {
               <p>Invoice No: ${invoiceNo}</p>
             </div>
             <div class="brand">
-              <img src="${BRAND_LOGO_URL}" alt="Brand" />
+              <table class="brandmark" cellpadding="0" cellspacing="0"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table>
               <div class="site">${FRONTEND_URL}</div>
             </div>
           </div>

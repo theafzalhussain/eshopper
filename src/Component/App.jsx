@@ -51,6 +51,22 @@ const ScrollToTop = () => {
     return null;
 }
 
+const AppShell = ({ children }) => {
+  const { pathname } = useLocation();
+  const hideFooterRoutes = ['/login', '/signup'];
+  const shouldShowFooter = !hideFooterRoutes.includes(pathname);
+
+  return (
+    <>
+      <ScrollToTop />
+      <Navbaar />
+      <ChatBot />
+      {children}
+      {shouldShowFooter && <Footer />}
+    </>
+  );
+}
+
 const AdminRoute = ({ children }) => {
     const isLoggedIn = localStorage.getItem("login") === "true";
     const role = localStorage.getItem("role");
@@ -72,54 +88,52 @@ export default function App() {
   return (
     <ToastProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <ScrollToTop />
-        <Navbaar />
-        <ChatBot />
-        <Suspense fallback={routeLoader}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/faq" element={<Faq />} />
-            <Route path="/privacy-policy" element={<ReturnPolicy />} />
-            <Route path="/return-policy" element={<ReturnPolicy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/shop/:maincat" element={<Shop />} />
-            <Route path="/single-product/:id" element={<SingleProductPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SingUp />} />
-            <Route path="/forget-password" element={<ForgetPassword />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/update-profile" element={<UpdateProfile />} />
-            <Route path="/my-orders" element={<MyOrders />} />
-            <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/confirmation" element={<Confirmation />} />
-            <Route path="/admin-home" element={<AdminRoute><AdminHome /></AdminRoute>} />
-            <Route path="/admin-user" element={<AdminRoute><AdminUser /></AdminRoute>} />
-            <Route path="/admin-contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
-            <Route path="/admin-newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
-            <Route path="/admin-checkout" element={<AdminRoute><AdminCheckout /></AdminRoute>} />
-            <Route path="/admin-orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
-            <Route path="/admin-coupon" element={<AdminRoute><AdminCoupon /></AdminRoute>} />
-            <Route path="/admin-maincategory" element={<AdminRoute><AdminMaincategory /></AdminRoute>} />
-            <Route path="/admin-add-maincategory" element={<AdminRoute><AdminAddMaincategory /></AdminRoute>} />
-            <Route path="/admin-update-maincategory/:id" element={<AdminRoute><AdminUpdateMaincategory /></AdminRoute>} />
-            <Route path="/admin-subcategory" element={<AdminRoute><AdminSubcategory /></AdminRoute>} />
-            <Route path="/admin-add-subcategory" element={<AdminRoute><AdminAddSubcategory /></AdminRoute>} />
-            <Route path="/admin-update-subcategory/:id" element={<AdminRoute><AdminUpdateSubcategory /></AdminRoute>} />
-            <Route path="/admin-brand" element={<AdminRoute><AdminBrand /></AdminRoute>} />
-            <Route path="/admin-add-brand" element={<AdminRoute><AdminAddBrand /></AdminRoute>} />
-            <Route path="/admin-update-brand/:id" element={<AdminRoute><AdminUpdateBrand /></AdminRoute>} />
-            <Route path="/admin-product" element={<AdminRoute><AdminProduct /></AdminRoute>} />
-            <Route path="/admin-add-product" element={<AdminRoute><AdminAddProduct /></AdminRoute>} />
-            <Route path="/admin-update-product/:id" element={<AdminRoute><AdminUpdateProduct /></AdminRoute>} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-        <Footer />
+        <AppShell>
+          <Suspense fallback={routeLoader}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/faq" element={<Faq />} />
+              <Route path="/privacy-policy" element={<ReturnPolicy />} />
+              <Route path="/return-policy" element={<ReturnPolicy />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/shop/:maincat" element={<Shop />} />
+              <Route path="/single-product/:id" element={<SingleProductPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SingUp />} />
+              <Route path="/forget-password" element={<ForgetPassword />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/update-profile" element={<UpdateProfile />} />
+              <Route path="/my-orders" element={<MyOrders />} />
+              <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/wishlist" element={<Wishlist />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/confirmation" element={<Confirmation />} />
+              <Route path="/admin-home" element={<AdminRoute><AdminHome /></AdminRoute>} />
+              <Route path="/admin-user" element={<AdminRoute><AdminUser /></AdminRoute>} />
+              <Route path="/admin-contact" element={<AdminRoute><AdminContact /></AdminRoute>} />
+              <Route path="/admin-newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
+              <Route path="/admin-checkout" element={<AdminRoute><AdminCheckout /></AdminRoute>} />
+              <Route path="/admin-orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+              <Route path="/admin-coupon" element={<AdminRoute><AdminCoupon /></AdminRoute>} />
+              <Route path="/admin-maincategory" element={<AdminRoute><AdminMaincategory /></AdminRoute>} />
+              <Route path="/admin-add-maincategory" element={<AdminRoute><AdminAddMaincategory /></AdminRoute>} />
+              <Route path="/admin-update-maincategory/:id" element={<AdminRoute><AdminUpdateMaincategory /></AdminRoute>} />
+              <Route path="/admin-subcategory" element={<AdminRoute><AdminSubcategory /></AdminRoute>} />
+              <Route path="/admin-add-subcategory" element={<AdminRoute><AdminAddSubcategory /></AdminRoute>} />
+              <Route path="/admin-update-subcategory/:id" element={<AdminRoute><AdminUpdateSubcategory /></AdminRoute>} />
+              <Route path="/admin-brand" element={<AdminRoute><AdminBrand /></AdminRoute>} />
+              <Route path="/admin-add-brand" element={<AdminRoute><AdminAddBrand /></AdminRoute>} />
+              <Route path="/admin-update-brand/:id" element={<AdminRoute><AdminUpdateBrand /></AdminRoute>} />
+              <Route path="/admin-product" element={<AdminRoute><AdminProduct /></AdminRoute>} />
+              <Route path="/admin-add-product" element={<AdminRoute><AdminAddProduct /></AdminRoute>} />
+              <Route path="/admin-update-product/:id" element={<AdminRoute><AdminUpdateProduct /></AdminRoute>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </AppShell>
       </BrowserRouter>
     </ToastProvider>
   )

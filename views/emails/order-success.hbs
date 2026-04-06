@@ -18,19 +18,29 @@
     .items th,.items td{padding:10px;border-bottom:1px solid #2c3039;text-align:left;font-size:14px;}
     .items th{color:#efcb4a;background:#171a20;}
     .items tr:last-child td{border-bottom:none;}
-    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
-    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
-    .progress-grid{width:100%;border-collapse:collapse;}
-    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
-    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;font-size:17px;border:1px solid #3a404d;background:#1b212d;}
-    .p-icon.done{background:#2ea94b;border-color:#55d372;}
-    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;}
-    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
-    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
-    .p-label.done{color:#5fda7f;}
-    .p-label.active{color:#7bc6ff;}
-    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
-    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
+    .progress-track{margin-top:14px;padding:18px;border:1px solid #263043;border-radius:18px;background:linear-gradient(180deg,#0e131b 0%,#0a1016 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.03);}
+    .progress-head-row{width:100%;border-collapse:collapse;margin-bottom:14px;}
+    .progress-head-title{color:#f5d15d;font-size:18px;letter-spacing:.5px;font-weight:800;text-transform:uppercase;}
+    .progress-pill{font-size:11px;padding:6px 10px;border-radius:999px;background:rgba(245,209,93,.12);border:1px solid rgba(245,209,93,.25);color:#ffe8a3;white-space:nowrap;}
+    .progress-grid{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;}
+    .progress-grid td{padding:0 4px;vertical-align:top;}
+    .step-card{position:relative;border:1px solid rgba(255,255,255,.06);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));padding:14px 10px 12px;text-align:center;min-height:122px;}
+    .step-card.done{border-color:rgba(63,208,106,.28);background:linear-gradient(180deg,rgba(63,208,106,.12),rgba(255,255,255,.018));box-shadow:0 0 0 1px rgba(63,208,106,.04),0 12px 24px rgba(0,0,0,.22);}
+    .step-card.active{border-color:rgba(76,163,255,.28);background:linear-gradient(180deg,rgba(76,163,255,.12),rgba(255,255,255,.018));box-shadow:0 0 0 1px rgba(76,163,255,.04),0 12px 24px rgba(0,0,0,.22);}
+    .step-card.pending{opacity:.92;}
+    .step-dot{width:44px;height:44px;margin:0 auto 10px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;border:2px solid transparent;box-sizing:border-box;}
+    .step-dot.done{background:linear-gradient(145deg,#3fe06d 0%,#24b45c 100%);border-color:#79f29d;box-shadow:0 10px 22px rgba(36,180,92,.30),0 0 0 7px rgba(63,224,109,.10);}
+    .step-dot.active{background:linear-gradient(145deg,#62b2ff 0%,#3190eb 100%);border-color:#a7d4ff;box-shadow:0 10px 22px rgba(49,144,235,.30),0 0 0 7px rgba(98,178,255,.10);}
+    .step-dot.pending{background:linear-gradient(145deg,#1c2230 0%,#121722 100%);border-color:#5c6477;color:#98a2b5;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);}
+    .step-copy{min-height:52px;display:flex;flex-direction:column;justify-content:flex-start;}
+    .step-label{font-size:11px;letter-spacing:1px;font-weight:800;color:#9ca6b8;text-transform:uppercase;line-height:1.35;}
+    .step-label.done{color:#72f09c;}
+    .step-label.active{color:#9ed0ff;}
+    .step-label.pending{color:#7f8897;}
+    .progress-bar{margin-top:14px;height:8px;background:#202532;border-radius:999px;overflow:hidden;}
+    .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#3fe06d 0%,#5ab8ff 55%,#a78bfa 100%);box-shadow:0 0 18px rgba(90,184,255,.35);}
+    .progress-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:#92a0b6;line-height:1.4;}
+    .progress-foot strong{color:#fff;}
     .btn{display:block;margin-top:14px;padding:12px;border-radius:10px;background:#4bbd60;color:#fff;text-decoration:none;text-align:center;font-weight:700;}
     .contact{margin-top:10px;text-align:center;}
     .contact a{display:inline-block;margin:4px;padding:9px 12px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;}
@@ -55,16 +65,19 @@
           {{/each}}
         </table>
         <div class="progress-track">
-          <div class="progress-head">DELIVERY PROGRESS</div>
+          <table class="progress-head-row" role="presentation"><tr><td class="progress-head-title">DELIVERY PROGRESS</td><td align="right"><span class="progress-pill">{{progressPercent}}% COMPLETE</span></td></tr></table>
           <table class="progress-grid" role="presentation"><tr>
             {{#each progressSteps}}
             <td>
-              <span class="p-icon {{state}}">{{{icon}}}</span>
-              <div class="p-label {{state}}">{{label}}</div>
+              <div class="step-card {{state}}">
+                <span class="step-dot {{state}}">{{{icon}}}</span>
+                <div class="step-copy"><div class="step-label {{state}}">{{label}}</div></div>
+              </div>
             </td>
             {{/each}}
           </tr></table>
-          <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+          <div class="progress-bar"><div class="progress-fill" style="width: {{progressPercent}}%;"></div></div>
+          <div class="progress-foot"><span>Live status synced from backend</span><strong>{{progressPercent}}% done</strong></div>
         </div>
         <a class="btn" href="{{myOrdersUrl}}">View Order History</a>
         <div class="contact">

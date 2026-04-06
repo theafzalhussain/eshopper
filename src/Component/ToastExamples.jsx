@@ -1,6 +1,8 @@
 // 🎨 Toast Notification Usage Examples - Eshopper Boutique Luxe
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import io from 'socket.io-client';
+import { BASE_URL } from '../constants';
 import { useToast } from './ToastNotification';
 
 // ============================================
@@ -127,7 +129,7 @@ function SocketExample() {
   const toast = useToast();
 
   useEffect(() => {
-    const socket = io(process.env.REACT_APP_API_URL);
+    const socket = io(BASE_URL);
 
     socket.on('orderStatusUpdate', (data) => {
       if (data.status === 'Shipped') {

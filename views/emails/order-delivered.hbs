@@ -12,7 +12,13 @@
     .wrap{width:100%;background:#050608;padding:16px 6px;}
     .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
     .top{padding:16px 20px;background:linear-gradient(120deg,#093722,#0e4f2f,#0c6d3d);}
-    .logo{height:28px;vertical-align:middle;}
+    .brandmark{display:inline-table;vertical-align:middle;border-collapse:collapse;}
+    .brandmark td{padding:0;vertical-align:top;}
+    .brandmark-e-cell{padding-right:8px !important;}
+    .brandmark-e{background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%);color:#fff;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:800;border-radius:4px;border-right:3px solid #d4af37;box-shadow:0 6px 16px rgba(15,23,42,0.22);line-height:34px;}
+    .brandmark-text{display:table-cell;line-height:1;}
+    .brandmark-name{display:block;font-weight:800;letter-spacing:2.4px;font-size:18px;color:#f5f7fb;line-height:1;}
+    .brandmark-tag{display:block;font-size:7px;letter-spacing:1.8px;color:#d4af37;font-weight:700;margin-top:2px;line-height:1.1;}
     .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#eafff0;border:1px solid #72db8f;background:#54bf6d;padding:7px 12px;border-radius:999px;}
     .hero{background:#65c36f;color:#fff;text-align:center;padding:28px 12px;}
     .hero .icon{font-size:48px;line-height:1;}
@@ -95,7 +101,7 @@
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Delivered successfully - {{orderId}}. Your tax invoice is ready.</div>
   <table class="wrap" role="presentation" width="100%"><tr><td>
     <table class="card" role="presentation" align="center">
-      <tr><td class="top"><img src="{{logoUrl}}" alt="eShopper Luxe" class="logo" /><span class="status">DELIVERED</span></td></tr>
+      <tr><td class="top"><table role="presentation" class="brandmark" cellpadding="0" cellspacing="0"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table><span class="status">DELIVERED</span></td></tr>
       <tr><td class="hero"><div class="icon">&#10003;</div><div class="t">DELIVERED</div><div class="s">Your luxury package has arrived safely</div></td></tr>
 
       <tr><td class="section">

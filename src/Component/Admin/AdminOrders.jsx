@@ -227,9 +227,9 @@ export default function AdminOrders() {
     const [actionDeliveryOtp, setActionDeliveryOtp] = useState('');
 
     const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const localApiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const localApiUrl = process.env.REACT_APP_LOCAL_API_URL || SHARED_BASE_URL || process.env.REACT_APP_API_URL || 'http://localhost:5000';
     const remoteApiUrl = process.env.REACT_APP_BASE_URL || SHARED_BASE_URL || 'https://eshopper-qtgl.onrender.com';
-    const [apiBaseUrl, setApiBaseUrl] = useState(isLocalHost ? localApiUrl : remoteApiUrl);
+    const [apiBaseUrl, setApiBaseUrl] = useState(isLocalHost && process.env.REACT_APP_USE_LOCAL_API === 'true' ? localApiUrl : remoteApiUrl);
     const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
 
     const showNotification = (message, type = 'info') => {

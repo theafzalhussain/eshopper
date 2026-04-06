@@ -1,5 +1,10 @@
 import { BASE_URL, API_ENDPOINTS, REQUEST_TIMEOUT } from "../constants";
 
+const isDevHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const RAZORPAY_API_BASE_URL = isDevHost
+    ? BASE_URL
+    : (process.env.REACT_APP_RAZORPAY_API_URL || process.env.REACT_APP_BASE_URL || BASE_URL || 'https://api.eshopperr.me');
+
 // Error notification system
 const showRateLimitNotification = (message) => {
     // Show user-friendly notification
@@ -79,7 +84,7 @@ const checkRateLimit = (endpoint) => {
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // With timeout and better error handling
-export async function fastAPI(endpoint, method = "GET", data = null, retryCount = 0) {
+export async function fastAPI(endpoint, method = "GET", data = null, retryCount = 0, customBaseUrl = null) {
     const isFD = data instanceof FormData;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -93,7 +98,8 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
         const token = getAuthToken();
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
-        const res = await fetch(`${BASE_URL}${endpoint}`, {
+        const requestBaseUrl = customBaseUrl || BASE_URL;
+        const res = await fetch(`${requestBaseUrl}${endpoint}`, {
             method,
             headers,
             body: isFD ? data : (data ? JSON.stringify(data) : null),
@@ -138,7 +144,7 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
             // Retry up to 3 times for 429 errors
             if (retryCount < 3) {
                 await delay(waitTime);
-                return fastAPI(endpoint, method, data, retryCount + 1);
+                return fastAPI(endpoint, method, data, retryCount + 1, customBaseUrl);
             } else {
                 showRateLimitNotification('Too many requests. Please refresh the page in a few minutes.');
                 throw new Error(`🚫 Rate limit exceeded for ${endpoint}. Please reload the page after a few minutes.`);
@@ -162,7 +168,7 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
             const retryDelay = 2000 * (retryCount + 1);
             console.warn(`🔁 Retrying ${endpoint} in ${retryDelay}ms due to transient error:`, errorMessage);
             await delay(retryDelay);
-            return fastAPI(endpoint, method, data, retryCount + 1);
+            return fastAPI(endpoint, method, data, retryCount + 1, customBaseUrl);
         }
 
         if (err.name === "AbortError") {
@@ -231,6 +237,10 @@ export const createCheckoutAPI = (d) => fastAPI(API_ENDPOINTS.CHECKOUT, "POST", 
 export const updateCheckoutAPI = (d) => fastAPI(`${API_ENDPOINTS.CHECKOUT}/${getID(d)}`, "PUT", d);
 export const deleteCheckoutAPI = (d) => fastAPI(`${API_ENDPOINTS.CHECKOUT}/${getID(d)}`, "DELETE");
 
+export const getRazorpayConfigAPI = () => fastAPI(API_ENDPOINTS.RAZORPAY_CONFIG, "GET", null, 0, RAZORPAY_API_BASE_URL);
+export const createRazorpayOrderAPI = (d) => fastAPI(API_ENDPOINTS.RAZORPAY_CREATE_ORDER, "POST", d, 0, RAZORPAY_API_BASE_URL);
+export const verifyRazorpayPaymentAPI = (d) => fastAPI(API_ENDPOINTS.RAZORPAY_VERIFY_PAYMENT, "POST", d, 0, RAZORPAY_API_BASE_URL);
+
 export const getContactAPI = () => fastAPI(API_ENDPOINTS.CONTACT);
 export const createContactAPI = (d) => fastAPI(API_ENDPOINTS.CONTACT, "POST", d);
 export const updateContactAPI = (d) => fastAPI(`${API_ENDPOINTS.CONTACT}/${getID(d)}`, "PUT", d);
@@ -241,3 +251,13 @@ export const createNewslatterAPI = (d) => fastAPI(API_ENDPOINTS.NEWSLETTER, "POS
 export const updateNewslatterAPI = (d) => fastAPI(`${API_ENDPOINTS.NEWSLETTER}/${getID(d)}`, "PUT", d);
 export const deleteNewslatterAPI = (d) => fastAPI(`${API_ENDPOINTS.NEWSLETTER}/${getID(d)}`, "DELETE");
 export const getFooterDataAPI = () => fastAPI(API_ENDPOINTS.FOOTER_DATA);
+
+export const getAdminFooterConfigAPI = (adminSecret) => {
+    const query = adminSecret ? `?adminSecret=${encodeURIComponent(String(adminSecret))}` : '';
+    return fastAPI(`${API_ENDPOINTS.ADMIN_FOOTER_CONFIG}${query}`);
+};
+
+export const updateAdminFooterConfigAPI = (data) => {
+    const payload = { ...(data || {}) };
+    return fastAPI(API_ENDPOINTS.ADMIN_FOOTER_CONFIG, "PUT", payload);
+};

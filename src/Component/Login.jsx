@@ -420,12 +420,17 @@ export default function Login() {
                     --lux-warn: #b91c1c;
                     position: relative;
                     min-height: 100vh;
-                    overflow: hidden;
+                    overflow-x: hidden;
+                    overflow-y: auto;
                     font-family: 'Manrope', sans-serif;
                     background:
                         radial-gradient(circle at 15% 10%, rgba(183, 134, 40, 0.26), transparent 42%),
                         radial-gradient(circle at 90% 85%, rgba(15, 118, 110, 0.24), transparent 38%),
                         linear-gradient(140deg, #0b1418 0%, #111f27 42%, #2b1f14 100%);
+                    padding-top: env(safe-area-inset-top);
+                    padding-right: env(safe-area-inset-right);
+                    padding-bottom: env(safe-area-inset-bottom);
+                    padding-left: env(safe-area-inset-left);
                 }
 
                 .luxury-bg-overlay {
@@ -478,10 +483,15 @@ export default function Login() {
                     z-index: 2;
                 }
 
+                .premium-login-container .container.min-vh-100 {
+                    min-height: 100vh !important;
+                    padding: clamp(18px, 2.4vw, 28px) 14px;
+                }
+
                 .glass-master-card {
                     position: relative;
                     width: 100%;
-                    max-width: 500px;
+                    max-width: 480px;
                     background: var(--lux-card);
                     border: 1px solid rgba(255, 255, 255, 0.45);
                     backdrop-filter: blur(14px);
@@ -489,7 +499,7 @@ export default function Login() {
                     box-shadow:
                         0 30px 90px rgba(2, 8, 14, 0.48),
                         inset 0 1px 0 rgba(255, 255, 255, 0.45);
-                    padding: 52px 38px;
+                    padding: 44px 32px;
                     animation: cardRise 0.8s ease both;
                 }
 
@@ -836,30 +846,52 @@ export default function Login() {
                     to { opacity: 1; transform: translateY(0); }
                 }
 
-                @media (max-width: 1024px) {
+                @media (min-width: 1440px) {
+                    .premium-login-container .container.min-vh-100 {
+                        padding-top: 30px;
+                        padding-bottom: 30px;
+                    }
+
                     .glass-master-card {
-                        max-width: 480px;
-                        padding: 46px 30px;
+                        max-width: 500px;
+                        padding: 48px 36px;
+                    }
+                }
+
+                @media (max-width: 1024px) {
+                    .premium-login-container .container.min-vh-100 {
+                        padding: 18px 12px;
+                    }
+
+                    .glass-master-card {
+                        max-width: 460px;
+                        padding: 38px 28px;
                     }
                 }
 
                 @media (max-width: 767px) {
                     .premium-login-container {
                         padding: 20px 14px;
-                        min-height: calc(100svh - 64px);
-                        overflow: hidden;
+                        min-height: 100svh;
                     }
 
                     .premium-login-container .container.min-vh-100 {
-                        min-height: calc(100svh - 64px) !important;
+                        min-height: 100svh !important;
+                        align-items: flex-start !important;
+                        padding-top: 14px;
+                        padding-bottom: 14px;
                     }
 
                     .glass-master-card {
                         max-width: 100%;
                         border-radius: 26px;
-                        padding: 32px 22px;
-                        max-height: calc(100svh - 86px);
-                        overflow-y: auto;
+                        padding: 30px 20px;
+                        max-height: none;
+                        overflow: visible;
+                    }
+
+                    .login-header {
+                        margin-bottom: 0.95rem !important;
                     }
 
                     .brand-name {
@@ -892,10 +924,19 @@ export default function Login() {
                         padding: 10px 8px;
                     }
 
+                    .premium-login-container .container.min-vh-100 {
+                        padding-top: 8px;
+                        padding-bottom: 8px;
+                    }
+
                     .glass-master-card {
-                        padding: 18px 12px;
+                        padding: 16px 12px;
                         border-radius: 22px;
-                        max-height: calc(100svh - 72px);
+                        max-height: none;
+                    }
+
+                    .login-header {
+                        margin-bottom: 0.85rem !important;
                     }
 
                     .brand-shield {
@@ -940,12 +981,21 @@ export default function Login() {
                         padding: 14px;
                     }
 
+                    .premium-login-container .container.min-vh-100 {
+                        align-items: flex-start !important;
+                        min-height: auto !important;
+                    }
+
                     .glass-master-card {
-                        padding: 24px 22px;
+                        padding: 22px 20px;
                     }
 
                     .login-header {
-                        margin-bottom: 1.2rem !important;
+                        margin-bottom: 0.9rem !important;
+                    }
+
+                    .login-header .brand-shield {
+                        margin-bottom: 0.75rem !important;
                     }
 
                     .input-field-wrap {

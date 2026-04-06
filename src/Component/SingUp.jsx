@@ -576,13 +576,18 @@ export default function SingUp() {
                     --lux-success: #15803d;
                     position: relative;
                     min-height: 100vh;
-                    overflow: hidden;
+                    overflow-x: hidden;
+                    overflow-y: auto;
                     z-index: 1;
                     font-family: 'Manrope', sans-serif;
                     background:
                         radial-gradient(circle at 12% 14%, rgba(183, 134, 40, 0.25), transparent 42%),
                         radial-gradient(circle at 92% 82%, rgba(15, 118, 110, 0.24), transparent 38%),
                         linear-gradient(142deg, #0a1318 0%, #11202a 45%, #2b1e14 100%);
+                    padding-top: env(safe-area-inset-top);
+                    padding-right: env(safe-area-inset-right);
+                    padding-bottom: env(safe-area-inset-bottom);
+                    padding-left: env(safe-area-inset-left);
                 }
 
                 .luxury-bg-overlay {
@@ -638,10 +643,15 @@ export default function SingUp() {
                     z-index: 2;
                 }
 
+                .signup-master-root .container.min-vh-100 {
+                    min-height: 100vh !important;
+                    padding: clamp(18px, 2.4vw, 28px) 14px;
+                }
+
                 .glass-signup-card {
                     position: relative;
                     width: 100%;
-                    max-width: 530px;
+                    max-width: 500px;
                     background: var(--lux-card);
                     border: 1px solid rgba(255, 255, 255, 0.5);
                     border-radius: 34px;
@@ -655,6 +665,22 @@ export default function SingUp() {
                     background: transparent;
                     border-radius: 34px;
                     z-index: 3;
+                }
+
+                .progress-indicator {
+                    margin-bottom: 14px !important;
+                }
+
+                .icon-badge-premium {
+                    margin-bottom: 0.9rem !important;
+                }
+
+                .brand-title {
+                    margin-bottom: 0.35rem;
+                }
+
+                .step-indicator {
+                    margin-bottom: 0;
                 }
 
                 .premium-spinner-overlay {
@@ -1155,8 +1181,27 @@ export default function SingUp() {
                 }
 
                 @media (max-width: 1024px) {
+                    .signup-master-root .container.min-vh-100 {
+                        padding: 18px 12px;
+                    }
+
                     .glass-signup-card {
-                        max-width: 500px;
+                        max-width: 480px;
+                    }
+
+                    .signup-inner-box {
+                        padding: 1.7rem 1.4rem !important;
+                    }
+                }
+
+                @media (min-width: 1440px) {
+                    .signup-master-root .container.min-vh-100 {
+                        padding-top: 30px;
+                        padding-bottom: 30px;
+                    }
+
+                    .glass-signup-card {
+                        max-width: 520px;
                     }
 
                     .signup-inner-box {
@@ -1167,23 +1212,25 @@ export default function SingUp() {
                 @media (max-width: 767px) {
                     .signup-master-root {
                         padding: 20px 14px;
-                        min-height: calc(100svh - 64px);
-                        overflow: hidden;
+                        min-height: 100svh;
                     }
 
                     .signup-master-root .container.min-vh-100 {
-                        min-height: calc(100svh - 64px) !important;
+                        min-height: 100svh !important;
+                        align-items: flex-start !important;
+                        padding-top: 14px;
+                        padding-bottom: 14px;
                     }
 
                     .glass-signup-card {
                         max-width: 100%;
                         border-radius: 26px;
-                        max-height: calc(100svh - 86px);
-                        overflow-y: auto;
+                        max-height: none;
+                        overflow: visible;
                     }
 
                     .signup-inner-box {
-                        padding: 1.9rem 1.2rem !important;
+                        padding: 1.65rem 1.1rem !important;
                     }
 
                     .brand-title {
@@ -1212,13 +1259,18 @@ export default function SingUp() {
                         padding: 10px 8px;
                     }
 
+                    .signup-master-root .container.min-vh-100 {
+                        padding-top: 8px;
+                        padding-bottom: 8px;
+                    }
+
                     .glass-signup-card {
                         border-radius: 22px;
-                        max-height: calc(100svh - 72px);
+                        max-height: none;
                     }
 
                     .signup-inner-box {
-                        padding: 1rem 0.75rem !important;
+                        padding: 0.9rem 0.7rem !important;
                     }
 
                     .icon-badge-premium {
@@ -1277,14 +1329,19 @@ export default function SingUp() {
                         padding: 14px;
                     }
 
+                    .signup-master-root .container.min-vh-100 {
+                        align-items: flex-start !important;
+                        min-height: auto !important;
+                    }
+
                     .glass-signup-card {
-                        max-height: 90vh;
-                        overflow-y: auto;
+                        max-height: none;
+                        overflow: visible;
                     }
 
                     .signup-inner-box {
-                        padding-top: 1.2rem !important;
-                        padding-bottom: 1.2rem !important;
+                        padding-top: 1rem !important;
+                        padding-bottom: 1rem !important;
                     }
 
                     .icon-badge-premium {

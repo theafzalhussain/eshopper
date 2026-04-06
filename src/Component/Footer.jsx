@@ -47,10 +47,18 @@ const fallbackFooterData = {
     subscribers: 0
   },
   trustBadges: ['Secure Payments', 'Verified Support', 'Premium Quality', 'Fast Delivery Network']
+  ,
+  userFeatures: [
+    { title: 'Live Order Tracking', subtitle: 'Real-time status updates after every order event' },
+    { title: 'Secure Payments', subtitle: 'Protected checkout with verified payment security' },
+    { title: 'Priority Support', subtitle: 'Fast help on WhatsApp and email whenever needed' },
+    { title: 'Premium Drops', subtitle: 'Early alerts for new launches and exclusive deals' }
+  ]
 }
 
 export default function Footer() {
   const toast = useToast()
+  const [role, setRole] = useState(() => String(localStorage.getItem('role') || '').toLowerCase())
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [submittingNewsletter, setSubmittingNewsletter] = useState(false)
   const [footerData, setFooterData] = useState(fallbackFooterData)
@@ -77,7 +85,10 @@ export default function Footer() {
           stats: { ...fallbackFooterData.stats, ...(footerResponse?.stats || {}) },
           trustBadges: Array.isArray(footerResponse?.trustBadges) && footerResponse.trustBadges.length
             ? footerResponse.trustBadges
-            : fallbackFooterData.trustBadges
+            : fallbackFooterData.trustBadges,
+          userFeatures: Array.isArray(footerResponse?.userFeatures) && footerResponse.userFeatures.length
+            ? footerResponse.userFeatures
+            : fallbackFooterData.userFeatures
         })
 
         const categoryList = Array.isArray(categoriesResponse) ? categoriesResponse : []
@@ -123,6 +134,31 @@ export default function Footer() {
     { label: 'Members', value: Number(footerData.stats.members || 0), Icon: Users },
     { label: 'Subscribers', value: Number(footerData.stats.subscribers || 0), Icon: BadgeCheck }
   ]), [footerData.stats])
+
+  const userFeatureCards = useMemo(() => {
+    const iconSet = [Truck, ShieldCheck, CircleHelp, Sparkles]
+    const incoming = Array.isArray(footerData.userFeatures) && footerData.userFeatures.length
+      ? footerData.userFeatures
+      : fallbackFooterData.userFeatures
+
+    return incoming.slice(0, 4).map((item, idx) => ({
+      title: String(item?.title || fallbackFooterData.userFeatures[idx]?.title || `Feature ${idx + 1}`),
+      subtitle: String(item?.subtitle || fallbackFooterData.userFeatures[idx]?.subtitle || ''),
+      Icon: iconSet[idx % iconSet.length]
+    }))
+  }, [footerData.userFeatures])
+
+  const isAdmin = role === 'admin'
+
+  useEffect(() => {
+    const syncRole = () => setRole(String(localStorage.getItem('role') || '').toLowerCase())
+    window.addEventListener('storage', syncRole)
+    window.addEventListener('focus', syncRole)
+    return () => {
+      window.removeEventListener('storage', syncRole)
+      window.removeEventListener('focus', syncRole)
+    }
+  }, [])
 
   const quickLinks = [
     { to: '/about', label: 'About Us' },
@@ -177,8 +213,16 @@ export default function Footer() {
       <div className="container esh-footer-container">
         <div className="esh-footer-top">
           <div className="esh-brand-block">
+            <Link to="/" className="footer-logo-link" aria-label="eShopper home">
+              <div className="footer-logo-wrapper">
+                <span className="footer-logo-e">E</span>
+                <div className="footer-logo-text-box">
+                  <span className="footer-logo-brand-name">SHOPPER</span>
+                  <span className="footer-logo-tagline">BOUTIQUE LUXE</span>
+                </div>
+              </div>
+            </Link>
             <div className="esh-brand-tag"><Sparkles size={14} /> Verified Premium Commerce</div>
-            <h2>{footerData.brand.name}</h2>
             <p>{footerData.brand.tagline}</p>
             <div className="esh-feature-chips">
               {featureChips.map(({ label, Icon }) => (
@@ -240,15 +284,27 @@ export default function Footer() {
         </div>
 
         <div className="esh-footer-mid">
-          <div className="esh-stats-grid">
-            {statCards.map(({ label, value, Icon }) => (
-              <div className="esh-stat-card" key={label}>
-                <Icon size={17} />
-                <strong>{value.toLocaleString()}</strong>
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
+          {isAdmin ? (
+            <div className="esh-stats-grid">
+              {statCards.map(({ label, value, Icon }) => (
+                <div className="esh-stat-card" key={label}>
+                  <Icon size={17} />
+                  <strong>{value.toLocaleString()}</strong>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="esh-user-features-grid">
+              {userFeatureCards.map(({ title, subtitle, Icon }) => (
+                <div className="esh-user-feature-card" key={title}>
+                  <Icon size={17} />
+                  <strong>{title}</strong>
+                  <span>{subtitle}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <form className="esh-newsletter" onSubmit={handleNewsletterSubmit}>
             <h4>Join Official eShopper Updates</h4>
@@ -318,6 +374,51 @@ export default function Footer() {
           font-size: 1.95rem;
           letter-spacing: 1.5px;
           color: #f4f7fb;
+        }
+
+        .footer-logo-link {
+          text-decoration: none;
+          display: inline-flex;
+          margin-bottom: 10px;
+        }
+
+        .footer-logo-wrapper { display: flex; align-items: center; gap: 8px; }
+
+        .footer-logo-e {
+          background: linear-gradient(145deg, #0f172a 0%, #1e293b 55%, #0f172a 100%);
+          color: #fff;
+          width: 38px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Playfair Display', serif;
+          font-size: 24px;
+          font-weight: 800;
+          border-radius: 4px;
+          border-right: 3px solid #d4af37;
+          box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+        }
+
+        .footer-logo-text-box {
+          display: flex;
+          flex-direction: column;
+          line-height: 1;
+        }
+
+        .footer-logo-brand-name {
+          font-weight: 800;
+          letter-spacing: 3px;
+          font-size: 20px;
+          color: #f3f4f6;
+        }
+
+        .footer-logo-tagline {
+          font-size: 8px;
+          letter-spacing: 2px;
+          color: #d4af37;
+          font-weight: 700;
+          margin-top: 2px;
         }
 
         .esh-brand-block p {
@@ -465,6 +566,12 @@ export default function Footer() {
           gap: 10px;
         }
 
+        .esh-user-features-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
         .esh-stat-card {
           border: 1px solid rgba(78, 106, 141, 0.55);
           border-radius: 13px;
@@ -489,6 +596,33 @@ export default function Footer() {
           letter-spacing: 0.5px;
           text-transform: uppercase;
           font-weight: 700;
+        }
+
+        .esh-user-feature-card {
+          border: 1px solid rgba(78, 106, 141, 0.55);
+          border-radius: 13px;
+          background: rgba(8, 17, 29, 0.66);
+          padding: 12px 10px;
+          display: grid;
+          gap: 6px;
+          justify-items: start;
+        }
+
+        .esh-user-feature-card svg {
+          color: #7fc2ff;
+        }
+
+        .esh-user-feature-card strong {
+          color: #ffffff;
+          font-size: 0.94rem;
+          line-height: 1.2;
+          letter-spacing: 0.2px;
+        }
+
+        .esh-user-feature-card span {
+          color: #b6c5dd;
+          font-size: 0.75rem;
+          line-height: 1.5;
         }
 
         .esh-newsletter {
@@ -616,8 +750,27 @@ export default function Footer() {
             font-size: 1.6rem;
           }
 
+          .footer-logo-brand-name {
+            font-size: 16px;
+            letter-spacing: 2px;
+          }
+
+          .footer-logo-e {
+            width: 32px;
+            height: 32px;
+            font-size: 18px;
+          }
+
+          .footer-logo-tagline {
+            font-size: 6px;
+          }
+
           .esh-stats-grid {
             grid-template-columns: 1fr 1fr;
+          }
+
+          .esh-user-features-grid {
+            grid-template-columns: 1fr;
           }
 
           .esh-newsletter-row {
@@ -647,6 +800,29 @@ export default function Footer() {
 
           .esh-stats-grid {
             grid-template-columns: 1fr;
+          }
+
+          .esh-user-feature-card strong {
+            font-size: 0.88rem;
+          }
+
+          .esh-user-feature-card span {
+            font-size: 0.72rem;
+          }
+
+          .footer-logo-brand-name {
+            font-size: 14px;
+            letter-spacing: 1.5px;
+          }
+
+          .footer-logo-e {
+            width: 28px;
+            height: 28px;
+            font-size: 16px;
+          }
+
+          .footer-logo-tagline {
+            font-size: 5px;
           }
         }
       `}} />

@@ -9,6 +9,7 @@ import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import { BASE_URL } from '../constants'
+import { createRazorpayOrderAPI, getRazorpayConfigAPI, verifyRazorpayPaymentAPI } from '../Store/Services'
 
 export default function Checkout() {
     const [mode, setMode] = useState("UPI")
@@ -17,6 +18,10 @@ export default function Checkout() {
     const [subtotal, setSubtotal] = useState(0)
     const [shipping, setshipping] = useState(0)
     const [placingOrder, setplacingOrder] = useState(false)
+    const [paymentProcessing, setPaymentProcessing] = useState(false)
+    const [razorpayKeyId, setRazorpayKeyId] = useState('')
+    const [razorpayCurrency, setRazorpayCurrency] = useState('INR')
+    const fallbackRazorpayKeyId = process.env.REACT_APP_RAZORPAY_KEY_ID || ''
     const [appliedCoupon, setAppliedCoupon] = useState({ code: '', discount: 0 })
     const [giftWrap, setGiftWrap] = useState(false)
     const [deliveryProtection, setDeliveryProtection] = useState(true)
@@ -37,6 +42,34 @@ export default function Checkout() {
         if (mode === 'COD') return { label: 'Cash on Delivery', fee: 39 }
         return { label: 'UPI / Wallet', fee: 0 }
     }, [mode])
+
+    const loadRazorpayScript = useMemo(() => {
+        return () => new Promise((resolve) => {
+            if (typeof window === 'undefined') {
+                resolve(false)
+                return
+            }
+
+            if (window.Razorpay) {
+                resolve(true)
+                return
+            }
+
+            const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')
+            if (existingScript) {
+                existingScript.addEventListener('load', () => resolve(true), { once: true })
+                existingScript.addEventListener('error', () => resolve(false), { once: true })
+                return
+            }
+
+            const script = document.createElement('script')
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+            script.async = true
+            script.onload = () => resolve(true)
+            script.onerror = () => resolve(false)
+            document.body.appendChild(script)
+        })
+    }, [])
 
     const gst = useMemo(() => Math.round(subtotal * 0.05), [subtotal])
     const giftWrapCharge = giftWrap ? 99 : 0
@@ -86,6 +119,26 @@ export default function Checkout() {
         { title: 'Delivered', eta: estimatedDelivery }
     ]), [estimatedDelivery])
 
+    useEffect(() => {
+        let cancelled = false
+
+        const loadPaymentConfig = async () => {
+            try {
+                const config = await getRazorpayConfigAPI()
+                if (cancelled) return
+                if (config?.keyId) setRazorpayKeyId(config.keyId)
+                if (config?.currency) setRazorpayCurrency(String(config.currency).toUpperCase())
+            } catch (error) {
+                console.warn('Razorpay config load failed:', error?.message || error)
+            }
+        }
+
+        loadPaymentConfig()
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
     function getAPIData() {
         dispatch(getUser())
         dispatch(getCart())
@@ -129,7 +182,7 @@ export default function Checkout() {
         }
     }
 
-    async function placeOrder() {
+    async function placeOrder(paymentDetails = {}) {
         try {
             const userid = localStorage.getItem("userid")
             if (!userid || cart.length === 0 || placingOrder) return
@@ -155,7 +208,12 @@ export default function Checkout() {
 
             const payload = {
                 userId: userid,
-                paymentMethod: mode,
+                paymentMethod: paymentDetails.paymentMethod || mode,
+                paymentStatus: paymentDetails.paymentStatus || ((paymentDetails.paymentMethod || mode) === 'COD' ? 'Pending' : 'Paid'),
+                paidAt: paymentDetails.paidAt,
+                razorpayOrderId: paymentDetails.razorpayOrderId,
+                razorpayPaymentId: paymentDetails.razorpayPaymentId,
+                razorpaySignature: paymentDetails.razorpaySignature,
                 totalAmount: subtotal,
                 shippingAmount: shipping,
                 gstAmount: gst,
@@ -201,6 +259,108 @@ export default function Checkout() {
             alert(message)
         } finally {
             setplacingOrder(false)
+        }
+    }
+
+    async function handlePaymentAndPlaceOrder() {
+        if (mode === 'COD') {
+            await placeOrder()
+            return
+        }
+
+        if (paymentProcessing || placingOrder) return
+
+        setPaymentProcessing(true)
+
+        try {
+            const payableAmount = Number(final)
+            if (!Number.isFinite(payableAmount) || payableAmount <= 0) {
+                throw new Error('Payment amount invalid hai. Please refresh checkout and try again.')
+            }
+
+            const loaded = await loadRazorpayScript()
+            if (!loaded) {
+                throw new Error('Razorpay checkout failed to load. Please try again.')
+            }
+
+            const userId = localStorage.getItem('userid')
+            const receipt = `checkout_${String(userId || 'guest')}_${Date.now()}`
+            const orderResponse = await createRazorpayOrderAPI({
+                amount: payableAmount,
+                currency: razorpayCurrency || 'INR',
+                paymentMethod: mode,
+                userId,
+                receipt
+            })
+
+            const razorpayOrder = orderResponse?.order
+            const keyId = orderResponse?.keyId || razorpayKeyId || fallbackRazorpayKeyId
+
+            if (!razorpayOrder?.id || !keyId) {
+                throw new Error('Razorpay order could not be created. Please try again.')
+            }
+
+            const options = {
+                key: keyId,
+                amount: razorpayOrder.amount,
+                currency: razorpayOrder.currency || razorpayCurrency || 'INR',
+                name: 'Eshopper',
+                description: mode === 'Card' ? 'Card / NetBanking payment' : 'UPI / Wallet payment',
+                order_id: razorpayOrder.id,
+                prefill: {
+                    name: user?.name || '',
+                    email: user?.email || '',
+                    contact: user?.phone || ''
+                },
+                notes: {
+                    userId: String(userId || ''),
+                    paymentMethod: mode,
+                    cartItems: String(cart.length)
+                },
+                theme: { color: '#0f766e' },
+                modal: {
+                    ondismiss: () => setPaymentProcessing(false)
+                },
+                handler: async (response) => {
+                    try {
+                        const verifyResponse = await verifyRazorpayPaymentAPI({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature
+                        })
+
+                        if (!verifyResponse?.success) {
+                            throw new Error(verifyResponse?.message || 'Payment verification failed')
+                        }
+
+                        await placeOrder({
+                            paymentMethod: mode,
+                            paymentStatus: 'Paid',
+                            paidAt: new Date().toISOString(),
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpaySignature: response.razorpay_signature
+                        })
+                    } catch (paymentError) {
+                        console.error('Razorpay verification/order error:', paymentError)
+                        alert(paymentError?.message || 'Payment verified but order could not be placed. Please contact support.')
+                    } finally {
+                        setPaymentProcessing(false)
+                    }
+                }
+            }
+
+            const razorpayInstance = new window.Razorpay(options)
+            razorpayInstance.on('payment.failed', (response) => {
+                console.error('Razorpay payment failed:', response?.error)
+                setPaymentProcessing(false)
+                alert(response?.error?.description || 'Payment failed. Please try again.')
+            })
+            razorpayInstance.open()
+        } catch (error) {
+            console.error('Razorpay checkout error:', error)
+            alert(error?.message || 'Unable to start payment checkout.')
+            setPaymentProcessing(false)
         }
     }
 
@@ -449,8 +609,10 @@ export default function Checkout() {
                                 <div>Authentic Products</div>
                             </motion.div>
 
-                            <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.99 }} onClick={placeOrder} disabled={placingOrder || cart.length === 0} className="btn btn-info btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold premium-place-btn">
-                                {placingOrder ? 'Placing Order...' : `Place Order - ₹${final.toLocaleString('en-IN')}`}
+                            <motion.button whileHover={{ y: -1 }} whileTap={{ scale: 0.99 }} onClick={handlePaymentAndPlaceOrder} disabled={placingOrder || paymentProcessing || cart.length === 0} className="btn btn-info btn-block btn-lg py-3 rounded-pill shadow-lg font-weight-bold premium-place-btn">
+                                {placingOrder || paymentProcessing
+                                    ? (mode === 'COD' ? 'Placing Order...' : 'Opening Razorpay...')
+                                    : (mode === 'COD' ? `Place Order - ₹${final.toLocaleString('en-IN')}` : `Pay & Place Order - ₹${final.toLocaleString('en-IN')}`)}
                             </motion.button>
                         </div>
                     </motion.div>
