@@ -273,10 +273,14 @@ export default function Checkout() {
         setPaymentProcessing(true)
 
         try {
-            const payableAmount = Number(final)
+
+            let payableAmount = Number(final)
             if (!Number.isFinite(payableAmount) || payableAmount <= 0) {
-                throw new Error('Payment amount invalid hai. Please refresh checkout and try again.')
+                alert('Payable amount invalid hai! Amount: ' + final + '. Please refresh checkout or contact support.');
+                setPaymentProcessing(false)
+                return
             }
+            payableAmount = Math.round(payableAmount)
 
             const loaded = await loadRazorpayScript()
             if (!loaded) {
@@ -285,6 +289,19 @@ export default function Checkout() {
 
             const userId = localStorage.getItem('userid')
             const receipt = `checkout_${String(userId || 'guest')}_${Date.now()}`
+
+            // Debug log for outgoing payload
+            console.log('[Razorpay] Creating order with:', {
+                amount: payableAmount,
+                currency: razorpayCurrency || 'INR',
+                paymentMethod: mode,
+                userId,
+                receipt,
+                final,
+                razorpayCurrency,
+                mode
+            })
+
             const orderResponse = await createRazorpayOrderAPI({
                 amount: payableAmount,
                 currency: razorpayCurrency || 'INR',

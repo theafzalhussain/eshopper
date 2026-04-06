@@ -3665,7 +3665,18 @@ app.post('/api/razorpay/create-order', async (req, res) => {
         const paymentMethod = String(req.body?.paymentMethod || 'Razorpay');
         const receipt = String(req.body?.receipt || buildRazorpayReceipt(req.body?.userId || 'payment'));
 
+        // Debug log for incoming amount
+        console.log('[Razorpay] Received create-order:', {
+            amountRaw,
+            amount,
+            currency,
+            paymentMethod,
+            receipt,
+            body: req.body
+        });
+
         if (!Number.isFinite(amount) || amount <= 0) {
+            console.error('[Razorpay] Invalid payment amount:', amountRaw, amount);
             return res.status(400).json({
                 success: false,
                 message: 'Invalid payment amount. Please refresh checkout and try again.',
@@ -3675,10 +3686,28 @@ app.post('/api/razorpay/create-order', async (req, res) => {
             });
         }
 
-        const order = await createRazorpayOrder({ amount, currency, receipt, paymentMethod });
-        return res.json({ success: true, order, keyId: RAZORPAY_KEY_ID, currency });
+        try {
+            const order = await createRazorpayOrder({ amount, currency, receipt, paymentMethod });
+            return res.json({ success: true, order, keyId: RAZORPAY_KEY_ID, currency });
+        } catch (razorpayError) {
+            // Log full Razorpay error response if available
+            if (razorpayError.response) {
+                console.error('❌ Razorpay API error:', {
+                    status: razorpayError.response.status,
+                    data: razorpayError.response.data,
+                    headers: razorpayError.response.headers
+                });
+            } else {
+                console.error('❌ Razorpay create-order error:', razorpayError.message, razorpayError);
+            }
+            return res.status(razorpayError.status || razorpayError.response?.status || 500).json({
+                success: false,
+                message: razorpayError.response?.data?.error?.description || razorpayError.message || 'Failed to create Razorpay order',
+                meta: razorpayError.response?.data || {}
+            });
+        }
     } catch (error) {
-        console.error('❌ Razorpay create-order error:', error.message);
+        console.error('❌ Razorpay create-order error:', error.message, error);
         return res.status(error.status || 500).json({ success: false, message: error.message || 'Failed to create Razorpay order' });
     }
 });
