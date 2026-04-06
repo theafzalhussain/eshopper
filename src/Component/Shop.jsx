@@ -36,6 +36,55 @@ export default function Shop() {
     // Available sizes for products
     const AVAILABLE_SIZES = ['S', 'M', 'L', 'XL', '2XL']
 
+    const normalizeCategory = (value) => String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[-_]+/g, ' ')
+        .replace(/\s+/g, ' ')
+
+    const CATEGORY_GROUPS = [
+        { key: 'kids', aliases: ['kid', 'kids', 'boy', 'boys', 'child', 'children'] },
+        { key: 'girls', aliases: ['girl', 'girls'] },
+        { key: 'women', aliases: ['woman', 'women', 'womens', 'lady', 'ladies', 'female'] },
+        { key: 'mens', aliases: ['man', 'men', 'mens'] }
+    ]
+
+    const resolveCategoryGroup = (value) => {
+        const normalized = normalizeCategory(value)
+        if (!normalized || normalized === 'all') return normalized
+
+        const matchedGroup = CATEGORY_GROUPS.find((group) =>
+            group.aliases.some((alias) => normalized === alias || normalized.includes(alias))
+        )
+
+        return matchedGroup ? matchedGroup.key : normalized
+    }
+
+    const matchesCategory = (productCategory, selectedCategory) => {
+        const normalizedSelected = resolveCategoryGroup(selectedCategory)
+        if (!normalizedSelected || normalizedSelected === 'all') return true
+        return resolveCategoryGroup(productCategory) === normalizedSelected
+    }
+
+    const matchesSearchQuery = (item, query) => {
+        const normalizedQuery = normalizeCategory(query)
+        if (!normalizedQuery) return true
+
+        const searchableText = [item.name, item.maincategory, item.subcategory, item.brand]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+
+        if (searchableText.includes(normalizedQuery)) return true
+
+        const resolvedGroup = resolveCategoryGroup(normalizedQuery)
+        if (resolvedGroup === 'all' || resolvedGroup === normalizedQuery) {
+            return false
+        }
+
+        return matchesCategory(item.maincategory, resolvedGroup) || matchesCategory(item.subcategory, resolvedGroup)
+    }
+
     const colorMap = {
         black: '#111111',
         white: '#ffffff',
@@ -186,39 +235,16 @@ export default function Shop() {
     const filteredProducts = useMemo(() => {
         let temp = [...product];
 
-        // Editorial category filter (from Home page) - case-insensitive, flexible
-        if (category === 'men') {
-            temp = temp.filter(x => {
-                const main = (x.maincategory || '').toLowerCase();
-                const sub = (x.subcategory || '').toLowerCase();
-                return (
-                    /men|mens|boy|boys/.test(main) ||
-                    /men|mens|boy|boys/.test(sub)
-                );
-            });
-        } else if (category === 'women') {
-            temp = temp.filter(x => {
-                const main = (x.maincategory || '').toLowerCase();
-                const sub = (x.subcategory || '').toLowerCase();
-                return (
-                    /women|ladies|girl|girls|female/.test(main) ||
-                    /women|ladies|girl|girls|female/.test(sub)
-                );
-            });
-        } else if (category === 'kids') {
-            temp = temp.filter(x => {
-                const main = (x.maincategory || '').toLowerCase();
-                const sub = (x.subcategory || '').toLowerCase();
-                return (
-                    /kid|kids|child|children/.test(main) ||
-                    /kid|kids|child|children/.test(sub)
-                );
-            });
+        // Editorial category filter (from Home page) - same alias logic as normal filters
+        if (category) {
+            temp = temp.filter((x) =>
+                matchesCategory(x.maincategory, category) || matchesCategory(x.subcategory, category)
+            );
         }
 
-        if (mc !== 'All') temp = temp.filter(x => x.maincategory === mc);
-        if (sc !== 'All') temp = temp.filter(x => x.subcategory === sc);
-        if (br !== 'All') temp = temp.filter(x => x.brand === br);
+        if (mc !== 'All') temp = temp.filter(x => matchesCategory(x.maincategory, mc));
+        if (sc !== 'All') temp = temp.filter(x => matchesCategory(x.subcategory, sc));
+        if (br !== 'All') temp = temp.filter(x => normalizeCategory(x.brand) === normalizeCategory(br));
         if (size !== 'All') temp = temp.filter(x => x.size === size);
         
         // Price Filter
@@ -226,7 +252,7 @@ export default function Shop() {
 
         // Search Filter
         if (search) {
-            temp = temp.filter(x => x.name.toLowerCase().includes(search.toLowerCase()));
+            temp = temp.filter((x) => matchesSearchQuery(x, search));
         }
 
         // Sorting

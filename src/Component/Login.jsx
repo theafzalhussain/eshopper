@@ -8,6 +8,7 @@ import { signInWithPopup, getIdToken } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
 import { loginAPI, login2FAAPI } from '../Store/Services'
 import { BASE_URL } from '../constants'
+import { useToast } from './ToastNotification'
 
 export default function Login() {
     const [data, setdata] = useState({ username: "", password: "" })
@@ -20,6 +21,7 @@ export default function Login() {
     const [otpHint, setOtpHint] = useState('')
     const [rememberMe, setRememberMe] = useState(false)
     const [autoLoginAttempted, setAutoLoginAttempted] = useState(false)
+    const toast = useToast()
     
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -139,15 +141,19 @@ export default function Login() {
             }
 
             persistUserSession(user, true)
+            toast.success('Signed in with Google successfully.')
             navigate(user.role === 'Admin' ? '/admin-home' : '/profile')
         } catch (err) {
             console.error('Google login error:', err)
             if (err.code === 'auth/popup-closed-by-user') {
                 setErrorMsg('Google sign-in was cancelled.')
+                toast.warning('Google sign-in was cancelled.')
             } else if (err.code === 'auth/configuration-not-found' || err.message?.includes('Firebase') || err.message?.includes('not configured')) {
                 setErrorMsg('Google login is not configured. Please contact support or try again later.')
+                toast.error('Google login is not configured right now.')
             } else {
                 setErrorMsg(err.message || 'Google sign-in failed. Please try again.')
+                toast.error(err.message || 'Google sign-in failed. Please try again.')
             }
         } finally {
             setGoogleLoading(false)
@@ -169,6 +175,7 @@ export default function Login() {
                 setTwoFactorRequired(true)
                 setOtpHint(user?.message || 'Verification code sent to your email.')
                 setErrorMsg('')
+                toast.info(user?.message || 'Verification code sent. Please enter OTP to continue.')
                 return
             }
             
@@ -186,24 +193,42 @@ export default function Login() {
                     localStorage.removeItem("savedCredentials")
                 }
 
+                toast.success('Login successful. Welcome back!')
                 navigate(user.role === "Admin" ? "/admin-home" : "/profile");
             } else {
                 // Check if it's a Firebase auth provider error
                 if (user.requiresFirebaseAuth && user.provider) {
                     setErrorMsg(user.message || "Invalid credentials. Please try again.");
+                    toast.error(user.message || "Invalid credentials. Please try again.")
                 } else {
                     setErrorMsg(user.message || "Invalid credentials. Please try again.");
+                    toast.error(user.message || "Invalid credentials. Please try again.")
                 }
             }
         } catch (err) {
             setLoading(false)
-            
-            // Better error handling
-            if (err.response?.status === 403) {
-                // Account locked or Firebase auth required
-                setErrorMsg(err.response.data.message || "Access denied. Please try again later.");
+
+            const status = err?.status
+            const apiMessage = err?.data?.message || err?.message
+
+            if (status === 401) {
+                setErrorMsg("Invalid username/email or password.")
+                toast.error("Invalid username/email or password.")
+            } else if (status === 403) {
+                setErrorMsg(apiMessage || "Access denied. Please try again later.")
+                toast.error(apiMessage || "Access denied. Please try again later.")
+            } else if (status === 429) {
+                setErrorMsg("Too many attempts right now. Please wait a moment and try again.")
+                toast.warning("Too many attempts right now. Please wait a moment and try again.")
+            } else if (status >= 500) {
+                setErrorMsg("Server issue while signing in. Please try again shortly.")
+                toast.error("Server issue while signing in. Please try again shortly.")
+            } else if ((err?.message || '').includes('timeout')) {
+                setErrorMsg("Login request timed out. Please check connection and retry.")
+                toast.warning("Login request timed out. Please check connection and retry.")
             } else {
-                setErrorMsg(err.message || "Login failed. Please try again.");
+                setErrorMsg(apiMessage || "Login failed. Please try again.")
+                toast.error(apiMessage || "Login failed. Please try again.")
             }
             
             console.error("Login Error:", err);
@@ -214,6 +239,9 @@ export default function Login() {
         <div className="premium-login-container">
             {/* Dynamic Background */}
             <div className="luxury-bg-overlay"></div>
+            <div className="luxury-orb orb-a" aria-hidden="true"></div>
+            <div className="luxury-orb orb-b" aria-hidden="true"></div>
+            <div className="luxury-grid" aria-hidden="true"></div>
             
             <div className="container d-flex align-items-center justify-content-center min-vh-100">
                 <motion.div 
@@ -380,241 +408,369 @@ export default function Login() {
             </div>
 
             <style dangerouslySetInnerHTML={{ __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@300;400;700;800&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
 
                 .premium-login-container {
+                    --lux-ink: #101419;
+                    --lux-card: rgba(255, 252, 245, 0.9);
+                    --lux-muted: #5c6670;
+                    --lux-border: rgba(20, 26, 33, 0.12);
+                    --lux-highlight: #0f766e;
+                    --lux-gold: #b78628;
+                    --lux-warn: #b91c1c;
                     position: relative;
                     min-height: 100vh;
-                    background: url('https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=1600&q=80') center/cover;
-                    font-family: 'Montserrat', sans-serif;
                     overflow: hidden;
+                    font-family: 'Manrope', sans-serif;
+                    background:
+                        radial-gradient(circle at 15% 10%, rgba(183, 134, 40, 0.26), transparent 42%),
+                        radial-gradient(circle at 90% 85%, rgba(15, 118, 110, 0.24), transparent 38%),
+                        linear-gradient(140deg, #0b1418 0%, #111f27 42%, #2b1f14 100%);
                 }
 
                 .luxury-bg-overlay {
                     position: absolute;
-                    top: 0; left: 0; width: 100%; height: 100%;
-                    background: linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(23,162,184,0.3) 100%);
-                    backdrop-filter: blur(5px);
+                    inset: 0;
+                    background: linear-gradient(180deg, rgba(6, 10, 14, 0.28), rgba(6, 10, 14, 0.72));
+                    pointer-events: none;
+                }
+
+                .luxury-orb {
+                    position: absolute;
+                    border-radius: 999px;
+                    filter: blur(10px);
+                    opacity: 0.55;
+                    animation: floatOrb 12s ease-in-out infinite;
+                    pointer-events: none;
+                }
+
+                .orb-a {
+                    width: 320px;
+                    height: 320px;
+                    top: -120px;
+                    right: -90px;
+                    background: radial-gradient(circle at 30% 30%, rgba(255, 208, 122, 0.85), rgba(183, 134, 40, 0.08));
+                }
+
+                .orb-b {
+                    width: 280px;
+                    height: 280px;
+                    bottom: -110px;
+                    left: -100px;
+                    animation-delay: 2.8s;
+                    background: radial-gradient(circle at 65% 40%, rgba(120, 255, 240, 0.6), rgba(15, 118, 110, 0.06));
+                }
+
+                .luxury-grid {
+                    position: absolute;
+                    inset: 0;
+                    background-image:
+                        linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+                    background-size: 36px 36px;
+                    mask-image: radial-gradient(circle at center, #000 40%, transparent 90%);
+                    pointer-events: none;
+                    opacity: 0.35;
+                }
+
+                .container {
+                    position: relative;
+                    z-index: 2;
                 }
 
                 .glass-master-card {
                     position: relative;
                     width: 100%;
-                    max-width: 480px;
-                    background: rgba(255, 255, 255, 0.92);
-                    backdrop-filter: blur(20px);
-                    border: 1px solid rgba(255, 255, 255, 0.4);
-                    border-radius: 40px;
-                    box-shadow: 0 40px 100px rgba(0,0,0,0.4);
-                    padding: 60px 40px;
+                    max-width: 500px;
+                    background: var(--lux-card);
+                    border: 1px solid rgba(255, 255, 255, 0.45);
+                    backdrop-filter: blur(14px);
+                    border-radius: 34px;
+                    box-shadow:
+                        0 30px 90px rgba(2, 8, 14, 0.48),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+                    padding: 52px 38px;
+                    animation: cardRise 0.8s ease both;
+                }
+
+                .login-content-wrapper {
+                    position: relative;
+                    z-index: 1;
                 }
 
                 .brand-shield {
-                    width: 60px; height: 60px;
-                    background: #111;
-                    color: white;
-                    display: flex; align-items: center; justify-content: center;
+                    width: 64px;
+                    height: 64px;
+                    border-radius: 20px;
                     margin: 0 auto;
-                    border-radius: 18px;
-                    font-family: 'Cinzel', serif;
-                    font-size: 1.5rem;
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #fff;
+                    background: linear-gradient(145deg, #111 0%, #273744 72%, #0f766e 100%);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+                }
+
+                .shield-text {
+                    font-family: 'Playfair Display', serif;
+                    font-size: 1.65rem;
+                    font-weight: 700;
+                    letter-spacing: 0.5px;
                 }
 
                 .brand-name {
-                    font-family: 'Montserrat', sans-serif;
-                    font-weight: 800;
-                    letter-spacing: 6px;
-                    font-size: 2rem;
-                    color: #111;
-                    margin-bottom: 5px;
+                    margin-bottom: 4px;
+                    color: var(--lux-ink);
+                    font-family: 'Playfair Display', serif;
+                    font-size: clamp(1.8rem, 4.4vw, 2.3rem);
+                    letter-spacing: 3px;
+                    font-weight: 700;
                 }
 
-                .accent-dot { color: #17a2b8; }
+                .accent-dot {
+                    color: var(--lux-gold);
+                }
 
                 .login-subtitle {
-                    font-size: 10px;
-                    font-weight: 700;
-                    letter-spacing: 3px;
-                    color: #888;
-                }
-
-                .input-field-wrap { margin-bottom: 25px; }
-                .input-field-wrap label {
-                    font-size: 10px;
-                    font-weight: 800;
-                    color: #222;
-                    margin-bottom: 10px;
-                    display: block;
-                    letter-spacing: 2px;
-                }
-
-                .input-box {
-                    display: flex;
-                    align-items: center;
-                    background: #f4f7f8;
-                    border: 2px solid transparent;
-                    border-radius: 15px;
-                    padding: 8px 15px;
-                    transition: 0.4s;
-                }
-
-                .input-box:focus-within {
-                    border-color: #17a2b8;
-                    background: white;
-                    box-shadow: 0 5px 15px rgba(23,162,184,0.1);
-                }
-
-                .input-box input {
-                    border: none;
-                    background: transparent;
-                    width: 100%;
-                    outline: none;
-                    font-size: 15px;
-                    font-weight: 600;
-                    padding: 10px;
-                    color: #111;
-                }
-
-                .icon { color: #bbb; transition: 0.3s; }
-                .input-box:focus-within .icon { color: #17a2b8; }
-
-                .input-hint {
-                    font-size: 11px;
-                    color: #666;
-                    margin-top: 6px;
-                    margin-left: 4px;
-                    font-weight: 500;
-                }
-
-                .twofactor-back-btn {
-                    margin-top: 10px;
-                    border: 0;
-                    background: transparent;
-                    color: #0f8ea4;
-                    font-size: 11px;
-                    font-weight: 700;
-                    letter-spacing: 0.6px;
-                    text-transform: uppercase;
-                    cursor: pointer;
-                    padding: 0;
-                }
-
-                .eye-toggle { border: none; background: transparent; color: #bbb; cursor: pointer; }
-
-                /* --- REMEMBER ME CHECKBOX STYLING --- */
-                .remember-me-wrapper {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    margin-bottom: 20px;
-                }
-
-                .remember-checkbox {
-                    width: 18px;
-                    height: 18px;
-                    cursor: pointer;
-                    accent-color: #17a2b8;
-                    border-radius: 4px;
-                }
-
-                .remember-label {
-                    font-size: 12px;
-                    font-weight: 600;
-                    color: #333;
-                    cursor: pointer;
-                    user-select: none;
                     margin: 0;
+                    color: var(--lux-muted);
+                    font-size: 0.68rem;
+                    letter-spacing: 3.4px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                }
+
+                .premium-error-alert {
+                    background: #fff2f2;
+                    border: 1px solid #fecaca;
+                    color: var(--lux-warn);
+                    border-radius: 14px;
+                    padding: 12px 14px;
+                    margin-bottom: 1.1rem;
+                    font-size: 0.78rem;
+                    font-weight: 700;
                     display: flex;
                     align-items: center;
                     gap: 8px;
                 }
 
-                .remember-label:hover {
-                    color: #17a2b8;
+                .premium-form {
+                    display: grid;
+                    gap: 0.95rem;
+                }
+
+                .input-field-wrap {
+                    margin-bottom: 0.2rem;
+                }
+
+                .input-field-wrap label {
+                    display: block;
+                    font-size: 0.63rem;
+                    letter-spacing: 2.1px;
+                    text-transform: uppercase;
+                    color: #2c3540;
+                    font-weight: 800;
+                    margin-bottom: 8px;
+                }
+
+                .input-box {
+                    display: flex;
+                    align-items: center;
+                    border: 1px solid var(--lux-border);
+                    border-radius: 14px;
+                    background: rgba(255, 255, 255, 0.88);
+                    padding: 8px 12px;
+                    min-height: 50px;
+                    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+                }
+
+                .input-box:focus-within {
+                    border-color: rgba(15, 118, 110, 0.65);
+                    box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+                    transform: translateY(-1px);
+                }
+
+                .icon {
+                    flex-shrink: 0;
+                    color: #86909a;
+                    transition: color 0.2s ease;
+                }
+
+                .input-box:focus-within .icon {
+                    color: var(--lux-highlight);
+                }
+
+                .input-box input {
+                    width: 100%;
+                    border: 0;
+                    outline: 0;
+                    background: transparent;
+                    color: var(--lux-ink);
+                    font-size: 0.96rem;
+                    font-weight: 650;
+                    padding: 9px 10px;
+                }
+
+                .input-box input::placeholder {
+                    color: #95a1ad;
+                    font-weight: 600;
+                }
+
+                .input-hint {
+                    margin-top: 6px;
+                    padding-left: 2px;
+                    font-size: 0.72rem;
+                    color: #5f6871;
+                    font-weight: 600;
+                }
+
+                .eye-toggle {
+                    border: 0;
+                    background: transparent;
+                    color: #8995a3;
+                    min-width: 34px;
+                    min-height: 34px;
+                    border-radius: 10px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: background-color 0.2s ease, color 0.2s ease;
+                }
+
+                .eye-toggle:hover {
+                    background: rgba(15, 118, 110, 0.1);
+                    color: var(--lux-highlight);
+                }
+
+                .twofactor-back-btn {
+                    margin-top: 8px;
+                    border: 0;
+                    background: transparent;
+                    color: #0d6a63;
+                    font-size: 0.7rem;
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                    text-transform: uppercase;
+                    padding: 0;
+                    text-align: left;
+                }
+
+                .remember-me-wrapper {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin: 8px 0 6px;
+                }
+
+                .remember-checkbox {
+                    accent-color: var(--lux-highlight);
+                    cursor: pointer;
+                    width: 18px;
+                    height: 18px;
+                }
+
+                .remember-label {
+                    margin: 0;
+                    color: #36404b;
+                    font-size: 0.76rem;
+                    font-weight: 700;
+                    cursor: pointer;
                 }
 
                 .master-login-btn {
                     width: 100%;
-                    background: #111;
-                    color: white;
-                    border: none;
-                    padding: 20px;
-                    border-radius: 20px;
-                    font-weight: 800;
-                    font-size: 14px;
-                    letter-spacing: 2px;
+                    border: 0;
+                    border-radius: 16px;
+                    padding: 16px 18px;
+                    margin-top: 0.65rem;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    cursor: pointer;
-                    margin-top: 30px;
-                    transition: 0.4s;
+                    gap: 8px;
+                    font-size: 0.8rem;
+                    font-weight: 800;
+                    letter-spacing: 1.8px;
+                    text-transform: uppercase;
+                    color: #f6f8fa;
+                    background: linear-gradient(132deg, #16212a, #0f766e 55%, #b78628);
+                    box-shadow: 0 14px 28px rgba(15, 118, 110, 0.28);
+                    transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
                 }
 
                 .master-login-btn:hover {
-                    background: #17a2b8;
-                    transform: translateY(-3px);
-                    box-shadow: 0 15px 30px rgba(23,162,184,0.3);
+                    transform: translateY(-2px);
+                    box-shadow: 0 18px 34px rgba(15, 118, 110, 0.36);
+                    filter: brightness(1.04);
+                }
+
+                .master-login-btn:disabled {
+                    opacity: 0.7;
+                    cursor: not-allowed;
+                    transform: none;
                 }
 
                 .social-login-block {
-                    margin-top: 18px;
+                    margin-top: 1rem;
                 }
 
-                .social-login-divider {
-                    margin: 28px 0 18px;
+                .social-login-divider,
+                .luxury-divider {
                     position: relative;
                     text-align: center;
+                    margin: 22px 0 14px;
                 }
 
-                .social-login-divider::before {
+                .social-login-divider::before,
+                .luxury-divider::before {
                     content: '';
                     position: absolute;
-                    top: 50%; left: 0; width: 100%; height: 1px;
-                    background: #e8e8e8;
+                    top: 50%;
+                    left: 0;
+                    width: 100%;
+                    height: 1px;
+                    background: linear-gradient(90deg, transparent 0%, rgba(44, 53, 64, 0.25) 15%, rgba(44, 53, 64, 0.25) 85%, transparent 100%);
                 }
 
-                .social-login-divider span {
+                .social-login-divider span,
+                .luxury-divider span {
                     position: relative;
                     z-index: 1;
-                    background: rgba(255, 255, 255, 0.92);
-                    padding: 0 14px;
-                    font-size: 10px;
+                    background: rgba(255, 252, 245, 0.95);
+                    padding: 0 12px;
+                    color: #6a727b;
+                    font-size: 0.63rem;
+                    letter-spacing: 1.9px;
                     font-weight: 800;
-                    letter-spacing: 2px;
-                    color: #9aa0a6;
+                    text-transform: uppercase;
                 }
 
                 .google-login-btn {
                     width: 100%;
+                    border-radius: 14px;
+                    padding: 13px 16px;
+                    border: 1px solid #dce1e6;
                     background: #fff;
-                    color: #202124;
-                    border: 1px solid #dadce0;
-                    border-radius: 999px;
-                    padding: 16px 22px;
-                    font-family: 'Montserrat', sans-serif;
-                    font-size: 15px;
+                    color: #1f2328;
                     font-weight: 700;
+                    font-size: 0.9rem;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 12px;
-                    box-shadow: 0 10px 24px rgba(0,0,0,0.06);
-                    transition: all 0.25s ease;
+                    gap: 11px;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    box-shadow: 0 10px 22px rgba(17, 24, 39, 0.08);
                 }
 
                 .google-login-btn:hover {
-                    border-color: #c6c8cc;
-                    box-shadow: 0 14px 28px rgba(0,0,0,0.1);
-                    background: #fff;
-                    color: #202124;
+                    transform: translateY(-1px);
+                    box-shadow: 0 14px 26px rgba(17, 24, 39, 0.12);
                 }
 
                 .google-login-btn:disabled {
                     opacity: 0.75;
                     cursor: not-allowed;
-                    transform: none !important;
+                    transform: none;
                 }
 
                 .google-mark {
@@ -632,285 +788,184 @@ export default function Login() {
                 }
 
                 .g-blue {
-                    background: #fff;
-                    color: #4285F4;
                     width: 18px;
                     height: 18px;
                     border-radius: 50%;
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    font-family: Arial, sans-serif;
+                    background: #fff;
+                    color: #4285F4;
                     font-size: 13px;
                     font-weight: 700;
+                    font-family: 'Manrope', sans-serif;
                 }
 
-                .google-spinner {
+                .google-spinner,
+                .spinner {
                     animation: rotate 1s linear infinite;
                 }
 
-                .premium-error-alert {
-                    background: #fff0f0;
-                    color: #e53e3e;
-                    padding: 15px;
-                    border-radius: 15px;
-                    margin-bottom: 25px;
-                    font-size: 12px;
-                    font-weight: 700;
-                    display: flex;
-                    align-items: center;
-                    border-left: 4px solid #e53e3e;
-                }
-
-                .luxury-divider {
-                    margin: 40px 0 25px;
-                    position: relative;
-                    text-align: center;
-                }
-
-                .luxury-divider::before {
-                    content: '';
-                    position: absolute;
-                    top: 50%; left: 0; width: 100%; height: 1px;
-                    background: #eee;
-                    z-index: 1;
-                }
-
-                .luxury-divider span {
-                    background: rgba(255, 255, 255, 0.92);
-                    padding: 0 15px;
-                    position: relative;
-                    z-index: 2;
-                    font-size: 10px;
-                    font-weight: 700;
-                    color: #aaa;
-                    letter-spacing: 2px;
-                }
-
                 .signup-link-premium {
-                    color: #111;
-                    font-weight: 800;
-                    letter-spacing: 1.5px;
-                    font-size: 12px;
                     text-decoration: none;
-                    padding-bottom: 5px;
-                    border-bottom: 2px solid #17a2b8;
-                    transition: 0.3s;
+                    color: #14202b;
+                    font-weight: 800;
+                    letter-spacing: 1.2px;
+                    font-size: 0.76rem;
+                    padding-bottom: 3px;
+                    border-bottom: 2px solid rgba(183, 134, 40, 0.7);
+                    transition: color 0.2s ease, border-color 0.2s ease;
                 }
 
                 .signup-link-premium:hover {
-                    color: #17a2b8;
+                    color: var(--lux-highlight);
+                    border-color: var(--lux-highlight);
                 }
 
-                .spinner { animation: rotate 2s linear infinite; }
-                @keyframes rotate { 100% { transform: rotate(360deg); } }
-
-                /* === 📱 PREMIUM FULL RESPONSIVE DESIGN === */
-                
-                /* Extra Large Devices (1200px and up) */
-                @media (min-width: 1200px) {
-                    .glass-master-card { 
-                        max-width: 520px; 
-                        padding: 70px 50px;
-                        box-shadow: 0 50px 120px rgba(0,0,0,0.5);
-                    }
-                    .brand-name { font-size: 2.2rem; }
-                    .input-box input { font-size: 16px; }
+                @keyframes rotate {
+                    to { transform: rotate(360deg); }
                 }
 
-                /* Large Devices (992px to 1199px) */
-                @media (max-width: 1199px) and (min-width: 992px) {
-                    .premium-login-container { padding: 50px 30px; }
-                    .glass-master-card { max-width: 500px; padding: 60px 45px; }
+                @keyframes floatOrb {
+                    0%, 100% { transform: translateY(0) scale(1); }
+                    50% { transform: translateY(-14px) scale(1.06); }
                 }
 
-                /* Medium Devices - Tablets (768px to 991px) */
-                @media (max-width: 991px) and (min-width: 768px) {
-                    .premium-login-container { padding: 40px 20px; }
-                    .glass-master-card { max-width: 480px; padding: 50px 35px; border-radius: 35px; }
-                    .brand-name { font-size: 1.75rem; letter-spacing: 5px; }
-                    .login-subtitle { font-size: 9px; letter-spacing: 2.5px; }
-                    .input-box input { font-size: 15px; }
-                    .master-login-btn { padding: 18px; font-size: 13px; }
+                @keyframes cardRise {
+                    from { opacity: 0; transform: translateY(18px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
 
-                /* Small Tablets & Large Phones (576px to 767px) */
-                @media (max-width: 767px) and (min-width: 576px) {
-                    .glass-master-card { 
-                        max-width: 92%; 
-                        padding: 45px 32px; 
-                        border-radius: 32px; 
-                    }
-                    .brand-shield { width: 56px; height: 56px; font-size: 1.35rem; }
-                    .brand-name { font-size: 1.65rem; letter-spacing: 4.5px; }
-                    .login-subtitle { font-size: 8.5px; letter-spacing: 2.3px; }
-                    .input-field-wrap label { font-size: 9.5px; }
-                    .input-box { padding: 10px 16px; }
-                    .input-box input { padding: 11px; font-size: 14.5px; }
-                    .master-login-btn { padding: 17px; font-size: 12.5px; }
-                    .input-hint { font-size: 10.5px; }
-                }
-
-                /* Standard Mobile (480px to 575px) */
-                @media (max-width: 575px) and (min-width: 480px) {
-                    .premium-login-container { padding: 25px 18px; }
-                    .glass-master-card { 
-                        border-radius: 28px; 
-                        padding: 42px 28px; 
-                        max-width: 94%;
-                        box-shadow: 0 25px 70px rgba(0,0,0,0.35);
-                    }
-                    .brand-shield { width: 52px; height: 52px; font-size: 1.25rem; border-radius: 16px; }
-                    .brand-name { font-size: 1.5rem; letter-spacing: 3.5px; }
-                    .login-subtitle { font-size: 7.5px; letter-spacing: 2.2px; }
-                    .input-field-wrap label { font-size: 9px; letter-spacing: 1.7px; }
-                    .input-box { 
-                        padding: 9px 14px;
-                        border-radius: 14px;
-                    }
-                    .input-box input { 
-                        padding: 11px; 
-                        font-size: 14px;
-                    }
-                    .master-login-btn { 
-                        padding: 16px; 
-                        font-size: 12px; 
-                        letter-spacing: 2.2px;
-                        border-radius: 18px;
-                    }
-                    .input-hint { font-size: 10px; }
-                    .remember-label { font-size: 11.5px; }
-                    .signup-link-premium { font-size: 11.5px; }
-                }
-
-                /* Compact Mobile (375px to 479px) */
-                @media (max-width: 479px) and (min-width: 375px) {
-                    .premium-login-container { padding: 20px 15px; }
-                    .glass-master-card { 
-                        border-radius: 25px; 
-                        padding: 38px 24px; 
-                        max-width: 95%;
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    }
-                    .brand-shield { width: 48px; height: 48px; font-size: 1.15rem; border-radius: 14px; }
-                    .brand-name { font-size: 1.35rem; letter-spacing: 3px; margin-bottom: 3px; }
-                    .login-subtitle { font-size: 7px; letter-spacing: 2px; }
-                    .input-field-wrap label { font-size: 8.5px; letter-spacing: 1.5px; }
-                    .input-box { 
-                        padding: 8px 13px;
-                        border-radius: 13px;
-                    }
-                    .input-box input { 
-                        padding: 10px; 
-                        font-size: 13.5px;
-                    }
-                    .master-login-btn { 
-                        padding: 15px; 
-                        font-size: 11.5px; 
-                        letter-spacing: 2px;
-                        border-radius: 16px;
-                    }
-                    .input-hint { font-size: 10px; margin-top: 5px; }
-                    .remember-label { font-size: 11px; }
-                    .remember-checkbox { width: 17px; height: 17px; }
-                    .luxury-divider { margin: 35px 0 20px; }
-                    .signup-link-premium { font-size: 11px; }
-                }
-
-                /* Extra Small Mobile (320px to 374px) */
-                @media (max-width: 374px) {
-                    .premium-login-container { 
-                        padding: 15px 12px; 
-                        min-height: 100vh;
-                        display: flex;
-                        align-items: center;
-                    }
-                    .glass-master-card { 
-                        padding: 32px 20px; 
-                        border-radius: 22px;
-                        max-width: 96%;
-                        box-shadow: 0 15px 50px rgba(0,0,0,0.25);
-                    }
-                    .brand-shield { width: 44px; height: 44px; font-size: 1.05rem; border-radius: 13px; }
-                    .brand-name { font-size: 1.2rem; letter-spacing: 2.5px; margin-bottom: 2px; }
-                    .login-subtitle { font-size: 6.5px; letter-spacing: 1.8px; }
-                    .input-field-wrap { margin-bottom: 20px; }
-                    .input-field-wrap label { font-size: 8px; letter-spacing: 1.3px; margin-bottom: 8px; }
-                    .input-box { 
-                        padding: 7px 12px;
-                        border-radius: 12px;
-                    }
-                    .input-box input { 
-                        padding: 9px; 
-                        font-size: 13px;
-                    }
-                    .icon { width: 16px; height: 16px; }
-                    .master-login-btn { 
-                        padding: 14px; 
-                        font-size: 11px; 
-                        letter-spacing: 1.8px;
-                        border-radius: 15px;
-                        margin-top: 25px;
-                    }
-                    .input-hint { font-size: 9.5px; margin-top: 5px; }
-                    .remember-me-wrapper { gap: 8px; margin-bottom: 18px; }
-                    .remember-checkbox { width: 16px; height: 16px; }
-                    .remember-label { font-size: 10.5px; gap: 7px; }
-                    .luxury-divider { margin: 30px 0 18px; }
-                    .luxury-divider span { font-size: 9px; padding: 0 12px; }
-                    .signup-link-premium { font-size: 10.5px; letter-spacing: 1.2px; }
-                    .premium-error-alert { 
-                        padding: 12px; 
-                        font-size: 11px;
-                        border-radius: 12px;
-                        margin-bottom: 20px;
+                @media (max-width: 1024px) {
+                    .glass-master-card {
+                        max-width: 480px;
+                        padding: 46px 30px;
                     }
                 }
 
-                /* Tall Screens - Center Content */
-                @media (min-height: 900px) {
-                    .premium-login-container { 
-                        align-items: center !important;
-                        justify-content: center !important;
-                    }
-                }
-
-                /* Touch-Friendly Enhancements for Mobile */
                 @media (max-width: 767px) {
+                    .premium-login-container {
+                        padding: 20px 14px;
+                        min-height: calc(100svh - 64px);
+                        overflow: hidden;
+                    }
+
+                    .premium-login-container .container.min-vh-100 {
+                        min-height: calc(100svh - 64px) !important;
+                    }
+
+                    .glass-master-card {
+                        max-width: 100%;
+                        border-radius: 26px;
+                        padding: 32px 22px;
+                        max-height: calc(100svh - 86px);
+                        overflow-y: auto;
+                    }
+
+                    .brand-name {
+                        letter-spacing: 2.2px;
+                    }
+
+                    .login-subtitle {
+                        letter-spacing: 2.3px;
+                    }
+
                     .input-box {
-                        min-height: 48px; /* Touch-friendly minimum */
+                        min-height: 48px;
                     }
+
                     .master-login-btn {
-                        min-height: 50px; /* Easier to tap */
-                        touch-action: manipulation; /* Prevent double-tap zoom */
+                        min-height: 50px;
+                        font-size: 0.75rem;
+                        letter-spacing: 1.5px;
                     }
-                    .remember-checkbox {
-                        min-width: 20px;
-                        min-height: 20px;
-                    }
-                    .eye-toggle {
-                        padding: 8px;
-                        min-width: 36px;
-                        min-height: 36px;
+
+                    .login-content-wrapper .mb-5,
+                    .login-content-wrapper .mt-5 {
+                        margin-bottom: 0.9rem !important;
+                        margin-top: 0.9rem !important;
                     }
                 }
 
-                /* Landscape Mode Optimizations */
-                @media (max-height: 500px) and (orientation: landscape) {
-                    .premium-login-container { 
-                        padding: 20px 15px;
-                        align-items: flex-start !important;
+                @media (max-width: 420px) {
+                    .premium-login-container {
+                        padding: 10px 8px;
                     }
-                    .glass-master-card { 
-                        padding: 30px 35px;
-                        margin: 20px auto;
+
+                    .glass-master-card {
+                        padding: 18px 12px;
+                        border-radius: 22px;
+                        max-height: calc(100svh - 72px);
                     }
-                    .brand-shield { width: 40px; height: 40px; font-size: 1rem; }
-                    .brand-name { font-size: 1.3rem; margin-bottom: 2px; }
-                    .login-subtitle { font-size: 7px; margin-bottom: 15px; }
-                    .input-field-wrap { margin-bottom: 18px; }
-                    .master-login-btn { margin-top: 20px; padding: 14px; }
-                    .luxury-divider { margin: 25px 0 15px; }
+
+                    .brand-shield {
+                        width: 54px;
+                        height: 54px;
+                    }
+
+                    .shield-text {
+                        font-size: 1.35rem;
+                    }
+
+                    .login-subtitle {
+                        font-size: 0.61rem;
+                    }
+
+                    .input-field-wrap label {
+                        font-size: 0.58rem;
+                        letter-spacing: 1.7px;
+                    }
+
+                    .remember-label {
+                        font-size: 0.69rem;
+                    }
+
+                    .signup-link-premium {
+                        font-size: 0.69rem;
+                    }
+
+                    .social-login-divider,
+                    .luxury-divider {
+                        margin: 14px 0 10px;
+                    }
+
+                    .input-hint {
+                        font-size: 0.66rem;
+                        margin-top: 4px;
+                    }
+                }
+
+                @media (max-height: 520px) and (orientation: landscape) {
+                    .premium-login-container {
+                        padding: 14px;
+                    }
+
+                    .glass-master-card {
+                        padding: 24px 22px;
+                    }
+
+                    .login-header {
+                        margin-bottom: 1.2rem !important;
+                    }
+
+                    .input-field-wrap {
+                        margin-bottom: 0.1rem;
+                    }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .luxury-orb,
+                    .glass-master-card,
+                    .google-spinner,
+                    .spinner {
+                        animation: none !important;
+                    }
+
+                    .master-login-btn,
+                    .google-login-btn,
+                    .input-box {
+                        transition: none !important;
+                    }
                 }
             `}} />
         </div>

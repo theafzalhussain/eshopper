@@ -22,14 +22,14 @@ export const SOCKET_TRANSPORTS = (isDev && !forceWebSocket)
 // Always use production domain
 export const FRONTEND_URL = "https://eshopperr.me";
 
-// ===== ADMIN DASHBOARD URL =====
-export const ADMIN_URL = "https://eshopperr.me/admin";
-
 // ===== BRAND ASSETS =====
 // Use the same premium ESHOPPER logo image for both standard logo and watermark usage.
 // Set these from environment for production/CDN hosting when needed.
 export const BRAND_LOGO_URL = process.env.REACT_APP_BRAND_LOGO_URL || "/assets/eshopper-logo-horizontal.svg";
 export const BRAND_WATERMARK_URL = process.env.REACT_APP_BRAND_WATERMARK_URL || BRAND_LOGO_URL;
+
+// ===== ADMIN DASHBOARD URL =====
+export const ADMIN_URL = "https://eshopperr.me/admin";
 
 // ===== API ENDPOINTS =====
 export const API_ENDPOINTS = {
@@ -61,7 +61,8 @@ export const API_ENDPOINTS = {
   
   // Other
   CONTACT: "/contact",
-  NEWSLETTER: "/newslatter"
+  NEWSLETTER: "/newslatter",
+  FOOTER_DATA: "/api/footer-data"
 };
 
 // ===== TIMEOUT SETTINGS =====

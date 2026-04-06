@@ -4,6 +4,7 @@ import { resetPasswordAPI } from '../Store/Services'
 import { fastAPI } from '../Store/Services.jsx';
 import { motion, AnimatePresence } from 'framer-motion'
 import { KeyRound, ShieldCheck, Loader2, User, Lock, CheckCircle2, ArrowLeft, RotateCcw, AlertCircle } from 'lucide-react'
+import { useToast } from './ToastNotification'
 
 export default function ForgetPassword() {
     const [data, setdata] = useState({ username: "", password: "", cpassword: "" })
@@ -15,6 +16,7 @@ export default function ForgetPassword() {
     const [maxAttempts] = useState(10)
     const [errors, setErrors] = useState({})
     const [redirectCountdown, setRedirectCountdown] = useState(3)
+    const toast = useToast()
     
     const navigate = useNavigate()
 
@@ -97,7 +99,9 @@ export default function ForgetPassword() {
         if(e) e.preventDefault();
         setErrors({});
         if (resendAttempts >= maxAttempts) {
-            setErrors({ username: `Maximum resend attempts (${maxAttempts}) reached. Please try again later.` });
+            const attemptMsg = `Maximum resend attempts (${maxAttempts}) reached. Please try again later.`;
+            setErrors({ username: attemptMsg });
+            toast.warning(attemptMsg);
             return;
         }
         setLoading(true);
@@ -107,11 +111,33 @@ export default function ForgetPassword() {
                 setStep(2);
                 setTimer(60);
                 setResendAttempts(prev => prev + 1);
+                toast.success("OTP sent successfully. Please check your email.");
             } else {
-                setErrors({ username: res.message || "No account found with this username/email. Please verify." });
+                const backendMsg = res.message || "Email is not registered.";
+                setErrors({ username: backendMsg });
+                toast.error(backendMsg);
             }
         } catch (err) {
-            setErrors({ username: err.message || "No account found with this username/email. Please verify." });
+            const status = err?.status
+            const message = err?.data?.message || err?.message
+
+            if (status === 429) {
+                const rateLimitMsg = "Too many requests. Please wait before trying again.";
+                setErrors({ username: rateLimitMsg });
+                toast.warning(rateLimitMsg);
+            } else if (status === 404) {
+                const notRegisteredMsg = message || "Email is not registered.";
+                setErrors({ username: notRegisteredMsg });
+                toast.error(notRegisteredMsg);
+            } else if (status >= 500) {
+                const serverMsg = "Server issue while sending code. Please retry in a minute.";
+                setErrors({ username: serverMsg });
+                toast.error(serverMsg);
+            } else {
+                const genericMsg = message || "Email is not registered.";
+                setErrors({ username: genericMsg });
+                toast.error(genericMsg);
+            }
         }
         setLoading(false);
     }
@@ -152,7 +178,16 @@ export default function ForgetPassword() {
                 setStep(3);  // Show success screen with countdown
             }
         } catch (err) {
-            setErrors({ otp: err.message || "Verification failed. Invalid or expired code." });
+            const status = err?.status
+            const message = err?.data?.message || err?.message
+
+            if (status === 400 || status === 404) {
+                setErrors({ otp: message || "Verification failed. Invalid or expired code." });
+            } else if (status === 429) {
+                setErrors({ otp: "Too many attempts. Please wait and try again." });
+            } else {
+                setErrors({ otp: message || "Reset failed due to a server issue. Please retry." });
+            }
         }
         setLoading(false);
     }
@@ -160,6 +195,9 @@ export default function ForgetPassword() {
     return (
         <div className="forget-master-root">
             <div className="luxury-overlay"></div>
+            <div className="luxury-orb orb-a" aria-hidden="true"></div>
+            <div className="luxury-orb orb-b" aria-hidden="true"></div>
+            <div className="luxury-grid" aria-hidden="true"></div>
             <div className="container d-flex align-items-center justify-content-center min-vh-100">
                 <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-forget-card shadow-2xl">
                     <div className="forget-inner-box p-4 p-md-5 text-center">
@@ -173,10 +211,10 @@ export default function ForgetPassword() {
                             {step === 1 ? (
                                 <motion.form key="s1" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} onSubmit={handleRequestOTP} className="text-left">
                                     <div className="premium-field mb-5">
-                                        <label className="field-label">USERNAME / EMAIL</label>
+                                        <label className="field-label">EMAIL ADDRESS</label>
                                         <div className="input-wrap">
                                             <User size={18} className="field-icon" />
-                                            <input type="text" placeholder="enter identity" onChange={e => setdata({...data, username: e.target.value})} required />
+                                            <input type="email" placeholder="enter your registered email" onChange={e => setdata({...data, username: e.target.value})} required />
                                         </div>
                                         {errors.username && (
                                             <motion.p 
@@ -334,481 +372,342 @@ export default function ForgetPassword() {
                 </motion.div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
-                .forget-master-root { position: relative; min-height: 100vh; background: url('https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=1600&q=80') center/cover; overflow: hidden; }
-                .luxury-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,10,10,0.85); backdrop-filter: blur(12px); }
-                .glass-forget-card { position: relative; width: 100%; max-width: 480px; background: rgba(255, 255, 255, 0.95); border-radius: 40px; }
-                .icon-badge-premium { width: 60px; height: 60px; background: rgba(23, 162, 184, 0.1); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
-                .brand-logo { font-weight: 800; letter-spacing: 5px; font-size: 1.8rem; color: #111; }
-                .dot { color: #17a2b8; }
-                .subtitle { font-size: 10px; font-weight: 800; letter-spacing: 2px; color: #888; }
-                .premium-field .field-label { font-size: 9px; font-weight: 800; color: #333; margin-bottom: 8px; display: block; letter-spacing: 1.5px; }
-                .input-wrap { display: flex; align-items: center; border-bottom: 2px solid #ddd; padding: 5px 0; transition: 0.3s; }
-                .input-wrap:focus-within { border-color: #17a2b8; }
-                .input-wrap input { border: none; background: transparent; width: 100%; outline: none; font-size: 15px; font-weight: 600; padding: 10px; color: #111; }
-                .submit-lux { width: 100%; background: #000; color: white; border: none; padding: 18px; border-radius: 50px; font-weight: 800; font-size: 13px; letter-spacing: 2px; cursor: pointer; transition: 0.3s; }
-                .submit-lux:hover { background: #17a2b8; }
-                .submit-lux:disabled { opacity: 0.6; cursor: not-allowed; }
-                
-                /* --- TIMER & RESEND STYLING --- */
-                .timer-badge { 
-                    display: inline-block;
-                    background: #17a2b8;
-                    color: white;
-                    padding: 4px 12px;
+                @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Playfair+Display:wght@600;700&display=swap');
+
+                .forget-master-root {
+                    --lux-ink: #101419;
+                    --lux-card: rgba(255, 252, 245, 0.9);
+                    --lux-muted: #5c6670;
+                    --lux-border: rgba(20, 26, 33, 0.12);
+                    --lux-highlight: #0f766e;
+                    --lux-gold: #b78628;
+                    --lux-warn: #b91c1c;
+                    position: relative;
+                    min-height: 100vh;
+                    overflow: hidden;
+                    font-family: 'Manrope', sans-serif;
+                    background:
+                        radial-gradient(circle at 15% 10%, rgba(183, 134, 40, 0.24), transparent 42%),
+                        radial-gradient(circle at 90% 85%, rgba(15, 118, 110, 0.25), transparent 38%),
+                        linear-gradient(145deg, #091217 0%, #13232e 46%, #2b1f14 100%);
+                }
+
+                .luxury-overlay {
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(180deg, rgba(6, 10, 14, 0.28), rgba(6, 10, 14, 0.72));
+                    pointer-events: none;
+                }
+
+                .luxury-orb {
+                    position: absolute;
+                    border-radius: 999px;
+                    filter: blur(10px);
+                    opacity: 0.52;
+                    animation: floatOrb 12s ease-in-out infinite;
+                    pointer-events: none;
+                }
+
+                .orb-a {
+                    width: 320px;
+                    height: 320px;
+                    top: -120px;
+                    right: -90px;
+                    background: radial-gradient(circle at 30% 30%, rgba(255, 208, 122, 0.85), rgba(183, 134, 40, 0.08));
+                }
+
+                .orb-b {
+                    width: 280px;
+                    height: 280px;
+                    bottom: -110px;
+                    left: -100px;
+                    animation-delay: 2.8s;
+                    background: radial-gradient(circle at 65% 40%, rgba(120, 255, 240, 0.6), rgba(15, 118, 110, 0.06));
+                }
+
+                .luxury-grid {
+                    position: absolute;
+                    inset: 0;
+                    background-image:
+                        linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+                    background-size: 36px 36px;
+                    mask-image: radial-gradient(circle at center, #000 40%, transparent 90%);
+                    pointer-events: none;
+                    opacity: 0.35;
+                }
+
+                .container { position: relative; z-index: 2; }
+
+                .glass-forget-card {
+                    position: relative;
+                    width: 100%;
+                    max-width: 500px;
+                    background: var(--lux-card);
+                    border: 1px solid rgba(255, 255, 255, 0.45);
+                    backdrop-filter: blur(14px);
+                    border-radius: 34px;
+                    box-shadow: 0 30px 90px rgba(2, 8, 14, 0.48), inset 0 1px 0 rgba(255,255,255,0.45);
+                }
+
+                .icon-badge-premium {
+                    width: 62px;
+                    height: 62px;
                     border-radius: 20px;
-                    font-size: 11px;
-                    font-weight: 800;
-                    letter-spacing: 1px;
-                }
-                
-                .resend-btn { 
-                    border: none; 
-                    background: transparent; 
-                    font-size: 11px; 
-                    color: #17a2b8; 
-                    font-weight: bold; 
-                    cursor: pointer;
-                    transition: 0.3s;
-                }
-                
-                .resend-btn:hover { color: #0f6a7a; text-decoration: underline; }
-                .resend-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-                
-                .max-attempts-msg {
-                    display: inline-block;
-                    background: #fff0f0;
-                    color: #e53e3e;
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-size: 11px;
-                    font-weight: 700;
-                }
-                
-                /* --- ERROR MESSAGES --- */
-                .error-message {
-                    color: #e53e3e;
-                    font-size: 11px;
-                    font-weight: 600;
-                    margin: 8px 0 0 0;
-                    padding: 6px 10px;
-                    background: #fff0f0;
-                    border-left: 3px solid #e53e3e;
-                    border-radius: 4px;
-                }
-                
-                /* --- PASSWORD REQUIREMENTS --- */
-                .password-requirements {
-                    margin-top: 8px;
-                }
-                
-                .password-requirements small {
-                    font-size: 10px;
-                    color: #666;
-                    font-weight: 500;
-                    letter-spacing: 0.5px;
-                }
-                
-                /* --- SECURITY CODE BOX --- */
-                .security-code-box {
-                    background: linear-gradient(135deg, rgba(23,162,184,0.08) 0%, rgba(23,162,184,0.04) 100%);
-                    border: 2px solid #17a2b8;
-                    border-radius: 20px;
-                    padding: 20px;
-                    margin-bottom: 15px;
-                }
-                
-                .code-label {
-                    font-size: 11px;
-                    font-weight: 700;
-                    color: #666;
-                    margin-bottom: 12px;
-                    letter-spacing: 1px;
-                }
-                
-                .code-expiry {
-                    font-size: 10px;
-                    font-weight: 600;
-                    color: #17a2b8;
-                    margin-top: 12px;
-                    text-align: center;
-                }
-                
-                /* --- SUCCESS SCREEN --- */
-                .success-screen {
-                    padding: 30px 20px;
-                }
-                
-                .success-icon-box {
-                    width: 100px;
-                    height: 100px;
-                    background: linear-gradient(135deg, #17a2b8 0%, #0f6a7a 100%);
-                    border-radius: 50%;
+                    margin: 0 auto;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    margin: 0 auto 20px;
+                    background: linear-gradient(145deg, #111, #273744 72%, #0f766e);
+                    color: #fff;
+                    border: 1px solid rgba(255,255,255,0.14);
+                    animation: pulse 2.5s ease-in-out infinite;
                 }
-                
-                .success-icon {
-                    color: white;
-                    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+
+                .brand-logo {
+                    margin-bottom: 4px;
+                    color: var(--lux-ink);
+                    font-family: 'Playfair Display', serif;
+                    font-size: clamp(1.8rem, 4.2vw, 2.2rem);
+                    letter-spacing: 3px;
+                    font-weight: 700;
                 }
-                
-                .success-title {
-                    font-size: 1.4rem;
+
+                .dot { color: var(--lux-gold); }
+
+                .subtitle {
+                    margin: 0;
+                    color: var(--lux-muted);
+                    font-size: 0.66rem;
+                    letter-spacing: 3px;
+                    text-transform: uppercase;
                     font-weight: 800;
-                    color: #111;
+                }
+
+                .field-label {
+                    display: block;
+                    margin-bottom: 8px;
+                    color: #2c3540;
+                    font-size: 0.62rem;
                     letter-spacing: 2px;
+                    text-transform: uppercase;
+                    font-weight: 800;
                 }
-                
-                .success-subtitle {
-                    font-size: 13px;
-                    color: #666;
-                    font-weight: 500;
-                }
-                
-                .info-box {
-                    background: #f0f9ff;
-                    border-left: 4px solid #17a2b8;
-                    padding: 15px;
-                    border-radius: 10px;
+
+                .input-wrap {
                     display: flex;
                     align-items: center;
-                    gap: 12px;
-                    font-size: 12px;
-                    color: #0f6a7a;
-                    font-weight: 600;
+                    border: 1px solid var(--lux-border);
+                    border-radius: 14px;
+                    background: rgba(255, 255, 255, 0.88);
+                    padding: 8px 12px;
+                    min-height: 50px;
+                    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
                 }
-                
-                /* --- REDIRECT MESSAGE --- */
-                .redirect-message {
-                    background: linear-gradient(135deg, rgba(23,162,184,0.1) 0%, rgba(23,162,184,0.05) 100%);
-                    border: 1px solid #17a2b8;
-                    border-radius: 12px;
-                    padding: 12px 20px;
+
+                .input-wrap:focus-within {
+                    border-color: rgba(15, 118, 110, 0.65);
+                    box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+                    transform: translateY(-1px);
                 }
-                
-                .redirect-message p {
-                    margin: 0;
-                    font-size: 13px;
-                    color: #0f6a7a;
-                    font-weight: 600;
+
+                .field-icon { color: #86909a; flex-shrink: 0; }
+
+                .input-wrap input {
+                    width: 100%;
+                    border: 0;
+                    outline: 0;
+                    background: transparent;
+                    color: var(--lux-ink);
+                    font-size: 0.95rem;
+                    font-weight: 650;
+                    padding: 9px 10px;
                 }
-                
-                .redirect-message strong {
-                    color: #17a2b8;
-                    font-size: 16px;
-                    font-weight: 800;
-                }
-                
-                .back-link { color: #111; font-weight: 800; letter-spacing: 1px; font-size: 12px; text-decoration: none !important; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-                .back-link:hover { color: #17a2b8; }
-                
-                
-                /* === 📧 PREMIUM ANIMATIONS === */
-                @keyframes pulse {
-                    0%, 100% { transform: scale(1); opacity: 1; }
-                    50% { transform: scale(1.05); opacity: 0.9; }
-                }
-                
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                
-                .icon-badge-premium {
-                    animation: pulse 2s ease-in-out infinite;
-                }
-                
+
+                .input-wrap input::placeholder { color: #95a1ad; font-weight: 600; }
+
                 .submit-lux {
-                    position: relative;
-                    overflow: hidden;
+                    width: 100%;
+                    border: 0;
+                    border-radius: 16px;
+                    padding: 15px 18px;
+                    margin-top: 0.5rem;
+                    font-size: 0.78rem;
+                    font-weight: 800;
+                    letter-spacing: 1.7px;
+                    text-transform: uppercase;
+                    color: #f6f8fa;
+                    background: linear-gradient(132deg, #16212a, #0f766e 55%, #b78628);
+                    box-shadow: 0 14px 28px rgba(15, 118, 110, 0.28);
+                    transition: transform 0.22s ease, box-shadow 0.22s ease;
                 }
-                
-                .submit-lux::before {
-                    content: '';
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    width: 0;
-                    height: 0;
-                    border-radius: 50%;
-                    background: rgba(255,255,255,0.2);
-                    transform: translate(-50%, -50%);
-                    transition: width 0.6s, height 0.6s;
+
+                .submit-lux:hover { transform: translateY(-2px); box-shadow: 0 18px 34px rgba(15, 118, 110, 0.36); }
+                .submit-lux:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+                .timer-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 4px 10px;
+                    border-radius: 999px;
+                    font-size: 0.66rem;
+                    font-weight: 800;
+                    background: rgba(15, 118, 110, 0.14);
+                    color: #0f766e;
                 }
-                
-                .submit-lux:hover::before {
-                    width: 300px;
-                    height: 300px;
+
+                .resend-btn {
+                    border: 0;
+                    background: transparent;
+                    color: #0f766e;
+                    font-size: 0.68rem;
+                    font-weight: 800;
+                    letter-spacing: 0.5px;
                 }
-                
-                .input-wrap {
-                    position: relative;
+
+                .max-attempts-msg {
+                    padding: 4px 10px;
+                    border-radius: 999px;
+                    font-size: 0.66rem;
+                    font-weight: 700;
+                    color: #b91c1c;
+                    background: #fee2e2;
                 }
-                
-                .input-wrap input:focus {
-                    animation: fadeIn 0.3s ease-out;
+
+                .security-code-box {
+                    background: linear-gradient(135deg, rgba(15, 118, 110, 0.09), rgba(183, 134, 40, 0.08));
+                    border: 1px solid rgba(15, 118, 110, 0.28);
+                    border-radius: 16px;
+                    padding: 14px;
+                    margin-bottom: 14px;
                 }
-                
-                /* === 📱 PREMIUM FULL RESPONSIVE DESIGN === */
-                
-                /* Extra Large Devices (1200px and up) */
-                @media (min-width: 1200px) {
-                    .glass-forget-card { 
-                        max-width: 520px;
-                        padding: 0;
-                        box-shadow: 0 50px 120px rgba(0,0,0,0.5);
-                    }
-                    .forget-inner-box { padding: 70px 50px !important; }
-                    .brand-logo { font-size: 2rem; }
-                    .input-wrap input { font-size: 16px; }
-                    .icon-badge-premium { width: 65px; height: 65px; }
+
+                .code-label {
+                    font-size: 0.67rem;
+                    font-weight: 700;
+                    color: #4f5a66;
+                    margin-bottom: 8px;
+                    letter-spacing: 0.6px;
                 }
-                
-                /* Large Devices (992px to 1199px) */
-                @media (max-width: 1199px) and (min-width: 992px) {
-                    .glass-forget-card { max-width: 500px; }
-                    .forget-inner-box { padding: 60px 45px !important; }
-                    .brand-logo { font-size: 1.9rem; }
+
+                .code-expiry {
+                    margin-top: 10px;
+                    text-align: center;
+                    font-size: 0.66rem;
+                    font-weight: 700;
+                    color: #0f766e;
                 }
-                
-                /* Medium Devices - Tablets (768px to 991px) */
-                @media (max-width: 991px) and (min-width: 768px) {
-                    .glass-forget-card { 
-                        max-width: 480px;
-                        border-radius: 35px;
-                    }
-                    .forget-inner-box { padding: 50px 35px !important; }
-                    .brand-logo { font-size: 1.7rem; letter-spacing: 4.5px; }
-                    .subtitle { font-size: 9.5px; letter-spacing: 2.3px; }
-                    .icon-badge-premium { width: 58px; height: 58px; }
-                    .field-label { font-size: 9.5px; }
-                    .input-wrap input { font-size: 15px; padding: 11px; }
-                    .submit-lux { padding: 17px; font-size: 12.5px; }
+
+                .error-message {
+                    margin: 8px 0 0;
+                    padding: 8px 10px;
+                    border-radius: 10px;
+                    border: 1px solid #fecaca;
+                    background: #fff2f2;
+                    color: var(--lux-warn);
+                    font-size: 0.71rem;
+                    font-weight: 700;
                 }
-                
-                /* Small Tablets & Large Phones (576px to 767px) */
-                @media (max-width: 767px) and (min-width: 576px) {
-                    .glass-forget-card { 
-                        max-width: 92%;
-                        border-radius: 32px;
-                    }
-                    .forget-inner-box { padding: 45px 32px !important; }
-                    .icon-badge-premium { width: 56px; height: 56px; border-radius: 16px; }
-                    .brand-logo { font-size: 1.6rem; letter-spacing: 4.2px; }
-                    .subtitle { font-size: 9px; letter-spacing: 2.2px; }
-                    .premium-field { margin-bottom: 22px !important; }
-                    .field-label { font-size: 9px; letter-spacing: 1.7px; }
-                    .input-wrap { padding: 7px 0; }
-                    .input-wrap input { font-size: 14.5px; padding: 10.5px; }
-                    .submit-lux { padding: 16px; font-size: 12px; border-radius: 45px; }
-                    .security-code-box { padding: 18px; border-radius: 18px; }
-                    .code-label { font-size: 11px; }
+
+                .password-requirements small {
+                    font-size: 0.67rem;
+                    color: #5f6871;
+                    font-weight: 600;
                 }
-                
-                /* Standard Mobile (480px to 575px) */
-                @media (max-width: 575px) and (min-width: 480px) {
-                    .glass-forget-card { 
-                        max-width: 94%;
-                        border-radius: 28px;
-                        box-shadow: 0 25px 70px rgba(0,0,0,0.35);
-                    }
-                    .forget-inner-box { padding: 42px 28px !important; }
-                    .icon-badge-premium { width: 54px; height: 54px; border-radius: 15px; }
-                    .brand-logo { font-size: 1.5rem; letter-spacing: 3.8px; }
-                    .subtitle { font-size: 8.5px; letter-spacing: 2px; }
-                    .premium-field { margin-bottom: 20px !important; }
-                    .field-label { font-size: 8.5px; letter-spacing: 1.6px; }
-                    .input-wrap { padding: 6px 0; }
-                    .input-wrap input { font-size: 14px; padding: 10px; }
-                    .field-icon { width: 17px; height: 17px; }
-                    .submit-lux { padding: 15px; font-size: 11.5px; border-radius: 42px; }
-                    .security-code-box { padding: 16px; border-radius: 16px; }
-                    .code-label { font-size: 10.5px; }
-                    .code-expiry { font-size: 11px; }
-                    .timer-badge { padding: 3px 10px; font-size: 11px; }
-                    .resend-btn { font-size: 11px; }
-                    .error-message { font-size: 11px; padding: 10px 12px; }
-                    .success-icon-box { width: 90px; height: 90px; }
-                    .success-title { font-size: 1.3rem; }
+
+                .success-screen { padding: 26px 8px 10px; }
+
+                .success-icon-box {
+                    width: 92px;
+                    height: 92px;
+                    border-radius: 999px;
+                    margin: 0 auto;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: #fff;
+                    background: linear-gradient(132deg, #1b2730, #0f766e 60%, #b78628);
+                    box-shadow: 0 16px 30px rgba(15, 118, 110, 0.28);
                 }
-                
-                /* Compact Mobile (375px to 479px) */
-                @media (max-width: 479px) and (min-width: 375px) {
-                    .glass-forget-card { 
-                        max-width: 95%;
-                        border-radius: 25px;
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    }
-                    .forget-inner-box { padding: 38px 24px !important; }
-                    .icon-badge-premium { width: 52px; height: 52px; border-radius: 14px; }
-                    .brand-logo { font-size: 1.4rem; letter-spacing: 3.5px; }
-                    .subtitle { font-size: 8px; letter-spacing: 1.8px; }
-                    .premium-field { margin-bottom: 18px !important; }
-                    .field-label { font-size: 8px; letter-spacing: 1.5px; margin-bottom: 7px; }
-                    .input-wrap { padding: 5px 0; }
-                    .input-wrap input { font-size: 13.5px; padding: 9.5px; }
-                    .field-icon { width: 16px; height: 16px; }
-                    .submit-lux { padding: 14px; font-size: 11px; border-radius: 40px; }
-                    .security-code-box { padding: 14px; border-radius: 15px; }
-                    .code-label { font-size: 10px; }
-                    .code-expiry { font-size: 10.5px; }
-                    .timer-badge { padding: 3px 9px; font-size: 10.5px; }
-                    .resend-btn { font-size: 10.5px; }
-                    .max-attempts-msg { font-size: 10.5px; }
-                    .error-message { font-size: 10.5px; padding: 9px 11px; border-radius: 10px; }
-                    .info-box { padding: 11px 14px; font-size: 11px; }
-                    .success-icon-box { width: 85px; height: 85px; }
-                    .success-title { font-size: 1.2rem; }
-                    .success-subtitle { font-size: 12px; }
-                    .redirect-message { padding: 10px 16px; border-radius: 10px; }
-                    .redirect-message p { font-size: 12px; }
-                    .back-link { font-size: 11px; }
+
+                .success-title {
+                    font-size: 1.15rem;
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                    color: #17222d;
                 }
-                
-                /* Extra Small Mobile (320px to 374px) */
-                @media (max-width: 374px) {
-                    .forget-master-root { padding: 15px 10px; }
-                    .glass-forget-card { 
-                        max-width: 96%;
-                        border-radius: 22px;
-                        box-shadow: 0 15px 50px rgba(0,0,0,0.25);
-                    }
-                    .forget-inner-box { padding: 32px 20px !important; }
-                    .icon-badge-premium { width: 48px; height: 48px; border-radius: 13px; }
-                    .icon-badge-premium svg { width: 28px; height: 28px; }
-                    .brand-logo { font-size: 1.25rem; letter-spacing: 3px; margin-bottom: 8px; }
-                    .subtitle { 
-                        font-size: 7px; 
-                        letter-spacing: 1.5px;
-                        margin-bottom: 35px !important;
-                    }
-                    .premium-field { margin-bottom: 16px !important; }
-                    .field-label { 
-                        font-size: 7.5px; 
-                        letter-spacing: 1.3px;
-                        margin-bottom: 6px;
-                    }
-                    .input-wrap { padding: 4px 0; }
-                    .input-wrap input { 
-                        font-size: 13px; 
-                        padding: 9px;
-                        min-height: 40px;
-                    }
-                    .field-icon { width: 15px; height: 15px; margin-right: 8px; }
-                    .submit-lux { 
-                        padding: 13px; 
-                        font-size: 10.5px;
-                        letter-spacing: 1.8px;
-                        border-radius: 38px;
-                        min-height: 48px;
-                    }
-                    .security-code-box { 
-                        padding: 12px; 
-                        border-radius: 14px;
-                        margin-top: 10px;
-                    }
-                    .code-label { font-size: 9px; margin-bottom: 8px; }
-                    .code-expiry { font-size: 9.5px; margin-top: 8px; }
-                    .timer-badge { 
-                        padding: 2px 8px; 
-                        font-size: 10px;
-                        border-radius: 15px;
-                    }
-                    .resend-btn { 
-                        font-size: 10px;
-                        padding: 4px 10px;
-                    }
-                    .max-attempts-msg { font-size: 10px; }
-                    .error-message { 
-                        font-size: 10px; 
-                        padding: 8px 10px;
-                        border-radius: 9px;
-                        margin-top: 8px;
-                    }
-                    .info-box { 
-                        padding: 10px 12px; 
-                        font-size: 10px;
-                        border-radius: 10px;
-                    }
-                    .info-box svg { width: 14px; height: 14px; }
-                    .success-icon-box { width: 75px; height: 75px; margin: 0 auto; }
-                    .success-icon-box svg { width: 45px; height: 45px; }
-                    .success-title { 
-                        font-size: 1.1rem;
-                        margin-top: 20px !important;
-                        margin-bottom: 10px !important;
-                    }
-                    .success-subtitle { font-size: 11px; }
-                    .redirect-message { 
-                        padding: 9px 14px; 
-                        border-radius: 9px;
-                        margin-bottom: 20px !important;
-                    }
-                    .redirect-message p { font-size: 11px; }
-                    .redirect-message strong { font-size: 14px; }
-                    .back-link { 
-                        font-size: 10px;
-                        letter-spacing: 0.8px;
-                    }
-                    .back-link svg { width: 14px; height: 14px; }
+
+                .success-subtitle { font-size: 0.82rem; color: #5e6872; }
+
+                .info-box {
+                    padding: 11px 12px;
+                    border-radius: 11px;
+                    border: 1px solid rgba(15, 118, 110, 0.25);
+                    background: rgba(15, 118, 110, 0.08);
+                    color: #0f5d57;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 0.74rem;
+                    font-weight: 700;
                 }
-                
-                /* Touch-Friendly Enhancements for Mobile */
+
+                .redirect-message {
+                    border-radius: 10px;
+                    border: 1px solid rgba(15, 118, 110, 0.25);
+                    background: rgba(15, 118, 110, 0.08);
+                    padding: 10px 12px;
+                }
+
+                .redirect-message p { margin: 0; font-size: 0.78rem; color: #205055; font-weight: 700; }
+                .redirect-message strong { color: #0f766e; font-size: 0.95rem; }
+
+                .back-link {
+                    color: #1a2530;
+                    font-size: 0.75rem;
+                    font-weight: 800;
+                    letter-spacing: 1px;
+                    text-decoration: none !important;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: color 0.2s ease;
+                }
+
+                .back-link:hover { color: var(--lux-highlight); }
+
+                @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+                @keyframes floatOrb { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-14px) scale(1.06); } }
+
+                @media (max-width: 1024px) {
+                    .glass-forget-card { max-width: 480px; }
+                }
+
                 @media (max-width: 767px) {
-                    .input-wrap {
-                        min-height: 44px;
-                    }
-                    .submit-lux {
-                        min-height: 50px;
-                        touch-action: manipulation;
-                    }
-                    .resend-btn {
-                        padding: 6px 12px;
-                        min-height: 36px;
-                        touch-action: manipulation;
-                    }
-                    .back-link {
-                        padding: 10px;
-                        min-height: 40px;
-                        display: inline-flex;
-                    }
+                    .forget-master-root { padding: 20px 14px; }
+                    .glass-forget-card { max-width: 100%; border-radius: 26px; }
+                    .forget-inner-box { padding: 30px 20px !important; }
+                    .brand-logo { letter-spacing: 2px; }
+                    .subtitle { letter-spacing: 2.2px; }
+                    .input-wrap { min-height: 48px; }
+                    .submit-lux { min-height: 50px; font-size: 0.73rem; letter-spacing: 1.4px; }
                 }
-                
-                /* Landscape Mode Optimizations */
-                @media (max-height: 500px) and (orientation: landscape) {
-                    .forget-master-root { padding: 20px 15px; }
-                    .glass-forget-card { 
-                        margin: 20px auto;
-                        max-height: 90vh;
-                        overflow-y: auto;
-                    }
-                    .forget-inner-box { padding: 25px 30px !important; }
-                    .icon-badge-premium { width: 45px; height: 45px; margin-bottom: 15px !important; }
-                    .brand-logo { font-size: 1.2rem; margin-bottom: 5px; }
-                    .subtitle { font-size: 7px; margin-bottom: 20px !important; }
-                    .premium-field { margin-bottom: 15px !important; }
-                    .submit-lux { padding: 12px; }
-                    .success-icon-box { width: 65px; height: 65px; }
-                    .success-title { font-size: 1rem; margin-top: 15px !important; }
+
+                @media (max-width: 420px) {
+                    .forget-master-root { padding: 16px 10px; }
+                    .glass-forget-card { border-radius: 22px; }
+                    .forget-inner-box { padding: 26px 14px !important; }
+                    .icon-badge-premium { width: 56px; height: 56px; }
+                    .subtitle { font-size: 0.6rem; }
+                    .field-label { font-size: 0.58rem; letter-spacing: 1.6px; }
+                    .input-wrap input { font-size: 0.88rem; }
+                    .back-link { font-size: 0.67rem; }
                 }
-                
-                /* High Resolution Displays */
-                @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-                    .glass-forget-card {
-                        backdrop-filter: blur(25px);
-                    }
-                    .luxury-overlay {
-                        backdrop-filter: blur(15px);
-                    }
-                }
-                
-                /* --- RESPONSIVE --- */
-                @media (max-width: 576px) {
-                    .glass-forget-card { border-radius: 25px; }
-                    .brand-logo { font-size: 1.4rem; letter-spacing: 3px; }
-                    .security-code-box { padding: 15px; }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .icon-badge-premium,
+                    .luxury-orb { animation: none !important; }
                 }
             `}} />
         </div>

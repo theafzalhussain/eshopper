@@ -3,7 +3,18 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, CheckCircle, Shield, Truck, Users, RefreshCw, Lock, Zap } from 'lucide-react'
 
-export default function Terms({ isOpen, onClose }) {
+export default function Terms({ isOpen = true, onClose }) {
+    const handleClose = () => {
+        if (typeof onClose === 'function') {
+            onClose()
+            return
+        }
+
+        if (typeof window !== 'undefined' && window.location.pathname === '/terms') {
+            window.history.back()
+        }
+    }
+
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden'
@@ -55,7 +66,7 @@ export default function Terms({ isOpen, onClose }) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="terms-backdrop"
                         style={{
                             position: 'fixed',
@@ -80,7 +91,7 @@ export default function Terms({ isOpen, onClose }) {
                             margin: '0 auto'
                         }}
                     >
-                        <button onClick={onClose} className="terms-close-btn" aria-label="Close Terms">
+                        <button onClick={handleClose} className="terms-close-btn" aria-label="Close Terms">
                             <X size={24} strokeWidth={2.5} />
                         </button>
 
@@ -125,7 +136,7 @@ export default function Terms({ isOpen, onClose }) {
                         </div>
 
                         <div className="terms-footer">
-                            <button onClick={onClose} className="terms-agree-btn">
+                            <button onClick={handleClose} className="terms-agree-btn">
                                 <CheckCircle size={18} strokeWidth={2.5} />
                                 <span>AGREE & PROCEED</span>
                             </button>

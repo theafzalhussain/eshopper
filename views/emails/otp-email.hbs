@@ -3,75 +3,269 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OTP Verification</title>
+  <title>eShopper Security Code</title>
   <style>
     {{> theme_tokens}}
-    body{margin:0;padding:0;background:radial-gradient(circle at 20% -10%,#2a3d64 0,#0a0d13 45%,#07090d 100%);font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#eef2fa;}
-    table{border-collapse:collapse;}
-    .wrap{padding:24px 10px;}
-    .card{width:100%;max-width:640px;margin:0 auto;background:#0d111a;border:1px solid #273246;border-radius:20px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.35);}
-    .top{padding:16px 20px;background:linear-gradient(120deg,#0f1828,#1a2b46,#9a8441);font-size:12px;letter-spacing:1px;font-weight:700;color:#f7df95;text-transform:uppercase;text-align:center;}
-    .hero{padding:28px 20px 22px;background:linear-gradient(180deg,#1a2539,#121a2a);text-align:center;border-bottom:1px solid #2a3447;}
-    .hero h1{margin:0;font-size:38px;line-height:1.05;color:#f9fbff;font-family:Georgia,'Times New Roman',serif;letter-spacing:.6px;}
-    .hero p{margin:10px 0 0;color:#b4c0d9;font-size:15px;line-height:1.5;}
-    .sec{padding:24px 22px;}
-    .sec h2{margin:0 0 10px;font-size:30px;line-height:1.1;color:#ffffff;font-family:Georgia,'Times New Roman',serif;}
-    .sec p{margin:0 0 12px;color:#d4dced;font-size:16px;line-height:1.65;}
-    .otp-wrap{margin:18px 0 16px;padding:12px;border:1px solid #2d3d5f;border-radius:14px;background:linear-gradient(140deg,#0a1425,#111c2e);}
-    .otp{margin:0 auto;max-width:310px;text-align:center;background:#08101d;border:1px solid #35517d;border-radius:12px;padding:14px 16px;font-size:52px;font-weight:800;letter-spacing:9px;color:#65f7be;line-height:1;}
-    .meta{margin:14px 0 0;font-size:13px;color:#9fb0cc;}
-    .help{margin-top:14px;color:#b8c4d9;font-size:14px;line-height:1.6;word-break:break-word;}
-    .help a{color:#6bb8ff;}
-    .cta{margin-top:18px;}
-    .btn{display:inline-block;padding:12px 16px;border-radius:11px;text-decoration:none;font-size:14px;font-weight:700;}
-    .btn-primary{background:linear-gradient(90deg,#1d9fff,#266bff);color:#ffffff;}
-    .btn-secondary{background:#111827;color:#cde3ff;border:1px solid #355486;margin-left:8px;}
-    .security{margin-top:16px;padding:12px;border:1px dashed #324767;border-radius:10px;background:#0b1220;color:#9fb1cc;font-size:13px;line-height:1.6;}
-    .foot{padding:16px;border-top:1px solid #2a3447;text-align:center;color:#93a3be;font-size:12px;line-height:1.65;background:#0a0f17;}
-    @media only screen and (max-width:620px){
-      .wrap{padding:14px 6px;}
-      .card{border-radius:16px;}
-      .hero{padding:22px 16px 18px;}
-      .hero h1{font-size:30px;}
-      .hero p{font-size:14px;}
-      .sec{padding:18px 16px;}
-      .sec h2{font-size:26px;}
-      .sec p{font-size:15px;}
-      .otp{font-size:42px;letter-spacing:7px;max-width:100%;}
-      .btn{display:block;width:100%;text-align:center;box-sizing:border-box;}
-      .btn-secondary{margin-left:0;margin-top:8px;}
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at 16% -8%, #22324d 0%, #0c121d 46%, #080d14 100%);
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      color: #e8eef9;
+    }
+    table { border-collapse: collapse; }
+    .preheader {
+      display: none !important;
+      visibility: hidden;
+      opacity: 0;
+      color: transparent;
+      height: 0;
+      width: 0;
+      overflow: hidden;
+      mso-hide: all;
+    }
+    .wrap {
+      padding: 28px 10px;
+    }
+    .card {
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      background: #0d1422;
+      border: 1px solid #26354d;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+    }
+    .brand-strip {
+      padding: 14px 22px;
+      background: linear-gradient(118deg, #0f1a2d 0%, #1a2f4e 58%, #9a8542 100%);
+      text-align: center;
+      color: #f4e2a2;
+      font-size: 12px;
+      letter-spacing: 1.1px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .hero {
+      padding: 28px 22px 24px;
+      text-align: center;
+      border-bottom: 1px solid #2a3a53;
+      background: linear-gradient(180deg, #16263e 0%, #111b2d 100%);
+    }
+    .hero-badge {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 6px 10px;
+      border: 1px solid #35507b;
+      border-radius: 999px;
+      background: #0d1628;
+      font-size: 11px;
+      font-weight: 700;
+      color: #9fc8ff;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      margin: 0;
+      color: #f9fbff;
+      font-size: 34px;
+      line-height: 1.1;
+      font-family: Georgia, 'Times New Roman', serif;
+      letter-spacing: 0.4px;
+    }
+    .hero p {
+      margin: 10px auto 0;
+      max-width: 520px;
+      color: #b5c2d8;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .main {
+      padding: 26px 22px;
+    }
+    .greeting {
+      margin: 0 0 10px;
+      color: #ffffff;
+      font-size: 34px;
+      line-height: 1.1;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+    .lead {
+      margin: 0 0 16px;
+      color: #d4dced;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+    .otp-shell {
+      margin: 18px 0 16px;
+      padding: 14px;
+      border: 1px solid #2d4468;
+      border-radius: 14px;
+      background: linear-gradient(140deg, #0a1528, #111f34);
+    }
+    .otp {
+      margin: 0 auto;
+      max-width: 360px;
+      border: 1px solid #35517d;
+      border-radius: 12px;
+      background: #071122;
+      text-align: center;
+      color: #66f6be;
+      font-size: 54px;
+      font-weight: 800;
+      letter-spacing: 9px;
+      line-height: 1;
+      padding: 16px 18px;
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    }
+    .meta {
+      margin: 0;
+      color: #9fb0cc;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .trust-line {
+      margin: 12px 0 0;
+      color: #c7d2e8;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .support {
+      margin-top: 16px;
+      color: #b9c6dc;
+      font-size: 14px;
+      line-height: 1.65;
+      word-break: break-word;
+    }
+    .support a {
+      color: #6bb8ff;
+      text-decoration: none;
+    }
+    .support a:hover { text-decoration: underline; }
+    .cta {
+      margin-top: 18px;
+    }
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      border-radius: 11px;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px 18px;
+    }
+    .btn-primary {
+      color: #ffffff;
+      background: linear-gradient(90deg, #1d9fff 0%, #256dff 100%);
+      border: 1px solid #357bff;
+    }
+    .btn-secondary {
+      margin-left: 8px;
+      color: #d8e5fb;
+      background: #101b30;
+      border: 1px solid #355486;
+    }
+    .security-note {
+      margin-top: 16px;
+      padding: 12px;
+      border: 1px dashed #344b6e;
+      border-radius: 10px;
+      background: #0b1424;
+      color: #a8b8d2;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .footer {
+      border-top: 1px solid #2a3a53;
+      background: #0a111d;
+      padding: 16px;
+      text-align: center;
+      color: #91a2bf;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .footer strong { color: #cfdbef; }
+
+    @media only screen and (max-width: 620px) {
+      .wrap { padding: 14px 6px; }
+      .card { border-radius: 16px; }
+      .hero { padding: 22px 16px 18px; }
+      .hero h1 { font-size: 28px; }
+      .hero p { font-size: 14px; }
+      .main { padding: 20px 16px; }
+      .greeting { font-size: 28px; }
+      .lead { font-size: 15px; }
+      .otp {
+        max-width: 100%;
+        font-size: 42px;
+        letter-spacing: 7px;
+        padding: 14px 12px;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      .btn-secondary {
+        margin-left: 0;
+        margin-top: 8px;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="preheader">Your eShopper verification code is {{otp}}. This code expires in 10 minutes.</div>
+
   <table role="presentation" width="100%" class="wrap">
     <tr>
       <td>
         <table role="presentation" class="card" align="center">
-          <tr><td class="top">ESHOPPER PREMIUM ACCOUNT SECURITY</td></tr>
+          <tr>
+            <td class="brand-strip">eShopper Premium Account Security</td>
+          </tr>
+
           <tr>
             <td class="hero">
-              <h1>OTP VERIFICATION</h1>
-              <p>Your secure access key is ready. Please verify within 10 minutes.</p>
-            </td>
+                      <div class="hero-badge">Official Security Message</div>
+                      <h1>OTP Verification</h1>
+                      <p>Use this one-time code to complete your secure verification.</p>
+                    </td>
           </tr>
+
           <tr>
-            <td class="sec">
-              <h2>Hi {{userName}},</h2>
-              <p>Use the one-time code below to continue safely.</p>
-              <div class="otp-wrap">
+            <td class="main">
+              <h2 class="greeting">Hi {{userName}},</h2>
+              <p class="lead">Your one-time verification code is below.</p>
+
+              <div class="otp-shell">
                 <div class="otp">{{otp}}</div>
               </div>
-              <p class="meta">Code expires in 10 minutes. Do not share this code with anyone.</p>
-              <div class="help">Need help? <a href="mailto:{{supportEmail}}">{{supportEmail}}</a> | {{supportPhone}}</div>
-              <div class="cta">
-                <a class="btn btn-primary" href="{{websiteUrl}}">Open eShopper</a>
-                <a class="btn btn-secondary" href="mailto:{{supportEmail}}">Email Support</a>
+
+              <p class="meta">Expires in 10 minutes. Never share this code with anyone.</p>
+              <p class="trust-line">If you did not request this, ignore this email and secure your account immediately.</p>
+
+              <div class="support">
+                Need assistance? <a href="mailto:{{supportEmail}}">{{supportEmail}}</a> | {{supportPhone}}
               </div>
-              <div class="security">If this OTP was not requested by you, ignore this email and reset your account password immediately for safety.</div>
+
+              <div class="cta">
+                <a class="btn btn-primary" href="{{websiteUrl}}">Open eShopper Secure Portal</a>
+                <a class="btn btn-secondary" href="mailto:{{supportEmail}}">Contact Support</a>
+              </div>
+
+              <div class="security-note">
+                eShopper will never ask for your OTP by phone, chat, or email.
+              </div>
             </td>
           </tr>
-          <tr><td class="foot">{{companyAddress}}</td></tr>
+
+          <tr>
+            <td class="footer">
+              <strong>eShopper Security Team</strong><br />
+              {{companyAddress}}
+            </td>
+          </tr>
         </table>
       </td>
     </tr>

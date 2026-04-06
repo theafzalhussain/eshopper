@@ -1684,10 +1684,10 @@ const sendMail = async (to, otp) => {
         }
 
         const data = {
-            sender: { name: "EShoppper Security", email: "support@eshopperr.me" },
+            sender: { name: "eShopper Security", email: "support@eshopperr.me" },
             to: [{ email: to }],
-            subject: `Your EShoppper Verification Code: ${otp}`,
-            textContent: `Hi ${recipientName},\n\nYour EShoppper verification code is: ${otp}\nThis code expires in 10 minutes.\n\nIf you did not request this, please ignore this email and secure your account.\n\nEShoppper Premium Security\nsupport@eshopperr.me`,
+            subject: `eShopper Security Code: ${otp}`,
+            textContent: `Hi ${recipientName},\n\nYour eShopper one-time verification code is: ${otp}\nCode validity: 10 minutes.\n\nFor security, never share this code. If you did not request it, ignore this email and secure your account immediately.\n\neShopper Security Team\nsupport@eshopperr.me`,
             htmlContent: otpHtml,
             replyTo: { email: "support@eshopperr.me" }
         };
@@ -1980,6 +1980,51 @@ const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String
 const Order = require('./models/Order');
 const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+
+app.get('/api/footer-data', async (req, res) => {
+    try {
+        const [productsCount, categoriesCount, usersCount, subscribersCount] = await Promise.all([
+            Product.countDocuments({}),
+            Maincategory.countDocuments({}),
+            User.countDocuments({}),
+            Newslatter.countDocuments({})
+        ]);
+
+        res.json({
+            brand: {
+                name: 'eShopper Boutique Luxe',
+                tagline: 'Trusted Premium Commerce Experience'
+            },
+            contact: {
+                email: SUPPORT_EMAIL_DEFAULT,
+                phone: SUPPORT_PHONE_DEFAULT,
+                address: process.env.COMPANY_ADDRESS || 'Eshopper Boutique Luxe, New Delhi, India'
+            },
+            socialLinks: {
+                instagram: process.env.SOCIAL_INSTAGRAM_URL || 'https://instagram.com',
+                facebook: process.env.SOCIAL_FACEBOOK_URL || 'https://facebook.com',
+                x: process.env.SOCIAL_X_URL || 'https://x.com',
+                youtube: process.env.SOCIAL_YOUTUBE_URL || 'https://youtube.com',
+                linkedin: process.env.SOCIAL_LINKEDIN_URL || 'https://linkedin.com'
+            },
+            stats: {
+                products: productsCount,
+                categories: categoriesCount,
+                members: usersCount,
+                subscribers: subscribersCount
+            },
+            trustBadges: [
+                'Secure Payments',
+                'Verified Support',
+                'Premium Quality',
+                'Fast Delivery Network'
+            ]
+        });
+    } catch (e) {
+        console.error('❌ Footer data error:', e.message);
+        res.status(500).json({ message: 'Failed to load footer data.' });
+    }
+});
 
 const generateOrderId = async () => {
     const year = new Date().getFullYear();
@@ -2398,11 +2443,31 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
         if (!email || !type) return res.status(400).json({ message: "Email and type are required." });
 
         const normalizedEmail = email.toLowerCase().trim();
+        const normalizedType = String(type).toLowerCase().trim();
+        const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+        if (!isValidEmail) {
+            return res.status(400).json({ message: "Invalid email format." });
+        }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const user = await User.findOne({ $or: [{ email: normalizedEmail }, { username: email.toLowerCase() }] });
 
-        if (type === 'forget' && !user) return res.json({ result: "Done", message: "If account exists, check your email for reset code." });
-        if (type === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
+        // Forgot password must validate against registered email only.
+        if (normalizedType === 'forget') {
+            const forgetUser = await User.findOne({ email: normalizedEmail });
+            if (!forgetUser) {
+                return res.status(404).json({ message: "Email is not registered." });
+            }
+
+            forgetUser.otp = otp;
+            forgetUser.otpExpires = new Date(Date.now() + 10 * 60000);
+            await forgetUser.save();
+
+            await sendMail(forgetUser.email, otp);
+            return res.json({ result: "Done", message: "OTP sent successfully" });
+        }
+
+        const user = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedEmail }] });
+
+        if (normalizedType === 'signup' && user) return res.status(400).json({ message: "Email already registered" });
 
         if (user) {
             user.otp = otp; user.otpExpires = new Date(Date.now() + 10 * 60000); await user.save();
@@ -2712,9 +2777,18 @@ const normalizeUserDocument = (doc) => {
     const plainDoc = typeof doc.toObject === 'function' ? doc.toObject() : doc;
     return {
         ...plainDoc,
+        id: String(plainDoc._id || plainDoc.id || ''),
         deliveryInstructions: plainDoc.deliveryNotes || plainDoc.deliveryInstructions || '',
         settings: normalizeUserSettings(plainDoc.settings)
     };
+};
+
+const conditionalUpload = (req, res, next) => {
+    const contentType = String(req.headers['content-type'] || '').toLowerCase();
+    if (contentType.includes('multipart/form-data')) {
+        return upload(req, res, next);
+    }
+    return next();
 };
 
 const handle = (path, Model, useUpload = false) => {
@@ -2744,7 +2818,7 @@ const handle = (path, Model, useUpload = false) => {
         }
     });
     // POST (create)
-    app.post(path, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
+    app.post(path, useUpload ? conditionalUpload : (req,res,next)=>next(), async (req, res) => {
         try {
             let data = { ...req.body };
             if (req.files) {
@@ -2772,7 +2846,17 @@ const handle = (path, Model, useUpload = false) => {
             await doc.save();
             res.status(201).json(path === '/user' ? normalizeUserDocument(doc) : doc);
         } catch (e) {
-            res.status(400).json({ message: 'Failed to create', error: e.message });
+            const mongoDup = e?.code === 11000 || /E11000/i.test(String(e?.message || ''));
+            if (mongoDup) {
+                const indexFieldFromMessage = String(e?.message || '').match(/index:\s+([a-zA-Z0-9_]+)_1/i)?.[1];
+                const duplicateField = Object.keys(e?.keyPattern || {})[0] || indexFieldFromMessage || 'field';
+                return res.status(400).json({
+                    message: `${duplicateField} already exists. Please use a different ${duplicateField}.`,
+                    error: e.message,
+                    field: duplicateField
+                });
+            }
+            res.status(400).json({ message: e.message || 'Failed to create', error: e.message });
         }
     });
     app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {

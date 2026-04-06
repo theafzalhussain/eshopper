@@ -1,84 +1,655 @@
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  ArrowUp,
+  BadgeCheck,
+  CircleHelp,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  ShoppingBag,
+  Truck,
+  Users,
+  Youtube,
+  Sparkles,
+  Send,
+  Boxes,
+  X
+} from 'lucide-react'
+import { createNewslatterAPI, getFooterDataAPI, getMaincategoryAPI } from '../Store/Services'
+import { useToast } from './ToastNotification'
+
+const fallbackFooterData = {
+  brand: {
+    name: 'eShopper Boutique Luxe',
+    tagline: 'Trusted Premium Commerce Experience'
+  },
+  contact: {
+    email: 'support@eshopperr.me',
+    phone: '+91 8447859784',
+    address: 'Eshopper Boutique Luxe, New Delhi, India'
+  },
+  socialLinks: {
+    instagram: 'https://instagram.com',
+    facebook: 'https://facebook.com',
+    x: 'https://x.com',
+    youtube: 'https://youtube.com',
+    linkedin: 'https://linkedin.com'
+  },
+  stats: {
+    products: 0,
+    categories: 0,
+    members: 0,
+    subscribers: 0
+  },
+  trustBadges: ['Secure Payments', 'Verified Support', 'Premium Quality', 'Fast Delivery Network']
+}
+
 export default function Footer() {
+  const toast = useToast()
+  const [newsletterEmail, setNewsletterEmail] = useState('')
+  const [submittingNewsletter, setSubmittingNewsletter] = useState(false)
+  const [footerData, setFooterData] = useState(fallbackFooterData)
+  const [mainCategories, setMainCategories] = useState([])
+
+  useEffect(() => {
+    let mounted = true
+
+    const loadFooterData = async () => {
+      try {
+        const [footerResponse, categoriesResponse] = await Promise.all([
+          getFooterDataAPI(),
+          getMaincategoryAPI()
+        ])
+
+        if (!mounted) return
+
+        setFooterData({
+          ...fallbackFooterData,
+          ...footerResponse,
+          brand: { ...fallbackFooterData.brand, ...(footerResponse?.brand || {}) },
+          contact: { ...fallbackFooterData.contact, ...(footerResponse?.contact || {}) },
+          socialLinks: { ...fallbackFooterData.socialLinks, ...(footerResponse?.socialLinks || {}) },
+          stats: { ...fallbackFooterData.stats, ...(footerResponse?.stats || {}) },
+          trustBadges: Array.isArray(footerResponse?.trustBadges) && footerResponse.trustBadges.length
+            ? footerResponse.trustBadges
+            : fallbackFooterData.trustBadges
+        })
+
+        const categoryList = Array.isArray(categoriesResponse) ? categoriesResponse : []
+        const menCategory = categoryList.find((item) => String(item?.name || '').trim().toLowerCase() === 'mens')
+        const orderedCategories = menCategory
+          ? [menCategory, ...categoryList.filter((item) => item !== menCategory)]
+          : [{ name: 'Mens' }, ...categoryList]
+        const filteredCategories = orderedCategories.filter((item) => {
+          const name = String(item?.name || '').trim().toLowerCase()
+          return name !== 'ladies' && name !== 'lady'
+        })
+
+        setMainCategories(filteredCategories.slice(0, 5))
+      } catch (err) {
+        console.warn('Footer data load issue:', err?.message || err)
+      }
+    }
+
+    loadFooterData()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const socialButtons = useMemo(() => ([
+    { name: 'Instagram', href: footerData.socialLinks.instagram, Icon: Instagram },
+    { name: 'Facebook', href: footerData.socialLinks.facebook, Icon: Facebook },
+    { name: 'X', href: footerData.socialLinks.x, Icon: X },
+    { name: 'YouTube', href: footerData.socialLinks.youtube, Icon: Youtube },
+    { name: 'LinkedIn', href: footerData.socialLinks.linkedin, Icon: Linkedin }
+  ]), [footerData.socialLinks])
+
+  const featureChips = useMemo(() => ([
+    { label: 'Secure Checkout', Icon: ShieldCheck },
+    { label: 'Premium Support', Icon: CircleHelp },
+    { label: 'Fast Shipping', Icon: Truck }
+  ]), [])
+
+  const statCards = useMemo(() => ([
+    { label: 'Products', value: Number(footerData.stats.products || 0), Icon: ShoppingBag },
+    { label: 'Categories', value: Number(footerData.stats.categories || 0), Icon: Boxes },
+    { label: 'Members', value: Number(footerData.stats.members || 0), Icon: Users },
+    { label: 'Subscribers', value: Number(footerData.stats.subscribers || 0), Icon: BadgeCheck }
+  ]), [footerData.stats])
+
+  const quickLinks = [
+    { to: '/about', label: 'About Us' },
+    { to: '/shop/fashion', label: 'Shop Collections' },
+    { to: '/contact', label: 'Contact Support' },
+    { to: '/faq', label: 'FAQs' },
+    { to: '/return-policy', label: 'Return Policy' },
+    { to: '/terms', label: 'Terms & Conditions' }
+  ]
+
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault()
+    const email = newsletterEmail.trim().toLowerCase()
+
+    if (!email) {
+      toast.warning('Please enter your email address.')
+      return
+    }
+
+    setSubmittingNewsletter(true)
+    try {
+      await createNewslatterAPI({ email })
+      setNewsletterEmail('')
+      setFooterData((prev) => ({
+        ...prev,
+        stats: {
+          ...prev.stats,
+          subscribers: Number(prev.stats.subscribers || 0) + 1
+        }
+      }))
+      toast.success('You are subscribed to premium updates.')
+    } catch (err) {
+      const message = String(err?.data?.message || err?.data?.error || err?.message || '').toLowerCase()
+      if (message.includes('duplicate') || message.includes('already')) {
+        toast.info('This email is already subscribed.')
+      } else {
+        toast.error('Subscription failed. Please try again.')
+      }
+    } finally {
+      setSubmittingNewsletter(false)
+    }
+  }
+
+  const goToTop = (e) => {
+    e.preventDefault()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
-    <>
-      <footer className="ftco-footer ftco-section ">
-        <div className="container">
-          <div className="row">
-            <div className="mouse">
-              <a href="#" className="mouse-icon">
-                <div className="mouse-wheel"><span className="ion-ios-arrow-up"></span></div>
-              </a>
+    <footer className="esh-footer-shell">
+      <div className="esh-footer-bg" aria-hidden="true"></div>
+      <div className="container esh-footer-container">
+        <div className="esh-footer-top">
+          <div className="esh-brand-block">
+            <div className="esh-brand-tag"><Sparkles size={14} /> Verified Premium Commerce</div>
+            <h2>{footerData.brand.name}</h2>
+            <p>{footerData.brand.tagline}</p>
+            <div className="esh-feature-chips">
+              {featureChips.map(({ label, Icon }) => (
+                <span key={label}><Icon size={14} /> {label}</span>
+              ))}
+            </div>
+            <div className="esh-social-row">
+              {socialButtons.map(({ name, href, Icon }) => (
+                <a key={name} href={href} target="_blank" rel="noreferrer" aria-label={name} title={name}>
+                  <Icon size={16} />
+                </a>
+              ))}
             </div>
           </div>
-          <div className="row mb-5">
-            <div className="col-lg-2">
-              <div className="ftco-footer-widget mb-4">
-                <h2 className="ftco-heading-2 ">Eshopper</h2>
-                <p>Far far away, behind the word mountains, far from the countries Vokalia and Consonantia.</p>
-                <ul className="ftco-footer-social list-unstyled float-md-left float-lft mt-5">
-                  <li className="ftco-animate"><a href="#"><span className="icon-twitter"></span></a></li>
-                  <li className="ftco-animate"><a href="#"><span className="icon-facebook"></span></a></li>
-                  <li className="ftco-animate"><a href="#"><span className="icon-instagram"></span></a></li>
-                </ul>
-              </div>
-            </div>
-            <div className="col-lg-3">
-              <div className="ftco-footer-widget mb-4 ml-md-5">
-                <h2 className="ftco-heading-2">Menu</h2>
-                <ul className="list-unstyled">
-                  <li><Link to="/about" className="py-2 d-block">About</Link></li>
-                  <li><Link to="/contact" className="py-2 d-block">Contact Us</Link></li>
-                  <li><Link to="/faq" className="py-2 d-block">FAQs</Link></li>
-                  <li><Link to="/return-policy" className="py-2 d-block">Return Policy</Link></li>
-                </ul>
-              </div>
-            </div>
-            <div className="col-lg-3">
-              <div className="ftco-footer-widget mb-4">
-                <h2 className="ftco-heading-2">Help</h2>
-                <div className="d-flex">
-                  <ul className="list-unstyled mr-l-5 pr-l-3 mr-4">
-                    <li><Link to="/faq" className="py-2 d-block">Shipping Information</Link></li>
-                    <li><Link to="/return-policy" className="py-2 d-block">Returns &amp; Exchange</Link></li>
-                    <li><Link to="/return-policy" className="py-2 d-block">Terms &amp; Conditions</Link></li>
-                    <li><Link to="/return-policy" className="py-2 d-block">Privacy Policy</Link></li>
-                  </ul>
-                  <ul className="list-unstyled">
-                    <li><Link to="/faq" className="py-2 d-block">FAQs</Link></li>
-                    <li><Link to="/contact" className="py-2 d-block">Contact</Link></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-            <div className="col-lg-4">
-              <div className="ftco-footer-widget mb-4">
-                <h2 className="ftco-heading-2">Have a Questions?</h2>
-                <div className="block-23 mb-3">
-                  <ul>
-                    <li><span className="icon icon-map-marker"></span><span className="text">A-43, Ducat Noida, Sector 16, Noida, 201301,Up, India</span></li>
-                    <li><a href="#"><span className="icon icon-phone"></span><span className="text">+91 844 785 9784</span></a></li>
-                    <li><a href="#"><span className="icon icon-envelope"></span><span className="text">theafzalhussain786@gmail.com</span></a></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+
+          <div className="esh-footer-links">
+            <h3>Quick Links</h3>
+            <ul>
+              {quickLinks.map((item) => (
+                <li key={item.to}><Link to={item.to}>{item.label}</Link></li>
+              ))}
+            </ul>
           </div>
-          <div className="row">
-            <div className="col-md-12 text-center">
 
-              <p>
-                <script>
-                </script> All rights reserved | This template 
-               is made with <i className="icon-heart color-danger" aria-hidden="true"></i> by <a 
-               href="https://colorlib.com" target="_blank">Colorlib</a>
+          <div className="esh-footer-links">
+            <h3>Top Categories</h3>
+            <ul>
+              {mainCategories.length > 0 ? (
+                mainCategories.map((cat) => {
+                  const categoryName = String(cat?.name || '').trim()
+                  const categoryKey = categoryName.toLowerCase().replace(/\s+/g, '-')
+                  return <li key={cat.id || cat._id || categoryKey}><Link to={`/shop/${encodeURIComponent(categoryName)}`}>{cat.name}</Link></li>
+                })
+              ) : (
+                <>
+                  <li><Link to="/shop/Mens">Mens</Link></li>
+                  <li><Link to="/shop/Women">Women</Link></li>
+                  <li><Link to="/shop/Kids">Kids</Link></li>
+                  <li><Link to="/shop/Boys">Boys</Link></li>
+                  <li><Link to="/shop/Fashion">Fashion Essentials</Link></li>
+                  <li><Link to="/shop/Beauty">Beauty & Care</Link></li>
+                  <li><Link to="/shop/Electronics">Electronics</Link></li>
+                </>
+              )}
+            </ul>
+          </div>
 
-              </p>
+          <div className="esh-contact-block">
+            <h3>Contact & Trust</h3>
+            <div className="esh-contact-line"><Mail size={14} /> <a href={`mailto:${footerData.contact.email}`}>{footerData.contact.email}</a></div>
+            <div className="esh-contact-line"><Phone size={14} /> <a href={`tel:${footerData.contact.phone}`}>{footerData.contact.phone}</a></div>
+            <div className="esh-contact-line"><MapPin size={14} /> <span>{footerData.contact.address}</span></div>
+            <div className="esh-trust-list">
+              {(footerData.trustBadges || []).slice(0, 3).map((badge) => (
+                <span key={badge}><BadgeCheck size={13} /> {badge}</span>
+              ))}
             </div>
           </div>
         </div>
-      </footer>
-    </>
+
+        <div className="esh-footer-mid">
+          <div className="esh-stats-grid">
+            {statCards.map(({ label, value, Icon }) => (
+              <div className="esh-stat-card" key={label}>
+                <Icon size={17} />
+                <strong>{value.toLocaleString()}</strong>
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <form className="esh-newsletter" onSubmit={handleNewsletterSubmit}>
+            <h4>Join Official eShopper Updates</h4>
+            <p>Receive verified product launches, exclusive drops, and order-security updates.</p>
+            <div className="esh-newsletter-row">
+              <input
+                type="email"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder="Enter your email"
+                aria-label="Newsletter email"
+                required
+              />
+              <button type="submit" disabled={submittingNewsletter}>
+                {submittingNewsletter ? 'Joining...' : <><Send size={14} /> Subscribe</>}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="esh-footer-bottom">
+          <p>© {new Date().getFullYear()} {footerData.brand.name}. All rights reserved. Built with security, trust, and premium quality.</p>
+          <a href="#top" onClick={goToTop} className="esh-top-btn"><ArrowUp size={14} /> Back to Top</a>
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .esh-footer-shell {
+          position: relative;
+          margin-top: 80px;
+          color: #e6edf7;
+          overflow: hidden;
+          background:
+            radial-gradient(circle at 14% -4%, rgba(183, 134, 40, 0.22), transparent 36%),
+            radial-gradient(circle at 92% 96%, rgba(15, 118, 110, 0.2), transparent 34%),
+            linear-gradient(132deg, #08111a 0%, #0f1f2a 54%, #1f1812 100%);
+          border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .esh-footer-bg {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          opacity: 0.28;
+          background-image:
+            linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+          background-size: 34px 34px;
+          mask-image: radial-gradient(circle at center, #000 44%, transparent 90%);
+        }
+
+        .esh-footer-container {
+          position: relative;
+          z-index: 2;
+          padding: 56px 12px 24px;
+        }
+
+        .esh-footer-top {
+          display: grid;
+          grid-template-columns: 1.35fr 1fr 1fr 1.15fr;
+          gap: 20px;
+        }
+
+        .esh-brand-block h2 {
+          margin: 10px 0 8px;
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: 1.95rem;
+          letter-spacing: 1.5px;
+          color: #f4f7fb;
+        }
+
+        .esh-brand-block p {
+          margin: 0;
+          color: #b8c3d8;
+          font-size: 0.95rem;
+          line-height: 1.62;
+          max-width: 360px;
+        }
+
+        .esh-brand-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border: 1px solid rgba(103, 143, 193, 0.5);
+          border-radius: 999px;
+          padding: 5px 10px;
+          font-size: 0.66rem;
+          font-weight: 800;
+          letter-spacing: 1.2px;
+          text-transform: uppercase;
+          color: #9ec8ff;
+          background: rgba(10, 20, 36, 0.7);
+        }
+
+        .esh-feature-chips {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 14px;
+        }
+
+        .esh-feature-chips span {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 0.72rem;
+          color: #d7e0ef;
+          border: 1px solid rgba(89, 109, 136, 0.52);
+          border-radius: 999px;
+          padding: 5px 10px;
+          background: rgba(10, 18, 30, 0.65);
+        }
+
+        .esh-social-row {
+          display: flex;
+          gap: 9px;
+          margin-top: 14px;
+        }
+
+        .esh-social-row a {
+          width: 34px;
+          height: 34px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 10px;
+          border: 1px solid rgba(115, 145, 182, 0.45);
+          color: #d7e6fb;
+          text-decoration: none;
+          background: rgba(10, 18, 30, 0.65);
+          transition: all 0.2s ease;
+        }
+
+        .esh-social-row a:hover {
+          transform: translateY(-1px);
+          color: #fff;
+          border-color: rgba(102, 179, 255, 0.95);
+          box-shadow: 0 8px 18px rgba(43, 115, 197, 0.28);
+        }
+
+        .esh-footer-links h3,
+        .esh-contact-block h3 {
+          margin: 3px 0 12px;
+          color: #f2f6fd;
+          font-size: 0.93rem;
+          letter-spacing: 1.2px;
+          text-transform: uppercase;
+          font-weight: 800;
+        }
+
+        .esh-footer-links ul {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: grid;
+          gap: 9px;
+        }
+
+        .esh-footer-links a {
+          color: #b7c7df;
+          font-size: 0.88rem;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+
+        .esh-footer-links a:hover {
+          color: #f7fafc;
+        }
+
+        .esh-contact-line {
+          display: flex;
+          align-items: flex-start;
+          gap: 7px;
+          margin-bottom: 10px;
+          font-size: 0.86rem;
+          color: #b8c6dc;
+          line-height: 1.45;
+        }
+
+        .esh-contact-line a {
+          color: #8ecbff;
+          text-decoration: none;
+        }
+
+        .esh-trust-list {
+          margin-top: 12px;
+          display: grid;
+          gap: 8px;
+        }
+
+        .esh-trust-list span {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border: 1px solid rgba(76, 111, 149, 0.56);
+          border-radius: 10px;
+          padding: 7px 9px;
+          font-size: 0.78rem;
+          color: #d7e4f8;
+          background: rgba(10, 18, 30, 0.65);
+        }
+
+        .esh-footer-mid {
+          margin-top: 26px;
+          display: grid;
+          grid-template-columns: 1.15fr 1fr;
+          gap: 16px;
+          align-items: stretch;
+        }
+
+        .esh-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .esh-stat-card {
+          border: 1px solid rgba(78, 106, 141, 0.55);
+          border-radius: 13px;
+          background: rgba(8, 17, 29, 0.66);
+          padding: 12px 10px;
+          display: grid;
+          gap: 6px;
+          justify-items: start;
+        }
+
+        .esh-stat-card svg { color: #89c4ff; }
+
+        .esh-stat-card strong {
+          color: #ffffff;
+          font-size: 1.06rem;
+          line-height: 1;
+        }
+
+        .esh-stat-card span {
+          color: #b6c5dd;
+          font-size: 0.76rem;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          font-weight: 700;
+        }
+
+        .esh-newsletter {
+          border: 1px solid rgba(96, 123, 156, 0.54);
+          border-radius: 14px;
+          background: rgba(8, 17, 29, 0.66);
+          padding: 14px;
+        }
+
+        .esh-newsletter h4 {
+          margin: 0;
+          color: #f3f8ff;
+          font-size: 1rem;
+          font-weight: 800;
+        }
+
+        .esh-newsletter p {
+          margin: 8px 0 12px;
+          color: #b7c5dc;
+          font-size: 0.82rem;
+          line-height: 1.55;
+        }
+
+        .esh-newsletter-row {
+          display: flex;
+          gap: 8px;
+        }
+
+        .esh-newsletter input {
+          flex: 1;
+          border: 1px solid rgba(104, 132, 168, 0.68);
+          border-radius: 10px;
+          background: #0b1627;
+          color: #ecf3ff;
+          padding: 10px 11px;
+          font-size: 0.86rem;
+          outline: none;
+        }
+
+        .esh-newsletter input::placeholder { color: #9cb0ce; }
+
+        .esh-newsletter button {
+          border: 0;
+          border-radius: 10px;
+          background: linear-gradient(90deg, #17a1ff, #2d6fff);
+          color: #fff;
+          font-size: 0.82rem;
+          font-weight: 800;
+          letter-spacing: 0.4px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          padding: 10px 12px;
+          min-width: 122px;
+          transition: transform 0.2s ease, filter 0.2s ease;
+        }
+
+        .esh-newsletter button:hover:not(:disabled) {
+          transform: translateY(-1px);
+          filter: brightness(1.04);
+        }
+
+        .esh-newsletter button:disabled {
+          opacity: 0.72;
+          cursor: not-allowed;
+        }
+
+        .esh-footer-bottom {
+          margin-top: 20px;
+          padding-top: 14px;
+          border-top: 1px solid rgba(132, 157, 187, 0.24);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .esh-footer-bottom p {
+          margin: 0;
+          color: #9cb0ce;
+          font-size: 0.78rem;
+          line-height: 1.52;
+        }
+
+        .esh-top-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border: 1px solid rgba(104, 132, 168, 0.68);
+          border-radius: 999px;
+          padding: 7px 12px;
+          text-decoration: none;
+          color: #d5e6ff;
+          font-size: 0.74rem;
+          font-weight: 800;
+          background: rgba(8, 17, 29, 0.72);
+        }
+
+        @media (max-width: 1100px) {
+          .esh-footer-top {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .esh-footer-mid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .esh-footer-shell {
+            margin-top: 44px;
+          }
+
+          .esh-footer-container {
+            padding: 38px 10px 20px;
+          }
+
+          .esh-footer-top {
+            grid-template-columns: 1fr;
+            gap: 14px;
+          }
+
+          .esh-brand-block h2 {
+            font-size: 1.6rem;
+          }
+
+          .esh-stats-grid {
+            grid-template-columns: 1fr 1fr;
+          }
+
+          .esh-newsletter-row {
+            flex-direction: column;
+          }
+
+          .esh-newsletter button {
+            width: 100%;
+            min-width: 100%;
+          }
+
+          .esh-footer-bottom {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .esh-feature-chips span,
+          .esh-footer-links a,
+          .esh-contact-line,
+          .esh-trust-list span,
+          .esh-newsletter p,
+          .esh-footer-bottom p {
+            font-size: 0.76rem;
+          }
+
+          .esh-stats-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}} />
+    </footer>
   )
 }

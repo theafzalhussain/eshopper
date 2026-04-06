@@ -240,3 +240,4 @@ export const getNewslatterAPI = () => fastAPI(API_ENDPOINTS.NEWSLETTER);
 export const createNewslatterAPI = (d) => fastAPI(API_ENDPOINTS.NEWSLETTER, "POST", d);
 export const updateNewslatterAPI = (d) => fastAPI(`${API_ENDPOINTS.NEWSLETTER}/${getID(d)}`, "PUT", d);
 export const deleteNewslatterAPI = (d) => fastAPI(`${API_ENDPOINTS.NEWSLETTER}/${getID(d)}`, "DELETE");
+export const getFooterDataAPI = () => fastAPI(API_ENDPOINTS.FOOTER_DATA);
