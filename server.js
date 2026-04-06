@@ -2021,7 +2021,16 @@ const RAZORPAY_KEY_SECRET = String(process.env.RAZORPAY_KEY_SECRET || '').trim()
 
 const buildRazorpayReceipt = (userId, prefix = 'eshopper') => {
     const safeUserId = String(userId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'guest';
-    return `${prefix}_${safeUserId}_${Date.now()}`;
+    // Compose receipt string
+    let receipt = `${prefix}_${safeUserId}_${Date.now()}`;
+    // Razorpay max receipt length = 40
+    if (receipt.length > 40) {
+        // Always keep the prefix and as much of userId as possible
+        const maxUserIdLen = 40 - (prefix.length + 1 + 1 + String(Date.now()).length); // prefix + '_' + '_' + timestamp
+        const trimmedUserId = safeUserId.slice(0, Math.max(0, maxUserIdLen));
+        receipt = `${prefix}_${trimmedUserId}_${Date.now()}`.slice(0, 40);
+    }
+    return receipt;
 };
 
 const getRazorpayConfigPayload = () => ({
@@ -2038,10 +2047,15 @@ const createRazorpayOrder = async ({ amount, currency = 'INR', receipt, paymentM
     }
 
     const orderAmount = Math.max(1, Math.round(Number(amount || 0) * 100));
+    // Ensure receipt is always <= 40 chars
+    let safeReceipt = receipt || buildRazorpayReceipt(paymentMethod || 'payment');
+    if (safeReceipt.length > 40) {
+        safeReceipt = safeReceipt.substring(0, 40);
+    }
     const response = await axios.post('https://api.razorpay.com/v1/orders', {
         amount: orderAmount,
         currency,
-        receipt: receipt || buildRazorpayReceipt(paymentMethod || 'payment'),
+        receipt: safeReceipt,
         payment_capture: 1,
         notes: {
             paymentMethod: String(paymentMethod || 'Razorpay')
@@ -3659,11 +3673,16 @@ app.get('/api/razorpay/config', (req, res) => {
 
 app.post('/api/razorpay/create-order', async (req, res) => {
     try {
+
         const amountRaw = req.body?.amount;
         const amount = Number(amountRaw);
         const currency = String(req.body?.currency || 'INR').toUpperCase();
         const paymentMethod = String(req.body?.paymentMethod || 'Razorpay');
-        const receipt = String(req.body?.receipt || buildRazorpayReceipt(req.body?.userId || 'payment'));
+        let receipt = String(req.body?.receipt || buildRazorpayReceipt(req.body?.userId || 'payment'));
+        // Razorpay receipt max length = 40
+        if (receipt.length > 40) {
+            receipt = receipt.substring(0, 40);
+        }
 
         // Debug log for incoming amount
         console.log('[Razorpay] Received create-order:', {
