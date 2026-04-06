@@ -321,8 +321,9 @@ export default function Checkout() {
                 key: keyId,
                 amount: razorpayOrder.amount,
                 currency: razorpayOrder.currency || razorpayCurrency || 'INR',
-                name: 'Eshopper',
-                description: mode === 'Card' ? 'Card / NetBanking payment' : 'UPI / Wallet payment',
+                name: 'Eshopper Boutique',
+                description: 'Exquisite Luxury Selection • Secured by eShopper Boutique',
+                image: 'https://cdn.jsdelivr.net/gh/theafzalhussain/eshopper-assets/eshopper-boutique-luxe-header.png', // E SHOPPER BOUTIQUE LUXE logo matching header/footer
                 order_id: razorpayOrder.id,
                 prefill: {
                     name: user?.name || '',
@@ -332,11 +333,20 @@ export default function Checkout() {
                 notes: {
                     userId: String(userId || ''),
                     paymentMethod: mode,
-                    cartItems: String(cart.length)
+                    cartItems: String(cart.length),
+                    brand: 'Eshopper Boutique',
+                    experience: 'Premium Luxury Checkout'
                 },
-                theme: { color: '#0f766e' },
+                theme: {
+                    color: '#D4AF37', // Gold
+                    hide_topbar: false,
+                    backdrop_color: '#fff8e1', // Subtle luxury background
+                },
+                retry: { enabled: true, max_count: 3 },
+                method: { upi: true, card: true, netbanking: true, wallet: true },
                 modal: {
-                    ondismiss: () => setPaymentProcessing(false)
+                    ondismiss: () => setPaymentProcessing(false),
+                    handle_back: true // Prevent accidental exits
                 },
                 handler: async (response) => {
                     try {

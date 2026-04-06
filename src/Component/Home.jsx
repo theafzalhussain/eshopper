@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
 import { getUser } from '../Store/ActionCreaters/UserActionCreators';
 import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators'; // Wishlist actions added
-import Newslatter from './Newslatter';
+// import Newslatter from './Newslatter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { optimizeCloudinaryUrl, optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 
@@ -433,7 +433,7 @@ export default function Home() {
                 </div>
             </section>
 
-            <Newslatter />
+            {/* <Newslatter /> */}
 
             <style dangerouslySetInnerHTML={{ __html: `
                 @import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;800&display=swap');
