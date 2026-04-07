@@ -566,6 +566,15 @@ const generateInvoicePdfBufferLegacy = async (invoiceData) => {
     }
     };
 
+// 🔴 SOCKET.IO AUTH MIDDLEWARE: Copy userId from handshake.auth to socket.data.userId
+io.use((socket, next) => {
+    const userId = socket.handshake.auth && socket.handshake.auth.userId;
+    if (userId) {
+        socket.data.userId = userId;
+    }
+    next();
+});
+
 // 🔴 SOCKET.IO CONNECTION & ROOM SETUP
 io.on('connection', (socket) => {
     const userRoom = `user:${socket.data.userId}`;
