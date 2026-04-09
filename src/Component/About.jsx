@@ -272,7 +272,7 @@ export default function About() {
                 </div>
                 <div className="ab-process-cards">
                     {[
-                        { img: "assets/images/choose-1.jpg", step: "01", title: "Selection", text: "We travel to the world's finest mills — Biella, Osaka, Como — hand-selecting every fabric bolt.", tag: "Sourcing" },
+                        { img: "assets/images/about-1.jpg", step: "01", title: "Selection", text: "We travel to the world's finest mills — Biella, Osaka, Como — hand-selecting every fabric bolt.", tag: "Sourcing" },
                         { img: "assets/images/choose-2.jpg", step: "02", title: "Precision", text: "Laser-guided cutting, hand-basted seams, and a 48-point inspection checklist. Zero shortcuts.", tag: "Craftsmanship" },
                         { img: "/assets/productimages/kid.jpg", step: "03", title: "Testing", text: "Each piece endures 200+ wear cycles, wash tests, and colorfastness checks before it earns our label.", tag: "Quality Control" }
                     ].map((item, i) => (
