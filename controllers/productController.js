@@ -18,7 +18,21 @@ module.exports = {
     // Add product
     addProduct: async (req, res) => {
         try {
-            const product = new Product(req.body);
+            // Multer fields: req.files.pic1, req.files.pic2, ...
+            const body = { ...req.body };
+            // Cloudinary returns file info in req.files
+            if (req.files) {
+                if (req.files.pic1 && req.files.pic1[0] && req.files.pic1[0].path) body.pic1 = req.files.pic1[0].path;
+                if (req.files.pic2 && req.files.pic2[0] && req.files.pic2[0].path) body.pic2 = req.files.pic2[0].path;
+                if (req.files.pic3 && req.files.pic3[0] && req.files.pic3[0].path) body.pic3 = req.files.pic3[0].path;
+                if (req.files.pic4 && req.files.pic4[0] && req.files.pic4[0].path) body.pic4 = req.files.pic4[0].path;
+            }
+            // Convert numeric fields
+            if (body.baseprice) body.baseprice = Number(body.baseprice);
+            if (body.discount) body.discount = Number(body.discount);
+            if (body.finalprice) body.finalprice = Number(body.finalprice);
+
+            const product = new Product(body);
             await product.save();
             // Emit dashboard update event
             if (typeof req.app.get === 'function') {
@@ -27,7 +41,7 @@ module.exports = {
             }
             res.status(201).json(product);
         } catch (err) {
-            res.status(400).json({ error: 'Failed to add product' });
+            res.status(400).json({ error: 'Failed to add product', details: err.message });
         }
     },
 

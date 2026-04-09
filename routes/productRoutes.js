@@ -3,10 +3,12 @@ const router = express.Router();
 
 
 const productController = require('../controllers/productController');
+const { upload } = require('../middleware/upload');
+
 
 // Product CRUD routes
 router.get('/list', productController.getAllProducts);
-router.post('/add', productController.addProduct);
+router.post('/add', upload, productController.addProduct);
 router.put('/update/:id', productController.updateProduct);
 router.delete('/delete/:id', productController.deleteProduct);
 
