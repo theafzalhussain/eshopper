@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { useSelector, useDispatch } from 'react-redux'
 import LefNav from './LefNav'
 import { deleteContact, getContact } from '../../Store/ActionCreaters/ContactActionCreators'
@@ -9,10 +10,20 @@ import './SystemControlCenter.css'
 export default function AdminContact() {
     const contacts = useSelector((state) => state.ContactStateData)
     const dispatch = useDispatch()
+    const toast = useToast()
 
     useEffect(() => {
         dispatch(getContact())
     }, [dispatch])
+
+    const handleDelete = (id) => {
+        toast.info("Removing contact...", 1200)
+        dispatch(deleteContact({ id }))
+        setTimeout(() => {
+            dispatch(getContact())
+            toast.success("Contact removed successfully!", 2000)
+        }, 1200)
+    }
 
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
@@ -49,7 +60,7 @@ export default function AdminContact() {
                                                 <td className="align-middle text-muted small">{item.subject}</td>
                                                 <td className="align-middle small d-none d-md-table-cell" style={{maxWidth: "300px"}}>{item.message}</td>
                                                 <td className="align-middle text-right">
-                                                    <button onClick={() => {if(window.confirm("Delete?")) dispatch(deleteContact({id: item.id || item._id}))}} className="btn btn-sm text-danger">
+                                                    <button onClick={() => handleDelete(item.id || item._id)} className="btn btn-sm text-danger">
                                                         <Trash2 size={18}/>
                                                     </button>
                                                 </td>

@@ -6,6 +6,7 @@ const express = require('express');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const cartRoutes = require('./routes/cartRoutes');
+const productRoutes = require('./routes/productRoutes');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
@@ -299,6 +300,7 @@ const buildInvoiceHtmlLegacy = async ({
                 .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 13px; }
                 .grand { display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 900; color: ${pdfKind === 'final' ? '#16a34a' : pdfKind === 'confirmation' ? '#4ade80' : '#2563eb'}; border-top: 1px dashed #94a3b8; padding-top: 8px; margin-top: 8px; }
                 .footer { margin-top: 14px; padding: 12px 14px 18px; border-top: 1px solid #e2e8f0; color: #475569; font-size: 11px; line-height: 1.7; }
+                .footer strong { color: #0f172a; }
                 .footer-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
                 .footer-card { border: 1px solid #dbe4ef; border-radius: 12px; padding: 10px; background: #fff; }
                 .footer-card .k { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 4px; }
@@ -726,6 +728,9 @@ io.on('connection', (socket) => {
 
 app.use('/api', cartRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Register product routes (enables /product/add and file upload endpoints)
+app.use('/product', productRoutes);
 
 // Register order routes (fixes missing /api/admin/delete-orders)
 app.use(orderRoutes);
@@ -1522,7 +1527,7 @@ const sendOrderPlacedEmail = async (payload = {}) => {
     const attachments = [];
     if (payload.invoiceBase64) {
         attachments.push({
-                filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
+            filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
             content: payload.invoiceBase64,
             contentType: 'application/pdf'
         });
@@ -1538,7 +1543,7 @@ const sendOrderConfirmationEmail = async (payload = {}) => {
     const attachments = [];
     if (payload.invoiceBase64) {
         attachments.push({
-                filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
+            filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
             content: payload.invoiceBase64,
             contentType: 'application/pdf'
         });
@@ -1559,7 +1564,7 @@ const sendOrderStatusEmail = async (payload = {}) => {
                 ? `Arriving Today - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`
                 : statusLower === 'delivered'
                     ? `Delivered Successfully - ${payload.orderId || 'ESHOPPER'} | Rate Your Experience`
-            : `Order ${statusText || 'Update'} • ${payload.orderId || 'ESHOPPER'}`;
+                    : `Order ${statusText || 'Update'} • ${payload.orderId || 'ESHOPPER'}`;
     const html = await renderTemplateEmailHtml(payload.status || 'Update', {
         ...payload,
         estimatedArrival: payload.estimatedDelivery || payload.estimatedArrival
@@ -1597,9 +1602,9 @@ if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
     process.exit(1);
 }
 
-cloudinary.config({ 
-    cloud_name: CLOUDINARY_CLOUD_NAME, 
-    api_key: CLOUDINARY_API_KEY, 
+cloudinary.config({
+    cloud_name: CLOUDINARY_CLOUD_NAME,
+    api_key: CLOUDINARY_API_KEY,
     api_secret: CLOUDINARY_API_SECRET
 });
 
@@ -1617,19 +1622,19 @@ const sanitizeCloudinaryUrl = (url) => {
     return url;
 };
 
-const storage = new CloudinaryStorage({ 
-    cloudinary: cloudinary, 
-    params: { 
-        folder: 'eshoper_master', 
-        allowedFormats: ['jpg', 'png', 'jpeg'],
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'eshoper_master',
+        allowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
         resource_type: 'auto'
-    } 
+    }
 });
-const upload = multer({ 
-    storage, 
+const upload = multer({
+    storage,
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg'];
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
         if (allowedMimes.includes(file.mimetype)) {
             cb(null, true);
         } else {
@@ -1959,25 +1964,25 @@ const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) 
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
 const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
-const User = mongoose.model('User', new mongoose.Schema({ 
-    name: String, 
-    username: { type: String, unique: true, sparse: true }, 
-    email: { type: String, unique: true, sparse: true }, 
-    phone: String, 
+const User = mongoose.model('User', new mongoose.Schema({
+    name: String,
+    username: { type: String, unique: true, sparse: true },
+    email: { type: String, unique: true, sparse: true },
+    phone: String,
     password: { type: String },
     uid: { type: String, unique: true, sparse: true, index: true }, // Firebase UID
     provider: { type: String, enum: ['email', 'google', 'phone'], default: 'email' }, // Auth provider
-    role: { type: String, default: "User" }, 
-    pic: String, 
-    addressline1: String, 
-    city: String, 
-    state: String, 
-    pin: String, 
-    otp: String, 
-    otpExpires: Date, 
+    role: { type: String, default: "User" },
+    pic: String,
+    addressline1: String,
+    city: String,
+    state: String,
+    pin: String,
+    otp: String,
+    otpExpires: Date,
     lastLogin: { type: Date, default: Date.now }, // Track last login
-    failedAttempts: { type: Number, default: 0 }, 
-    lockUntil: Date 
+    failedAttempts: { type: Number, default: 0 },
+    lockUntil: Date
 }, opts));
 const Product = require('./models/Product');
 const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
@@ -1988,7 +1993,7 @@ const Coupon = require('./models/Coupon');
 const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
 const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, paidAt: { type: Date, default: null }, razorpayOrderId: { type: String, default: '' }, razorpayPaymentId: { type: String, default: '' }, razorpaySignature: { type: String, default: '' }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, couponCode: { type: String, default: '' }, couponDiscount: { type: Number, default: 0 }, discountAmount: { type: Number, default: 0 }, gstAmount: { type: Number, default: 0 }, giftWrapCharge: { type: Number, default: 0 }, protectionCharge: { type: Number, default: 0 }, ecoCharge: { type: Number, default: 0 }, paymentFee: { type: Number, default: 0 }, extraCharges: { type: Number, default: 0 }, preDiscountTotal: { type: Number, default: 0 }, products: Array }, opts));
 const Order = require('./models/Order');
-const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: {type: String, default: "Active"} }, opts));
+const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" } }, opts));
 const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
 const FooterConfig = mongoose.model('FooterConfig', new mongoose.Schema({
     brand: {
@@ -2114,7 +2119,7 @@ const DEFAULT_FOOTER_CONFIG = {
         phone: SUPPORT_PHONE_DEFAULT,
         address: process.env.COMPANY_ADDRESS || 'Eshopper Boutique Luxe, New Delhi, India'
     },
-    socialLinks: {
+     socialLinks: {
         instagram: process.env.SOCIAL_INSTAGRAM_URL || 'https://instagram.com',
         facebook: process.env.SOCIAL_FACEBOOK_URL || 'https://facebook.com',
         x: process.env.SOCIAL_X_URL || 'https://x.com',
@@ -2376,12 +2381,12 @@ const sendWhatsAppMedia = async (number, mediaUrl, caption) => {
     try {
         const endpoint = `${apiUrl}/message/sendMedia/${instance}`;
         const mediaCaption = String(caption).trim();
-        
+
         // 🔴 VALIDATE MEDIA URL WITH BETTER ERROR HANDLING
         let mediaUrlValid = true;
         try {
             console.log(`🔍 Validating media URL: ${mediaUrl}`);
-            const urlCheck = await axios.head(mediaUrl, { 
+            const urlCheck = await axios.head(mediaUrl, {
                 timeout: 8000,
                 maxRedirects: 5,
                 headers: { 'User-Agent': 'Eshopper-WhatsApp-Client/1.0' }
@@ -2532,7 +2537,7 @@ app.post('/api/auth-sync', async (req, res) => {
         // Improved validation with better logging
         if (!idToken || !uid || !provider) {
             console.warn('⚠️ Auth sync called with incomplete data:', { hasToken: !!idToken, hasUid: !!uid, hasProvider: !!provider });
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: "Authentication incomplete. Please try signing in again.",
                 missingFields: {
                     idToken: !idToken,
@@ -2567,13 +2572,13 @@ app.post('/api/auth-sync', async (req, res) => {
             // ✅ USER EXISTS - UPDATE LOGIN TIMESTAMP & PROVIDER INFO
             console.log(`📝 Updating existing user: ${user.email}`);
             user.lastLogin = new Date();
-            
+
             // Update additional info if provided
             if (name && !user.name) user.name = name;
             if (pic && !user.pic) user.pic = pic;
             if (phone && !user.phone) user.phone = phone;
             if (email && !user.email) user.email = email;
-            
+
             await user.save();
             console.log(`✅ User updated successfully: ${user.email}`);
         } else {
@@ -2645,7 +2650,7 @@ app.post('/api/auth-sync', async (req, res) => {
 
         // Return user data (without sensitive info)
         const { password, otp, otpExpires, failedAttempts, lockUntil, ...safeUser } = user.toJSON();
-        
+
         res.json(safeUser);
     } catch (err) {
         console.error("❌ Auth Sync Error:", err.message);
@@ -2728,7 +2733,7 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
         }
 
         const user = await User.findOne({ $or: [{ email: searchTerm }, { username: searchTerm }] });
-        
+
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }
@@ -2754,16 +2759,16 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
         // 🔐 HASH NEW PASSWORD
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(newPassword, salt);
-        
+
         // 🧹 CLEANUP: Remove OTP and expiration after successful reset
         user.otp = undefined;
         user.otpExpires = undefined;
-        
+
         await user.save();
-        
+
         console.log(`✅ Password reset successful for user: ${user.username}`);
         res.json({ result: "Done", message: "Password updated successfully!" });
-        
+
     } catch (e) {
         console.error("❌ Password Reset Error:", e.message);
         res.status(500).json({ message: "Something went wrong. Please try again." });
@@ -2794,7 +2799,7 @@ app.post('/login', authLimiter, async (req, res) => {
         // 🔒 CHECK IF ACCOUNT IS LOCKED
         if (user && user.lockUntil && Date.now() < user.lockUntil) {
             const minutesRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
-            return res.status(403).json({ 
+            return res.status(403).json({
                 message: `Account temporarily locked due to multiple failed login attempts. Try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.`,
                 remainingMinutes: minutesRemaining
             });
@@ -2804,13 +2809,13 @@ app.post('/login', authLimiter, async (req, res) => {
         if (user) {
             // ❌ BLOCK LOGIN IF NO PASSWORD (Google/Phone auth user)
             if (!user.password) {
-                const authMethod = user.provider === 'google' ? 'Google Login' : 
-                                  user.provider === 'phone' ? 'Phone Login' :
-                                  'your authentication provider';
-                
+                const authMethod = user.provider === 'google' ? 'Google Login' :
+                    user.provider === 'phone' ? 'Phone Login' :
+                        'your authentication provider';
+
                 console.warn(`⚠️ Login attempt by ${user.provider} user via manual login: ${user.email || user.username}`);
-                
-                return res.status(403).json({ 
+
+                return res.status(403).json({
                     message: `This account uses ${authMethod}. Use ${authMethod} to sign in or set a password using Forgot Password.`,
                     provider: user.provider,
                     requiresFirebaseAuth: true
@@ -2849,7 +2854,7 @@ app.post('/login', authLimiter, async (req, res) => {
                 user.lockUntil = undefined;
                 user.lastLogin = new Date();
                 await user.save();
-                
+
                 console.log(`✅ Login successful: ${user.email || user.username}`);
                 const { password: _pw, otp: _otp, otpExpires: _exp, failedAttempts: _fa, lockUntil: _lu, ...safeUser } = user.toJSON();
                 return res.json(safeUser);
@@ -2859,18 +2864,18 @@ app.post('/login', authLimiter, async (req, res) => {
         // ❌ LOGIN FAILED - INCREMENT FAILED ATTEMPTS
         if (user) {
             user.failedAttempts = (user.failedAttempts || 0) + 1;
-            
+
             // LOCK ACCOUNT AFTER 5 FAILED ATTEMPTS
             if (user.failedAttempts >= 5) {
                 user.lockUntil = new Date(Date.now() + 15 * 60000); // 15 minutes
                 await user.save();
                 console.warn(`🔒 Account locked: ${user.email || user.username} - Too many failed attempts`);
-                return res.status(403).json({ 
+                return res.status(403).json({
                     message: "Too many failed login attempts. Account locked for 15 minutes.",
                     remainingMinutes: 15
                 });
             }
-            
+
             await user.save();
             console.warn(`⚠️ Failed login attempt #${user.failedAttempts}: ${user.email || user.username}`);
         } else {
@@ -2878,10 +2883,10 @@ app.post('/login', authLimiter, async (req, res) => {
         }
 
         return res.status(401).json({ message: "Invalid Credentials" });
-        
-    } catch (e) { 
+
+    } catch (e) {
         console.error("❌ Login Error:", e.message);
-        res.status(500).json({ message: "Something went wrong." }); 
+        res.status(500).json({ message: "Something went wrong." });
     }
 });
 
@@ -3038,7 +3043,7 @@ const handle = (path, Model, useUpload = false) => {
         }
     });
     // POST (create)
-    app.post(path, useUpload ? conditionalUpload : (req,res,next)=>next(), async (req, res) => {
+    app.post(path, useUpload ? conditionalUpload : (req, res, next) => next(), async (req, res) => {
         try {
             let data = { ...req.body };
             if (req.files) {
@@ -3079,11 +3084,11 @@ const handle = (path, Model, useUpload = false) => {
             res.status(400).json({ message: e.message || 'Failed to create', error: e.message });
         }
     });
-    app.put(`${path}/:id`, useUpload ? upload : (req,res,next)=>next(), async (req, res) => {
+    app.put(`${path}/:id`, useUpload ? upload : (req, res, next) => next(), async (req, res) => {
         try {
             let upData = { ...req.body };
-            if (req.files) { 
-                if (req.files.pic) upData.pic = req.files.pic[0].path; 
+            if (req.files) {
+                if (req.files.pic) upData.pic = req.files.pic[0].path;
                 if (req.files.pic1) upData.pic1 = req.files.pic1[0].path;
                 if (req.files.pic2) upData.pic2 = req.files.pic2[0].path;
                 if (req.files.pic3) upData.pic3 = req.files.pic3[0].path;
@@ -3110,11 +3115,11 @@ const handle = (path, Model, useUpload = false) => {
                 const existingUser = await Model.findById(req.params.id);
                 upData.settings = normalizeUserSettings(deepMerge(existingUser?.settings || {}, upData.settings || {}));
             }
-            
+
             if (path === '/user' && req.body.password && String(req.body.password).length < 25) {
                 const salt = await bcrypt.genSalt(10); upData.password = await bcrypt.hash(upData.password, salt);
             } else if (path === '/user') { delete upData.password; }
-            const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true }); 
+            const d = await Model.findByIdAndUpdate(req.params.id, upData, { new: true });
             if (!d) return res.status(404).json({ message: 'Not found' });
 
             if (path === '/product') {
@@ -3144,40 +3149,41 @@ const handle = (path, Model, useUpload = false) => {
             }
 
             res.json(path === '/user' ? normalizeUserDocument(d) : d);
-        } catch (e) { 
-            res.status(500).json({ error: e.message }); 
+        } catch (e) {
+            res.status(500).json({ error: e.message });
         }
     });
     app.delete(`${path}/:id`, async (req, res) => {
         try {
             await Model.findByIdAndDelete(req.params.id);
             res.json({ result: "Done" });
-        } catch (e) { 
+        } catch (e) {
             console.error(`❌ Error deleting from ${path}:`, e.message);
-            res.status(500).json({ error: "Failed to delete." }); 
+            res.status(500).json({ error: "Failed to delete." });
         }
     });
 };
 
 
-handle('/user', User, true); 
-handle('/product', Product, true); 
+handle('/user', User, true);
+handle('/product', Product, true);
 // Compatibility: GET /product returns all products (for frontend)
 app.get('/product', async (req, res) => {
-        try {
-                const products = await Product.find().sort({ createdAt: -1 });
-                res.json(products);
-        } catch (err) {
-                res.status(500).json({ error: 'Failed to fetch products' });
-        }
+    try {
+        const products = await Product.find().sort({ createdAt: -1 });
+        res.json(products);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch products' });
+    }
 });
 handle('/maincategory', Maincategory);
-handle('/subcategory', Subcategory); 
-handle('/brand', Brand); 
+handle('/subcategory', Subcategory);
+handle('/brand', Brand);
 handle('/cart', Cart);
 handle('/coupon', Coupon);
-handle('/wishlist', Wishlist); 
-handle('/checkout', Checkout); 
+handle('/wishlist', Wishlist);
+handle('/api/wishlist', Wishlist);
+handle('/checkout', Checkout);
 handle('/contact', Contact);
 handle('/newslatter', Newslatter);
 
@@ -3599,54 +3605,54 @@ const placeOrderHandler = async (req, res) => {
 
         // 📲 SEND WHATSAPP NOTIFICATION (if enabled)
         if (FEATURE_WHATSAPP_NOTIFICATIONS) {
-        try {
-            const phoneNumber = addressPayload?.phone || user.phone;
-            
-            console.log(`\n🔔 WhatsApp Notification Debug for Order ${orderId}:`);
-            console.log(`   User: ${user.name} (${userId})`);
-            console.log(`   Email: ${user.email}`);
-            console.log(`   Phone from profile: "${user.phone || 'NOT SET'}"`);
-            console.log(`   Phone from address: "${addressPayload?.phone || 'NOT PROVIDED'}"`);
-            console.log(`   Final phone: "${phoneNumber || 'MISSING'}"\n`);
-            
-            if (!phoneNumber) {
-                console.log(`ℹ️  WhatsApp SKIPPED - No phone number in profile. User should update profile at: https://eshopperr.me/profile\n`);
-            } else {
-                const itemSummary = cleanProducts
-                    .slice(0, 5)
-                    .map((item, idx) => `   ${idx + 1}. ${item.name}\n      Qty: ${item.qty} | Rate: ₹${Number(item.price || 0).toLocaleString('en-IN')} | Subtotal: ₹${Number(item.total || 0).toLocaleString('en-IN')}`)
-                    .join('\n');
+            try {
+                const phoneNumber = addressPayload?.phone || user.phone;
 
-                const savedAmount = total - payable;
-                const discountInfo = savedAmount > 0 ? `\n💰 Total Savings: ₹${Number(savedAmount).toLocaleString('en-IN')}` : '';
-                const estimatedDays = 5; // Default 5 days delivery
-                const deliveryDate = new Date();
-                deliveryDate.setDate(deliveryDate.getDate() + estimatedDays);
-                const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                console.log(`\n🔔 WhatsApp Notification Debug for Order ${orderId}:`);
+                console.log(`   User: ${user.name} (${userId})`);
+                console.log(`   Email: ${user.email}`);
+                console.log(`   Phone from profile: "${user.phone || 'NOT SET'}"`);
+                console.log(`   Phone from address: "${addressPayload?.phone || 'NOT PROVIDED'}"`);
+                console.log(`   Final phone: "${phoneNumber || 'MISSING'}"\n`);
 
-                const whatsappMsg = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')}\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT: ${paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod || 'Card'}\n\n📅 ESTIMATED DELIVERY: ${formattedDeliveryDate}\n\n🎯 NEXT STEPS:\n✓ We're preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery\n\n🔗 TRACK: https://eshopperr.me/order-tracking/${orderId}\n\n🙏 Thank you for your business!\nEshopper Boutique Luxe`;
+                if (!phoneNumber) {
+                    console.log(`ℹ️  WhatsApp SKIPPED - No phone number in profile. User should update profile at: https://eshopperr.me/profile\n`);
+                } else {
+                    const itemSummary = cleanProducts
+                        .slice(0, 5)
+                        .map((item, idx) => `   ${idx + 1}. ${item.name}\n      Qty: ${item.qty} | Rate: ₹${Number(item.price || 0).toLocaleString('en-IN')} | Subtotal: ₹${Number(item.total || 0).toLocaleString('en-IN')}`)
+                        .join('\n');
 
-                try {
-                    console.log(`📤 Sending WhatsApp to ${phoneNumber} for order ${orderId}`);
-                    await sendWhatsApp(phoneNumber, whatsappMsg);
-                    console.log(`✅ WhatsApp sent for order ${orderId}`);
-                } catch (waErr) {
-                    if (isExpectedWhatsAppError(waErr)) {
-                        console.log(`ℹ️  WhatsApp skipped for ${orderId}:`, waErr.message);
-                    } else {
-                        console.error(`⚠️  WhatsApp failed for ${orderId}:`, waErr.message);
-                        if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                    const savedAmount = total - payable;
+                    const discountInfo = savedAmount > 0 ? `\n💰 Total Savings: ₹${Number(savedAmount).toLocaleString('en-IN')}` : '';
+                    const estimatedDays = 5; // Default 5 days delivery
+                    const deliveryDate = new Date();
+                    deliveryDate.setDate(deliveryDate.getDate() + estimatedDays);
+                    const formattedDeliveryDate = deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                    const whatsappMsg = `✨ LUXURY EXPERIENCE STARTS NOW! 💎\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nHello ${(user.name || 'Valued Customer').split(' ')[0]} 👋\nThank you for your exquisite order!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n✅ ORDER CONFIRMED\nOrder ID: #${orderId}\nOrder Date: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}\n\n📦 YOUR PREMIUM ITEMS:\n${itemSummary}${cleanProducts.length > 5 ? `\n   + ${cleanProducts.length - 5} more exclusive item(s)` : ''}\n\n💹 ORDER BREAKDOWN:\n   Subtotal: ₹${Number(total || 0).toLocaleString('en-IN')}${discountInfo}\n   Shipping: ₹${Number(shipping || 0).toLocaleString('en-IN')}\n   ─────────────────────────────\n   Final Amount: ₹${Number(payable || 0).toLocaleString('en-IN')} 💳\n\n💳 PAYMENT: ${paymentMethod === 'COD' ? 'Cash on Delivery' : paymentMethod || 'Card'}\n\n📅 ESTIMATED DELIVERY: ${formattedDeliveryDate}\n\n🎯 NEXT STEPS:\n✓ We're preparing your premium selection\n✓ Expert packaging with care\n✓ Fast & secure delivery\n\n🔗 TRACK: https://eshopperr.me/order-tracking/${orderId}\n\n🙏 Thank you for your business!\nEshopper Boutique Luxe`;
+
+                    try {
+                        console.log(`📤 Sending WhatsApp to ${phoneNumber} for order ${orderId}`);
+                        await sendWhatsApp(phoneNumber, whatsappMsg);
+                        console.log(`✅ WhatsApp sent for order ${orderId}`);
+                    } catch (waErr) {
+                        if (isExpectedWhatsAppError(waErr)) {
+                            console.log(`ℹ️  WhatsApp skipped for ${orderId}:`, waErr.message);
+                        } else {
+                            console.error(`⚠️  WhatsApp failed for ${orderId}:`, waErr.message);
+                            if (process.env.SENTRY_DSN) Sentry.captureException(waErr);
+                        }
                     }
                 }
+            } catch (waError) {
+                if (isExpectedWhatsAppError(waError)) {
+                    console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waError.message);
+                } else {
+                    console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
+                    if (process.env.SENTRY_DSN) Sentry.captureException(waError);
+                }
             }
-        } catch (waError) {
-            if (isExpectedWhatsAppError(waError)) {
-                console.log(`ℹ️  Order WhatsApp skipped (expected) for ${orderId}:`, waError.message);
-            } else {
-                console.error(`⚠️  Order WhatsApp failed for ${orderId}:`, waError.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(waError);
-            }
-        }
         }
 
         // 🔴 EMIT REAL-TIME DASHBOARD UPDATE VIA SOCKET.IO
@@ -3660,7 +3666,6 @@ const placeOrderHandler = async (req, res) => {
             io.emit('dashboardUpdate', { type: 'newOrder', timestamp: new Date() });
             console.log(`📡 Socket.io: Dashboard update emitted for new order ${orderId}`);
         }
-
         return res.status(201).json({
             success: true,
             message: 'Order placed successfully',
@@ -3914,1023 +3919,1049 @@ async function startServer() {
             retryWrites: true,
             w: 'majority'
         });
-        
+
         console.log("✅ MongoDB connected successfully");
         console.log(`📊 Database: ${mongoose.connection.name}`);
         console.log(`🔗 State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
-        
-          // 🔴 Trimming to ensure no space/newline error
-              // --- server.js AI REFACTOR START ---
-     const geminiApiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
-     const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
-     let cachedGenerateModels = [];
-     let cachedAt = 0;
-     const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
-    const modelCooldownUntil = new Map();
 
-     const isDev = process.env.NODE_ENV === 'development';
-     const devLog = (msg) => { if (isDev) console.log(`[DEV] ${msg}`); };
-     const devWarn = (msg) => { if (isDev) console.warn(`[DEV] ${msg}`); };
+        // 🔴 Trimming to ensure no space/newline error
+        // --- server.js AI REFACTOR START ---
+        const geminiApiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
+        const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
+        let cachedGenerateModels = [];
+        let cachedAt = 0;
+        const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
+        const modelCooldownUntil = new Map();
 
-     const getAvailableGeminiModels = async () => {
-        const now = Date.now();
-        if (cachedGenerateModels.length > 0 && (now - cachedAt) < MODEL_CACHE_TTL_MS) {
-            return cachedGenerateModels;
-        }
+        const isDev = process.env.NODE_ENV === 'development';
+        const devLog = (msg) => { if (isDev) console.log(`[DEV] ${msg}`); };
+        const devWarn = (msg) => { if (isDev) console.warn(`[DEV] ${msg}`); };
 
-        try {
-            const response = await axios.get('https://generativelanguage.googleapis.com/v1beta/models', {
+        const getAvailableGeminiModels = async () => {
+            const now = Date.now();
+            if (cachedGenerateModels.length > 0 && (now - cachedAt) < MODEL_CACHE_TTL_MS) {
+                return cachedGenerateModels;
+            }
+
+            try {
+                const response = await axios.get('https://generativelanguage.googleapis.com/v1beta/models', {
+                    headers: {
+                        'x-goog-api-key': geminiApiKey
+                    }
+                });
+                const models = (response.data?.models || [])
+                    .filter((model) => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
+                    .map((model) => String(model.name || '').replace(/^models\//, '').trim())
+                    .filter(Boolean);
+
+                if (models.length > 0) {
+                    cachedGenerateModels = models;
+                    cachedAt = now;
+                    console.log(`✅ Gemini models discovered: ${models.slice(0, 5).join(', ')}${models.length > 5 ? '...' : ''}`);
+                }
+
+                return models;
+            } catch (modelListError) {
+                devWarn(`Could not fetch Gemini model list: ${modelListError.message}`);
+                return [];
+            }
+        };
+
+        const extractGeminiText = (data) => {
+            const candidates = data?.candidates || [];
+            const first = candidates[0];
+            const parts = first?.content?.parts || [];
+            const text = parts.map((part) => part?.text || '').join('').trim();
+            return text;
+        };
+
+        const isQuotaError = (error) => {
+            const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`.toLowerCase();
+            return error?.response?.status === 429 || combined.includes('quota exceeded') || combined.includes('too many requests');
+        };
+
+        const extractRetryDelayMs = (error) => {
+            const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`;
+            const match = combined.match(/retry in\s+([\d.]+)s/i);
+            if (!match) return 60000;
+            const sec = Number(match[1]);
+            if (!Number.isFinite(sec) || sec <= 0) return 60000;
+            return Math.ceil(sec * 1000);
+        };
+
+        const isModelCoolingDown = (modelName) => {
+            const until = modelCooldownUntil.get(modelName);
+            if (!until) return false;
+            if (Date.now() >= until) {
+                modelCooldownUntil.delete(modelName);
+                return false;
+            }
+            return true;
+        };
+
+        const setModelCooldown = (modelName, error) => {
+            const retryMs = extractRetryDelayMs(error);
+            modelCooldownUntil.set(modelName, Date.now() + retryMs);
+            devLog(`Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
+        };
+
+        const generateWithRest = async (modelName, fullPrompt) => {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+            const payload = {
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [{ text: fullPrompt }]
+                    }
+                ],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 300
+                }
+            };
+
+            const response = await axios.post(url, payload, {
                 headers: {
+                    'Content-Type': 'application/json',
                     'x-goog-api-key': geminiApiKey
                 }
             });
-            const models = (response.data?.models || [])
-                .filter((model) => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
-                .map((model) => String(model.name || '').replace(/^models\//, '').trim())
-                .filter(Boolean);
 
-            if (models.length > 0) {
-                cachedGenerateModels = models;
-                cachedAt = now;
-                console.log(`✅ Gemini models discovered: ${models.slice(0, 5).join(', ')}${models.length > 5 ? '...' : ''}`);
-            }
-
-            return models;
-        } catch (modelListError) {
-            devWarn(`Could not fetch Gemini model list: ${modelListError.message}`);
-            return [];
-        }
-     };
-
-     const extractGeminiText = (data) => {
-        const candidates = data?.candidates || [];
-        const first = candidates[0];
-        const parts = first?.content?.parts || [];
-        const text = parts.map((part) => part?.text || '').join('').trim();
-        return text;
-     };
-
-      const isQuotaError = (error) => {
-          const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`.toLowerCase();
-          return error?.response?.status === 429 || combined.includes('quota exceeded') || combined.includes('too many requests');
-      };
-
-      const extractRetryDelayMs = (error) => {
-          const combined = `${error?.message || ''} ${JSON.stringify(error?.response?.data || {})}`;
-          const match = combined.match(/retry in\s+([\d.]+)s/i);
-          if (!match) return 60000;
-          const sec = Number(match[1]);
-          if (!Number.isFinite(sec) || sec <= 0) return 60000;
-          return Math.ceil(sec * 1000);
-      };
-
-      const isModelCoolingDown = (modelName) => {
-          const until = modelCooldownUntil.get(modelName);
-          if (!until) return false;
-          if (Date.now() >= until) {
-                modelCooldownUntil.delete(modelName);
-                return false;
-          }
-          return true;
-      };
-
-      const setModelCooldown = (modelName, error) => {
-          const retryMs = extractRetryDelayMs(error);
-          modelCooldownUntil.set(modelName, Date.now() + retryMs);
-          devLog(`Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
-      };
-
-     const generateWithRest = async (modelName, fullPrompt) => {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-        const payload = {
-            contents: [
-                {
-                    role: 'user',
-                    parts: [{ text: fullPrompt }]
-                }
-            ],
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 300
-            }
+            return extractGeminiText(response.data);
         };
 
-        const response = await axios.post(url, payload, {
-            headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': geminiApiKey
-            }
-        });
-
-        return extractGeminiText(response.data);
-     };
-
-// 🔴 REAL-TIME ORDER TRACKING - Get single order
-app.get('/api/orders/:userId', async (req, res) => {
-    try {
-        const userId = String(req.params.userId || '').trim();
-
-        if (!userId) {
-            return res.status(400).json({ message: 'userId is required' });
-        }
-
-        // 🔴 FETCH FROM ORDER COLLECTION (primary source)
-        const orders = await Order.find({ userid: userId })
-            .sort({ updatedAt: -1, createdAt: -1 })
-            .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount estimatedArrival deliverySchedule statusHistory deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt couponCode couponDiscount discountAmount gstAmount giftWrapCharge protectionCharge ecoCharge paymentFee extraCharges preDiscountTotal')
-            .lean();
-
-        const hydratedOrders = await Promise.all(
-            orders.map(async (item) => {
-                try {
-                    return await ensureOutForDeliveryOtp(item);
-                } catch {
-                    return item;
-                }
-            })
-        );
-
-        // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
-        if (orders.length === 0) {
-            const checkoutOrders = await Checkout.find({ userid: userId })
-                .sort({ updatedAt: -1, createdAt: -1 })
-                .lean();
-            
-            return res.json({
-                success: true,
-                orders: checkoutOrders.map((item) => ({
-                    orderId: item.orderId || `CHECKOUT-${item._id}`,
-                    orderStatus: item.orderstatus || 'Order Placed',
-                    totalAmount: Number(item.totalAmount || 0),
-                    shippingAmount: Number(item.shippingAmount || 0),
-                    finalAmount: Number(item.finalAmount || 0),
-                    couponCode: item.couponCode || '',
-                    couponDiscount: Number(item.couponDiscount || 0),
-                    discountAmount: Number(item.discountAmount || 0),
-                    gstAmount: Number(item.gstAmount || 0),
-                    giftWrapCharge: Number(item.giftWrapCharge || 0),
-                    protectionCharge: Number(item.protectionCharge || 0),
-                    ecoCharge: Number(item.ecoCharge || 0),
-                    paymentFee: Number(item.paymentFee || 0),
-                    extraCharges: Number(item.extraCharges || 0),
-                    preDiscountTotal: Number(item.preDiscountTotal || 0),
-                    paymentStatus: item.paymentstatus || 'Pending',
-                    paymentMethod: item.paymentmode || 'COD',
-                    createdAt: item.createdAt || item.updatedAt || new Date(),
-                    updatedAt: item.updatedAt || new Date(),
-                    orderItems: normalizeOrderProducts(item.products),
-                    estimatedDelivery: item.estimatedArrival || null,
-                    estimatedArrival: item.estimatedArrival || null,
-                    deliverySchedule: item.deliverySchedule || null,
-                    statusHistory: Array.isArray(item.statusHistory) ? item.statusHistory : [],
-                    deliveryOtp: item.deliveryOtp || '',
-                    deliveryOtpSentAt: item.deliveryOtpSentAt || null,
-                    deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
-                    deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null
-                }))
-            });
-        }
-
-        return res.json({
-            success: true,
-            orders: hydratedOrders.map((item) => ({
-                orderId: item.orderId,
-                orderStatus: item.orderStatus || 'Order Placed',
-                totalAmount: Number(item.totalAmount || 0),
-                shippingAmount: Number(item.shippingAmount || 0),
-                finalAmount: Number(item.finalAmount || 0),
-                couponCode: item.couponCode || '',
-                couponDiscount: Number(item.couponDiscount || 0),
-                discountAmount: Number(item.discountAmount || 0),
-                gstAmount: Number(item.gstAmount || 0),
-                giftWrapCharge: Number(item.giftWrapCharge || 0),
-                protectionCharge: Number(item.protectionCharge || 0),
-                ecoCharge: Number(item.ecoCharge || 0),
-                paymentFee: Number(item.paymentFee || 0),
-                extraCharges: Number(item.extraCharges || 0),
-                preDiscountTotal: Number(item.preDiscountTotal || 0),
-                paymentStatus: item.paymentStatus || 'Pending',
-                paymentMethod: item.paymentMethod || 'COD',
-                createdAt: item.createdAt || item.updatedAt || new Date(),
-                updatedAt: item.updatedAt || item.createdAt || new Date(),
-                orderItems: normalizeOrderProducts(item.products),
-                estimatedDelivery: item.estimatedArrival || null,
-                estimatedArrival: item.estimatedArrival || null,
-                deliverySchedule: item.deliverySchedule || null,
-                statusHistory: Array.isArray(item.statusHistory) ? item.statusHistory : [],
-                deliveryOtp: item.deliveryOtp || '',
-                deliveryOtpSentAt: item.deliveryOtpSentAt || null,
-                deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
-                deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null
-            }))
-        });
-    } catch (e) {
-        console.error('❌ Orders list fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch orders' });
-    }
-});
-
-app.get('/api/orders/recent/:userId', async (req, res) => {
-    try {
-        const userId = String(req.params.userId || '').trim();
-        const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
-
-        if (!userId) {
-            return res.status(400).json({ message: 'userId is required' });
-        }
-
-        const orders = await Order.find({ userid: userId })
-            .sort({ updatedAt: -1, createdAt: -1 })
-            .limit(limit)
-            .select('orderId orderStatus finalAmount updatedAt createdAt')
-            .lean();
-
-        return res.json({
-            success: true,
-            orders: orders.map((item) => ({
-                orderId: item.orderId,
-                orderStatus: item.orderStatus || 'Order Placed',
-                finalAmount: Number(item.finalAmount || 0),
-                updatedAt: item.updatedAt || item.createdAt || new Date()
-            }))
-        });
-    } catch (e) {
-        console.error('❌ Recent orders fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch recent orders' });
-    }
-});
-
-app.get('/api/order/:orderId', async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const userId = req.query.userId;
-
-        if (!orderId || !userId) {
-            return res.status(400).json({ message: 'orderId and userId are required' });
-        }
-
-        const order = await Order.findOne({
-            orderId,
-            userid: userId
-        }).lean();
-
-        if (!order) return res.status(404).json({ message: 'Order not found' });
-
-        const ensuredOrder = await ensureOutForDeliveryOtp(order).catch(() => order);
-
-        // 📦 Build comprehensive order response
-        const statusHistory = Array.isArray(ensuredOrder.statusHistory) ? ensuredOrder.statusHistory : [
-            { status: 'Ordered', timestamp: ensuredOrder.orderDate || ensuredOrder.createdAt || new Date() }
-        ];
-
-        const normalizedProducts = normalizeOrderProducts(ensuredOrder.products);
-
-        return res.json({
-            orderId: ensuredOrder.orderId,
-            userid: ensuredOrder.userid,
-            orderStatus: ensuredOrder.orderStatus || 'Ordered',
-            userName: ensuredOrder.userName || '',
-            userEmail: ensuredOrder.userEmail || '',
-            paymentMethod: ensuredOrder.paymentMethod || 'COD',
-            paymentStatus: ensuredOrder.paymentStatus || 'Pending',
-            totalAmount: Number(ensuredOrder.totalAmount || 0),
-            shippingAmount: Number(ensuredOrder.shippingAmount || 0),
-            finalAmount: ensuredOrder.finalAmount || 0,
-            couponCode: ensuredOrder.couponCode || '',
-            couponDiscount: Number(ensuredOrder.couponDiscount || 0),
-            discountAmount: Number(ensuredOrder.discountAmount || 0),
-            gstAmount: Number(ensuredOrder.gstAmount || 0),
-            giftWrapCharge: Number(ensuredOrder.giftWrapCharge || 0),
-            protectionCharge: Number(ensuredOrder.protectionCharge || 0),
-            ecoCharge: Number(ensuredOrder.ecoCharge || 0),
-            paymentFee: Number(ensuredOrder.paymentFee || 0),
-            extraCharges: Number(ensuredOrder.extraCharges || 0),
-            preDiscountTotal: Number(ensuredOrder.preDiscountTotal || 0),
-            shippingAddress: ensuredOrder.shippingAddress || {},
-            products: normalizedProducts,
-            deliverySchedule: ensuredOrder.deliverySchedule || null,
-            deliveryOtp: ensuredOrder.deliveryOtp || '',
-            deliveryOtpSentAt: ensuredOrder.deliveryOtpSentAt || null,
-            deliveryOtpExpiresAt: ensuredOrder.deliveryOtpExpiresAt || null,
-            deliveryOtpVerifiedAt: ensuredOrder.deliveryOtpVerifiedAt || null,
-            estimatedDelivery: ensuredOrder.estimatedArrival || null,
-            estimatedArrival: ensuredOrder.estimatedArrival || null,
-            statusHistory: statusHistory,
-            createdAt: ensuredOrder.orderDate || ensuredOrder.createdAt || new Date(),
-            orderDate: ensuredOrder.orderDate || ensuredOrder.createdAt,
-            updatedAt: ensuredOrder.updatedAt || ensuredOrder.createdAt || new Date()
-        });
-    } catch (e) {
-        console.error('❌ Order fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch order' });
-    }
-});
-
-app.get('/api/order/:orderId/invoice', async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const userId = String(req.query.userId || '').trim();
-        const disposition = String(req.query.disposition || '').toLowerCase() === 'inline' ? 'inline' : 'attachment';
-        const requestedType = String(req.query.type || '').trim().toLowerCase();
-
-        if (!orderId) {
-            return res.status(400).json({ success: false, message: 'orderId is required' });
-        }
-
-        let order = null;
-        if (userId) {
-            order = await Order.findOne({ orderId, userid: userId }).lean();
-        }
-        if (!order) {
-            // Fallback for legacy invoice links that may not include userId.
-            order = await Order.findOne({ orderId }).lean();
-        }
-        if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-
-        const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-        const isDelivered = orderStatus === 'delivered';
-        const pdfType = requestedType === 'final'
-            ? 'final'
-            : requestedType === 'confirmation'
-                ? 'confirmation'
-                : requestedType === 'placed'
-                    ? 'placed'
-                    : (isDelivered ? 'final' : (orderStatus.includes('confirm') ? 'confirmation' : 'placed'));
-
-        const pdfBuffer = await generateInvoicePdfBuffer({
-            orderId: order.orderId,
-            userName: order.userName,
-            userEmail: order.userEmail,
-            paymentMethod: order.paymentMethod,
-            paymentStatus: order.paymentStatus,
-            finalAmount: Number(order.finalAmount || 0),
-            totalAmount: Number(order.totalAmount || 0),
-            shippingAmount: Number(order.shippingAmount || 0),
-            couponDiscount: Number(order.couponDiscount || 0),
-            discountAmount: Number(order.discountAmount || 0),
-            gstAmount: Number(order.gstAmount || 0),
-            giftWrapCharge: Number(order.giftWrapCharge || 0),
-            protectionCharge: Number(order.protectionCharge || 0),
-            ecoCharge: Number(order.ecoCharge || 0),
-            paymentFee: Number(order.paymentFee || 0),
-            extraCharges: Number(order.extraCharges || 0),
-            preDiscountTotal: Number(order.preDiscountTotal || 0),
-            shippingAddress: order.shippingAddress || {},
-            products: normalizeOrderProducts(order.products),
-            orderDate: order.orderDate || order.createdAt,
-            orderStatus: order.orderStatus || order.status || 'Ordered',
-            pdfType,
-            isDelivered
-        });
-
-        const fileName = `TaxInvoice-${order.orderId}.pdf`;
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
-        res.setHeader('Content-Length', String(pdfBuffer.length));
-        return res.send(pdfBuffer);
-    } catch (e) {
-        console.error('❌ User invoice download error:', e.message);
-        if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ success: false, message: 'Failed to generate invoice' });
-    }
-});
-
-// 🔴 ADMIN ANALYTICS/TESING ROUTES (delegate to unified controller payload)
-app.get('/api/admin/dashboard-analytics', (req, res) => {
-    const adminController = require('./controllers/adminController');
-    return adminController.getDashboardAnalytics(req, res);
-});
-
-// 🔴 TEST ENDPOINT FOR DATABASE CONNECTION
-app.get('/api/admin/test-connection', (req, res) => {
-    const adminController = require('./controllers/adminController');
-    return adminController.testConnection(req, res);
-});
-
-// 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
-app.get('/api/admin/orders', async (req, res) => {
-    try {
-        const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
-
-        const search = String(req.query.search || '').trim();
-        const statusFilter = String(req.query.status || '').trim();
-        const fromDate = req.query.fromDate ? new Date(req.query.fromDate) : null;
-        const toDate = req.query.toDate ? new Date(req.query.toDate) : null;
-        const customer = String(req.query.customer || '').trim();
-        const paymentStatus = String(req.query.paymentStatus || '').trim();
-
-        let query = {};
-
-        // Search by orderId, userName, or userEmail (case-insensitive, partial match, ignore spaces)
-        if (search) {
-            const safeSearch = String(search).replace(/\s+/g, ' ').trim();
-            query.$or = [
-                { orderId: { $regex: safeSearch, $options: 'i' } },
-                { userEmail: { $regex: safeSearch, $options: 'i' } },
-                { email: { $regex: safeSearch, $options: 'i' } }
-            ];
-        }
-
-
-        // Filter by status
-        if (statusFilter && ALLOWED_ORDER_STATUS.includes(statusFilter)) {
-            query.orderStatus = statusFilter;
-        }
-
-        // Filter by payment status (case-insensitive)
-        if (paymentStatus) {
-            query.paymentStatus = { $regex: `^${paymentStatus}$`, $options: 'i' };
-        }
-
-        // Filter by date range (createdAt)
-        if (fromDate || toDate) {
-            query.createdAt = {};
-            if (fromDate) query.createdAt.$gte = fromDate;
-            if (toDate) {
-                toDate.setHours(23,59,59,999);
-                query.createdAt.$lte = toDate;
-            }
-        }
-
-        const skip = (page - 1) * limit;
-        const totalOrders = await Order.countDocuments(query);
-        const orders = await Order.find(query)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products deliverySchedule deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt')
-            .lean();
-
-        const hydratedOrders = await Promise.all(
-            orders.map(async (item) => {
-                try {
-                    return await ensureOutForDeliveryOtp(item);
-                } catch {
-                    return item;
-                }
-            })
-        );
-
-        return res.json({
-            success: true,
-            total: totalOrders,
-            page,
-            limit,
-            pages: Math.ceil(totalOrders / limit),
-            orders: hydratedOrders.map((item) => ({
-                orderId: item.orderId,
-                userId: item.userid,
-                userName: item.userName || 'N/A',
-                userEmail: item.userEmail || 'N/A',
-                orderStatus: item.orderStatus || 'Order Placed',
-                paymentStatus: item.paymentStatus || 'Pending',
-                finalAmount: Number(item.finalAmount || 0),
-                deliverySchedule: item.deliverySchedule || null,
-                deliveryOtp: item.deliveryOtp || '',
-                deliveryOtpSentAt: item.deliveryOtpSentAt || null,
-                deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
-                deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null,
-                productCount: normalizeOrderProducts(item.products).reduce((sum, product) => sum + Number(product.quantity || 0), 0),
-                updatedAt: item.updatedAt || item.createdAt || new Date()
-            }))
-        });
-    } catch (e) {
-        console.error('❌ Admin orders fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch orders' });
-    }
-});
-
-app.get('/api/admin/invoices', async (req, res) => {
-    try {
-        const adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
-        if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
-            return res.status(403).json({ success: false, message: 'Unauthorized' });
-        }
-
-        const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
-        const search = String(req.query.search || '').trim();
-
-        const query = {};
-        if (search) {
-            query.$or = [
-                { orderId: { $regex: search, $options: 'i' } },
-                { userName: { $regex: search, $options: 'i' } },
-                { userEmail: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        const skip = (page - 1) * limit;
-        const total = await Order.countDocuments(query);
-        const orders = await Order.find(query)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount createdAt updatedAt')
-            .lean();
-
-        return res.json({
-            success: true,
-            total,
-            page,
-            limit,
-            pages: Math.ceil(total / limit),
-            invoices: orders.map((o) => ({
-                orderId: o.orderId,
-                userId: o.userid,
-                userName: o.userName || 'N/A',
-                userEmail: o.userEmail || 'N/A',
-                orderStatus: o.orderStatus || 'Ordered',
-                paymentStatus: o.paymentStatus || 'Pending',
-                finalAmount: Number(o.finalAmount || 0),
-                invoiceType: String(o.orderStatus || '').toLowerCase() === 'delivered' ? 'Tax Invoice' : 'Receipt',
-                createdAt: o.createdAt,
-                updatedAt: o.updatedAt || o.createdAt
-            }))
-        });
-    } catch (e) {
-        console.error('❌ Admin invoices fetch error:', e.message);
-        return res.status(500).json({ success: false, message: 'Failed to fetch invoices' });
-    }
-});
-
-app.get('/api/admin/invoices/:orderId/download', async (req, res) => {
-    try {
-        const adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
-        if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
-            return res.status(403).json({ success: false, message: 'Unauthorized' });
-        }
-
-        const { orderId } = req.params;
-        if (!orderId) return res.status(400).json({ success: false, message: 'orderId required' });
-
-        const order = await Order.findOne({ orderId }).lean();
-        if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-
-        const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
-        const isDelivered = orderStatus === 'delivered';
-        const pdfType = isDelivered ? 'final' : 'receipt';
-
-        const pdfBuffer = await generateInvoicePdfBuffer({
-            orderId: order.orderId,
-            userName: order.userName,
-            userEmail: order.userEmail,
-            paymentMethod: order.paymentMethod,
-            paymentStatus: order.paymentStatus,
-            finalAmount: Number(order.finalAmount || 0),
-            totalAmount: Number(order.totalAmount || 0),
-            shippingAmount: Number(order.shippingAmount || 0),
-            couponDiscount: Number(order.couponDiscount || 0),
-            discountAmount: Number(order.discountAmount || 0),
-            gstAmount: Number(order.gstAmount || 0),
-            giftWrapCharge: Number(order.giftWrapCharge || 0),
-            protectionCharge: Number(order.protectionCharge || 0),
-            ecoCharge: Number(order.ecoCharge || 0),
-            paymentFee: Number(order.paymentFee || 0),
-            extraCharges: Number(order.extraCharges || 0),
-            preDiscountTotal: Number(order.preDiscountTotal || 0),
-            shippingAddress: order.shippingAddress || {},
-            products: normalizeOrderProducts(order.products),
-            orderDate: order.orderDate || order.createdAt,
-            orderStatus: order.orderStatus || order.status || 'Ordered',
-            pdfType,
-            isDelivered
-        });
-
-        const fileName = isDelivered ? `TaxInvoice-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`;
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-        res.setHeader('Content-Length', String(pdfBuffer.length));
-        return res.send(pdfBuffer);
-    } catch (e) {
-        console.error('❌ Admin invoice download error:', e.message);
-        if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ success: false, message: 'Failed to generate invoice' });
-    }
-});
-
-// 🔴 ADMIN - GET DETAILED ORDER
-app.get('/api/admin/order/:orderId', async (req, res) => {
-    try {
-        const { orderId } = req.params;
-
-        // 🔒 SECURITY: Verify admin role
-        const adminSecret = req.headers['x-admin-secret'] || req.body.adminSecret;
-        if (adminSecret !== process.env.ADMIN_SECRET && process.env.ADMIN_SECRET) {
-            return res.status(403).json({
-                message: 'Unauthorized - Admin access required',
-                success: false
-            });
-        }
-
-        if (!orderId) {
-            return res.status(400).json({ message: 'orderId is required' });
-        }
-
-        const order = await Order.findOne({ orderId }).lean();
-
-        if (!order) return res.status(404).json({ message: 'Order not found' });
-
-        const ensuredOrder = await ensureOutForDeliveryOtp(order).catch(() => order);
-
-        return res.json({
-            success: true,
-            orderId: ensuredOrder.orderId,
-            userid: ensuredOrder.userid,
-            userName: ensuredOrder.userName || 'N/A',
-            userEmail: ensuredOrder.userEmail || 'N/A',
-            orderStatus: ensuredOrder.orderStatus || 'Ordered',
-            paymentMethod: ensuredOrder.paymentMethod || 'COD',
-            paymentStatus: ensuredOrder.paymentStatus || 'Pending',
-            totalAmount: Number(ensuredOrder.totalAmount || 0),
-            shippingAmount: Number(ensuredOrder.shippingAmount || 0),
-            preDiscountTotal: Number(ensuredOrder.preDiscountTotal || 0),
-            discountAmount: Number(ensuredOrder.discountAmount || 0),
-            couponCode: String(ensuredOrder.couponCode || ''),
-            couponDiscount: Number(ensuredOrder.couponDiscount || 0),
-            gstAmount: Number(ensuredOrder.gstAmount || 0),
-            giftWrapCharge: Number(ensuredOrder.giftWrapCharge || 0),
-            protectionCharge: Number(ensuredOrder.protectionCharge || 0),
-            ecoCharge: Number(ensuredOrder.ecoCharge || 0),
-            paymentFee: Number(ensuredOrder.paymentFee || 0),
-            extraCharges: Number(ensuredOrder.extraCharges || 0),
-            finalAmount: Number(ensuredOrder.finalAmount || 0),
-            shippingAddress: ensuredOrder.shippingAddress || {},
-            products: normalizeOrderProducts(ensuredOrder.products),
-            deliveryOtp: ensuredOrder.deliveryOtp || '',
-            deliveryOtpSentAt: ensuredOrder.deliveryOtpSentAt || null,
-            deliveryOtpExpiresAt: ensuredOrder.deliveryOtpExpiresAt || null,
-            deliveryOtpVerifiedAt: ensuredOrder.deliveryOtpVerifiedAt || null,
-            estimatedArrival: ensuredOrder.estimatedArrival || null,
-            orderDate: ensuredOrder.orderDate || ensuredOrder.createdAt,
-            createdAt: ensuredOrder.createdAt,
-            updatedAt: ensuredOrder.updatedAt
-        });
-    } catch (e) {
-        console.error('❌ Admin order fetch error:', e.message);
-        return res.status(500).json({ message: 'Failed to fetch order' });
-    }
-});
-
-// 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
-const handleOrderStatusUpdate = async (req, res) => {
-    try {
-        const {
-            orderId,
-            status,
-            deliverySchedule,
-            adminNote,
-            deliveryAgent,
-            riderPhone,
-            locationName,
-            latitude,
-            longitude,
-            deliveryOtp
-        } = req.body;
-        const normalized = normalizeOrderStatus(status);
-        const otpInput = String(deliveryOtp || '').trim();
-        const latRaw = String(latitude ?? '').trim();
-        const lngRaw = String(longitude ?? '').trim();
-        const hasLatValue = latRaw.length > 0;
-        const hasLngValue = lngRaw.length > 0;
-        const latNum = hasLatValue ? Number(latRaw) : NaN;
-        const lngNum = hasLngValue ? Number(lngRaw) : NaN;
-        const hasCoords = hasLatValue && hasLngValue && Number.isFinite(latNum) && Number.isFinite(lngNum);
-
-        const normalizedDeliverySchedule = deliverySchedule
-            ? {
-                ...deliverySchedule,
-                ...(deliveryAgent ? { deliveryAgent: String(deliveryAgent).trim() } : {}),
-                ...(riderPhone ? { riderPhone: String(riderPhone).trim() } : {}),
-                ...(locationName ? { locationName: String(locationName).trim() } : {}),
-                ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
-            }
-            : ((deliveryAgent || riderPhone || locationName || hasCoords)
-                ? {
-                    scheduledAt: new Date().toISOString(),
-                    ...(deliveryAgent ? { deliveryAgent: String(deliveryAgent).trim() } : {}),
-                    ...(riderPhone ? { riderPhone: String(riderPhone).trim() } : {}),
-                    ...(locationName ? { locationName: String(locationName).trim() } : {}),
-                    ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
-                }
-                : null);
-
-        if (!orderId || !normalized) {
-            return res.status(400).json({
-                message: `orderId and valid status are required (${ALLOWED_ORDER_STATUS.join(', ')})`
-            });
-        }
-
-        const validateOutForDeliverySchedule = (schedule = null) => {
-            const riderNameValue = String(schedule?.deliveryAgent || '').trim();
-            const riderPhoneValue = String(schedule?.riderPhone || '').trim();
-            const locationNameValue = String(schedule?.locationName || '').trim();
-            const hasCoordsValue = Number.isFinite(Number(schedule?.latitude)) && Number.isFinite(Number(schedule?.longitude));
-
-            if (!riderNameValue || !riderPhoneValue) {
-                return 'Rider name and rider phone are required for Out for Delivery updates.';
-            }
-
-            if (!locationNameValue && !hasCoordsValue) {
-                return 'Current location name or valid latitude/longitude is required for Out for Delivery updates.';
-            }
-
-            return '';
-        };
-
-        const now = new Date();
-        const shouldGenerateDeliveryOtp = normalized === 'Out for Delivery';
-        const generatedDeliveryOtp = shouldGenerateDeliveryOtp ? generateDeliveryOtpCode() : '';
-        const generatedDeliveryOtpExpiresAt = shouldGenerateDeliveryOtp
-            ? new Date(now.getTime() + DELIVERY_OTP_EXPIRY_MINUTES * 60000)
-            : null;
-
-        // 🔴 FIRST: Try to find by orderId (from Order collection)
-        let order = await Order.findOne({ orderId });
-        
-        // 🔴 SECOND: If not found, try by MongoDB _id (from Checkout collection)
-        if (!order && orderId.length === 24) {
+        // 🔴 REAL-TIME ORDER TRACKING - Get single order
+        app.get('/api/orders/:userId', async (req, res) => {
             try {
-                order = await Order.findById(orderId);
-            } catch (idErr) {
-                // Not a valid MongoDB ID, continue
-            }
-        }
+                const userId = String(req.params.userId || '').trim();
 
-        if (!order) {
-            if (normalized === 'Delivered') {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Delivery OTP is required. Move order to Out for Delivery first to generate OTP.'
-                });
-            }
-
-            // Final attempt: Search in Checkout and use userid + order data
-            const checkout = await Checkout.findById(orderId).lean();
-            if (!checkout) {
-                return res.status(404).json({ message: 'Order not found in any collection' });
-            }
-
-            if (normalized === 'Out for Delivery') {
-                const validationError = validateOutForDeliverySchedule(normalizedDeliverySchedule);
-                if (validationError) {
-                    return res.status(400).json({ success: false, message: validationError });
+                if (!userId) {
+                    return res.status(400).json({ message: 'userId is required' });
                 }
-            }
-            
-            // Create order record from checkout data
-            const estimatedArrival = normalizedDeliverySchedule?.date
-                ? new Date(normalizedDeliverySchedule.date)
-                : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Default 7 days
 
-            const newOrder = await Order.create({
-                orderId: orderId,
-                userid: checkout.userid,
-                userName: 'Customer',
-                userEmail: '',
-                paymentMethod: checkout.paymentmode || 'COD',
-                paymentStatus: checkout.paymentstatus || 'Pending',
-                orderStatus: normalized,
-                totalAmount: checkout.totalAmount,
-                shippingAmount: checkout.shippingAmount,
-                finalAmount: checkout.finalAmount,
-                products: normalizeOrderProducts(checkout.products),
-                estimatedArrival: estimatedArrival,
-                deliveryOtp: generatedDeliveryOtp || undefined,
-                deliveryOtpSentAt: generatedDeliveryOtp ? now : null,
-                deliveryOtpExpiresAt: generatedDeliveryOtpExpiresAt,
-                deliveryOtpVerifiedAt: null,
-                deliverySchedule: normalizedDeliverySchedule || null,
-                statusHistory: [{
-                    status: normalized,
-                    timestamp: new Date(),
-                    message: `Order status changed to ${normalized}`,
-                    deliverySchedule: normalizedDeliverySchedule || null,
-                    adminNote: adminNote || null,
-                    deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
-                    riderPhone: normalizedDeliverySchedule?.riderPhone || null,
-                    locationName: normalizedDeliverySchedule?.locationName || null,
-                    latitude: normalizedDeliverySchedule?.latitude || null,
-                    longitude: normalizedDeliverySchedule?.longitude || null,
-                    deliveryOtp: generatedDeliveryOtp || null,
-                    deliveryOtpExpiresAt: generatedDeliveryOtpExpiresAt || null,
-                    deliveryOtpVerifiedAt: null
-                }]
-            });
-            order = newOrder;
-        } else {
-            // Update existing order
-            const previousOrderStatus = String(order.orderStatus || '').trim().toLowerCase();
+                // 🔴 FETCH FROM ORDER COLLECTION (primary source)
+                const orders = await Order.find({ userid: userId })
+                    .sort({ updatedAt: -1, createdAt: -1 })
+                    .select('orderId orderStatus finalAmount paymentStatus paymentMethod updatedAt createdAt products shippingAmount totalAmount estimatedArrival deliverySchedule statusHistory deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt couponCode couponDiscount discountAmount gstAmount giftWrapCharge protectionCharge ecoCharge paymentFee extraCharges preDiscountTotal')
+                    .lean();
 
-            if (normalized === 'Out for Delivery') {
-                const effectiveSchedule = normalizedDeliverySchedule
-                    ? { ...(order.deliverySchedule || {}), ...normalizedDeliverySchedule }
-                    : (order.deliverySchedule || null);
-                const validationError = validateOutForDeliverySchedule(effectiveSchedule);
-                if (validationError) {
-                    return res.status(400).json({ success: false, message: validationError });
-                }
-            }
-
-            order.orderStatus = normalized;
-
-            // 🔴 UPDATE DELIVERY SCHEDULE IF PROVIDED
-            if (normalizedDeliverySchedule) {
-                order.deliverySchedule = normalizedDeliverySchedule;
-                // Update estimatedArrival if new delivery date provided
-                if (normalizedDeliverySchedule.date) {
-                    order.estimatedArrival = new Date(normalizedDeliverySchedule.date);
-                } else if (normalizedDeliverySchedule.estimatedDelivery) {
-                    order.estimatedArrival = new Date(normalizedDeliverySchedule.estimatedDelivery);
-                }
-            }
-
-            if (normalized === 'Out for Delivery') {
-                order.deliveryOtp = generatedDeliveryOtp;
-                order.deliveryOtpSentAt = now;
-                order.deliveryOtpExpiresAt = generatedDeliveryOtpExpiresAt;
-                order.deliveryOtpVerifiedAt = null;
-            }
-
-            if (normalized === 'Delivered') {
-                const alreadyVerifiedDelivery = previousOrderStatus === 'delivered' && Boolean(order.deliveryOtpVerifiedAt);
-                if (alreadyVerifiedDelivery) {
-                    // Allow non-status metadata updates on already verified delivered orders.
-                } else {
-                    const storedDeliveryOtp = String(order.deliveryOtp || '').trim();
-
-                    if (!storedDeliveryOtp) {
-                        return res.status(400).json({
-                            success: false,
-                            message: 'Delivery OTP not found for this order. Move to Out for Delivery first.'
-                        });
-                    }
-
-                    if (!otpInput) {
-                        return res.status(400).json({
-                            success: false,
-                            message: 'Delivery OTP is required to mark this order as Delivered.'
-                        });
-                    }
-
-                    const otpExpiryTime = order.deliveryOtpExpiresAt ? new Date(order.deliveryOtpExpiresAt).getTime() : null;
-                    if (otpExpiryTime && otpExpiryTime < Date.now()) {
-                        return res.status(400).json({
-                            success: false,
-                            message: 'Delivery OTP has expired. Re-run Out for Delivery to generate a fresh OTP.'
-                        });
-                    }
-
-                    if (storedDeliveryOtp !== otpInput) {
-                        return res.status(400).json({
-                            success: false,
-                            message: 'Invalid delivery OTP. Please verify OTP with customer before marking Delivered.'
-                        });
-                    }
-
-                    order.deliveryOtpVerifiedAt = now;
-                }
-            }
-
-            const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
-            order.statusHistory = [
-                ...existingTimeline,
-                {
-                    status: normalized,
-                    timestamp: new Date(),
-                    message: `Order status changed to ${normalized}`,
-                    deliverySchedule: normalizedDeliverySchedule || null,
-                    adminNote: adminNote || null,
-                    deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
-                    riderPhone: normalizedDeliverySchedule?.riderPhone || null,
-                    locationName: normalizedDeliverySchedule?.locationName || null,
-                    latitude: normalizedDeliverySchedule?.latitude || null,
-                    longitude: normalizedDeliverySchedule?.longitude || null,
-                    deliveryOtp: normalized === 'Out for Delivery' ? order.deliveryOtp || null : null,
-                    deliveryOtpExpiresAt: normalized === 'Out for Delivery' ? order.deliveryOtpExpiresAt || null : null,
-                    deliveryOtpVerifiedAt: normalized === 'Delivered' ? order.deliveryOtpVerifiedAt || null : null
-                }
-            ];
-            await order.save();
-        }
-
-        if (!Array.isArray(order.statusHistory) || order.statusHistory.length === 0) {
-            order.statusHistory = [{
-                status: normalized,
-                timestamp: new Date(),
-                message: `Order status changed to ${normalized}`,
-                deliverySchedule: deliverySchedule || null,
-                adminNote: adminNote || null
-            }];
-            await order.save();
-        }
-
-        await Checkout.updateMany(
-            { userid: order.userid, totalAmount: order.totalAmount, finalAmount: order.finalAmount },
-            {
-                orderstatus: normalized,
-                updatedAt: new Date(),
-                ...(normalizedDeliverySchedule
-                    ? {
-                        deliverySchedule: normalizedDeliverySchedule,
-                        estimatedArrival: normalizedDeliverySchedule.date || normalizedDeliverySchedule.estimatedDelivery || order.estimatedArrival || null
-                    }
-                    : {})
-            }
-        ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
-
-        const payload = {
-            orderId: order.orderId,
-            userId: order.userid,
-            status: order.orderStatus,
-            updatedAt: new Date().toISOString(),
-            // 🔴 INCLUDE DELIVERY INFORMATION FOR REAL-TIME FRONTEND UPDATES
-            estimatedDelivery: order.estimatedArrival || null,
-            deliverySchedule: order.deliverySchedule || (order.estimatedArrival ? {
-                date: order.estimatedArrival,
-                time: order.deliveryTime || null,
-                scheduledAt: order.estimatedArrival
-            } : null),
-            adminNote: req.body.adminNote || null,
-            deliveryAgent: order.deliverySchedule?.deliveryAgent || null,
-            riderPhone: order.deliverySchedule?.riderPhone || null,
-            locationName: order.deliverySchedule?.locationName || null,
-            latitude: order.deliverySchedule?.latitude || null,
-            longitude: order.deliverySchedule?.longitude || null,
-            deliveryOtp: order.deliveryOtp || null,
-            deliveryOtpSentAt: order.deliveryOtpSentAt || null,
-            deliveryOtpExpiresAt: order.deliveryOtpExpiresAt || null,
-            deliveryOtpVerifiedAt: order.deliveryOtpVerifiedAt || null,
-            deliveryOtpRequired: Boolean(order.deliveryOtp && !order.deliveryOtpVerifiedAt && order.orderStatus === 'Out for Delivery')
-        };
-
-        // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
-        const ioInstance = req.app.get('io');
-        if (ioInstance) {
-            // Emit to individual user room
-            ioInstance.to(`user:${order.userid}`).emit('statusUpdate', payload);
-            // Emit to admin dashboard room
-            ioInstance.to('admin:dashboard').emit('statusUpdate', payload);
-            console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid} and admin:dashboard`);
-        }
-
-        // 🔴 TRIGGER LUXURY NOTIFICATIONS (WhatsApp - disabled unless explicitly enabled)
-        if (FEATURE_WHATSAPP_NOTIFICATIONS) {
-            setImmediate(() => {
-                User.findById(order.userid).lean()
-                    .then((userDoc) => {
-                        const resolvedPhone = order.shippingAddress?.phone || userDoc?.phone || order.userPhone;
-                        const resolvedEmail = order.userEmail || userDoc?.email || '';
-                        const resolvedName = order.userName || userDoc?.name || 'Customer';
-
-                        return sendLuxeStatusNotification({
-                            orderId: order.orderId,
-                            status: normalized,
-                            phone: resolvedPhone,
-                            customerName: resolvedName,
-                            email: resolvedEmail,
-                            estimatedDelivery: order.estimatedArrival,
-                            finalAmount: order.finalAmount,
-                            totalAmount: order.totalAmount,
-                            shippingAmount: order.shippingAmount,
-                            paymentMethod: order.paymentMethod,
-                            paymentStatus: order.paymentStatus,
-                            shippingAddress: order.shippingAddress,
-                            products: normalizeOrderProducts(order.products)
-                        });
-                    })
-                    .catch(err => {
-                        console.error(`⚠️  Background notification error: ${err.message}`);
-                    });
-            });
-        }
-
-        // 🔴 TRIGGER STATUS EMAILS (confirmed/packed/shipped/out-for-delivery/delivered)
-        if (FEATURE_EMAIL_NOTIFICATIONS) {
-            setImmediate(() => {
-                (async () => {
-                    const emailStatuses = new Set(['Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered']);
-                    if (!emailStatuses.has(normalized)) return;
-
-                    const userDoc = await User.findById(order.userid).lean().catch(() => null);
-                    const toEmail = String(order.userEmail || userDoc?.email || '').trim();
-                    if (!toEmail) {
-                        console.warn(`⚠️ Skipping status email for ${order.orderId}: recipient email not found`);
-                        return;
-                    }
-
-                    const resolvedUserName = order.userName || userDoc?.name || 'Customer';
-                    let invoiceBase64 = null;
-
-                    // Confirmed and Delivered statuses should carry invoice attachments.
-                    if (FEATURE_INVOICE_SYSTEM && (normalized === 'Confirmed' || normalized === 'Delivered')) {
+                const hydratedOrders = await Promise.all(
+                    orders.map(async (item) => {
                         try {
-                            const invoiceTypeForStatus = normalized === 'Confirmed' ? 'confirmation' : 'final';
-                            const invoiceBuffer = await generateInvoicePdfBuffer({
-                                orderId: order.orderId,
+                            return await ensureOutForDeliveryOtp(item);
+                        } catch {
+                            return item;
+                        }
+                    })
+                );
+
+                // 🔴 MERGE WITH CHECKOUT COLLECTION (sync fallback - in case of manual DB updates)
+                if (orders.length === 0) {
+                    const checkoutOrders = await Checkout.find({ userid: userId })
+                        .sort({ updatedAt: -1, createdAt: -1 })
+                        .lean();
+
+                    return res.json({
+                        success: true,
+                        orders: checkoutOrders.map((item) => ({
+                            orderId: item.orderId || `CHECKOUT-${item._id}`,
+                            orderStatus: item.orderstatus || 'Order Placed',
+                            totalAmount: Number(item.totalAmount || 0),
+                            shippingAmount: Number(item.shippingAmount || 0),
+                            finalAmount: Number(item.finalAmount || 0),
+                            couponCode: item.couponCode || '',
+                            couponDiscount: Number(item.couponDiscount || 0),
+                            discountAmount: Number(item.discountAmount || 0),
+                            gstAmount: Number(item.gstAmount || 0),
+                            giftWrapCharge: Number(item.giftWrapCharge || 0),
+                            protectionCharge: Number(item.protectionCharge || 0),
+                            ecoCharge: Number(item.ecoCharge || 0),
+                            paymentFee: Number(item.paymentFee || 0),
+                            extraCharges: Number(item.extraCharges || 0),
+                            preDiscountTotal: Number(item.preDiscountTotal || 0),
+                            paymentStatus: item.paymentstatus || 'Pending',
+                            paymentMethod: item.paymentmode || 'COD',
+                            createdAt: item.createdAt || item.updatedAt || new Date(),
+                            updatedAt: item.updatedAt || item.createdAt || new Date(), orderItems: normalizeOrderProducts(item.products),
+                            estimatedDelivery: item.estimatedArrival || null,
+                            estimatedArrival: item.estimatedArrival || null,
+                            deliverySchedule: item.deliverySchedule || null,
+                            statusHistory: Array.isArray(item.statusHistory) ? item.statusHistory : [],
+                            deliveryOtp: item.deliveryOtp || '',
+                            deliveryOtpSentAt: item.deliveryOtpSentAt || null,
+                            deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
+                            deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null
+                        }))
+                    });
+                }
+
+                return res.json({
+                    success: true,
+                    orders: hydratedOrders.map((item) => ({
+                        orderId: item.orderId,
+                        orderStatus: item.orderStatus || 'Order Placed',
+                        totalAmount: Number(item.totalAmount || 0),
+                        shippingAmount: Number(item.shippingAmount || 0),
+                        finalAmount: Number(item.finalAmount || 0),
+                        couponCode: item.couponCode || '',
+                        couponDiscount: Number(item.couponDiscount || 0),
+                        discountAmount: Number(item.discountAmount || 0),
+                        gstAmount: Number(item.gstAmount || 0),
+                        giftWrapCharge: Number(item.giftWrapCharge || 0),
+                        protectionCharge: Number(item.protectionCharge || 0),
+                        ecoCharge: Number(item.ecoCharge || 0),
+                        paymentFee: Number(item.paymentFee || 0),
+                        extraCharges: Number(item.extraCharges || 0),
+                        preDiscountTotal: Number(item.preDiscountTotal || 0),
+                        paymentStatus: item.paymentStatus || 'Pending',
+                        paymentMethod: item.paymentMethod || 'COD',
+                        createdAt: item.createdAt || item.updatedAt || new Date(),
+                        updatedAt: item.updatedAt || new Date(),
+                        orderItems: normalizeOrderProducts(item.products),
+                        estimatedDelivery: item.estimatedArrival || null,
+                        estimatedArrival: item.estimatedArrival || null,
+                        deliverySchedule: item.deliverySchedule || null,
+                        statusHistory: Array.isArray(item.statusHistory) ? item.statusHistory : [],
+                        deliveryOtp: item.deliveryOtp || '',
+                        deliveryOtpSentAt: item.deliveryOtpSentAt || null,
+                        deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
+                        deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null
+                    }))
+                });
+            } catch (e) {
+                console.error('❌ Orders list fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch orders' });
+            }
+        });
+
+        app.get('/api/orders/recent/:userId', async (req, res) => {
+            try {
+                const userId = String(req.params.userId || '').trim();
+                const limit = Math.max(1, Math.min(10, Number(req.query.limit) || 5));
+
+                if (!userId) {
+                    return res.status(400).json({ message: 'userId is required' });
+                }
+
+                const orders = await Order.find({ userid: userId })
+                    .sort({ updatedAt: -1, createdAt: -1 })
+                    .limit(limit)
+                    .select('orderId orderStatus finalAmount updatedAt createdAt')
+                    .lean();
+
+                return res.json({
+                    success: true,
+                    orders: orders.map((item) => ({
+                        orderId: item.orderId,
+                        orderStatus: item.orderStatus || 'Order Placed',
+                        finalAmount: Number(item.finalAmount || 0),
+                        updatedAt: item.updatedAt || item.createdAt || new Date()
+                    }))
+                });
+            } catch (e) {
+                console.error('❌ Recent orders fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch recent orders' });
+            }
+        });
+
+        app.get('/api/order/:orderId', async (req, res) => {
+            try {
+                const { orderId } = req.params;
+                const userId = req.query.userId;
+
+                if (!orderId || !userId) {
+                    return res.status(400).json({ message: 'orderId and userId are required' });
+                }
+
+                const order = await Order.findOne({
+                    orderId,
+                    userid: userId
+                }).lean();
+
+                if (!order) return res.status(404).json({ message: 'Order not found' });
+
+                const ensuredOrder = await ensureOutForDeliveryOtp(order).catch(() => order);
+
+                // 📦 Build comprehensive order response
+                const statusHistory = Array.isArray(ensuredOrder.statusHistory) ? ensuredOrder.statusHistory : [
+                    { status: 'Ordered', timestamp: ensuredOrder.orderDate || ensuredOrder.createdAt || new Date() }
+                ];
+
+                const normalizedProducts = normalizeOrderProducts(ensuredOrder.products);
+
+                return res.json({
+                    orderId: ensuredOrder.orderId,
+                    userid: ensuredOrder.userid,
+                    orderStatus: ensuredOrder.orderStatus || 'Ordered',
+                    userName: ensuredOrder.userName || '',
+                    userEmail: ensuredOrder.userEmail || '',
+                    paymentMethod: ensuredOrder.paymentMethod || 'COD',
+                    paymentStatus: ensuredOrder.paymentStatus || 'Pending',
+                    totalAmount: Number(ensuredOrder.totalAmount || 0),
+                    shippingAmount: Number(ensuredOrder.shippingAmount || 0),
+                    finalAmount: ensuredOrder.finalAmount || 0,
+                    couponCode: ensuredOrder.couponCode || '',
+                    couponDiscount: Number(ensuredOrder.couponDiscount || 0),
+                    discountAmount: Number(ensuredOrder.discountAmount || 0),
+                    gstAmount: Number(ensuredOrder.gstAmount || 0),
+                    giftWrapCharge: Number(ensuredOrder.giftWrapCharge || 0),
+                    protectionCharge: Number(ensuredOrder.protectionCharge || 0),
+                    ecoCharge: Number(ensuredOrder.ecoCharge || 0),
+                    paymentFee: Number(ensuredOrder.paymentFee || 0),
+                    extraCharges: Number(ensuredOrder.extraCharges || 0),
+                    preDiscountTotal: Number(ensuredOrder.preDiscountTotal || 0),
+                    shippingAddress: ensuredOrder.shippingAddress || {},
+                    products: normalizedProducts,
+                    deliverySchedule: ensuredOrder.deliverySchedule || null,
+                    deliveryOtp: ensuredOrder.deliveryOtp || '',
+                    deliveryOtpSentAt: ensuredOrder.deliveryOtpSentAt || null,
+                    deliveryOtpExpiresAt: ensuredOrder.deliveryOtpExpiresAt || null,
+                    deliveryOtpVerifiedAt: ensuredOrder.deliveryOtpVerifiedAt || null,
+                    estimatedDelivery: ensuredOrder.estimatedArrival || null,
+                    estimatedArrival: ensuredOrder.estimatedArrival || null,
+                    statusHistory: statusHistory,
+                    createdAt: ensuredOrder.orderDate || ensuredOrder.createdAt || new Date(),
+                    orderDate: ensuredOrder.orderDate || ensuredOrder.createdAt,
+                    updatedAt: ensuredOrder.updatedAt || ensuredOrder.createdAt || new Date()
+                });
+            } catch (e) {
+                console.error('❌ Order fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch order' });
+            }
+        });
+
+        app.get('/api/order/:orderId/invoice', async (req, res) => {
+            try {
+                const { orderId } = req.params;
+                const userId = String(req.query.userId || '').trim();
+                const disposition = String(req.query.disposition || '').toLowerCase() === 'inline' ? 'inline' : 'attachment';
+                const requestedType = String(req.query.type || '').trim().toLowerCase();
+
+                if (!orderId) {
+                    return res.status(400).json({ success: false, message: 'orderId is required' });
+                }
+
+                let order = null;
+                if (userId) {
+                    order = await Order.findOne({ orderId, userid: userId }).lean();
+                }
+                if (!order) {
+                    // Fallback for legacy invoice links that may not include userId.
+                    order = await Order.findOne({ orderId }).lean();
+                }
+                if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+                const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+                const isDelivered = orderStatus === 'delivered';
+                const pdfType = requestedType === 'final'
+                    ? 'final'
+                    : requestedType === 'confirmation'
+                        ? 'confirmation'
+                        : requestedType === 'placed'
+                            ? 'placed'
+                            : (isDelivered ? 'final' : (orderStatus.includes('confirm') ? 'confirmation' : 'placed'));
+
+                const pdfBuffer = await generateInvoicePdfBuffer({
+                    orderId: order.orderId,
+                    userName: order.userName,
+                    userEmail: order.userEmail,
+                    paymentMethod: order.paymentMethod,
+                    paymentStatus: order.paymentStatus,
+                    finalAmount: Number(order.finalAmount || 0),
+                    totalAmount: Number(order.totalAmount || 0),
+                    shippingAmount: Number(order.shippingAmount || 0),
+                    couponDiscount: Number(order.couponDiscount || 0),
+                    discountAmount: Number(order.discountAmount || 0),
+                    gstAmount: Number(order.gstAmount || 0),
+                    giftWrapCharge: Number(order.giftWrapCharge || 0),
+                    protectionCharge: Number(order.protectionCharge || 0),
+                    ecoCharge: Number(order.ecoCharge || 0),
+                    paymentFee: Number(order.paymentFee || 0),
+                    extraCharges: Number(order.extraCharges || 0),
+                    preDiscountTotal: Number(order.preDiscountTotal || 0),
+                    shippingAddress: order.shippingAddress || {},
+                    products: normalizeOrderProducts(order.products),
+                    orderDate: order.orderDate || order.createdAt,
+                    orderStatus: order.orderStatus || order.status || 'Ordered',
+                    pdfType,
+                    isDelivered
+                });
+
+                const fileName = isDelivered ? `TaxInvoice-${order.orderId}.pdf` : `Receipt-${order.orderId}.pdf`;
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
+                res.setHeader('Content-Length', String(pdfBuffer.length));
+                return res.send(pdfBuffer);
+            } catch (e) {
+                console.error('❌ User invoice download error:', e.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(e);
+                return res.status(500).json({ success: false, message: 'Failed to generate invoice' });
+            }
+        });
+
+        // 🔴 ADMIN ANALYTICS/TESING ROUTES (delegate to unified controller payload)
+        app.get('/api/admin/dashboard-analytics', (req, res) => {
+            const adminController = require('./controllers/adminController');
+            return adminController.getDashboardAnalytics(req, res);
+        });
+
+        // 🔴 TEST ENDPOINT FOR DATABASE CONNECTION
+        app.get('/api/admin/test-connection', (req, res) => {
+            const adminController = require('./controllers/adminController');
+            return adminController.testConnection(req, res);
+        });
+
+        // 🔴 ADMIN - GET ALL ORDERS (for admin dashboard)
+        app.get('/api/admin/orders', async (req, res) => {
+            try {
+                const page = Math.max(1, Number(req.query.page) || 1);
+                const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
+
+                const search = String(req.query.search || '').trim();
+                const statusFilter = String(req.query.status || '').trim();
+                const fromDate = req.query.fromDate ? new Date(req.query.fromDate) : null;
+                const toDate = req.query.toDate ? new Date(req.query.toDate) : null;
+                const customer = String(req.query.customer || '').trim();
+                const paymentStatus = String(req.query.paymentStatus || '').trim();
+
+                let query = {};
+
+                // Search by orderId, userName, or userEmail (case-insensitive, partial match, ignore spaces)
+                if (search) {
+                    const safeSearch = String(search).replace(/\s+/g, ' ').trim();
+                    query.$or = [
+                        { orderId: { $regex: safeSearch, $options: 'i' } },
+                        { userEmail: { $regex: safeSearch, $options: 'i' } },
+                        { email: { $regex: safeSearch, $options: 'i' } }
+                    ];
+                }
+
+
+                // Filter by status
+                if (statusFilter && ALLOWED_ORDER_STATUS.includes(statusFilter)) {
+                    query.orderStatus = statusFilter;
+                }
+
+                // Filter by payment status (case-insensitive)
+                if (paymentStatus) {
+                    query.paymentStatus = { $regex: `^${paymentStatus}$`, $options: 'i' };
+                }
+
+                // Filter by date range (createdAt)
+                if (fromDate || toDate) {
+                    query.createdAt = {};
+                    if (fromDate) query.createdAt.$gte = fromDate;
+                    if (toDate) {
+                        toDate.setHours(23, 59, 59, 999);
+                        query.createdAt.$lte = toDate;
+                    }
+                }
+
+                const skip = (page - 1) * limit;
+                const totalOrders = await Order.countDocuments(query);
+                const orders = await Order.find(query)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products deliverySchedule deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt').lean();
+
+                const hydratedOrders = await Promise.all(
+                    orders.map(async (item) => {
+                        try {
+                            return await ensureOutForDeliveryOtp(item);
+                        } catch {
+                            return item;
+                        }
+                    })
+                );
+
+                return res.json({
+                    success: true,
+                    total: totalOrders,
+                    page,
+                    limit,
+                    pages: Math.ceil(totalOrders / limit),
+                    orders: hydratedOrders.map((item) => ({
+                        orderId: item.orderId,
+                        userId: item.userid,
+                        userName: item.userName || 'N/A',
+                        userEmail: item.userEmail || 'N/A',
+                        orderStatus: item.orderStatus || 'Order Placed',
+                        paymentStatus: item.paymentStatus || 'Pending',
+                        finalAmount: Number(item.finalAmount || 0),
+                        deliverySchedule: item.deliverySchedule || null,
+                        deliveryOtp: item.deliveryOtp || '',
+                        deliveryOtpSentAt: item.deliveryOtpSentAt || null,
+                        deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
+                        deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null,
+                        productCount: normalizeOrderProducts(item.products).reduce((sum, product) => sum + Number(product.quantity || 0), 0),
+                        updatedAt: item.updatedAt || item.createdAt || new Date()
+                    }))
+                });
+            } catch (e) {
+                console.error('❌ Admin orders fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch orders' });
+            }
+        });
+
+        app.get('/api/admin/invoices', async (req, res) => {
+            try {
+                const adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
+                if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
+                    return res.status(403).json({ success: false, message: 'Unauthorized' });
+                }
+
+                const page = Math.max(1, Number(req.query.page) || 1);
+                const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 10));
+                const search = String(req.query.search || '').trim();
+
+                const query = {};
+                if (search) {
+                    query.$or = [
+                        { orderId: { $regex: search, $options: 'i' } },
+                        { userName: { $regex: search, $options: 'i' } },
+                        { userEmail: { $regex: search, $options: 'i' } }
+                    ];
+                }
+
+                const skip = (page - 1) * limit;
+                const total = await Order.countDocuments(query);
+                const orders = await Order.find(query)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount createdAt updatedAt')
+                    .lean();
+
+                return res.json({
+                    success: true,
+                    total,
+                    page,
+                    limit,
+                    pages: Math.ceil(total / limit),
+                    invoices: orders.map((o) => ({
+                        orderId: o.orderId,
+                        userId: o.userid,
+                        userName: o.userName || 'N/A',
+                        userEmail: o.userEmail || 'N/A',
+                        orderStatus: o.orderStatus || 'Ordered',
+                        paymentStatus: o.paymentStatus || 'Pending',
+                        finalAmount: Number(o.finalAmount || 0),
+                        invoiceType: String(o.orderStatus || '').toLowerCase() === 'delivered' ? 'Tax Invoice' : 'Receipt',
+                        createdAt: o.createdAt,
+                        updatedAt: o.updatedAt || o.createdAt
+                    }))
+                });
+            } catch (e) {
+                console.error('❌ Admin invoices fetch error:', e.message);
+                return res.status(500).json({ success: false, message: 'Failed to fetch invoices' });
+            }
+        });
+
+        app.get('/api/admin/invoices/:orderId/download', async (req, res) => {
+            try {
+                const adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
+                if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
+                    return res.status(403).json({ success: false, message: 'Unauthorized' });
+                }
+
+                const { orderId } = req.params;
+                if (!orderId) return res.status(400).json({ success: false, message: 'orderId required' });
+
+                const order = await Order.findOne({ orderId }).lean();
+                if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+                const orderStatus = String(order.orderStatus || order.status || 'Ordered').trim().toLowerCase();
+                const isDelivered = orderStatus === 'delivered';
+                const pdfType = isDelivered ? 'final' : 'receipt';
+
+                const pdfBuffer = await generateInvoicePdfBuffer({
+                    orderId: order.orderId,
+                    userName: order.userName,
+                    userEmail: order.userEmail,
+                    paymentMethod: order.paymentMethod,
+                    paymentStatus: order.paymentStatus,
+                    finalAmount: Number(order.finalAmount || 0),
+                    totalAmount: Number(order.totalAmount || 0),
+                    shippingAmount: Number(order.shippingAmount || 0),
+                    couponDiscount: Number(order.couponDiscount || 0),
+                    discountAmount: Number(order.discountAmount || 0),
+                    gstAmount: Number(order.gstAmount || 0),
+                    giftWrapCharge: Number(order.giftWrapCharge || 0),
+                    protectionCharge: Number(order.protectionCharge || 0),
+                    ecoCharge: Number(order.ecoCharge || 0),
+                    paymentFee: Number(order.paymentFee || 0),
+                    extraCharges: Number(order.extraCharges || 0),
+                    preDiscountTotal: Number(order.preDiscountTotal || 0),
+                    shippingAddress: order.shippingAddress || {},
+                    products: normalizeOrderProducts(order.products),
+                    orderDate: order.orderDate || order.createdAt,
+                    orderStatus: order.orderStatus || order.status || 'Ordered',
+                    pdfType,
+                    isDelivered
+                });
+
+                const fileName = `TaxInvoice-${order.orderId}.pdf`;
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+                res.setHeader('Content-Length', String(pdfBuffer.length));
+                return res.send(pdfBuffer);
+            } catch (e) {
+                console.error('❌ Admin invoice download error:', e.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(e);
+                return res.status(500).json({ success: false, message: 'Failed to generate invoice' });
+            }
+        });
+
+        // 🔴 ADMIN - GET DETAILED ORDER
+        app.get('/api/admin/order/:orderId', async (req, res) => {
+            try {
+                const { orderId } = req.params;
+
+                // 🔒 SECURITY: Verify admin role
+                const adminSecret = req.headers['x-admin-secret'] || req.body.adminSecret;
+                if (adminSecret !== process.env.ADMIN_SECRET && process.env.ADMIN_SECRET) {
+                    return res.status(403).json({
+                        message: 'Unauthorized - Admin access required',
+                        success: false
+                    });
+                }
+
+                if (!orderId) {
+                    return res.status(400).json({ message: 'orderId is required' });
+                }
+
+                const order = await Order.findOne({ orderId }).lean();
+
+                if (!order) return res.status(404).json({ message: 'Order not found' });
+
+                const ensuredOrder = await ensureOutForDeliveryOtp(order).catch(() => order);
+
+                return res.json({
+                    success: true,
+                    orderId: ensuredOrder.orderId,
+                    userid: ensuredOrder.userid,
+                    userName: ensuredOrder.userName || 'N/A',
+                    userEmail: ensuredOrder.userEmail || 'N/A',
+                    orderStatus: ensuredOrder.orderStatus || 'Ordered',
+                    paymentMethod: ensuredOrder.paymentMethod || 'COD',
+                    paymentStatus: ensuredOrder.paymentStatus || 'Pending',
+                    totalAmount: Number(ensuredOrder.totalAmount || 0),
+                    shippingAmount: Number(ensuredOrder.shippingAmount || 0),
+                    preDiscountTotal: Number(ensuredOrder.preDiscountTotal || 0),
+                    discountAmount: Number(ensuredOrder.discountAmount || 0),
+                    couponCode: String(ensuredOrder.couponCode || ''),
+                    couponDiscount: Number(ensuredOrder.couponDiscount || 0),
+                    gstAmount: Number(ensuredOrder.gstAmount || 0),
+                    giftWrapCharge: Number(ensuredOrder.giftWrapCharge || 0),
+                    protectionCharge: Number(ensuredOrder.protectionCharge || 0),
+                    ecoCharge: Number(ensuredOrder.ecoCharge || 0),
+                    paymentFee: Number(ensuredOrder.paymentFee || 0),
+                    extraCharges: Number(ensuredOrder.extraCharges || 0),
+                    finalAmount: Number(ensuredOrder.finalAmount || 0),
+                    shippingAddress: ensuredOrder.shippingAddress || {},
+                    products: normalizeOrderProducts(ensuredOrder.products),
+                    deliveryOtp: ensuredOrder.deliveryOtp || '',
+                    deliveryOtpSentAt: ensuredOrder.deliveryOtpSentAt || null,
+                    deliveryOtpExpiresAt: ensuredOrder.deliveryOtpExpiresAt || null,
+                    deliveryOtpVerifiedAt: ensuredOrder.deliveryOtpVerifiedAt || null,
+                    estimatedArrival: ensuredOrder.estimatedArrival || null,
+                    orderDate: ensuredOrder.orderDate || ensuredOrder.createdAt,
+                    createdAt: ensuredOrder.createdAt,
+                    updatedAt: ensuredOrder.updatedAt
+                });
+            } catch (e) {
+                console.error('❌ Admin order fetch error:', e.message);
+                return res.status(500).json({ message: 'Failed to fetch order' });
+            }
+        });
+
+        // 🔴 REAL-TIME ORDER TRACKING - Admin updates order status + realtime emit
+        const handleOrderStatusUpdate = async (req, res) => {
+            try {
+                const {
+                    orderId,
+                    status,
+                    deliverySchedule,
+                    adminNote,
+                    deliveryAgent,
+                    riderPhone,
+                    locationName,
+                    latitude,
+                    longitude,
+                    deliveryOtp
+                } = req.body;
+                const normalized = normalizeOrderStatus(status);
+                const otpInput = String(deliveryOtp || '').trim();
+                const latRaw = String(latitude ?? '').trim();
+                const lngRaw = String(longitude ?? '').trim();
+                const hasLatValue = latRaw.length > 0;
+                const hasLngValue = lngRaw.length > 0;
+                const latNum = hasLatValue ? Number(latRaw) : NaN;
+                const lngNum = hasLngValue ? Number(lngRaw) : NaN;
+                const hasCoords = hasLatValue && hasLngValue && Number.isFinite(latNum) && Number.isFinite(lngNum);
+
+                const normalizedDeliverySchedule = deliverySchedule
+                    ? {
+                        ...deliverySchedule,
+                        ...(deliveryAgent ? { deliveryAgent: String(deliveryAgent).trim() } : {}),
+                        ...(riderPhone ? { riderPhone: String(riderPhone).trim() } : {}),
+                        ...(locationName ? { locationName: String(locationName).trim() } : {}),
+                        ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
+                    }
+                    : ((deliveryAgent || riderPhone || locationName || hasCoords)
+                        ? {
+                            scheduledAt: new Date().toISOString(),
+                            ...(deliveryAgent ? { deliveryAgent: String(deliveryAgent).trim() } : {}),
+                            ...(riderPhone ? { riderPhone: String(riderPhone).trim() } : {}),
+                            ...(locationName ? { locationName: String(locationName).trim() } : {}),
+                            ...(hasCoords ? { latitude: latNum, longitude: lngNum } : {})
+                        }
+                        : null);
+
+                if (!orderId || !normalized) {
+                    return res.status(400).json({
+                        message: `orderId and valid status are required (${ALLOWED_ORDER_STATUS.join(', ')})`
+                    });
+                }
+
+                const validateOutForDeliverySchedule = (schedule = null) => {
+                    const riderNameValue = String(schedule?.deliveryAgent || '').trim();
+                    const riderPhoneValue = String(schedule?.riderPhone || '').trim();
+                    const locationNameValue = String(schedule?.locationName || '').trim();
+                    const hasCoordsValue = Number.isFinite(Number(schedule?.latitude)) && Number.isFinite(Number(schedule?.longitude));
+
+                    if (!riderNameValue || !riderPhoneValue) {
+                        return 'Rider name and rider phone are required for Out for Delivery updates.';
+                    }
+
+                    if (!locationNameValue && !hasCoordsValue) {
+                        return 'Current location name or valid latitude/longitude is required for Out for Delivery updates.';
+                    }
+
+                    return '';
+                };
+
+                const now = new Date();
+                const shouldGenerateDeliveryOtp = normalized === 'Out for Delivery';
+                const generatedDeliveryOtp = shouldGenerateDeliveryOtp ? generateDeliveryOtpCode() : '';
+                const generatedDeliveryOtpExpiresAt = shouldGenerateDeliveryOtp
+                    ? new Date(now.getTime() + DELIVERY_OTP_EXPIRY_MINUTES * 60000)
+                    : null;
+
+                // 🔴 FIRST: Try to find by orderId (from Order collection)
+                let order = await Order.findOne({ orderId });
+
+                // 🔴 SECOND: If not found, try by MongoDB _id (from Checkout collection)
+                if (!order && orderId.length === 24) {
+                    try {
+                        order = await Order.findById(orderId);
+                    } catch (idErr) {
+                        // Not a valid MongoDB ID, continue
+                    }
+                }
+
+                if (!order) {
+                    if (normalized === 'Delivered') {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Delivery OTP is required. Move order to Out for Delivery first to generate OTP.'
+                        });
+                    }
+
+                    // Final attempt: Search in Checkout and use userid + order data
+                    const checkout = await Checkout.findById(orderId).lean();
+                    if (!checkout) {
+                        return res.status(404).json({ message: 'Order not found in any collection' });
+                    }
+
+                    if (normalized === 'Out for Delivery') {
+                        const validationError = validateOutForDeliverySchedule(normalizedDeliverySchedule);
+                        if (validationError) {
+                            return res.status(400).json({ success: false, message: validationError });
+                        }
+                    }
+
+                    // Create order record from checkout data
+                    const estimatedArrival = normalizedDeliverySchedule?.date
+                        ? new Date(normalizedDeliverySchedule.date)
+                        : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Default 7 days
+
+                    const newOrder = await Order.create({
+                        orderId: orderId,
+                        userid: checkout.userid,
+                        userName: 'Customer',
+                        userEmail: '',
+                        paymentMethod: checkout.paymentmode || 'COD',
+                        paymentStatus: checkout.paymentstatus || 'Pending',
+                        orderStatus: normalized,
+                        totalAmount: checkout.totalAmount,
+                        shippingAmount: checkout.shippingAmount,
+                        finalAmount: checkout.finalAmount,
+                        products: normalizeOrderProducts(checkout.products),
+                        estimatedArrival: estimatedArrival,
+                        deliveryOtp: generatedDeliveryOtp || undefined,
+                        deliveryOtpSentAt: generatedDeliveryOtp ? now : null,
+                        deliveryOtpExpiresAt: generatedDeliveryOtpExpiresAt,
+                        deliveryOtpVerifiedAt: null,
+                        deliverySchedule: normalizedDeliverySchedule || null,
+                        statusHistory: [{
+                            status: normalized,
+                            timestamp: new Date(),
+                            message: `Order status changed to ${normalized}`,
+                            deliverySchedule: normalizedDeliverySchedule || null,
+                            adminNote: adminNote || null,
+                            deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
+                            riderPhone: normalizedDeliverySchedule?.riderPhone || null,
+                            locationName: normalizedDeliverySchedule?.locationName || null,
+                            latitude: normalizedDeliverySchedule?.latitude || null,
+                            longitude: normalizedDeliverySchedule?.longitude || null,
+                            deliveryOtp: generatedDeliveryOtp || null,
+                            deliveryOtpExpiresAt: generatedDeliveryOtpExpiresAt || null,
+                            deliveryOtpVerifiedAt: null
+                        }]
+                    });
+                    order = newOrder;
+                } else {
+                    // Update existing order
+                    const previousOrderStatus = String(order.orderStatus || '').trim().toLowerCase();
+
+                    if (normalized === 'Out for Delivery') {
+                        const effectiveSchedule = normalizedDeliverySchedule
+                            ? { ...(order.deliverySchedule || {}), ...normalizedDeliverySchedule }
+                            : (order.deliverySchedule || null);
+                        const validationError = validateOutForDeliverySchedule(effectiveSchedule);
+                        if (validationError) {
+                            return res.status(400).json({ success: false, message: validationError });
+                        }
+                    }
+
+                    order.orderStatus = normalized;
+
+                    // 🔴 UPDATE DELIVERY SCHEDULE IF PROVIDED
+                    if (normalizedDeliverySchedule) {
+                        order.deliverySchedule = normalizedDeliverySchedule;
+                        // Update estimatedArrival if new delivery date provided
+                        if (normalizedDeliverySchedule.date) {
+                            order.estimatedArrival = new Date(normalizedDeliverySchedule.date);
+                        } else if (normalizedDeliverySchedule.estimatedDelivery) {
+                            order.estimatedArrival = new Date(normalizedDeliverySchedule.estimatedDelivery);
+                        }
+                    }
+
+                    if (normalized === 'Out for Delivery') {
+                        order.deliveryOtp = generatedDeliveryOtp;
+                        order.deliveryOtpSentAt = now;
+                        order.deliveryOtpExpiresAt = generatedDeliveryOtpExpiresAt;
+                        order.deliveryOtpVerifiedAt = null;
+                    }
+
+                    if (normalized === 'Delivered') {
+                        const alreadyVerifiedDelivery = previousOrderStatus === 'delivered' && Boolean(order.deliveryOtpVerifiedAt);
+                        if (alreadyVerifiedDelivery) {
+                            // Allow non-status metadata updates on already verified delivered orders.
+                        } else {
+                            const storedDeliveryOtp = String(order.deliveryOtp || '').trim();
+
+                            if (!storedDeliveryOtp) {
+                                return res.status(400).json({
+                                    success: false,
+                                    message: 'Delivery OTP not found for this order. Move to Out for Delivery first.'
+                                });
+                            }
+
+                            if (!otpInput) {
+                                return res.status(400).json({
+                                    success: false,
+                                    message: 'Delivery OTP is required to mark this order as Delivered.'
+                                });
+                            }
+
+                            const otpExpiryTime = order.deliveryOtpExpiresAt ? new Date(order.deliveryOtpExpiresAt).getTime() : null;
+                            if (otpExpiryTime && otpExpiryTime < Date.now()) {
+                                return res.status(400).json({
+                                    success: false,
+                                    message: 'Delivery OTP has expired. Re-run Out for Delivery to generate a fresh OTP.'
+                                });
+                            }
+
+                            if (storedDeliveryOtp !== otpInput) {
+                                return res.status(400).json({
+                                    success: false,
+                                    message: 'Invalid delivery OTP. Please verify OTP with customer before marking Delivered.'
+                                });
+                            }
+
+                            order.deliveryOtpVerifiedAt = now;
+                        }
+                    }
+
+                    const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+                    order.statusHistory = [
+                        ...existingTimeline,
+                        {
+                            status: normalized,
+                            timestamp: new Date(),
+                            message: `Order status changed to ${normalized}`,
+                            deliverySchedule: normalizedDeliverySchedule || null,
+                            adminNote: adminNote || null,
+                            deliveryAgent: normalizedDeliverySchedule?.deliveryAgent || null,
+                            riderPhone: normalizedDeliverySchedule?.riderPhone || null,
+                            locationName: normalizedDeliverySchedule?.locationName || null,
+                            latitude: normalizedDeliverySchedule?.latitude || null,
+                            longitude: normalizedDeliverySchedule?.longitude || null,
+                            deliveryOtp: normalized === 'Out for Delivery' ? order.deliveryOtp || null : null,
+                            deliveryOtpExpiresAt: normalized === 'Out for Delivery' ? order.deliveryOtpExpiresAt || null : null,
+                            deliveryOtpVerifiedAt: normalized === 'Delivered' ? order.deliveryOtpVerifiedAt || null : null
+                        }
+                    ];
+                    await order.save();
+                }
+
+                if (!Array.isArray(order.statusHistory) || order.statusHistory.length === 0) {
+                    order.statusHistory = [{
+                        status: normalized,
+                        timestamp: new Date(),
+                        message: `Order status changed to ${normalized}`,
+                        deliverySchedule: deliverySchedule || null,
+                        adminNote: adminNote || null
+                    }];
+                    await order.save();
+                }
+
+                await Checkout.updateMany(
+                    { userid: order.userid, totalAmount: order.totalAmount, finalAmount: order.finalAmount },
+                    {
+                        orderstatus: normalized,
+                        updatedAt: new Date(),
+                        ...(normalizedDeliverySchedule
+                            ? {
+                                deliverySchedule: normalizedDeliverySchedule,
+                                estimatedArrival: normalizedDeliverySchedule.date || normalizedDeliverySchedule.estimatedDelivery || order.estimatedArrival || null
+                            }
+                            : {})
+                    }
+                ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
+
+                const payload = {
+                    orderId: order.orderId,
+                    userId: order.userid,
+                    status: order.orderStatus,
+                    updatedAt: new Date().toISOString(),
+                    // 🔴 INCLUDE DELIVERY INFORMATION FOR REAL-TIME FRONTEND UPDATES
+                    estimatedDelivery: order.estimatedArrival || null,
+                    deliverySchedule: order.deliverySchedule || (order.estimatedArrival ? {
+                        date: order.estimatedArrival,
+                        time: order.deliveryTime || null,
+                        scheduledAt: order.estimatedArrival
+                    } : null),
+                    adminNote: req.body.adminNote || null,
+                    deliveryAgent: order.deliverySchedule?.deliveryAgent || null,
+                    riderPhone: order.deliverySchedule?.riderPhone || null,
+                    locationName: order.deliverySchedule?.locationName || null,
+                    latitude: order.deliverySchedule?.latitude || null,
+                    longitude: order.deliverySchedule?.longitude || null,
+                    deliveryOtp: order.deliveryOtp || null,
+                    deliveryOtpSentAt: order.deliveryOtpSentAt || null,
+                    deliveryOtpExpiresAt: order.deliveryOtpExpiresAt || null,
+                    deliveryOtpVerifiedAt: order.deliveryOtpVerifiedAt || null,
+                    deliveryOtpRequired: Boolean(order.deliveryOtp && !order.deliveryOtpVerifiedAt && order.orderStatus === 'Out for Delivery')
+                };
+
+                // 🔴 EMIT REAL-TIME STATUS UPDATE VIA SOCKET.IO (instant UI update)
+                const ioInstance = req.app.get('io');
+                if (ioInstance) {
+                    // Emit to individual user room
+                    ioInstance.to(`user:${order.userid}`).emit('statusUpdate', payload);
+                    // Emit to admin dashboard room
+                    ioInstance.to('admin:dashboard').emit('statusUpdate', payload);
+                    console.log(`✅ Status updated for order ${order.orderId} to ${normalized}, emitted to user:${order.userid} and admin:dashboard`);
+                }
+
+                // 🔴 TRIGGER LUXURY NOTIFICATIONS (WhatsApp - disabled unless explicitly enabled)
+                if (FEATURE_WHATSAPP_NOTIFICATIONS) {
+                    setImmediate(() => {
+                        User.findById(order.userid).lean()
+                            .then((userDoc) => {
+                                const resolvedPhone = order.shippingAddress?.phone || userDoc?.phone || order.userPhone;
+                                const resolvedEmail = order.userEmail || userDoc?.email || '';
+                                const resolvedName = order.userName || userDoc?.name || 'Customer';
+
+                                return sendLuxeStatusNotification({
+                                    orderId: order.orderId,
+                                    status: normalized,
+                                    phone: resolvedPhone,
+                                    customerName: resolvedName,
+                                    email: resolvedEmail,
+                                    estimatedDelivery: order.estimatedArrival,
+                                    finalAmount: order.finalAmount,
+                                    totalAmount: order.totalAmount,
+                                    shippingAmount: order.shippingAmount,
+                                    paymentMethod: order.paymentMethod,
+                                    paymentStatus: order.paymentStatus,
+                                    shippingAddress: order.shippingAddress,
+                                    products: normalizeOrderProducts(order.products)
+                                });
+                            })
+                            .catch(err => {
+                                console.error(`⚠️  Background notification error: ${err.message}`);
+                            });
+                    });
+                }
+
+                // 🔴 TRIGGER STATUS EMAILS (confirmed/packed/shipped/out-for-delivery/delivered)
+                if (FEATURE_EMAIL_NOTIFICATIONS) {
+                    setImmediate(() => {
+                        (async () => {
+                            const emailStatuses = new Set(['Confirmed', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered']);
+                            if (!emailStatuses.has(normalized)) return;
+
+                            const userDoc = await User.findById(order.userid).lean().catch(() => null);
+                            const toEmail = String(order.userEmail || userDoc?.email || '').trim();
+                            if (!toEmail) {
+                                console.warn(`⚠️ Skipping status email for ${order.orderId}: recipient email not found`);
+                                return;
+                            }
+
+                            const resolvedUserName = order.userName || userDoc?.name || 'Customer';
+                            let invoiceBase64 = null;
+
+                            // Confirmed and Delivered statuses should carry invoice attachments.
+                            if (FEATURE_INVOICE_SYSTEM && (normalized === 'Confirmed' || normalized === 'Delivered')) {
+                                try {
+                                    const invoiceTypeForStatus = normalized === 'Confirmed' ? 'confirmation' : 'final';
+                                    const invoiceBuffer = await generateInvoicePdfBuffer({
+                                        orderId: order.orderId,
+                                        userName: resolvedUserName,
+                                        userEmail: toEmail,
+                                        paymentMethod: order.paymentMethod || 'COD',
+                                        paymentStatus: order.paymentStatus || 'Pending',
+                                        finalAmount: Number(order.finalAmount || 0),
+                                        totalAmount: Number(order.totalAmount || 0),
+                                        shippingAmount: Number(order.shippingAmount || 0),
+                                        shippingAddress: order.shippingAddress || {},
+                                        products: normalizeOrderProducts(order.products),
+                                        orderDate: order.orderDate || order.createdAt,
+                                        estimatedArrival: order.estimatedArrival,
+                                        orderStatus: normalized,
+                                        pdfType: invoiceTypeForStatus,
+                                        isDelivered: normalized === 'Delivered'
+                                    });
+
+                                    if (invoiceBuffer) {
+                                        invoiceBase64 = invoiceBuffer.toString('base64');
+                                    }
+                                } catch (pdfErr) {
+                                    console.warn(`⚠️ Final invoice generation failed for ${order.orderId}: ${pdfErr.message}`);
+                                    if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
+                                }
+                            }
+
+                            await enqueueEmailJob('order-status', {
+                                toEmail,
+                                userId: order.userid,
                                 userName: resolvedUserName,
-                                userEmail: toEmail,
+                                orderId: order.orderId,
                                 paymentMethod: order.paymentMethod || 'COD',
                                 paymentStatus: order.paymentStatus || 'Pending',
                                 finalAmount: Number(order.finalAmount || 0),
@@ -4940,378 +4971,350 @@ const handleOrderStatusUpdate = async (req, res) => {
                                 products: normalizeOrderProducts(order.products),
                                 orderDate: order.orderDate || order.createdAt,
                                 estimatedArrival: order.estimatedArrival,
+                                status: normalized,
                                 orderStatus: normalized,
-                                pdfType: invoiceTypeForStatus,
-                                isDelivered: normalized === 'Delivered'
+                                deliveryOtp: order.deliveryOtp || null,
+                                deliverySchedule: order.deliverySchedule || null,
+                                deliveryAgent: order.deliverySchedule?.deliveryAgent || null,
+                                agentContact: order.deliverySchedule?.riderPhone || null,
+                                deliverySlot: order.deliverySchedule?.time || null,
+                                statusUpdatedAt: new Date(),
+                                invoiceBase64
                             });
+                        })().catch((emailErr) => {
+                            console.error(`⚠️ Status email queue failed for ${order.orderId}:`, emailErr.message);
+                            if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
+                        });
+                    });
+                }
 
-                            if (invoiceBuffer) {
-                                invoiceBase64 = invoiceBuffer.toString('base64');
-                            }
-                        } catch (pdfErr) {
-                            console.warn(`⚠️ Final invoice generation failed for ${order.orderId}: ${pdfErr.message}`);
-                            if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
+                // 🔴 EMIT REAL-TIME DASHBOARD UPDATE VIA SOCKET.IO
+                if (ioInstance) {
+                    ioInstance.emit('dashboardUpdate', {
+                        type: 'orderStatusUpdate',
+                        orderId: order.orderId,
+                        newStatus: normalized,
+                        timestamp: new Date()
+                    });
+                    // Also emit to specific user room
+                    ioInstance.to(`user:${order.userid}`).emit('orderUpdate', {
+                        orderId: order.orderId,
+                        status: normalized,
+                        timestamp: new Date()
+                    });
+                }
+
+                return res.json({
+                    success: true,
+                    message: `Order status updated to ${normalized}`,
+                    order: payload
+                });
+            } catch (e) {
+                console.error('❌ Order update error:', e.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(e);
+                return res.status(500).json({ message: 'Failed to update order status' });
+            }
+        };
+
+        app.post('/api/update-order-status', handleOrderStatusUpdate);
+        app.post('/update-order-status', handleOrderStatusUpdate);
+        // ==================== ADMIN: CONFIRM ORDER (Send Email #2) ====================
+        app.post('/api/admin/confirm-order', async (req, res) => {
+            try {
+                const { orderId } = req.body;
+
+                // 🔒 SECURITY: Verify admin role
+                const adminSecret = req.headers['x-admin-secret'] || req.body.adminSecret;
+                if (adminSecret !== process.env.ADMIN_SECRET && process.env.ADMIN_SECRET) {
+                    return res.status(403).json({
+                        message: 'Unauthorized - Admin access required',
+                        success: false
+                    });
+                }
+
+                if (!orderId) {
+                    return res.status(400).json({ message: 'orderId is required' });
+                }
+
+                // Find order
+                let order = await Order.findOne({ orderId });
+                if (!order) {
+                    try {
+                        order = await Order.findById(orderId);
+                    } catch (err) {
+                        // Try checkout collection
+                        const checkout = await Checkout.findById(orderId).lean();
+                        if (checkout) {
+                            order = await Order.findOne({ userid: checkout.userid, finalAmount: checkout.finalAmount }).lean();
                         }
                     }
+                }
 
-                    await enqueueEmailJob('order-status', {
-                        toEmail,
-                        userId: order.userid,
-                        userName: resolvedUserName,
+                if (!order) {
+                    return res.status(404).json({ message: 'Order not found' });
+                }
+
+                const userDoc = await User.findById(order.userid).lean().catch(() => null);
+                const recipientEmail = String(order.userEmail || userDoc?.email || '').trim();
+                const recipientName = order.userName || userDoc?.name || 'Customer';
+
+                // Generate Proforma PDF for Email #2 (Confirmed)
+                let invoiceBase64 = null;
+                if (FEATURE_INVOICE_SYSTEM) {
+                    try {
+                        const invoiceBuffer = await generateInvoicePdfBuffer({
+                            orderId: order.orderId,
+                            userName: order.userName,
+                            userEmail: order.userEmail,
+                            paymentMethod: order.paymentMethod || 'COD',
+                            paymentStatus: 'Verified',
+                            finalAmount: order.finalAmount,
+                            totalAmount: order.totalAmount,
+                            shippingAmount: order.shippingAmount,
+                            shippingAddress: order.shippingAddress,
+                            products: normalizeOrderProducts(order.products),
+                            orderDate: order.orderDate || new Date(),
+                            estimatedArrival: order.estimatedArrival,
+                            deliveryPartner: order.deliveryPartner,
+                            orderStatus: 'Confirmed',
+                            pdfType: 'confirmation'
+                        });
+                        if (invoiceBuffer) {
+                            invoiceBase64 = invoiceBuffer.toString('base64');
+                        }
+                    } catch (pdfError) {
+                        console.error('❌ PDF generation for Email #2 failed:', pdfError.message);
+                    }
+                }
+
+                // Send Email #2: Order Confirmed (Ultra-Premium) via queue with Proforma attachment
+                let emailSent = true;
+                if (FEATURE_EMAIL_NOTIFICATIONS && recipientEmail) {
+                    try {
+                        await enqueueEmailJob('order-confirmed', {
+                            toEmail: recipientEmail,
+                            userId: order.userid,
+                            userName: recipientName,
+                            orderId: order.orderId,
+                            paymentMethod: order.paymentMethod || 'COD',
+                            paymentStatus: order.paymentStatus || 'Pending',
+                            finalAmount: order.finalAmount,
+                            totalAmount: order.totalAmount,
+                            shippingAmount: order.shippingAmount,
+                            shippingAddress: order.shippingAddress,
+                            products: normalizeOrderProducts(order.products),
+                            orderDate: order.orderDate || order.createdAt,
+                            estimatedArrival: order.estimatedArrival,
+                            invoiceBase64: invoiceBase64,
+                            orderStatus: 'Confirmed'
+                        });
+                    } catch (confirmQueueErr) {
+                        emailSent = false;
+                        console.warn(`⚠️ Email #2 queue failed for ${orderId}:`, confirmQueueErr.message);
+                        if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
+                    }
+                }
+
+                if (!emailSent) {
+                    console.warn(`⚠️ Email #2 (Confirmation) failed for ${orderId}, but updating status anyway`);
+                }
+
+                // Update order status to "Confirmed"
+                order.orderStatus = 'Confirmed';
+                order.confirmationEmailSent = true;
+                order.confirmationEmailSentAt = new Date();
+                const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
+                order.statusHistory = [
+                    ...existingTimeline,
+                    {
+                        status: 'Confirmed',
+                        timestamp: new Date(),
+                        message: 'Order confirmed by admin - Confirmation email sent'
+                    }
+                ];
+                await order.save();
+
+                // Sync to checkout collection
+                await Checkout.updateMany(
+                    { userid: order.userid, finalAmount: order.finalAmount },
+                    { orderstatus: 'Confirmed', updatedAt: new Date() }
+                ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
+
+                // Real-time update via Socket.IO
+                io.to(`user:${order.userid}`).emit('statusUpdate', {
+                    orderId: order.orderId,
+                    status: 'Confirmed',
+                    message: 'Your order has been confirmed! Check your email for full details.',
+                    emailSent: emailSent
+                });
+                // Also emit to admin dashboard
+                io.to('admin:dashboard').emit('statusUpdate', {
+                    orderId: order.orderId,
+                    status: 'Confirmed',
+                    message: 'Your order has been confirmed! Check your email for full details.',
+                    emailSent: emailSent
+                });
+
+                res.json({
+                    success: true,
+                    message: 'Order confirmed successfully',
+                    orderId: order.orderId,
+                    emailSent: emailSent,
+                    order: {
                         orderId: order.orderId,
-                        paymentMethod: order.paymentMethod || 'COD',
-                        paymentStatus: order.paymentStatus || 'Pending',
-                        finalAmount: Number(order.finalAmount || 0),
-                        totalAmount: Number(order.totalAmount || 0),
-                        shippingAmount: Number(order.shippingAmount || 0),
-                        shippingAddress: order.shippingAddress || {},
-                        products: normalizeOrderProducts(order.products),
-                        orderDate: order.orderDate || order.createdAt,
-                        estimatedArrival: order.estimatedArrival,
-                        status: normalized,
-                        orderStatus: normalized,
-                        deliveryOtp: order.deliveryOtp || null,
-                        deliverySchedule: order.deliverySchedule || null,
-                        deliveryAgent: order.deliverySchedule?.deliveryAgent || null,
-                        agentContact: order.deliverySchedule?.riderPhone || null,
-                        deliverySlot: order.deliverySchedule?.time || null,
-                        statusUpdatedAt: new Date(),
-                        invoiceBase64
+                        status: order.orderStatus,
+                        userEmail: order.userEmail,
+                        confirmationEmailSentAt: order.confirmationEmailSentAt
+                    }
+                });
+            } catch (error) {
+                console.error('❌ Admin Confirm Order Error:', error.message);
+                if (process.env.SENTRY_DSN) Sentry.captureException(error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Failed to confirm order',
+                    error: error.message
+                });
+            }
+        });
+
+        app.post('/api/admin/update-order-status', handleOrderStatusUpdate);
+
+        app.post('/api/chat', async (req, res) => {
+            try {
+                const prompt = (req.body?.prompt || req.body?.message || '').trim();
+                const history = req.body?.history || req.body?.conversationHistory || [];
+
+                if (!prompt) {
+                    console.error("⚠️ No prompt received from frontend");
+                    return res.status(400).json({ error: "Prompt is required" });
+                }
+
+                if (!genAI) {
+                    console.error("⚠️ GEMINI_API_KEY missing or invalid");
+                    return res.json({
+                        text: "I’m here to help with fashion recommendations. Our AI service is refreshing right now—please try again in a moment.",
+                        fallback: true
                     });
-                })().catch((emailErr) => {
-                    console.error(`⚠️ Status email queue failed for ${order.orderId}:`, emailErr.message);
-                    if (process.env.SENTRY_DSN) Sentry.captureException(emailErr);
-                });
-            });
-        }
-
-        // 🔴 EMIT REAL-TIME DASHBOARD UPDATE VIA SOCKET.IO
-        if (ioInstance) {
-            ioInstance.emit('dashboardUpdate', {
-                type: 'orderStatusUpdate',
-                orderId: order.orderId,
-                newStatus: normalized,
-                timestamp: new Date()
-            });
-            // Also emit to specific user room
-            ioInstance.to(`user:${order.userid}`).emit('orderUpdate', {
-                orderId: order.orderId,
-                status: normalized,
-                timestamp: new Date()
-            });
-        }
-
-        return res.json({
-            success: true,
-            message: `Order status updated to ${normalized}`,
-            order: payload
-        });
-    } catch (e) {
-        console.error('❌ Order update error:', e.message);
-        if (process.env.SENTRY_DSN) Sentry.captureException(e);
-        return res.status(500).json({ message: 'Failed to update order status' });
-    }
-};
-
-app.post('/api/update-order-status', handleOrderStatusUpdate);
-app.post('/update-order-status', handleOrderStatusUpdate);
-// ==================== ADMIN: CONFIRM ORDER (Send Email #2) ====================
-app.post('/api/admin/confirm-order', async (req, res) => {
-    try {
-        const { orderId } = req.body;
-        
-        // 🔒 SECURITY: Verify admin role
-        const adminSecret = req.headers['x-admin-secret'] || req.body.adminSecret;
-        if (adminSecret !== process.env.ADMIN_SECRET && process.env.ADMIN_SECRET) {
-            return res.status(403).json({ 
-                message: 'Unauthorized - Admin access required',
-                success: false 
-            });
-        }
-
-        if (!orderId) {
-            return res.status(400).json({ message: 'orderId is required' });
-        }
-
-        // Find order
-        let order = await Order.findOne({ orderId });
-        if (!order) {
-            try {
-                order = await Order.findById(orderId);
-            } catch (err) {
-                // Try checkout collection
-                const checkout = await Checkout.findById(orderId).lean();
-                if (checkout) {
-                    order = await Order.findOne({ userid: checkout.userid, finalAmount: checkout.finalAmount }).lean();
                 }
-            }
-        }
 
-        if (!order) {
-            return res.status(404).json({ message: 'Order not found' });
-        }
+                console.log(`💬 AI Context check for: ${prompt.substring(0, 30)}...`);
 
-        const userDoc = await User.findById(order.userid).lean().catch(() => null);
-        const recipientEmail = String(order.userEmail || userDoc?.email || '').trim();
-        const recipientName = order.userName || userDoc?.name || 'Customer';
+                // 📊 DATABASE SYNC: Products की लिस्ट निकाल रहे हैं
+                const allProducts = await Product.find({}, 'name baseprice maincategory');
+                const productDataSummary = allProducts.map(p => `- ${p.name} (Rs.${p.baseprice})`).slice(0, 15).join("\n");
 
-        // Generate Proforma PDF for Email #2 (Confirmed)
-        let invoiceBase64 = null;
-        if (FEATURE_INVOICE_SYSTEM) {
-            try {
-                const invoiceBuffer = await generateInvoicePdfBuffer({
-                    orderId: order.orderId,
-                    userName: order.userName,
-                    userEmail: order.userEmail,
-                    paymentMethod: order.paymentMethod || 'COD',
-                    paymentStatus: 'Verified',
-                    finalAmount: order.finalAmount,
-                    totalAmount: order.totalAmount,
-                    shippingAmount: order.shippingAmount,
-                    shippingAddress: order.shippingAddress,
-                    products: normalizeOrderProducts(order.products),
-                    orderDate: order.orderDate || new Date(),
-                    estimatedArrival: order.estimatedArrival,
-                    deliveryPartner: order.deliveryPartner,
-                    orderStatus: 'Confirmed',
-                    pdfType: 'confirmation'
-                });
-                if (invoiceBuffer) {
-                    invoiceBase64 = invoiceBuffer.toString('base64');
-                }
-            } catch (pdfError) {
-                console.error('❌ PDF generation for Email #2 failed:', pdfError.message);
-            }
-        }
-
-        // Send Email #2: Order Confirmed (Ultra-Premium) via queue with Proforma attachment
-        let emailSent = true;
-        if (FEATURE_EMAIL_NOTIFICATIONS && recipientEmail) {
-            try {
-                await enqueueEmailJob('order-confirmed', {
-                    toEmail: recipientEmail,
-                    userId: order.userid,
-                    userName: recipientName,
-                    orderId: order.orderId,
-                    paymentMethod: order.paymentMethod || 'COD',
-                    paymentStatus: order.paymentStatus || 'Pending',
-                    finalAmount: order.finalAmount,
-                    totalAmount: order.totalAmount,
-                    shippingAmount: order.shippingAmount,
-                    shippingAddress: order.shippingAddress,
-                    products: normalizeOrderProducts(order.products),
-                    orderDate: order.orderDate || order.createdAt,
-                    estimatedArrival: order.estimatedArrival,
-                    invoiceBase64: invoiceBase64,
-                    orderStatus: 'Confirmed'
-                });
-            } catch (confirmQueueErr) {
-                emailSent = false;
-                console.warn(`⚠️ Email #2 queue failed for ${orderId}:`, confirmQueueErr.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(confirmQueueErr);
-            }
-        }
-
-        if (!emailSent) {
-            console.warn(`⚠️ Email #2 (Confirmation) failed for ${orderId}, but updating status anyway`);
-        }
-
-        // Update order status to "Confirmed"
-        order.orderStatus = 'Confirmed';
-        order.confirmationEmailSent = true;
-        order.confirmationEmailSentAt = new Date();
-        const existingTimeline = Array.isArray(order.statusHistory) ? order.statusHistory : [];
-        order.statusHistory = [
-            ...existingTimeline,
-            {
-                status: 'Confirmed',
-                timestamp: new Date(),
-                message: 'Order confirmed by admin - Confirmation email sent'
-            }
-        ];
-        await order.save();
-
-        // Sync to checkout collection
-        await Checkout.updateMany(
-            { userid: order.userid, finalAmount: order.finalAmount },
-            { orderstatus: 'Confirmed', updatedAt: new Date() }
-        ).catch(err => console.warn('⚠️ Checkout sync warning:', err.message));
-
-        // Real-time update via Socket.IO
-        io.to(`user:${order.userid}`).emit('statusUpdate', {
-            orderId: order.orderId,
-            status: 'Confirmed',
-            message: 'Your order has been confirmed! Check your email for full details.',
-            emailSent: emailSent
-        });
-        // Also emit to admin dashboard
-        io.to('admin:dashboard').emit('statusUpdate', {
-            orderId: order.orderId,
-            status: 'Confirmed',
-            message: 'Your order has been confirmed! Check your email for full details.',
-            emailSent: emailSent
-        });
-
-        res.json({
-            success: true,
-            message: 'Order confirmed successfully',
-            orderId: order.orderId,
-            emailSent: emailSent,
-            order: {
-                orderId: order.orderId,
-                status: order.orderStatus,
-                userEmail: order.userEmail,
-                confirmationEmailSentAt: order.confirmationEmailSentAt
-            }
-        });
-    } catch (error) {
-        console.error('❌ Admin Confirm Order Error:', error.message);
-        if (process.env.SENTRY_DSN) Sentry.captureException(error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to confirm order',
-            error: error.message
-        });
-    }
-});
-
-app.post('/api/admin/update-order-status', handleOrderStatusUpdate);
-
-app.post('/api/chat', async (req, res) => {
-    try {
-        const prompt = (req.body?.prompt || req.body?.message || '').trim();
-        const history = req.body?.history || req.body?.conversationHistory || [];
-
-        if (!prompt) {
-            console.error("⚠️ No prompt received from frontend");
-            return res.status(400).json({ error: "Prompt is required" });
-        }
-
-        if (!genAI) {
-            console.error("⚠️ GEMINI_API_KEY missing or invalid");
-            return res.json({
-                text: "I’m here to help with fashion recommendations. Our AI service is refreshing right now—please try again in a moment.",
-                fallback: true
-            });
-        }
-
-        console.log(`💬 AI Context check for: ${prompt.substring(0, 30)}...`);
-
-        // 📊 DATABASE SYNC: Products की लिस्ट निकाल रहे हैं
-        const allProducts = await Product.find({}, 'name baseprice maincategory');
-        const productDataSummary = allProducts.map(p => `- ${p.name} (Rs.${p.baseprice})`).slice(0, 15).join("\n");
-
-        const systemInstruction = `You are the Expert Fashion Stylist for 'eShopper Boutique Luxe'. 
+                const systemInstruction = `You are the Expert Fashion Stylist for 'eShopper Boutique Luxe'. 
             Your only goal is to suggest clothes from this inventory:\n${productDataSummary}\n
             Rules: 
             1. Suggest real items from the list above.
             2. Be extremely polite and stylish.
             3. Keep answers under 3 lines.`;
 
-        // 🛠️ ROLE FIX: Roles normalized for stable prompt composition
-        let cleanHistory = (history || []).map(m => ({
-            role: (m.role === 'ai' || m.role === 'model' || m.role === 'bot' || m.sender === 'ai' || m.sender === 'model' || m.sender === 'bot') ? 'model' : 'user',
-            parts: [{ text: m.text || m.parts?.[0]?.text || "" }]
-        }));
+                // 🛠️ ROLE FIX: Roles normalized for stable prompt composition
+                let cleanHistory = (history || []).map(m => ({
+                    role: (m.role === 'ai' || m.role === 'model' || m.role === 'bot' || m.sender === 'ai' || m.sender === 'model' || m.sender === 'bot') ? 'model' : 'user',
+                    parts: [{ text: m.text || m.parts?.[0]?.text || "" }]
+                }));
 
-        const discoveredModels = await getAvailableGeminiModels();
-        const preferredOrder = [
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-lite",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro",
-            "gemini-pro"
-        ];
+                const discoveredModels = await getAvailableGeminiModels();
+                const preferredOrder = [
+                    "gemini-2.5-flash",
+                    "gemini-2.0-flash",
+                    "gemini-2.0-flash-lite",
+                    "gemini-1.5-flash",
+                    "gemini-1.5-pro",
+                    "gemini-pro"
+                ];
 
-        let candidateModels = [];
-        if (discoveredModels.length > 0) {
-            const preferredAvailable = preferredOrder.filter((name) => discoveredModels.includes(name));
-            const remaining = discoveredModels.filter((name) => !preferredAvailable.includes(name));
-            candidateModels = [...preferredAvailable, ...remaining];
-        } else {
-            candidateModels = preferredOrder;
-        }
+                let candidateModels = [];
+                if (discoveredModels.length > 0) {
+                    const preferredAvailable = preferredOrder.filter((name) => discoveredModels.includes(name));
+                    const remaining = discoveredModels.filter((name) => !preferredAvailable.includes(name));
+                    candidateModels = [...preferredAvailable, ...remaining];
+                } else {
+                    candidateModels = preferredOrder;
+                }
 
-        const historyText = cleanHistory
-            .map((item) => {
-                const roleLabel = item.role === 'model' ? 'Assistant' : 'User';
-                const text = String(item.parts?.[0]?.text || '').trim();
-                return text ? `${roleLabel}: ${text}` : '';
-            })
-            .filter(Boolean)
-            .slice(-12)
-            .join('\n');
+                const historyText = cleanHistory
+                    .map((item) => {
+                        const roleLabel = item.role === 'model' ? 'Assistant' : 'User';
+                        const text = String(item.parts?.[0]?.text || '').trim();
+                        return text ? `${roleLabel}: ${text}` : '';
+                    })
+                    .filter(Boolean)
+                    .slice(-12)
+                    .join('\n');
 
-        const fullPrompt = `${systemInstruction}\n\nConversation So Far:\n${historyText || 'No previous conversation.'}\n\nCurrent User Query: ${prompt}`;
+                const fullPrompt = `${systemInstruction}\n\nConversation So Far:\n${historyText || 'No previous conversation.'}\n\nCurrent User Query: ${prompt}`;
 
-        let textResponse = "";
-        let lastModelError = null;
+                let textResponse = "";
+                let lastModelError = null;
 
-        for (const modelName of candidateModels) {
-            if (isModelCoolingDown(modelName)) {
-                continue;
-            }
+                for (const modelName of candidateModels) {
+                    if (isModelCoolingDown(modelName)) {
+                        continue;
+                    }
 
-            try {
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    systemInstruction
+                    try {
+                        const model = genAI.getGenerativeModel({
+                            model: modelName,
+                            systemInstruction
+                        });
+
+                        const result = await model.generateContent(fullPrompt);
+                        const response = await result.response;
+                        textResponse = response.text();
+
+                        if (textResponse && textResponse.trim()) {
+                            console.log(`✅ AI responded successfully using model: ${modelName}`);
+                            break;
+                        }
+
+                        throw new Error(`Empty response from model: ${modelName}`);
+                    } catch (modelError) {
+                        if (isQuotaError(modelError)) {
+                            setModelCooldown(modelName, modelError);
+                            lastModelError = modelError;
+                            devWarn(`Quota hit for ${modelName}, cooling down`);
+                            continue;
+                        }
+
+                        devWarn(`Gemini SDK failed (${modelName}): ${modelError.message}`);
+
+                        try {
+                            const restText = await generateWithRest(modelName, fullPrompt);
+                            if (restText && restText.trim()) {
+                                textResponse = restText;
+                                devLog(`AI responded via REST fallback using model: ${modelName}`);
+                                break;
+                            }
+                            throw new Error(`Empty REST response from model: ${modelName}`);
+                        } catch (restError) {
+                            if (isQuotaError(restError)) {
+                                setModelCooldown(modelName, restError);
+                            }
+                            lastModelError = restError;
+                            devWarn(`Gemini REST failed (${modelName}): ${restError.message}`);
+                        }
+                    }
+                }
+
+                if (!textResponse || !textResponse.trim()) {
+                    throw lastModelError || new Error("No Gemini model returned a valid response");
+                }
+
+                res.json({ text: textResponse });
+
+            } catch (error) {
+                console.error("❌ Chat API Error:", error.message);
+                res.json({
+                    text: "I’m having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
+                    fallback: true
                 });
-
-                const result = await model.generateContent(fullPrompt);
-                const response = await result.response;
-                textResponse = response.text();
-
-                if (textResponse && textResponse.trim()) {
-                    console.log(`✅ AI responded successfully using model: ${modelName}`);
-                    break;
-                }
-
-                throw new Error(`Empty response from model: ${modelName}`);
-            } catch (modelError) {
-                if (isQuotaError(modelError)) {
-                    setModelCooldown(modelName, modelError);
-                    lastModelError = modelError;
-                    devWarn(`Quota hit for ${modelName}, cooling down`);
-                    continue;
-                }
-
-                devWarn(`Gemini SDK failed (${modelName}): ${modelError.message}`);
-
-                try {
-                    const restText = await generateWithRest(modelName, fullPrompt);
-                    if (restText && restText.trim()) {
-                        textResponse = restText;
-                        devLog(`AI responded via REST fallback using model: ${modelName}`);
-                        break;
-                    }
-                    throw new Error(`Empty REST response from model: ${modelName}`);
-                } catch (restError) {
-                    if (isQuotaError(restError)) {
-                        setModelCooldown(modelName, restError);
-                    }
-                    lastModelError = restError;
-                    devWarn(`Gemini REST failed (${modelName}): ${restError.message}`);
-                }
             }
-        }
-
-        if (!textResponse || !textResponse.trim()) {
-            throw lastModelError || new Error("No Gemini model returned a valid response");
-        }
-        
-        res.json({ text: textResponse });
-
-    } catch (error) {
-        console.error("❌ Chat API Error:", error.message);
-        res.json({ 
-            text: "I’m having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
-            fallback: true
         });
-    }
-});
-// --- server.js AI REFACTOR END ---
+        // --- server.js AI REFACTOR END ---
 
         const server = httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`🚀 Master Server Live on ${PORT}`);

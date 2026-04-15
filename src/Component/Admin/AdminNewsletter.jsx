@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { useSelector, useDispatch } from 'react-redux'
 import LefNav from './LefNav'
 import { getNewslatter, deleteNewslatter } from '../../Store/ActionCreaters/NewslatterActionCreators'
@@ -9,10 +10,20 @@ import './SystemControlCenter.css'
 export default function AdminNewsletter() {
     const newsletters = useSelector((state) => state.NewslatterStateData)
     const dispatch = useDispatch()
+    const toast = useToast()
 
     useEffect(() => {
         dispatch(getNewslatter())
     }, [dispatch])
+
+    const handleDelete = (id) => {
+        toast.info("Removing subscriber...", 1200)
+        dispatch(deleteNewslatter({ id }))
+        setTimeout(() => {
+            dispatch(getNewslatter())
+            toast.success("Subscriber removed successfully!", 2000)
+        }, 1200)
+    }
 
     return (
         <div style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }} className="py-5">
@@ -38,7 +49,7 @@ export default function AdminNewsletter() {
                                             <tr key={index}>
                                                 <td className="font-weight-bold p-3">{item.email}</td>
                                                 <td className="text-right align-middle">
-                                                    <button onClick={() => dispatch(deleteNewslatter({id: item.id || item._id}))} className="btn btn-sm btn-outline-danger px-3 rounded-pill">
+                                                    <button onClick={() => handleDelete(item.id || item._id)} className="btn btn-sm btn-outline-danger px-3 rounded-pill">
                                                         <Trash2 size={14}/> <span className="d-none d-sm-inline">Remove</span>
                                                     </button>
                                                 </td>

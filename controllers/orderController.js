@@ -44,6 +44,10 @@ exports.deleteOrders = async (req, res) => {
 };
 
 const { sendTransactionalEmail } = require('../src/utils/email');
+const { sendEmail } = require('../emailService');
+const {
+    sendOrderStatus,
+} = require('../mailController');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 
@@ -89,63 +93,88 @@ exports.addOrderNote = async (req, res) => {
     }
 };
 
-// Order confirmation email logic
-exports.sendOrderConfirmation = async (req, res) => {
-        const path = require('path');
-        const templatePath = path.join(__dirname, '..', 'views', 'emails', 'order-confirmed.hbs');
-    try {
 
-        const { orderId } = req.body;
-        if (!orderId) return res.status(400).json({ message: 'Order ID required.' });
-        // Use populate to fetch product details
+// Unified order status email logic
+exports.sendOrderStatusEmail = async (req, res) => {
+    try {
+        const { orderId, status } = req.body;
+        if (!orderId || !status) return res.status(400).json({ message: 'Order ID and status required.' });
         const orderData = await Order.findOne({ orderId }).populate('products.productid');
         if (!orderData) return res.status(404).json({ message: 'Order not found.' });
 
-        // Map variables for Handlebars/email template
-        const populatedProducts = (orderData.products || []).map(item => {
-            // If productid is populated, use its fields
-            if (item.productid && typeof item.productid === 'object') {
-                return {
-                    ...item,
-                    name: item.productid.name,
-                    price: item.productid.finalprice,
-                    pic1: item.productid.pic1,
-                    brand: item.productid.brand,
-                    color: item.color || item.productid.color,
-                    size: item.size || item.productid.size,
-                    description: item.productid.description,
-                };
-            }
-            // Fallback to original item
-            return item;
+        // Prepare product summary for email
+        const items = (orderData.products || []).map(item => {
+            const prod = item.productid && typeof item.productid === 'object' ? item.productid : {};
+            return {
+                imageUrl: prod.pic1 || item.pic1 || '',
+                name: prod.name || item.name || '',
+                size: item.size || prod.size || '',
+                color: item.color || prod.color || '',
+                quantity: item.quantity || item.qty || 1,
+                subtotal: (prod.finalprice || item.price || 0) * (item.quantity || item.qty || 1),
+                brand: prod.brand || '',
+                description: prod.description || '',
+                sku: prod._id || item.productid || '',
+            };
         });
 
-        // Map variables for Handlebars/email template
-        const emailVars = {
+        // Progress stepper logic (customize as needed)
+        const allSteps = [
+            { key: 'Order Received', label: 'Received', icon: '&#10003;' },
+            { key: 'Order Confirmed', label: 'Confirmed', icon: '&#128179;' },
+            { key: 'Order Packed', label: 'Packed', icon: '&#9671;' },
+            { key: 'Order Shipped', label: 'Shipped', icon: '&#10148;' },
+            { key: 'Out for Delivery', label: 'Out for Delivery', icon: '&#10022;' },
+            { key: 'Delivered', label: 'Delivered', icon: '&#9989;' },
+        ];
+        const normalizedStatus = String(status).toLowerCase();
+        const currentStep = allSteps.findIndex(s => s.key.toLowerCase() === normalizedStatus);
+        const progressSteps = allSteps.map((step, idx) => ({
+            ...step,
+            state: idx < currentStep ? 'done' : idx === currentStep ? 'active' : 'pending',
+            isCurrent: idx === currentStep,
+        }));
+        const progressPercent = Math.max(0, Math.round(((currentStep + 1) / allSteps.length) * 100));
+
+        // Compose payload for template
+        const payload = {
             orderId: orderData.orderId,
-            userName: orderData.userName,
-            userEmail: orderData.userEmail,
+            customerName: orderData.userName,
+            orderDate: orderData.orderDate ? new Date(orderData.orderDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+            items,
+            shippingName: orderData.shippingAddress?.fullName || '',
+            shippingAddressLine1: orderData.shippingAddress?.addressline1 || '',
+            shippingAddressLine2: orderData.shippingAddress?.city || '',
+            shippingAddressLine3: orderData.shippingAddress?.state ? `${orderData.shippingAddress.state} ${orderData.shippingAddress.pin}` : '',
+            shippingPhone: orderData.shippingAddress?.phone || '',
             paymentMethod: orderData.paymentMethod,
             paymentStatus: orderData.paymentStatus,
-            finalAmount: orderData.finalAmount,
-            totalAmount: orderData.totalAmount,
-            shippingAmount: orderData.shippingAmount,
-            shippingAddress: orderData.shippingAddress,
-            products: populatedProducts,
-            orderDate: orderData.orderDate,
+            subtotal: orderData.totalAmount,
+            shippingCharges: orderData.shippingAmount,
+            totalAmount: orderData.finalAmount,
+            progressSteps,
+            progressPercent,
+            trackingUrl: `${process.env.BRAND_SITE_URL || 'https://eshopperr.me'}/order-tracking/${orderData.orderId}`,
+            placedInvoiceUrl: `${process.env.BRAND_SITE_URL || 'https://eshopperr.me'}/invoice/${orderData.orderId}`,
+            orderDetailsUrl: `${process.env.BRAND_SITE_URL || 'https://eshopperr.me'}/order/${orderData.orderId}`,
+            whatsappUrl: `https://wa.me/${process.env.SUPPORT_PHONE || '919999999999'}`,
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@eshopperr.me',
+            companyAddress: process.env.COMPANY_ADDRESS || 'Eshopper Luxe, New Delhi, India',
+            privacyPolicyUrl: `${process.env.BRAND_SITE_URL || 'https://eshopperr.me'}/privacy-policy`,
+            termsUrl: `${process.env.BRAND_SITE_URL || 'https://eshopperr.me'}/terms`,
         };
 
-        // Render email using Handlebars (example)
-        // const html = renderTemplate('order-confirmed.hbs', emailVars);
-        // For now, send simple email
-        await sendTransactionalEmail({
+        // Render and send email using mailController and emailService.js
+        const html = await sendOrderStatus({ status, ...payload });
+        await sendEmail({
             to: orderData.userEmail,
-            subject: `Order Confirmation - ${orderData.orderId}`,
-            htmlContent: `<h1>Thank you for your order, ${orderData.userName}!</h1><p>Your order ID is ${orderData.orderId}.</p><ul>${populatedProducts.map(p => `<li>${p.name} - ₹${p.price} <img src='${p.pic1}' width='60'/></li>`).join('')}</ul>`
+            subject: `Your Order ${orderData.orderId} - ${status}`,
+            template: `order-${normalizedStatus.replace(/ /g, '-').toLowerCase()}.hbs`,
+            context: payload
         });
-        res.json({ result: 'Order confirmation email sent.' });
+        res.json({ result: `Order ${status} email sent.` });
     } catch (err) {
-        console.error('Order email error:', err.message);
-        res.status(500).json({ error: 'Failed to send order confirmation email.' });
+        console.error('Order status email error:', err.message);
+        res.status(500).json({ error: 'Failed to send order status email.' });
     }
 };

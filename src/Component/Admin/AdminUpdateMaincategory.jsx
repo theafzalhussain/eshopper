@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import LefNav from './LefNav'
@@ -7,6 +8,7 @@ import { motion } from 'framer-motion'
 import { Save, ArrowLeft, Layers } from 'lucide-react'
 
 export default function AdminUpdateMaincategory() {
+    const toast = useToast();
     const [name, setName] = useState("")
     const { id } = useParams()
     const navigate = useNavigate()
@@ -22,7 +24,7 @@ export default function AdminUpdateMaincategory() {
     function postData(e) {
         e.preventDefault()
         dispatch(updateMaincategory({ id: id, name: name }))
-        alert("System Updated: Main Category Refreshed")
+        toast.success("Main Category updated successfully!");
         navigate("/admin-maincategory")
     }
 

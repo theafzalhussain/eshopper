@@ -5,6 +5,7 @@ import { ADD_CART, ADD_CART_RED, CLEAR_CART, CLEAR_CART_RED, DELETE_CART, DELETE
 function* createCartSaga(action) {
     try {
         if (!action || !action.payload) return;
+        console.log("Cart Saga Payload:", action.payload); // Debug log
         let response = yield createCartAPI(action.payload);
         const cartData = response.cart || response;
         yield put({ type: ADD_CART_RED, data: cartData });

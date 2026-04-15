@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import LefNav from './LefNav'
@@ -7,6 +8,7 @@ import { motion } from 'framer-motion'
 import { Save, ArrowLeft, Grid } from 'lucide-react'
 
 export default function AdminUpdateSubcategory() {
+    const toast = useToast();
     const [name, setName] = useState("")
     const { id } = useParams() // MongoDB String ID
     const navigate = useNavigate()
@@ -23,7 +25,7 @@ export default function AdminUpdateSubcategory() {
     function postData(e) {
         e.preventDefault()
         dispatch(updateSubcategory({ id: id, name: name }))
-        alert("System Synchronized: Subcategory updated!")
+        toast.success("Subcategory updated successfully!");
         navigate("/admin-subcategory")
     }
 

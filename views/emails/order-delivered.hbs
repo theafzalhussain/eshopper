@@ -100,13 +100,15 @@
 <body>
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Delivered successfully - {{orderId}}. Your tax invoice is ready.</div>
   <table class="wrap" role="presentation" width="100%"><tr><td>
-    <table class="card" role="presentation" align="center">
+    <table class="card" role="presentation" align="center" style="width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;">
+      {{> animated-gold-border}}
       <tr><td class="top"><table role="presentation" class="brandmark" cellpadding="0" cellspacing="0"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table><span class="status">DELIVERED</span></td></tr>
       <tr><td class="hero"><div class="icon">&#10003;</div><div class="t">DELIVERED</div><div class="s">Your luxury package has arrived safely</div></td></tr>
 
       <tr><td class="section">
         <h2 class="title">Thank You, {{customerName}}</h2>
         <p class="sub">We hope you love your luxury purchase! Your order <strong style="color:#e0bf3f;">{{orderId}}</strong> was delivered on <strong style="color:#35c769;">{{deliveredOn}}</strong>.</p>
+        {{> review-snippet}}
         <div class="confirm">DELIVERY CONFIRMED<br><span style="font-size:16px;color:#d6f7e4;font-weight:600;">Received by: {{receivedBy}}</span></div>
         <div class="progress-track">
           <div class="progress-head">DELIVERY PROGRESS</div>
@@ -145,7 +147,7 @@
             <tr><th>ITEM</th><th>DETAILS</th><th>QTY</th><th>PRICE</th></tr>
             {{#each items}}
             <tr>
-              <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" /></td>
+              <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;" /></td>
               <td><strong>{{name}}</strong><br><span style="color:#b4bac6;">Fashion</span></td>
               <td>{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
               <td>INR {{subtotal}}</td>
@@ -174,10 +176,10 @@
           <div class="social">
             <h4>Stay Connected with eShopper Luxe</h4>
             <p>Follow us for exclusive deals, luxury collections, and styling tips.</p>
-            <table class="btn-row" role="presentation"><tr>
-              <td><a class="btn-sm insta" href="{{instagramUrl}}">Follow on Instagram</a></td>
-              <td><a class="btn-sm wa" href="{{whatsappUrl}}">Join WhatsApp</a></td>
-            </tr></table>
+            <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
+              <a href="{{instagramUrl}}" style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-align:center;box-shadow:0 2px 8px rgba(216,78,228,0.08);">Follow on Instagram</a>
+              <a href="{{whatsappUrl}}" style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#25d366,#1ed66d);color:#0f1912;text-align:center;box-shadow:0 2px 8px rgba(34,139,34,0.08);">Join WhatsApp</a>
+            </div>
           </div>
 
           <div class="help">
@@ -189,6 +191,7 @@
       </td></tr>
 
       <tr><td class="foot">
+        {{> brand-story-footer}}
         <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
         <div>{{companyAddress}}</div>
         <div><a href="{{privacyPolicyUrl}}">Privacy Policy</a> &nbsp; | &nbsp; <a href="{{termsUrl}}">Terms of Service</a> &nbsp; | &nbsp; <a href="{{returnPolicyUrl}}">Return Policy</a></div>

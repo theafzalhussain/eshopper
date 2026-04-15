@@ -98,12 +98,14 @@ export default function Home() {
                 setWishlistToast({ show: true, text: "Removed from Wishlist" })
             } else {
                 // Product not in wishlist, so add it
+                // Wishlist expects size as string, not array
+                let sizeStr = Array.isArray(p.size) ? (p.size[0] || "") : p.size;
                 let item = {
                     productid: p.id,
                     userid: localStorage.getItem("userid"),
                     name: p.name,
                     color: p.color,
-                    size: p.size,
+                    size: sizeStr,
                     price: Number(p.finalprice),
                     pic: p.pic1,
                 }

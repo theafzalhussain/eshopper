@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
@@ -7,6 +8,7 @@ import { motion } from 'framer-motion'
 import { Plus, Edit3, Trash2, Layers } from 'lucide-react'
 
 export default function AdminMaincategory() {
+    const toast = useToast();
     const maincategory = useSelector((state) => state.MaincategoryStateData)
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -47,7 +49,11 @@ export default function AdminMaincategory() {
                                                     <button className="btn btn-sm btn-info rounded-circle mr-2" onClick={() => navigate(`/admin-update-maincategory/${row.id}`)}>
                                                         <Edit3 size={14} />
                                                     </button>
-                                                    <button className="btn btn-sm btn-danger rounded-circle" onClick={() => { if (window.confirm("Delete this main category?")) dispatch(deleteMaincategory({ id: row.id })) }}>
+                                                    <button className="btn btn-sm btn-danger rounded-circle" onClick={() => {
+                                                        toast.info("Deleting main category...");
+                                                        dispatch(deleteMaincategory({ id: row.id }));
+                                                        toast.success("Main category deleted successfully!");
+                                                    }}>
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </td>

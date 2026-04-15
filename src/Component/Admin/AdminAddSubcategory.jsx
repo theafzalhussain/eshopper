@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { addSubcategory, getSubcategory } from '../../Store/ActionCreaters/SubcategoryActionCreators'
@@ -7,6 +8,7 @@ import { motion } from 'framer-motion'
 import { Grid, ArrowLeft, Save } from 'lucide-react'
 
 export default function AdminAddSubcategory() {
+    const toast = useToast();
     const [name, setname] = useState("")
     const subcategory = useSelector((state) => state.SubcategoryStateData)
     const navigate = useNavigate()
@@ -16,10 +18,10 @@ export default function AdminAddSubcategory() {
         e.preventDefault()
         let item = subcategory.find((x) => x.name.toLowerCase() === name.toLowerCase())
         if (item) {
-            alert("This Sub-category already exists!")
+            toast.error("This Sub-category already exists!");
         } else {
             dispatch(addSubcategory({ name: name }))
-            alert("Sub-category catalog updated.")
+            toast.success("Sub-category catalog updated.");
             navigate("/admin-subcategory")
         }
     }

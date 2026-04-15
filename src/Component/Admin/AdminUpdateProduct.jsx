@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import LefNav from './LefNav'
 import { useSelector, useDispatch } from 'react-redux'
@@ -11,6 +12,7 @@ import { Save, ArrowLeft, Image as ImageIcon, Ruler, Palette, BadgePercent, Layo
 import './SystemControlCenter.css'
 
 export default function AdminUpdateProduct() {
+    const toast = useToast();
     let { id } = useParams()
     let dispatch = useDispatch()
     let navigate = useNavigate()
@@ -23,7 +25,7 @@ export default function AdminUpdateProduct() {
 
     let [data, setdata] = useState({
         name: "", maincategory: "", subcategory: "", brand: "",
-        color: "", size: "", baseprice: 0, discount: 0, finalprice: 0,
+        color: "", size: [], baseprice: 0, discount: 0, finalprice: 0,
         stock: "In Stock", description: "", pic1: "", pic2: "", pic3: "", pic4: ""
     })
 
@@ -37,8 +39,20 @@ export default function AdminUpdateProduct() {
     }, [products.length, id])
 
     function getData(e) {
-        let { name, value } = e.target
-        setdata((old) => ({ ...old, [name]: value }))
+        let { name, value, type, checked } = e.target;
+        if (name === 'size') {
+            setdata((old) => {
+                let newSizes = Array.isArray(old.size) ? [...old.size] : [];
+                if (checked) {
+                    if (!newSizes.includes(value)) newSizes.push(value);
+                } else {
+                    newSizes = newSizes.filter((s) => s !== value);
+                }
+                return { ...old, size: newSizes };
+            });
+        } else {
+            setdata((old) => ({ ...old, [name]: value }));
+        }
     }
 
     function getFile(e) {
@@ -63,7 +77,12 @@ function postData(e) {
     formData.append("discount", d);
     formData.append("finalprice", fp);
     formData.append("color", data.color);
-    formData.append("size", data.size);
+    // Send all sizes as array
+    if (Array.isArray(data.size)) {
+        data.size.forEach((sz) => formData.append("size", sz));
+    } else if (data.size) {
+        formData.append("size", data.size);
+    }
     formData.append("stock", data.stock);
     formData.append("description", data.description);
 
@@ -74,7 +93,7 @@ function postData(e) {
     if (data.pic4 && typeof data.pic4 === 'object') formData.append("pic4", data.pic4);
 
     dispatch(updateProduct(formData));
-    alert("Re-calibrating Success: Data Synced with Atlas!");
+    toast.success("Product updated successfully!", 3500);
     navigate("/admin-product");
 }
     return (
@@ -105,34 +124,190 @@ function postData(e) {
                                 </div>
 
                                 {/* Dropdown Matrix */}
-                                <div className="row mb-4 mb-lg-5">
+                                <div className="row mb-4 mb-lg-3 g-2 g-md-3">
                                     {[
                                         { label: "Department", name: "maincategory", options: maincat, val: data.maincategory },
                                         { label: "Seasonality", name: "subcategory", options: subcat, val: data.subcategory },
-                                        { label: "Craft Label", name: "brand", options: brand, val: data.brand }
+                                        { label: "Craft Label", name: "brand", options: brand, val: data.brand },
+                                        { label: "Status", name: "stock", options: [
+                                            { id: 'in', name: 'Active: In Stock', value: 'In Stock' },
+                                            { id: 'out', name: 'On Request: Sold Out', value: 'Out of Stock' }
+                                        ], val: data.stock, isStatus: true }
                                     ].map((field, idx) => (
-                                        <div key={idx} className="col-6 col-md-3 mb-3">
+                                        <div key={idx} className="col-12 col-md-3 mb-3 d-flex flex-column" style={{minWidth:'200px',flex:'1 1 240px',overflow:'visible',whiteSpace:'normal'}}>
                                             <label className="text-muted small font-weight-bold uppercase mb-2 d-block">{field.label}</label>
-                                            <select name={field.name} value={field.val} className="form-control rounded-xl p-2 p-lg-3 border-light shadow-sm" onChange={getData}>
-                                                {field.options.map(opt => <option key={opt.id} value={opt.name}>{opt.name}</option>)}
-                                            </select>
+                                            {field.isStatus ? (
+                                                <select name="stock" value={data.stock} className="form-control rounded-xl p-2 p-lg-3 border-light shadow-sm admin-big-select" style={{width:'100%',whiteSpace:'normal',overflow:'visible',textOverflow:'unset',fontSize:'1.15rem',lineHeight:'1.5',minWidth:'180px',maxWidth:'100%'}} onChange={getData}>
+                                                    {field.options.map(opt => <option key={opt.id} value={opt.value}>{opt.name}</option>)}
+                                                </select>
+                                            ) : (
+                                                <select name={field.name} value={field.val} className="form-control rounded-xl p-2 p-lg-3 border-light shadow-sm admin-big-select" style={{width:'100%',whiteSpace:'normal',overflow:'visible',textOverflow:'unset',fontSize:'1.15rem',lineHeight:'1.5',minWidth:'180px',maxWidth:'100%'}} onChange={getData}>
+                                                    {field.options.map(opt => <option key={opt.id} value={opt.name}>{opt.name}</option>)}
+                                                </select>
+                                            )}
                                         </div>
                                     ))}
-                                    <div className="col-6 col-md-3 mb-3">
-                                        <label className="text-muted small font-weight-bold uppercase mb-2 d-block">Status</label>
-                                        <select name="stock" value={data.stock} className="form-control rounded-xl p-2 p-lg-3 border-light shadow-sm" onChange={getData}>
-                                            <option value="In Stock">Active: In Stock</option>
-                                            <option value="Out of Stock">On Request: Sold Out</option>
-                                        </select>
+                                </div>
+
+                                {/* Color, Price, Discount in one row */}
+                                <div className="row mb-4 mb-lg-3 g-2 g-md-3">
+                                    <div className="col-12 col-md-4 mb-3">
+                                        <div className="spec-item">
+                                            <Palette size={16} className="text-info"/>
+                                            <input name="color" value={data.color} placeholder="Visual Tint" onChange={getData} className="form-control"/>
+                                        </div>
+                                    </div>
+                                    <div className="col-6 col-md-4 mb-3">
+                                        <div className="spec-item">
+                                            <label>₹</label>
+                                            <input type="number" name="baseprice" value={data.baseprice} onChange={getData} className="form-control font-weight-bold text-dark"/>
+                                        </div>
+                                    </div>
+                                    <div className="col-6 col-md-4 mb-3">
+                                        <div className="spec-item">
+                                            <BadgePercent size={18} className="text-danger"/>
+                                            <input type="number" name="discount" value={data.discount} onChange={getData} className="form-control text-danger"/>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Specifications Row */}
-                                <div className="row mb-4 mb-lg-5">
-                                    <div className="col-6 col-md-3 mb-3"><div className="spec-item"><Palette size={16} className="text-info"/><input name="color" value={data.color} placeholder="Visual Tint" onChange={getData} className="form-control"/></div></div>
-                                    <div className="col-6 col-md-3 mb-3"><div className="spec-item"><Ruler size={16} className="text-info"/><input name="size" value={data.size} placeholder="Metric Fit" onChange={getData} className="form-control"/></div></div>
-                                    <div className="col-6 col-md-3 mb-3"><div className="spec-item"><label>₹</label><input type="number" name="baseprice" value={data.baseprice} onChange={getData} className="form-control font-weight-bold text-dark"/></div></div>
-                                    <div className="col-6 col-md-3 mb-3"><div className="spec-item"><BadgePercent size={18} className="text-danger"/><input type="number" name="discount" value={data.discount} onChange={getData} className="form-control text-danger"/></div></div>
+                                {/* Size section below all */}
+                                <div className="row mb-4 mb-lg-5 g-2 g-md-3">
+                                    <div className="col-12">
+                                        <div className="spec-item size-spec-item" style={{flexDirection:'column', alignItems:'flex-start', background:'transparent', border:'none', boxShadow:'none', padding:0}}>
+                                            <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:8}}>
+                                                <Ruler size={16} className="text-info"/>
+                                                <span style={{fontWeight:600,fontSize:'13px'}}>Size</span>
+                                            </div>
+                                            <div className="size-grid-responsive">
+                                                <div className="size-row">
+                                                    {['XS','S','M','L','XL','XXL'].map((sz) => (
+                                                        <label key={sz} className="size-checkbox-label size-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                name="size"
+                                                                value={sz}
+                                                                checked={Array.isArray(data.size) ? data.size.includes(sz) : false}
+                                                                onChange={getData}
+                                                            />
+                                                            <span>{sz}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                                <div className="size-row">
+                                                    {[26,28,30,32,34,36,38,40].map((sz) => (
+                                                        <label key={sz} className="size-checkbox-label size-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                name="size"
+                                                                value={sz.toString()}
+                                                                checked={Array.isArray(data.size) ? data.size.includes(sz.toString()) : false}
+                                                                onChange={getData}
+                                                            />
+                                                            <span>{sz}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <style>{`
+                                        .size-grid-responsive {
+                                            width: 100%;
+                                            max-width: 100%;
+                                            margin-bottom: 2px;
+                                            display: flex;
+                                            flex-direction: column;
+                                            gap: 8px;
+                                            overflow-x: auto;
+                                        }
+                                        .size-row {
+                                            display: flex;
+                                            gap: 10px;
+                                            flex-wrap: wrap;
+                                            justify-content: flex-start;
+                                        }
+                                        .size-checkbox-label {
+                                            background: #f5f7fa;
+                                            border-radius: 10px;
+                                            padding: 10px 0;
+                                            color: #1a1a1a;
+                                            border: 2px solid #d1d5db;
+                                            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+                                            font-weight: 700;
+                                            font-size: 1.08em;
+                                            transition: all 0.2s;
+                                            display: flex;
+                                            flex-direction: column;
+                                            align-items: center;
+                                            justify-content: center;
+                                            cursor: pointer;
+                                            min-width: 60px;
+                                            max-width: 80px;
+                                            width: 100%;
+                                            box-sizing: border-box;
+                                            text-align: center;
+                                            gap: 2px;
+                                        }
+                                        .size-checkbox-label input[type='checkbox'] {
+                                            accent-color: #007bff;
+                                            width: 22px;
+                                            height: 22px;
+                                            margin: 0 0 2px 0;
+                                            display: block;
+                                        }
+                                        .size-checkbox-label input[type='checkbox']:checked + span {
+                                            color: #007bff;
+                                            font-weight: 900;
+                                        }
+                                        @media (max-width: 991px) {
+                                            .size-row {
+                                                gap: 8px;
+                                            }
+                                            .size-checkbox-label {
+                                                padding: 8px 0;
+                                                font-size: 1em;
+                                            }
+                                        }
+                                        @media (max-width: 767px) {
+                                            .size-row {
+                                                gap: 7px;
+                                            }
+                                            .size-checkbox-label {
+                                                padding: 7px 0;
+                                                font-size: 0.97em;
+                                            }
+                                        }
+                                        @media (max-width: 600px) {
+                                            .size-grid-responsive {
+                                                gap: 7px;
+                                            }
+                                            .size-row {
+                                                flex-direction: row;
+                                                flex-wrap: wrap;
+                                                gap: 7px;
+                                                justify-content: flex-start;
+                                            }
+                                            .size-checkbox-label {
+                                                width: 100%;
+                                                padding: 12px 0;
+                                                font-size: 1.08em;
+                                                border-radius: 14px;
+                                            }
+                                            .size-spec-item {
+                                                margin-top: 12px;
+                                            }
+                                        }
+                                        @media (max-width: 480px) {
+                                            .size-row {
+                                                gap: 6px;
+                                            }
+                                            .size-checkbox-label {
+                                                padding: 8px 0;
+                                                font-size: 0.97em;
+                                            }
+                                        }
+                                            `}</style>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Description Editor */}
@@ -163,15 +338,30 @@ function postData(e) {
                 </div>
             </div>
             <style dangerouslySetInnerHTML={{ __html: `
+                .admin-big-select, .admin-big-select option {
+                    font-size: 1.15rem !important;
+                    line-height: 1.5 !important;
+                    white-space: normal !important;
+                    overflow: visible !important;
+                    text-overflow: unset !important;
+                    min-width: 180px !important;
+                    max-width: 100% !important;
+                }
                 .shadow-2xl { box-shadow: 0 40px 100px -10px rgba(0,0,0,0.12) !important; }
                 .rounded-2xl { border-radius: 20px !important; } .rounded-3xl { border-radius: 42px !important; }
                 .spec-item { display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 5px 15px; border-radius: 50px; border: 1.5px solid #eee; }
                 .spec-item input { border: none !important; background: transparent; height: 45px; width: 100%; outline: none !important; font-size: 13px; font-weight: 700; }
                 .ls-2 { letter-spacing: 2px; } .ls-1 { letter-spacing: 1px; }
                 .small-file-btn { font-size: 9px; cursor: pointer; color: #17a2b8; font-weight: bold; }
+                .row.g-2>[class*='col-'] { margin-bottom: 12px; }
+                .row.g-2>[class*='col-'] > * { min-width: 160px; }
+                @media (max-width: 991px) {
+                    .row.g-2>[class*='col-'] { min-width: 100%; }
+                }
                 @media (max-width: 767px) {
                     .spec-item { padding: 5px 10px; }
                     .spec-item input { height: 38px; font-size: 12px; }
+                    .row.g-2>[class*='col-'] { margin-bottom: 10px; min-width: 100%; }
                 }
             `}} />
         </div>

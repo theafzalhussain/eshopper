@@ -13,14 +13,14 @@ const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'eshoper_master',
-        allowedFormats: ['jpg', 'png', 'jpeg'],
+        allowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
         resource_type: 'auto'
     }
 });
 
 const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 20 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
         if (allowedMimes.includes(file.mimetype)) {

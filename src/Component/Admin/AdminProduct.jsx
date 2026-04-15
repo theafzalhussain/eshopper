@@ -6,6 +6,9 @@ import { deleteProduct, getProduct } from '../../Store/ActionCreaters/ProductAct
 import { motion } from 'framer-motion'
 import { Plus, Edit3, Trash2, LayoutGrid, AlertTriangle, CheckCircle } from 'lucide-react'
 
+// Real-time socket
+import { getSocket } from './socket';
+
 export default function AdminProduct() {
     const productData = useSelector((state) => state.ProductStateData)
     const dispatch = useDispatch()
@@ -16,6 +19,18 @@ export default function AdminProduct() {
     const [selectAll, setSelectAll] = useState(false)
 
     useEffect(() => { dispatch(getProduct()) }, [dispatch])
+
+    useEffect(() => {
+        // Setup socket for real-time dashboard updates
+        const socket = getSocket('admin-dashboard');
+        const handleDashboardUpdate = () => {
+            dispatch(getProduct());
+        };
+        socket.on('dashboardUpdate', handleDashboardUpdate);
+        return () => {
+            socket.off('dashboardUpdate', handleDashboardUpdate);
+        };
+    }, [dispatch]);
 
     // FIX: Mapping MongoDB _id to table data
     const rows = productData?.map((item) => ({

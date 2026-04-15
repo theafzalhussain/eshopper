@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { getUser } from '../Store/ActionCreaters/UserActionCreators'
 import { motion } from 'framer-motion'
@@ -52,6 +52,7 @@ const defaultSettings = {
 }
 
 export default function Updateprofile() {
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState('personal')
     const [data, setdata] = useState({
         name: "", email: "", phone: "", addressline1: "",
@@ -248,7 +249,11 @@ export default function Updateprofile() {
             setShowToast(true)
             setTimeout(() => {
                 setShowToast(false)
-                navigate("/profile")
+                if (location.state && location.state.from === 'checkout') {
+                    navigate(-1) // Go back to checkout
+                } else {
+                    navigate("/profile")
+                }
             }, 900)
         } catch (error) {
             console.error('Profile update failed:', error)

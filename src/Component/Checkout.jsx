@@ -15,6 +15,7 @@ export default function Checkout() {
     const [mode, setMode] = useState("UPI")
     const [user, setuser] = useState({})
     const [cart, setcart] = useState([])
+    const [deliveryEstimate, setDeliveryEstimate] = useState({ pincode: '', estimatedDate: null, label: '' })
     const [subtotal, setSubtotal] = useState(0)
     const [shipping, setshipping] = useState(0)
     const [placingOrder, setplacingOrder] = useState(false)
@@ -32,6 +33,7 @@ export default function Checkout() {
 
     const users = useSelector((state) => state.UserStateData)
     const carts = useSelector((state) => (state.CartStateData && state.CartStateData.items) ? state.CartStateData.items : [])
+    const cartDeliveryEstimate = useSelector((state) => state.CartStateData && state.CartStateData.deliveryEstimate ? state.CartStateData.deliveryEstimate : {})
     const { membershipType } = useMembership()
 
     const dispatch = useDispatch()
@@ -101,11 +103,21 @@ export default function Checkout() {
         return cart.reduce((acc, item) => acc + Number(item.quantity ?? item.qty ?? 1), 0)
     }, [cart])
 
+    // Use backend deliveryEstimate from cart (same as Cart page)
     const estimatedDelivery = useMemo(() => {
-        const d = new Date()
-        d.setDate(d.getDate() + 4)
-        return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
-    }, [])
+        if (deliveryEstimate && deliveryEstimate.estimatedDate) {
+            const dt = new Date(deliveryEstimate.estimatedDate)
+            return dt.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
+        }
+        return ''
+    }, [deliveryEstimate])
+
+    // Real-time update: whenever cartDeliveryEstimate changes, update deliveryEstimate state
+    useEffect(() => {
+        if (cartDeliveryEstimate && cartDeliveryEstimate.estimatedDate) {
+            setDeliveryEstimate(cartDeliveryEstimate)
+        }
+    }, [cartDeliveryEstimate])
 
     const deliverySlots = useMemo(() => ([
         'Morning 9 AM - 12 PM',
@@ -146,6 +158,13 @@ export default function Checkout() {
 
         const userData = users.find((item) => String(item.id || item._id) === String(userId))
         if (userData) setuser(userData)
+
+        // Get deliveryEstimate from Redux cart state (backend value)
+        if (cartDeliveryEstimate && cartDeliveryEstimate.estimatedDate) {
+            setDeliveryEstimate(cartDeliveryEstimate)
+        } else {
+            setDeliveryEstimate({ pincode: '', estimatedDate: null, label: '' })
+        }
 
         if (carts && carts.length > 0) {
             setcart(carts)
@@ -407,7 +426,7 @@ export default function Checkout() {
                         <h3 className="mb-1">Final step for your curated order</h3>
                         <p className="mb-0">Every detail reviewed before your order is confirmed.</p>
                     </div>
-                    <div className="eta-chip">Estimated Delivery: <strong>{estimatedDelivery}</strong></div>
+                    <div className="eta-chip">Estimated Delivery: <strong>{estimatedDelivery || '—'}</strong></div>
                 </div>
 
                 <div className="row">
@@ -420,7 +439,7 @@ export default function Checkout() {
                             <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                 <h4 className="font-weight-bold mb-0">Delivery Details</h4>
                                 <div className="d-flex align-items-center gap-2">
-                                    <button type="button" className="address-edit-link" onClick={() => navigate('/update-profile')}>
+                                    <button type="button" className="address-edit-link" onClick={() => navigate('/update-profile', { state: { from: 'checkout' } })}>
                                         Edit address
                                     </button>
                                     <span className="verified-pill">Verified Account</span>

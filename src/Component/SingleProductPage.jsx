@@ -649,21 +649,41 @@ export default function SingleProductPage() {
     }
 
     function addToCart() {
-        if (!localStorage.getItem("login")) {
-            navigate("/login", { state: { from: location.pathname } })
-        } else {
-            const userId = localStorage.getItem("userid")
-            const productId = p.id || p._id || id
-        const eliteDiscountedPrice = membershipType === 'Elite' ? Math.round(Number(p.finalprice || 0) * 0.9) : Number(p.finalprice || 0)
-            let d = cartItems.find((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId))
-            if (d) {
-                navigate("/cart")
-            } else {
-          let item = { userId, productId, quantity: Number(qty), price: eliteDiscountedPrice }
-                dispatch(addCart(item))
-                navigate("/cart")
-            }
+      if (!localStorage.getItem("login")) {
+        navigate("/login", { state: { from: location.pathname } })
+      } else {
+        const userId = localStorage.getItem("userid")
+        const productId = p.id || p._id || id
+        const size = selectedSize || p.size || "";
+        const color = selectedColor || p.color || "";
+        if (!size || !color) {
+          alert("Please select both size and color before adding to cart.");
+          return;
         }
+        const eliteDiscountedPrice = membershipType === 'Elite' ? Math.round(Number(p.finalprice || 0) * 0.9) : Number(p.finalprice || 0)
+        let d = cartItems.find((item) =>
+          String(item.productid) === String(productId) &&
+          String(item.userid) === String(userId) &&
+          String(item.size || "") === String(size) &&
+          String(item.color || "") === String(color)
+        );
+        if (d) {
+          dispatch(getCart());
+          navigate("/cart");
+        } else {
+          let item = {
+            userId,
+            productId,
+            quantity: Number(qty),
+            price: eliteDiscountedPrice,
+            size,
+            color
+          }
+          console.log("Add to Cart Payload:", item); // Debug log
+          dispatch(addCart(item))
+          navigate("/cart")
+        }
+      }
     }
 
     function addToWishlist() {

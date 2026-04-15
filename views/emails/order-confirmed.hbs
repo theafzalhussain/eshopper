@@ -1,209 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Order Confirmed - {{orderId}}</title>
-  <style>
-    {{> theme_tokens}}
-    body{margin:0;padding:0;background:#050608;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
-    table{border-collapse:collapse;}
-    img{max-width:100%;height:auto;border:0;display:block;}
-    .wrap{width:100%;background:#050608;padding:16px 6px;}
-    .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
-    .top{padding:16px 20px;background:linear-gradient(120deg,#0d2315,#12311f,#1b3a2b);}
-    .brandmark{display:inline-table;vertical-align:middle;border-collapse:collapse;}
-    .brandmark td{padding:0;vertical-align:top;}
-    .brandmark-e-cell{padding-right:8px !important;}
-    .brandmark-e{background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%);color:#fff;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:800;border-radius:4px;border-right:3px solid #d4af37;box-shadow:0 6px 16px rgba(15,23,42,0.22);line-height:34px;}
-    .brandmark-text{display:table-cell;line-height:1;}
-    .brandmark-name{display:block;font-weight:800;letter-spacing:2.4px;font-size:18px;color:#f5f7fb;line-height:1;}
-    .brandmark-tag{display:block;font-size:7px;letter-spacing:1.8px;color:#d4af37;font-weight:700;margin-top:2px;line-height:1.1;}
-    .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#dbffe8;border:1px solid #4aba65;background:#2f8d44;padding:7px 12px;border-radius:999px;}
-    .hero{background:#46b14d;color:#fff;text-align:center;padding:22px 12px;}
-    .hero .t{font-size:48px;font-weight:800;line-height:1;letter-spacing:.4px;}
-    .hero .s{font-size:13px;opacity:.96;margin-top:8px;}
-    .section{padding:22px 20px;border-top:1px solid #272a30;}
-    .title{margin:0 0 12px;font-size:44px;line-height:1.06;text-align:center;}
-    .sub{text-align:center;color:#d6dae2;font-size:17px;line-height:1.62;margin:0;}
-    .arrival{margin:18px auto 0;max-width:360px;background:#e0bf3f;color:#fff;border-radius:14px;text-align:center;padding:14px;}
-    .arrival .h{font-size:14px;font-weight:700;letter-spacing:1px;}
-    .arrival .d{font-size:50px;font-weight:800;line-height:1;margin-top:6px;}
-    .arrival .s{font-size:14px;margin-top:8px;}
-    .promise{background:#032312;border-top:1px solid #0f4f2a;border-bottom:1px solid #0f4f2a;padding:18px 12px;}
-    .promise h3{margin:0 0 14px;text-align:center;color:#2fe06f;font-size:32px;}
-    .pgrid{width:100%;}
-    .pgrid td{width:33.33%;text-align:center;color:#dce9df;padding:8px 6px;border-right:1px solid #1e6a3f;vertical-align:top;}
-    .pgrid td:last-child{border-right:none;}
-    .pgrid .i{font-size:30px;display:block;margin-bottom:6px;}
-    .pgrid .t{font-size:31px;font-weight:700;line-height:1.1;}
-    .pgrid .d{font-size:15px;color:#adc4b5;line-height:1.45;margin-top:6px;}
-    .progress-track{margin-top:14px;padding:18px;border:1px solid #263043;border-radius:18px;background:linear-gradient(180deg,#0e131b 0%,#0a1016 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.03);}
-    .progress-head-row{width:100%;border-collapse:collapse;margin-bottom:14px;}
-    .progress-head-title{color:#f5d15d;font-size:18px;letter-spacing:.5px;font-weight:800;text-transform:uppercase;}
-    .progress-pill{font-size:11px;padding:6px 10px;border-radius:999px;background:rgba(245,209,93,.12);border:1px solid rgba(245,209,93,.25);color:#ffe8a3;white-space:nowrap;}
-    .progress-grid{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;}
-    .progress-grid td{padding:0 4px;vertical-align:top;}
-    .step-card{position:relative;border:1px solid rgba(255,255,255,.06);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));padding:14px 10px 12px;text-align:center;min-height:122px;}
-    .step-card.done{border-color:rgba(63,208,106,.28);background:linear-gradient(180deg,rgba(63,208,106,.12),rgba(255,255,255,.018));box-shadow:0 0 0 1px rgba(63,208,106,.04),0 12px 24px rgba(0,0,0,.22);}
-    .step-card.active{border-color:rgba(76,163,255,.28);background:linear-gradient(180deg,rgba(76,163,255,.12),rgba(255,255,255,.018));box-shadow:0 0 0 1px rgba(76,163,255,.04),0 12px 24px rgba(0,0,0,.22);}
-    .step-card.pending{opacity:.92;}
-    .step-dot{width:44px;height:44px;margin:0 auto 10px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;border:2px solid transparent;box-sizing:border-box;}
-    .step-dot.done{background:linear-gradient(145deg,#3fe06d 0%,#24b45c 100%);border-color:#79f29d;box-shadow:0 10px 22px rgba(36,180,92,.30),0 0 0 7px rgba(63,224,109,.10);}
-    .step-dot.active{background:linear-gradient(145deg,#62b2ff 0%,#3190eb 100%);border-color:#a7d4ff;box-shadow:0 10px 22px rgba(49,144,235,.30),0 0 0 7px rgba(98,178,255,.10);}
-    .step-dot.pending{background:linear-gradient(145deg,#1c2230 0%,#121722 100%);border-color:#5c6477;color:#98a2b5;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);}
-    .step-copy{min-height:52px;display:flex;flex-direction:column;justify-content:flex-start;}
-    .step-label{font-size:11px;letter-spacing:1px;font-weight:800;color:#9ca6b8;text-transform:uppercase;line-height:1.35;}
-    .step-label.done{color:#72f09c;}
-    .step-label.active{color:#9ed0ff;}
-    .step-label.pending{color:#7f8897;}
-    .progress-bar{margin-top:14px;height:8px;background:#202532;border-radius:999px;overflow:hidden;}
-    .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#3fe06d 0%,#5ab8ff 55%,#a78bfa 100%);box-shadow:0 0 18px rgba(90,184,255,.35);}
-    .progress-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:#92a0b6;line-height:1.4;}
-    .progress-foot strong{color:#fff;}
-    .box{border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;}
-    .heading{color:#f0c84a;font-size:34px;margin:0 0 14px;}
-    .items{width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;}
-    .items th{text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;}
-    .items td{padding:12px 10px;font-size:15px;color:#eceef2;border-bottom:1px solid #2c3039;vertical-align:top;}
-    .items tr:last-child td{border-bottom:none;}
-    .thumb{width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;}
-    .dim{color:#b4bac6;}
-    .totals{margin-top:14px;border:1px solid #343844;border-radius:12px;padding:16px;}
-    .totals table{width:100%;}
-    .totals td{padding:5px 0;color:#d5d9e2;font-size:16px;}
-    .totals .final td{border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:48px;font-weight:800;}
-    .totals .paid{color:#21c05c;font-size:14px;text-align:right;padding-top:0;}
-    .grid{width:100%;margin-top:14px;}
-    .grid td{width:50%;vertical-align:top;}
-    .mini{border:1px solid #0f6f35;background:#101a12;border-radius:12px;padding:14px;margin-right:8px;}
-    .mini2{border:1px solid #343944;background:#111317;border-radius:12px;padding:14px;margin-left:8px;}
-    .k{font-size:13px;color:#36d76d;margin-bottom:8px;font-weight:700;letter-spacing:.3px;}
-    .k2{font-size:13px;color:#efcb4a;margin-bottom:8px;font-weight:700;letter-spacing:.3px;}
-    .v{color:#e7e9ed;font-size:16px;line-height:1.45;}
-    .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;}
-    .btn-primary{background:#4ab75a;color:#fff;}
-    .btn-secondary{background:#151820;color:#f0d07a;border:1px solid #756225;}
-    .tx{color:#e0bc52;}
-    .foot{background:#052712;padding:20px 16px;border-top:1px solid #0b5a2a;text-align:center;}
-    .community{color:#d6f7e0;font-size:16px;}
-    .stars{color:#f4d64b;font-size:28px;letter-spacing:2px;margin:8px 0;}
-    .btn-inst{display:inline-block;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:18px;}
-    .assist{padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;}
-    .assist h4{margin:0 0 10px;font-size:36px;color:#f1f2f5;}
-    .smallbtn{display:inline-block;margin:6px 6px 0;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;}
-    .wa{background:#25d366;color:#0f1912;}
-    .mail{background:#121620;color:#e7d391;border:1px solid #715f2a;}
-    .footnote{text-align:center;color:#9ea4b2;font-size:12px;padding:18px 14px 24px;border-top:1px solid #272a30;line-height:1.7;}
-    .footnote a{color:#d4b75a;text-decoration:none;}
-    @media only screen and (max-width:620px){
-      .status{float:none;display:inline-block;margin-top:8px;}
-      .hero .t{font-size:38px;}
-      .title{font-size:34px;}
-      .sub{font-size:16px;}
-      .arrival .d{font-size:42px;}
-      .pgrid td{display:block;width:100%;border-right:none;border-top:1px solid #1e6a3f;}
-      .pgrid tr td:first-child{border-top:none;}
-      .grid td{display:block;width:100%;}
-      .mini,.mini2{margin:0 0 10px 0;}
-      .btn{font-size:21px;}
-      .assist h4{font-size:28px;}
-      .totals .final td{font-size:36px;}
-    }
-  </style>
+  <!-- All CSS is now inlined below for maximum compatibility -->
 </head>
-<body>
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} confirmed. Premium preparation is in progress.</div>
-  <table class="wrap" role="presentation" width="100%"><tr><td>
-    <table class="card" role="presentation" align="center">
-      <tr><td class="top"><table role="presentation" class="brandmark" cellpadding="0" cellspacing="0"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table><span class="status">CONFIRMED</span></td></tr>
-      <tr><td class="hero"><div class="t">ORDER CONFIRMED</div><div class="s">Order #{{orderId}} | {{orderDate}}</div></td></tr>
 
-      <tr><td class="section">
-        <h2 class="title">Hi {{customerName}}!</h2>
-        <p class="sub">Your order has been confirmed and is now being prepared by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.</p>
-        <div class="arrival"><div class="h">EXPECTED ARRIVAL</div><div class="d">{{expectedArrival}}</div><div class="s">3-5 Business Days</div></div>
-
-        <div class="progress-track">
-          <table class="progress-head-row" role="presentation"><tr><td class="progress-head-title">DELIVERY PROGRESS</td><td align="right"><span class="progress-pill">{{progressPercent}}% COMPLETE</span></td></tr></table>
-          <table class="progress-grid" role="presentation"><tr>
-            {{#each progressSteps}}
-            <td>
-              <div class="step-card {{state}}">
-                <span class="step-dot {{state}}">{{{icon}}}</span>
-                <div class="step-copy"><div class="step-label {{state}}">{{label}}</div></div>
+<body
+  style="margin:0;padding:0;background:#050608;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} confirmed. Premium preparation is
+    in progress.</div>
+  {{> animated-gold-border}}
+  <table role="presentation" width="100%" style="width:100%;background:#050608;padding:16px 6px;">
+    <tr>
+      <td>
+        <table role="presentation" align="center"
+          style="width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;">
+          <tr>
+            <td style="padding:16px 20px;background:linear-gradient(120deg,#0d2315,#12311f,#1b3a2b);">
+              <table role="presentation" style="display:inline-table;vertical-align:middle;border-collapse:collapse;">
+                <tr>
+                  <td style="padding-right:8px;vertical-align:top;">
+                    <span
+                      style="background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%);color:#fff;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:800;border-radius:4px;border-right:3px solid #d4af37;box-shadow:0 6px 16px rgba(15,23,42,0.22);line-height:34px;">E</span>
+                  </td>
+                  <td style="vertical-align:top;">
+                    <span
+                      style="display:block;font-weight:800;letter-spacing:2.4px;font-size:18px;color:#f5f7fb;line-height:1;">SHOPPER</span>
+                    <span
+                      style="display:block;font-size:7px;letter-spacing:1.8px;color:#d4af37;font-weight:700;margin-top:2px;line-height:1.1;">BOUTIQUE
+                      LUXE</span>
+                  </td>
+                </tr>
+              </table>
+              <span
+                style="float:right;display:inline-block;font-size:12px;font-weight:700;color:#dbffe8;border:1px solid #4aba65;background:#2f8d44;padding:7px 12px;border-radius:999px;">CONFIRMED</span>
+            </td>
+          </tr>
+          <tr>
+            <td
+              style="background:linear-gradient(120deg,#151515,#262117);border-bottom:3px solid #d4af37;text-align:center;padding:22px 12px;">
+              <div
+                style="font-family:'Brush Script MT',cursive,Georgia,serif;font-size:28px;color:#d4af37;margin-bottom:6px;">
+                Thank you, {{customerName}}!</div>
+              <div style="font-size:38px;font-weight:800;line-height:1;letter-spacing:.4px;">ORDER CONFIRMED</div>
+              <div style="color:#f8d98a;font-size:16px;opacity:.96;margin-top:8px;">Order #{{orderId}} | {{orderDate}}
               </div>
             </td>
-            {{/each}}
-          </tr></table>
-          <div class="progress-bar"><div class="progress-fill" style="width: {{progressPercent}}%;"></div></div>
-          <div class="progress-foot"><span>Live status synced from backend</span><strong>{{progressPercent}}% done</strong></div>
-        </div>
-      </td></tr>
+          </tr>
 
-      <tr><td class="promise">
-        <h3>THE LUXE PROMISE</h3>
-        <table class="pgrid" role="presentation"><tr>
-          <td><span class="i">&#10003;</span><div class="t">Quality Check</div><div class="d">10-point inspection by experts</div></td>
-          <td><span class="i">&#9671;</span><div class="t">Premium Packaging</div><div class="d">Eco-friendly luxury boxes</div></td>
-          <td><span class="i">&#9679;</span><div class="t">100% Authentic</div><div class="d">Guaranteed genuine products</div></td>
-        </tr></table>
-      </td></tr>
+          <tr>
+            <td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
+              <h2 class="title">Hi {{customerName}}!</h2>
+              <p class="sub">Your order has been confirmed and is now being prepared by our expert team. Every item will
+                undergo our strict 10-point quality inspection before dispatch.</p>
+              <div class="arrival">
+                <div class="h">EXPECTED ARRIVAL</div>
+                <div class="d">{{expectedArrival}}</div>
+                <div class="s">3-5 Business Days</div>
+              </div>
 
-      <tr><td class="section">
-        <div class="box">
-          <h3 class="heading">ORDER DETAILS</h3>
-          <table class="items" role="presentation" width="100%">
-            <tr><th>ITEM</th><th>DETAILS</th><th>QTY</th><th>PRICE</th></tr>
-            {{#each items}}
-            <tr>
-              <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" /></td>
-              <td><strong>{{name}}</strong><br><span class="dim">Size: {{size}}</span><br><span class="dim">Color: {{color}}</span></td>
-              <td>{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
-              <td>INR {{subtotal}}</td>
-            </tr>
-            {{/each}}
-          </table>
+              <div class="progress-track">
+                <table class="progress-head-row" role="presentation">
+                  <tr>
+                    <td class="progress-head-title">DELIVERY PROGRESS</td>
+                    <td align="right"><span class="progress-pill">{{progressPercent}}% COMPLETE</span></td>
+                  </tr>
+                </table>
+                <table class="progress-grid" role="presentation">
+                  <tr>
+                    {{#each progressSteps}}
+                    <td>
+                      <div class="step-card {{state}}">
+                        <span class="step-dot {{state}}">{{{icon}}}</span>
+                        <div class="step-copy">
+                          <div class="step-label {{state}}">{{label}}</div>
+                        </div>
+                      </div>
+                    </td>
+                    {{/each}}
+                  </tr>
+                </table>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: {{progressPercent}}%;"></div>
+                </div>
+                <div class="progress-foot"><span>Live status synced from backend</span><strong>{{progressPercent}}%
+                    done</strong></div>
+              </div>
+            </td>
+          </tr>
 
-          <div class="totals"><table role="presentation">
-            <tr><td>Item Price</td><td align="right">INR {{subtotal}}</td></tr>
-            <tr><td>Shipping Charges</td><td align="right">INR {{shippingCharges}}</td></tr>
-            <tr><td>GST (Included)</td><td align="right">INR {{gst}}</td></tr>
-            <tr class="final"><td>Total Amount Paid</td><td align="right">INR {{totalPaid}}</td></tr>
-            <tr><td>Payment Mode: {{paymentMethod}}</td><td class="paid">&#10003; PAID</td></tr>
-          </table></div>
+          <tr>
+            <td class="promise"
+              style="background:#032312;border-top:1px solid #0f4f2a;border-bottom:1px solid #0f4f2a;padding:18px 12px;">
+              <h3>THE LUXE PROMISE</h3>
+              <table class="pgrid" role="presentation">
+                <tr>
+                  <td><span class="i">&#10003;</span>
+                    <div class="t">Quality Check</div>
+                    <div class="d">10-point inspection by experts</div>
+                  </td>
+                  <td><span class="i">&#9671;</span>
+                    <div class="t">Premium Packaging</div>
+                    <div class="d">Eco-friendly luxury boxes</div>
+                  </td>
+                  <td><span class="i">&#9679;</span>
+                    <div class="t">100% Authentic</div>
+                    <div class="d">Guaranteed genuine products</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-          <table class="grid" role="presentation"><tr>
-            <td><div class="mini"><div class="k">SHIPPING ADDRESS</div><div class="v">{{shippingName}}<br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>Phone: {{shippingPhone}}</div></div></td>
-            <td><div class="mini2"><div class="k2">BILLING INFO</div><div class="v">{{customerName}}<br>Email: {{customerEmail}}<br>Transaction ID:<br><span class="tx">{{transactionId}}</span></div></div></td>
-          </tr></table>
+          <tr>
+            <td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
+              <div class="box" style="border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;">
+                <h3 class="heading" style="color:#f0c84a;font-size:34px;margin:0 0 14px;">ORDER DETAILS</h3>
+                <table class="items" role="presentation" width="100%"
+                  style="width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;">
+                  <tr>
+                    <th
+                      style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">
+                      ITEM</th>
+                    <th
+                      style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">
+                      DETAILS</th>
+                    <th
+                      style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">
+                      QTY</th>
+                    <th
+                      style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">
+                      PRICE</th>
+                  </tr>
+                  {{#each items}}
+                  <tr>
+                    <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}"
+                        style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;max-width:100%;display:block;" />
+                    </td>
+                    <td><strong>{{name}}</strong><br><span class="dim" style="color:#b4bac6;">Size:
+                        {{size}}</span><br><span class="dim" style="color:#b4bac6;">Color: {{color}}</span></td>
+                    <td>{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
+                    <td>INR {{subtotal}}</td>
+                  </tr>
+                  {{/each}}
+                </table>
 
-          <a class="btn btn-primary" href="{{trackingUrl}}">TRACK YOUR ORDER</a>
-          <a class="btn btn-secondary" href="{{confirmationInvoiceUrl}}">VIEW RECEIPT</a>
-        </div>
-      </td></tr>
+                <div class="totals" style="margin-top:14px;border:1px solid #343844;border-radius:12px;padding:16px;">
+                  <table role="presentation" style="width:100%;">
+                    <tr>
+                      <td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Item Price</td>
+                      <td align="right" style="padding:5px 0;color:#d5d9e2;font-size:16px;">INR {{subtotal}}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Shipping Charges</td>
+                      <td align="right" style="padding:5px 0;color:#d5d9e2;font-size:16px;">INR {{shippingCharges}}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:5px 0;color:#d5d9e2;font-size:16px;">GST (Included)</td>
+                      <td align="right" style="padding:5px 0;color:#d5d9e2;font-size:16px;">INR {{gst}}</td>
+                    </tr>
+                    <tr class="final">
+                      <td
+                        style="border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:48px;font-weight:800;">
+                        Total Amount Paid</td>
+                      <td align="right"
+                        style="border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:48px;font-weight:800;">
+                        INR {{totalPaid}}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Payment Mode: {{paymentMethod}}</td>
+                      <td class="paid" style="color:#21c05c;font-size:14px;text-align:right;padding-top:0;">&#10003;
+                        PAID</td>
+                    </tr>
+                  </table>
+                </div>
 
-      <tr><td class="foot">
-        <div class="community">Join our 50,000+ Luxe community</div>
-        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <a class="btn-inst" href="{{instagramUrl}}">Follow us on Instagram</a>
-      </td></tr>
+                <table class="grid" role="presentation" style="width:100%;margin-top:14px;">
+                  <tr>
+                    <td style="width:50%;vertical-align:top;">
+                      <div class="mini"
+                        style="border:1px solid #0f6f35;background:#101a12;border-radius:12px;padding:14px;margin-right:8px;">
+                        <div class="k"
+                          style="font-size:13px;color:#36d76d;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">
+                          SHIPPING ADDRESS</div>
+                        <div class="v" style="color:#e7e9ed;font-size:16px;line-height:1.45;">
+                          {{shippingName}}<br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>Phone:
+                          {{shippingPhone}}</div>
+                      </div>
+                    </td>
+                    <td style="width:50%;vertical-align:top;">
+                      <div class="mini2"
+                        style="border:1px solid #343944;background:#111317;border-radius:12px;padding:14px;margin-left:8px;">
+                        <div class="k2"
+                          style="font-size:13px;color:#efcb4a;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">
+                          BILLING INFO</div>
+                        <div class="v" style="color:#e7e9ed;font-size:16px;line-height:1.45;">{{customerName}}<br>Email:
+                          {{customerEmail}}<br>Transaction ID:<br><span class="tx"
+                            style="color:#e0bc52;">{{transactionId}}</span></div>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
 
-      <tr><td class="assist">
-        <h4>Need Assistance?</h4>
-        <a class="smallbtn wa" href="{{whatsappUrl}}">WhatsApp Us</a>
-        <a class="smallbtn mail" href="mailto:{{supportEmail}}">Email Support</a>
-      </td></tr>
+                <a class="btn btn-primary" href="{{trackingUrl}}"
+                  style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#4ab75a;color:#fff;">TRACK
+                  YOUR ORDER</a>
+                <a class="btn btn-secondary" href="{{confirmationInvoiceUrl}}"
+                  style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#151820;color:#f0d07a;border:1px solid #756225;">VIEW
+                  RECEIPT</a>
+              </div>
+            </td>
+          </tr>
 
-      <tr><td class="footnote">
-        <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
-        <div>{{companyAddress}}</div>
-        <div>GSTIN: {{companyGstin}} | CIN: {{companyCin}}</div>
-        <div><a href="{{privacyPolicyUrl}}">Privacy</a> | <a href="{{termsUrl}}">Terms</a> | <a href="{{unsubscribeUrl}}">Unsubscribe</a></div>
-      </td></tr>
-    </table>
-  </td></tr></table>
+          <tr>
+            <td class="foot"
+              style="padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;">
+              <div class="community" style="color:#d6f7e0;font-size:16px;">Join our 50,000+ Luxe community</div>
+              <div class="stars" style="color:#f4d64b;font-size:28px;letter-spacing:2px;margin:8px 0;">
+                &#9733;&#9733;&#9733;&#9733;&#9733;</div>
+              <a class="btn-inst" href="{{instagramUrl}}"
+                style="display:inline-block;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:18px;">Follow
+                us on Instagram</a>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="assist" style="padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;">
+              <h4 style="margin:0 0 10px;font-size:36px;color:#f1f2f5;">Need Assistance?</h4>
+              <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
+                <a href="{{whatsappUrl}}"
+                  style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#25d366,#1ed66d);color:#0f1912;text-align:center;box-shadow:0 2px 8px rgba(34,139,34,0.08);">WhatsApp
+                  Support</a>
+                <a href="{{instagramUrl}}"
+                  style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-align:center;box-shadow:0 2px 8px rgba(216,78,228,0.08); margin-left:8px;">Instagram</a>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="footnote"
+              style="text-align:center;color:#9ea4b2;font-size:12px;padding:18px 14px 24px;border-top:1px solid #272a30;line-height:1.7;">
+              {{> review-snippet}}
+              {{> social-footer}}
+              {{> brand-story-footer}}
+              <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
+              <div>{{companyAddress}}</div>
+              <div>GSTIN: {{companyGstin}} | CIN: {{companyCin}}</div>
+              <div><a href="{{privacyPolicyUrl}}">Privacy</a> | <a href="{{termsUrl}}">Terms</a> | <a
+                  href="{{unsubscribeUrl}}">Unsubscribe</a></div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
+
 </html>
-
-

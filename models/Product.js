@@ -7,7 +7,7 @@ const productSchema = new mongoose.Schema({
     subcategory: { type: String },
     brand: { type: String },
     color: { type: String },
-    size: { type: String },
+    size: [{ type: String }],
     baseprice: { type: Number },
     discount: { type: Number },
     finalprice: { type: Number, required: true },

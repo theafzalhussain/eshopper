@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { addMaincategory, getMaincategory } from '../../Store/ActionCreaters/MaincategoryActionCreators'
@@ -7,6 +8,7 @@ import { motion } from 'framer-motion'
 import { Layers, ArrowLeft, PlusCircle } from 'lucide-react'
 
 export default function AdminAddMaincategory() {
+    const toast = useToast();
     const [name, setname] = useState("")
     const maincategory = useSelector((state) => state.MaincategoryStateData)
     const navigate = useNavigate()
@@ -17,10 +19,10 @@ export default function AdminAddMaincategory() {
         // Duplicate check logic
         let item = maincategory.find((x) => x.name.toLowerCase() === name.toLowerCase())
         if (item) {
-            alert("This Main Category already exists!")
+            toast.error("This Main Category already exists!");
         } else {
             dispatch(addMaincategory({ name: name }))
-            alert("Success: New Main Category added to boutique.")
+            toast.success("Success: New Main Category added to boutique.");
             navigate("/admin-maincategory")
         }
     }

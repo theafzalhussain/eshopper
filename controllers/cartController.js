@@ -1,7 +1,7 @@
 // Add item to cart (POST /api/cart)
 exports.addToCart = async (req, res) => {
     try {
-        const { userId, productId, quantity, price } = req.body;
+        const { userId, productId, quantity, price, size, color } = req.body;
         if (!userId || !productId) {
             return res.status(400).json({ success: false, message: 'User ID and Product ID required.' });
         }
@@ -11,13 +11,23 @@ exports.addToCart = async (req, res) => {
         if (!cart) {
             cart = await Cart.create({ user: new mongoose.Types.ObjectId(userId), items: [] });
         }
-        // Check if product already exists in cart
-        const existingItem = cart.items.find(item => item.product.toString() === productId);
+        // Check if product with same size and color exists in cart
+        const existingItem = cart.items.find(item =>
+            item.product.toString() === productId &&
+            String(item.size) === String(size || '') &&
+            String(item.color) === String(color || '')
+        );
         if (existingItem) {
             existingItem.quantity += qty;
             if (normalizedPrice > 0) existingItem.price = normalizedPrice;
         } else {
-            cart.items.push({ product: productId, quantity: qty, price: normalizedPrice > 0 ? normalizedPrice : 0 });
+            cart.items.push({
+                product: productId,
+                quantity: qty,
+                price: normalizedPrice > 0 ? normalizedPrice : 0,
+                size: size || '',
+                color: color || ''
+            });
         }
         await cart.save();
         cart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
@@ -295,8 +305,8 @@ const mapCartItem = (item, userId) => ({
     productid: item.product?._id || item.product,
     userid: userId,
     name: item.product?.name || '',
-    color: item.product?.color || '',
-    size: item.product?.size || '',
+    color: item.color || item.product?.color || '',
+    size: item.size || item.product?.size || '',
     price: Number(item.price || item.product?.finalprice || item.product?.price || 0),
     quantity: Number(item.quantity || 1),
     pic: item.product?.pic1 || '',

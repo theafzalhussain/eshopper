@@ -94,7 +94,8 @@
 <body>
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} is out for delivery and arriving today.</div>
   <table class="wrap" role="presentation" width="100%"><tr><td>
-    <table class="card" role="presentation" align="center">
+    <table class="card" role="presentation" align="center" style="width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;">
+      {{> animated-gold-border}}
       <tr><td class="top"><table role="presentation" class="brandmark" cellpadding="0" cellspacing="0"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table><span class="status">OUT FOR DELIVERY</span></td></tr>
       <tr><td class="hero"><div class="icon">&#10022;</div><div class="t">IT'S ARRIVING TODAY</div><div class="s">Your luxury package is just minutes away</div></td></tr>
 
@@ -102,6 +103,7 @@
         <div class="delivery"><div class="h">DELIVERY IN PROGRESS</div><div class="d">TODAY</div><div class="s">Expected by {{deliveryTimeSlot}}</div></div>
         <h2 class="title">Hi {{customerName}}</h2>
         <p class="sub">Your luxury package is out for delivery and will reach you today. Our delivery partner is on the way to your doorstep.</p>
+        {{> review-snippet}}
 
         <div class="security">
           <h4>SECURITY FIRST</h4>
@@ -136,10 +138,14 @@
             <p><strong>{{shippingName}}</strong><br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>{{shippingPhone}}</p>
           </div>
 
+      
+            {{> social-footer}}
+      
           <div class="live">
             <div style="font-size:48px;">&#9671;</div>
             <div style="color:#c9d0de;font-size:22px;">Live tracking map</div>
-            <a class="btn btn-track" href="{{liveTrackingUrl}}">Track Live Location</a>
+            <a class="btn btn-track" href="{{liveTrackingUrl}}">TRACK LIVE LOCATION</a>
+            <a class="btn btn-secondary" href="{{orderDetailsUrl}}" style="margin-top:10px;">VIEW ORDER DETAILS</a>
           </div>
 
           <table class="btn-row" role="presentation"><tr>
@@ -155,19 +161,28 @@
               <li>Open and inspect items condition.</li>
               <li>Then share OTP/verification code.</li>
             </ul>
+            {{#each items}}
+            <div style="margin:10px 0;">
+              <img class="thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;" />
+              <div style="color:#fff;font-weight:700;margin-top:4px;">{{name}}</div>
+            </div>
+            {{/each}}
           </div>
 
           <div class="ins">100% AUTHENTIC AND INSURED - All deliveries are fully insured during transit.</div>
         </div>
       </td></tr>
 
-      <tr><td class="support">
-        <h4>Questions? We're here to help!</h4>
-        <a class="wa" href="{{whatsappUrl}}">WhatsApp</a>
-        <a class="insta" href="{{instagramUrl}}">Instagram</a>
+      <tr><td class="support" style="padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;">
+        <h4 style="margin:0 0 10px;font-size:30px;color:#f1f2f5;">Questions? We're here to help!</h4>
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
+          <a href="{{whatsappUrl}}" style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#25d366,#1ed66d);color:#0f1912;text-align:center;box-shadow:0 2px 8px rgba(34,139,34,0.08);">WhatsApp Support</a>
+          <a href="{{instagramUrl}}" style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-align:center;box-shadow:0 2px 8px rgba(216,78,228,0.08);">Instagram</a>
+        </div>
       </td></tr>
 
       <tr><td class="foot">
+        {{> brand-story-footer}}
         <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
         <div>{{companyAddress}}</div>
         <div><a href="{{privacyPolicyUrl}}">Privacy</a> &nbsp; | &nbsp; <a href="{{termsUrl}}">Terms</a></div>

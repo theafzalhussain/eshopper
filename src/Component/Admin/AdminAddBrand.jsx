@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { addBrand, getBrand } from '../../Store/ActionCreaters/BrandActionCreators'
@@ -7,6 +8,7 @@ import { motion } from 'framer-motion'
 import { Tag, ArrowLeft, ShieldPlus } from 'lucide-react'
 
 export default function AdminAddBrand() {
+    const toast = useToast();
     const [name, setname] = useState("")
     const brand = useSelector((state) => state.BrandStateData)
     const navigate = useNavigate()
@@ -16,10 +18,10 @@ export default function AdminAddBrand() {
         e.preventDefault()
         let item = brand.find((x) => x.name.toLowerCase() === name.toLowerCase())
         if (item) {
-            alert("This brand is already registered!")
+            toast.error("This brand is already registered!");
         } else {
             dispatch(addBrand({ name: name }))
-            alert("New Brand identity created.")
+            toast.success("New Brand identity created.");
             navigate("/admin-brand")
         }
     }

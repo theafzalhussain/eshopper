@@ -58,7 +58,44 @@ const fallbackFooterData = {
 
 export default function Footer() {
   const toast = useToast()
+  // Robust admin detection (same as Shop.jsx)
   const [role, setRole] = useState(() => String(localStorage.getItem('role') || '').toLowerCase())
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = () => {
+      const isAdminLS = localStorage.getItem("isAdmin");
+      const roleLS = localStorage.getItem("role");
+      const adminEmails = ["admin@gmail.com", "theafzalhussain@gmail.com", "theafzalhussain786@gmail.com"];
+      const adminUserIds = [
+        "1",
+        "admin",
+        "your-admin-id",
+        "699af12865bfff087143211c" // Afzal Hussain's MongoDB ObjectId
+      ];
+      const userEmail = localStorage.getItem("email") || "";
+      const userId = localStorage.getItem("userid") || "";
+      setIsAdmin(
+        isAdminLS === true ||
+        isAdminLS === "true" ||
+        isAdminLS === 1 ||
+        isAdminLS === "1" ||
+        roleLS === "admin" ||
+        roleLS === true ||
+        roleLS === 1 ||
+        roleLS === "1" ||
+        adminEmails.includes(userEmail) ||
+        adminUserIds.includes(userId)
+      );
+    };
+    checkAdmin();
+    window.addEventListener('storage', checkAdmin);
+    window.addEventListener('focus', checkAdmin);
+    return () => {
+      window.removeEventListener('storage', checkAdmin);
+      window.removeEventListener('focus', checkAdmin);
+    };
+  }, []);
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [submittingNewsletter, setSubmittingNewsletter] = useState(false)
   const [footerData, setFooterData] = useState(fallbackFooterData)
@@ -148,7 +185,7 @@ export default function Footer() {
     }))
   }, [footerData.userFeatures])
 
-  const isAdmin = role === 'admin'
+  // (isAdmin state is now used)
 
   useEffect(() => {
     const syncRole = () => setRole(String(localStorage.getItem('role') || '').toLowerCase())

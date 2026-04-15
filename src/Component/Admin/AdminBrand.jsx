@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { useToast } from '../ToastNotification'
 import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
@@ -8,6 +9,7 @@ import { motion } from 'framer-motion'
 import './SystemControlCenter.css'
 
 export default function AdminBrand() {
+    const toast = useToast();
     const brand = useSelector((state) => state.BrandStateData)
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -50,7 +52,12 @@ export default function AdminBrand() {
                                                     <button className="btn btn-sm btn-info rounded-circle mr-2" onClick={() => navigate(`/admin-update-brand/${row.id}`)}>
                                                         <Edit size={14} />
                                                     </button>
-                                                    <button className="btn btn-sm btn-danger rounded-circle" onClick={() => { if (window.confirm("Delete this brand?")) dispatch(deleteBrand({ id: row.id })) }}>
+                                                    <button className="btn btn-sm btn-danger rounded-circle" onClick={async () => {
+                                                        toast.info("Deleting brand...");
+                                                        await dispatch(deleteBrand({ id: row.id }));
+                                                        dispatch(getBrand());
+                                                        toast.success("Brand deleted successfully!");
+                                                    }}>
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </td>

@@ -20,6 +20,10 @@ module.exports = {
         try {
             // Multer fields: req.files.pic1, req.files.pic2, ...
             const body = { ...req.body };
+            // Ensure size is always an array
+            if (body.size && !Array.isArray(body.size)) {
+                body.size = [body.size];
+            }
             // Cloudinary returns file info in req.files
             if (req.files) {
                 if (req.files.pic1 && req.files.pic1[0] && req.files.pic1[0].path) body.pic1 = req.files.pic1[0].path;
@@ -48,7 +52,24 @@ module.exports = {
     // Update product
     updateProduct: async (req, res) => {
         try {
-            const product = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+            // Handle images from req.files (like addProduct)
+            if (req.files) {
+                if (req.files.pic1 && req.files.pic1[0] && req.files.pic1[0].path) req.body.pic1 = req.files.pic1[0].path;
+                if (req.files.pic2 && req.files.pic2[0] && req.files.pic2[0].path) req.body.pic2 = req.files.pic2[0].path;
+                if (req.files.pic3 && req.files.pic3[0] && req.files.pic3[0].path) req.body.pic3 = req.files.pic3[0].path;
+                if (req.files.pic4 && req.files.pic4[0] && req.files.pic4[0].path) req.body.pic4 = req.files.pic4[0].path;
+            }
+            // Ensure size is always an array
+            const updateData = { ...req.body };
+            if (updateData.size && !Array.isArray(updateData.size)) {
+                updateData.size = [updateData.size];
+            }
+            // Convert numeric fields
+            if (updateData.baseprice) updateData.baseprice = Number(updateData.baseprice);
+            if (updateData.discount) updateData.discount = Number(updateData.discount);
+            if (updateData.finalprice) updateData.finalprice = Number(updateData.finalprice);
+
+            const product = await Product.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true });
             // Emit dashboard update event
             if (typeof req.app.get === 'function') {
                 const io = req.app.get('io');
@@ -56,7 +77,7 @@ module.exports = {
             }
             res.json(product);
         } catch (err) {
-            res.status(400).json({ error: 'Failed to update product' });
+            res.status(400).json({ error: 'Failed to update product', details: err.message });
         }
     },
 

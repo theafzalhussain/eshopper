@@ -39,41 +39,61 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="top">ORDER CONFIRMATION</div>
-      <div class="hero">ORDER CONFIRMED</div>
-      <div class="sec">
-        <h2>Hi {{userName}}</h2>
-        <p>Your order has been confirmed and is now in processing.</p>
-        <div class="meta">
-          <div>Order ID: {{orderId}}</div>
-          <div>Payment Method: {{paymentMethod}}</div>
-          <div>Final Amount: INR {{finalAmount}}</div>
-          <div>Shipping Address: {{shippingAddress}}</div>
-          <div>Order Date: {{orderDate}}</div>
-          <div>Estimated Arrival: {{estimatedArrival}}</div>
-          <div>Delivery Partner: {{deliveryPartner}}</div>
+      <div class="top" style="background:linear-gradient(120deg,#232526,#414345 80%);box-shadow:0 2px 16px 0 #0008,0 1.5px 0 #ffd70033 inset;border-bottom:2px solid #ffd700;letter-spacing:1.2px;text-shadow:0 1px 8px #000a;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span>ORDER CONFIRMATION</span>
+        <table role="presentation" class="brandmark" cellpadding="0" cellspacing="0"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table>
+      </div>
+      <div class="hero" style="background:linear-gradient(90deg,#ffd700 10%,#232526 90%);color:#232526;text-shadow:0 2px 8px #ffd70055,0 1px 0 #fff8;letter-spacing:2px;font-family:'Cinzel',serif;font-size:38px;">ORDER CONFIRMED</div>
+      <div class="sec" style="background:rgba(20,20,20,0.98);backdrop-filter:blur(2px);box-shadow:0 2px 16px 0 #ffd70022;border-radius:0 0 18px 18px;padding:32px 28px 28px 28px;">
+        <h2 style="color:#ffd700;font-family:'Cinzel',serif;text-shadow:0 2px 8px #ffd70055;font-size:2.1rem;margin:0 0 12px 0;letter-spacing:1px;">Hi {{userName}}!</h2>
+        <p style="font-size:1.1rem;color:#fff;font-weight:500;margin:0 0 18px 0;line-height:1.7;">Your order has been confirmed and is now being prepared by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.</p>
+        <div style="margin-bottom:18px;">
+          <div style="color:#ffd700;font-weight:700;font-size:1.08rem;margin-bottom:2px;">EXPECTED ARRIVAL</div>
+          <div style="color:#fff;font-size:1.05rem;font-weight:600;">{{estimatedArrival}}</div>
+          <div style="color:#fff;font-size:0.98rem;">3-5 Business Days</div>
         </div>
-        <table class="items" role="presentation">
-          <tr><th>Product</th><th>Qty</th><th>Price</th></tr>
-          {{#each products}}
-          <tr><td>{{this.name}}</td><td>{{#if this.quantity}}{{this.quantity}}{{else}}{{this.qty}}{{/if}}</td><td>INR {{this.price}}</td></tr>
-          {{/each}}
-        </table>
-        <div class="progress-track">
-          <div class="progress-head">DELIVERY PROGRESS</div>
-          <table class="progress-grid" role="presentation"><tr>
+        <div class="progress-track" style="background:linear-gradient(140deg,#232526,#1a1a1a 80%);border:1.5px solid #ffd700;box-shadow:0 1px 8px #ffd70022;margin-bottom:18px;">
+          <div class="progress-head" style="color:#ffd700;text-shadow:0 1px 8px #ffd70055;font-size:1.1rem;">DELIVERY PROGRESS <span style="font-size:1rem;color:#fff;font-weight:400;">{{progressPercent}}% COMPLETE</span></div>
+          <table class="progress-grid" role="presentation" style="margin-bottom:2px;"><tr>
             {{#each progressSteps}}
             <td>
-              <span class="p-icon {{state}}">{{{icon}}}</span>
-              <div class="p-label {{state}}">{{label}}</div>
+              <span class="p-icon {{state}}" style="border-width:2px;{{#if (eq state 'done')}}background:#ffd700;border-color:#ffd700;color:#232526;{{/if}}{{#if (eq state 'active')}}background:#fff;border-color:#ffd700;color:#232526;{{/if}}{{#if (eq state 'pending')}}background:#232526;border-color:#ffd70055;color:#ffd70099;{{/if}}font-size:20px;width:38px;height:38px;">{{{icon}}}</span>
+              <div class="p-label {{state}}" style="color:#ffd700;opacity:{{#if (eq state 'pending')}}0.6{{else}}1{{/if}};font-size:12px;letter-spacing:0.5px;">{{label}}</div>
             </td>
             {{/each}}
           </tr></table>
-          <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+          <div class="p-bar" style="background:#ffd70033;height:5px;"><div class="p-fill" style="width: {{progressPercent}}%;background:linear-gradient(90deg,#ffd700,#fffbe6);height:100%;"></div></div>
+          <div style="margin-top:8px;font-size:13px;color:#ffd700b0;text-align:center;">Live status synced from backend <b style="color:#ffd700;">{{progressPercent}}% done</b></div>
         </div>
-        <a class="btn" href="{{trackingUrl}}">Track Your Order</a>
+        <!-- Luxe Promise Section -->
+        <div style="margin-top:18px;padding:18px 14px;background:linear-gradient(120deg,#0a1a0a,#0d2a1f 80%);border-radius:14px;border:1.5px solid #ffd700;box-shadow:0 1px 8px #ffd70022;">
+          <div style="font-size:20px;font-weight:800;color:#ffd700;font-family:'Cinzel',serif;margin-bottom:10px;letter-spacing:1px;">THE LUXE PROMISE</div>
+          <table style="width:100%;border:none;background:none;color:#fff;font-size:15px;">
+            <tr>
+              <td style="text-align:center;padding:8px 0;vertical-align:top;">
+                <span style="font-size:22px;color:#ffd700;">✓</span><br/>
+                <span style="font-weight:700;">Quality Check</span><br/>
+                <span style="font-size:13px;">10-point inspection by experts</span>
+              </td>
+              <td style="text-align:center;padding:8px 0;vertical-align:top;">
+                <span style="font-size:22px;color:#ffd700;">✧</span><br/>
+                <span style="font-weight:700;">Premium Packaging</span><br/>
+                <span style="font-size:13px;">Eco-friendly luxury boxes</span>
+              </td>
+              <td style="text-align:center;padding:8px 0;vertical-align:top;">
+                <span style="font-size:22px;color:#ffd700;">●</span><br/>
+                <span style="font-weight:700;">100% Authentic</span><br/>
+                <span style="font-size:13px;">Guaranteed genuine products</span>
+              </td>
+            </tr>
+          </table>
+        </div>
+        <a class="btn" href="{{trackingUrl}}" style="background:linear-gradient(90deg,#ffd700,#232526);color:#232526;font-weight:800;box-shadow:0 2px 8px #ffd70055;">Track Your Order</a>
       </div>
-      <div class="foot">eShopper Luxe</div>
+      <div class="foot" style="color:#ffd700;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:10px;flex-direction:column;padding-top:24px;">
+        <table role="presentation" class="brandmark" cellpadding="0" cellspacing="0" style="margin-bottom:2px"><tr><td class="brandmark-e-cell"><span class="brandmark-e" style="background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%);color:#fff;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-size:17px;font-weight:800;border-radius:4px;border-right:3px solid #d4af37;line-height:28px;">E</span></td><td class="brandmark-text"><span class="brandmark-name" style="display:block;font-weight:800;letter-spacing:2px;font-size:14px;color:#f5f7fb;line-height:1;">SHOPPER</span><span class="brandmark-tag" style="display:block;font-size:6px;letter-spacing:1.6px;color:#d4af37;font-weight:700;margin-top:2px;line-height:1.1;">BOUTIQUE LUXE</span></td></tr></table>
+        <span style="font-size:12px;color:#ffd700;">https://eshopperr.me</span>
+      </div>
     </div>
   </div>
 </body>

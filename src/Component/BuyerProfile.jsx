@@ -311,6 +311,7 @@ function Field({ icon: Icon, label, value, copyable, full, onCopied }) {
 
 export default function BuyerProfile({ user = {} }) {
     const navigate = useNavigate()
+    // ...existing code...
     const [toast, setToast] = useState(false)
     const { membershipType: ctxMembershipType, totalOrders: ctxTotalOrders } = useMembership()
 
@@ -350,7 +351,7 @@ export default function BuyerProfile({ user = {} }) {
                             {resolvedMembershipType} Member - {resolvedTotalOrders} Orders
                         </div>
                     </div>
-                    <button className="bpx-edit-btn" onClick={() => navigate('/update-profile')}>
+                    <button className="bpx-edit-btn" onClick={() => navigate('/update-profile', { state: { from: 'checkout' } })}>
                         <Pencil size={12} />
                         Edit Profile
                     </button>

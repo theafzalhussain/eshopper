@@ -85,6 +85,7 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // With timeout and better error handling
 export async function fastAPI(endpoint, method = "GET", data = null, retryCount = 0, customBaseUrl = null) {
+    console.log("API CALL:", endpoint, method, data); // Debug log
     const isFD = data instanceof FormData;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -202,7 +203,7 @@ export const deleteUserAPI = (d) => fastAPI(`${API_ENDPOINTS.USER}/${getID(d)}`,
 
 export const getProductAPI = () => fastAPI(API_ENDPOINTS.PRODUCT);
 export const getSingleProductAPI = (id) => fastAPI(`${API_ENDPOINTS.PRODUCT}/${id}`);
-export const createProductAPI = (d) => fastAPI(API_ENDPOINTS.PRODUCT, "POST", d);
+export const createProductAPI = (d) => fastAPI("/product/add", "POST", d);
 export const updateProductAPI = (d) => fastAPI(`${API_ENDPOINTS.PRODUCT}/${getID(d)}`, "PUT", d);
 export const deleteProductAPI = (d) => fastAPI(`${API_ENDPOINTS.PRODUCT}/${getID(d)}`, "DELETE");
 

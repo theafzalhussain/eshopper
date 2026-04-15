@@ -28,19 +28,65 @@ export default function Shop() {
     var [max, setmax] = useState(10000)
     var [search, setSearch] = useState("")
     var [sortBy, setSortBy] = useState("newest")
-    var [selectedSizes, setSelectedSizes] = useState({}) // Track selected sizes per product
-    var [cartNotifications, setCartNotifications] = useState({}) // Track cart add counts
+    var [selectedSizes, setSelectedSizes] = useState({})
+    var [cartNotifications, setCartNotifications] = useState({})
     const toast = useToast();
-    var [selectedColors, setSelectedColors] = useState({}) // Track selected colors per product
-    
-    // Available sizes for products
-    const AVAILABLE_SIZES = ['S', 'M', 'L', 'XL', '2XL']
+    var [selectedColors, setSelectedColors] = useState({})
+    var [sidebarOpen, setSidebarOpen] = useState(false)
+
+    // ── Admin detection (reactive) ──
+    const [isAdmin, setIsAdmin] = useState(false);
+    useEffect(() => {
+        const checkAdmin = () => {
+            const isAdminLS = localStorage.getItem("isAdmin");
+            const roleLS = localStorage.getItem("role");
+            const adminEmails = ["admin@gmail.com", "theafzalhussain786@gmail.com", "theafzalhussain786@gmail.com"];
+            const adminUserIds = [
+                "1",
+                "admin",
+                "your-admin-id",
+                "699af12865bfff087143211c"
+            ];
+            const userEmail = localStorage.getItem("email") || "";
+            const userId = localStorage.getItem("userid") || "";
+            setIsAdmin(
+                isAdminLS === true ||
+                isAdminLS === "true" ||
+                isAdminLS === 1 ||
+                isAdminLS === "1" ||
+                roleLS === "admin" ||
+                roleLS === true ||
+                roleLS === 1 ||
+                roleLS === "1" ||
+                adminEmails.includes(userEmail) ||
+                adminUserIds.includes(userId)
+            );
+        };
+        checkAdmin();
+        window.addEventListener('storage', checkAdmin);
+        window.addEventListener('focus', checkAdmin);
+        return () => {
+            window.removeEventListener('storage', checkAdmin);
+            window.removeEventListener('focus', checkAdmin);
+        };
+    }, [location]);
+
+    // Dynamically compute all unique sizes from all products
+    // Preserve admin's order for sizes (no sorting) for product cards
+    const AVAILABLE_SIZES = useMemo(() => {
+        const allSizes = (product || []).flatMap(p => Array.isArray(p.size) ? p.size : [p.size]);
+        const seen = new Set();
+        return allSizes.filter(s => {
+            if (!s || seen.has(s)) return false;
+            seen.add(s);
+            return true;
+        });
+    }, [product]);
+    // For sidebar filter: show all possible sizes
+    const ALL_SIZES = ['XS','S','M','L','XL','2XL','28','30','32','34','36','38','40','42'];
 
     const normalizeCategory = (value) => String(value || '')
-        .trim()
-        .toLowerCase()
-        .replace(/[-_]+/g, ' ')
-        .replace(/\s+/g, ' ')
+        .trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ')
 
     const CATEGORY_GROUPS = [
         { key: 'kids', aliases: ['kid', 'kids', 'boy', 'boys', 'child', 'children'] },
@@ -52,11 +98,9 @@ export default function Shop() {
     const resolveCategoryGroup = (value) => {
         const normalized = normalizeCategory(value)
         if (!normalized || normalized === 'all') return normalized
-
         const matchedGroup = CATEGORY_GROUPS.find((group) =>
             group.aliases.some((alias) => normalized === alias || normalized.includes(alias))
         )
-
         return matchedGroup ? matchedGroup.key : normalized
     }
 
@@ -69,53 +113,27 @@ export default function Shop() {
     const matchesSearchQuery = (item, query) => {
         const normalizedQuery = normalizeCategory(query)
         if (!normalizedQuery) return true
-
         const searchableText = [item.name, item.maincategory, item.subcategory, item.brand]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
-
+            .filter(Boolean).join(' ').toLowerCase()
         if (searchableText.includes(normalizedQuery)) return true
-
         const resolvedGroup = resolveCategoryGroup(normalizedQuery)
-        if (resolvedGroup === 'all' || resolvedGroup === normalizedQuery) {
-            return false
-        }
-
+        if (resolvedGroup === 'all' || resolvedGroup === normalizedQuery) return false
         return matchesCategory(item.maincategory, resolvedGroup) || matchesCategory(item.subcategory, resolvedGroup)
     }
 
     const colorMap = {
-        black: '#111111',
-        white: '#ffffff',
-        red: '#e74c3c',
-        blue: '#3498db',
-        green: '#27ae60',
-        yellow: '#f1c40f',
-        orange: '#f39c12',
-        purple: '#9b59b6',
-        pink: '#e84393',
-        gray: '#95a5a6',
-        grey: '#95a5a6',
-        brown: '#8e6e53',
-        beige: '#f5f5dc',
-        navy: '#1b2a4e',
-        maroon: '#7b1e1e'
+        black: '#111111', white: '#ffffff', red: '#e74c3c', blue: '#3498db',
+        green: '#27ae60', yellow: '#f1c40f', orange: '#f39c12', purple: '#9b59b6',
+        pink: '#e84393', gray: '#95a5a6', grey: '#95a5a6', brown: '#8e6e53',
+        beige: '#f5f5dc', navy: '#1b2a4e', maroon: '#7b1e1e'
     }
-
     const DEFAULT_COLORS = ['black', 'white', 'red', 'blue', 'green']
 
     function normalizeColors(value) {
         const list = value
-            ? value
-            .split(/[,/|]/)
-            .map((c) => c.trim())
-            .filter((c) => c.length > 0)
-            .slice(0, 6)
+            ? value.split(/[,/|]/).map((c) => c.trim()).filter((c) => c.length > 0).slice(0, 6)
             : []
-
         if (list.length === 0) return DEFAULT_COLORS
-
         const merged = [...list]
         for (const c of DEFAULT_COLORS) {
             if (merged.length >= 6) break
@@ -137,7 +155,6 @@ export default function Shop() {
     var cart = useSelector((state) => state.CartStateData)
     var wishlist = useSelector((state) => state.WishlistStateData)
 
-    // --- LOAD DATA ---
     useEffect(() => {
         dispatch(getProduct())
         dispatch(getMaincategory())
@@ -148,52 +165,31 @@ export default function Shop() {
     }, [dispatch])
 
     useEffect(() => { setmc(maincat) }, [maincat])
-    
-    // --- SMART ADD TO CART FUNCTION (NO REDIRECT) ---
-    function addToCart(p, sizeFromParam = null, colorFromParam = null) {
-        if (!localStorage.getItem("login")) {
-            navigate("/login")
-            return
-        }
-        
-        // Check if size is selected
-        const selectedSize = sizeFromParam || selectedSizes[p.id]
-        if (!selectedSize) {
-            toast.warning('⚠️ Please select a size first');
-            return;
-        }
 
-        // Check if color is selected (if product has color options)
+    function addToCart(p, sizeFromParam = null, colorFromParam = null) {
+        if (!localStorage.getItem("login")) { navigate("/login"); return }
+        const selectedSize = sizeFromParam || selectedSizes[p.id]
+        if (!selectedSize) { toast.warning('⚠️ Please select a size first'); return; }
         const selectedColor = colorFromParam || selectedColors[p.id]
-        if (normalizeColors(p.color).length > 0 && !selectedColor) {
-            toast.warning('⚠️ Please select a color first');
-            return;
-        }
-        
-        // Check if product already exists in cart with this size AND color
-        let existingItem = (cart.items || []).find((item) => 
-            item.productid === p.id && 
-            item.userid === localStorage.getItem("userid") &&
-            item.size === selectedSize &&
-            item.color === selectedColor
+        if (normalizeColors(p.color).length > 0 && !selectedColor) { toast.warning('⚠️ Please select a color first'); return; }
+        let existingItem = (cart.items || []).find((item) =>
+            item.productid === p.id && item.userid === localStorage.getItem("userid") &&
+            item.size === selectedSize && item.color === selectedColor
         )
-        
         if (existingItem) {
-            // Item already in cart - just show notification
             const currentCount = (cartNotifications[p.id] || 0) + 1;
             setCartNotifications({...cartNotifications, [p.id]: currentCount});
             toast.info(`✓ Already added! Total: ${currentCount} time(s)`);
         } else {
-            // Add new item to cart
             dispatch(addCart({
                 userId: localStorage.getItem("userid"),
                 productId: p.id,
-                quantity: 1
+                quantity: 1,
+                size: selectedSize,
+                color: selectedColor
             }))
-            
             const currentCount = (cartNotifications[p.id] || 0) + 1
             setCartNotifications({...cartNotifications, [p.id]: currentCount})
-            
             toast.success(`✓ Added to bag! (${currentCount} item)`);
         }
     }
@@ -203,902 +199,958 @@ export default function Shop() {
         return (wishlist || []).some((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId))
     }
 
-    function addToWishlistFromCard(p) {
+    // Home page style toggle wishlist logic
+    function toggleWishlist(p) {
         if (!localStorage.getItem('login')) {
-            navigate('/login')
-            return
+            navigate('/login');
+            return;
         }
+        const userId = localStorage.getItem('userid');
+        const productId = p.id || p._id;
+        const existing = (wishlist || []).find((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId));
 
-        const userId = localStorage.getItem('userid')
-        const productId = p.id || p._id
-        const existing = (wishlist || []).find((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId))
+        // Wishlist expects size as string, not array
+        let selectedSize = selectedSizes[p.id];
+        // If no size selected, try to pick first available size
+        if (!selectedSize) {
+            const sizesArr = Array.isArray(p.size) ? p.size : [p.size];
+            selectedSize = sizesArr && sizesArr.length > 0 ? sizesArr[0] : '';
+        }
+        if (!selectedSize) {
+            toast.warning('⚠️ Please select a size first');
+            return;
+        }
 
         if (existing) {
-            dispatch(deleteWishlist({ id: existing.id || existing._id }))
-            toast.info('Removed from wishlist')
-            return
+            dispatch(deleteWishlist({ id: existing.id || existing._id }));
+            toast.info('Removed from wishlist');
+        } else {
+            dispatch(addWishlist({
+                userid: userId,
+                productid: productId,
+                name: p.name,
+                color: p.color,
+                size: selectedSize, // Only string!
+                price: Number(p.finalprice || 0),
+                pic: p.pic1
+            }));
+            toast.success('Added to wishlist');
         }
-
-        dispatch(addWishlist({
-            userid: userId,
-            productid: productId,
-            name: p.name,
-            color: p.color,
-            size: p.size,
-            price: Number(p.finalprice || 0),
-            pic: p.pic1,
-        }))
-        toast.success('Added to wishlist')
     }
 
-    // --- SMART FILTERING LOGIC (For Fast Loading) ---
     const filteredProducts = useMemo(() => {
         let temp = [...product];
-
-        // Editorial category filter (from Home page) - same alias logic as normal filters
-        if (category) {
-            temp = temp.filter((x) =>
-                matchesCategory(x.maincategory, category) || matchesCategory(x.subcategory, category)
-            );
-        }
-
+        if (category) { temp = temp.filter((x) => matchesCategory(x.maincategory, category) || matchesCategory(x.subcategory, category)); }
         if (mc !== 'All') temp = temp.filter(x => matchesCategory(x.maincategory, mc));
         if (sc !== 'All') temp = temp.filter(x => matchesCategory(x.subcategory, sc));
         if (br !== 'All') temp = temp.filter(x => normalizeCategory(x.brand) === normalizeCategory(br));
-        if (size !== 'All') temp = temp.filter(x => x.size === size);
-        
-        // Price Filter
-        temp = temp.filter(x => x.finalprice >= min && x.finalprice <= max);
-
-        // Search Filter
-        if (search) {
-            temp = temp.filter((x) => matchesSearchQuery(x, search));
+        if (size !== 'All') {
+            temp = temp.filter(x => {
+                const sizes = Array.isArray(x.size) ? x.size.map(s => String(s).toUpperCase()) : [String(x.size).toUpperCase()];
+                if (size.toUpperCase() === '2XL' || size.toUpperCase() === 'XXL') {
+                    return sizes.includes('2XL') || sizes.includes('XXL');
+                }
+                return sizes.includes(size.toUpperCase());
+            });
         }
-
-        // Sorting
+        temp = temp.filter(x => x.finalprice >= min && x.finalprice <= max);
+        if (search) { temp = temp.filter((x) => matchesSearchQuery(x, search)); }
         if (sortBy === "low") temp.sort((a, b) => a.finalprice - b.finalprice);
         else if (sortBy === "high") temp.sort((a, b) => b.finalprice - a.finalprice);
-        else temp.reverse(); // newest
-
+        else temp.reverse();
         return temp;
     }, [product, mc, sc, br, size, min, max, search, sortBy, category]);
 
+    // Loading state for premium animation (simulate with product.length === 0 for skeleton)
+    const [shopLoading, setShopLoading] = useState(true);
+    useEffect(() => {
+        if (product && product.length > 0) {
+            setTimeout(() => setShopLoading(false), 200); // short delay for smoothness
+        } else {
+            setShopLoading(true);
+        }
+    }, [product]);
+
     return (
-        <div style={{ backgroundColor: "#fcfcfc" }}>
-            {/* Toast Notification handled globally by ToastProvider */}
-            
-            {/* --- TOP PREMIUM BANNER --- */}
-            <div className="hero-wrap py-5" style={{ background: 'linear-gradient(45deg, #17a2b8, #0056b3)', position: 'relative' }}>
-                <div className="container text-center py-4">
-                    <motion.h1 initial={{y:-20, opacity:0}} animate={{y:0, opacity:1}} className="text-white font-weight-bold display-4">Shop Premium</motion.h1>
-                    <p className="text-white-50">Discover curated collections tailored for your style</p>
+        <div className="lux-shop-root">
+
+            {/* ══ HERO — FULLY CENTERED ══ */}
+            <div className="lux-hero">
+                <div className="lux-hero-glow lux-glow-l" />
+                <div className="lux-hero-glow lux-glow-r" />
+                <div className="lux-hero-grain" />
+                <div className="lux-hero-inner">
+                    <motion.span className="lux-hero-eyebrow"
+                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+                    >
+                        <span className="lux-eline" />The Collection<span className="lux-eline" />
+                    </motion.span>
+                    <motion.h1 className="lux-hero-title"
+                        initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.75, delay: 0.15 }}
+                    >Curated <em>Luxury</em><br />for Every Style</motion.h1>
+                    <motion.p className="lux-hero-sub"
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.75, delay: 0.3 }}
+                    >Discover premium pieces crafted with exceptional quality</motion.p>
+                    {isAdmin && (
+                        <motion.div className="lux-hero-stats"
+                            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.45 }}
+                        >
+                            <div className="lux-hstat"><span>{filteredProducts.length}</span><small>Pieces</small></div>
+                            <div className="lux-hdiv" />
+                            <div className="lux-hstat"><span>{brand.length}</span><small>Brands</small></div>
+                            <div className="lux-hdiv" />
+                            <div className="lux-hstat"><span>{maincategory.length}</span><small>Categories</small></div>
+                        </motion.div>
+                    )}
                 </div>
+                <div className="lux-hero-watermark">BOUTIQUE LUXE · ESHOPPER</div>
             </div>
 
-            <section className="container-fluid px-lg-5 py-5 shop-layout-section">
-                <div className="row">
-                    {/* --- SIDEBAR FILTERS --- */}
-                    <div className="col-lg-3 shop-sidebar">
-                        <div className="sticky-top shop-filter-sticky" style={{ top: '100px' }}>
-                            <div className="bg-white shadow-sm p-4 rounded-xl mb-4 border-0 shop-filter-panel">
-                                <h5 className="font-weight-bold mb-4">Search & Filter</h5>
-                                
-                                {/* Search Bar */}
-                                <div className="input-group mb-4 shop-search-group rounded-pill overflow-hidden border">
-                                    <div className="input-group-prepend">
-                                        <span className="input-group-text bg-white border-0"><i className="icon-search"></i></span>
-                                    </div>
-                                    <input type="text" className="form-control border-0" placeholder="Search products..." onChange={(e) => setSearch(e.target.value)} />
-                                </div>
+            {/* ══ MOBILE BAR ══ */}
+            <div className="lux-mbar">
+                <button className="lux-ftoggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/>
+                    </svg>
+                    Filters
+                </button>
+                <span className="lux-mcount">{filteredProducts.length} items</span>
+                <select className="lux-msort" onChange={(e) => setSortBy(e.target.value)}>
+                    <option value="newest">Newest</option>
+                    <option value="low">Price ↑</option>
+                    <option value="high">Price ↓</option>
+                </select>
+            </div>
 
-                                {/* Main Category */}
-                                <div className="mb-4">
-                                    <p className="small font-weight-bold text-uppercase text-info mb-2">Category</p>
-                                    <select className="form-control custom-select-sm shop-filter-select" value={mc} onChange={(e) => setmc(e.target.value)}>
-                                        <option value="All">All Categories</option>
-                                        {maincategory.map((item, i) => <option key={i} value={item.name}>{item.name}</option>)}
-                                    </select>
-                                </div>
+            <div className="lux-layout">
+                {/* Backdrop */}
+                {sidebarOpen && <div className="lux-backdrop" onClick={() => setSidebarOpen(false)} />}
 
-                                {/* Size Selection (New Feature) */}
-                                <div className="mb-4">
-                                    <p className="small font-weight-bold text-uppercase text-info mb-2">Select Size</p>
-                                    <div className="d-flex flex-wrap gap-2">
-                                        {["All", "S", "M", "L", "XL", "XXL", "38", "40", "42"].map((s, i) => (
-                                            <button key={i} onClick={() => setSize(s)} className={`btn btn-sm m-1 rounded-pill ${size === s ? 'btn-info shadow' : 'btn-outline-light text-dark'}`}>
-                                                {s}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Brands */}
-                                <div className="mb-4">
-                                    <p className="small font-weight-bold text-uppercase text-info mb-2">Brands</p>
-                                    <select className="form-control shop-filter-select" onChange={(e) => setbr(e.target.value)}>
-                                        <option value="All">All Brands</option>
-                                        {brand.map((item, i) => <option key={i} value={item.name}>{item.name}</option>)}
-                                    </select>
-                                </div>
-
-                                {/* Price Range */}
-                                <div className="mb-2">
-                                    <p className="small font-weight-bold text-uppercase text-info mb-2">Price Range (₹)</p>
-                                    <div className="d-flex align-items-center">
-                                        <input type="number" className="form-control form-control-sm" placeholder="Min" onChange={(e) => setmin(e.target.value)} />
-                                        <span className="mx-2">-</span>
-                                        <input type="number" className="form-control form-control-sm" placeholder="Max" onChange={(e) => setmax(e.target.value)} />
-                                    </div>
-                                </div>
+                {/* ══ SIDEBAR — PREMIUM REFINE ══ */}
+                <aside className={`lux-sidebar ${sidebarOpen ? 'open' : ''}`}>
+                    <div className="lux-sb-inner">
+                        <div className="lux-sb-head">
+                            <div>
+                                <p className="lux-sb-eyebrow">Filter & Sort</p>
+                                <h2 className="lux-sb-title">Refine</h2>
                             </div>
+                            <button className="lux-sb-close" onClick={() => setSidebarOpen(false)}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+
+                        {/* Search */}
+                        <div className="lux-fg">
+                            <label className="lux-fl"><span className="lux-fl-icon">◎</span>Search</label>
+                            <div className="lux-sw">
+                                <svg className="lux-si" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                <input className="lux-sinp" type="text" placeholder="Search pieces…" onChange={(e) => setSearch(e.target.value)} />
+                            </div>
+                        </div>
+
+                        {/* Category */}
+                        <div className="lux-fg">
+                            <label className="lux-fl"><span className="lux-fl-icon">⊞</span>Category</label>
+                            <select className="lux-sel" value={mc} onChange={(e) => setmc(e.target.value)}>
+                                <option value="All">All Categories</option>
+                                {maincategory.map((item, i) => <option key={i} value={item.name}>{item.name}</option>)}
+                            </select>
+                        </div>
+
+                        {/* Size */}
+                        <div className="lux-fg">
+                            <label className="lux-fl"><span className="lux-fl-icon">◻</span>Size</label>
+                            <div className="lux-sgrid">
+                                {['All',...ALL_SIZES].map((s, i) => (
+                                    <button key={i} onClick={() => setSize(s)} className={`lux-sp ${size === s ? 'active' : ''}`}>{s}</button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Brand — ADMIN ONLY */}
+                        {isAdmin && (
+                            <div className="lux-fg lux-admin-fg">
+                                <label className="lux-fl lux-fl-admin">
+                                    <span className="lux-fl-icon">◈</span>Brand
+                                    <span className="lux-atag">Admin</span>
+                                </label>
+                                <select className="lux-sel" onChange={(e) => setbr(e.target.value)}>
+                                    <option value="All">All Brands</option>
+                                    {brand.map((item, i) => <option key={i} value={item.name}>{item.name}</option>)}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* Price */}
+                        <div className="lux-fg">
+                            <label className="lux-fl"><span className="lux-fl-icon">₹</span>Price Range</label>
+                            <div className="lux-prow">
+                                <input className="lux-pinp" type="number" placeholder="Min" onChange={(e) => setmin(e.target.value)} />
+                                <span className="lux-psep">—</span>
+                                <input className="lux-pinp" type="number" placeholder="Max" onChange={(e) => setmax(e.target.value)} />
+                            </div>
+                        </div>
+
+                        {/* Sort */}
+                        {/* <div className="lux-fg lux-fg-last">
+                            <label className="lux-fl"><span className="lux-fl-icon">⇅</span>Sort By</label>
+                            <select className="lux-sel" onChange={(e) => setSortBy(e.target.value)} value={sortBy}>
+                                <option value="newest">Newest First</option>
+                                <option value="low">Price: Low to High</option>
+                                <option value="high">Price: High to Low</option>
+                            </select>
+                        </div> */}
+                    </div>
+                </aside>
+
+                {/* ══ MAIN ══ */}
+                <main className="lux-main">
+                    {/* Desktop toolbar */}
+                    <div className="lux-toolbar">
+                        <span className="lux-tc">Showing <strong>{filteredProducts.length}</strong> pieces</span>
+                        <div className="lux-tr">
+                            <span className="lux-tl">Sort</span>
+                            <select className="lux-dsort" onChange={(e) => setSortBy(e.target.value)} value={sortBy}>
+                                <option value="newest">Newest First</option>
+                                <option value="low">Price: Low to High</option>
+                                <option value="high">Price: High to Low</option>
+                            </select>
                         </div>
                     </div>
 
-                    {/* --- MAIN SHOP AREA --- */}
-                    <div className="col-lg-9 shop-main-area">
-                        <div className="d-flex justify-content-between align-items-center mb-4 bg-white p-3 shadow-sm rounded-lg shop-toolbar">
-                            <span className="text-muted small">Showing <strong>{filteredProducts.length}</strong> Products</span>
-                            <div className="d-flex align-items-center">
-                                <span className="small mr-2 d-none d-md-block">Sort by:</span>
-                                <select className="form-control form-control-sm border-0 bg-light" onChange={(e) => setSortBy(e.target.value)}>
-                                    <option value="newest">Newest First</option>
-                                    <option value="low">Price: Low to High</option>
-                                    <option value="high">Price: High to Low</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="row">
-                            <AnimatePresence>
-                                {filteredProducts.map((item, index) => (
-                                    <motion.div 
-                                        key={item.id}
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="col-sm-6 col-md-4 col-lg-3 mb-4"
+                    {/* Grid with AnimatePresence and skeletons */}
+                    <div className="lux-grid">
+                        <AnimatePresence mode="wait">
+                            {shopLoading ? (
+                                <motion.div
+                                    key="shop-skeleton"
+                                    initial={{ opacity: 0, scale: 0.98, y: 40 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.98, y: 40, transition: { duration: 0.35 } }}
+                                    transition={{ duration: 0.7, type: 'spring', stiffness: 70 }}
+                                    style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 32 }}
+                                >
+                                    {[...Array(8)].map((_, i) => (
+                                        <div key={i} className="lux-card" style={{opacity:0.5, minHeight: 420, minWidth: 260, maxWidth: 320}}>
+                                            <div className="skeleton-box mb-3" style={{height:220,width:'100%',borderRadius:16}} />
+                                            <div className="skeleton-box mb-2" style={{height:24,width:'60%'}} />
+                                            <div className="skeleton-box mb-1" style={{height:16,width:'40%'}} />
+                                            <div className="skeleton-box mb-2" style={{height:18,width:'50%'}} />
+                                            <div className="skeleton-box mt-2" style={{height:32,width:'80%'}} />
+                                        </div>
+                                    ))}
+                                </motion.div>
+                            ) : (
+                                filteredProducts.map((item, index) => (
+                                    <motion.div key={item.id} layout
+                                        initial={{ opacity: 0, y: 32, scale: 0.98 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.94 }}
+                                        transition={{ duration: 0.38, delay: Math.min(index * 0.035, 0.4) }}
+                                        className="lux-card"
                                     >
-                                        <div className="product-card-premium h-100 bg-white shadow-sm overflow-hidden position-relative rounded-lg">
-                                            {/* Discount Badge */}
-                                            {item.discount > 0 && (
-                                                <div className="premium-badge">{item.discount}% OFF</div>
-                                            )}
+                                        {item.discount > 0 && <div className="lux-ribbon">{item.discount}% OFF</div>}
 
-                                            <button
-                                                type="button"
-                                                className={`wishlist-heart-btn ${isInWishlist(item.id) ? 'active' : ''}`}
-                                                onClick={(e) => {
-                                                    e.preventDefault()
-                                                    addToWishlistFromCard(item)
-                                                }}
-                                                title={isInWishlist(item.id) ? 'Remove from wishlist' : 'Add to wishlist'}
-                                                aria-label={isInWishlist(item.id) ? 'Remove from wishlist' : 'Add to wishlist'}
-                                            >
-                                                <svg viewBox="0 0 24 24" fill="none" role="presentation">
-                                                    <path d="M12 21s-6.7-4.4-9.3-7.9C.7 10.2 1.5 6.9 4.4 5.3c2.3-1.2 4.6-.4 6 1.4 1.4-1.8 3.7-2.6 6-1.4 2.9 1.6 3.7 4.9 1.7 7.8C18.7 16.6 12 21 12 21z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                                </svg>
-                                            </button>
+                                        <button
+                                            type="button"
+                                            className={`lux-wish ${isInWishlist(item.id) ? 'active' : ''}`}
+                                            onClick={e => { e.preventDefault(); toggleWishlist(item); }}
+                                            aria-label={isInWishlist(item.id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                                            title={isInWishlist(item.id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                                            style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
+                                        >
+                                            <svg viewBox="0 0 24 24" width="24" height="24" fill={isInWishlist(item.id) ? '#e74c3c' : 'none'} stroke="#b8965a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M12 21s-6.7-4.4-9.3-7.9C.7 10.2 1.5 6.9 4.4 5.3c2.3-1.2 4.6-.4 6 1.4 1.4-1.8 3.7-2.6 6-1.4 2.9 1.6 3.7 4.9 1.7 7.8C18.7 16.6 12 21 12 21z" />
+                                            </svg>
+                                        </button>
 
-                                            <Link to={`/single-product/${item.id}`} className="img-wrap">
-                                                <motion.img 
-                                                    src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 500, crop: 'fill' })} 
-                                                    loading="lazy"
-                                                    decoding="async"
-                                                    className="w-100" 
-                                                    style={{ height: "220px", objectFit: "cover" }} 
-                                                    alt={item.name}
-                                                    whileHover={{ scale: 1.1 }}
-                                                    transition={{ duration: 0.3 }}
-                                                />
-                                                <motion.div 
-                                                    className="card-overlay"
-                                                    whileHover={{ opacity: 1 }}
-                                                    initial={{ opacity: 0 }}
-                                                    transition={{ duration: 0.3 }}
+                                        {/* Image — blur + centered overlay on hover */}
+                                        <Link to={`/single-product/${item.id}`} className="lux-img-wrap">
+                                            <img
+                                                src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 500, crop: 'fill' })}
+                                                loading="lazy" decoding="async"
+                                                className="lux-img" alt={item.name}
+                                            />
+                                            <div className="lux-overlay">
+                                                <motion.span className="lux-vpill"
+                                                    whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}
                                                 >
-                                                    <motion.span 
-                                                        className="btn btn-white btn-sm px-4 rounded-pill view-detail-pill"
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                    >
-                                                        View Detail
-                                                    </motion.span>
-                                                </motion.div>
-                                            </Link>
+                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                    View Details
+                                                </motion.span>
+                                            </div>
+                                        </Link>
 
-                                            <div className="p-3 p-md-3">
-                                                <div className="d-flex justify-content-between mb-2">
-                                                    <span className="product-brand-shop">{item.brand}</span>
-                                                    <div className="rating-shop d-flex align-items-center">
-                                                        <span className="stars-display" style={{ color: '#FFB800', fontSize: '14px', marginRight: '4px' }}>
-                                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                                <span key={star}>
-                                                                    {star <= Math.floor(item.rating || 4.5) ? '★' : 
-                                                                     star === Math.ceil(item.rating || 4.5) && (item.rating || 4.5) % 1 !== 0 ? '★' : '☆'}
-                                                                </span>
-                                                            ))}
-                                                        </span>
-                                                        <span className="rating-number" style={{ fontSize: '12px', color: '#666' }}>({(item.rating || 4.5).toFixed(1)})</span>
-                                                    </div>
+                                        <div className="lux-cbody">
+                                            <div className="lux-cmeta">
+                                                <span className="lux-cbrand">{item.brand}</span>
+                                                <div className="lux-crating">
+                                                    <span className="lux-stars">{[1,2,3,4,5].map(s=><span key={s}>{s<=Math.floor(item.rating||4.5)?'★':'☆'}</span>)}</span>
+                                                    <span className="lux-rnum">({(item.rating||4.5).toFixed(1)})</span>
                                                 </div>
-                                                <h3 className="product-name-shop mb-2">
-                                                    <Link to={`/single-product/${item.id}`} className="product-name-link">{item.name}</Link>
-                                                </h3>
-                                                
-                                                {/* Category */}
-                                                <p className="product-category-shop mb-2">
-                                                    {item.maincategory} • {item.subcategory}
-                                                </p>
+                                            </div>
+                                            <h3 className="lux-cname">
+                                                <Link to={`/single-product/${item.id}`} className="lux-cnlink">{item.name}</Link>
+                                            </h3>
+                                            <p className="lux-ccat">{item.maincategory} · {item.subcategory}</p>
 
-                                                {normalizeColors(item.color).length > 0 && (
-                                                    <div className="color-options-shop mb-2">
-                                                        <span className="color-label">Color</span>
-                                                        <div className="color-dots">
-                                                            {normalizeColors(item.color).map((c) => (
-                                                                <button
-                                                                    key={`${item.id}-${c}`}
-                                                                    type="button"
-                                                                    className={`color-dot ${selectedColors[item.id] === c ? 'active' : ''}`}
-                                                                    style={{ backgroundColor: resolveColor(c) }}
-                                                                    onClick={() => setSelectedColors({ ...selectedColors, [item.id]: c })}
-                                                                    title={c}
-                                                                    aria-label={`Select color ${c}`}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                
-                                                {/* Size Selection - Smaller */}
-                                                <div className="product-size-selector-shop mb-2">
-                                                    <div className="size-header-shop">
-                                                        <label className="size-label-shop">Size</label>
-                                                        {selectedSizes[item.id] && <span className="size-selected-pill">{selectedSizes[item.id]}</span>}
-                                                    </div>
-                                                    <div className="size-options-shop">
-                                                        {AVAILABLE_SIZES.map((s) => (
-                                                            <motion.button
-                                                                key={s}
-                                                                onClick={() => setSelectedSizes({...selectedSizes, [item.id]: s})}
-                                                                className={`size-btn-shop ${selectedSizes[item.id] === s ? 'active' : ''}`}
-                                                                whileHover={{ scale: 1.1 }}
-                                                                whileTap={{ scale: 0.95 }}
-                                                            >
-                                                                {s}
-                                                            </motion.button>
+                                            {normalizeColors(item.color).length > 0 && (
+                                                <div className="lux-colors">
+                                                    <span className="lux-clabel">Colour</span>
+                                                    <div className="lux-cdots">
+                                                        {normalizeColors(item.color).map((c) => (
+                                                            <button key={`${item.id}-${c}`} type="button"
+                                                                className={`lux-cdot ${selectedColors[item.id]===c?'active':''}`}
+                                                                style={{ backgroundColor: resolveColor(c) }}
+                                                                onClick={() => setSelectedColors({...selectedColors,[item.id]:c})}
+                                                                title={c} aria-label={`Select colour ${c}`}
+                                                            />
                                                         ))}
                                                     </div>
                                                 </div>
-                                                
-                                                {/* Price and Cart */}
-                                                <div className="d-flex align-items-center justify-content-between mb-2">
-                                                    <div className="d-flex align-items-center flex-wrap">
-                                                        <span className="price-current-shop mb-0">₹{item.finalprice}</span>
-                                                        {item.baseprice > item.finalprice && (
-                                                            <>
-                                                                <del className="price-original-shop ml-2">₹{item.baseprice}</del>
-                                                                <span className="ml-2 px-2 py-1" style={{
-                                                                    background: '#ffebee',
-                                                                    color: '#c62828',
-                                                                    fontSize: '11px',
-                                                                    fontWeight: '700',
-                                                                    borderRadius: '4px',
-                                                                    whiteSpace: 'nowrap'
-                                                                }}>
-                                                                    SAVE ₹{item.baseprice - item.finalprice}
-                                                                </span>
-                                                            </>
-                                                        )}
-                                                    </div>
+                                            )}
+
+                                            <div className="lux-sizes">
+                                                <div className="lux-shd">
+                                                    <span className="lux-slbl">Size</span>
+                                                    {selectedSizes[item.id] && <span className="lux-schosen">{selectedSizes[item.id]}</span>}
                                                 </div>
-                                                
-                                                {/* Add to Bag Button - Premium */}
-                                                <motion.button 
-                                                    onClick={() => addToCart(item, selectedSizes[item.id], selectedColors[item.id])} 
-                                                    className={`btn-add-bag w-100 ${(!selectedSizes[item.id] || (normalizeColors(item.color).length > 0 && !selectedColors[item.id])) ? 'size-not-selected' : ''}`}
-                                                    whileHover={(selectedSizes[item.id] && (normalizeColors(item.color).length === 0 || selectedColors[item.id])) ? { scale: 1.02 } : {}}
-                                                    whileTap={(selectedSizes[item.id] && (normalizeColors(item.color).length === 0 || selectedColors[item.id])) ? { scale: 0.98 } : {}}
-                                                >
-                                                    <span>Add to Bag</span>
-                                                    <span className="bag-icon">+</span>
-                                                </motion.button>
-                                                
-                                                {/* Cart Count Indicator */}
-                                                {cartNotifications[item.id] && (
-                                                    <motion.div 
-                                                        className="cart-count-badge-shop mt-2"
-                                                        initial={{ scale: 0, opacity: 0 }}
-                                                        animate={{ scale: 1, opacity: 1 }}
-                                                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                                                    >
-                                                        <span>✓ Added {cartNotifications[item.id]}x</span>
-                                                    </motion.div>
+                                                <div className="lux-sbtns">
+                                                    {Array.from(new Set((Array.isArray(item.size) ? item.size : [item.size]).filter(s => s && s !== 'All'))).map((s) => (
+                                                        <motion.button key={s}
+                                                            onClick={() => setSelectedSizes({...selectedSizes,[item.id]:s})}
+                                                            className={`lux-sbtn ${selectedSizes[item.id]===s?'active':''}`}
+                                                            whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+                                                        >{s}</motion.button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="lux-prow-c">
+                                                <span className="lux-price">₹{item.finalprice}</span>
+                                                {item.baseprice > item.finalprice && (
+                                                    <>
+                                                        <del className="lux-orig">₹{item.baseprice}</del>
+                                                        <span className="lux-save">SAVE ₹{item.baseprice - item.finalprice}</span>
+                                                    </>
                                                 )}
                                             </div>
+
+                                            <motion.button
+                                                onClick={() => addToCart(item, selectedSizes[item.id], selectedColors[item.id])}
+                                                className={`lux-addbtn ${(!selectedSizes[item.id]||(normalizeColors(item.color).length>0&&!selectedColors[item.id]))?'disabled':''}`}
+                                                whileHover={(selectedSizes[item.id])?{scale:1.02}:{}}
+                                                whileTap={(selectedSizes[item.id])?{scale:0.98}:{}}
+                                            >
+                                                <span>Add to Bag</span>
+                                                <span className="lux-addico">+</span>
+                                            </motion.button>
+
+                                            {cartNotifications[item.id] && (
+                                                <motion.div className="lux-cbadge"
+                                                    initial={{ scale: 0, opacity: 0 }}
+                                                    animate={{ scale: 1, opacity: 1 }}
+                                                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                                                >✓ Added {cartNotifications[item.id]}×</motion.div>
+                                            )}
                                         </div>
                                     </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </div>
-
-                        {/* If No Products */}
-                        {filteredProducts.length === 0 && (
-                            <div className="text-center py-5">
-                                <img src="https://cdn-icons-png.flaticon.com/512/11329/11329060.png" width="120" className="opacity-50 mb-3" />
-                                <h4 className="text-muted">Oops! No products match your filters.</h4>
-                                <button className="btn btn-info mt-3 rounded-pill" onClick={() => window.location.reload()}>Clear All Filters</button>
-                            </div>
-                        )}
+                                ))
+                            )}
+                        </AnimatePresence>
+                        <style>{`.skeleton-box { background: linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 37%,#f3f4f6 63%); border-radius: 8px; animation: skeleton-shimmer 1.2s infinite linear; }
+                        @keyframes skeleton-shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }`}</style>
                     </div>
-                </div>
-            </section>
+
+                    {filteredProducts.length === 0 && (
+                        <div className="lux-empty">
+                            <div className="lux-eico">◇</div>
+                            <h4>No pieces match your selection</h4>
+                            <p>Refine your filters or explore the full collection</p>
+                            <button className="lux-ebtn" onClick={() => window.location.reload()}>Clear All Filters</button>
+                        </div>
+                    )}
+                </main>
+            </div>
 
             <style dangerouslySetInnerHTML={{ __html: `
-                .rounded-lg { border-radius: 16px !important; }
-                .rounded-xl { border-radius: 20px !important; }
-                
-                .product-card-premium {
-                    border-radius: 16px;
-                    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                    border: 2px solid #f0f0f0;
-                    overflow: hidden;
+                /* Force premium admin stats CSS */
+                .lux-hero-stats {
+                    display: flex !important;
+                    align-items: center !important;
+                    gap: 0 !important;
+                    border-top: 1px solid rgba(184,150,90,0.2) !important;
+                    padding-top: 28px !important;
+                    width: 100% !important;
+                    max-width: 360px !important;
+                    margin: 0 auto !important;
+                }
+                .lux-hstat {
+                    flex: 1 !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    gap: 7px !important;
+                }
+                .lux-hstat span {
+                    font-family: var(--serif) !important;
+                    font-size: 34px !important;
+                    font-weight: 600 !important;
+                    color: var(--gold-light) !important;
+                    line-height: 1 !important;
+                }
+                .lux-hstat small {
+                    font-size: 9px !important;
+                    font-weight: 600 !important;
+                    letter-spacing: 2.5px !important;
+                    text-transform: uppercase !important;
+                    color: rgba(245,240,232,0.32) !important;
+                }
+                .lux-hdiv {
+                    width: 1px !important;
+                    height: 42px !important;
+                    background: rgba(184,150,90,0.22) !important;
+                    flex-shrink: 0 !important;
+                }
+                @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Jost:wght@300;400;500;600;700&display=swap');
+
+                .lux-shop-root {
+                    --gold:        #b8965a;
+                    --gold-light:  #d4aa70;
+                    --ink:         #1a1612;
+                    --ink-mid:     #3d3530;
+                    --ink-muted:   #7a6f66;
+                    --cream:       #faf7f3;
+                    --cream-dark:  #f2ede5;
+                    --white:       #ffffff;
+                    --border:      rgba(184,150,90,0.18);
+                    --border-d:    rgba(184,150,90,0.38);
+                    --r:           4px;
+                    --r-lg:        12px;
+                    --serif:       'Cormorant Garamond', Georgia, serif;
+                    --sans:        'Jost', sans-serif;
+                    background: var(--cream);
+                    font-family: var(--sans);
+                    color: var(--ink);
+                    min-height: 100vh;
+                }
+
+                /* ── HERO (CENTERED) ── */
+                .lux-hero {
                     position: relative;
-                    box-shadow: none;
-                }
-                .product-card-premium::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(135deg, rgba(23,162,184,0.02) 0%, rgba(0,0,0,0) 100%);
-                    pointer-events: none;
-                    z-index: 1;
-                    border-radius: 16px;
-                }
-                .product-card-premium:hover {
-                    transform: translateY(-12px);
-                    box-shadow: 0 8px 18px rgba(23, 162, 184, 0.12) !important;
-                    border-color: #17a2b8;
-                    outline: 2px solid rgba(23, 162, 184, 0.35);
-                    outline-offset: -2px;
-                }
-                .img-wrap { position: relative; display: block; overflow: hidden; border-radius: 16px 16px 0 0; }
-                .img-wrap::after {
-                    content: '';
-                    position: absolute;
-                    inset: 0;
-                    background: linear-gradient(180deg, rgba(0,0,0,0) 60%, rgba(0,0,0,0.35) 100%);
-                    opacity: 0;
-                    transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-                    pointer-events: none;
-                }
-                .img-wrap img { transition: 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
-                .product-card-premium:hover .img-wrap img { 
-                    transform: scale(1.15);
-                    filter: brightness(1.05);
-                }
-                .product-card-premium:hover .img-wrap::after { opacity: 1; }
-                
-                .card-overlay {
-                    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-                    background: linear-gradient(145deg, rgba(10,25,47,0.18), rgba(255,255,255,0.06)); display: flex; align-items: center;
-                    justify-content: center; opacity: 0; transition: 0.3s;
-                    backdrop-filter: blur(5px);
-                }
-
-                .view-detail-pill {
-                    background: rgba(255,255,255,0.3) !important;
-                    border: 1px solid rgba(255,255,255,0.58) !important;
-                    color: #ffffff !important;
-                    backdrop-filter: blur(10px);
-                    box-shadow: 0 8px 18px rgba(0,0,0,0.18);
-                }
-                
-                .premium-badge {
-                    position: absolute; top: 12px; left: 12px; z-index: 10;
-                    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-                    color: white; padding: 6px 14px;
-                    border-radius: 8px; font-size: 11px; font-weight: bold;
-                    box-shadow: 0 4px 10px rgba(255,71,87,0.3);
-                    animation: badgePulse 2s ease-in-out infinite;
-                }
-                @keyframes badgePulse {
-                    0%, 100% { transform: scale(1); }
-                    50% { transform: scale(1.05); }
-                }
-                
-                .gap-2 { gap: 10px; }
-                .btn-white { background: white; color: black; border: none; font-weight: bold; }
-
-                .shop-filter-panel {
-                    border: 1px solid #e8edf2 !important;
-                    box-shadow: 0 8px 26px rgba(15,23,42,0.05) !important;
-                }
-                .shop-search-group {
-                    border: 1px solid #e2e8f0;
-                    box-shadow: none !important;
-                }
-                .shop-filter-select {
-                    border: 1px solid #dbe3ec;
-                    border-radius: 10px;
-                    height: 40px;
-                    font-size: 13px;
-                    color: #1f2937;
-                    background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
-                    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
-                    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-                }
-                .shop-filter-select:focus {
-                    border-color: #17a2b8;
-                    box-shadow: 0 0 0 3px rgba(23,162,184,0.12);
-                }
-
-                .wishlist-heart-btn {
-                    position: absolute;
-                    top: 10px;
-                    right: 10px;
-                    z-index: 12;
-                    width: 34px;
-                    height: 34px;
-                    border-radius: 999px;
-                    border: 1px solid rgba(255,255,255,0.55);
-                    background: rgba(255,255,255,0.72);
-                    backdrop-filter: blur(8px);
-                    color: #334155;
-                    display: inline-flex;
+                    background: var(--ink);
+                    min-height: 420px;
+                    display: flex;
                     align-items: center;
                     justify-content: center;
-                    cursor: pointer;
-                    transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
-                }
-                .wishlist-heart-btn svg {
-                    width: 16px;
-                    height: 16px;
-                }
-                .wishlist-heart-btn:hover {
-                    transform: translateY(-1px) scale(1.05);
-                    color: #e11d48;
-                    background: rgba(255,255,255,0.9);
-                }
-                .wishlist-heart-btn.active {
-                    color: #e11d48;
-                    background: rgba(255,255,255,0.96);
-                    border-color: rgba(225,29,72,0.32);
-                    box-shadow: 0 8px 16px rgba(225,29,72,0.2);
-                }
-                .wishlist-heart-btn.active svg path {
-                    fill: currentColor !important;
-                    stroke: currentColor !important;
-                }
-
-                .product-brand-shop {
-                    font-size: 9px;
-                    font-weight: 800;
-                    letter-spacing: 1.2px;
-                    color: #17a2b8;
-                    text-transform: uppercase;
-                }
-                .rating-shop {
-                    font-size: 11px;
-                    color: #f5b301;
-                    letter-spacing: -1px;
-                    font-weight: 700;
-                }
-                .product-name-shop {
-                    font-size: 13px;
-                    line-height: 1.35;
-                    font-weight: 800;
-                    letter-spacing: -0.2px;
-                }
-                .product-name-link {
-                    color: #1b1b1b;
-                    text-decoration: none;
-                }
-                .product-name-link:hover { color: #17a2b8; }
-                .product-category-shop {
-                    font-size: 10px;
-                    color: #6c757d;
-                    font-weight: 600;
-                    letter-spacing: 0.2px;
-                }
-                
-                .color-options-shop {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                .color-label {
-                    font-size: 9px;
-                    font-weight: 700;
-                    color: #333;
-                    text-transform: uppercase;
-                    letter-spacing: 0.6px;
-                }
-                .color-dots {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 6px;
-                }
-                .color-dot {
-                    width: 16px;
-                    height: 16px;
-                    border-radius: 50%;
-                    border: 2px solid #e9ecef;
-                    cursor: pointer;
-                    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-                }
-                .color-dot:hover {
-                    transform: scale(1.1);
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-                    border-color: #17a2b8;
-                }
-                .color-dot.active {
-                    border-color: #17a2b8;
-                    box-shadow: 0 0 0 2px rgba(23,162,184,0.25);
-                }
-
-                
-                /* Size Selector for Shop - SMALLER */
-                .product-size-selector-shop {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 6px;
-                    opacity: 0;
-                    transform: translateY(6px);
-                    max-height: 0;
-                    overflow: hidden;
-                    pointer-events: none;
-                    margin-bottom: 0 !important;
-                    padding: 8px;
-                    border-radius: 10px;
-                    border: 1px solid #e7edf4;
-                    background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
-                    box-shadow: inset 0 1px 0 rgba(255,255,255,0.95);
-                    transition: opacity 0.22s ease, transform 0.22s ease, max-height 0.22s ease, margin-bottom 0.22s ease;
-                }
-                .product-card-premium:hover .product-size-selector-shop,
-                .product-card-premium:focus-within .product-size-selector-shop {
-                    opacity: 1;
-                    transform: translateY(0);
-                    max-height: 132px;
-                    pointer-events: auto;
-                    margin-bottom: 8px !important;
-                }
-                .size-header-shop {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 8px;
-                }
-                .size-label-shop {
-                    font-size: 9px;
-                    font-weight: 800;
-                    color: #0f172a;
-                    text-transform: uppercase;
-                    letter-spacing: 0.7px;
-                    margin-bottom: 0;
-                }
-                .size-selected-pill {
-                    font-size: 9px;
-                    font-weight: 700;
-                    letter-spacing: 0.6px;
-                    color: #0f766e;
-                    border: 1px solid rgba(15,118,110,0.25);
-                    background: rgba(15,118,110,0.08);
-                    border-radius: 999px;
-                    padding: 3px 8px;
-                    line-height: 1;
-                }
-                .size-options-shop {
-                    display: grid;
-                    grid-template-columns: repeat(5, minmax(0, 1fr));
-                    gap: 6px;
-                }
-                .size-btn-shop {
-                    height: 30px;
-                    min-width: 30px;
-                    padding: 0;
-                    background: #ffffff;
-                    border: 1px solid #d9e2ec;
-                    border-radius: 999px;
-                    font-size: 10px;
-                    font-weight: 700;
-                    letter-spacing: 0.4px;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                    color: #334155;
                     text-align: center;
+                    overflow: hidden;
+                    padding: 72px 24px;
+                }
+                .lux-hero-glow {
+                    position: absolute;
+                    width: 700px; height: 700px;
+                    border-radius: 50%;
+                    pointer-events: none;
+                    filter: blur(130px);
+                }
+                .lux-glow-l { background: radial-gradient(circle,rgba(184,150,90,0.14) 0%,transparent 70%); top:-300px; left:-250px; }
+                .lux-glow-r { background: radial-gradient(circle,rgba(184,150,90,0.09) 0%,transparent 70%); bottom:-300px; right:-250px; }
+                .lux-hero-grain {
+                    position: absolute; inset: 0;
+                    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+                    pointer-events: none; opacity: 0.45;
+                }
+                .lux-hero-inner {
+                    position: relative; z-index: 2;
+                    display: flex; flex-direction: column; align-items: center;
+                    max-width: 680px; width: 100%;
+                }
+                .lux-hero-eyebrow {
+                    display: flex; align-items: center; gap: 16px;
+                    font-family: var(--sans); font-size: 10px; font-weight: 600;
+                    letter-spacing: 4px; color: var(--gold); text-transform: uppercase;
+                    margin-bottom: 22px;
+                }
+                .lux-eline {
+                    display: block; width: 44px; height: 1px;
+                    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+                }
+                .lux-hero-title {
+                    font-family: var(--serif);
+                    font-size: clamp(3rem, 6vw, 5.2rem);
+                    font-weight: 600; color: #f5f0e8;
+                    line-height: 1.08; margin: 0 0 18px;
+                    letter-spacing: -0.01em;
+                }
+                .lux-hero-title em { font-style: italic; color: var(--gold-light); }
+                .lux-wish {
+                    position: absolute;
+                    top: 18px;
+                    right: 18px;
+                    z-index: 3;
+                    background: linear-gradient(135deg, #fffbe6 60%, #f7e7c4 100%);
+                    border: 2.5px solid #b8965a;
+                    border-radius: 50%;
+                    padding: 7px;
+                    margin: 0;
+                    cursor: pointer;
+                    outline: none;
+                    box-shadow:
+                        0 2px 16px 0 rgba(184,150,90,0.13),
+                        0 0 0 2px #fffbe6,
+                        0 0 0 0px #e7c46a;
+                    transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+                    position: absolute;
+                    overflow: visible;
+                }
+                .lux-wish::before {
+                    content: "";
+                    position: absolute;
+                    inset: -10px;
+                    border-radius: 50%;
+                    z-index: 1;
+                    background: radial-gradient(circle, rgba(184,150,90,0.18) 0%, transparent 70%);
+                    pointer-events: none;
+                    opacity: 0.85;
+                    transition: opacity 0.18s;
+                }
+                .lux-wish:hover::before, .lux-wish.active::before {
+                    opacity: 1;
+                    background: radial-gradient(circle, rgba(231,196,106,0.22) 0%, transparent 70%);
+                }
+                .lux-wish:hover, .lux-wish:focus {
+                    border-color: #e7c46a;
+                    box-shadow:
+                        0 4px 24px 0 rgba(184,150,90,0.22),
+                        0 0 0 4px #f7e7c4,
+                        0 0 0 8px #e7c46a88;
+                    transform: scale(1.13);
+                    animation: lux-heart-pulse 0.5s;
+                }
+                .lux-wish:active {
+                    transform: scale(0.93);
+                    box-shadow:
+                        0 2px 16px 0 rgba(184,150,90,0.18),
+                        0 0 0 2.5px #e7c46a,
+                        0 0 0 10px #e7c46a44;
+                    animation: lux-heart-pulse 0.4s;
+                }
+                @keyframes lux-heart-pulse {
+                    0% { box-shadow: 0 0 0 0 #e7c46a44; }
+                    70% { box-shadow: 0 0 0 12px #e7c46a22; }
+                    100% { box-shadow: 0 0 0 0 #e7c46a00; }
+                }
+                .lux-wish svg {
+                    display: block;
+                    filter: drop-shadow(0 2px 8px rgba(184,150,90,0.18));
+                    stroke: #b8965a;
+                    stroke-width: 2.3;
+                    fill: none;
+                    transition: fill 0.18s, stroke 0.18s, filter 0.18s;
                     position: relative;
+                    z-index: 2;
                 }
-                .size-btn-shop:hover {
-                    border-color: #17a2b8;
-                    color: #17a2b8;
-                    background: rgba(23, 162, 184, 0.06);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 10px rgba(23, 162, 184, 0.14);
+                .lux-wish.active svg {
+                    fill: #e74c3c;
+                    stroke: #b8965a;
+                    filter: drop-shadow(0 0 16px #e74c3c99) drop-shadow(0 0 8px #e7c46a88);
                 }
-                .size-btn-shop.active {
-                    background: linear-gradient(135deg, #111827 0%, #0f172a 70%, #17a2b8 100%);
-                    color: #fff;
-                    border-color: #111827;
-                    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.28);
-                    font-weight: 800;
+                .lux-wish:not(.active):hover svg {
+                    stroke: #e7c46a;
+                    filter: drop-shadow(0 0 12px #b8965a88);
+                }
+                .lux-mbar {
+                    display: none; align-items: center; gap: 10px;
+                    padding: 12px 16px; background: var(--white);
+                    border-bottom: 1px solid var(--border);
+                    position: sticky; top: 0; z-index: 200;
+                    box-shadow: 0 2px 14px rgba(26,22,18,0.05);
+                }
+                .lux-ftoggle {
+                    display: flex; align-items: center; gap: 7px;
+                    background: var(--ink); color: var(--gold-light);
+                    border: none; border-radius: var(--r);
+                    padding: 9px 16px; font-family: var(--sans);
+                    font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
+                    text-transform: uppercase; cursor: pointer; white-space: nowrap;
+                    transition: background 0.2s;
+                }
+                .lux-ftoggle:hover { background: var(--ink-mid); }
+                .lux-mcount { font-size: 11px; color: var(--ink-muted); font-family: var(--sans); flex: 1; text-align: center; }
+                .lux-msort {
+                    background: transparent; border: 1px solid var(--border-d);
+                    border-radius: var(--r); padding: 8px 10px;
+                    font-family: var(--sans); font-size: 11px; color: var(--ink);
+                    cursor: pointer; outline: none;
                 }
 
-                .price-current-shop {
-                    font-size: 20px;
-                    font-weight: 900;
-                    color: #0f172a;
-                    letter-spacing: -0.01em;
-                    line-height: 1;
+                /* ── LAYOUT ── */
+                .lux-layout {
+                    display: flex; align-items: flex-start;
+                    max-width: 1540px; margin: 0 auto;
+                    padding: 48px 40px; gap: 36px;
                 }
-                .price-original-shop {
-                    font-size: 16px;
-                    font-weight: 500;
-                    color: #9ca3af;
-                    text-decoration-thickness: 1.5px;
-                    text-decoration-color: #cbd5e1;
+                .lux-backdrop {
+                    display: none; position: fixed; inset: 0;
+                    background: rgba(26,22,18,0.52);
+                    z-index: 399; backdrop-filter: blur(3px);
                 }
-                
-                /* Add to Bag Button - Premium */
-                .btn-add-bag {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 5px;
-                    width: 100%;
-                    padding: 9px 14px;
-                    background: linear-gradient(135deg, #000 0%, #2c2c2c 100%);
-                    color: #fff;
-                    border: none;
-                    border-radius: 10px;
-                    font-weight: 700;
-                    font-size: 12px;
-                    letter-spacing: 0.5px;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-                    min-height: 32px;
-                    position: relative;
-                    overflow: hidden;
+
+                /* ── SIDEBAR ── */
+                .lux-sidebar {
+                    width: 295px; flex-shrink: 0;
+                    position: sticky; top: 90px;
+                    max-height: calc(100vh - 110px);
+                    overflow-y: auto;
+                    scrollbar-width: thin;
+                    scrollbar-color: var(--border-d) transparent;
                 }
-                .btn-add-bag::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                .lux-sb-inner {
+                    background: var(--white);
+                    border: 1px solid var(--border);
+                    border-radius: var(--r-lg);
+                    padding: 32px 28px;
+                    box-shadow: 0 8px 40px rgba(26,22,18,0.07), 0 2px 8px rgba(26,22,18,0.04);
+                }
+                .lux-sb-head {
+                    display: flex; align-items: flex-start; justify-content: space-between;
+                    margin-bottom: 30px; padding-bottom: 22px; border-bottom: 1px solid var(--border);
+                }
+                .lux-sb-eyebrow {
+                    font-family: var(--sans); font-size: 9px; font-weight: 700;
+                    letter-spacing: 2.5px; color: var(--gold); text-transform: uppercase;
+                    margin: 0 0 6px;
+                }
+                .lux-sb-title {
+                    font-family: var(--serif); font-size: 30px; font-weight: 600;
+                    color: var(--ink); line-height: 1; margin: 0;
+                }
+                .lux-sb-close {
+                    display: none; background: var(--cream); border: 1px solid var(--border);
+                    border-radius: 50%; width: 34px; height: 34px;
+                    align-items: center; justify-content: center;
+                    color: var(--ink-muted); cursor: pointer; flex-shrink: 0;
+                    margin-top: 4px; transition: background 0.2s, color 0.2s;
+                }
+                .lux-sb-close:hover { background: var(--ink); color: var(--gold-light); }
+
+                .lux-fg {
+                    margin-bottom: 26px; padding-bottom: 26px;
+                    border-bottom: 1px solid rgba(184,150,90,0.1);
+                }
+                .lux-fg-last { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+                .lux-fl {
+                    display: flex; align-items: center; gap: 7px;
+                    font-family: var(--sans); font-size: 9px; font-weight: 700;
+                    letter-spacing: 2.5px; text-transform: uppercase;
+                    color: var(--gold); margin-bottom: 13px;
+                    cursor: default; user-select: none;
+                }
+                .lux-fl-icon { font-size: 11px; opacity: 0.7; }
+                .lux-fl-admin { color: #8b6914; }
+                .lux-admin-fg { background: rgba(184,150,90,0.04); border-radius: var(--r); padding: 12px; margin-left: -12px; margin-right: -12px; }
+                .lux-atag {
+                    margin-left: auto; background: rgba(139,105,20,0.12);
+                    border: 1px solid rgba(139,105,20,0.3); color: #8b6914;
+                    font-size: 8px; font-weight: 700; letter-spacing: 1px;
+                    padding: 2px 8px; border-radius: 999px;
+                }
+
+                .lux-sw { position: relative; }
+                .lux-si {
+                    position: absolute; left: 13px; top: 50%;
+                    transform: translateY(-50%); color: var(--ink-muted); pointer-events: none;
+                }
+                .lux-sinp {
+                    width: 100%; padding: 12px 13px 12px 40px;
+                    border: 1px solid var(--border-d); border-radius: var(--r);
+                    font-family: var(--sans); font-size: 13px; color: var(--ink);
+                    background: var(--cream); outline: none;
+                    transition: border-color 0.2s, box-shadow 0.2s;
+                    box-sizing: border-box;
+                }
+                .lux-sinp:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(184,150,90,0.1); background: var(--white); }
+
+                .lux-sel {
+                    width: 100%; padding: 12px 13px;
+                    border: 1px solid var(--border-d); border-radius: var(--r);
+                    font-family: var(--sans); font-size: 13px; color: var(--ink);
+                    background: var(--cream); outline: none; cursor: pointer;
+                    transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;
+                }
+                .lux-sel:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(184,150,90,0.1); }
+
+                .lux-sgrid { display: flex; flex-wrap: wrap; gap: 7px; }
+                .lux-sp {
+                    padding: 6px 14px; border: 1px solid var(--border-d);
+                    border-radius: 999px; font-family: var(--sans);
+                    font-size: 11px; font-weight: 600; color: var(--ink-mid);
+                    background: transparent; cursor: pointer;
+                    transition: all 0.2s; letter-spacing: 0.4px;
+                }
+                .lux-sp:hover { border-color: var(--gold); color: var(--gold); }
+                .lux-sp.active { background: var(--ink); color: var(--gold-light); border-color: var(--ink); }
+
+                .lux-prow { display: flex; align-items: center; gap: 10px; }
+                .lux-pinp {
+                    flex: 1; padding: 11px 11px; border: 1px solid var(--border-d);
+                    border-radius: var(--r); font-family: var(--sans); font-size: 12px;
+                    color: var(--ink); background: var(--cream); outline: none;
+                    min-width: 0; transition: border-color 0.2s; box-sizing: border-box;
+                }
+                .lux-pinp:focus { border-color: var(--gold); }
+                .lux-psep { color: var(--ink-muted); font-size: 13px; flex-shrink: 0; }
+
+                /* ── MAIN ── */
+                .lux-main { flex: 1; min-width: 0; }
+                .lux-toolbar {
+                    display: flex; align-items: center; justify-content: space-between;
+                    background: var(--white); border: 1px solid var(--border);
+                    border-radius: var(--r-lg); padding: 15px 24px; margin-bottom: 28px;
+                    box-shadow: 0 2px 14px rgba(26,22,18,0.04);
+                }
+                .lux-tc { font-family: var(--sans); font-size: 12px; color: var(--ink-muted); letter-spacing: 0.3px; }
+                .lux-tc strong { color: var(--ink); font-weight: 700; }
+                .lux-tr { display: flex; align-items: center; gap: 12px; }
+                .lux-tl { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); }
+                .lux-dsort {
+                    background: transparent; border: 1px solid var(--border-d);
+                    border-radius: var(--r); padding: 8px 13px;
+                    font-family: var(--sans); font-size: 12px; color: var(--ink);
+                    cursor: pointer; outline: none; transition: border-color 0.2s;
+                }
+                .lux-dsort:focus { border-color: var(--gold); }
+
+                /* ── GRID ── */
+                .lux-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                    gap: 22px;
+                }
+
+                /* ── CARD ── */
+                .lux-card {
+                    background: var(--white); border: 1px solid var(--border);
+                    border-radius: var(--r-lg); overflow: hidden; position: relative;
+                    display: flex; flex-direction: column;
+                    transition: border-color 0.35s, box-shadow 0.35s, transform 0.35s cubic-bezier(0.16,1,0.3,1);
+                    box-shadow: 0 2px 14px rgba(26,22,18,0.04);
+                }
+                .lux-card:hover {
+                    border-color: rgba(184,150,90,0.55);
+                    box-shadow: 0 16px 48px rgba(184,150,90,0.13), 0 4px 16px rgba(26,22,18,0.06);
+                    transform: translateY(-7px);
+                }
+                .lux-ribbon {
+                    position: absolute; top: 14px; left: 14px; z-index: 10;
+                    background: var(--ink); color: var(--gold-light);
+                    padding: 5px 11px; border-radius: 2px;
+                    font-size: 9px; font-weight: 700; font-family: var(--sans);
+                    letter-spacing: 1px; text-transform: uppercase;
+                }
+                .lux-wish {
+                    position: absolute; top: 12px; right: 12px; z-index: 12;
+                    width: 36px; height: 36px; border-radius: 50%;
+                    border: 1px solid rgba(255,255,255,0.55);
+                    background: rgba(255,255,255,0.72); backdrop-filter: blur(10px);
+                    color: var(--ink-muted); display: flex; align-items: center;
+                    justify-content: center; cursor: pointer; transition: all 0.25s;
+                }
+                .lux-wish svg { width: 15px; height: 15px; }
+                .lux-wish:hover { color: #c0392b; background: rgba(255,255,255,0.95); transform: scale(1.1); }
+                .lux-wish.active { color: #c0392b; background: rgba(255,255,255,0.96); border-color: rgba(192,57,43,0.3); box-shadow: 0 4px 14px rgba(192,57,43,0.18); }
+                .lux-wish.active svg path { fill: currentColor; stroke: currentColor; }
+
+                /* Image + hover: blur + centered pill */
+                .lux-img-wrap {
+                    display: block; overflow: hidden; position: relative;
+                    aspect-ratio: 4/5; background: var(--cream-dark); cursor: pointer;
+                }
+                .lux-img {
+                    width: 100%; height: 100%; object-fit: cover; display: block;
+                    transition: transform 0.55s cubic-bezier(0.16,1,0.3,1), filter 0.42s ease;
+                    will-change: transform, filter;
+                }
+                .lux-card:hover .lux-img {
+                    transform: scale(1.08);
+                    filter: blur(4px) brightness(0.7);
+                }
+                .lux-overlay {
+                    position: absolute; inset: 0;
+                    display: flex; align-items: center; justify-content: center;
+                    background: rgba(26,22,18,0.15);
+                    opacity: 0; transition: opacity 0.35s ease; z-index: 5;
+                }
+                .lux-card:hover .lux-overlay { opacity: 1; }
+                .lux-vpill {
+                    display: inline-flex; align-items: center; gap: 9px;
+                    font-family: var(--sans); font-size: 11px; font-weight: 600;
+                    letter-spacing: 2px; text-transform: uppercase; color: #f5f0e8;
+                    background: rgba(26,22,18,0.7); backdrop-filter: blur(16px);
+                    border: 1px solid rgba(212,170,112,0.5); border-radius: var(--r);
+                    padding: 13px 24px; cursor: pointer; white-space: nowrap;
+                    box-shadow: 0 8px 28px rgba(26,22,18,0.32);
+                }
+                .lux-vpill:hover { border-color: var(--gold-light); color: var(--gold-light); }
+
+                /* Card body */
+                .lux-cbody { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+                .lux-cmeta { display: flex; align-items: center; justify-content: space-between; }
+                .lux-cbrand { font-family: var(--sans); font-size: 8px; font-weight: 700; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; }
+                .lux-crating { display: flex; align-items: center; gap: 3px; }
+                .lux-stars { font-size: 10px; color: var(--gold); letter-spacing: -1px; }
+                .lux-rnum { font-size: 10px; color: var(--ink-muted); }
+                .lux-cname { font-family: var(--serif); font-size: 15px; font-weight: 600; line-height: 1.3; margin: 0; color: var(--ink); }
+                .lux-cnlink { color: inherit; text-decoration: none; }
+                .lux-cnlink:hover { color: var(--gold); }
+                .lux-ccat { font-size: 10px; color: var(--ink-muted); font-weight: 500; letter-spacing: 0.3px; margin: 0; }
+
+                .lux-colors { display: flex; align-items: center; gap: 9px; }
+                .lux-clabel { font-size: 8px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-mid); white-space: nowrap; }
+                .lux-cdots { display: flex; flex-wrap: wrap; gap: 5px; }
+                .lux-cdot {
+                    width: 14px; height: 14px; border-radius: 50%; border: 2px solid #e9ecef;
+                    cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+                }
+                .lux-cdot:hover { transform: scale(1.2); border-color: var(--gold); }
+                .lux-cdot.active { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(184,150,90,0.3); }
+
+                /* Size — revealed on hover */
+                .lux-sizes {
+                    display: flex; flex-direction: column; gap: 8px;
+                    overflow: hidden; max-height: 0; opacity: 0; pointer-events: none;
+                    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+                    border: 1px solid var(--border); border-radius: var(--r);
+                    padding: 0 12px; background: var(--cream);
+                }
+                .lux-card:hover .lux-sizes,
+                .lux-card:focus-within .lux-sizes {
+                    max-height: 130px; opacity: 1; pointer-events: auto; padding: 11px 12px;
+                }
+                .lux-shd { display: flex; align-items: center; justify-content: space-between; }
+                .lux-slbl { font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--ink); }
+                .lux-schosen { font-size: 8px; font-weight: 700; color: var(--gold); border: 1px solid var(--border-d); border-radius: 999px; padding: 2px 9px; letter-spacing: 0.5px; }
+                .lux-sbtns { display: grid; grid-template-columns: repeat(5,1fr); gap: 5px; }
+                .lux-sbtn {
+                    height: 28px; border: 1px solid var(--border-d); border-radius: 2px;
+                    background: var(--white); font-family: var(--sans); font-size: 9px;
+                    font-weight: 700; color: var(--ink-mid); cursor: pointer; transition: all 0.2s;
+                }
+                .lux-sbtn:hover { border-color: var(--gold); color: var(--gold); }
+                .lux-sbtn.active { background: var(--ink); color: var(--gold-light); border-color: var(--ink); }
+
+                /* Price */
+                .lux-prow-c { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+                .lux-price { font-family: var(--serif); font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1; }
+                .lux-orig { font-size: 13px; color: var(--ink-muted); font-weight: 400; text-decoration-color: var(--border-d); }
+                .lux-save {
+                    font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: #7c4700;
+                    background: rgba(184,150,90,0.12); border: 1px solid rgba(184,150,90,0.25);
+                    border-radius: 2px; padding: 3px 7px; white-space: nowrap;
+                }
+
+                /* Add to Bag */
+                .lux-addbtn {
+                    display: flex; align-items: center; justify-content: space-between;
+                    width: 100%; padding: 11px 16px; background: var(--ink);
+                    color: var(--gold-light); border: 1px solid var(--ink);
+                    border-radius: var(--r); font-family: var(--sans); font-size: 11px;
+                    font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+                    cursor: pointer; transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+                    margin-top: 4px; position: relative; overflow: hidden; box-sizing: border-box;
+                }
+                .lux-addbtn::before {
+                    content:''; position: absolute; top:0; left:-100%; width:100%; height:100%;
+                    background: linear-gradient(90deg,transparent,rgba(184,150,90,0.18),transparent);
                     transition: left 0.5s;
                 }
-                .btn-add-bag:hover {
-                    background: linear-gradient(135deg, #111827 0%, #0f172a 100%);
-                    transform: translateY(-1px);
-                    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.24);
-                }
-                .btn-add-bag:hover::before {
-                    left: 100%;
-                }
-                .btn-add-bag.size-not-selected {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-                .btn-add-bag.size-not-selected:hover {
-                    background: linear-gradient(135deg, #000 0%, #2c2c2c 100%);
-                    transform: none;
-                    box-shadow: none;
-                }
-                .bag-icon {
-                    font-size: 16px;
-                    font-weight: 300;
-                    transition: transform 0.3s;
-                }
-                .btn-add-bag:hover .bag-icon {
-                    transform: rotate(90deg) scale(1.2);
-                }
-                
-                /* Cart Count Badge */
-                .cart-count-badge-shop {
-                    padding: 6px 10px;
-                    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-                    border: 1px solid #c3e6cb;
-                    border-radius: 8px;
-                    font-size: 10px;
-                    font-weight: 700;
-                    color: #155724;
-                    text-align: center;
-                    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
-                }
-                
-                /* Toast Notifications */
-                .toast-notification {
-                    position: fixed;
-                    top: 30px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    padding: 14px 24px;
-                    border-radius: 12px;
-                    font-weight: 600;
-                    font-size: 14px;
-                    z-index: 9999;
-                    max-width: 90%;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-                    backdrop-filter: blur(10px);
-                    letter-spacing: 0.5px;
-                }
-                .toast-success {
-                    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-                    color: #155724;
-                    border: 1px solid #c3e6cb;
-                }
-                .toast-warning {
-                    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-                    color: #856404;
-                    border: 1px solid #ffeaa7;
-                }
-                .toast-info {
-                    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-                    color: #0c5460;
-                    border: 1px solid #bee5eb;
-                }
-                .toast-message {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
+                .lux-addbtn:hover { background:#2a2218; color:var(--gold); border-color:var(--gold); box-shadow:0 4px 16px rgba(26,22,18,0.2); }
+                .lux-addbtn:hover::before { left:100%; }
+                .lux-addbtn.disabled { opacity:0.42; cursor:not-allowed; }
+                .lux-addbtn.disabled:hover { background:var(--ink); color:var(--gold-light); border-color:var(--ink); box-shadow:none; }
+                .lux-addico { font-size:18px; font-weight:300; transition:transform 0.3s; line-height:1; }
+                .lux-addbtn:hover .lux-addico { transform:rotate(90deg); }
+
+                .lux-cbadge {
+                    background: linear-gradient(135deg,#eef7ea 0%,#e4f0df 100%);
+                    border: 1px solid rgba(90,160,70,0.22); border-radius: var(--r);
+                    font-size:10px; font-weight:700; color:#2d6a1a;
+                    text-align:center; padding:6px 10px; letter-spacing:0.5px;
                 }
 
-                .shop-toolbar select {
-                    min-width: 170px;
+                /* Empty */
+                .lux-empty { text-align:center; padding:90px 20px; }
+                .lux-eico { font-family:var(--serif); font-size:60px; color:var(--border-d); line-height:1; margin-bottom:20px; }
+                .lux-empty h4 { font-family:var(--serif); font-size:26px; font-weight:600; color:var(--ink); margin-bottom:10px; }
+                .lux-empty p { font-size:13px; color:var(--ink-muted); margin-bottom:30px; }
+                .lux-ebtn {
+                    background:var(--ink); color:var(--gold-light); border:1px solid var(--ink);
+                    border-radius:var(--r); padding:13px 34px; font-family:var(--sans);
+                    font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase;
+                    cursor:pointer; transition:all 0.25s;
                 }
+                .lux-ebtn:hover { background:transparent; color:var(--ink); border-color:var(--gold); }
 
-                @media (hover: none) and (pointer: coarse) {
-                    .product-card-premium:hover {
-                        transform: none;
-                        box-shadow: none !important;
-                        border-color: #f0f0f0;
-                        outline: none;
-                    }
-                    .product-card-premium:hover .img-wrap img {
-                        transform: none;
-                        filter: none;
-                    }
-                    .card-overlay {
-                        display: none;
-                    }
-                    .btn-add-bag:hover {
-                        transform: none;
-                        box-shadow: none;
-                    }
-                    .color-dot:hover,
-                    .size-btn-shop:hover {
-                        transform: none;
-                        box-shadow: none;
-                    }
-                }
-
+                /* Accessibility */
                 @media (prefers-reduced-motion: reduce) {
-                    .product-card-premium,
-                    .img-wrap img,
-                    .card-overlay,
-                    .btn-add-bag,
-                    .size-btn-shop,
-                    .color-dot,
-                    .premium-badge {
-                        animation: none !important;
-                        transition: none !important;
-                    }
-                }
-                
-                /* Responsive */
-                @media (max-width: 1200px) {
-                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
-                    .size-btn-shop { height: 28px; font-size: 9px; }
-                                .btn-add-bag { padding: 8px 10px; font-size: 11px; min-height: 32px; }
-                                .product-name-shop { font-size: 12px; }
-                                .product-category-shop { font-size: 9px; }
-                }
-                
-                @media (max-width: 991px) {
-                    .shop-layout-section { padding: 24px 14px !important; }
-                    .shop-sidebar { margin-bottom: 10px; }
-                    .shop-filter-sticky {
-                        position: static !important;
-                        top: auto !important;
-                    }
-                    .shop-filter-panel { padding: 14px !important; margin-bottom: 12px !important; }
-                    .shop-toolbar {
-                        flex-direction: column;
-                        align-items: stretch !important;
-                        gap: 10px;
-                    }
-                    .shop-toolbar > div {
-                        width: 100%;
-                        justify-content: space-between;
-                    }
-                    .shop-toolbar select { width: 100%; }
-                    .product-card-premium { border-radius: 14px; }
-                    .img-wrap { border-radius: 14px 14px 0 0; }
-                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-                    .size-btn-shop { height: 28px; font-size: 9px; min-width: 0; }
-                                .btn-add-bag { padding: 8px 10px; font-size: 11px; min-height: 32px; }
-                    .size-label-shop { font-size: 8px; }
-                    .toast-notification { font-size: 13px; padding: 12px 20px; }
-                    .product-card-premium:hover { transform: translateY(-8px); }
-                                .product-brand-shop { font-size: 8px; }
-                                .product-name-shop { font-size: 12px; }
-                }
-                
-                @media (max-width: 768px) {
-                    .product-card-premium:hover {
-                        transform: translateY(-4px);
-                    }
-                    .size-options-shop { gap: 2px; }
-                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-                    .size-btn-shop { height: 26px; font-size: 8px; min-width: 0; }
-                    .btn-add-bag { padding: 8px 10px; font-size: 10px; min-height: 32px; }
-                    .cart-count-badge-shop { font-size: 9px; padding: 4px 8px; margin-top: 4px; }
-                    .toast-notification { font-size: 12px; padding: 10px 18px; top: 20px; }
-                    .product-name-shop { font-size: 12px; }
-                    .product-category-shop { font-size: 10px; }
-                    .product-size-selector-shop {
-                        opacity: 1;
-                        transform: none;
-                        max-height: none;
-                        pointer-events: auto;
-                        margin-bottom: 8px !important;
-                    }
-                }
-                
-                @media (max-width: 575px) {
-                    .shop-layout-section { padding: 16px 10px !important; }
-                    .hero-wrap .container { padding-left: 12px; padding-right: 12px; }
-                    .hero-wrap h1 { font-size: 2rem !important; }
-                    .hero-wrap p { font-size: 13px; margin-bottom: 0; }
-                    .shop-toolbar { padding: 10px !important; }
-                    .shop-toolbar span.small { font-size: 12px !important; }
-                    .shop-toolbar select { min-width: 0; height: 34px; font-size: 12px; }
-                    .shop-filter-panel h5 { font-size: 16px; margin-bottom: 12px !important; }
-                    .shop-filter-panel .mb-4 { margin-bottom: 12px !important; }
-                    .shop-main-area .row { margin-left: -6px; margin-right: -6px; }
-                    .shop-main-area .row > div { padding-left: 6px; padding-right: 6px; }
-                    .product-card-premium { border-radius: 12px; margin-bottom: 12px; border: 1px solid #f0f0f0; }
-                    .img-wrap { border-radius: 12px 12px 0 0; }
-                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
-                    .size-btn-shop { height: 25px; font-size: 8px; }
-                    .size-label-shop { font-size: 8px; margin-bottom: 2px; }
-                    .btn-add-bag { padding: 8px 10px; font-size: 10px; min-height: 32px; }
-                    .premium-badge { padding: 5px 10px; font-size: 9px; top: 10px; left: 10px; }
-                    .product-card-premium .p-3,
-                    .product-card-premium .p-md-3,
-                    .product-card-premium .p-md-4 { padding: 10px !important; }
-                    .product-name-shop { font-size: 12px; }
-                    .product-category-shop { font-size: 9px; }
-                    .color-dot { width: 14px; height: 14px; }
-                }
-                
-                @media (max-width: 375px) {
-                    .shop-layout-section { padding: 14px 8px !important; }
-                    .hero-wrap h1 { font-size: 1.65rem !important; }
-                    .hero-wrap p { font-size: 12px; }
-                    .shop-toolbar { gap: 8px; }
-                    .shop-toolbar select { height: 32px; font-size: 11px; }
-                    .size-options-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
-                    .size-btn-shop { height: 24px; font-size: 8px; }
-                                .btn-add-bag { padding: 7px 10px; font-size: 9px; min-height: 30px; }
-                    .premium-badge { font-size: 8px; padding: 4px 8px; }
+                    .lux-card,.lux-img,.lux-overlay,.lux-addbtn,.lux-sbtn,.lux-cdot,.lux-sidebar
+                    { transition:none!important; animation:none!important; }
                 }
 
-                @media (max-width: 425px) {
-                    .shop-main-area .row { margin-left: -5px; margin-right: -5px; }
-                    .shop-main-area .row > div { padding-left: 5px; padding-right: 5px; }
-                    .product-card-premium .p-3,
-                    .product-card-premium .p-md-3,
-                    .product-card-premium .p-md-4 { padding: 9px !important; }
+                /* Touch */
+                @media (hover:none) and (pointer:coarse) {
+                    .lux-card:hover { transform:none; box-shadow:0 2px 14px rgba(26,22,18,0.04); border-color:var(--border); }
+                    .lux-card:hover .lux-img { transform:none; filter:none; }
+                    .lux-overlay { display:none; }
+                    .lux-sizes { max-height:none; opacity:1; pointer-events:auto; padding:11px 12px; }
+                }
+
+                /* ── RESPONSIVE ── */
+                @media (max-width: 1280px) {
+                    .lux-layout { padding:40px 28px; gap:28px; }
+                    .lux-sidebar { width:268px; }
+                    .lux-grid { grid-template-columns:repeat(auto-fill,minmax(195px,1fr)); gap:18px; }
+                }
+                @media (max-width: 991px) {
+                    .lux-hero { min-height:360px; padding:60px 24px; }
+                    .lux-mbar { display:flex; }
+                    .lux-layout { padding:24px 16px; gap:0; }
+                    .lux-toolbar { display:none; }
+                    .lux-grid { grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; }
+                    .lux-backdrop { display:block; }
+                    .lux-sidebar {
+                        position:fixed; top:0; left:0;
+                        width:310px; height:100vh; max-height:none;
+                        z-index:400; border-radius:0;
+                        transform:translateX(-115%);
+                        transition:transform 0.38s cubic-bezier(0.16,1,0.3,1);
+                    }
+                    .lux-sidebar.open { transform:translateX(0); }
+                    .lux-sb-inner { border-radius:0; min-height:100vh; }
+                    .lux-sb-close { display:flex; }
+                }
+                @media (max-width: 640px) {
+                    .lux-hero { min-height:300px; padding:50px 20px; }
+                    .lux-hero-title { font-size:2.4rem; }
+                    .lux-hero-stats { max-width:100%; }
+                    .lux-hero-watermark { display:none; }
+                    .lux-layout { padding:16px 12px; }
+                    .lux-grid { grid-template-columns:repeat(2,1fr); gap:12px; }
+                    .lux-cbody { padding:12px; gap:6px; }
+                    .lux-cname { font-size:13px; }
+                    .lux-price { font-size:19px; }
+                    .lux-addbtn { font-size:10px; padding:9px 12px; letter-spacing:1px; }
+                }
+                @media (max-width: 420px) {
+                    .lux-hero-title { font-size:2rem; }
+                    .lux-hstat span { font-size:26px; }
+                    .lux-grid { grid-template-columns:repeat(2,1fr); gap:10px; }
+                    .lux-cbody { padding:10px; gap:5px; }
+                    .lux-cname { font-size:12px; }
+                    .lux-addbtn { font-size:9px; padding:8px 10px; }
+                    .lux-sbtn { height:25px; font-size:8px; }
+                    .lux-price { font-size:17px; }
                 }
             `}} />
         </div>

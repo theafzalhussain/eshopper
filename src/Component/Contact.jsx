@@ -93,16 +93,39 @@ export default function Contact() {
 
     return (
         <div style={{ backgroundColor: "#f8f9fa" }}>
-            {/* --- PREMIUM BREADCRUMB BANNER --- */}
-            <div className="hero-wrap hero-bread py-4 compact-contact-hero" style={{ background: 'linear-gradient(rgba(0,0,0,0.58), rgba(0,0,0,0.58)), url("/assets/images/bg_6.jpg")', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-                <div className="container">
+            {/* --- PREMIUM LUXURY HEADER --- */}
+            <div className="hero-wrap hero-bread py-5 compact-contact-hero" style={{ background: 'linear-gradient(120deg, #18120f 60%, #2d2217 100%)', backgroundSize: 'cover', backgroundPosition: 'center', borderBottom: '2px solid #c9a84c', padding: 0 }}>
+                <div className="container-fluid px-0">
                     <div className="row no-gutters slider-text align-items-center justify-content-center">
-                        <div className="col-md-9 text-center">
-                            <motion.h1 initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-0 bread text-white contact-hero-title">Get In Touch</motion.h1>
-                            <p className="text-white-50 mt-2">We'd love to hear from you. Send us a message!</p>
+                        <div className="col-12 col-md-10 text-center px-2 px-md-0">
+                            <div className="contact-hero-eyebrow" style={{ letterSpacing: 2, color: '#c9a84c', fontWeight: 600, fontSize: 13, marginBottom: 12 }}>
+                                — GET IN TOUCH —
+                            </div>
+                            <motion.h1 initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-2 bread contact-hero-title" style={{ color: '#fff', fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: '3.2rem', letterSpacing: '-1px', lineHeight: 1.1 }}>
+                                <span style={{ color: '#fff' }}>Premium&nbsp;</span>
+                                <span style={{ color: '#c9a84c', fontStyle: 'italic' }}>Luxury</span>
+                                <span style={{ color: '#fff' }}>&nbsp;Support</span>
+                            </motion.h1>
+                            <div className="contact-hero-desc text-white-50 mt-2" style={{ fontSize: 18, fontWeight: 400, maxWidth: 700, margin: '0 auto', letterSpacing: 0.2 }}>
+                                Our concierge team is ready to help you with any query, feedback, or collaboration. Experience the luxury of personal support.
+                            </div>
                         </div>
                     </div>
                 </div>
+                                <style>{`
+                                    .contact-hero-title {font-size: 3.2rem;}
+                                    .contact-hero-desc {font-size: 18px;}
+                                    @media (max-width: 900px) {
+                                        .contact-hero-title {font-size: 2.1rem !important;}
+                                        .contact-hero-desc {font-size: 1.1rem !important;}
+                                    }
+                                    @media (max-width: 600px) {
+                                        .compact-contact-hero {padding: 16px 0 10px 0 !important;}
+                                        .contact-hero-title {font-size: 1.15rem !important;}
+                                        .contact-hero-desc {font-size: 0.93rem !important;}
+                                        .contact-hero-eyebrow {margin-bottom: 7px !important;}
+                                    }
+                                `}</style>
             </div>
 
             <section className="ftco-section contact-section">
@@ -115,8 +138,8 @@ export default function Contact() {
                             { icon: "icon-paper-plane", label: "Email", text: brandEmail, link: `mailto:${brandEmail}` },
                             { icon: "icon-globe", label: "Website", text: brandSite.replace(/^https?:\/\//, ''), link: brandSite }
                         ].map((item, i) => (
-                            <motion.div key={i} className="col-md-3 d-flex" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                                <div className="info bg-white p-4 shadow-sm rounded-lg border-0 w-100 text-center transition-all hover-info">
+                            <motion.div key={i} className="col-12 col-sm-6 col-md-3 d-flex mb-3 mb-md-0" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+                                <div className="info bg-white p-4 shadow-sm rounded-lg border-0 w-100 text-center transition-all hover-info contact-info-card">
                                     <div className="icon-circle mb-3 mx-auto shadow-sm">
                                         <span className={`icon ${item.icon} text-info`}></span>
                                     </div>
@@ -127,6 +150,18 @@ export default function Contact() {
                             </motion.div>
                         ))}
                     </div>
+                                        <style>{`
+                                            .contact-info-card {min-width:0;}
+                                            @media (max-width: 900px) {
+                                                .contact-info .info {padding: 16px 6px !important; margin-bottom: 16px !important;}
+                                                .contact-info-card {font-size: 0.98rem;}
+                                            }
+                                            @media (max-width: 600px) {
+                                                .contact-info .info {padding: 10px 2px !important; margin-bottom: 12px !important;}
+                                                .contact-info-card {font-size: 0.93rem;}
+                                                .contact-info {margin-left: -4px !important; margin-right: -4px !important;}
+                                            }
+                                        `}</style>
 
                     <div className="row">
                         {/* --- CONTACT FORM: PREMIUM LOOK --- */}

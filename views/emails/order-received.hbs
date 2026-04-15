@@ -93,110 +93,126 @@
   </style>
 </head>
 <body>
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order Received - {{orderId}}. Your order is now in processing.</div>
-  <table class="wrapper" role="presentation" width="100%"><tr><td>
-    <table class="frame" role="presentation" align="center">
-      <tr><td class="head">
-        <table role="presentation" class="brandmark" cellpadding="0" cellspacing="0"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table>
-        <div class="orderid">ORDER ID<strong>{{orderId}}</strong></div>
+</body>
+<body style="margin:0;padding:0;background:#050608;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} received. Premium processing in progress.</div>
+  {{> animated-gold-border}}
+  <table role="presentation" width="100%" style="width:100%;background:#050608;padding:16px 6px;"><tr><td>
+    <table role="presentation" align="center" style="width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;">
+      <tr><td style="padding:16px 20px;background:linear-gradient(120deg,#0d2315,#12311f,#1b3a2b);">
+        <table role="presentation" style="display:inline-table;vertical-align:middle;border-collapse:collapse;">
+          <tr>
+            <td style="padding-right:8px;vertical-align:top;">
+              <span style="background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%);color:#fff;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:800;border-radius:4px;border-right:3px solid #d4af37;box-shadow:0 6px 16px rgba(15,23,42,0.22);line-height:34px;">E</span>
+            </td>
+            <td style="vertical-align:top;">
+              <span style="display:block;font-weight:800;letter-spacing:2.4px;font-size:18px;color:#f5f7fb;line-height:1;">SHOPPER</span>
+              <span style="display:block;font-size:7px;letter-spacing:1.8px;color:#d4af37;font-weight:700;margin-top:2px;line-height:1.1;">BOUTIQUE LUXE</span>
+            </td>
+          </tr>
+        </table>
+        <span style="float:right;display:inline-block;font-size:12px;font-weight:700;color:#dbffe8;border:1px solid #4aba65;background:#2f8d44;padding:7px 12px;border-radius:999px;">RECEIVED</span>
+      </td></tr>
+      <tr><td style="background:linear-gradient(120deg,#151515,#262117);border-bottom:3px solid #d4af37;text-align:center;padding:22px 12px;">
+        <div style="font-family:'Brush Script MT',cursive,Georgia,serif;font-size:28px;color:#d4af37;margin-bottom:6px;">Thank you, {{customerName}}!</div>
+        <div style="font-size:38px;font-weight:800;line-height:1;letter-spacing:.4px;">ORDER RECEIVED</div>
+        <div style="color:#f8d98a;font-size:16px;opacity:.96;margin-top:8px;">Order #{{orderId}} | {{orderDate}}</div>
       </td></tr>
 
-      <tr><td class="hero">
-        <div class="ok">&#10003;</div>
-        <div class="label">ORDER RECEIVED</div>
-        <div class="date">{{orderDate}}</div>
-      </td></tr>
+      <tr><td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
+        <h2 class="title">Hi {{customerName}}!</h2>
+        <p class="sub">Your order has been received and is now being processed by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.</p>
+        <div class="arrival"><div class="h">EXPECTED CONFIRMATION</div><div class="d">{{expectedConfirmation}}</div><div class="s">1-2 Business Days</div></div>
 
-      <tr><td class="section" style="text-align:center;">
-        <h2 class="title">Hi {{customerName}},</h2>
-        <p class="subtitle">Your luxury selection is now in our queue. We are verifying your items and preparing them for dispatch.</p>
-        <div class="verify">&#10003; Payment Received &amp; Verified</div>
-
-        <div class="progress-track" style="margin-top:16px;">
-          <div class="progress-head">DELIVERY PROGRESS</div>
+        <div class="progress-track">
+          <table class="progress-head-row" role="presentation"><tr><td class="progress-head-title">DELIVERY PROGRESS</td><td align="right"><span class="progress-pill">{{progressPercent}}% COMPLETE</span></td></tr></table>
           <table class="progress-grid" role="presentation"><tr>
             {{#each progressSteps}}
             <td>
-              <span class="p-icon {{state}}">{{{icon}}}</span>
-              <div class="p-label {{state}}">{{label}}</div>
+              <div class="step-card {{state}}">
+                <span class="step-dot {{state}}">{{{icon}}}</span>
+                <div class="step-copy"><div class="step-label {{state}}">{{label}}</div></div>
+              </div>
             </td>
             {{/each}}
           </tr></table>
-          <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
+          <div class="progress-bar" style="height:6px;background:linear-gradient(90deg,#d4af37,#fffbe6,#d4af37);border-radius:999px;overflow:hidden;margin-top:8px;">
+            <div class="progress-fill" style="height:100%;background:linear-gradient(90deg,#f8d98a,#d4af37,#fffbe6);border-radius:999px;width:{{progressPercent}}%;transition:width 0.7s cubic-bezier(.4,2,.6,1);box-shadow:0 0 8px #d4af37;"></div>
+          </div>
+          <div class="progress-foot"><span>Live status synced from backend</span><strong>{{progressPercent}}% done</strong></div>
         </div>
       </td></tr>
 
-      <tr><td class="section">
-        <div class="panel">
-          <h3>ORDER SUMMARY</h3>
-          <table class="items" role="presentation">
-            <tr>
-              <th>ITEM</th><th>DETAILS</th><th>QTY</th><th>PRICE</th>
-            </tr>
+      <tr><td class="promise" style="background:#032312;border-top:1px solid #0f4f2a;border-bottom:1px solid #0f4f2a;padding:18px 12px;">
+        <h3>THE LUXE PROMISE</h3>
+        <table class="pgrid" role="presentation"><tr>
+          <td><span class="i">&#10003;</span><div class="t">Quality Check</div><div class="d">10-point inspection by experts</div></td>
+          <td><span class="i">&#9671;</span><div class="t">Premium Packaging</div><div class="d">Eco-friendly luxury boxes</div></td>
+          <td><span class="i">&#9679;</span><div class="t">100% Authentic</div><div class="d">Guaranteed genuine products</div></td>
+        </tr></table>
+      </td></tr>
+
+      <tr><td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
+        <div class="box" style="border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;">
+          <h3 class="heading" style="color:#f0c84a;font-size:34px;margin:0 0 14px;">ORDER DETAILS</h3>
+          <table class="items" role="presentation" width="100%" style="width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;">
+            <tr><th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">ITEM</th><th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">DETAILS</th><th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">QTY</th><th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">PRICE</th></tr>
             {{#each items}}
             <tr>
-              <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" /></td>
-              <td>
-                <strong>{{name}}</strong><br>
-                <span class="muted">Size: {{size}}</span><br>
-                <span class="muted">Color: {{color}}</span>
-              </td>
+              <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;max-width:100%;display:block;" /></td>
+              <td><strong>{{name}}</strong><br><span class="dim" style="color:#b4bac6;">Size: {{size}}</span><br><span class="dim" style="color:#b4bac6;">Color: {{color}}</span></td>
               <td>{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
               <td>INR {{subtotal}}</td>
             </tr>
             {{/each}}
           </table>
 
-          <table class="cards" role="presentation">
-            <tr>
-              <td>
-                <div class="box">
-                  <p class="k">SHIPPING ADDRESS</p>
-                  <p class="v"><strong>{{shippingName}}</strong><br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>{{shippingPhone}}</p>
-                </div>
-              </td>
-              <td>
-                <div class="box2">
-                  <p class="k">PAYMENT METHOD</p>
-                  <p class="v">{{paymentMethod}}<br>Status: <span class="pending">{{paymentStatus}}</span></p>
-                </div>
-              </td>
-            </tr>
-          </table>
-
-          <div class="totals">
-            <table role="presentation" width="100%">
-              <tr><td>Subtotal</td><td class="amount">INR {{subtotal}}</td></tr>
-              <tr><td>Shipping</td><td class="amount">INR {{shippingCharges}}</td></tr>
-              <tr class="final"><td>Total Amount</td><td class="amount">INR {{totalAmount}}</td></tr>
+          <div class="totals" style="margin-top:14px;border:1px solid #343844;border-radius:12px;padding:16px;">
+            <table role="presentation" style="width:100%;">
+              <tr><td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Item Price</td><td align="right" style="padding:5px 0;color:#d5d9e2;font-size:16px;">INR {{subtotal}}</td></tr>
+              <tr><td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Shipping Charges</td><td align="right" style="padding:5px 0;color:#d5d9e2;font-size:16px;">INR {{shippingCharges}}</td></tr>
+              <tr><td style="padding:5px 0;color:#d5d9e2;font-size:16px;">GST (Included)</td><td align="right" style="padding:5px 0;color:#d5d9e2;font-size:16px;">INR {{gst}}</td></tr>
+              <tr class="final"><td style="border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:48px;font-weight:800;">Total Amount Paid</td><td align="right" style="border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:48px;font-weight:800;">INR {{totalPaid}}</td></tr>
+              <tr><td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Payment Mode: {{paymentMethod}}</td><td class="paid" style="color:#21c05c;font-size:14px;text-align:right;padding-top:0;">&#10003; PAID</td></tr>
             </table>
           </div>
 
-          <div class="cta"><a href="{{trackingUrl}}">VIEW ORDER STATUS</a></div>
-          <div class="cta"><a href="{{placedInvoiceUrl}}" style="margin-top:10px;background:#2f6fed;color:#ffffff;">VIEW INVOICE</a></div>
-          <p class="note">* This is an order receipt, not a Tax Invoice. Tax Invoice will be provided upon delivery.</p>
+          <table class="grid" role="presentation" style="width:100%;margin-top:14px;"><tr>
+            <td style="width:50%;vertical-align:top;"><div class="mini" style="border:1px solid #0f6f35;background:#101a12;border-radius:12px;padding:14px;margin-right:8px;"><div class="k" style="font-size:13px;color:#36d76d;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">SHIPPING ADDRESS</div><div class="v" style="color:#e7e9ed;font-size:16px;line-height:1.45;">{{shippingName}}<br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>Phone: {{shippingPhone}}</div></div></td>
+            <td style="width:50%;vertical-align:top;"><div class="mini2" style="border:1px solid #343944;background:#111317;border-radius:12px;padding:14px;margin-left:8px;"><div class="k2" style="font-size:13px;color:#efcb4a;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">BILLING INFO</div><div class="v" style="color:#e7e9ed;font-size:16px;line-height:1.45;">{{customerName}}<br>Email: {{customerEmail}}<br>Transaction ID:<br><span class="tx" style="color:#e0bc52;">{{transactionId}}</span></div></div></td>
+          </tr></table>
+
+          <a class="btn btn-primary" href="{{trackingUrl}}" style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#4ab75a;color:#fff;">TRACK YOUR ORDER</a>
+          <a class="btn btn-secondary" href="{{placedInvoiceUrl}}" style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#151820;color:#f0d07a;border:1px solid #756225;">VIEW RECEIPT</a>
         </div>
       </td></tr>
 
-      <tr><td class="concierge">
-        <div class="crown">&#9671;</div>
-        <p class="h">Personal Concierge</p>
-        <p class="p">Our dedicated team is here to assist with any questions about your order. Reach out anytime!</p>
-        <table class="support" role="presentation">
-          <tr>
-            <td><a class="wa" href="{{whatsappUrl}}">WhatsApp Support</a></td>
-            <td><a class="mail" href="mailto:{{supportEmail}}">Email Us</a></td>
-          </tr>
-        </table>
+      <tr><td class="foot" style="padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;">
+        <div class="community" style="color:#d6f7e0;font-size:16px;">Join our 50,000+ Luxe community</div>
+        <div class="stars" style="color:#f4d64b;font-size:28px;letter-spacing:2px;margin:8px 0;">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <a class="btn-inst" href="{{instagramUrl}}" style="display:inline-block;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:18px;">Follow us on Instagram</a>
       </td></tr>
 
-      <tr><td class="footer">
+      <tr><td class="assist" style="padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;">
+        <h4 style="margin:0 0 10px;font-size:36px;color:#f1f2f5;">Need Assistance?</h4>
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
+          <a href="{{whatsappUrl}}" style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#25d366,#1ed66d);color:#0f1912;text-align:center;box-shadow:0 2px 8px rgba(34,139,34,0.08);">WhatsApp Support</a>
+          <a href="{{instagramUrl}}" style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-align:center;box-shadow:0 2px 8px rgba(216,78,228,0.08);">Instagram</a>
+        </div>
+      </td></tr>
+
+      <tr><td class="footnote" style="text-align:center;color:#9ea4b2;font-size:12px;padding:18px 14px 24px;border-top:1px solid #272a30;line-height:1.7;">
+        {{> review-snippet}}
+        {{> social-footer}}
+        {{> brand-story-footer}}
         <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
         <div>{{companyAddress}}</div>
-        <div><a href="{{privacyPolicyUrl}}">Privacy Policy</a> &nbsp; | &nbsp; <a href="{{termsUrl}}">Terms of Service</a></div>
+        <div>GSTIN: {{companyGstin}} | CIN: {{companyCin}}</div>
+        <div><a href="{{privacyPolicyUrl}}">Privacy</a> | <a href="{{termsUrl}}">Terms</a> | <a href="{{unsubscribeUrl}}">Unsubscribe</a></div>
       </td></tr>
     </table>
   </td></tr></table>
+</body>
 </body>
 </html>
 

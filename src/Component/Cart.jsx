@@ -40,7 +40,10 @@ export default function Cart() {
     const [appliedCouponCode, setAppliedCouponCode] = useState("");
     const [couponError, setCouponError] = useState("");
     const [availableCoupons, setAvailableCoupons] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // legacy, for full page
+    const [cartLoading, setCartLoading] = useState(true);
+    const [summaryLoading, setSummaryLoading] = useState(true);
+    const [couponLoading, setCouponLoading] = useState(true);
     const [movingIds, setMovingIds] = useState([]);
     const [savingIds, setSavingIds] = useState([]);
     const [savedActionIds, setSavedActionIds] = useState([]);
@@ -56,6 +59,7 @@ export default function Cart() {
         return cart.reduce((acc, item) => acc + Number(item.quantity ?? item.qty ?? 1), 0);
     }, [cart]);
 
+    // Parallel fetch for cart, summary, coupons
     async function fetchCartAndSummary() {
         if (!userId) {
             setUserMissing(true);
@@ -68,46 +72,52 @@ export default function Cart() {
             return;
         }
         setUserMissing(false);
-        setLoading(true);
-        try {
-            // Redux fetch
-            await dispatch(getCart());
-            const cartRes = await axios.get(`/api/cart?userId=${userId}`);
-            const persistedDelivery = cartRes?.data?.cart?.deliveryEstimate || {};
-            setDeliveryPincode('');
-            setDeliveryEstimateMsg(String(persistedDelivery.label || ''));
-            const summaryRes = await axios.get(`/api/cart/order-summary?userId=${userId}`);
-            const s = summaryRes.data.summary || {};
-            setSubtotal(s.subtotal || 0);
-            setBaseDiscount(s.discount || 0);
-            setShipping(s.shipping || 0);
-            setGst(s.gst || 0);
-
-            // Keep coupon discount in sync when cart values change.
-            if (couponApplied && coupon) {
+        setLoading(false); // never block full page
+        setCartLoading(true);
+        setSummaryLoading(true);
+        setCouponLoading(true);
+        // Redux fetch (shows cart instantly)
+        await dispatch(getCart());
+        // Parallel API fetch
+        await Promise.all([
+            (async () => {
                 try {
-                    const couponRes = await axios.post('/api/cart/apply-coupon', { userId, coupon });
-                    if (couponRes.data && couponRes.data.success) {
-                        setCouponDiscount(couponRes.data.discount || 0);
-                        setCouponError("");
-                    } else {
-                        setCouponDiscount(0);
-                    }
-                } catch (couponErr) {
-                    setCouponDiscount(0);
-                    setCouponApplied(false);
-                    localStorage.removeItem('appliedCoupon');
-                    setCouponError(couponErr.response?.data?.message || "Coupon no longer applicable");
+                    const cartRes = await axios.get(`/api/cart?userId=${userId}`);
+                    const persistedDelivery = cartRes?.data?.cart?.deliveryEstimate || {};
+                    setDeliveryPincode('');
+                    setDeliveryEstimateMsg(String(persistedDelivery.label || ''));
+                } catch {
+                    setDeliveryEstimateMsg('');
                 }
-            }
-        } catch (e) {
-            setSubtotal(0);
-            setBaseDiscount(0);
-            setCouponDiscount(0);
-            setShipping(0);
-            setGst(0);
-        }
-        setLoading(false);
+                setCartLoading(false);
+            })(),
+            (async () => {
+                try {
+                    const summaryRes = await axios.get(`/api/cart/order-summary?userId=${userId}`);
+                    const s = summaryRes.data.summary || {};
+                    setSubtotal(s.subtotal || 0);
+                    setBaseDiscount(s.discount || 0);
+                    setShipping(s.shipping || 0);
+                    setGst(s.gst || 0);
+                } catch {
+                    setSubtotal(0);
+                    setBaseDiscount(0);
+                    setShipping(0);
+                    setGst(0);
+                }
+                setSummaryLoading(false);
+            })(),
+            (async () => {
+                try {
+                    const res = await axios.get('/api/cart/coupons', { params: { userId } });
+                    const list = res?.data?.coupons;
+                    setAvailableCoupons(Array.isArray(list) ? list : []);
+                } catch {
+                    setAvailableCoupons([]);
+                }
+                setCouponLoading(false);
+            })()
+        ]);
     }
 
     async function refreshSummaryOnly() {
@@ -235,6 +245,7 @@ export default function Cart() {
             await axios.put(`/api/cart/update-quantity/${item._id || item.id}`, { userId, quantity: newQty });
             console.log('✅ Quantity updated via HTTP');
             await dispatch(getCart());
+            await refreshSummaryOnly();
             toast.success('Quantity updated!');
             // Also try to sync via socket if available
             if (socketRef.current && socketRef.current.connected) {
@@ -262,6 +273,7 @@ export default function Cart() {
             });
             console.log('✅ Item removed via HTTP');
             await dispatch(getCart());
+            await refreshSummaryOnly();
             if (!silent) toast.info('Item removed from cart.');
             // Also try to sync via socket if available
             if (socketRef.current && socketRef.current.connected) {
@@ -280,33 +292,27 @@ export default function Cart() {
 
     async function moveToWishlist(item) {
         const itemId = item._id || item.id;
-        const productId = item.productid || item.product?._id || item.product || itemId;
-        if (!userId) {
+        // Always extract clean userId and productId
+        const user = userId || localStorage.getItem('userid');
+        const product = item.productid || item.product?._id || item.product || itemId;
+        if (!user) {
             toast.error('Please login first.');
             return;
         }
         setMovingIds((prev) => [...prev, itemId]);
         try {
-            const wishlistRes = await axios.get('/wishlist');
-            const existing = Array.isArray(wishlistRes.data) ? wishlistRes.data : [];
-            const alreadyInWishlist = existing.some((w) =>
-                String(w.userid) === String(userId) && String(w.productid) === String(productId)
-            );
-
-            if (!alreadyInWishlist) {
-                await axios.post('/wishlist', {
-                    userid: userId,
-                    productid: productId,
-                    name: item.name || item.product?.name,
-                    color: item.color || item.product?.color,
-                    size: item.size || item.product?.size,
-                    price: Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0),
-                    pic: item.pic || item.product?.pic1 || ''
-                });
-            }
-
+            await axios.post('/api/wishlist', {
+                user,
+                product,
+                size: item.size || item.product?.size || '',
+                color: item.color || item.product?.color || '',
+                price: Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0),
+                pic: item.pic || item.product?.pic1 || '',
+                name: item.name || item.product?.name || ''
+            });
             await removeProduct(itemId, true);
-            toast.success(alreadyInWishlist ? 'Already in wishlist, removed from cart.' : 'Moved to wishlist successfully.');
+            await refreshSummaryOnly();
+            toast.success('Moved to wishlist successfully.');
         } catch (e) {
             toast.error('Failed to move item to wishlist.');
         } finally {
@@ -318,8 +324,14 @@ export default function Cart() {
         const normalizedCoupon = String(coupon || '').trim().toUpperCase();
         if (!normalizedCoupon) return;
         setCouponError("");
+        // If same coupon is already applied, show notification
+        if (couponApplied && appliedCouponCode && normalizedCoupon === appliedCouponCode) {
+            toast.info('This coupon is already applied.');
+            setCouponError('This coupon is already applied.');
+            return;
+        }
         try {
-            const replacingExisting = couponApplied && appliedCouponCode && appliedCouponCode !== normalizedCoupon;
+            // If a different coupon is already applied, remove it first (backend will handle replace)
             const res = await axios.post('/api/cart/apply-coupon', { userId, coupon: normalizedCoupon });
             if (res.data && res.data.success) {
                 setCouponDiscount(res.data.discount || 0);
@@ -327,7 +339,7 @@ export default function Cart() {
                 setAppliedCouponCode(normalizedCoupon);
                 setCoupon('');
                 setCouponError("");
-                toast.success(replacingExisting ? 'Previous coupon replaced successfully!' : 'Coupon applied successfully!');
+                toast.success('Coupon applied successfully!');
                 localStorage.setItem('appliedCoupon', JSON.stringify({
                     userId,
                     code: normalizedCoupon,
@@ -335,10 +347,12 @@ export default function Cart() {
                 }));
             } else {
                 setCouponError(res.data.message || "Invalid coupon");
+                toast.error(res.data.message || "Invalid coupon");
             }
         } catch (err) {
             localStorage.removeItem('appliedCoupon');
             setCouponError(err.response?.data?.message || "Invalid or already applied coupon");
+            toast.error(err.response?.data?.message || "Invalid or already applied coupon");
         }
     }
 
@@ -408,7 +422,6 @@ export default function Cart() {
 
         // Initial data fetch with HTTP (reliable)
         fetchCartAndSummary();
-        fetchAvailableCoupons();
 
         // Cleanup on unmount
         return () => {
@@ -424,14 +437,82 @@ export default function Cart() {
     }, [userId]);
 
     return (
-        <div className="cart-page-shell" style={{ minHeight: "100vh", boxSizing: 'border-box', maxWidth: '100vw', position: 'relative' }}>
-            {/* Spinner Overlay for Loading States */}
-            {loading && <Spinner />}
-            {/* Header Section */}
-            <div className="py-5 text-center shadow-sm cart-hero-band">
-                <h2 className="text-white font-weight-bold mb-1">Shopping Cart</h2>
-                <p className="text-white-50 mb-2">Luxury picks, ready for checkout</p>
-                <nav className="small mt-1"><Link to="/" className="text-info">Home</Link> <span className="text-white-50">/ Cart</span></nav>
+        <motion.div
+            className="cart-page-shell"
+            style={{ minHeight: "100vh", boxSizing: 'border-box', maxWidth: '100vw', position: 'relative' }}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: cartLoading && !cart.length ? 0 : 1, y: cartLoading && !cart.length ? 40 : 0 }}
+            transition={{ duration: 0.7, type: 'spring', stiffness: 70 }}
+        >
+            {/* Skeletons for cart and summary */}
+            {cartLoading && !cart.length && (
+                <div className="container py-5">
+                    <div className="row">
+                        <div className="col-lg-8 col-12 mb-4 mb-lg-0">
+                            {[...Array(2)].map((_, i) => (
+                                <div key={i} className="cart-premium-row bg-white p-3 mb-3 border-0 rounded-lg shadow-sm position-relative" style={{opacity:0.5}}>
+                                    <div className="d-flex align-items-center premium-cart-grid">
+                                        <div className="cart-img-col d-flex align-items-center justify-content-center" style={{ minWidth: 90, minHeight: 90 }}>
+                                            <div style={{ width: 90, height: 90, borderRadius: '50%', background: '#f3f4f6' }} />
+                                        </div>
+                                        <div className="cart-details-col flex-grow-1 px-3">
+                                            <div className="skeleton-box mb-2" style={{height:18,width:'60%'}} />
+                                            <div className="skeleton-box mb-1" style={{height:12,width:'40%'}} />
+                                            <div className="skeleton-box mt-2" style={{height:14,width:'50%'}} />
+                                        </div>
+                                        <div className="cart-qtyprice-col d-flex flex-column align-items-center justify-content-center">
+                                            <div className="skeleton-box" style={{height:28,width:80}} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="col-lg-4 col-12 mt-0 mt-lg-0">
+                            <div className="card border-0 p-4 bg-white sticky-top premium-summary-card" style={{ top: "100px", border: "1px solid #eee", opacity:0.5 }}>
+                                <div className="skeleton-box mb-3" style={{height:28,width:'60%'}} />
+                                {[...Array(4)].map((_,i)=>(<div key={i} className="skeleton-box mb-2" style={{height:18,width:'80%'}} />))}
+                                <div className="skeleton-box mt-4" style={{height:38,width:'100%'}} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Premium Luxury Header Section */}
+            <div
+                className="premium-header py-5 text-center mb-0 position-relative"
+                style={{
+                    background: "linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+                    color: "#fff",
+                    borderBottomLeftRadius: 32,
+                    borderBottomRightRadius: 32,
+                    boxShadow: "0 6px 32px 0 rgba(44,62,80,0.12)",
+                    overflow: "hidden",
+                    zIndex: 2,
+                }}
+            >
+                <motion.h1
+                    initial={{ opacity: 0, y: -30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, type: "spring", stiffness: 80 }}
+                    className="display-4 font-weight-bold mb-2 premium-title"
+                    style={{ letterSpacing: 1, fontFamily: 'Montserrat, serif', color: '#fff', textShadow: '0 2px 16px rgba(0,0,0,0.18)' }}
+                >
+                    Shopping Cart
+                </motion.h1>
+                <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.7 }}
+                    className="lead mb-3 premium-subtitle"
+                    style={{ color: '#e0e0e0', fontWeight: 400, fontSize: 22, fontFamily: 'Montserrat, serif', textShadow: '0 1px 8px rgba(0,0,0,0.10)' }}
+                >
+                    Luxury picks, ready for checkout
+                </motion.p>
+                <nav className="small mt-2">
+                    <Link to="/" className="text-info">Home</Link>
+                    <span className="text-white-50"> / Cart</span>
+                </nav>
+                {/* Decorative SVG or Icon can be added here for extra luxury */}
             </div>
 
             <div className="container py-5">
@@ -439,7 +520,7 @@ export default function Cart() {
                     <div className="text-center py-5">
                         <span className="text-danger">Please login to view your cart.</span>
                     </div>
-                ) : loading ? (
+                ) : cartLoading && !cart.length ? (
                     <div className="text-center py-5"><span>Loading...</span></div>
                 ) : cart && cart.length > 0 ? (
                     <div className="row">
@@ -463,7 +544,9 @@ export default function Cart() {
                                     const itemId = item._id || item.id;
                                     const itemName = item.name || item.product?.name || 'Product';
                                     const itemColor = item.color || item.product?.color || 'N/A';
-                                    const itemSize = item.size || item.product?.size || 'N/A';
+                                    // Show only the selected size (not all sizes)
+                                    let itemSize = item.size || item.product?.size || 'N/A';
+                                    if (Array.isArray(itemSize)) itemSize = itemSize[0] || 'N/A';
                                     const itemPic = item.pic || item.product?.pic1 || '/assets/images/noimage.png';
                                     const itemQty = Number(item.quantity ?? item.qty ?? 1);
                                     const itemPrice = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0);
@@ -557,7 +640,9 @@ export default function Cart() {
                                         const itemId = item._id || item.id;
                                         const itemName = item.name || item.product?.name || 'Product';
                                         const itemColor = item.color || item.product?.color || 'N/A';
-                                        const itemSize = item.size || item.product?.size || 'N/A';
+                                        // Show only the selected size (not all sizes)
+                                        let itemSize = item.size || item.product?.size || 'N/A';
+                                        if (Array.isArray(itemSize)) itemSize = itemSize[0] || 'N/A';
                                         const itemPic = item.pic || item.product?.pic1 || '/assets/images/noimage.png';
                                         const itemQty = Number(item.quantity ?? item.qty ?? 1);
                                         const itemPrice = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0);
@@ -609,6 +694,9 @@ export default function Cart() {
                         {/* Order Summary Sidebar */}
                         <div className="col-lg-4 col-12 mt-0 mt-lg-0">
                             <div className="card border-0 p-4 bg-white sticky-top premium-summary-card" style={{ top: "100px", border: "1px solid #eee" }}>
+                                {summaryLoading && (
+                                    <div className="skeleton-box mb-3" style={{height:28,width:'60%'}} />
+                                )}
                                 <h5 className="font-weight-bold mb-4" style={{ color: "#B8860B", letterSpacing: 1 }}>Order Summary</h5>
                                 <div className="d-flex justify-content-between mb-2">
                                     <span className="text-muted premium-summary-label">Subtotal (MRP)</span>
@@ -669,6 +757,7 @@ export default function Cart() {
                                 </div>
                                 {/* Coupon Input */}
                                 <div className="input-group mb-3 premium-coupon-group">
+                                    {couponLoading && <div className="skeleton-box mb-2" style={{height:18,width:'80%'}} />}
                                     <input type="text" className="form-control" placeholder="Apply Coupon" value={coupon} onChange={e => { setCoupon(e.target.value); setCouponError(''); }}
                                         style={{ border: "1px solid #eee", borderRight: 0, borderRadius: "50px 0 0 50px" }} />
                                     <div className="input-group-append">
@@ -744,6 +833,8 @@ export default function Cart() {
                 )}
             </div>
             {/* Custom Styling */}
+            <style>{`.skeleton-box { background: linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 37%,#f3f4f6 63%); border-radius: 8px; animation: skeleton-shimmer 1.2s infinite linear; }
+            @keyframes skeleton-shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }`}</style>
             <style dangerouslySetInnerHTML={{ __html: `
                 /* Checkbox scale fix */
                 input[type="checkbox"] { width: 18px !important; height: 18px !important; }
@@ -1016,6 +1107,64 @@ export default function Cart() {
                     .premium-delivery-btn { width: 100%; }
                 }
             `}} />
-        </div>
+        
+            <AnimatePresence mode="wait">
+                {cartLoading && !cart.length ? (
+                    <motion.div
+                        key="cart-skeleton"
+                        initial={{ opacity: 0, scale: 0.98, y: 40 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.98, y: 40, transition: { duration: 0.35 } }}
+                        transition={{ duration: 0.7, type: 'spring', stiffness: 70 }}
+                    >
+                        {/* Skeletons for cart and summary */}
+                        <div className="container py-5">
+                            <div className="row">
+                                <div className="col-lg-8 col-12 mb-4 mb-lg-0">
+                                    {[...Array(2)].map((_, i) => (
+                                        <div key={i} className="cart-premium-row bg-white p-3 mb-3 border-0 rounded-lg shadow-sm position-relative" style={{opacity:0.5}}>
+                                            <div className="d-flex align-items-center premium-cart-grid">
+                                                <div className="cart-img-col d-flex align-items-center justify-content-center" style={{ minWidth: 90, minHeight: 90 }}>
+                                                    <div style={{ width: 90, height: 90, borderRadius: '50%', background: '#f3f4f6' }} />
+                                                </div>
+                                                <div className="cart-details-col flex-grow-1 px-3">
+                                                    <div className="skeleton-box mb-2" style={{height:18,width:'60%'}} />
+                                                    <div className="skeleton-box mb-1" style={{height:12,width:'40%'}} />
+                                                    <div className="skeleton-box mt-2" style={{height:14,width:'50%'}} />
+                                                </div>
+                                                <div className="cart-qtyprice-col d-flex flex-column align-items-center justify-content-center">
+                                                    <div className="skeleton-box" style={{height:28,width:80}} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="col-lg-4 col-12 mt-0 mt-lg-0">
+                                    <div className="card border-0 p-4 bg-white sticky-top premium-summary-card" style={{ top: "100px", border: "1px solid #eee", opacity:0.5 }}>
+                                        <div className="skeleton-box mb-3" style={{height:28,width:'60%'}} />
+                                        {[...Array(4)].map((_,i)=>(<div key={i} className="skeleton-box mb-2" style={{height:18,width:'80%'}} />))}
+                                        <div className="skeleton-box mt-4" style={{height:38,width:'100%'}} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="cart-content"
+                        initial={{ opacity: 0, y: 40, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 40, scale: 0.98, transition: { duration: 0.35 } }}
+                        transition={{ duration: 0.7, type: 'spring', stiffness: 70 }}
+                    >
+                        {/* ...existing cart content... */}
+                        {/** The rest of the cart page content is already here, just keep it as is **/}
+                        {/* Custom Styling */}
+                        <style>{`.skeleton-box { background: linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 37%,#f3f4f6 63%); border-radius: 8px; animation: skeleton-shimmer 1.2s infinite linear; }
+                        @keyframes skeleton-shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }`}</style>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 }

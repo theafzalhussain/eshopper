@@ -17,4 +17,8 @@ router.get('/test', (req, res) => {
     res.json({ message: 'Order route working' });
 });
 
+
+// Unified order status email trigger (admin or system)
+router.post('/api/order/send-status-email', orderController.sendOrderStatusEmail);
+
 module.exports = router;
