@@ -172,7 +172,7 @@ export default function AdminAddProduct() {
                                     <div className="col-md-6 mb-3">
                                         <label className="font-weight-bold text-secondary mb-2">Size</label>
                                         <div className="d-flex flex-wrap gap-2 premium-size-wrap">
-                                            {['XS','S','M','L','XL','XXL',26,28,30,32,34,36,38,40].map((sz) => (
+                                            {['XS','S','M','L','XL','XXL',26,28,30,32,34,36,38,40,'5-6','6-7','7-8','8-9','9-10','10-11','11-12','12-13','13-14','14-15','15-16'].map((sz) => (
                                                 <label key={sz} className="mr-2 mb-1 premium-size-label" style={{fontWeight:700, background:'#f5f7fa', borderRadius:'8px', padding:'6px 14px', color:'#1a1a1a', border:'2px solid #d1d5db', boxShadow:'0 2px 8px rgba(0,0,0,0.04)', transition:'all 0.2s'}}>
                                                     <input
                                                         type="checkbox"

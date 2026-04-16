@@ -261,16 +261,6 @@ export default function Shop() {
         return temp;
     }, [product, mc, sc, br, size, min, max, search, sortBy, category]);
 
-    // Loading state for premium animation (simulate with product.length === 0 for skeleton)
-    const [shopLoading, setShopLoading] = useState(true);
-    useEffect(() => {
-        if (product && product.length > 0) {
-            setTimeout(() => setShopLoading(false), 200); // short delay for smoothness
-        } else {
-            setShopLoading(true);
-        }
-    }, [product]);
-
     return (
         <div className="lux-shop-root">
 
@@ -418,148 +408,125 @@ export default function Shop() {
                         </div>
                     </div>
 
-                    {/* Grid with AnimatePresence and skeletons */}
+                    {/* Grid */}
                     <div className="lux-grid">
-                        <AnimatePresence mode="wait">
-                            {shopLoading ? (
-                                <motion.div
-                                    key="shop-skeleton"
-                                    initial={{ opacity: 0, scale: 0.98, y: 40 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.98, y: 40, transition: { duration: 0.35 } }}
-                                    transition={{ duration: 0.7, type: 'spring', stiffness: 70 }}
-                                    style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: 32 }}
+                        <AnimatePresence>
+                            {filteredProducts.map((item, index) => (
+                                <motion.div key={item.id} layout
+                                    initial={{ opacity: 0, y: 24 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.94 }}
+                                    transition={{ duration: 0.38, delay: Math.min(index * 0.035, 0.4) }}
+                                    className="lux-card"
                                 >
-                                    {[...Array(8)].map((_, i) => (
-                                        <div key={i} className="lux-card" style={{opacity:0.5, minHeight: 420, minWidth: 260, maxWidth: 320}}>
-                                            <div className="skeleton-box mb-3" style={{height:220,width:'100%',borderRadius:16}} />
-                                            <div className="skeleton-box mb-2" style={{height:24,width:'60%'}} />
-                                            <div className="skeleton-box mb-1" style={{height:16,width:'40%'}} />
-                                            <div className="skeleton-box mb-2" style={{height:18,width:'50%'}} />
-                                            <div className="skeleton-box mt-2" style={{height:32,width:'80%'}} />
-                                        </div>
-                                    ))}
-                                </motion.div>
-                            ) : (
-                                filteredProducts.map((item, index) => (
-                                    <motion.div key={item.id} layout
-                                        initial={{ opacity: 0, y: 32, scale: 0.98 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.94 }}
-                                        transition={{ duration: 0.38, delay: Math.min(index * 0.035, 0.4) }}
-                                        className="lux-card"
+                                    {item.discount > 0 && <div className="lux-ribbon">{item.discount}% OFF</div>}
+
+                                    <button
+                                        type="button"
+                                        className={`lux-wish ${isInWishlist(item.id) ? 'active' : ''}`}
+                                        onClick={e => { e.preventDefault(); toggleWishlist(item); }}
+                                        aria-label={isInWishlist(item.id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                                        title={isInWishlist(item.id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                                        style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
                                     >
-                                        {item.discount > 0 && <div className="lux-ribbon">{item.discount}% OFF</div>}
+                                        <svg viewBox="0 0 24 24" width="24" height="24" fill={isInWishlist(item.id) ? '#e74c3c' : 'none'} stroke="#b8965a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M12 21s-6.7-4.4-9.3-7.9C.7 10.2 1.5 6.9 4.4 5.3c2.3-1.2 4.6-.4 6 1.4 1.4-1.8 3.7-2.6 6-1.4 2.9 1.6 3.7 4.9 1.7 7.8C18.7 16.6 12 21 12 21z" />
+                                        </svg>
+                                    </button>
 
-                                        <button
-                                            type="button"
-                                            className={`lux-wish ${isInWishlist(item.id) ? 'active' : ''}`}
-                                            onClick={e => { e.preventDefault(); toggleWishlist(item); }}
-                                            aria-label={isInWishlist(item.id) ? "Remove from Wishlist" : "Add to Wishlist"}
-                                            title={isInWishlist(item.id) ? "Remove from Wishlist" : "Add to Wishlist"}
-                                            style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
-                                        >
-                                            <svg viewBox="0 0 24 24" width="24" height="24" fill={isInWishlist(item.id) ? '#e74c3c' : 'none'} stroke="#b8965a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                                <path d="M12 21s-6.7-4.4-9.3-7.9C.7 10.2 1.5 6.9 4.4 5.3c2.3-1.2 4.6-.4 6 1.4 1.4-1.8 3.7-2.6 6-1.4 2.9 1.6 3.7 4.9 1.7 7.8C18.7 16.6 12 21 12 21z" />
-                                            </svg>
-                                        </button>
+                                    {/* Image — blur + centered overlay on hover */}
+                                    <Link to={`/single-product/${item.id}`} className="lux-img-wrap">
+                                        <img
+                                            src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 500, crop: 'fill' })}
+                                            loading="lazy" decoding="async"
+                                            className="lux-img" alt={item.name}
+                                        />
+                                        <div className="lux-overlay">
+                                            <motion.span className="lux-vpill"
+                                                whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}
+                                            >
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                View Details
+                                            </motion.span>
+                                        </div>
+                                    </Link>
 
-                                        {/* Image — blur + centered overlay on hover */}
-                                        <Link to={`/single-product/${item.id}`} className="lux-img-wrap">
-                                            <img
-                                                src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 500, crop: 'fill' })}
-                                                loading="lazy" decoding="async"
-                                                className="lux-img" alt={item.name}
-                                            />
-                                            <div className="lux-overlay">
-                                                <motion.span className="lux-vpill"
-                                                    whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }}
-                                                >
-                                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                                    View Details
-                                                </motion.span>
+                                    <div className="lux-cbody">
+                                        <div className="lux-cmeta">
+                                            <span className="lux-cbrand">{item.brand}</span>
+                                            <div className="lux-crating">
+                                                <span className="lux-stars">{[1,2,3,4,5].map(s=><span key={s}>{s<=Math.floor(item.rating||4.5)?'★':'☆'}</span>)}</span>
+                                                <span className="lux-rnum">({(item.rating||4.5).toFixed(1)})</span>
                                             </div>
-                                        </Link>
+                                        </div>
+                                        <h3 className="lux-cname">
+                                            <Link to={`/single-product/${item.id}`} className="lux-cnlink">{item.name}</Link>
+                                        </h3>
+                                        <p className="lux-ccat">{item.maincategory} · {item.subcategory}</p>
 
-                                        <div className="lux-cbody">
-                                            <div className="lux-cmeta">
-                                                <span className="lux-cbrand">{item.brand}</span>
-                                                <div className="lux-crating">
-                                                    <span className="lux-stars">{[1,2,3,4,5].map(s=><span key={s}>{s<=Math.floor(item.rating||4.5)?'★':'☆'}</span>)}</span>
-                                                    <span className="lux-rnum">({(item.rating||4.5).toFixed(1)})</span>
-                                                </div>
-                                            </div>
-                                            <h3 className="lux-cname">
-                                                <Link to={`/single-product/${item.id}`} className="lux-cnlink">{item.name}</Link>
-                                            </h3>
-                                            <p className="lux-ccat">{item.maincategory} · {item.subcategory}</p>
-
-                                            {normalizeColors(item.color).length > 0 && (
-                                                <div className="lux-colors">
-                                                    <span className="lux-clabel">Colour</span>
-                                                    <div className="lux-cdots">
-                                                        {normalizeColors(item.color).map((c) => (
-                                                            <button key={`${item.id}-${c}`} type="button"
-                                                                className={`lux-cdot ${selectedColors[item.id]===c?'active':''}`}
-                                                                style={{ backgroundColor: resolveColor(c) }}
-                                                                onClick={() => setSelectedColors({...selectedColors,[item.id]:c})}
-                                                                title={c} aria-label={`Select colour ${c}`}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className="lux-sizes">
-                                                <div className="lux-shd">
-                                                    <span className="lux-slbl">Size</span>
-                                                    {selectedSizes[item.id] && <span className="lux-schosen">{selectedSizes[item.id]}</span>}
-                                                </div>
-                                                <div className="lux-sbtns">
-                                                    {Array.from(new Set((Array.isArray(item.size) ? item.size : [item.size]).filter(s => s && s !== 'All'))).map((s) => (
-                                                        <motion.button key={s}
-                                                            onClick={() => setSelectedSizes({...selectedSizes,[item.id]:s})}
-                                                            className={`lux-sbtn ${selectedSizes[item.id]===s?'active':''}`}
-                                                            whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
-                                                        >{s}</motion.button>
+                                        {normalizeColors(item.color).length > 0 && (
+                                            <div className="lux-colors">
+                                                <span className="lux-clabel">Colour</span>
+                                                <div className="lux-cdots">
+                                                    {normalizeColors(item.color).map((c) => (
+                                                        <button key={`${item.id}-${c}`} type="button"
+                                                            className={`lux-cdot ${selectedColors[item.id]===c?'active':''}`}
+                                                            style={{ backgroundColor: resolveColor(c) }}
+                                                            onClick={() => setSelectedColors({...selectedColors,[item.id]:c})}
+                                                            title={c} aria-label={`Select colour ${c}`}
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
+                                        )}
 
-                                            <div className="lux-prow-c">
-                                                <span className="lux-price">₹{item.finalprice}</span>
-                                                {item.baseprice > item.finalprice && (
-                                                    <>
-                                                        <del className="lux-orig">₹{item.baseprice}</del>
-                                                        <span className="lux-save">SAVE ₹{item.baseprice - item.finalprice}</span>
-                                                    </>
-                                                )}
+                                        <div className="lux-sizes">
+                                            <div className="lux-shd">
+                                                <span className="lux-slbl">Size</span>
+                                                {selectedSizes[item.id] && <span className="lux-schosen">{selectedSizes[item.id]}</span>}
                                             </div>
+                                            <div className="lux-sbtns">
+                                                {Array.from(new Set((Array.isArray(item.size) ? item.size : [item.size]).filter(s => s && s !== 'All'))).map((s) => (
+                                                    <motion.button key={s}
+                                                        onClick={() => setSelectedSizes({...selectedSizes,[item.id]:s})}
+                                                        className={`lux-sbtn ${selectedSizes[item.id]===s?'active':''}`}
+                                                        whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+                                                    >{s}</motion.button>
+                                                ))}
+                                            </div>
+                                        </div>
 
-                                            <motion.button
-                                                onClick={() => addToCart(item, selectedSizes[item.id], selectedColors[item.id])}
-                                                className={`lux-addbtn ${(!selectedSizes[item.id]||(normalizeColors(item.color).length>0&&!selectedColors[item.id]))?'disabled':''}`}
-                                                whileHover={(selectedSizes[item.id])?{scale:1.02}:{}}
-                                                whileTap={(selectedSizes[item.id])?{scale:0.98}:{}}
-                                            >
-                                                <span>Add to Bag</span>
-                                                <span className="lux-addico">+</span>
-                                            </motion.button>
-
-                                            {cartNotifications[item.id] && (
-                                                <motion.div className="lux-cbadge"
-                                                    initial={{ scale: 0, opacity: 0 }}
-                                                    animate={{ scale: 1, opacity: 1 }}
-                                                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                                                >✓ Added {cartNotifications[item.id]}×</motion.div>
+                                        <div className="lux-prow-c">
+                                            <span className="lux-price">₹{item.finalprice}</span>
+                                            {item.baseprice > item.finalprice && (
+                                                <>
+                                                    <del className="lux-orig">₹{item.baseprice}</del>
+                                                    <span className="lux-save">SAVE ₹{item.baseprice - item.finalprice}</span>
+                                                </>
                                             )}
                                         </div>
-                                    </motion.div>
-                                ))
-                            )}
+
+                                        <motion.button
+                                            onClick={() => addToCart(item, selectedSizes[item.id], selectedColors[item.id])}
+                                            className={`lux-addbtn ${(!selectedSizes[item.id]||(normalizeColors(item.color).length>0&&!selectedColors[item.id]))?'disabled':''}`}
+                                            whileHover={(selectedSizes[item.id])?{scale:1.02}:{}}
+                                            whileTap={(selectedSizes[item.id])?{scale:0.98}:{}}
+                                        >
+                                            <span>Add to Bag</span>
+                                            <span className="lux-addico">+</span>
+                                        </motion.button>
+
+                                        {cartNotifications[item.id] && (
+                                            <motion.div className="lux-cbadge"
+                                                initial={{ scale: 0, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                                            >✓ Added {cartNotifications[item.id]}×</motion.div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            ))}
                         </AnimatePresence>
-                        <style>{`.skeleton-box { background: linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 37%,#f3f4f6 63%); border-radius: 8px; animation: skeleton-shimmer 1.2s infinite linear; }
-                        @keyframes skeleton-shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }`}</style>
                     </div>
 
                     {filteredProducts.length === 0 && (
@@ -1151,6 +1118,19 @@ export default function Shop() {
                     .lux-addbtn { font-size:9px; padding:8px 10px; }
                     .lux-sbtn { height:25px; font-size:8px; }
                     .lux-price { font-size:17px; }
+                }
+
+                /* Custom: 500px and below - show 1 product per row, full width */
+                @media (max-width: 500px) {
+                    .lux-grid {
+                        grid-template-columns: 1fr !important;
+                        gap: 14px !important;
+                    }
+                    .lux-card {
+                        width: 100% !important;
+                        min-width: 0 !important;
+                        max-width: 100% !important;
+                    }
                 }
             `}} />
         </div>

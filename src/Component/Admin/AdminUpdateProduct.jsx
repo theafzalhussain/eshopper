@@ -181,21 +181,7 @@ function postData(e) {
                                             </div>
                                             <div className="size-grid-responsive">
                                                 <div className="size-row">
-                                                    {['XS','S','M','L','XL','XXL'].map((sz) => (
-                                                        <label key={sz} className="size-checkbox-label size-center">
-                                                            <input
-                                                                type="checkbox"
-                                                                name="size"
-                                                                value={sz}
-                                                                checked={Array.isArray(data.size) ? data.size.includes(sz) : false}
-                                                                onChange={getData}
-                                                            />
-                                                            <span>{sz}</span>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                                <div className="size-row">
-                                                    {[26,28,30,32,34,36,38,40].map((sz) => (
+                                                    {['XS','S','M','L','XL','XXL',26,28,30,32,34,36,38,40,'5-6','6-7','7-8','8-9','9-10','10-11','11-12','12-13','13-14','14-15','15-16'].map((sz) => (
                                                         <label key={sz} className="size-checkbox-label size-center">
                                                             <input
                                                                 type="checkbox"

@@ -1,35 +1,38 @@
-import React, { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useEffect, useState, useRef } from 'react';
+import { useToast } from '../ToastNotification';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import LefNav from './LefNav'
+import LefNav from './LefNav';
 import { deleteProduct, getProduct } from '../../Store/ActionCreaters/ProductActionCreators';
-import { motion } from 'framer-motion'
-import { Plus, Edit3, Trash2, LayoutGrid, AlertTriangle, CheckCircle } from 'lucide-react'
-
-// Real-time socket
+import { motion } from 'framer-motion';
+import { Plus, Edit3, Trash2, LayoutGrid, AlertTriangle, CheckCircle } from 'lucide-react';
 import { getSocket } from './socket';
 
 export default function AdminProduct() {
-    const productData = useSelector((state) => state.ProductStateData)
-    const dispatch = useDispatch()
-    const navigate = useNavigate()
-    const [showAlert, setShowAlert] = useState(false)
+    const toast = useToast();
+    const productData = useSelector((state) => state.ProductStateData);
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const [showAlert, setShowAlert] = useState(false);
     // Bulk selection state
-    const [selectedProducts, setSelectedProducts] = useState([])
-    const [selectAll, setSelectAll] = useState(false)
+    const [selectedProducts, setSelectedProducts] = useState([]);
+    const [selectAll, setSelectAll] = useState(false);
+    // Socket ref to persist across renders
+    const socketRef = useRef();
 
-    useEffect(() => { dispatch(getProduct()) }, [dispatch])
-
+    // Always fetch products on mount
     useEffect(() => {
-        // Setup socket for real-time dashboard updates
-        const socket = getSocket('admin-dashboard');
-        const handleDashboardUpdate = () => {
-            dispatch(getProduct());
-        };
-        socket.on('dashboardUpdate', handleDashboardUpdate);
-        return () => {
-            socket.off('dashboardUpdate', handleDashboardUpdate);
-        };
+        dispatch(getProduct());
+        // Setup socket only once
+        if (!socketRef.current) {
+            const socket = getSocket('admin-dashboard');
+            socketRef.current = socket;
+            const handleDashboardUpdate = () => {
+                dispatch(getProduct());
+            };
+            socket.on('dashboardUpdate', handleDashboardUpdate);
+        }
+        // No cleanup to keep socket persistent for admin
     }, [dispatch]);
 
     // FIX: Mapping MongoDB _id to table data
@@ -53,11 +56,18 @@ export default function AdminProduct() {
         }
     }
     const handleBulkDelete = () => {
-        if (selectedProducts.length === 0) return alert('Select at least one product!')
-        if (!window.confirm(`Delete ${selectedProducts.length} products? This cannot be undone!`)) return
-        selectedProducts.forEach(id => dispatch(deleteProduct({id})))
-        setSelectedProducts([])
-        setSelectAll(false)
+        if (selectedProducts.length === 0) {
+            toast.error('Select at least one product!', 3500);
+            return;
+        }
+        toast.warning(`Deleting ${selectedProducts.length} products...`, 2500);
+        selectedProducts.forEach(id => dispatch(deleteProduct({id})));
+        setTimeout(() => {
+            dispatch(getProduct());
+            setSelectedProducts([]);
+            setSelectAll(false);
+            toast.success('Products deleted successfully!', 3500);
+        }, 900);
     }
 
     return (
@@ -119,7 +129,14 @@ export default function AdminProduct() {
                                                     <button className="btn btn-sm btn-info rounded-circle mr-2" onClick={() => navigate("/admin-update-product/" + row.id)}>
                                                         <Edit3 size={14} />
                                                     </button>
-                                                    <button className="btn btn-sm btn-danger rounded-circle" onClick={() => { if(window.confirm("Overwrite: Delete record?")) dispatch(deleteProduct({id: row.id})) }}>
+                                                    <button className="btn btn-sm btn-danger rounded-circle" onClick={() => {
+                                                        toast.warning('Deleting product...', 2000);
+                                                        dispatch(deleteProduct({id: row.id}));
+                                                        setTimeout(() => {
+                                                            dispatch(getProduct());
+                                                            toast.success('Product deleted successfully!', 3500);
+                                                        }, 900);
+                                                    }}>
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </td>

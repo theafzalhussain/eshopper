@@ -83,9 +83,9 @@ export default function Cart() {
             (async () => {
                 try {
                     const cartRes = await axios.get(`/api/cart?userId=${userId}`);
-                    const persistedDelivery = cartRes?.data?.cart?.deliveryEstimate || {};
+                    // Delivery estimate should NOT auto-show on page load
                     setDeliveryPincode('');
-                    setDeliveryEstimateMsg(String(persistedDelivery.label || ''));
+                    setDeliveryEstimateMsg('');
                 } catch {
                     setDeliveryEstimateMsg('');
                 }
@@ -138,10 +138,22 @@ export default function Cart() {
         const cartData = responseData?.cart;
         if (!cartData) return;
         dispatch({ type: GET_CART_RED, data: cartData });
-        const persistedDelivery = cartData?.deliveryEstimate || {};
+        // Do NOT auto-show delivery estimate after cart actions
         setDeliveryPincode('');
-        setDeliveryEstimateMsg(String(persistedDelivery.label || ''));
+        setDeliveryEstimateMsg('');
     }
+    // Clear delivery estimate on mount/unmount (refresh or navigation)
+    useEffect(() => {
+        setDeliveryEstimateMsg('');
+        setDeliveryEstimateError('');
+        setDeliveryPincode('');
+        // On unmount, clear as well
+        return () => {
+            setDeliveryEstimateMsg('');
+            setDeliveryEstimateError('');
+            setDeliveryPincode('');
+        };
+    }, []);
 
     async function saveForLater(item) {
         const itemId = item._id || item.id;
