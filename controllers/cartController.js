@@ -462,7 +462,7 @@ exports.saveForLater = async (req, res) => {
         }
         if (!srcItem) return res.status(404).json({ success: false, message: 'Cart item not found.' });
 
-        const existingSaved = cart.savedItems.find((entry) => String(entry.product) === String(srcItem.product));
+        const existingSaved = cart.savedItems.find((entry) => String(entry.product) === String(srcItem.product) && entry.size === srcItem.size && entry.color === srcItem.color);
         if (existingSaved) {
             existingSaved.quantity += Number(srcItem.quantity || 1);
             if (Number(srcItem.price || 0) > 0) existingSaved.price = Number(srcItem.price || 0);
@@ -471,6 +471,8 @@ exports.saveForLater = async (req, res) => {
                 product: srcItem.product,
                 quantity: Number(srcItem.quantity || 1),
                 price: Number(srcItem.price || 0),
+                size: srcItem.size || '',
+                color: srcItem.color || '',
                 savedAt: new Date(),
             });
         }
@@ -515,6 +517,8 @@ exports.moveSavedToCart = async (req, res) => {
                 product: savedItem.product,
                 quantity: Number(savedItem.quantity || 1),
                 price: Number(savedItem.price || 0),
+                size: savedItem.size || req.body.size || '',
+                color: savedItem.color || req.body.color || ''
             });
         }
 

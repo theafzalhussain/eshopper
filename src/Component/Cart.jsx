@@ -182,7 +182,11 @@ export default function Cart() {
         }
         setSavedActionIds((prev) => [...prev, itemId]);
         try {
-            const res = await axios.post(`/api/cart/move-saved-to-cart/${itemId}`, { userId });
+            const res = await axios.post(`/api/cart/move-saved-to-cart/${itemId}`, {
+                userId,
+                size: item.size || '',
+                color: item.color || ''
+            });
             syncCartFromResponse(res.data);
             await refreshSummaryOnly();
             toast.success('Saved item moved to cart.');

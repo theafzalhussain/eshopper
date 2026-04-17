@@ -702,6 +702,7 @@ input[type="checkbox"]:focus {
     display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
+    
   }
   .hx-story-text {
     width: 100% !important;

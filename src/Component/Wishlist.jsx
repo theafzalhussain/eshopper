@@ -172,6 +172,8 @@ export default function Wishlist() {
                     userId,
                     productId,
                     quantity: 1,
+                    size: item.size || '',
+                    color: item.color || ''
                 })
                 await axios.delete(`/wishlist/${itemId}`)
             }
