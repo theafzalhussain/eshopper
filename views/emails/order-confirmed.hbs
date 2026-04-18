@@ -6,10 +6,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Order Confirmed - {{orderId}}</title>
   <!-- All CSS is now inlined below for maximum compatibility -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;600&display=swap');
+    a:hover { opacity: 0.85; }
+    /* Premium Delivery Progress Styles */
+    .step-icon-done { border-color: #d4af37 !important; background: #1a1813 !important; color: #d4af37 !important; }
+    .step-label-done { color: #d4af37 !important; }
+    .step-icon-active { border-color: #f8d98a !important; background: linear-gradient(135deg, #d4af37 0%, #aa8222 100%) !important; color: #000000 !important; box-shadow: 0 0 14px rgba(212,175,55,0.6) !important; }
+    .step-label-active { color: #f8d98a !important; font-weight: 800 !important; }
+    .step-icon-pending { border-color: #222222 !important; background: #0a0a0c !important; color: #555555 !important; }
+    .step-label-pending { color: #666666 !important; }
+    @media only screen and (max-width:620px) {
+      .step-icon-done, .step-icon-active, .step-icon-pending { width: 22px !important; height: 22px !important; line-height: 20px !important; font-size: 10px !important; margin-bottom: 6px !important; border-width: 1px !important; }
+      .step-label-done, .step-label-active, .step-label-pending { font-size: 8px !important; letter-spacing: 0px !important; }
+      .luxe-journey-title { font-size: 14px !important; }
+      .luxe-percent-pill { font-size: 9px !important; padding: 4px 8px !important; }
+    }
+  </style>
 </head>
 
 <body
-  style="margin:0;padding:0;background:#050608;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;">
+  style="margin:0;padding:0;background:#050608;font-family:'Inter', 'Trebuchet MS', Arial, sans-serif;color:#f5f5f5;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} confirmed. Premium preparation is
     in progress.</div>
   {{> animated-gold-border}}
@@ -41,19 +58,19 @@
           </tr>
           <tr>
             <td
-              style="background:linear-gradient(120deg,#151515,#262117);border-bottom:3px solid #d4af37;text-align:center;padding:22px 12px;">
+              style="background:linear-gradient(120deg,#111111,#1a1813);border-bottom:2px solid #d4af37;text-align:center;padding:35px 15px;">
               <div
-                style="font-family:'Brush Script MT',cursive,Georgia,serif;font-size:28px;color:#d4af37;margin-bottom:6px;">
-                Thank you, {{customerName}}!</div>
-              <div style="font-size:38px;font-weight:800;line-height:1;letter-spacing:.4px;">ORDER CONFIRMED</div>
-              <div style="color:#f8d98a;font-size:16px;opacity:.96;margin-top:8px;">Order #{{orderId}} | {{orderDate}}
+                style="font-family:'Playfair Display', Georgia, serif;font-style:italic;font-size:24px;color:#d4af37;margin-bottom:12px;">
+                Thank you, {{customerName}}</div>
+              <div style="font-family:'Playfair Display', Georgia, serif;font-size:34px;font-weight:700;line-height:1.2;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;">ORDER CONFIRMED</div>
+              <div style="color:#c5a059;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-top:14px;">Order #{{orderId}} &bull; {{orderDate}}
               </div>
             </td>
           </tr>
 
           <tr>
             <td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
-              <h2 class="title">Hi {{customerName}}!</h2>
+              <h2 class="title" style="font-family:'Playfair Display', Georgia, serif; font-size:22px; color:#d4af37; font-weight:400;">Hi {{customerName}},</h2>
               <p class="sub">Your order has been confirmed and is now being prepared by our expert team. Every item will
                 undergo our strict 10-point quality inspection before dispatch.</p>
               <div class="arrival">
@@ -62,32 +79,42 @@
                 <div class="s">3-5 Business Days</div>
               </div>
 
-              <div class="progress-track">
-                <table class="progress-head-row" role="presentation">
+              <div style="margin-top:28px; background:linear-gradient(145deg, #0a0a0c, #111111); border:1px solid #2a2a2a; border-radius:16px; padding:24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <table role="presentation" style="width:100%; margin-bottom:20px;">
                   <tr>
-                    <td class="progress-head-title">DELIVERY PROGRESS</td>
-                    <td align="right"><span class="progress-pill">{{progressPercent}}% COMPLETE</span></td>
+                    <td class="luxe-journey-title" style="font-family:'Playfair Display', Georgia, serif; font-size:18px; color:#d4af37; font-weight:600; letter-spacing:1px;">
+                      The Luxe Journey
+                    </td>
+                    <td align="right">
+                      <span class="luxe-percent-pill" style="font-size:10px; background:linear-gradient(135deg, #1a1813, #0a0a0c); color:#d4af37; padding:6px 12px; border-radius:999px; font-weight:800; border:1px solid #d4af37; letter-spacing:1.5px; box-shadow: 0 0 10px rgba(212,175,55,0.15);">
+                        {{progressPercent}}% COMPLETE
+                      </span>
+                    </td>
                   </tr>
                 </table>
-                <table class="progress-grid" role="presentation">
+
+                <div style="width:100%; height:4px; background:#1a1a1a; border-radius:4px; margin-bottom:24px; overflow:hidden; border: 1px solid #222;">
+                  <div style="height:100%; background:linear-gradient(90deg, #8b6a12, #d4af37, #fffbe6); width:{{progressPercent}}%; border-radius:4px; box-shadow: 0 0 12px rgba(212,175,55,0.8);"></div>
+                </div>
+
+                <table role="presentation" style="width:100%; text-align:center; table-layout:fixed;">
                   <tr>
                     {{#each progressSteps}}
-                    <td>
-                      <div class="step-card {{state}}">
-                        <span class="step-dot {{state}}">{{{icon}}}</span>
-                        <div class="step-copy">
-                          <div class="step-label {{state}}">{{label}}</div>
-                        </div>
+                    <td style="vertical-align:top; padding:0 2px;">
+                      <div class="step-icon-{{state}}" style="display:inline-block; width:32px; height:32px; line-height:30px; border-radius:50%; font-size:13px; margin-bottom:10px; border: 2px solid #222; background: #0a0a0c; color: #555; box-sizing:border-box;">
+                        {{{icon}}}
+                      </div>
+                      <div class="step-label-{{state}}" style="font-size:10px; color:#666; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; line-height:1.4;">
+                        {{label}}
                       </div>
                     </td>
                     {{/each}}
                   </tr>
                 </table>
-                <div class="progress-bar">
-                  <div class="progress-fill" style="width: {{progressPercent}}%;"></div>
+
+                <div style="margin-top:24px; padding-top:16px; border-top:1px solid #222; font-size:11px; color:#888; text-align:center; font-style:italic; font-family:Georgia, serif;">
+                  Live status synced automatically with our premium dispatch center.
                 </div>
-                <div class="progress-foot"><span>Live status synced from backend</span><strong>{{progressPercent}}%
-                    done</strong></div>
               </div>
             </td>
           </tr>
@@ -117,10 +144,10 @@
 
           <tr>
             <td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
-              <div class="box" style="border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;">
-                <h3 class="heading" style="color:#f0c84a;font-size:34px;margin:0 0 14px;">ORDER DETAILS</h3>
+              <div class="box" style="border:1px solid #2a2a2a;border-radius:8px;padding:20px;background:#0d0e10;">
+                <h3 class="heading" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:26px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;">ORDER DETAILS</h3>
                 <table class="items" role="presentation" width="100%"
-                  style="width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;">
+                  style="width:100%;border:1px solid #222;border-radius:6px;overflow:hidden;">
                   <tr>
                     <th
                       style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">
@@ -205,37 +232,33 @@
                   </tr>
                 </table>
 
-                <a class="btn btn-primary" href="{{trackingUrl}}"
-                  style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#4ab75a;color:#fff;">TRACK
+                <a class="btn btn-primary" href="{{trackingUrl}}" target="_blank"
+                  style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:16px 12px;font-size:16px;margin-top:24px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:1.5px;text-transform:uppercase;">TRACK
                   YOUR ORDER</a>
-                <a class="btn btn-secondary" href="{{confirmationInvoiceUrl}}"
-                  style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#151820;color:#f0d07a;border:1px solid #756225;">VIEW
+                <a class="btn btn-secondary" href="{{confirmationInvoiceUrl}}" target="_blank"
+                  style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:16px 12px;font-size:16px;margin-top:14px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1.5px;text-transform:uppercase;">VIEW
                   RECEIPT</a>
               </div>
             </td>
           </tr>
 
           <tr>
-            <td class="foot"
-              style="padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;">
-              <div class="community" style="color:#d6f7e0;font-size:16px;">Join our 50,000+ Luxe community</div>
+            <td class="foot" style="padding:24px 14px;border-top:1px solid #1a1a1a;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;background:#0b0c0e;">
+              <div class="community" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:20px;font-style:italic;">Join our Luxe community</div>
               <div class="stars" style="color:#f4d64b;font-size:28px;letter-spacing:2px;margin:8px 0;">
                 &#9733;&#9733;&#9733;&#9733;&#9733;</div>
-              <a class="btn-inst" href="{{instagramUrl}}"
-                style="display:inline-block;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:18px;">Follow
-                us on Instagram</a>
             </td>
           </tr>
 
           <tr>
             <td class="assist" style="padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;">
-              <h4 style="margin:0 0 10px;font-size:36px;color:#f1f2f5;">Need Assistance?</h4>
+              <h4 style="font-family:'Playfair Display', Georgia, serif;margin:0 0 14px;font-size:24px;color:#d4af37;font-weight:400;">Need Assistance?</h4>
               <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
-                <a href="{{whatsappUrl}}"
-                  style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#25d366,#1ed66d);color:#0f1912;text-align:center;box-shadow:0 2px 8px rgba(34,139,34,0.08);">WhatsApp
+                <a href="{{whatsappUrl}}" target="_blank"
+                  style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#06140b;border:1px solid #25d366;color:#25d366;text-align:center;letter-spacing:0.5px;transition:all 0.3s ease;">WhatsApp
                   Support</a>
-                <a href="{{instagramUrl}}"
-                  style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-align:center;box-shadow:0 2px 8px rgba(216,78,228,0.08); margin-left:8px;">Instagram</a>
+                <a href="{{instagramUrl}}" target="_blank"
+                  style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#170814;border:1px solid #d84ee4;color:#d84ee4;text-align:center;letter-spacing:0.5px;margin-left:8px;transition:all 0.3s ease;">Instagram</a>
               </div>
             </td>
           </tr>
@@ -246,11 +269,14 @@
               {{> review-snippet}}
               {{> social-footer}}
               {{> brand-story-footer}}
-              <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
+              <div style="margin-top:10px;">&copy; 2024 E-Shopper Boutique Luxe. All rights reserved.</div>
               <div>{{companyAddress}}</div>
               <div>GSTIN: {{companyGstin}} | CIN: {{companyCin}}</div>
-              <div><a href="{{privacyPolicyUrl}}">Privacy</a> | <a href="{{termsUrl}}">Terms</a> | <a
-                  href="{{unsubscribeUrl}}">Unsubscribe</a></div>
+              <div style="margin-top: 14px;">
+                <a href="{{privacyPolicyUrl}}" style="color:#d4af37;text-decoration:none;margin:0 6px;">Privacy</a> | 
+                <a href="{{termsUrl}}" style="color:#d4af37;text-decoration:none;margin:0 6px;">Terms</a> | 
+                <a href="{{unsubscribeUrl}}" style="color:#d4af37;text-decoration:none;margin:0 6px;">Unsubscribe</a>
+              </div>
             </td>
           </tr>
         </table>

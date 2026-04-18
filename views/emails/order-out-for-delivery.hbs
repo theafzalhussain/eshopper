@@ -6,190 +6,248 @@
   <title>Out For Delivery - {{orderId}}</title>
   <style>
     {{> theme_tokens}}
-    body{margin:0;padding:0;background:#050608;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
-    table{border-collapse:collapse;}
-    img{max-width:100%;height:auto;border:0;display:block;}
-    .wrap{width:100%;background:#050608;padding:16px 6px;}
-    .card{width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;}
-    .top{padding:16px 20px;background:linear-gradient(120deg,#2a1909,#4b2807,#67340a);}
-    .brandmark{display:inline-table;vertical-align:middle;border-collapse:collapse;}
-    .brandmark td{padding:0;vertical-align:top;}
-    .brandmark-e-cell{padding-right:8px !important;}
-    .brandmark-e{background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%);color:#fff;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:800;border-radius:4px;border-right:3px solid #d4af37;box-shadow:0 6px 16px rgba(15,23,42,0.22);line-height:34px;}
-    .brandmark-text{display:table-cell;line-height:1;}
-    .brandmark-name{display:block;font-weight:800;letter-spacing:2.4px;font-size:18px;color:#f5f7fb;line-height:1;}
-    .brandmark-tag{display:block;font-size:7px;letter-spacing:1.8px;color:#d4af37;font-weight:700;margin-top:2px;line-height:1.1;}
-    .status{float:right;display:inline-block;font-size:12px;font-weight:700;color:#fff2df;border:1px solid #ffc15a;background:#ffb638;padding:7px 12px;border-radius:999px;}
-    .hero{background:#ffad22;color:#fff;text-align:center;padding:28px 12px;}
-    .hero .icon{font-size:48px;line-height:1;}
-    .hero .t{font-size:48px;font-weight:800;line-height:1;margin-top:8px;letter-spacing:.4px;}
-    .hero .s{font-size:14px;opacity:.96;margin-top:8px;}
-    .section{padding:22px 20px;border-top:1px solid #272a30;}
-    .delivery{border:1px solid #e59116;background:#3a1f05;border-radius:14px;padding:14px;text-align:center;}
-    .delivery .h{color:#ffbf59;font-size:30px;font-weight:800;}
-    .delivery .d{color:#fff;font-size:52px;font-weight:800;line-height:1;margin-top:5px;}
-    .delivery .s{color:#f8d8a8;font-size:20px;margin-top:5px;}
-    .title{margin:14px 0 10px;font-size:44px;line-height:1.08;text-align:center;}
-    .sub{text-align:center;color:#d6dae2;font-size:18px;line-height:1.62;margin:0;}
-    .security{margin-top:14px;background:#3a0f0f;border:2px solid #b12b2b;border-radius:12px;padding:14px;}
-    .security h4{margin:0 0 8px;color:#ff584f;font-size:32px;}
-    .security p{margin:0;color:#ffd8d5;line-height:1.6;font-size:19px;}
-    .security .n{margin-top:8px;color:#c5a3a0;font-size:12px;font-style:italic;}
-    .box{margin-top:14px;border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;}
-    .heading{color:#ffb12f;font-size:32px;margin:0 0 12px;}
-    .summary{width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;}
-    .summary td{padding:12px 10px;border-bottom:1px solid #2d313a;font-size:16px;color:#e7e9ed;}
-    .summary tr:last-child td{border-bottom:none;}
-    .summary .k{color:#bfc3ce;}
-    .summary .v{color:#ffffff;font-weight:700;text-align:right;}
-    .progress-track{margin-top:14px;border:1px solid #323844;border-radius:12px;padding:14px;background:linear-gradient(140deg,#0f131a,#182033,#111827);}
-    .progress-head{margin:0 0 10px;color:#f8d98a;font-size:20px;letter-spacing:.3px;text-align:center;font-weight:800;}
-    .progress-grid{width:100%;}
-    .progress-grid td{text-align:center;padding:4px 2px;width:20%;}
-    .p-icon{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:999px;font-size:18px;border:1px solid #3a404d;background:#1b212d;}
-    .p-icon.done{background:#2ea94b;border-color:#55d372;}
-    .p-icon.active{background:#2f8fe2;border-color:#6fc3ff;box-shadow:0 0 0 3px rgba(47,143,226,0.22);}
-    .p-icon.pending{background:#1b212d;border-style:dashed;color:#8a93a5;}
-    .p-label{margin-top:6px;font-size:11px;letter-spacing:.4px;font-weight:700;color:#8f98aa;text-transform:uppercase;}
-    .p-label.done{color:#5fda7f;}
-    .p-label.active{color:#7bc6ff;}
-    .p-bar{margin-top:10px;height:4px;background:#2a2e37;border-radius:999px;overflow:hidden;}
-    .p-fill{height:100%;background:linear-gradient(90deg,#34d399,#60a5fa,#a78bfa);border-radius:999px;}
-    .loc{margin-top:14px;border:1px solid #0a9446;background:#073629;border-radius:12px;padding:14px;}
-    .loc h4{margin:0 0 8px;color:#22dc6f;font-size:30px;}
-    .loc p{margin:0;color:#d8efe2;line-height:1.5;font-size:17px;}
-    .live{margin-top:14px;border:1px solid #3d414a;border-radius:12px;padding:16px;text-align:center;}
-    .btn{display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:12px;}
-    .btn-track{background:#ffb638;color:#fff;}
-    .btn-row{width:100%;margin-top:12px;}
-    .btn-row td{width:50%;}
-    .btn-sm{display:block;text-align:center;text-decoration:none;font-weight:700;border-radius:10px;padding:11px 8px;font-size:16px;}
-    .change{background:#2cd16b;color:#0f1712;margin-right:8px;}
-    .call{background:#1c1f26;color:#ffb638;border:1px solid #7c5a1e;margin-left:8px;}
-    .check{margin-top:14px;background:#04301a;border:1px solid #0b7c3b;border-radius:12px;padding:14px;}
-    .check h4{margin:0 0 8px;color:#19d15f;font-size:30px;}
-    .check ul{margin:0;padding-left:18px;color:#c9ead8;font-size:18px;line-height:1.55;}
-    .ins{margin-top:14px;border:1px solid #8d6f28;background:#2a210f;border-radius:12px;padding:12px;text-align:center;color:#f0d07a;font-size:18px;font-weight:700;}
-    .support{padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;}
-    .support h4{margin:0 0 10px;font-size:30px;color:#f1f2f5;}
-    .wa{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:#25d366;color:#0f1712;text-decoration:none;font-weight:700;font-size:15px;}
-    .insta{display:inline-block;margin:6px;padding:10px 14px;border-radius:10px;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;font-weight:700;font-size:15px;}
-    .foot{padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;}
-    .foot a{color:#d4b75a;text-decoration:none;}
-    @media only screen and (max-width:620px){
-      .status{float:none;display:inline-block;margin-top:8px;}
-      .hero .t{font-size:38px;}
-      .title{font-size:34px;}
-      .sub{font-size:16px;}
-      .delivery .d{font-size:40px;}
-      .p-icon{width:32px;height:32px;font-size:16px;}
-      .p-label{font-size:10px;}
-      .btn{font-size:21px;}
-      .btn-row td{display:block;width:100%;}
-      .change,.call{margin:0 0 10px 0;}
-      .support h4{font-size:24px;}
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;600&display=swap');
+    a:hover { opacity: 0.85; }
+    /* Premium Delivery Progress Styles */
+    .step-icon-done { border-color: #d4af37 !important; background: #1a1813 !important; color: #d4af37 !important; }
+    .step-label-done { color: #d4af37 !important; }
+    .step-icon-active { border-color: #f8d98a !important; background: linear-gradient(135deg, #d4af37 0%, #aa8222 100%) !important; color: #000000 !important; box-shadow: 0 0 14px rgba(212,175,55,0.6) !important; }
+    .step-label-active { color: #f8d98a !important; font-weight: 800 !important; }
+    .step-icon-pending { border-color: #222222 !important; background: #0a0a0c !important; color: #555555 !important; }
+    .step-label-pending { color: #666666 !important; }
+    @media only screen and (max-width:620px) {
+      .step-icon-done, .step-icon-active, .step-icon-pending { width: 22px !important; height: 22px !important; line-height: 20px !important; font-size: 10px !important; margin-bottom: 6px !important; border-width: 1px !important; }
+      .step-label-done, .step-label-active, .step-label-pending { font-size: 8px !important; letter-spacing: 0px !important; }
+      .luxe-journey-title { font-size: 14px !important; }
+      .luxe-percent-pill { font-size: 9px !important; padding: 4px 8px !important; }
+      .btn-row td { display: block; width: 100%; padding:0 !important; }
+      .change, .call { margin: 0 0 10px 0 !important; }
+      
+      /* Global Responsive Classes */
+      .mobile-stack { display: block !important; width: 100% !important; padding: 0 !important; margin-bottom: 12px !important; box-sizing: border-box !important; }
+      .mobile-btn { display: block !important; width: 100% !important; box-sizing: border-box !important; margin: 10px 0 !important; }
+      .mobile-flex-btn { width: 100% !important; min-width: unset !important; margin-left: 0 !important; margin-right: 0 !important; margin-bottom: 10px !important; }
+      .mobile-hero-title { font-size: 26px !important; line-height: 1.3 !important; }
+      .mobile-section-title { font-size: 20px !important; }
+      .mobile-table-header { font-size: 11px !important; padding: 8px 4px !important; }
+      .mobile-table-cell { font-size: 13px !important; padding: 10px 4px !important; }
+      .mobile-thumb { width: 50px !important; height: 50px !important; }
+      .mobile-otp { font-size: 22px !important; padding: 12px 20px !important; letter-spacing: 2px !important; }
     }
   </style>
 </head>
-<body>
+<body style="margin:0;padding:0;background:#050608;font-family:'Inter', 'Trebuchet MS', Arial, sans-serif;color:#f5f5f5;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} is out for delivery and arriving today.</div>
-  <table class="wrap" role="presentation" width="100%"><tr><td>
-    <table class="card" role="presentation" align="center" style="width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;">
+  <table role="presentation" width="100%" style="width:100%;background:#050608;padding:16px 6px;"><tr><td>
+    <table role="presentation" align="center" style="width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;">
       {{> animated-gold-border}}
-      <tr><td class="top"><table role="presentation" class="brandmark" cellpadding="0" cellspacing="0"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table><span class="status">OUT FOR DELIVERY</span></td></tr>
-      <tr><td class="hero"><div class="icon">&#10022;</div><div class="t">IT'S ARRIVING TODAY</div><div class="s">Your luxury package is just minutes away</div></td></tr>
+      <tr><td style="padding:16px 20px;background:linear-gradient(120deg,#0d2315,#12311f,#1b3a2b);">
+        <table role="presentation" style="display:inline-table;vertical-align:middle;border-collapse:collapse;">
+          <tr>
+            <td style="padding-right:8px;vertical-align:top;">
+              <span style="background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%);color:#fff;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:800;border-radius:4px;border-right:3px solid #d4af37;box-shadow:0 6px 16px rgba(15,23,42,0.22);line-height:34px;">E</span>
+            </td>
+            <td style="vertical-align:top;">
+              <span style="display:block;font-weight:800;letter-spacing:2.4px;font-size:18px;color:#f5f7fb;line-height:1;">SHOPPER</span>
+              <span style="display:block;font-size:7px;letter-spacing:1.8px;color:#d4af37;font-weight:700;margin-top:2px;line-height:1.1;">BOUTIQUE LUXE</span>
+            </td>
+          </tr>
+        </table>
+        <span style="float:right;display:inline-block;font-size:12px;font-weight:700;color:#000000;border:1px solid #d4af37;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);padding:7px 12px;border-radius:999px;">OUT FOR DELIVERY</span>
+      </td></tr>
 
-      <tr><td class="section">
-        <div class="delivery"><div class="h">DELIVERY IN PROGRESS</div><div class="d">TODAY</div><div class="s">Expected by {{deliveryTimeSlot}}</div></div>
-        <h2 class="title">Hi {{customerName}}</h2>
-        <p class="sub">Your luxury package is out for delivery and will reach you today. Our delivery partner is on the way to your doorstep.</p>
+      <tr>
+        <td style="background:linear-gradient(120deg,#111111,#1a1813);border-bottom:2px solid #d4af37;text-align:center;padding:35px 15px;">
+          <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;color:#d4af37;line-height:1;margin-bottom:12px;">&#10022;</div>
+          <div style="font-family:'Playfair Display', Georgia, serif;font-size:34px;font-weight:700;line-height:1.2;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;">IT'S ARRIVING TODAY</div>
+          <div class="mobile-hero-title" style="font-family:'Playfair Display', Georgia, serif;font-size:34px;font-weight:700;line-height:1.2;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;">IT'S ARRIVING TODAY</div>
+          <div style="color:#c5a059;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-top:14px;">Order #{{orderId}}</div>
+        </td>
+      </tr>
+
+      <tr>
+        <td class="section" style="padding:30px 20px;border-top:1px solid #272a30;">
+          <div style="text-align:center;margin-top:0;padding:16px;background:#0d0e10;border-radius:12px;border:1px solid #2a2a2a;margin-bottom:24px;">
+            <div style="font-size:12px;color:#888;letter-spacing:1px;margin-bottom:4px;font-weight:700;">DELIVERY IN PROGRESS</div>
+            <div style="font-size:28px;color:#d4af37;font-weight:800;font-family:'Playfair Display', Georgia, serif;">EXPECTED TODAY</div>
+            <div class="mobile-hero-title" style="font-size:28px;color:#d4af37;font-weight:800;font-family:'Playfair Display', Georgia, serif;">EXPECTED TODAY</div>
+            <div style="font-size:14px;color:#aaa;margin-top:6px;">Expected by <span style="color:#fff;">{{deliveryTimeSlot}}</span></div>
+          </div>
+
+          <h2 class="title" style="font-family:'Playfair Display', Georgia, serif; font-size:22px; color:#d4af37; font-weight:400;text-align:center;">Hi {{customerName}},</h2>
+          <p class="sub" style="color:#d6dae2;font-size:16px;line-height:1.62;margin:0 0 16px;text-align:center;">Your luxury package is out for delivery and will reach you today. Our delivery partner is on the way to your doorstep.</p>
+          
         {{> review-snippet}}
 
-        <div class="security">
-          <h4>SECURITY FIRST</h4>
-          <p>Please share the OTP or verification code only when you receive the package in perfect condition.<br><strong>OTP: {{otp}}</strong></p>
-          <div class="n">Never share OTP before inspecting the package</div>
-        </div>
+          <div style="margin-top:24px;border:1px solid #d4af37;border-radius:8px;padding:20px;background:#1a1813;text-align:center;box-shadow: 0 4px 15px rgba(212,175,55,0.1);">
+            <h4 style="margin:0 0 10px;color:#d4af37;font-size:18px;font-family:'Playfair Display', Georgia, serif;letter-spacing:1px;text-transform:uppercase;">Security First</h4>
+            <h4 class="mobile-section-title" style="margin:0 0 10px;color:#d4af37;font-size:18px;font-family:'Playfair Display', Georgia, serif;letter-spacing:1px;text-transform:uppercase;">Security First</h4>
+            <p style="margin:0 0 16px;color:#d3c7a8;line-height:1.6;font-size:15px;">Please share this OTP only when you receive the package in perfect condition.</p>
+            <div style="display:inline-block;background:#0a0a0c;color:#d4af37;border:1px dashed #d4af37;padding:12px 28px;font-size:28px;font-weight:800;letter-spacing:4px;border-radius:6px;">{{otp}}</div>
+            <div class="mobile-otp" style="display:inline-block;background:#0a0a0c;color:#d4af37;border:1px dashed #d4af37;padding:12px 28px;font-size:28px;font-weight:800;letter-spacing:4px;border-radius:6px;">{{otp}}</div>
+            <div style="margin-top:14px;color:#c5a059;font-size:12px;font-style:italic;">Never share OTP before inspecting the package.</div>
+          </div>
 
-        <div class="box">
-          <h3 class="heading">YOUR DELIVERY PARTNER</h3>
-          <table class="summary" role="presentation" width="100%">
-            <tr><td class="k">Courier Partner</td><td class="v">{{courierPartner}}</td></tr>
-            <tr><td class="k">Tracking ID</td><td class="v">{{trackingNumber}}</td></tr>
-            <tr><td class="k">Delivery Agent</td><td class="v">{{deliveryAgent}}</td></tr>
-            <tr><td class="k">Agent Contact</td><td class="v">{{agentContact}}</td></tr>
+          <div style="margin-top:28px;border:1px solid #2a2a2a;border-radius:12px;padding:20px;background:#0d0e10;">
+            <h3 style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:20px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;">DELIVERY PARTNER</h3>
+            <h3 class="mobile-section-title" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:20px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;">DELIVERY PARTNER</h3>
+            <table role="presentation" width="100%" style="border:1px solid #222;border-radius:8px;overflow:hidden;border-collapse:collapse;">
+              <tr>
+                <td style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#bfc3ce;">Courier Partner</td>
+                <td style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#ffffff;font-weight:700;text-align:right;">{{courierPartner}}</td>
+                <td class="mobile-table-cell" style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#bfc3ce;">Courier Partner</td>
+                <td class="mobile-table-cell" style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#ffffff;font-weight:700;text-align:right;">{{courierPartner}}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#bfc3ce;">Tracking ID</td>
+                <td style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#d4af37;font-weight:700;text-align:right;">{{trackingNumber}}</td>
+                <td class="mobile-table-cell" style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#bfc3ce;">Tracking ID</td>
+                <td class="mobile-table-cell" style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#d4af37;font-weight:700;text-align:right;">{{trackingNumber}}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#bfc3ce;">Delivery Agent</td>
+                <td style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#ffffff;font-weight:700;text-align:right;">{{deliveryAgent}}</td>
+                <td class="mobile-table-cell" style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#bfc3ce;">Delivery Agent</td>
+                <td class="mobile-table-cell" style="padding:12px 14px;border-bottom:1px solid #222;font-size:14px;color:#ffffff;font-weight:700;text-align:right;">{{deliveryAgent}}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 14px;font-size:14px;color:#bfc3ce;">Agent Contact</td>
+                <td style="padding:12px 14px;font-size:14px;color:#ffffff;font-weight:700;text-align:right;">{{agentContact}}</td>
+                <td class="mobile-table-cell" style="padding:12px 14px;font-size:14px;color:#bfc3ce;">Agent Contact</td>
+                <td class="mobile-table-cell" style="padding:12px 14px;font-size:14px;color:#ffffff;font-weight:700;text-align:right;">{{agentContact}}</td>
+              </tr>
+            </table>
+
+            <div style="margin-top:28px; background:linear-gradient(145deg, #0a0a0c, #111111); border:1px solid #2a2a2a; border-radius:16px; padding:24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+              <table role="presentation" style="width:100%; margin-bottom:20px;">
+                <tr>
+                  <td class="luxe-journey-title" style="font-family:'Playfair Display', Georgia, serif; font-size:18px; color:#d4af37; font-weight:600; letter-spacing:1px;">
+                    The Luxe Journey
+                  </td>
+                  <td align="right">
+                    <span class="luxe-percent-pill" style="font-size:10px; background:linear-gradient(135deg, #1a1813, #0a0a0c); color:#d4af37; padding:6px 12px; border-radius:999px; font-weight:800; border:1px solid #d4af37; letter-spacing:1.5px; box-shadow: 0 0 10px rgba(212,175,55,0.15);">
+                      {{progressPercent}}% COMPLETE
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="width:100%; height:4px; background:#1a1a1a; border-radius:4px; margin-bottom:24px; overflow:hidden; border: 1px solid #222;">
+                <div style="height:100%; background:linear-gradient(90deg, #8b6a12, #d4af37, #fffbe6); width:{{progressPercent}}%; border-radius:4px; box-shadow: 0 0 12px rgba(212,175,55,0.8);"></div>
+              </div>
+
+              <table role="presentation" style="width:100%; text-align:center; table-layout:fixed;">
+                <tr>
+                  <!-- Step 1: Placed -->
+                  <td style="vertical-align:top; padding:0 2px;">
+                    <div class="step-icon-done" style="display:inline-block; width:32px; height:32px; line-height:30px; border-radius:50%; font-size:14px; font-weight:800; margin-bottom:10px; border: 2px solid #d4af37; background: #1a1813; color: #d4af37; box-sizing:border-box;">&#10003;</div>
+                    <div class="step-label-done" style="font-size:10px; color:#d4af37; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; line-height:1.4;">PLACED</div>
+                  </td>
+                  <!-- Step 2: Packed -->
+                  <td style="vertical-align:top; padding:0 2px;">
+                    <div class="step-icon-done" style="display:inline-block; width:32px; height:32px; line-height:30px; border-radius:50%; font-size:14px; font-weight:800; margin-bottom:10px; border: 2px solid #d4af37; background: #1a1813; color: #d4af37; box-sizing:border-box;">&#10003;</div>
+                    <div class="step-label-done" style="font-size:10px; color:#d4af37; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; line-height:1.4;">PACKED</div>
+                  </td>
+                  <!-- Step 3: Shipped -->
+                  <td style="vertical-align:top; padding:0 2px;">
+                    <div class="step-icon-done" style="display:inline-block; width:32px; height:32px; line-height:30px; border-radius:50%; font-size:14px; font-weight:800; margin-bottom:10px; border: 2px solid #d4af37; background: #1a1813; color: #d4af37; box-sizing:border-box;">&#10003;</div>
+                    <div class="step-label-done" style="font-size:10px; color:#d4af37; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; line-height:1.4;">SHIPPED</div>
+                  </td>
+                  <!-- Step 4: Out for Delivery (Active) -->
+                  <td style="vertical-align:top; padding:0 2px;">
+                    <div class="step-icon-active" style="display:inline-block; width:32px; height:32px; line-height:30px; border-radius:50%; font-size:15px; font-weight:900; margin-bottom:10px; border: 2px solid #f8d98a; background: linear-gradient(135deg, #d4af37 0%, #aa8222 100%); color: #000000; box-shadow: 0 0 14px rgba(212,175,55,0.6); box-sizing:border-box;">&#10148;</div>
+                    <div class="step-label-active" style="font-size:10px; color:#f8d98a; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; line-height:1.4;">OUT FOR DLVY</div>
+                  </td>
+                  <!-- Step 5: Delivered -->
+                  <td style="vertical-align:top; padding:0 2px;">
+                    <div class="step-icon-pending" style="display:inline-block; width:32px; height:32px; line-height:30px; border-radius:50%; font-size:13px; margin-bottom:10px; border: 2px solid #222; background: #0a0a0c; color: #555; box-sizing:border-box;">&#9679;</div>
+                    <div class="step-label-pending" style="font-size:10px; color:#666; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; line-height:1.4;">DELIVERED</div>
+                  </td>
+                </tr>
+              </table>
+              <div style="margin-top:24px; padding-top:16px; border-top:1px solid #222; font-size:11px; color:#888; text-align:center; font-style:italic; font-family:Georgia, serif;">
+                Live status synced automatically with our premium dispatch center.
+              </div>
+            </div>
           </table>
 
-          <div class="progress-track">
-            <div class="progress-head">DELIVERY PROGRESS</div>
-            <table class="progress-grid" role="presentation"><tr>
-              {{#each progressSteps}}
-              <td>
-                <span class="p-icon {{state}}">{{{icon}}}</span>
-                <div class="p-label {{state}}">{{label}}</div>
+          <table class="grid" role="presentation" style="width:100%;margin-top:20px;border-collapse:collapse;">
+            <tr>
+              <td style="width:50%;vertical-align:top;padding-right:4px;">
+              <td class="mobile-stack" style="width:50%;vertical-align:top;padding-right:4px;">
+                <div class="mini" style="border:1px solid #0f6f35;background:#101a12;border-radius:12px;padding:14px;min-height:115px;">
+                  <div class="k" style="font-size:13px;color:#36d76d;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">SHIPPING ADDRESS</div>
+                  <div class="v" style="color:#e7e9ed;font-size:14px;line-height:1.45;">{{shippingName}}<br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>Phone: {{shippingPhone}}</div>
+                </div>
               </td>
-              {{/each}}
-            </tr></table>
-            <div class="p-bar"><div class="p-fill" style="width: {{progressPercent}}%;"></div></div>
-          </div>
+              <td style="width:50%;vertical-align:top;padding-left:4px;">
+              <td class="mobile-stack" style="width:50%;vertical-align:top;padding-left:4px;">
+                <div class="mini2" style="border:1px solid #343944;background:#111317;border-radius:12px;padding:14px;min-height:115px;text-align:center;">
+                  <div style="font-size:32px;color:#d4af37;line-height:1;margin-bottom:8px;font-family:Georgia,serif;">&#10022;</div>
+                  <div style="font-size:14px;color:#e7e9ed;font-weight:600;">100% Authentic<br>Fully Insured</div>
+                </div>
+              </td>
+            </tr>
+          </table>
 
-          <div class="loc">
-            <h4>DELIVERY LOCATION</h4>
-            <p><strong>{{shippingName}}</strong><br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>{{shippingPhone}}</p>
-          </div>
+          <a class="btn btn-primary" href="{{liveTrackingUrl}}" target="_blank"
+          <a class="btn btn-primary mobile-btn" href="{{liveTrackingUrl}}" target="_blank"
+            style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:16px 12px;font-size:16px;margin-top:24px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:1.5px;text-transform:uppercase;">TRACK LIVE LOCATION</a>
+          
+          <table class="btn-row" role="presentation" style="width:100%;margin-top:14px;">
+            <tr>
+              <td style="padding-right:6px;"><a class="change" href="{{helpCenterUrl}}" style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:14px 10px;font-size:14px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1px;text-transform:uppercase;">Change Address</a></td>
+              <td style="padding-left:6px;"><a class="call" href="tel:{{supportPhone}}" style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:14px 10px;font-size:14px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1px;text-transform:uppercase;">Call Support</a></td>
+              <td class="mobile-stack" style="padding-right:6px;"><a class="change mobile-btn" href="{{helpCenterUrl}}" style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:14px 10px;font-size:14px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1px;text-transform:uppercase;">Change Address</a></td>
+              <td class="mobile-stack" style="padding-left:6px;"><a class="call mobile-btn" href="tel:{{supportPhone}}" style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:14px 10px;font-size:14px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1px;text-transform:uppercase;">Call Support</a></td>
+            </tr>
+          </table>
 
-      
-            {{> social-footer}}
-      
-          <div class="live">
-            <div style="font-size:48px;">&#9671;</div>
-            <div style="color:#c9d0de;font-size:22px;">Live tracking map</div>
-            <a class="btn btn-track" href="{{liveTrackingUrl}}">TRACK LIVE LOCATION</a>
-            <a class="btn btn-secondary" href="{{orderDetailsUrl}}" style="margin-top:10px;">VIEW ORDER DETAILS</a>
-          </div>
-
-          <table class="btn-row" role="presentation"><tr>
-            <td><a class="btn-sm change" href="{{helpCenterUrl}}">Change Address</a></td>
-            <td><a class="btn-sm call" href="tel:{{supportPhone}}">Call Support</a></td>
-          </tr></table>
-
-          <div class="check">
-            <h4>BEFORE ACCEPTING DELIVERY</h4>
-            <ul>
+          <div style="margin-top:28px;border:1px solid #2a2a2a;border-radius:12px;padding:20px;background:#0d0e10;">
+            <h3 style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:20px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;">BEFORE ACCEPTING</h3>
+            <h3 class="mobile-section-title" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:20px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;">BEFORE ACCEPTING</h3>
+            <ul style="margin:0 0 20px;padding-left:20px;color:#c8cdd7;font-size:15px;line-height:1.6;">
               <li>Check package seal is intact.</li>
-              <li>Verify Order ID matches: {{orderId}}</li>
+              <li>Verify Order ID matches: <span style="color:#fff;">{{orderId}}</span></li>
               <li>Open and inspect items condition.</li>
               <li>Then share OTP/verification code.</li>
             </ul>
-            {{#each items}}
-            <div style="margin:10px 0;">
-              <img class="thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;" />
-              <div style="color:#fff;font-weight:700;margin-top:4px;">{{name}}</div>
-            </div>
-            {{/each}}
+            
+            <h4 style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:16px;margin:0 0 12px;letter-spacing:1px;">WHAT'S IN THE BOX</h4>
+            <table role="presentation" width="100%" style="border-collapse:collapse;">
+              {{#each items}}
+              <tr>
+                <td style="padding:8px 0;width:70px;vertical-align:top;"><img src="{{imageUrl}}" alt="{{name}}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #333;" /></td>
+                <td style="padding:8px 0;width:70px;vertical-align:top;"><img class="mobile-thumb" src="{{imageUrl}}" alt="{{name}}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #333;" /></td>
+                <td style="padding:8px 12px;vertical-align:middle;color:#fff;font-size:15px;font-weight:600;">{{name}}</td>
+              </tr>
+              {{/each}}
+            </table>
           </div>
-
-          <div class="ins">100% AUTHENTIC AND INSURED - All deliveries are fully insured during transit.</div>
         </div>
       </td></tr>
 
-      <tr><td class="support" style="padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;">
-        <h4 style="margin:0 0 10px;font-size:30px;color:#f1f2f5;">Questions? We're here to help!</h4>
+      <tr><td style="padding:24px 20px;border-top:1px solid #2a2e36;text-align:center;background:#0d0e10;">
+        <h4 style="font-family:'Playfair Display', Georgia, serif;margin:0 0 16px;font-size:24px;color:#d4af37;font-weight:400;">Questions? We're here to help!</h4>
         <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
-          <a href="{{whatsappUrl}}" style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#25d366,#1ed66d);color:#0f1912;text-align:center;box-shadow:0 2px 8px rgba(34,139,34,0.08);">WhatsApp Support</a>
-          <a href="{{instagramUrl}}" style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-align:center;box-shadow:0 2px 8px rgba(216,78,228,0.08);">Instagram</a>
+          <a href="{{whatsappUrl}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#06140b;border:1px solid #25d366;color:#25d366;text-align:center;letter-spacing:0.5px;">WhatsApp Support</a>
+          <a href="{{instagramUrl}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#170814;border:1px solid #d84ee4;color:#d84ee4;text-align:center;letter-spacing:0.5px;margin-left:8px;">Instagram</a>
+          <a class="mobile-flex-btn" href="{{whatsappUrl}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#06140b;border:1px solid #25d366;color:#25d366;text-align:center;letter-spacing:0.5px;">WhatsApp Support</a>
+          <a class="mobile-flex-btn" href="{{instagramUrl}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#170814;border:1px solid #d84ee4;color:#d84ee4;text-align:center;letter-spacing:0.5px;margin-left:8px;">Instagram</a>
         </div>
       </td></tr>
 
-      <tr><td class="foot">
+      <tr><td style="padding:24px 14px;border-top:1px solid #1a1a1a;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;background:#0b0c0e;">
+        {{> social-footer}}
         {{> brand-story-footer}}
-        <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
+        <div style="margin-top:14px;">&copy; 2024 E-Shopper Boutique Luxe. All rights reserved.</div>
         <div>{{companyAddress}}</div>
-        <div><a href="{{privacyPolicyUrl}}">Privacy</a> &nbsp; | &nbsp; <a href="{{termsUrl}}">Terms</a></div>
+        <div style="margin-top: 14px;">
+          <a href="{{privacyPolicyUrl}}" style="color:#d4af37;text-decoration:none;margin:0 6px;">Privacy</a> | 
+          <a href="{{termsUrl}}" style="color:#d4af37;text-decoration:none;margin:0 6px;">Terms</a>
+        </div>
       </td></tr>
     </table>
   </td></tr></table>
 </body>
 </html>
-
-

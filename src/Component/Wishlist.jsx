@@ -111,14 +111,13 @@ export default function Wishlist() {
 
         setLoading(true)
         try {
-            const res = await axios.get('/wishlist')
-            const all = Array.isArray(res.data) ? res.data : []
-            const mine = all.filter((item) => String(item.userid) === String(userId))
-            setWishlist(mine)
+            // Always fetch wishlist for the current user
+            const res = await axios.get('/wishlist', { params: { user: userId } })
+            setWishlist(Array.isArray(res.data) ? res.data : [])
             dispatch(getWishlist())
         } catch (e) {
             setWishlist([])
-            toast.error('Failed to load wishlist.')
+            setLoading(false)
         }
         setLoading(false)
     }
@@ -148,6 +147,8 @@ export default function Wishlist() {
                 userId,
                 productId,
                 quantity: 1,
+                size: item.size,
+                color: item.color,
             })
             await axios.delete(`/wishlist/${itemId}`)
             await fetchWishlist()
@@ -172,8 +173,8 @@ export default function Wishlist() {
                     userId,
                     productId,
                     quantity: 1,
-                    size: item.size || '',
-                    color: item.color || ''
+                    size: item.size,
+                    color: item.color,
                 })
                 await axios.delete(`/wishlist/${itemId}`)
             }

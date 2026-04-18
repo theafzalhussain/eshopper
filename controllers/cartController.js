@@ -5,6 +5,9 @@ exports.addToCart = async (req, res) => {
         if (!userId || !productId) {
             return res.status(400).json({ success: false, message: 'User ID and Product ID required.' });
         }
+        if (!size || !color) {
+            return res.status(400).json({ success: false, message: 'Size and color are required.' });
+        }
         const qty = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
         const normalizedPrice = Number(price || 0);
         let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
@@ -463,6 +466,9 @@ exports.saveForLater = async (req, res) => {
         if (!srcItem) return res.status(404).json({ success: false, message: 'Cart item not found.' });
 
         const existingSaved = cart.savedItems.find((entry) => String(entry.product) === String(srcItem.product) && entry.size === srcItem.size && entry.color === srcItem.color);
+        if (!srcItem.size || !srcItem.color) {
+            return res.status(400).json({ success: false, message: 'Size and color are required to save for later.' });
+        }
         if (existingSaved) {
             existingSaved.quantity += Number(srcItem.quantity || 1);
             if (Number(srcItem.price || 0) > 0) existingSaved.price = Number(srcItem.price || 0);
@@ -471,8 +477,8 @@ exports.saveForLater = async (req, res) => {
                 product: srcItem.product,
                 quantity: Number(srcItem.quantity || 1),
                 price: Number(srcItem.price || 0),
-                size: srcItem.size || '',
-                color: srcItem.color || '',
+                size: srcItem.size,
+                color: srcItem.color,
                 savedAt: new Date(),
             });
         }
@@ -508,7 +514,17 @@ exports.moveSavedToCart = async (req, res) => {
         }
         if (!savedItem) return res.status(404).json({ success: false, message: 'Saved item not found.' });
 
-        const existingCartItem = cart.items.find((entry) => String(entry.product) === String(savedItem.product));
+        const finalSize = savedItem.size || req.body.size;
+        const finalColor = savedItem.color || req.body.color;
+        if (!finalSize || !finalColor) {
+            return res.status(400).json({ success: false, message: 'Size and color are required to move item to cart.' });
+        }
+        // Find exact match (product + size + color)
+        const existingCartItem = cart.items.find((entry) =>
+            String(entry.product) === String(savedItem.product) &&
+            String(entry.size) === String(finalSize) &&
+            String(entry.color) === String(finalColor)
+        );
         if (existingCartItem) {
             existingCartItem.quantity += Number(savedItem.quantity || 1);
             if (Number(savedItem.price || 0) > 0) existingCartItem.price = Number(savedItem.price || 0);
@@ -517,8 +533,8 @@ exports.moveSavedToCart = async (req, res) => {
                 product: savedItem.product,
                 quantity: Number(savedItem.quantity || 1),
                 price: Number(savedItem.price || 0),
-                size: savedItem.size || req.body.size || '',
-                color: savedItem.color || req.body.color || ''
+                size: finalSize,
+                color: finalColor
             });
         }
 

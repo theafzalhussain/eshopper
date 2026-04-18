@@ -5,41 +5,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Order Placed - {{orderId}}</title>
   <style>
-    body{margin:0;padding:0;background:#0a0a0a;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;}
-    .wrap{padding:20px 8px;}
-    .card{max-width:620px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:16px;overflow:hidden;}
-    .top{padding:18px 20px;background:linear-gradient(120deg,#232526,#414345 80%);box-shadow:0 2px 16px 0 #0008,0 1.5px 0 #ffd70033 inset;border-bottom:2px solid #ffd700;letter-spacing:1.2px;text-shadow:0 1px 8px #000a;display:flex;align-items:center;justify-content:space-between;gap:10px;}
-    .brandmark{display:inline-table;vertical-align:middle;border-collapse:collapse;}
-    .brandmark td{padding:0;vertical-align:top;}
-    .brandmark-e-cell{padding-right:8px !important;}
-    .brandmark-e{background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%);color:#fff;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-size:17px;font-weight:800;border-radius:4px;border-right:3px solid #d4af37;line-height:28px;}
-    .brandmark-text{display:table-cell;line-height:1;}
-    .brandmark-name{display:block;font-weight:800;letter-spacing:2px;font-size:14px;color:#f5f7fb;line-height:1;}
-    .brandmark-tag{display:block;font-size:6px;letter-spacing:1.6px;color:#d4af37;font-weight:700;margin-top:2px;line-height:1.1;}
-    .hero{background:#49b84f;padding:22px 12px;text-align:center;color:#fff;font-size:34px;font-weight:800;}
-    .sec{padding:20px;border-top:1px solid #292d35;}
-    .sec h2{margin:0 0 10px;font-size:30px;}
-    .sec p{margin:0 0 8px;color:#cdd2db;font-size:16px;line-height:1.6;}
-    .foot{padding:16px;border-top:1px solid #292d35;text-align:center;color:#99a2b3;font-size:12px;}
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;600&display=swap');
   </style>
 </head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <div class="top">
-        <span>ORDER PLACED</span>
-        <table role="presentation" class="brandmark" cellpadding="0" cellspacing="0"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table>
-      </div>
-      <div class="hero">ORDER PLACED</div>
-      <div class="sec">
-        <h2>Hi {{userName}}!</h2>
-        <p>Your order has been placed successfully. We will notify you once it is confirmed and processed.</p>
-      </div>
-      <div class="foot">
-        <table role="presentation" class="brandmark" cellpadding="0" cellspacing="0" style="margin-bottom:2px"><tr><td class="brandmark-e-cell"><span class="brandmark-e">E</span></td><td class="brandmark-text"><span class="brandmark-name">SHOPPER</span><span class="brandmark-tag">BOUTIQUE LUXE</span></td></tr></table>
-        <span style="font-size:12px;color:#ffd700;">https://eshopperr.me</span>
-      </div>
-    </div>
+<body style="margin:0;padding:0;background:#050608;font-family:'Inter', 'Trebuchet MS', Arial, sans-serif;color:#f5f5f5;">
+  <div style="padding:20px 8px;width:100%;box-sizing:border-box;">
+    <table role="presentation" align="center" style="border-collapse:collapse;width:100%;max-width:640px;margin:0 auto;background:#131416;border:1px solid #23262b;border-radius:18px;overflow:hidden;">
+            <div style="margin-bottom:14px;text-align:center;">
+              <table align="center" role="presentation" style="margin:0 auto;border-collapse:collapse;"><tr>
+                <td style="padding:0 8px;"><span style="font-size:32px;vertical-align:middle;">🛒</span></td>
+                <td style="padding:0 8px;"><span style="font-size:32px;vertical-align:middle;">⭐</span></td>
+                <td style="padding:0 8px;"><span style="font-size:32px;vertical-align:middle;">✅</span></td>
+              </tr></table>
+            </div>
+            <tr>
+              <td style="padding-right:8px;vertical-align:top;"><span style="background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%);color:#fff;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;font-family:Georgia,'Times New Roman',serif;font-size:21px;font-weight:800;border-radius:4px;border-right:3px solid #d4af37;box-shadow:0 6px 16px rgba(15,23,42,0.22);line-height:34px;">E</span></td>
+              <td style="display:table-cell;line-height:1;padding:0;vertical-align:top;"><span style="display:block;font-weight:800;letter-spacing:2.4px;font-size:18px;color:#f5f7fb;line-height:1;">SHOPPER</span><span style="display:block;font-size:7px;letter-spacing:1.8px;color:#d4af37;font-weight:700;margin-top:2px;line-height:1.1;">BOUTIQUE LUXE</span></td>
+            </tr>
+          </table>
+          <span style="float:right;display:inline-block;font-size:12px;font-weight:700;color:#000000;border:1px solid #d4af37;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);padding:7px 12px;border-radius:999px;">RECEIVED</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:linear-gradient(120deg,#111111,#1a1813);border-bottom:2px solid #d4af37;text-align:center;padding:35px 15px;">
+          <div style="font-family:'Playfair Display', Georgia, serif;font-style:italic;font-size:24px;color:#d4af37;margin-bottom:12px;">Thank you, {{userName}}</div>
+          <h1 style="font-family:'Playfair Display', Georgia, serif;font-size:34px;font-weight:700;line-height:1.2;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;margin:0;">ORDER PLACED</h1>
+          <div style="color:#c5a059;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-top:14px;">Order #{{orderId}}</div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:30px 20px;border-top:1px solid #272a30;">
+          <h2 style="font-family:'Playfair Display', Georgia, serif;font-size:22px;color:#d4af37;font-weight:400;margin:0 0 14px;">Hi {{userName}},</h2>
+          <p style="color:#d6dae2;font-size:16px;line-height:1.62;margin:0 0 16px;">We've successfully received your order. Our luxury processing desk is currently reviewing your selection.</p>
+          <p style="color:#d6dae2;font-size:16px;line-height:1.62;margin:0 0 16px;">We will notify you via email and SMS the moment your order is confirmed and moves to our premium packaging phase.</p>
+          
+          <div style="margin-top:24px;background:#0a0a0c;border:1px solid #2a2a2a;border-radius:8px;padding:20px;">
+            <h3 style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:18px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;text-align:center;">The Luxe Journey</h3>
+            <div style="display:flex;align-items:flex-start;margin-bottom:16px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:#1a1813;border:1px solid #d4af37;color:#d4af37;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-right:12px;flex-shrink:0;">1</div>
+              <div style="font-size:14px;color:#c8cdd7;line-height:1.5;padding-top:4px;"><strong style="color:#ffffff;">Order Placement:</strong> We received your request. (Current)</div>
+            </div>
+            <div style="display:flex;align-items:flex-start;margin-bottom:16px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:#1a1813;border:1px solid #d4af37;color:#d4af37;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-right:12px;flex-shrink:0;">2</div>
+              <div style="font-size:14px;color:#c8cdd7;line-height:1.5;padding-top:4px;"><strong style="color:#ffffff;">Confirmation:</strong> Our team verifies your items.</div>
+            </div>
+            <div style="display:flex;align-items:flex-start;margin-bottom:0;">
+              <div style="width:28px;height:28px;border-radius:50%;background:#1a1813;border:1px solid #d4af37;color:#d4af37;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-right:12px;flex-shrink:0;">3</div>
+              <div style="font-size:14px;color:#c8cdd7;line-height:1.5;padding-top:4px;"><strong style="color:#ffffff;">Preparation:</strong> 10-point quality check &amp; eco-luxe packing.</div>
+            </div>
+          </div>
+          
+          <a href="https://eshopperr.me" target="_blank" style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:16px 12px;font-size:16px;margin-top:24px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:1.5px;text-transform:uppercase;">CONTINUE SHOPPING</a>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:24px 14px;border-top:1px solid #1a1a1a;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;background:#0b0c0e;">
+          <div style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:20px;font-style:italic;margin-bottom:12px;">Join our Luxe community</div>
+          <div>&copy; 2024 E-Shopper Boutique Luxe. All rights reserved.</div>
+          <div style="margin-top: 14px;">
+            <a href="https://eshopperr.me/privacy" target="_blank" style="color:#d4af37;text-decoration:none;margin:0 6px;">Privacy</a> | 
+            <a href="https://eshopperr.me/terms" target="_blank" style="color:#d4af37;text-decoration:none;margin:0 6px;">Terms</a>
+          </div>
+        </td>
+      </tr>
+    </table>
   </div>
 </body>
 </html>

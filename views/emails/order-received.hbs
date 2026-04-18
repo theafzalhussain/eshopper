@@ -6,94 +6,25 @@
   <title>Order Received - {{orderId}}</title>
   <style>
     {{> theme_tokens}}
-    body { margin:0; padding:0; background:#050608; font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif; color:#f4f4f4; }
-    table { border-collapse:collapse; }
-    img { max-width:100%; height:auto; border:0; display:block; }
-    .wrapper { width:100%; background:#050608; padding:16px 6px; }
-    .frame { width:100%; max-width:650px; margin:0 auto; background:#0d0f12; border:1px solid #1f2229; border-radius:18px; overflow:hidden; }
-    .head { padding:16px 20px; background:linear-gradient(120deg,#151515,#262117); }
-    .brandmark { display:inline-table; vertical-align:middle; border-collapse:collapse; }
-    .brandmark td { padding:0; vertical-align:top; }
-    .brandmark-e-cell { padding-right:8px !important; }
-    .brandmark-e { background:linear-gradient(145deg,#0f172a 0%,#1e293b 55%,#0f172a 100%); color:#fff; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; font-family:Georgia,'Times New Roman',serif; font-size:21px; font-weight:800; border-radius:4px; border-right:3px solid #d4af37; box-shadow:0 6px 16px rgba(15,23,42,0.22); line-height:34px; }
-    .brandmark-text { display:table-cell; line-height:1; }
-    .brandmark-name { display:block; font-weight:800; letter-spacing:2.4px; font-size:18px; color:#f5f7fb; line-height:1; }
-    .brandmark-tag { display:block; font-size:7px; letter-spacing:1.8px; color:#d4af37; font-weight:700; margin-top:2px; line-height:1.1; }
-    .orderid { float:right; text-align:right; color:#f4d163; font-size:12px; letter-spacing:0.3px; }
-    .orderid strong { color:#ffffff; display:block; font-size:22px; margin-top:3px; }
-    .hero { background:#dfbe3f; color:#ffffff; text-align:center; padding:16px 10px; }
-    .hero .ok { font-size:30px; line-height:1; font-weight:700; }
-    .hero .label { font-size:30px; font-weight:800; letter-spacing:0.6px; line-height:1.04; margin-top:6px; }
-    .hero .date { font-size:14px; margin-top:8px; }
-    .section { padding:20px 22px; border-top:1px solid #20242b; }
-    .title { margin:0 0 8px 0; font-size:32px; line-height:1.1; text-align:center; }
-    .subtitle { margin:0; text-align:center; color:#c7ccd4; font-size:16px; line-height:1.5; }
-    .verify { display:inline-block; margin-top:14px; background:#0d3119; border:1px solid #0f7d3c; color:#7cffaf; border-radius:8px; padding:8px 12px; font-size:14px; font-weight:700; }
-    .panel { border:1px solid #2a2f39; border-radius:12px; padding:14px; background:#0f1115; }
-    .panel h3 { margin:0 0 12px 0; color:#e8c450; font-size:20px; }
-    .items { width:100%; border:1px solid #303542; border-radius:10px; overflow:hidden; }
-    .items th { text-align:left; color:#e7c44b; font-size:12px; padding:10px; border-bottom:1px solid #2a2f3a; background:#11141a; }
-    .items td { padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top; }
-    .items tr:last-child td { border-bottom:none; }
-    .thumb { width:82px; height:82px; object-fit:cover; border-radius:8px; border:1px solid #343946; }
-    .muted { color:#9ba3b2; font-size:12px; line-height:1.3; }
-    .cards { width:100%; margin-top:14px; }
-    .cards td { width:50%; vertical-align:top; }
-    .box { border:1px solid #6f5b20; border-radius:12px; background:linear-gradient(120deg,#1f1b12,#14161b); padding:14px; margin-right:7px; min-height:160px; }
-    .box2 { border:1px solid #37404c; border-radius:12px; background:#0f1116; padding:14px; margin-left:7px; min-height:160px; }
-    .k { margin:0 0 8px 0; font-size:12px; color:#e8c450; font-weight:700; letter-spacing:0.3px; }
-    .v { margin:0; color:#e4e6eb; font-size:14px; line-height:1.5; }
-    .pending { color:#11a64e; }
-    .totals { margin-top:14px; border:1px solid #323844; border-radius:12px; padding:14px; }
-    .totals td { font-size:14px; color:#d6d9df; padding:6px 0; }
-    .totals .amount { text-align:right; }
-    .totals .final td { color:#e8c450; font-size:22px; font-weight:800; padding-top:10px; }
-    .cta { margin-top:15px; text-align:center; }
-    .cta a { display:inline-block; min-width:220px; background:#dfbe3f; color:#171717; text-decoration:none; font-weight:800; letter-spacing:0.3px; border-radius:9px; padding:10px 14px; font-size:14px; }
-    .note { margin:10px 0 0 0; text-align:center; color:#868d9a; font-size:12px; font-style:italic; }
-    .concierge { background:#2a220b; text-align:center; padding:20px 20px 18px; border-top:1px solid #7b6421; }
-    .concierge .crown { font-size:24px; }
-    .concierge .h { margin:8px 0 6px 0; color:#d7b148; font-size:24px; font-weight:700; }
-    .concierge .p { margin:0 auto; max-width:500px; color:#d1b56d; font-size:14px; line-height:1.5; }
-    .support { width:100%; margin-top:14px; }
-    .support td { width:50%; }
-    .support a { display:block; text-align:center; text-decoration:none; border-radius:8px; padding:11px 8px; font-weight:700; font-size:13px; letter-spacing:0.3px; text-transform:uppercase; }
-    .wa { margin-right:7px; background:#12d362; color:#0d1a12; }
-    .mail { margin-left:7px; background:#0f1116; color:#d8e7ff; border:1px solid #2d5e95; }
-    .footer { text-align:center; color:#a3a9b5; font-size:12px; padding:18px 16px 24px; line-height:1.6; }
-    .footer a { color:#d4b75a; text-decoration:none; }
+    a:hover { opacity: 0.85; }
     @media only screen and (max-width:620px){
-      .head { padding:14px 14px; }
-      .brandmark-name { font-size:16px; letter-spacing:2px; }
-      .brandmark-e { width:32px; height:32px; font-size:19px; }
-      .brandmark-tag { font-size:6px; }
-      .orderid { float:none; display:block; text-align:left; margin-top:8px; }
-      .hero .ok { font-size:36px; }
-      .hero .label { font-size:33px; }
-      .hero .date { font-size:17px; }
-      .section { padding:16px 12px; }
-      .title { font-size:28px; }
-      .subtitle { font-size:17px; }
-      .verify { font-size:15px; }
-      .panel h3 { font-size:20px; }
-      .items td { font-size:18px; }
-      .muted { font-size:15px; }
-      .k { font-size:12px; }
-      .v { font-size:14px; }
-      .cards td { display:block; width:100%; }
-      .box,.box2 { margin:0 0 10px 0; }
-      .totals td { font-size:15px; }
-      .totals .final td { font-size:20px; }
-      .cta a { min-width:100%; font-size:16px; box-sizing:border-box; }
-      .concierge .h { font-size:22px; }
-      .concierge .p { font-size:17px; }
-      .support td { display:block; width:100%; }
-      .wa,.mail { margin:0 0 10px 0; }
+      .cards td { display:block !important; width:100% !important; }
+      .box, .box2 { margin:0 0 10px 0 !important; }
+      .support td { display:block !important; width:100% !important; }
+      /* Premium Delivery Progress Styles */
+      .step-icon-done { border-color: #d4af37 !important; background: #1a1813 !important; color: #d4af37 !important; }
+      .step-label-done { color: #d4af37 !important; }
+      .step-icon-active { border-color: #f8d98a !important; background: linear-gradient(135deg, #d4af37 0%, #aa8222 100%) !important; color: #000000 !important; box-shadow: 0 0 14px rgba(212,175,55,0.6) !important; }
+      .step-label-active { color: #f8d98a !important; font-weight: 800 !important; }
+      .step-icon-pending { border-color: #222222 !important; background: #0a0a0c !important; color: #555555 !important; }
+      .step-label-pending { color: #666666 !important; }
+      .step-icon-done, .step-icon-active, .step-icon-pending { width: 22px !important; height: 22px !important; line-height: 20px !important; font-size: 10px !important; margin-bottom: 6px !important; border-width: 1px !important; }
+      .step-label-done, .step-label-active, .step-label-pending { font-size: 8px !important; letter-spacing: 0px !important; }
+      .luxe-journey-title { font-size: 14px !important; }
+      .luxe-percent-pill { font-size: 9px !important; padding: 4px 8px !important; }
     }
   </style>
 </head>
-<body>
-</body>
 <body style="margin:0;padding:0;background:#050608;font-family:'Trebuchet MS','Segoe UI','Helvetica Neue',Arial,sans-serif;color:#f5f5f5;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order {{orderId}} received. Premium processing in progress.</div>
   {{> animated-gold-border}}
@@ -119,81 +50,106 @@
         <div style="color:#f8d98a;font-size:16px;opacity:.96;margin-top:8px;">Order #{{orderId}} | {{orderDate}}</div>
       </td></tr>
 
-      <tr><td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
-        <h2 class="title">Hi {{customerName}}!</h2>
-        <p class="sub">Your order has been received and is now being processed by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.</p>
-        <div class="arrival"><div class="h">EXPECTED CONFIRMATION</div><div class="d">{{expectedConfirmation}}</div><div class="s">1-2 Business Days</div></div>
+      <tr><td style="padding:22px 20px;border-top:1px solid #272a30;">
+        <h2 style="margin:0 0 8px 0; font-size:32px; line-height:1.1; text-align:center; font-family:Georgia, serif; color:#d4af37;">Hi {{customerName}}!</h2>
+        <p style="margin:0; text-align:center; color:#c7ccd4; font-size:16px; line-height:1.5;">Your order has been received and is now being processed by our expert team. Every item will undergo our strict 10-point quality inspection before dispatch.</p>
+        
+        <div style="text-align:center;margin-top:20px;padding:16px;background:#111317;border-radius:12px;border:1px solid #333742;">
+          <div style="font-size:12px;color:#888;letter-spacing:1px;margin-bottom:4px;font-weight:700;">EXPECTED CONFIRMATION</div>
+          <div style="font-size:24px;color:#d4af37;font-weight:700;">{{expectedConfirmation}}</div>
+          <div style="font-size:14px;color:#aaa;margin-top:4px;">1-2 Business Days</div>
+        </div>
 
-        <div class="progress-track">
-          <table class="progress-head-row" role="presentation"><tr><td class="progress-head-title">DELIVERY PROGRESS</td><td align="right"><span class="progress-pill">{{progressPercent}}% COMPLETE</span></td></tr></table>
-          <table class="progress-grid" role="presentation"><tr>
-            {{#each progressSteps}}
-            <td>
-              <div class="step-card {{state}}">
-                <span class="step-dot {{state}}">{{{icon}}}</span>
-                <div class="step-copy"><div class="step-label {{state}}">{{label}}</div></div>
-              </div>
-            </td>
-            {{/each}}
-          </tr></table>
-          <div class="progress-bar" style="height:6px;background:linear-gradient(90deg,#d4af37,#fffbe6,#d4af37);border-radius:999px;overflow:hidden;margin-top:8px;">
-            <div class="progress-fill" style="height:100%;background:linear-gradient(90deg,#f8d98a,#d4af37,#fffbe6);border-radius:999px;width:{{progressPercent}}%;transition:width 0.7s cubic-bezier(.4,2,.6,1);box-shadow:0 0 8px #d4af37;"></div>
+        <div style="margin-top:28px; background:linear-gradient(145deg, #0a0a0c, #111111); border:1px solid #2a2a2a; border-radius:16px; padding:24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+          <table role="presentation" style="width:100%; margin-bottom:20px;">
+            <tr>
+              <td class="luxe-journey-title" style="font-family:'Playfair Display', Georgia, serif; font-size:18px; color:#d4af37; font-weight:600; letter-spacing:1px;">
+                The Luxe Journey
+              </td>
+              <td align="right">
+                <span class="luxe-percent-pill" style="font-size:10px; background:linear-gradient(135deg, #1a1813, #0a0a0c); color:#d4af37; padding:6px 12px; border-radius:999px; font-weight:800; border:1px solid #d4af37; letter-spacing:1.5px; box-shadow: 0 0 10px rgba(212,175,55,0.15);">
+                  {{progressPercent}}% COMPLETE
+                </span>
+              </td>
+            </tr>
+          </table>
+
+          <div style="width:100%; height:4px; background:#1a1a1a; border-radius:4px; margin-bottom:24px; overflow:hidden; border: 1px solid #222;">
+            <div style="height:100%; background:linear-gradient(90deg, #8b6a12, #d4af37, #fffbe6); width:{{progressPercent}}%; border-radius:4px; box-shadow: 0 0 12px rgba(212,175,55,0.8);"></div>
           </div>
-          <div class="progress-foot"><span>Live status synced from backend</span><strong>{{progressPercent}}% done</strong></div>
+
+          <table role="presentation" style="width:100%; text-align:center; table-layout:fixed;">
+            <tr>
+              {{#each progressSteps}}
+              <td style="vertical-align:top; padding:0 2px;">
+                <div class="step-icon-{{state}}" style="display:inline-block; width:32px; height:32px; line-height:30px; border-radius:50%; font-size:13px; margin-bottom:10px; border: 2px solid #222; background: #0a0a0c; color: #555; box-sizing:border-box;">
+                  {{{icon}}}
+                </div>
+                <div class="step-label-{{state}}" style="font-size:10px; color:#666; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; line-height:1.4;">
+                  {{label}}
+                </div>
+              </td>
+              {{/each}}
+            </tr>
+          </table>
+
+          <div style="margin-top:24px; padding-top:16px; border-top:1px solid #222; font-size:11px; color:#888; text-align:center; font-style:italic; font-family:Georgia, serif;">
+            Live status synced automatically with our premium dispatch center.
+          </div>
         </div>
       </td></tr>
 
-      <tr><td class="promise" style="background:#032312;border-top:1px solid #0f4f2a;border-bottom:1px solid #0f4f2a;padding:18px 12px;">
-        <h3>THE LUXE PROMISE</h3>
-        <table class="pgrid" role="presentation"><tr>
-          <td><span class="i">&#10003;</span><div class="t">Quality Check</div><div class="d">10-point inspection by experts</div></td>
-          <td><span class="i">&#9671;</span><div class="t">Premium Packaging</div><div class="d">Eco-friendly luxury boxes</div></td>
-          <td><span class="i">&#9679;</span><div class="t">100% Authentic</div><div class="d">Guaranteed genuine products</div></td>
+      <tr><td style="background:#032312;border-top:1px solid #0f4f2a;border-bottom:1px solid #0f4f2a;padding:18px 12px;">
+        <h3 style="margin:0 0 16px 0; color:#d4af37; font-size:18px; text-align:center; letter-spacing:1px; font-family:Georgia, serif;">THE LUXE PROMISE</h3>
+        <table role="presentation" style="width:100%; text-align:center;"><tr>
+          <td style="vertical-align:top; width:33.33%; padding:0 5px;"><span style="display:block; font-size:24px; color:#d4af37; margin-bottom:8px;">&#10003;</span><div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:4px;">Quality Check</div><div style="font-size:12px; color:#aaa; line-height:1.4;">10-point inspection by experts</div></td>
+          <td style="vertical-align:top; width:33.33%; padding:0 5px;"><span style="display:block; font-size:24px; color:#d4af37; margin-bottom:8px;">&#9671;</span><div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:4px;">Premium Packaging</div><div style="font-size:12px; color:#aaa; line-height:1.4;">Eco-friendly luxury boxes</div></td>
+          <td style="vertical-align:top; width:33.33%; padding:0 5px;"><span style="display:block; font-size:24px; color:#d4af37; margin-bottom:8px;">&#9679;</span><div style="font-size:14px; font-weight:700; color:#fff; margin-bottom:4px;">100% Authentic</div><div style="font-size:12px; color:#aaa; line-height:1.4;">Guaranteed genuine products</div></td>
         </tr></table>
       </td></tr>
 
-      <tr><td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
-        <div class="box" style="border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;">
-          <h3 class="heading" style="color:#f0c84a;font-size:34px;margin:0 0 14px;">ORDER DETAILS</h3>
-          <table class="items" role="presentation" width="100%" style="width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;">
+      <tr><td style="padding:22px 20px;border-top:1px solid #272a30;">
+        <div style="border:1px solid #333742;border-radius:12px;padding:16px;background:#111317;">
+          <h3 style="color:#f0c84a;font-size:34px;margin:0 0 14px;">ORDER DETAILS</h3>
+          <table role="presentation" width="100%" style="width:100%;border:1px solid #363a45;border-radius:10px;overflow:hidden;border-collapse:collapse;">
             <tr><th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">ITEM</th><th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">DETAILS</th><th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">QTY</th><th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">PRICE</th></tr>
             {{#each items}}
             <tr>
-              <td><img class="thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;max-width:100%;display:block;" /></td>
-              <td><strong>{{name}}</strong><br><span class="dim" style="color:#b4bac6;">Size: {{size}}</span><br><span class="dim" style="color:#b4bac6;">Color: {{color}}</span></td>
-              <td>{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
-              <td>INR {{subtotal}}</td>
+              <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><img src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;max-width:100%;display:block;" /></td>
+              <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><strong>{{name}}</strong><br><span style="color:#b4bac6;">Size: {{size}}</span><br><span style="color:#b4bac6;">Color: {{color}}</span></td>
+              <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
+              <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">INR {{subtotal}}</td>
             </tr>
             {{/each}}
           </table>
 
-          <div class="totals" style="margin-top:14px;border:1px solid #343844;border-radius:12px;padding:16px;">
+          <div style="margin-top:14px;border:1px solid #343844;border-radius:12px;padding:16px;">
             <table role="presentation" style="width:100%;">
               <tr><td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Item Price</td><td align="right" style="padding:5px 0;color:#d5d9e2;font-size:16px;">INR {{subtotal}}</td></tr>
               <tr><td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Shipping Charges</td><td align="right" style="padding:5px 0;color:#d5d9e2;font-size:16px;">INR {{shippingCharges}}</td></tr>
               <tr><td style="padding:5px 0;color:#d5d9e2;font-size:16px;">GST (Included)</td><td align="right" style="padding:5px 0;color:#d5d9e2;font-size:16px;">INR {{gst}}</td></tr>
-              <tr class="final"><td style="border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:48px;font-weight:800;">Total Amount Paid</td><td align="right" style="border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:48px;font-weight:800;">INR {{totalPaid}}</td></tr>
-              <tr><td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Payment Mode: {{paymentMethod}}</td><td class="paid" style="color:#21c05c;font-size:14px;text-align:right;padding-top:0;">&#10003; PAID</td></tr>
+              <tr><td style="border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:48px;font-weight:800;">Total Amount Paid</td><td align="right" style="border-top:1px solid #2c3140;padding-top:10px;color:#efcb4a;font-size:48px;font-weight:800;">INR {{totalPaid}}</td></tr>
+              <tr><td style="padding:5px 0;color:#d5d9e2;font-size:16px;">Payment Mode: {{paymentMethod}}</td><td style="color:#21c05c;font-size:14px;text-align:right;padding-top:0;">&#10003; PAID</td></tr>
             </table>
           </div>
 
-          <table class="grid" role="presentation" style="width:100%;margin-top:14px;"><tr>
-            <td style="width:50%;vertical-align:top;"><div class="mini" style="border:1px solid #0f6f35;background:#101a12;border-radius:12px;padding:14px;margin-right:8px;"><div class="k" style="font-size:13px;color:#36d76d;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">SHIPPING ADDRESS</div><div class="v" style="color:#e7e9ed;font-size:16px;line-height:1.45;">{{shippingName}}<br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>Phone: {{shippingPhone}}</div></div></td>
-            <td style="width:50%;vertical-align:top;"><div class="mini2" style="border:1px solid #343944;background:#111317;border-radius:12px;padding:14px;margin-left:8px;"><div class="k2" style="font-size:13px;color:#efcb4a;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">BILLING INFO</div><div class="v" style="color:#e7e9ed;font-size:16px;line-height:1.45;">{{customerName}}<br>Email: {{customerEmail}}<br>Transaction ID:<br><span class="tx" style="color:#e0bc52;">{{transactionId}}</span></div></div></td>
+          <table role="presentation" class="cards" style="width:100%;margin-top:14px;"><tr>
+            <td style="width:50%;vertical-align:top;"><div class="box" style="border:1px solid #0f6f35;background:#101a12;border-radius:12px;padding:14px;margin-right:8px;"><div style="font-size:13px;color:#36d76d;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">SHIPPING ADDRESS</div><div style="color:#e7e9ed;font-size:16px;line-height:1.45;">{{shippingName}}<br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>Phone: {{shippingPhone}}</div></div></td>
+            <td style="width:50%;vertical-align:top;"><div class="box2" style="border:1px solid #343944;background:#111317;border-radius:12px;padding:14px;margin-left:8px;"><div style="font-size:13px;color:#efcb4a;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">BILLING INFO</div><div style="color:#e7e9ed;font-size:16px;line-height:1.45;">{{customerName}}<br>Email: {{customerEmail}}<br>Transaction ID:<br><span style="color:#e0bc52;">{{transactionId}}</span></div></div></td>
           </tr></table>
 
-          <a class="btn btn-primary" href="{{trackingUrl}}" style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#4ab75a;color:#fff;">TRACK YOUR ORDER</a>
-          <a class="btn btn-secondary" href="{{placedInvoiceUrl}}" style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#151820;color:#f0d07a;border:1px solid #756225;">VIEW RECEIPT</a>
+          <a href="{{trackingUrl}}" style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#4ab75a;color:#fff;">TRACK YOUR ORDER</a>
+          <a href="{{placedInvoiceUrl}}" style="display:block;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 12px;font-size:24px;margin-top:14px;background:#151820;color:#f0d07a;border:1px solid #756225;">VIEW RECEIPT</a>
         </div>
       </td></tr>
 
-      <tr><td class="foot" style="padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;">
-        <div class="community" style="color:#d6f7e0;font-size:16px;">Join our 50,000+ Luxe community</div>
-        <div class="stars" style="color:#f4d64b;font-size:28px;letter-spacing:2px;margin:8px 0;">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <a class="btn-inst" href="{{instagramUrl}}" style="display:inline-block;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:18px;">Follow us on Instagram</a>
+      <tr><td style="padding:18px 14px 24px;border-top:1px solid #272a30;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;">
+        <div style="color:#d6f7e0;font-size:16px;">Join our 50,000+ Luxe community</div>
+        <div style="color:#f4d64b;font-size:28px;letter-spacing:2px;margin:8px 0;">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <a href="{{instagramUrl}}" style="display:inline-block;background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;border-radius:999px;padding:12px 22px;font-weight:700;font-size:18px;">Follow us on Instagram</a>
       </td></tr>
 
-      <tr><td class="assist" style="padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;">
+      <tr><td style="padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;">
         <h4 style="margin:0 0 10px;font-size:36px;color:#f1f2f5;">Need Assistance?</h4>
         <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
           <a href="{{whatsappUrl}}" style="display:inline-block;width:48%;min-width:180px;margin:6px 0;padding:16px 0;border-radius:10px;text-decoration:none;font-weight:800;font-size:18px;background:linear-gradient(90deg,#25d366,#1ed66d);color:#0f1912;text-align:center;box-shadow:0 2px 8px rgba(34,139,34,0.08);">WhatsApp Support</a>
@@ -201,19 +157,16 @@
         </div>
       </td></tr>
 
-      <tr><td class="footnote" style="text-align:center;color:#9ea4b2;font-size:12px;padding:18px 14px 24px;border-top:1px solid #272a30;line-height:1.7;">
+      <tr><td style="text-align:center;color:#9ea4b2;font-size:12px;padding:18px 14px 24px;border-top:1px solid #272a30;line-height:1.7;">
         {{> review-snippet}}
         {{> social-footer}}
         {{> brand-story-footer}}
         <div>&copy; 2026 eShopper Luxe. All rights reserved.</div>
         <div>{{companyAddress}}</div>
         <div>GSTIN: {{companyGstin}} | CIN: {{companyCin}}</div>
-        <div><a href="{{privacyPolicyUrl}}">Privacy</a> | <a href="{{termsUrl}}">Terms</a> | <a href="{{unsubscribeUrl}}">Unsubscribe</a></div>
+        <div><a href="{{privacyPolicyUrl}}" style="color:#d4b75a;text-decoration:none;margin:0 6px;">Privacy</a> | <a href="{{termsUrl}}" style="color:#d4b75a;text-decoration:none;margin:0 6px;">Terms</a> | <a href="{{unsubscribeUrl}}" style="color:#d4b75a;text-decoration:none;margin:0 6px;">Unsubscribe</a></div>
       </td></tr>
     </table>
   </td></tr></table>
 </body>
-</body>
 </html>
-
-

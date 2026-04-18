@@ -16,8 +16,8 @@ const cartSchema = new mongoose.Schema({
             product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
             quantity: { type: Number, default: 1 },
             price: { type: Number, default: 0 },
-            size: { type: String, required: true },
-            color: { type: String, required: true },
+                size: { type: String, required: false },
+                color: { type: String, required: false },
             savedAt: { type: Date, default: Date.now },
         }
     ],

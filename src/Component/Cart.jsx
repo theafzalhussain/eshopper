@@ -163,7 +163,7 @@ export default function Cart() {
         }
         setSavingIds((prev) => [...prev, itemId]);
         try {
-            const res = await axios.post(`/api/cart/save-for-later/${itemId}`, { userId });
+            const res = await axios.post(`/api/cart/save-for-later/${itemId}`, { userId, size: item.size, color: item.color });
             syncCartFromResponse(res.data);
             await refreshSummaryOnly();
             toast.success('Item saved for later.');
@@ -182,11 +182,7 @@ export default function Cart() {
         }
         setSavedActionIds((prev) => [...prev, itemId]);
         try {
-            const res = await axios.post(`/api/cart/move-saved-to-cart/${itemId}`, {
-                userId,
-                size: item.size || '',
-                color: item.color || ''
-            });
+            const res = await axios.post(`/api/cart/move-saved-to-cart/${itemId}`, { userId, size: item.size, color: item.color });
             syncCartFromResponse(res.data);
             await refreshSummaryOnly();
             toast.success('Saved item moved to cart.');
@@ -308,7 +304,6 @@ export default function Cart() {
 
     async function moveToWishlist(item) {
         const itemId = item._id || item.id;
-        // Always extract clean userId and productId
         const user = userId || localStorage.getItem('userid');
         const product = item.productid || item.product?._id || item.product || itemId;
         if (!user) {
@@ -317,14 +312,36 @@ export default function Cart() {
         }
         setMovingIds((prev) => [...prev, itemId]);
         try {
+            // Try to get all product data, fetch if missing
+            let name = item.name || item.product?.name || '';
+            let pic = item.pic || item.product?.pic1 || '';
+            let price = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0);
+            let size = item.size || item.product?.size || '';
+            let color = item.color || item.product?.color || '';
+            // If any important field is missing, fetch product details
+            if (!name || !pic || !price) {
+                try {
+                    const res = await axios.get(`/product/${product}`);
+                    const prod = res.data;
+                    console.log('Fetched product for wishlist:', prod);
+                    name = name || prod.name || 'Product';
+                    pic = pic || prod.pic1 || '/assets/images/noimage.png';
+                    price = price || prod.finalprice || prod.price || 0;
+                } catch (err) {
+                    // Fallback if fetch fails
+                    name = name || 'Product';
+                    pic = pic || '/assets/images/noimage.png';
+                    price = price || 0;
+                }
+            }
             await axios.post('/api/wishlist', {
                 user,
                 product,
-                size: item.size || item.product?.size || '',
-                color: item.color || item.product?.color || '',
-                price: Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0),
-                pic: item.pic || item.product?.pic1 || '',
-                name: item.name || item.product?.name || ''
+                size,
+                color,
+                price,
+                pic,
+                name
             });
             await removeProduct(itemId, true);
             await refreshSummaryOnly();
