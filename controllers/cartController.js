@@ -1,7 +1,33 @@
 // Add item to cart (POST /api/cart)
 exports.addToCart = async (req, res) => {
     try {
-        const { userId, productId, quantity, price, size, color } = req.body;
+        const userId = req.body.userId || req.body.userid || req.body.user;
+        let productId = req.body.productId || req.body.productid || req.body.product;
+        const quantity = req.body.quantity || req.body.qty;
+        const { price, size, color, name, pic, pic1 } = req.body;
+        let finalName = name;
+        let finalPic = pic || pic1;
+        let finalPrice = price;
+
+        // If any important field is missing, fetch product details from DB
+        if (!finalName || !finalPic || !finalPrice || Number(finalPrice) === 0) {
+            try {
+                const Product = require('../models/Product');
+                const prod = await Product.findById(productId);
+                if (prod) {
+                    finalName = finalName || prod.name || '';
+                    finalPic = finalPic || prod.pic1 || '';
+                    finalPrice = finalPrice || prod.finalprice || prod.price || 0;
+                }
+            } catch (err) {
+                // ignore fetch error, fallback to blank/defaults
+            }
+        }
+        
+        if (productId && typeof productId === 'object') {
+            productId = productId._id || productId.id || String(productId);
+        }
+
         if (!userId || !productId) {
             return res.status(400).json({ success: false, message: 'User ID and Product ID required.' });
         }
@@ -9,31 +35,52 @@ exports.addToCart = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Size and color are required.' });
         }
         const qty = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
-        const normalizedPrice = Number(price || 0);
-        let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+        const normalizedPrice = Number(finalPrice || 0);
+
+        const query = mongoose.Types.ObjectId.isValid(userId) 
+            ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+            : { userid: userId };
+
+        let cart = await Cart.findOne(query);
         if (!cart) {
-            cart = await Cart.create({ user: new mongoose.Types.ObjectId(userId), items: [] });
+            cart = new Cart({ 
+                user: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : undefined, 
+                userid: userId, 
+                items: [] 
+            });
         }
         // Check if product with same size and color exists in cart
         const existingItem = cart.items.find(item =>
-            item.product.toString() === productId &&
+            (String(item.product) === String(productId) || String(item.productid) === String(productId) || String(item.productId) === String(productId)) &&
             String(item.size) === String(size || '') &&
             String(item.color) === String(color || '')
         );
         if (existingItem) {
             existingItem.quantity += qty;
+            existingItem.qty += qty;
             if (normalizedPrice > 0) existingItem.price = normalizedPrice;
+            if (finalName) existingItem.name = finalName;
+            if (finalPic) {
+                existingItem.pic = finalPic;
+                existingItem.pic1 = finalPic;
+            }
         } else {
             cart.items.push({
-                product: productId,
+                product: mongoose.Types.ObjectId.isValid(productId) ? new mongoose.Types.ObjectId(productId) : undefined,
+                productid: mongoose.Types.ObjectId.isValid(productId) ? new mongoose.Types.ObjectId(productId) : undefined,
+                productId: mongoose.Types.ObjectId.isValid(productId) ? new mongoose.Types.ObjectId(productId) : undefined,
                 quantity: qty,
+                qty: qty,
                 price: normalizedPrice > 0 ? normalizedPrice : 0,
                 size: size || '',
-                color: color || ''
+                color: color || '',
+                name: finalName || '',
+                pic: finalPic || '',
+                pic1: finalPic || ''
             });
         }
         await cart.save();
-        cart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
+        await cart.populate('items.product savedItems.product');
         const mappedCart = mapCartForClient(cart);
         res.json({ success: true, cart: mappedCart });
     } catch (err) {
@@ -53,11 +100,14 @@ exports.applyCoupon = async (req, res) => {
         await ensureDefaultCoupons();
 
         // Fetch cart for user
-        let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+        const query = mongoose.Types.ObjectId.isValid(userId) 
+            ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+            : { userid: userId };
+        let cart = await Cart.findOne(query).populate('items.product');
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
         let subtotal = 0;
         cart.items.forEach(item => {
-            subtotal += ((item.product?.finalprice || item.product?.price || 0) * item.quantity);
+            subtotal += ((item.price || item.product?.finalprice || item.product?.price || 0) * (item.quantity || item.qty || 1));
         });
 
         const code = String(coupon).trim().toUpperCase();
@@ -305,14 +355,14 @@ const validatePincodeWithAPI = async (pincode) => {
 
 const mapCartItem = (item, userId) => ({
     _id: item._id,
-    productid: item.product?._id || item.product,
+    productid: item.product?._id || item.product || item.productid || item.productId,
     userid: userId,
-    name: item.product?.name || '',
+    name: item.name || item.product?.name || 'Product',
     color: item.color || item.product?.color || '',
     size: item.size || item.product?.size || '',
     price: Number(item.price || item.product?.finalprice || item.product?.price || 0),
-    quantity: Number(item.quantity || 1),
-    pic: item.product?.pic1 || '',
+    quantity: Number(item.quantity || item.qty || 1),
+    pic: item.pic || item.pic1 || item.product?.pic1 || item.product?.pic || '/assets/images/noimage.png',
 });
 
 const mapCartForClient = (cart) => {
@@ -345,9 +395,14 @@ exports.getCart = async (req, res) => {
             console.error('[ERROR] /api/cart: Missing userId in request');
             return res.status(400).json({ success: false, message: 'User ID required.' });
         }
+        
+        const query = mongoose.Types.ObjectId.isValid(userId) 
+            ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+            : { userid: userId };
+
         let cart;
         try {
-            cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product').populate('savedItems.product');
+            cart = await Cart.findOne(query).populate('items.product savedItems.product');
         } catch (dbErr) {
             console.error('[ERROR] /api/cart: Invalid userId or DB error:', dbErr);
             return res.status(400).json({ success: false, message: 'Invalid userId or database error.' });
@@ -355,8 +410,11 @@ exports.getCart = async (req, res) => {
         if (!cart) {
             // Auto-create cart for new user
             try {
-                cart = await Cart.create({ user: new mongoose.Types.ObjectId(userId), items: [] });
-                cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product').populate('savedItems.product');
+                cart = await Cart.create({ 
+                    user: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : undefined, 
+                    userid: userId, 
+                    items: [] 
+                });
                 console.log(`[INFO] /api/cart: Created new cart for userId ${userId}`);
             } catch (createErr) {
                 console.error('[ERROR] /api/cart: Failed to create cart:', createErr);
@@ -378,7 +436,10 @@ exports.updateQuantity = async (req, res) => {
         const { itemId } = req.params;
         const { quantity } = req.body;
         if (!userId || !itemId || typeof quantity !== 'number') return res.status(400).json({ success: false, message: 'Missing data.' });
-        let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+        const query = mongoose.Types.ObjectId.isValid(userId) 
+            ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+            : { userid: userId };
+        let cart = await Cart.findOne(query).populate('items.product savedItems.product');
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
         const item = cart.items.id(itemId);
         if (!item) return res.status(404).json({ success: false, message: 'Item not found.' });
@@ -388,12 +449,12 @@ exports.updateQuantity = async (req, res) => {
         if (product && product.stock !== undefined && product.stock !== null) {
             stock = Number(product.stock);
         }
-        if (stock > 0 && quantity > stock) {
+        if (product && stock > 0 && quantity > stock) {
             return res.status(400).json({ success: false, message: 'Out of Stock. Only ' + stock + ' left.' });
         }
         item.quantity = quantity;
+        item.qty = quantity;
         await cart.save();
-        cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product').populate('savedItems.product');
         const mappedCart = mapCartForClient(cart);
         res.json({ success: true, cart: mappedCart });
     } catch (err) {
@@ -456,7 +517,11 @@ exports.saveForLater = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Valid item id required.' });
         }
 
-        const cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+        const query = mongoose.Types.ObjectId.isValid(userId) 
+            ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+            : { userid: userId };
+
+        const cart = await Cart.findOne(query);
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
 
         let srcItem = cart.items.id(itemId);
@@ -475,19 +540,22 @@ exports.saveForLater = async (req, res) => {
         } else {
             cart.savedItems.push({
                 product: srcItem.product,
-                quantity: Number(srcItem.quantity || 1),
+                productid: srcItem.productid || srcItem.productId || srcItem.product,
+                quantity: Number(srcItem.quantity || srcItem.qty || 1),
                 price: Number(srcItem.price || 0),
                 size: srcItem.size,
                 color: srcItem.color,
+                name: srcItem.name || '',
+                pic: srcItem.pic || srcItem.pic1 || '',
                 savedAt: new Date(),
             });
         }
 
         srcItem.deleteOne();
         await cart.save();
-
-        const freshCart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
-        return res.json({ success: true, message: 'Item saved for later.', cart: mapCartForClient(freshCart) });
+        await cart.populate('items.product savedItems.product');
+        
+        return res.json({ success: true, message: 'Item saved for later.', cart: mapCartForClient(cart) });
     } catch (err) {
         console.error('[ERROR] /api/cart/save-for-later:', err);
         return res.status(500).json({ success: false, message: 'Failed to save item for later.' });
@@ -530,7 +598,7 @@ exports.moveSavedToCart = async (req, res) => {
             if (Number(savedItem.price || 0) > 0) existingCartItem.price = Number(savedItem.price || 0);
         } else {
             cart.items.push({
-                product: savedItem.product,
+                product: new mongoose.Types.ObjectId(savedItem.product),
                 quantity: Number(savedItem.quantity || 1),
                 price: Number(savedItem.price || 0),
                 size: finalSize,
@@ -560,11 +628,15 @@ exports.removeSavedItem = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Valid saved item id required.' });
         }
 
+        const query = mongoose.Types.ObjectId.isValid(userId) 
+            ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+            : { userid: userId };
+
         const cart = await Cart.findOneAndUpdate(
-            { user: new mongoose.Types.ObjectId(userId), 'savedItems._id': new mongoose.Types.ObjectId(itemId) },
+            { ...query, 'savedItems._id': new mongoose.Types.ObjectId(itemId) },
             { $pull: { savedItems: { _id: new mongoose.Types.ObjectId(itemId) } } },
             { new: true }
-        ).populate('items.product').populate('savedItems.product');
+        ).populate('items.product savedItems.product');
 
         if (!cart) {
             return res.status(404).json({ success: false, message: 'Saved item not found.' });
@@ -607,9 +679,17 @@ exports.setDeliveryEstimate = async (req, res) => {
         console.log(`[DELIVERY] Pincode ${normalizedPincode} is VALID - generating delivery date`);
         const estimatedDate = buildMockDeliveryDate(normalizedPincode);
 
-        let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) });
+        const query = mongoose.Types.ObjectId.isValid(userId) 
+            ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+            : { userid: userId };
+
+        let cart = await Cart.findOne(query);
         if (!cart) {
-            cart = await Cart.create({ user: new mongoose.Types.ObjectId(userId), items: [] });
+            cart = await Cart.create({ 
+                user: mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : undefined, 
+                userid: userId, 
+                items: [] 
+            });
         }
 
         cart.deliveryEstimate = {
@@ -642,12 +722,17 @@ exports.getOrderSummary = async (req, res) => {
     try {
         const userId = req.user?._id || req.query.userId;
         if (!userId) return res.status(400).json({ success: false, message: 'User ID required.' });
+            
+            const query = mongoose.Types.ObjectId.isValid(userId) 
+                ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+                : { userid: userId };
+
         const user = await require('../models/User').findById(userId).select('membershipType totalOrders');
-        let cart = await Cart.findOne({ user: new mongoose.Types.ObjectId(userId) }).populate('items.product');
+            let cart = await Cart.findOne(query).populate('items.product');
         if (!cart) return res.json({ success: true, summary: { subtotal: 0, discount: 0, shipping: 0, gst: 0, grandTotal: 0 } });
         let subtotal = 0;
         cart.items.forEach(item => {
-            subtotal += ((item.price || item.product?.finalprice || item.product?.price || 0) * item.quantity);
+                subtotal += ((item.price || item.product?.finalprice || item.product?.price || 0) * (item.quantity || item.qty || 1));
         });
         // Luxury logic: 10% discount if subtotal > 2000
         let discount = subtotal > 2000 ? Math.round(subtotal * 0.1) : 0;

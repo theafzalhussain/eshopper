@@ -256,6 +256,7 @@ export default function Contact() {
                                     frameBorder="0"
                                     scrolling="no"
                                     style={{ filter: "saturate(1.08) contrast(1.12)" }}
+                                loading="lazy"
                                     title="Office Location"
                                 ></iframe>
                                 <div className="map-bottom-strip">

@@ -789,4 +789,53 @@ input[type="checkbox"]:focus {
   }
 }
 
+/* === LUXURY PREMIUM SPINNER === */
+.premium-spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #18191A 0%, #23272F 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
 
+.ultra-spinner-icon {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(184, 134, 11, 0.2);
+  border-top-color: #B8860B; /* Gold accent */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.spinner-title {
+  color: #D4AF37;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.spinner-subtitle {
+  color: #9A9490;
+  font-size: 0.8rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}

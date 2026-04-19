@@ -29,6 +29,7 @@ const puppeteer = require('puppeteer');
 const { jsPDF } = require('jspdf');
 require('jspdf-autotable');
 const QRCode = require('qrcode');
+const compression = require('compression');
 const { sendOrderStatus, registerTemplatePartials } = require('./mailController');
 
 const app = express();
@@ -41,12 +42,15 @@ const io = new Server(httpServer, {
             return callback(new Error('Socket CORS policy: Unauthorized origin'));
         },
         credentials: true,
-        methods: ['GET', 'POST']
-    }
+            methods: ['GET', 'POST']
+        },
+        transports: ['websocket', 'polling'],
+        allowEIO3: true
 });
 app.set('io', io);
 
 app.use(express.json());
+app.use(compression()); // ✅ Payload size reduced by 70%
 app.use(express.urlencoded({ extended: true }));
 app.set('trust proxy', 1);
 
@@ -600,7 +604,7 @@ io.on('connection', (socket) => {
                 return;
             }
 
-            const cart = await Cart.findOne({ userid: userId });
+            const cart = await Cart.findOne({ $or: [{ userid: userId }, { user: userId }] });
             if (!cart) {
                 socket.emit('cart:error', { message: 'Cart not found' });
                 return;
@@ -643,7 +647,7 @@ io.on('connection', (socket) => {
                 return;
             }
 
-            const cart = await Cart.findOne({ userid: userId });
+            const cart = await Cart.findOne({ $or: [{ userid: userId }, { user: userId }] });
             if (!cart) {
                 socket.emit('cart:error', { message: 'Cart not found' });
                 return;
@@ -679,7 +683,7 @@ io.on('connection', (socket) => {
                 return;
             }
 
-            const cart = await Cart.findOne({ userid: userId }).populate('items.productid');
+            const cart = await Cart.findOne({ $or: [{ userid: userId }, { user: userId }] }).populate('items.productid').populate('items.product').populate('items.productId');
             if (!cart || !cart.items.length) {
                 socket.emit('cart:summary-updated', { 
                     subtotal: 0, 
@@ -3026,7 +3030,7 @@ const handle = (path, Model, useUpload = false) => {
                 if (!doc) return res.status(404).json({ message: 'Not found' });
                 return res.json(path === '/user' ? normalizeUserDocument(doc) : doc);
             }
-            const docs = await Model.find().sort({ createdAt: -1 });
+            const docs = await Model.find().sort({ createdAt: -1 }).lean(); // ✅ Faster JSON Queries
             res.json(path === '/user' ? docs.map((doc) => normalizeUserDocument(doc)) : docs);
         } catch (e) {
             res.status(500).json({ message: 'Failed to fetch', error: e.message });
@@ -3170,7 +3174,7 @@ handle('/product', Product, true);
 // Compatibility: GET /product returns all products (for frontend)
 app.get('/product', async (req, res) => {
     try {
-        const products = await Product.find().sort({ createdAt: -1 });
+        const products = await Product.find().sort({ createdAt: -1 }).lean();
         res.json(products);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch products' });
@@ -3190,7 +3194,7 @@ handle('/newslatter', Newslatter);
 // 🔴 EXPLICIT /coupon ENDPOINTS (Ensure they always work)
 app.get('/coupon', async (req, res) => {
     try {
-        const docs = await Coupon.find().sort({ createdAt: -1 });
+        const docs = await Coupon.find().sort({ createdAt: -1 }).lean();
         res.json(docs);
     } catch (e) {
         res.status(500).json({ message: 'Failed to fetch coupons', error: e.message });
@@ -3260,7 +3264,7 @@ compatModels.forEach(({ path, Model }) => {
                 if (!doc) return res.status(404).json({ message: 'Not found' });
                 return res.json(doc);
             }
-            const docs = await Model.find().sort({ createdAt: -1 });
+            const docs = await Model.find().sort({ createdAt: -1 }).lean();
             res.json(docs);
         } catch (e) {
             res.status(500).json({ message: 'Failed to fetch' });
@@ -3877,10 +3881,10 @@ app.get('/api/products', async (req, res) => {
         const query = String(req.query.query || '').toLowerCase().trim();
         const limit = Math.max(1, Math.min(24, Number(req.query.limit) || 6));
 
-        const products = await Product.find().sort({ _id: -1 });
+        const products = await Product.find().sort({ _id: -1 }).lean();
 
         const normalized = products.map((p) => {
-            const data = p.toObject();
+            const data = typeof p.toObject === 'function' ? p.toObject() : p;
             return {
                 ...data,
                 pic1: sanitizeCloudinaryUrl(data.pic1),

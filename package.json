@@ -27,6 +27,7 @@
     "bullmq": "^5.16.0",
     "canvas-confetti": "^1.9.4",
     "cloudinary": "^2.0.0",
+    "compression": "^1.8.1",
     "constants-browserify": "^1.0.0",
     "cors": "^2.8.6",
     "crypto-browserify": "^3.12.1",

@@ -29,6 +29,8 @@ export default function Cart() {
             item && item._id && arr.findIndex(i => i && i._id === item._id) === idx)
         : [];
     const [removingIds, setRemovingIds] = useState([]);
+    // For live green indicator
+    const [cartNotifications, setCartNotifications] = useState({});
     const toast = useToast();
     const [subtotal, setSubtotal] = useState(0);
     const [shipping, setShipping] = useState(0);
@@ -185,6 +187,15 @@ export default function Cart() {
             const res = await axios.post(`/api/cart/move-saved-to-cart/${itemId}`, { userId, size: item.size, color: item.color });
             syncCartFromResponse(res.data);
             await refreshSummaryOnly();
+            // Show live green indicator instantly
+            setCartNotifications((prev) => ({ ...prev, [item.productid || item._id || item.id]: (prev[item.productid || item._id || item.id] || 0) + 1 }));
+            setTimeout(() => {
+                setCartNotifications((prev) => {
+                    const copy = { ...prev };
+                    delete copy[item.productid || item._id || item.id];
+                    return copy;
+                });
+            }, 2000);
             toast.success('Saved item moved to cart.');
         } catch (e) {
             toast.error(e?.response?.data?.message || 'Failed to move item to cart.');
@@ -341,7 +352,8 @@ export default function Cart() {
                 color,
                 price,
                 pic,
-                name
+                name,
+                quantity: item.quantity || item.qty || 1
             });
             await removeProduct(itemId, true);
             await refreshSummaryOnly();
@@ -468,6 +480,24 @@ export default function Cart() {
             }
         };
     }, [userId]);
+
+    // Listen for cart changes (Redux) and show indicator for new items
+    useEffect(() => {
+        if (cart && cart.length > 0) {
+            cart.forEach((item) => {
+                if (item.justAdded) {
+                    setCartNotifications((prev) => ({ ...prev, [item._id || item.id]: (prev[item._id || item.id] || 0) + 1 }));
+                    setTimeout(() => {
+                        setCartNotifications((prev) => {
+                            const copy = { ...prev };
+                            delete copy[item._id || item.id];
+                            return copy;
+                        });
+                    }, 2000);
+                }
+            });
+        }
+    }, [cart]);
 
     return (
         <motion.div
@@ -628,38 +658,49 @@ export default function Cart() {
                                             <div className="cart-details-col flex-grow-1 px-3">
                                                 <h6 className="mb-1 font-weight-bold text-dark" key={itemId + '-name'}>{itemName}</h6>
                                                 <div className="small text-muted mb-1" key={itemId + '-color'}>{itemColor} | Size: {itemSize}</div>
-                                                <div className="d-flex align-items-center mt-2 cart-action-row">
-                                                    <button
-                                                        key={itemId + '-wishlist'}
-                                                        onClick={() => moveToWishlist(item)}
-                                                        className="btn btn-sm premium-wishlist-btn mr-2"
-                                                        disabled={isMoving || savingIds.includes(itemId)}
-                                                    >
-                                                        {isMoving ? 'Moving...' : 'Move to Wishlist'}
-                                                    </button>
-                                                    <button
-                                                        key={itemId + '-save-later'}
-                                                        onClick={() => saveForLater(item)}
-                                                        className="btn btn-sm premium-save-btn mr-2"
-                                                        disabled={isMoving || savingIds.includes(itemId)}
-                                                    >
-                                                        {savingIds.includes(itemId) ? 'Saving...' : 'Save for Later'}
-                                                    </button>
+                                                <div className="d-flex align-items-center justify-content-between mt-2 cart-action-row-fullwidth">
+                                                    <div className="d-flex align-items-center cart-action-row">
+                                                        <button
+                                                            key={itemId + '-wishlist'}
+                                                            onClick={() => moveToWishlist(item)}
+                                                            className="btn btn-sm premium-wishlist-btn mr-2"
+                                                            disabled={isMoving || savingIds.includes(itemId)}
+                                                        >
+                                                            {isMoving ? 'Moving...' : 'Move to Wishlist'}
+                                                        </button>
+                                                        <button
+                                                            key={itemId + '-save-later'}
+                                                            onClick={() => saveForLater(item)}
+                                                            className="btn btn-sm premium-save-btn mr-2"
+                                                            disabled={isMoving || savingIds.includes(itemId)}
+                                                        >
+                                                            {savingIds.includes(itemId) ? 'Saving...' : 'Save for Later'}
+                                                        </button>
+                                                    </div>
+                                                    <div className="d-flex align-items-center premium-qty-line">
+                                                        <div className="d-flex align-items-center premium-qty-wrap mr-2">
+                                                            <button key={itemId + '-dec'} onClick={() => updateQty(item, "dec")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn" disabled={isMoving}>−</button>
+                                                            <span className="mx-2 font-weight-bold premium-qty-count" style={{ minWidth: "30px" }} key={itemId + '-qty'}>{itemQty}</span>
+                                                            <button key={itemId + '-inc'} onClick={() => updateQty(item, "inc")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn" disabled={isMoving}>+</button>
+                                                        </div>
+                                                        <div className="premium-live-price premium-total-price" key={itemId + '-price'}>₹{itemTotal}</div>
+                                                        {cartNotifications[item.productid || item._id || item.id] && (
+                                                            <motion.div
+                                                                className="lux-cbadge"
+                                                                initial={{ scale: 0, opacity: 0 }}
+                                                                animate={{ scale: 1, opacity: 1 }}
+                                                                exit={{ scale: 0, opacity: 0 }}
+                                                                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                                                                style={{ marginLeft: 10, background: 'linear-gradient(135deg,#e4f0df 0%,#c6f7e2 100%)', color: '#2d6a1a', fontWeight: 700, fontSize: 12, border: '1px solid #a3e635', borderRadius: 8, padding: '4px 10px', display: 'inline-block' }}
+                                                            >
+                                                                ✓ Added
+                                                            </motion.div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 {deliveryEstimateMsg && (
                                                     <div className="small mt-2 premium-item-delivery">{deliveryEstimateMsg}</div>
                                                 )}
-                                            </div>
-                                            {/* Quantity & Price */}
-                                            <div className="cart-qtyprice-col d-flex flex-column align-items-center justify-content-center">
-                                                <div className="d-flex align-items-center mb-1 premium-qty-line">
-                                                    <div className="d-flex align-items-center premium-qty-wrap mr-2">
-                                                    <button key={itemId + '-dec'} onClick={() => updateQty(item, "dec")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn" disabled={isMoving}>−</button>
-                                                    <span className="mx-2 font-weight-bold premium-qty-count" style={{ minWidth: "30px" }} key={itemId + '-qty'}>{itemQty}</span>
-                                                    <button key={itemId + '-inc'} onClick={() => updateQty(item, "inc")} className="btn btn-sm font-weight-bold border rounded-circle premium-qty-btn" disabled={isMoving}>+</button>
-                                                    </div>
-                                                    <div className="premium-live-price premium-total-price" key={itemId + '-price'}>₹{itemTotal}</div>
-                                                </div>
                                             </div>
                                         </div>
                                     </motion.div>
@@ -869,6 +910,34 @@ export default function Cart() {
             <style>{`.skeleton-box { background: linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 37%,#f3f4f6 63%); border-radius: 8px; animation: skeleton-shimmer 1.2s infinite linear; }
             @keyframes skeleton-shimmer { 0%{background-position:-200px 0} 100%{background-position:calc(200px + 100%) 0} }`}</style>
             <style dangerouslySetInnerHTML={{ __html: `
+                                                /* Fast badge animation */
+                                                .lux-cbadge {
+                                                    animation: lux-bounce-in 0.3s cubic-bezier(.68,-0.55,.27,1.55);
+                                                }
+                                                @keyframes lux-bounce-in {
+                                                    0% { transform: scale(0.7); opacity: 0; }
+                                                    60% { transform: scale(1.15); opacity: 1; }
+                                                    100% { transform: scale(1); opacity: 1; }
+                                                }
+
+                                                /* Make action buttons and qty+price appear in one row, spaced apart */
+                                                .cart-action-row-fullwidth {
+                                                    width: 100%;
+                                                    display: flex;
+                                                    align-items: center;
+                                                    justify-content: space-between;
+                                                    gap: 12px;
+                                                }
+                                                @media (max-width: 767.98px) {
+                                                    .cart-action-row-fullwidth {
+                                                        flex-direction: column;
+                                                        align-items: stretch;
+                                                        gap: 8px;
+                                                    }
+                                                    .premium-qty-line {
+                                                        justify-content: flex-start !important;
+                                                    }
+                                                }
                 /* Checkbox scale fix */
                 input[type="checkbox"] { width: 18px !important; height: 18px !important; }
                 .cart-page-shell {
@@ -943,7 +1012,16 @@ export default function Cart() {
                 .premium-cart-grid { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
                 .cart-img-col { flex: 0 0 90px; min-width: 90px; min-height: 90px; }
                 .cart-details-col { min-width: 180px; }
-                .cart-qtyprice-col { min-width: 140px; margin-right: 8px; }
+                                .cart-qtyprice-col {
+                                    display: flex !important;
+                                    flex-direction: row !important;
+                                    align-items: center !important;
+                                    justify-content: flex-end !important;
+                                    gap: 12px;
+                                    width: 100%;
+                                    min-width: 140px;
+                                    margin-right: 8px;
+                                }
                 .premium-wishlist-btn { border: 1px solid #b9963a; color: #7a5c1f; background: linear-gradient(90deg, #fff8e1, #fef3c7); border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 700; }
                 .premium-wishlist-btn:hover { background: #f9edc8; color: #5f4717; }
                 .premium-save-btn { border: 1px solid #cbd5e1; color: #334155; background: #f8fafc; border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 700; }
@@ -954,7 +1032,12 @@ export default function Cart() {
                 .premium-x-btn:hover .premium-trash-icon { color: #dc2626; transform: scale(1.05); }
                 .premium-x-top { position: absolute; top: 12px; right: 12px; z-index: 5; }
                 .premium-qty-wrap { background: linear-gradient(145deg, #ffffff, #f8fafc); border: 1px solid #e5eaf0; border-radius: 999px; padding: 4px 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.9); }
-                .premium-qty-line { gap: 8px; }
+                                .premium-qty-line {
+                                    display: flex !important;
+                                    flex-direction: row !important;
+                                    align-items: center !important;
+                                    gap: 12px;
+                                }
                 .premium-qty-count { text-align: center; color: #1f2937; }
                 .premium-live-price { font-size: 1.2rem; line-height: 1; }
                 .premium-total-price { font-weight: 800 !important; color: #10a4c5 !important; }
@@ -1119,26 +1202,37 @@ export default function Cart() {
                 .premium-coupon-chip:hover { background: #f9edc8; }
                 .premium-checkout-btn { background: linear-gradient(90deg, #b19d5e 0%, #f6e27a 100%); color: #222; border: none; letter-spacing: 1px; }
                 .premium-checkout-btn:hover { background: linear-gradient(90deg, #f6e27a 0%, #b19d5e 100%); color: #111; transform: translateY(-2px); }
-                @media (max-width: 767.98px) {
-                    .premium-cart-grid { align-items: flex-start; }
-                    .cart-details-col { width: calc(100% - 102px); min-width: 0; padding-right: 4px !important; }
-                    .cart-qtyprice-col { width: 100%; margin-left: 102px; align-items: center !important; }
-                    .cart-premium-row { padding-right: 36px !important; }
-                    .premium-x-top { top: 8px; right: 8px; }
-                    .cart-action-row { flex-wrap: wrap; gap: 6px; }
-                    .premium-id-pill { max-width: 140px; }
-                    .premium-wishlist-btn { padding: 4px 10px; font-size: 11px; }
-                    .premium-save-btn { padding: 4px 10px; font-size: 11px; }
-                    .cart-qtyprice-col { margin-top: 6px; }
-                    .premium-qty-line { width: 100%; justify-content: center; }
-                    .cart-premium-intro { padding: 12px; }
-                    .intro-title { font-size: 1rem; }
-                    .intro-value { font-size: 0.85rem; padding: 7px 12px; }
-                    .saved-item-row { flex-direction: column; align-items: flex-start !important; gap: 10px; }
-                    .saved-action-row { width: 100%; }
-                    .premium-delivery-row { flex-direction: column; }
-                    .premium-delivery-btn { width: 100%; }
-                }
+                                @media (max-width: 767.98px) {
+                                    .premium-cart-grid { align-items: flex-start; }
+                                    .cart-details-col { width: calc(100% - 102px); min-width: 0; padding-right: 4px !important; }
+                                    .cart-qtyprice-col {
+                                        flex-direction: row !important;
+                                        align-items: center !important;
+                                        justify-content: flex-end !important;
+                                        width: 100%;
+                                        margin-left: 0 !important;
+                                        margin-top: 0 !important;
+                                    }
+                                    .cart-premium-row { padding-right: 36px !important; }
+                                    .premium-x-top { top: 8px; right: 8px; }
+                                    .cart-action-row { flex-wrap: wrap; gap: 6px; }
+                                    .premium-id-pill { max-width: 140px; }
+                                    .premium-wishlist-btn { padding: 4px 10px; font-size: 11px; }
+                                    .premium-save-btn { padding: 4px 10px; font-size: 11px; }
+                                    .premium-qty-line {
+                                        flex-direction: row !important;
+                                        align-items: center !important;
+                                        width: 100%;
+                                        justify-content: flex-end !important;
+                                    }
+                                    .cart-premium-intro { padding: 12px; }
+                                    .intro-title { font-size: 1rem; }
+                                    .intro-value { font-size: 0.85rem; padding: 7px 12px; }
+                                    .saved-item-row { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+                                    .saved-action-row { width: 100%; }
+                                    .premium-delivery-row { flex-direction: column; }
+                                    .premium-delivery-btn { width: 100%; }
+                                }
             `}} />
         
             <AnimatePresence mode="wait">

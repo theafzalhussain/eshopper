@@ -418,7 +418,7 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ duration: 0.7 }}
             >
-              <img src="/assets/images/choose-1.jpg" className="hx-ed-img" alt="Man" loading="eager" />
+              <img src="/assets/images/choose-1.jpg" className="hx-ed-img" alt="Man" loading="lazy" />
               <div className="hx-ed-overlay" />
               <div className="hx-ed-content">
                 <span className="hx-ed-tag">EDITORIAL</span>
@@ -439,7 +439,7 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.1 }}
                 style={{ flex: 1 }}
               >
-                <img src="/assets/images/CR-1.png" className="hx-ed-img" alt="Women" loading="eager" />
+                <img src="/assets/images/CR-1.png" className="hx-ed-img" alt="Women" loading="lazy" />
                 <div className="hx-ed-overlay" />
                 <div className="hx-ed-content">
                   <span className="hx-ed-tag">WOMEN</span>
@@ -458,7 +458,7 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.2 }}
                 style={{ flex: 1 }}
               >
-                <img src="/assets/images/kids3.png" className="hx-ed-img" alt="Kids" loading="eager" />
+                <img src="/assets/images/kids3.png" className="hx-ed-img" alt="Kids" loading="lazy" />
                 <div className="hx-ed-overlay" />
                 <div className="hx-ed-content">
                   <span className="hx-ed-tag">KIDS</span>

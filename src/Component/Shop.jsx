@@ -27,6 +27,7 @@ export default function Shop() {
     var [min, setmin] = useState(1)
     var [max, setmax] = useState(10000)
     var [search, setSearch] = useState("")
+    var [searchInput, setSearchInput] = useState("")
     var [sortBy, setSortBy] = useState("newest")
     var [selectedSizes, setSelectedSizes] = useState({})
     var [cartNotifications, setCartNotifications] = useState({})
@@ -70,6 +71,14 @@ export default function Shop() {
             window.removeEventListener('focus', checkAdmin);
         };
     }, [location]);
+
+    // Debounce Search Input to prevent laggy re-renders on every keystroke
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            setSearch(searchInput)
+        }, 300)
+        return () => clearTimeout(delayDebounceFn)
+    }, [searchInput])
 
     // Dynamically compute all unique sizes from all products
     // Preserve admin's order for sizes (no sorting) for product cards
@@ -334,7 +343,7 @@ export default function Shop() {
                             <label className="lux-fl"><span className="lux-fl-icon">◎</span>Search</label>
                             <div className="lux-sw">
                                 <svg className="lux-si" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                                <input className="lux-sinp" type="text" placeholder="Search pieces…" onChange={(e) => setSearch(e.target.value)} />
+                                <input className="lux-sinp" type="text" placeholder="Search pieces…" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
                             </div>
                         </div>
 

@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Package, Truck, CheckCircle2, Printer, Plus, ShieldCheck, RotateCcw, Headphones, Copy, RefreshCw, Share2, FileText, Radar, Sparkles } from 'lucide-react';
-import { clearCart, getCart } from '../Store/ActionCreaters/CartActionCreators';
+import { Package, Truck, CheckCircle2, Printer, Plus, ShieldCheck, RotateCcw, Headphones, Copy, RefreshCw, Share2, FileText, Radar, Sparkles, CreditCard, Calendar, ChevronRight } from 'lucide-react';
+import { clearCart, getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
 import { API_ENDPOINTS, BASE_URL, BRAND_LOGO_URL, FRONTEND_URL, SOCKET_TRANSPORTS } from '../constants';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import io from 'socket.io-client';
+import confetti from 'canvas-confetti';
 
 const money = (v) => `₹${Number(v || 0).toLocaleString('en-IN')}`;
 const formatDate = (d) => new Date(d || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -559,15 +560,14 @@ export default function Confirmation() {
         userId: currentUserId,
         productId,
         quantity: 1,
-        price: Number(product?.finalprice || product?.price || 0)
+        size: Array.isArray(product?.size) ? (product?.size[0] || "") : (product?.size || ""),
+        color: typeof product?.color === 'string' ? product?.color.split(',')[0] : (product?.color || ""),
+        price: Number(product?.finalprice || product?.price || 0),
+        name: product?.name || "",
+        pic: product?.pic1 || product?.pic || ""
       };
 
-      try {
-        await axios.post(`${BASE_URL}${API_ENDPOINTS.CART}`, payload, { timeout: 12000 });
-      } catch (primaryErr) {
-        // Fallback keeps quick add working even when absolute API origin is blocked/transient.
-        await axios.post(API_ENDPOINTS.CART, payload, { timeout: 12000 });
-      }
+      dispatch(addCart(payload));
 
       dispatch(getCart());
 
@@ -592,11 +592,24 @@ export default function Confirmation() {
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
   }, [order?.estimatedArrival]);
 
+  useEffect(() => {
+    if (!loading && order) {
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.4 },
+        colors: ['#D4AF37', '#1e293b', '#ffffff', '#10b981']
+      });
+    }
+  }, [loading, order?.orderId]);
+
   if (loading || !order) {
     return (
-      <div className='confirm-shell loading-shell'>
-        <div className='loader-ring' />
-        <p>Preparing your premium confirmation...</p>
+      <div className='lux-confirm-loading'>
+        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
+          <Sparkles size={48} color="#D4AF37" strokeWidth={1.5} />
+        </motion.div>
+        <p className='lux-loading-text'>Securing your luxury confirmation...</p>
         <style>{styles}</style>
       </div>
     );
@@ -612,15 +625,15 @@ export default function Confirmation() {
   const couponDiscount = Number(order.couponDiscount || 0);
 
   const timeline = [
-    { title: 'Order Review', meta: 'Now', icon: Package },
-    { title: 'Packed', meta: 'Today', icon: Truck },
+    { title: 'Order Received', meta: 'Now', icon: Package },
+    { title: 'Processing', meta: 'Today', icon: Truck },
     { title: 'Delivered', meta: estimatedDate, icon: CheckCircle2 },
   ];
 
   const assurancePoints = [
-    { icon: ShieldCheck, title: 'Secure Purchase', copy: 'Encrypted payment and verified fulfillment.' },
-    { icon: RotateCcw, title: 'Easy Returns', copy: 'Hassle-free return support from your order panel.' },
-    { icon: Headphones, title: 'Priority Support', copy: 'Fast help for delivery and tracking issues.' }
+    { icon: ShieldCheck, title: 'Secure Checkout', copy: 'Encrypted payment and verified fulfillment.' },
+    { icon: RotateCcw, title: 'Easy Returns', copy: 'Hassle-free return support from your account.' },
+    { icon: Headphones, title: 'Priority Concierge', copy: 'VIP help for delivery and tracking issues.' }
   ];
 
   async function handleShareOrder() {
@@ -655,73 +668,55 @@ export default function Confirmation() {
   const timelineProgress = Math.min(100, Math.max(0, ((currentStepIndex + 1) / timeline.length) * 100));
 
   return (
-    <motion.div className='confirm-shell confirm-page-fade' initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }}>
-      <div className='confirm-bg-orb orb-a' />
-      <div className='confirm-bg-orb orb-b' />
-
+    <motion.div className='lux-confirm-page' initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
       <div className='container py-5'>
-        <motion.section className={`hero-card elite-hero ${heroTheme === 'dark' ? 'hero-theme-dark' : ''}`} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-          <span className='hero-monogram'>E</span>
-          <button className='hero-theme-toggle' onClick={() => setHeroTheme((prev) => prev === 'light' ? 'dark' : 'light')}>
-            <Sparkles size={14} />
-            <span>{heroTheme === 'light' ? 'Noir Mode' : 'Ivory Mode'}</span>
-          </button>
-          <div className='hero-check-wrap'>
-            <svg className='hero-checkmark' viewBox='0 0 52 52' aria-hidden='true'>
-              <circle className='check-circle' cx='26' cy='26' r='24' />
-              <path className='check-path' d='M15 27 L23 35 L38 19' />
-            </svg>
+        
+        {/* Premium Hero Section */}
+        <motion.section className={`lux-hero ${heroTheme === 'dark' ? 'lux-hero-dark' : ''}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <span className='lux-hero-monogram'>E</span>
+          
+          <div className='lux-hero-badge'>
+            <CheckCircle2 size={14} className="mr-2" style={{ display: 'inline' }} />
+            ORDER CONFIRMED
           </div>
-          <div className='hero-badge'>ORDER CONFIRMED</div>
+          
           <h1>Thank you for your order, {customerName}.</h1>
-          <div className='hero-shimmer-line' />
-          <p className='hero-subcopy'>Order ID: {order.orderId || 'N/A'} • Estimated delivery by {estimatedDate}</p>
-          <div className='hero-meta'>
-            <span className='hero-chip chip-payment'>Payment: {paymentMethod}</span>
-            <span className='hero-chip chip-slot'>Slot: {deliverySlot}</span>
-            <span className={`hero-chip chip-status ${statusTone}`}>Status: {order.orderStatus || order.status || 'Ordered'}</span>
+          <p className='lux-hero-sub'>Your exclusive pieces are being prepared. Order ID: {order.orderId || 'N/A'}</p>
+          
+          <div className='lux-meta-grid'>
+            <span className='lux-meta-pill'><CreditCard size={14} className="mr-2" style={{ display: 'inline' }} /> {paymentMethod}</span>
+            <span className='lux-meta-pill'><Calendar size={14} className="mr-2" style={{ display: 'inline' }} /> {deliverySlot}</span>
+            <span className={`lux-meta-pill ${statusTone}`}><Package size={14} className="mr-2" style={{ display: 'inline' }} /> {order.orderStatus || order.status || 'Ordered'}</span>
           </div>
-          <div className='hero-actions'>
-            <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className='hero-btn hero-btn-accent' onClick={() => navigate(`/order-tracking/${encodeURIComponent(order.orderId || '')}`)}>
+          
+          <div className='lux-action-bar'>
+            <button className='lux-btn lux-btn-primary' onClick={() => navigate(`/order-tracking/${encodeURIComponent(order.orderId || '')}`)}>
               <Radar size={14} />
               <span>Track Live</span>
-            </motion.button>
-            <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className='hero-btn hero-btn-outline' onClick={handlePremiumInvoice}>
+            </button>
+            <button className='lux-btn lux-btn-outline' onClick={handlePremiumInvoice}>
               <FileText size={14} />
               <span>View Tax Invoice</span>
-            </motion.button>
-            <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className='hero-btn' onClick={handleCopyOrderId}>
+            </button>
+            <button className='lux-btn lux-btn-outline' onClick={handleCopyOrderId}>
               <Copy size={14} />
               <span>{copied ? 'Copied' : 'Copy Order ID'}</span>
-            </motion.button>
-            <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className='hero-btn' onClick={handleRefreshStatus}>
+            </button>
+            <button className='lux-btn lux-btn-outline' onClick={handleRefreshStatus}>
               <RefreshCw size={14} className={refreshing ? 'spin-icon' : ''} />
               <span>{refreshing ? 'Refreshing...' : 'Refresh Status'}</span>
-            </motion.button>
-            <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} className='hero-btn' onClick={handleShareOrder}>
+            </button>
+            <button className='lux-btn lux-btn-outline' onClick={handleShareOrder}>
               <Share2 size={14} />
               <span>{shared ? 'Shared' : 'Share Order'}</span>
-            </motion.button>
-          </div>
-          <div className='luxe-stat-grid'>
-            <div className='luxe-stat-card'>
-              <h5>Live Delivery Tracking</h5>
-              <p>Auto-synced order status from backend with realtime progress updates.</p>
-            </div>
-            <div className='luxe-stat-card'>
-              <h5>Easy Return Protection</h5>
-              <p>Return support available for this order till {returnWindowUntil}.</p>
-            </div>
-            <div className='luxe-stat-card'>
-              <h5>Invoice & Order Security</h5>
-              <p>Tax invoice, verified checkout records, and priority support assistance.</p>
-            </div>
+            </button>
           </div>
         </motion.section>
 
-        <motion.section className='assurance-strip mt-3' initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
+        {/* Assurance Features */}
+        <motion.section className='lux-assurance' initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           {assurancePoints.map((point) => (
-            <div className='assurance-card' key={point.title}>
+            <div className='lux-assurance-card' key={point.title}>
               <point.icon size={16} />
               <div>
                 <h6>{point.title}</h6>
@@ -732,14 +727,14 @@ export default function Confirmation() {
         </motion.section>
 
         <div className='row mt-4 g-4'>
-          <motion.div className='col-lg-7' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-            <div className='panel-card'>
-              <div className='panel-title-row'>
-                <h4>Items in this order</h4>
-                <span className='count-pill'>{items.length} items</span>
-              </div>
+          <motion.div className='col-lg-7' initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
+            <div className='lux-card'>
+              <h4>
+                Manifest
+                <span className='lux-count-pill'>{items.length} items</span>
+              </h4>
 
-              <div className='items-wrap items-scrollable'>
+              <div className='lux-items-wrap'>
                 {items.map((item, idx) => {
                   const qty = Number(item.quantity ?? item.qty ?? 1);
                   const price = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0);
@@ -747,125 +742,84 @@ export default function Confirmation() {
                   const pic = item.pic || item.product?.pic1 || '/assets/images/noimage.png';
 
                   return (
-                    <div key={item._id || item.id || idx} className='order-item'>
+                    <div key={item._id || item.id || idx} className='lux-item'>
                       <img src={optimizeCloudinaryUrlAdvanced(pic, { maxWidth: 240, crop: 'fill' })} alt='product' />
-                      <div className='item-mid'>
-                        <h6>{item.name || item.product?.name || 'Product'}</h6>
-                        <div className='item-inline'>
-                          <span className='qty-pill'>Qty {qty}</span>
-                          <span className='sku-pill'>SKU {String(item._id || item.id || '').slice(0, 12)}...</span>
+                      <div className='lux-item-details'>
+                        <div className='lux-item-name'>{item.name || item.product?.name || 'Premium Product'}</div>
+                        <div className='lux-item-meta'>
+                          <span>Qty: {qty}</span> • 
+                          <span>SKU: {String(item._id || item.id || '').slice(0, 8).toUpperCase()}</span>
                         </div>
-                        <small>₹{price} each</small>
                       </div>
-                      <div className='item-price'>{money(lineTotal)}</div>
+                      <div className='lux-item-price'>{money(lineTotal)}</div>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            <div className='panel-card mt-4'>
-              <h4>Delivery Timeline</h4>
-              <div className='progress-shell'>
-                <div className='progress-track'>
-                  <span className='progress-fill' style={{ width: `${timelineProgress}%` }} />
-                </div>
-                <small>{Math.round(timelineProgress)}% order journey completed</small>
-              </div>
-              <div className='timeline-wrap timeline-horizontal'>
+            <div className='lux-card mt-4'>
+              <h4>Order Journey</h4>
+              <div className='lux-timeline'>
+                <div className="lux-timeline-progress" style={{ width: `${timelineProgress}%` }} />
                 {timeline.map((step, i) => (
-                  <div className={`timeline-row ${i <= currentStepIndex ? 'is-completed' : ''} ${i === currentStepIndex ? 'is-current' : ''}`} key={step.title}>
-                    <div className='timeline-dot-wrap'>
-                      <span className='timeline-dot'>
+                  <div className={`lux-timeline-step ${i <= currentStepIndex ? 'completed' : ''} ${i === currentStepIndex ? 'current' : ''}`} key={step.title}>
+                      <span className='lux-timeline-icon'>
                         <step.icon size={13} />
                       </span>
-                      {i !== timeline.length - 1 ? <span className='timeline-line' /> : null}
-                    </div>
-                    <div className='timeline-content'>
-                      <strong>{step.title}</strong>
-                      <small>{step.meta}</small>
-                    </div>
+                      <div className='lux-timeline-title'>{step.title}</div>
+                      <div className='lux-timeline-meta'>{step.meta}</div>
                   </div>
                 ))}
               </div>
             </div>
-
-            <div className='panel-card mt-4'>
-              <h4>Need Help?</h4>
-              <div className='help-grid'>
-                <button className='help-chip' onClick={() => navigate('/contact')}>Contact Support</button>
-                <button className='help-chip' onClick={() => navigate('/my-orders')}>Manage Orders</button>
-                <button className='help-chip' onClick={() => navigate('/profile')}>Delivery Preferences</button>
-              </div>
-            </div>
           </motion.div>
 
-          <motion.div className='col-lg-5' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <div className='panel-card sticky-side'>
-              <h4>Payment & Shipping Summary</h4>
-
-              <div className='price-box'>
-                <div className='price-row'><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
-                <div className='price-row'><span>Shipping</span><strong>{shipping === 0 ? 'FREE' : money(shipping)}</strong></div>
-                {couponDiscount > 0 ? <div className='price-row text-success'><span>Coupon Discount</span><strong>-{money(couponDiscount)}</strong></div> : null}
-                <hr />
-                <div className='price-total'><span>Payable Amount</span><strong>{money(finalAmount)}</strong></div>
+          <motion.div className='col-lg-5' initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+            <div className='lux-card'>
+              <h4>Summary</h4>
+              
+              <div className='lux-summary-row'><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
+              <div className='lux-summary-row'><span>Shipping</span><strong>{shipping === 0 ? 'FREE' : money(shipping)}</strong></div>
+              {couponDiscount > 0 ? <div className='lux-summary-row text-success'><span>Coupon Discount</span><strong>-{money(couponDiscount)}</strong></div> : null}
+              
+              <div className='lux-summary-total'>
+                <span>Payable Amount</span>
+                <strong>{money(finalAmount)}</strong>
               </div>
-
-              <div className='address-box'>
-                <p className='label'>Shipping Address</p>
-                <h6>{shippingAddress.fullName || '-'}</h6>
-                <p>{shippingAddress.addressline1 || shippingAddress.address || '-'}</p>
-                <p>{shippingAddress.city || '-'}, {shippingAddress.state || '-'} {shippingAddress.pin || shippingAddress.zipCode || '-'}</p>
-              </div>
-
-              <div className='delivery-guarantee'>
-                <p className='label'>Delivery Guarantee</p>
-                <h6>On-time Delivery Promise</h6>
-                <p>If your delivery is delayed, our support team prioritizes immediate resolution.</p>
-              </div>
-
-              <div className='action-grid'>
-                <button className='btn-premium btn-luxe-solid' onClick={() => navigate('/my-orders')}>Track Order</button>
-                <button className='btn-secondary-premium' onClick={() => navigate('/shop/all')}>Continue Shopping</button>
-              </div>
-
-              <div className='concierge-box'>
-                <p className='concierge-title'>Luxury Concierge</p>
-                <p className='concierge-copy'>Need priority support? Our team is ready with real-time delivery help.</p>
-                <button className='concierge-btn' onClick={() => navigate('/contact')}>Contact Concierge</button>
+            </div>
+            
+            <div className='lux-card mt-4'>
+              <h4>Delivery Location</h4>
+              <div style={{ fontSize: '14px', lineHeight: '1.6', color: '#334155' }}>
+                <strong style={{ display: 'block', color: '#0f172a', marginBottom: '8px' }}>{shippingAddress.fullName || '-'}</strong>
+                {shippingAddress.addressline1 || shippingAddress.address || '-'}<br/>
+                {shippingAddress.city || '-'}, {shippingAddress.state || '-'} {shippingAddress.pin || shippingAddress.zipCode || '-'}
               </div>
             </div>
           </motion.div>
         </div>
 
         {recommended.length > 0 ? (
-          <motion.section className='panel-card mt-4' initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-            <div className='panel-title-row'>
-              <h4>You May Also Like</h4>
-              <span className='count-pill'>{recommended.length} picks</span>
-            </div>
-            <div className='rec-grid rec-scroll'>
+          <motion.section className='lux-card mt-4' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <h4>You May Also Like</h4>
+            <div className='lux-rec-scroll'>
               {recommended.map((p, i) => (
-                <div key={p._id || p.id || i} className='rec-card'>
-                  <div className='rec-media'>
+                <div key={p._id || p.id || i} className='lux-rec-card'>
+                  <div className='lux-rec-img'>
                     <img src={optimizeCloudinaryUrlAdvanced(p.pic1 || '/assets/images/noimage.png', { maxWidth: 420, crop: 'fill' })} alt={p.name || 'product'} />
                     <button
-                      className='rec-quick-add'
+                      className='lux-rec-quick'
                       onClick={() => handleQuickAdd(p)}
                       disabled={quickAddingId === String(p._id || p.id)}
                     >
                       <Plus size={14} />
-                      <span>
-                        {quickAddedMap[String(p._id || p.id)]
-                          ? 'Added'
-                          : (quickAddingId === String(p._id || p.id) ? 'Adding...' : 'Quick Add')}
-                      </span>
+                      {quickAddedMap[String(p._id || p.id)] ? 'Added' : (quickAddingId === String(p._id || p.id) ? 'Adding...' : 'Quick Add')}
                     </button>
                   </div>
-                  <h6>{p.name || 'Product'}</h6>
-                  <p>{money(p.finalprice || p.price || 0)}</p>
-                  <button onClick={() => navigate(`/single-product/${encodeURIComponent(p._id || p.id || '')}`)}>View</button>
+                  <div className='lux-rec-title'>{p.name || 'Product'}</div>
+                  <div className='lux-rec-price'>{money(p.finalprice || p.price || 0)}</div>
+                  <button className='lux-rec-view' onClick={() => navigate(`/single-product/${encodeURIComponent(p._id || p.id || '')}`)}>View Details</button>
                 </div>
               ))}
             </div>
@@ -873,7 +827,7 @@ export default function Confirmation() {
         ) : null}
       </div>
 
-      <button className='floating-print' onClick={handlePremiumInvoice} title='Print Receipt'>
+      <button className='lux-print-fab' onClick={handlePremiumInvoice} title='Print Receipt'>
         <Printer size={17} />
       </button>
 
@@ -883,846 +837,154 @@ export default function Confirmation() {
 }
 
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Bodoni+Moda:wght@500;600;700&display=swap');
-  .confirm-shell {
-    font-family: 'Manrope', sans-serif;
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Jost:wght@300;400;500;600;700;800&display=swap');
+  
+  .lux-confirm-page {
+    font-family: 'Jost', sans-serif;
+    background: #f8fafc;
     min-height: 100vh;
-    background:
-      radial-gradient(circle at 12% 4%, rgba(212, 175, 55, 0.16), transparent 26%),
-      radial-gradient(circle at 0% 0%, rgba(186, 230, 253, 0.35), transparent 30%),
-      radial-gradient(circle at 100% 0%, rgba(253, 230, 138, 0.25), transparent 28%),
-      linear-gradient(180deg, #f5f7fb 0%, #ecf1f6 100%);
+    padding-bottom: 80px;
     position: relative;
     overflow: hidden;
   }
-  .confirm-shell::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.08;
-    background-image:
-      linear-gradient(45deg, rgba(15,23,42,0.06) 25%, transparent 25%),
-      linear-gradient(-45deg, rgba(15,23,42,0.06) 25%, transparent 25%);
-    background-size: 26px 26px;
-    mask-image: linear-gradient(to bottom, black 0%, transparent 52%);
+  .lux-confirm-loading {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #fff;
   }
-  .confirm-page-fade {
-    animation: pageFade 0.55s ease;
-  }
-  @keyframes pageFade {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .loading-shell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .loader-ring {
-    width: 44px;
-    height: 44px;
-    border: 4px solid #bfdbfe;
-    border-top-color: #0284c7;
-    border-radius: 999px;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .lux-loading-text { margin-top: 16px; font-family: 'Jost', sans-serif; font-weight: 700; color: #D4AF37; text-transform: uppercase; letter-spacing: 2px; font-size: 12px; }
 
-  .confirm-bg-orb {
-    position: absolute;
-    width: 280px;
-    height: 280px;
-    border-radius: 999px;
-    filter: blur(70px);
-    opacity: 0.45;
-    pointer-events: none;
-  }
-  .orb-a { background: #67e8f9; top: -60px; left: -60px; }
-  .orb-b { background: #fde68a; top: 40px; right: -90px; }
-
-  .hero-card {
-    background:
-      radial-gradient(circle at 92% 6%, rgba(212, 175, 55, 0.16), transparent 24%),
-      linear-gradient(145deg, #fffdf7, #ffffff);
-    color: #111827;
+  /* Hero */
+  .lux-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #fff;
     border-radius: 22px;
-    padding: 28px;
-    border: 1px solid #ebdfc0;
-    box-shadow: 0 20px 36px rgba(15, 23, 42, 0.1);
+    padding: 48px 32px;
     position: relative;
     overflow: hidden;
     text-align: center;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+    margin-bottom: 32px;
   }
-  .hero-theme-toggle {
-    position: absolute;
-    right: 16px;
-    top: 16px;
-    border: 1px solid #e3d5ad;
-    background: rgba(255, 255, 255, 0.78);
-    color: #7a5d17;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    padding: 6px 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    z-index: 2;
+  .lux-hero-dark {
+    background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
   }
-  .hero-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(120deg, rgba(255,255,255,0.65), rgba(255,255,255,0) 45%);
-    pointer-events: none;
+  .lux-hero-monogram {
+    position: absolute; right: -20px; top: -30px; font-family: 'Playfair Display', serif; font-size: 150px; font-weight: 800; color: rgba(255,255,255,0.03); pointer-events: none; line-height: 1;
   }
-  .hero-monogram {
-    position: absolute;
-    right: 18px;
-    top: 14px;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 60px;
-    color: rgba(212, 175, 55, 0.16);
-    font-weight: 700;
-    line-height: 1;
-    pointer-events: none;
+  .lux-hero-badge {
+    display: inline-block; padding: 8px 16px; border-radius: 999px; border: 1px solid #D4AF37; color: #D4AF37; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 24px; background: rgba(212, 175, 55, 0.1);
   }
-  .hero-check-wrap {
-    margin-bottom: 34px;
-    display: inline-flex;
-    border-radius: 999px;
-    animation: greenPulse 2.4s ease-in-out infinite;
+  .lux-hero h1 {
+    font-family: 'Playfair Display', serif; font-size: clamp(28px, 5vw, 48px); font-weight: 700; margin-bottom: 12px; color: #fff; line-height: 1.2;
   }
-  .hero-checkmark {
-    width: 52px;
-    height: 52px;
+  .lux-hero-sub {
+    font-size: 16px; color: #94a3b8; margin-bottom: 32px; font-weight: 400;
   }
-  .check-circle {
-    fill: none;
-    stroke: rgba(34, 197, 94, 0.25);
-    stroke-width: 1.4;
+  .lux-meta-grid {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-bottom: 32px;
   }
-  .check-path {
-    fill: none;
-    stroke: #16a34a;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-dasharray: 40;
-    stroke-dashoffset: 40;
-    animation: drawCheck 0.65s ease forwards;
+  .lux-meta-pill {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; color: #f8fafc; backdrop-filter: blur(8px);
   }
-  @keyframes drawCheck { to { stroke-dashoffset: 0; } }
-  @keyframes greenPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.15); }
-    50% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+  .tone-success { border-color: rgba(16, 185, 129, 0.4); color: #34d399; background: rgba(16, 185, 129, 0.1); }
+  .lux-action-bar {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;
   }
-  .hero-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #dcc27e;
-    color: #7a5d17;
-    border-radius: 999px;
-    padding: 8px 18px;
-    font-size: 14px;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    margin-bottom: 16px;
-    background: rgba(255, 247, 224, 0.9);
-    text-transform: uppercase;
-    box-shadow: 0 8px 18px rgba(212, 175, 55, 0.16);
+  .lux-btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 999px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease; cursor: pointer; border: none;
   }
-  .hero-card h1 {
-    font-family: 'Bodoni Moda', 'Cormorant Garamond', serif;
-    font-size: clamp(1.95rem, 4.2vw, 3.15rem);
-    font-weight: 600;
-    margin-bottom: 10px;
-    letter-spacing: -0.3px;
-    color: #16181d;
-    line-height: 1.15;
-    text-wrap: balance;
+  .lux-btn-primary { background: linear-gradient(135deg, #D4AF37, #b8860b); color: #0f172a; box-shadow: 0 10px 20px rgba(212, 175, 55, 0.3); }
+  .lux-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(212, 175, 55, 0.4); }
+  .lux-btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff; }
+  .lux-btn-outline:hover { background: rgba(255,255,255,0.1); border-color: #D4AF37; color: #D4AF37; }
+  
+  .lux-card {
+    background: #fff; border-radius: 24px; padding: 32px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); border: 1px solid rgba(212, 175, 55, 0.1); margin-bottom: 24px;
   }
-  .hero-subcopy {
-    color: #334155;
-    margin-bottom: 12px;
-    font-size: 1.16rem;
-    font-weight: 800;
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, rgba(239, 246, 255, 0.95), rgba(255, 247, 224, 0.95));
-    border: 1px solid #dbe4ef;
-    box-shadow: 0 6px 14px rgba(51, 65, 85, 0.08);
+  .lux-card h4 {
+    font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;
   }
-  .hero-shimmer-line {
-    width: min(340px, 78%);
-    height: 1px;
-    margin: 10px auto 12px;
-    background: linear-gradient(90deg, rgba(212, 175, 55, 0), rgba(212, 175, 55, 0.88), rgba(212, 175, 55, 0));
-    animation: shimmerSlide 2.8s ease-in-out infinite;
+  .lux-count-pill {
+    font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 700; background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;
   }
-  @keyframes shimmerSlide {
-    0%, 100% { opacity: 0.45; transform: translateX(0); }
-    50% { opacity: 1; transform: translateX(8px); }
+  
+  /* Items */
+  .lux-item {
+    display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid #f1f5f9; border-radius: 16px; margin-bottom: 12px; transition: all 0.3s ease; background: #fafbfc;
   }
-  .hero-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-  }
-  .hero-chip {
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #d5e0ee;
-    padding: 7px 12px;
-    font-size: 12px;
-    font-weight: 800;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
-  }
-  .chip-payment {
-    color: #0f172a;
-    border-color: #cfd9e8;
-  }
-  .chip-slot {
-    color: #1f2937;
-    border-color: #c3d3e5;
-  }
-  .chip-status {
-    border-width: 1.5px;
-    background: #fffef8;
-    color: #8b6f1a;
-  }
-  .hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 9px;
-    margin-top: 14px;
-    justify-content: center;
-  }
-  .hero-btn {
-    border: 1px solid #cfd9e8;
-    background: #ffffff;
-    color: #1f2937;
-    border-radius: 999px;
-    padding: 8px 14px;
-    font-size: 12px;
-    font-weight: 800;
-    transition: all 0.25s ease;
-    box-shadow: 0 3px 10px rgba(148, 163, 184, 0.12);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .hero-btn:hover {
-    transform: translateY(-2px);
-    border-color: #9fb8dd;
-    box-shadow: 0 10px 20px rgba(30, 64, 175, 0.16);
-  }
-  .hero-btn-accent {
-    background: linear-gradient(90deg, #111827, #0b0f17);
-    color: #f8fafc;
-    border-color: #111827;
-    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.28);
-  }
-  .hero-btn-outline {
-    border-color: #d4af37;
-    background: linear-gradient(90deg, #fffdf7, #fff6dd);
-    color: #7a5d17;
-    font-weight: 800;
-  }
-  .spin-icon { animation: spin 0.8s linear infinite; }
-  .hero-btn-outline:hover {
-    border-color: #c9a84c;
-    box-shadow: 0 10px 18px rgba(212, 175, 55, 0.2);
-  }
-  .hero-btn-accent:hover {
-    border-color: #020617;
-    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.28);
-  }
-  .luxe-stat-grid {
-    margin-top: 14px;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-  }
-  .hero-theme-dark {
-    background:
-      radial-gradient(circle at 90% 6%, rgba(212, 175, 55, 0.18), transparent 24%),
-      linear-gradient(145deg, #0f172a, #111827 48%, #0b1220);
-    border-color: rgba(212, 175, 55, 0.34);
-    box-shadow: 0 20px 36px rgba(2, 6, 23, 0.45);
-    color: #e2e8f0;
-  }
-  .hero-theme-dark .hero-badge {
-    background: rgba(212, 175, 55, 0.1);
-    border-color: rgba(212, 175, 55, 0.45);
-    color: #f8df9d;
-  }
-  .hero-theme-dark h1,
-  .hero-theme-dark .hero-subcopy,
-  .hero-theme-dark .luxe-stat-card h5 {
-    color: #f8fafc;
-  }
-  .hero-theme-dark .hero-subcopy,
-  .hero-theme-dark .luxe-stat-card p {
-    color: #cbd5e1;
-  }
-  .hero-theme-dark .hero-subcopy {
-    background: linear-gradient(90deg, rgba(30, 41, 59, 0.92), rgba(51, 65, 85, 0.82));
-    border-color: rgba(100, 116, 139, 0.6);
-    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.34);
-  }
-  .hero-theme-dark .hero-chip {
-    background: rgba(15, 23, 42, 0.55);
-    border-color: rgba(148, 163, 184, 0.35);
-    color: #e2e8f0;
-  }
-  .hero-theme-dark .chip-status {
-    background: rgba(212, 175, 55, 0.12);
-    color: #f8df9d;
-  }
-  .hero-theme-dark .hero-btn {
-    background: rgba(15, 23, 42, 0.7);
-    border-color: rgba(148, 163, 184, 0.35);
-    color: #f8fafc;
-  }
-  .hero-theme-dark .hero-btn-accent {
-    background: linear-gradient(90deg, #d4af37, #b8860b);
-    border-color: #d4af37;
-    color: #111827;
-  }
-  .hero-theme-dark .hero-btn-outline {
-    background: rgba(212, 175, 55, 0.12);
-    color: #f8df9d;
-  }
-  .hero-theme-dark .hero-theme-toggle {
-    background: rgba(15, 23, 42, 0.72);
-    border-color: rgba(212, 175, 55, 0.45);
-    color: #f8df9d;
-  }
-  .hero-theme-dark .luxe-stat-card {
-    border-color: rgba(148, 163, 184, 0.28);
-    background: rgba(15, 23, 42, 0.45);
-    box-shadow: 0 10px 18px rgba(2, 6, 23, 0.3);
-  }
-  .luxe-stat-card {
-    border: 1px solid #dfe7f2;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 11px 12px;
-    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
-    text-align: left;
-  }
-  .luxe-stat-card h5 {
-    margin: 0 0 5px;
-    color: #0f172a;
-    font-size: 0.96rem;
-    font-weight: 900;
-    letter-spacing: 0.01em;
-  }
-  .luxe-stat-card p {
-    margin: 0;
-    color: #64748b;
-    font-size: 12px;
-    line-height: 1.45;
-    font-weight: 600;
-    text-transform: none;
-    letter-spacing: 0;
-  }
-  .tone-success { border-color: #86efac !important; color: #15803d; background: #f0fdf4; }
-  .tone-info { border-color: #7dd3fc !important; color: #0369a1; background: #f0f9ff; }
-  .tone-danger { border-color: #fca5a5 !important; color: #b91c1c; background: #fef2f2; }
-  .tone-warn { border-color: #fde68a !important; color: #a16207; background: #fffbeb; }
-
-  .panel-card {
-    border: 1px solid #dbe4ef;
-    border-radius: 16px;
-    background: linear-gradient(145deg, #ffffff, #f8fbff);
-    box-shadow: 0 14px 24px rgba(15, 23, 42, 0.07);
-    padding: 16px;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-  }
+  .lux-item:hover { border-color: rgba(212, 175, 55, 0.3); background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.03); }
+  .lux-item img { width: 72px; height: 72px; object-fit: cover; border-radius: 12px; border: 1px solid #e2e8f0; }
+  .lux-item-details { flex: 1; }
+  .lux-item-name { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+  .lux-item-meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: #64748b; font-weight: 500; }
+  .lux-item-price { font-size: 16px; font-weight: 800; color: #0f766e; }
+  
+  /* Summary */
+  .lux-summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; color: #475569; font-weight: 500; }
+  .lux-summary-row strong { color: #0f172a; font-weight: 700; }
+  .lux-summary-total { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 16px; border-top: 1px dashed #cbd5e1; font-size: 18px; color: #0f172a; font-weight: 800; }
+  .lux-summary-total strong { color: #0f766e; font-size: 22px; }
+  
+  /* Timeline */
+  .lux-timeline { display: flex; justify-content: space-between; position: relative; margin-top: 32px; margin-bottom: 16px; }
+  .lux-timeline::before { content: ''; position: absolute; top: 16px; left: 0; right: 0; height: 2px; background: #e2e8f0; z-index: 1; }
+  .lux-timeline-progress { position: absolute; top: 16px; left: 0; height: 2px; background: linear-gradient(90deg, #D4AF37, #b8860b); z-index: 2; transition: width 1s ease-in-out; }
+  .lux-timeline-step { display: flex; flex-direction: column; align-items: center; z-index: 3; position: relative; width: 33.33%; text-align: center; }
+  .lux-timeline-icon { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8; transition: all 0.3s; margin-bottom: 8px; }
+  .lux-timeline-step.completed .lux-timeline-icon,
+  .lux-timeline-step.current .lux-timeline-icon { border-color: #D4AF37; color: #D4AF37; box-shadow: 0 0 0 4px rgba(212,175,55,0.1); }
+  .lux-timeline-step.completed .lux-timeline-icon { background: #D4AF37; color: #fff; }
+  .lux-timeline-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
+  .lux-timeline-meta { font-size: 11px; color: #64748b; font-weight: 500; }
+  
+  /* Assurance */
   .assurance-strip {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
+    margin-top: -16px;
+    margin-bottom: 32px;
   }
-  .assurance-card {
-    border: 1px solid #dbe4ef;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #ffffff, #f8fbff);
-    padding: 10px;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    color: #0f172a;
-  }
-  .assurance-card svg {
-    color: #0f766e;
-    margin-top: 2px;
-    flex-shrink: 0;
-  }
-  .assurance-card h6 {
-    margin: 0 0 2px;
-    font-size: 0.85rem;
-    font-weight: 800;
-  }
-  .assurance-card p {
-    margin: 0;
-    font-size: 12px;
-    color: #64748b;
-  }
-  .panel-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 30px rgba(15, 23, 42, 0.1);
-  }
-  .panel-title-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  .panel-card h4 {
-    margin: 0;
-    font-size: 1.2rem;
-    font-weight: 900;
-    color: #0f172a;
-  }
-  .count-pill {
-    border-radius: 999px;
-    background: #0ea5b7;
-    color: #fff;
-    padding: 5px 10px;
-    font-size: 12px;
-    font-weight: 800;
-  }
+  .lux-assurance-card { background: #fff; border-radius: 16px; padding: 20px; display: flex; align-items: flex-start; gap: 12px; border: 1px solid rgba(212,175,55,0.15); box-shadow: 0 4px 20px rgba(0,0,0,0.02); transition: transform 0.3s; }
+  .lux-assurance-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.05); }
+  .lux-assurance-card svg { color: #D4AF37; flex-shrink: 0; margin-top: 2px; }
+  .lux-assurance-card h6 { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+  .lux-assurance-card p { font-size: 12px; color: #64748b; margin: 0; line-height: 1.4; }
+  
+  /* Recommendations */
+  .lux-rec-scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; }
+  .lux-rec-scroll::-webkit-scrollbar { height: 6px; }
+  .lux-rec-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  .lux-rec-card { min-width: 240px; background: #fff; border: 1px solid #f1f5f9; border-radius: 16px; padding: 12px; transition: all 0.3s; }
+  .lux-rec-card:hover { box-shadow: 0 10px 30px rgba(0,0,0,0.06); border-color: rgba(212,175,55,0.3); }
+  .lux-rec-img { position: relative; border-radius: 12px; overflow: hidden; margin-bottom: 12px; height: 240px; }
+  .lux-rec-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+  .lux-rec-card:hover .lux-rec-img img { transform: scale(1.05); }
+  .lux-rec-quick { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; background: rgba(255,255,255,0.95); color: #0f172a; padding: 8px 16px; border-radius: 999px; font-size: 12px; font-weight: 700; border: none; display: flex; align-items: center; gap: 6px; transition: all 0.3s; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .lux-rec-card:hover .lux-rec-quick { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .lux-rec-quick:hover { background: #D4AF37; color: #fff; }
+  .lux-rec-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lux-rec-price { font-size: 15px; font-weight: 800; color: #D4AF37; margin-bottom: 12px; }
+  .lux-rec-view { width: 100%; background: #f8fafc; color: #0f172a; border: 1px solid #e2e8f0; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; transition: all 0.3s; cursor: pointer; }
+  .lux-rec-view:hover { background: #0f172a; color: #fff; border-color: #0f172a; }
+  
+  /* Floating Print */
+  .lux-print-fab { position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px; border-radius: 50%; background: #fff; color: #0f172a; border: 1px solid rgba(212,175,55,0.3); box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; z-index: 50; }
+  .lux-print-fab:hover { transform: translateY(-4px) rotate(5deg); box-shadow: 0 14px 30px rgba(212,175,55,0.25); background: #D4AF37; color: #fff; }
 
-  .items-wrap { display: grid; gap: 10px; }
-  .items-scrollable {
-    max-height: 420px;
-    overflow-y: auto;
-    padding-right: 6px;
+  @media (max-width: 991px) {
+    .lux-assurance { grid-template-columns: 1fr; gap: 12px; }
   }
-  .items-scrollable::-webkit-scrollbar { width: 7px; }
-  .items-scrollable::-webkit-scrollbar-thumb { background: #d1dae6; border-radius: 999px; }
-  .order-item {
-    display: grid;
-    grid-template-columns: 64px 1fr auto;
-    gap: 10px;
-    align-items: center;
-    border: 1px solid #edf2f7;
-    border-radius: 12px;
-    padding: 10px;
-    background: #fff;
-  }
-  .order-item img {
-    width: 64px;
-    height: 64px;
-    object-fit: cover;
-    border-radius: 10px;
-  }
-  .item-mid h6 {
-    margin-bottom: 4px;
-    font-size: 1rem;
-    font-weight: 800;
-    color: #1e293b;
-  }
-  .item-inline {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 4px;
-  }
-  .qty-pill {
-    border-radius: 999px;
-    background: linear-gradient(90deg, #0ea5b7, #0284c7);
-    color: #fff;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 800;
-  }
-  .sku-pill {
-    border-radius: 999px;
-    background: #eef2ff;
-    border: 1px solid #c7d2fe;
-    color: #334155;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 700;
-  }
-  .item-mid small { color: #64748b; }
-  .item-price {
-    color: #0284c7;
-    font-weight: 900;
-    font-size: 1.2rem;
-  }
-
-  .timeline-wrap {
-    border: 1px solid #dbe4ef;
-    border-radius: 12px;
-    background: #f8fafc;
-    padding: 10px;
-    margin-top: 10px;
-  }
-  .progress-shell {
-    margin-top: 10px;
-    margin-bottom: 12px;
-  }
-  .progress-track {
-    width: 100%;
-    height: 6px;
-    border-radius: 999px;
-    background: #e2e8f0;
-    overflow: hidden;
-  }
-  .progress-fill {
-    display: block;
-    height: 100%;
-    background: linear-gradient(90deg, #16a34a, #22c55e);
-    border-radius: 999px;
-    transition: width 0.35s ease;
-  }
-  .progress-shell small {
-    display: block;
-    margin-top: 6px;
-    font-size: 12px;
-    color: #64748b;
-    font-weight: 700;
-  }
-  .timeline-horizontal {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    align-items: start;
-  }
-  .timeline-row {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 8px;
-    margin-bottom: 0;
-    position: relative;
-    padding-top: 4px;
-  }
-  .timeline-dot-wrap {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    width: 100%;
-  }
-  .timeline-dot {
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    color: #94a3b8;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 0;
-  }
-  .timeline-line {
-    position: absolute;
-    top: 13px;
-    left: calc(50% + 16px);
-    height: 1.5px;
-    width: calc(100% - 26px);
-    background: #dbe4ef;
-  }
-  .timeline-row.is-completed .timeline-dot,
-  .timeline-row.is-current .timeline-dot {
-    border-color: #16a34a;
-    color: #16a34a;
-    background: #f0fdf4;
-  }
-  .timeline-row.is-completed .timeline-line {
-    background: #86efac;
-  }
-  .timeline-content strong {
-    display: block;
-    font-size: 13px;
-    color: #0f172a;
-    font-weight: 800;
-  }
-  .timeline-content small { color: #64748b; font-size: 12px; }
-
-  .sticky-side { position: sticky; top: 20px; }
-  .price-box {
-    border: 1px solid #dbe4ef;
-    border-radius: 12px;
-    background: linear-gradient(130deg, #f8fafc, #f1f5f9);
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-  .price-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    color: #334155;
-  }
-  .price-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.1rem;
-    font-weight: 900;
-    color: #0f172a;
-  }
-  .price-total strong {
-    color: #0284c7;
-    font-size: 1.4rem;
-  }
-
-  .address-box {
-    border: 1px solid #dbe4ef;
-    border-radius: 12px;
-    background: #fff;
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-  .delivery-guarantee {
-    border: 1px solid #dbe4ef;
-    border-radius: 12px;
-    background: linear-gradient(140deg, #f8fafc, #f1f5f9);
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-  .delivery-guarantee h6 {
-    margin-bottom: 4px;
-    color: #0f172a;
-    font-weight: 800;
-  }
-  .delivery-guarantee p {
-    margin-bottom: 0;
-    color: #475569;
-    font-size: 0.9rem;
-  }
-  .address-box .label {
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 800;
-    margin-bottom: 6px;
-  }
-  .address-box h6 {
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 4px;
-  }
-  .address-box p {
-    color: #475569;
-    margin-bottom: 4px;
-    font-size: 0.93rem;
-  }
-
-  .action-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .help-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .help-chip {
-    border: 1px solid #dbe4ef;
-    border-radius: 999px;
-    background: #fff;
-    color: #1e293b;
-    padding: 8px 10px;
-    font-size: 12px;
-    font-weight: 800;
-  }
-  .rec-grid {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-  .rec-scroll::-webkit-scrollbar { height: 7px; }
-  .rec-scroll::-webkit-scrollbar-thumb { background: #d4dbe4; border-radius: 999px; }
-  .rec-card {
-    min-width: 290px;
-    border: 1px solid #dbe4ef;
-    border-radius: 12px;
-    background: #fff;
-    padding: 12px;
-    text-align: center;
-    transition: transform 0.22s ease, box-shadow 0.22s ease;
-  }
-  .rec-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 24px rgba(15, 23, 42, 0.12);
-  }
-  .rec-media {
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 10px;
-  }
-  .rec-card img {
-    width: 100%;
-    height: 220px;
-    object-fit: cover;
-    border-radius: 12px;
-    display: block;
-  }
-  .rec-quick-add {
-    position: absolute;
-    left: 50%;
-    bottom: 12px;
-    transform: translateX(-50%) translateY(8px);
-    border: 1px solid rgba(255,255,255,0.5);
-    border-radius: 999px;
-    background: rgba(2, 6, 23, 0.9);
-    color: #fff;
-    padding: 8px 14px;
-    font-size: 12px;
-    font-weight: 800;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    opacity: 0;
-    transition: all 0.25s ease;
-  }
-  .rec-media:hover .rec-quick-add {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-  .rec-card h6 {
-    margin-bottom: 4px;
-    font-size: 0.9rem;
-    font-weight: 800;
-    color: #0f172a;
-  }
-  .rec-card p {
-    margin-bottom: 8px;
-    color: #0284c7;
-    font-weight: 800;
-  }
-  .rec-card button {
-    border: 1px solid #bfdbfe;
-    border-radius: 999px;
-    background: #eff6ff;
-    color: #1e3a8a;
-    padding: 6px 10px;
-    font-size: 12px;
-    font-weight: 800;
-  }
-  .btn-premium {
-    border: none;
-    border-radius: 999px;
-    background: linear-gradient(90deg, #0ea5b7, #0284c7);
-    color: #fff;
-    padding: 10px 12px;
-    font-weight: 800;
-    font-size: 0.92rem;
-  }
-  .btn-luxe-solid {
-    background: linear-gradient(90deg, #111827, #0b0f17);
-    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.22);
-  }
-  .btn-secondary-premium {
-    border: 1px solid #94a3b8;
-    border-radius: 999px;
-    background: transparent;
-    color: #1e293b;
-    padding: 10px 12px;
-    font-weight: 800;
-    font-size: 0.92rem;
-  }
-  .concierge-box {
-    margin-top: 12px;
-    border: 1px solid #e7edf4;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #ffffff, #f8fafc);
-    padding: 11px;
-  }
-  .concierge-title {
-    margin: 0 0 4px;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #0e7490;
-    font-weight: 800;
-  }
-  .concierge-copy {
-    margin: 0 0 8px;
-    color: #475569;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  .concierge-btn {
-    border: 1px solid #bae6fd;
-    background: #ecfeff;
-    color: #0e7490;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 800;
-    padding: 6px 11px;
-  }
-  .floating-print {
-    position: fixed;
-    right: 20px;
-    bottom: 20px;
-    width: 44px;
-    height: 44px;
-    border-radius: 999px;
-    border: 1px solid #cbd5e1;
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.2);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 30;
-  }
-  .floating-print:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 26px rgba(15, 23, 42, 0.25);
-  }
-
-  @media (max-width: 991.98px) {
-    .sticky-side { position: static; }
-  }
-  @media (max-width: 767.98px) {
-    .hero-card { padding: 18px; border-radius: 18px; }
-    .hero-check-wrap { margin-bottom: 22px; }
-    .hero-badge {
-      margin-bottom: 12px;
-      font-size: 12px;
-      padding: 7px 14px;
-    }
-    .hero-card h1 { font-size: 1.7rem; }
-    .hero-subcopy {
-      font-size: 0.98rem;
-      padding: 5px 10px;
-      border-radius: 12px;
-    }
-    .luxe-stat-grid { grid-template-columns: 1fr; }
-    .order-item { grid-template-columns: 56px 1fr; }
-    .order-item img { width: 56px; height: 56px; }
-    .item-price { grid-column: span 2; text-align: right; }
-    .action-grid { grid-template-columns: 1fr; }
-    .help-grid { grid-template-columns: 1fr; }
-    .timeline-horizontal { grid-template-columns: 1fr; }
-    .timeline-line { display: none; }
-    .hero-actions { flex-direction: column; align-items: stretch; }
-    .assurance-strip { grid-template-columns: 1fr; }
-    .luxe-stat-grid { grid-template-columns: 1fr; }
-    .rec-quick-add { opacity: 1; transform: translateX(-50%) translateY(0); }
-    .floating-print { display: none; }
+  @media (max-width: 767px) {
+    .lux-hero { padding: 32px 20px; border-radius: 16px; }
+    .lux-hero h1 { font-size: 28px; }
+    .lux-action-bar { flex-direction: column; align-items: stretch; }
+    .lux-btn { justify-content: center; }
+    .lux-card { padding: 20px; border-radius: 16px; }
+    .lux-item { flex-direction: column; align-items: flex-start; }
+    .lux-item img { width: 100%; height: auto; aspect-ratio: 1; }
+    .lux-timeline-title { font-size: 11px; }
+    .lux-timeline-meta { font-size: 10px; }
+    .lux-print-fab { display: none; }
   }
 `;

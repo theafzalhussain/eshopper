@@ -1,35 +1,94 @@
-import React from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { BASE_URL } from '../constants';
 
 // Responsive, modern luxury confirmation page (Luxe-Gold Edition)
 // Color palette: #0D0D0D (charcoal), #D4AF37 (gold), #fff (white)
 // All product images, order details, and user info are shown
-const ConfirmationPremium = ({
-  order = {},
-  user = {},
-  onViewOrder = () => {},
-}) => {
-  const {
-    items = [
-      {
-        name: "Gold Luxe Watch",
-        price: 12999,
-        image: "https://eshopperr.me/assets/images/sample-watch.jpg",
-      },
-      {
-        name: "Champagne Silk Scarf",
-        price: 3499,
-        image: "https://eshopperr.me/assets/images/sample-scarf.jpg",
-      },
-    ],
-    subtotal = 16498,
-    tax = 0,
-    total = 16498,
-    shipping = 0,
-    shippingAddress = "A-101, Luxe Residency, Mumbai, 400001",
-    paymentDetails = "Credit Card (**** 1234)",
-    expectedDate = "Wednesday, 11th March",
-    orderId = "ORD1234567",
-  } = order;
+const money = (v) => `9${Number(v || 0).toLocaleString('en-IN')}`;
+const formatDate = (d) => new Date(d || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+const ConfirmationPremium = () => {
+  const navigate = useNavigate();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [recommended, setRecommended] = useState([]);
+  const [feedback, setFeedback] = useState(0);
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const syncInProgressRef = useRef(false);
+
+  // Fetch order from localStorage or backend
+  useEffect(() => {
+    async function syncOrder() {
+      let fallbackOrder = null;
+      const stored = localStorage.getItem('lastPlacedOrder');
+      if (stored) {
+        try { fallbackOrder = JSON.parse(stored); } catch {}
+      }
+      setOrder(fallbackOrder);
+      setLoading(false);
+      // Optionally, fetch latest from backend
+      if (fallbackOrder?.orderId) {
+        try {
+          const { data } = await axios.get(`${BASE_URL}/api/order/${encodeURIComponent(fallbackOrder.orderId)}?userId=${encodeURIComponent(fallbackOrder.userid)}`);
+          if (data?.orderId) setOrder(data);
+        } catch {}
+      }
+    }
+    syncOrder();
+  }, []);
+
+  // Fetch recommendations
+  useEffect(() => {
+    async function getRecommendedProducts() {
+      try {
+        const { data } = await axios.get(`${BASE_URL}/product`);
+        const list = Array.isArray(data) ? data : [];
+        const purchased = new Set((order?.products || []).map((p) => String(p.productid || p._id || p.id || '')));
+        const picks = list.filter((p) => !purchased.has(String(p._id || p.id || ''))).slice(0, 4);
+        setRecommended(picks);
+      } catch (e) {
+        setRecommended([]);
+      }
+    }
+    if (order?.orderId) getRecommendedProducts();
+  }, [order?.orderId]);
+
+  // Feedback submit
+  async function handleFeedbackSubmit() {
+    if (!order?.orderId || !feedback) return;
+    setFeedbackSent(true);
+    // TODO: Send feedback to backend
+    setTimeout(() => setFeedbackSent(false), 2000);
+  }
+
+  // Invoice download
+  async function handleInvoiceDownload() {
+    if (!order) return;
+    setInvoiceLoading(true);
+    // TODO: Generate and download invoice (HTML/PDF)
+    setTimeout(() => setInvoiceLoading(false), 1200);
+  }
+
+  if (loading || !order) return <div style={{color:'#d4af37',textAlign:'center',marginTop:80}}>Loading your order...</div>;
+
+  const items = Array.isArray(order.products) ? order.products.map((p) => ({
+    name: p.name || p.product?.name || 'Product',
+    price: p.price || p.product?.finalprice || p.product?.price || 0,
+    image: p.product?.pic1 || p.image || p.product?.image || 'https://eshopperr.me/assets/images/sample-watch.jpg',
+    quantity: p.quantity || p.qty || 1,
+  })) : [];
+  const subtotal = Number(order.totalAmount || 0);
+  const tax = Math.round(subtotal * 0.05);
+  const total = Number(order.finalAmount || subtotal);
+  const shipping = Number(order.shippingAmount || 0);
+  const shippingAddress = order.shippingAddress?.address || order.shippingAddress || 'N/A';
+  const paymentDetails = order.paymentMethod || 'N/A';
+  const expectedDate = formatDate(order.estimatedArrival || Date.now() + 4 * 24 * 60 * 60 * 1000);
+  const orderId = order.orderId || 'N/A';
+  const userName = order.shippingAddress?.fullName || order.userName || 'Valued Customer';
 
   return (
     <div
@@ -163,7 +222,7 @@ const ConfirmationPremium = ({
                 />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", lineHeight: 1.3 }}>{item.name}</div>
-                  <div style={{ fontSize: 15, color: "#d4af37", fontWeight: 600, marginTop: 2 }}>₹{item.price}</div>
+                  <div style={{ fontSize: 15, color: "#d4af37", fontWeight: 600, marginTop: 2 }}>{money(item.price)} x {item.quantity}</div>
                 </div>
               </div>
             ))}
@@ -242,10 +301,10 @@ const ConfirmationPremium = ({
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer & Actions */}
         <div style={{ padding: "0 32px 32px 32px", textAlign: "center" }}>
           <button
-            onClick={onViewOrder}
+            onClick={() => navigate('/myorders')}
             style={{
               display: "inline-block",
               padding: "13px 38px",
@@ -261,8 +320,32 @@ const ConfirmationPremium = ({
               cursor: "pointer",
             }}
           >
-            View Order
+            View All Orders
           </button>
+          <button
+            onClick={handleInvoiceDownload}
+            disabled={invoiceLoading}
+            style={{
+              display: "inline-block",
+              padding: "13px 38px",
+              borderRadius: 24,
+              background: invoiceLoading ? '#bdbdbd' : "linear-gradient(90deg,#d4af37,#f5e7b2)",
+              color: "#0D0D0D",
+              fontSize: 16,
+              fontWeight: 700,
+              textDecoration: "none",
+              marginBottom: 12,
+              marginLeft: 12,
+              boxShadow: "0 2px 8px #d4af3720",
+              border: "none",
+              cursor: invoiceLoading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {invoiceLoading ? 'Preparing Invoice...' : 'Download Invoice'}
+          </button>
+          <div style={{ marginTop: 18, fontSize: 15, color: '#d4af37', fontWeight: 600 }}>
+            Thank you, {userName.split(' ')[0] || 'Customer'}! Your order ID is <span style={{color:'#fff'}}>{orderId}</span>
+          </div>
           <div style={{ marginTop: 10, fontSize: 13 }}>
             <a href="https://instagram.com/eshopperr" style={{ color: "#d4af37", textDecoration: "none", marginRight: 18 }}>
               Instagram
@@ -271,6 +354,48 @@ const ConfirmationPremium = ({
               Support
             </a>
           </div>
+        </div>
+
+        {/* Recommendations */}
+        {recommended.length > 0 && (
+          <div style={{ padding: '0 32px 32px 32px', textAlign: 'center' }}>
+            <div style={{ color: '#d4af37', fontWeight: 700, fontSize: 17, marginBottom: 10 }}>Recommended for You</div>
+            <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {recommended.map((p) => (
+                <div key={p._id || p.id} style={{ background: '#181818', borderRadius: 12, padding: 12, width: 140 }}>
+                  <img src={p.pic1 || p.image} alt={p.name} style={{ width: '100%', borderRadius: 8, marginBottom: 8 }} />
+                  <div style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>{p.name}</div>
+                  <div style={{ color: '#d4af37', fontWeight: 700, fontSize: 14 }}>{money(p.finalprice || p.price)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Feedback Prompt */}
+        <div style={{ padding: '0 32px 32px 32px', textAlign: 'center' }}>
+          <div style={{ color: '#fff', fontWeight: 600, fontSize: 15, marginBottom: 8 }}>How was your experience?</div>
+          <div>
+            {[1,2,3,4,5].map((star) => (
+              <span key={star} style={{ fontSize: 28, color: feedback >= star ? '#d4af37' : '#bdbdbd', cursor: 'pointer' }} onClick={() => setFeedback(star)}>&#9733;</span>
+            ))}
+          </div>
+          <button
+            onClick={handleFeedbackSubmit}
+            disabled={feedbackSent || !feedback}
+            style={{
+              marginTop: 10,
+              padding: '8px 28px',
+              borderRadius: 18,
+              background: feedbackSent ? '#bdbdbd' : '#d4af37',
+              color: '#0D0D0D',
+              fontWeight: 700,
+              border: 'none',
+              cursor: feedbackSent ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {feedbackSent ? 'Thank you!' : 'Submit Feedback'}
+          </button>
         </div>
       </div>
 

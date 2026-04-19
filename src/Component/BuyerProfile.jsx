@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, memo } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useMembership } from './MembershipContext'
@@ -309,7 +309,7 @@ function Field({ icon: Icon, label, value, copyable, full, onCopied }) {
     )
 }
 
-export default function BuyerProfile({ user = {} }) {
+const BuyerProfile = ({ user = {} }) => {
     const navigate = useNavigate()
     // ...existing code...
     const [toast, setToast] = useState(false)
@@ -385,4 +385,6 @@ export default function BuyerProfile({ user = {} }) {
             </div>
         </>
     )
-}
+};
+
+export default memo(BuyerProfile);

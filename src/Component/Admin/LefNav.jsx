@@ -6,6 +6,7 @@ import {
     ShoppingBag, MessageSquare, Send, CheckSquare, Package, TicketPercent,
     Menu, X, LayoutDashboard, Moon, Sun
 } from 'lucide-react'
+import './SystemControlCenter.css'
 
 export default function LefNav() {
     const location = useLocation()

@@ -57,7 +57,6 @@
         <td style="background:linear-gradient(120deg,#111111,#1a1813);border-bottom:2px solid #d4af37;text-align:center;padding:35px 15px;">
           <div style="font-family:'Playfair Display', Georgia, serif;font-style:italic;font-size:24px;color:#d4af37;margin-bottom:12px;">
             Exciting News, {{customerName}}</div>
-          <div style="font-family:'Playfair Display', Georgia, serif;font-size:34px;font-weight:700;line-height:1.2;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;">ORDER SHIPPED</div>
           <div class="mobile-hero-title" style="font-family:'Playfair Display', Georgia, serif;font-size:34px;font-weight:700;line-height:1.2;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;">ORDER SHIPPED</div>
           <div style="color:#c5a059;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-top:14px;">Order #{{orderId}} &bull; {{shippedOn}}</div>
         </td>
@@ -142,43 +141,32 @@
       <tr>
         <td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
           <div class="box" style="border:1px solid #2a2a2a;border-radius:8px;padding:20px;background:#0d0e10;">
-            <h3 class="heading" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:26px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;">ORDER DETAILS</h3>
             <h3 class="heading mobile-section-title" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:26px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;">ORDER DETAILS</h3>
             <table class="items" role="presentation" width="100%" style="width:100%;border:1px solid #222;border-radius:6px;overflow:hidden;border-collapse:collapse;">
               <tr>
-                <th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">ITEM</th>
-                <th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">DETAILS</th>
-                <th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">QTY</th>
-                <th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">PRICE</th>
                 <th class="mobile-table-header" style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">ITEM</th>
                 <th class="mobile-table-header" style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">DETAILS</th>
-                <th class="mobile-table-header" style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">QTY</th>
-                <th class="mobile-table-header" style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">PRICE</th>
+                <th class="mobile-table-header" style="text-align:center;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">QTY</th>
+                <th class="mobile-table-header" style="text-align:right;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">PRICE</th>
               </tr>
               {{#each items}}
               <tr>
-                <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><img class="thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;max-width:100%;display:block;" /></td>
-                <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><strong>{{name}}</strong><br><span class="dim" style="color:#b4bac6;">Size: {{size}}</span><br><span class="dim" style="color:#b4bac6;">Color: {{color}}</span></td>
-                <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
-                <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">INR {{subtotal}}</td>
-                <td class="mobile-table-cell" style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><img class="thumb mobile-thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;max-width:100%;display:block;" /></td>
-                <td class="mobile-table-cell" style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><strong>{{name}}</strong><br><span class="dim" style="color:#b4bac6;">Size: {{size}}</span><br><span class="dim" style="color:#b4bac6;">Color: {{color}}</span></td>
-                <td class="mobile-table-cell" style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
-                <td class="mobile-table-cell" style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">INR {{subtotal}}</td>
+                <td class="mobile-table-cell" style="padding:16px 10px; border-bottom:1px solid #292d37; vertical-align:middle; width:80px;"><img class="thumb mobile-thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;display:block;" /></td>
+                <td class="mobile-table-cell" style="padding:16px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:middle;"><strong style="color:#ffffff;">{{name}}</strong><br><span class="dim" style="color:#b4bac6; font-size:12px;">Size: {{size}} &nbsp;|&nbsp; Color: {{color}}</span></td>
+                <td class="mobile-table-cell" style="padding:16px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:middle; text-align:center;"><span style="background:#1a1a1a; padding:4px 10px; border-radius:4px; border:1px solid #333;">{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</span></td>
+                <td class="mobile-table-cell" style="padding:16px 10px; color:#d4af37; font-size:14px; font-weight:700; border-bottom:1px solid #292d37; vertical-align:middle; text-align:right;">INR {{subtotal}}</td>
               </tr>
               {{/each}}
             </table>
             
             <table class="grid" role="presentation" style="width:100%;margin-top:14px;border-collapse:collapse;">
               <tr>
-                <td style="width:50%;vertical-align:top;padding-right:4px;">
                 <td class="mobile-stack" style="width:50%;vertical-align:top;padding-right:4px;">
                   <div class="mini" style="border:1px solid #0f6f35;background:#101a12;border-radius:12px;padding:14px;min-height:115px;">
                     <div class="k" style="font-size:13px;color:#36d76d;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">SHIPPING ADDRESS</div>
                     <div class="v" style="color:#e7e9ed;font-size:14px;line-height:1.45;">{{shippingName}}<br>{{shippingAddressLine1}}<br>{{shippingAddressLine2}}<br>{{shippingAddressLine3}}<br>Phone: {{shippingPhone}}</div>
                   </div>
                 </td>
-                <td style="width:50%;vertical-align:top;padding-left:4px;">
                 <td class="mobile-stack" style="width:50%;vertical-align:top;padding-left:4px;">
                   <div class="mini2" style="border:1px solid #343944;background:#111317;border-radius:12px;padding:14px;min-height:115px;">
                     <div class="k2" style="font-size:13px;color:#efcb4a;margin-bottom:8px;font-weight:700;letter-spacing:.3px;">IMPORTANT TIPS</div>
@@ -188,12 +176,12 @@
               </tr>
             </table>
 
-            <a class="btn btn-primary" href="{{liveTrackingUrl}}" target="_blank"
-            <a class="btn btn-primary mobile-btn" href="{{liveTrackingUrl}}" target="_blank"
-              style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:16px 12px;font-size:16px;margin-top:24px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:1.5px;text-transform:uppercase;">LIVE TRACKING</a>
-            <a class="btn btn-secondary" href="{{carrierWebsiteUrl}}" target="_blank"
-            <a class="btn btn-secondary mobile-btn" href="{{carrierWebsiteUrl}}" target="_blank"
-              style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:16px 12px;font-size:16px;margin-top:14px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1.5px;text-transform:uppercase;">CARRIER WEBSITE</a>
+            <div style="text-align: center; margin-top: 30px;">
+              <a class="btn btn-primary mobile-btn" href="{{liveTrackingUrl}}" target="_blank"
+                style="display:inline-block;text-align:center;text-decoration:none;font-weight:700;border-radius:6px;padding:16px 32px;font-size:14px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 6px;min-width:180px;">LIVE TRACKING</a>
+              <a class="btn btn-secondary mobile-btn" href="{{carrierWebsiteUrl}}" target="_blank"
+                style="display:inline-block;text-align:center;text-decoration:none;font-weight:700;border-radius:6px;padding:16px 32px;font-size:14px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1.5px;text-transform:uppercase;margin:8px 6px;min-width:180px;">CARRIER WEBSITE</a>
+            </div>
           </div>
         </td>
       </tr>
@@ -201,8 +189,6 @@
       <tr><td style="padding:24px 20px;border-top:1px solid #2a2e36;text-align:center;background:#0d0e10;">
         <h4 style="font-family:'Playfair Display', Georgia, serif;margin:0 0 16px;font-size:24px;color:#d4af37;font-weight:400;">Need Help with Your Delivery?</h4>
         <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
-          <a href="{{whatsappUrl}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#06140b;border:1px solid #25d366;color:#25d366;text-align:center;letter-spacing:0.5px;">WhatsApp Support</a>
-          <a href="tel:{{supportPhone}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#151820;border:1px solid #756225;color:#f0d07a;text-align:center;letter-spacing:0.5px;margin-left:8px;">Call Us</a>
           <a class="mobile-flex-btn" href="{{whatsappUrl}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#06140b;border:1px solid #25d366;color:#25d366;text-align:center;letter-spacing:0.5px;">WhatsApp Support</a>
           <a class="mobile-flex-btn" href="tel:{{supportPhone}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#151820;border:1px solid #756225;color:#f0d07a;text-align:center;letter-spacing:0.5px;margin-left:8px;">Call Us</a>
         </div>

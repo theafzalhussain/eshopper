@@ -11,7 +11,8 @@ import {
     Search,
     SlidersHorizontal,
     Sparkles,
-    Truck
+    Truck,
+    Trash2
 } from 'lucide-react';
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
@@ -21,6 +22,7 @@ import { SOCKET_TRANSPORTS } from '../../constants';
 import LefNav from './LefNav';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
 import OrderActionDrawer from './OrderActionDrawer';
+import { motion } from 'framer-motion';
 import { BASE_URL as SHARED_BASE_URL } from '../../constants';
 import './AdminOrders.css';
 
@@ -813,277 +815,273 @@ export default function AdminOrders() {
     }, [filteredOrders, selectedOrders]);
 
     return (
-        <>
-        <LefNav />
-        <div className="admin-orders-page premium-layout-keep">
-            <div className="orders-toolbar-panel">
-                <div className="filter-grid">
-                    <div className="filter-item filter-search">
-                        <label>Search (Order ID / Name / Email)</label>
-                        <div className="search-input-wrap">
-                            <Search size={16} />
-                            <input
-                                type="text"
-                                placeholder="Search orders..."
-                                value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value);
-                                    setPage(1);
-                                }}
-                            />
+        <div className="lux-admin-page" style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
+            <LefNav />
+            <div className="admin-main-content">
+                <div className="container-fluid px-lg-4 py-4">
+                    
+                    {/* Luxury Header Banner */}
+                    <motion.div 
+                        className="lux-banner mb-4"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <div className="lux-banner-content">
+                            <div>
+                                <div className="lux-eyebrow"><Package size={14} className="mr-1"/> Dispatch Center</div>
+                                <h1 className="lux-banner-title">Global <span>Orders</span></h1>
+                                <p className="lux-banner-sub">Command center for logistics, order tracking, and fulfillment.</p>
+                            </div>
+                            <div className="lux-banner-stats">
+                                <div className="lux-stat-box">
+                                    <span>Total Revenue</span>
+                                    <strong>INR {stats.revenue.toLocaleString('en-IN')}</strong>
+                                </div>
+                                <div className="lux-stat-box">
+                                    <span>Active Orders</span>
+                                    <strong>{stats.total}</strong>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </motion.div>
 
-                    <div className="filter-item">
-                        <label>From Date</label>
-                        <input
-                            type="date"
-                            value={fromDate}
-                            max={toDate || undefined}
-                            onChange={(e) => {
-                                setDatePreset('custom');
-                                setFromDate(e.target.value);
-                                setPage(1);
-                            }}
-                        />
-                    </div>
-
-                    <div className="filter-item">
-                        <label>To Date</label>
-                        <input
-                            type="date"
-                            value={toDate}
-                            min={fromDate || undefined}
-                            onChange={(e) => {
-                                setDatePreset('custom');
-                                setToDate(e.target.value);
-                                setPage(1);
-                            }}
-                        />
-                    </div>
-
-                    <div className="filter-item">
-                        <label>Payment Status</label>
-                        <select
-                            value={paymentStatus}
-                            onChange={(e) => {
-                                setPaymentStatus(e.target.value);
-                                setPage(1);
-                            }}
+                    {notification && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }} 
+                            animate={{ opacity: 1, y: 0 }} 
+                            className={`alert alert-${notification.type === 'error' ? 'danger' : 'info'} border-0 shadow-sm rounded-lg mb-4 font-weight-bold`}
                         >
-                            {PAYMENT_STATUSES.map((status) => (
-                                <option key={status} value={status}>{status}</option>
-                            ))}
-                        </select>
-                    </div>
+                            <Sparkles size={16} className="mr-2 d-inline" /> {notification.message}
+                        </motion.div>
+                    )}
 
-                    <div className="filter-item">
-                        <label>Filter by Status</label>
-                        <select
-                            value={selectedStatus}
-                            onChange={(e) => {
-                                setSelectedStatus(e.target.value);
-                                setPage(1);
-                            }}
-                        >
-                            <option value="">All</option>
-                            {ALLOWED_STATUSES.map((status) => (
-                                <option key={status} value={status}>{status}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
+                    <motion.div 
+                        initial={{opacity:0, y:20}} 
+                        animate={{opacity:1, y:0}} 
+                        transition={{ delay: 0.2 }}
+                        className="lux-card"
+                    >
+                        {/* Toolbar: Search & Export */}
+                        <div className="lux-toolbar border-bottom pb-3">
+                            <div className="lux-search-box flex-grow-1" style={{ maxWidth: '400px' }}>
+                                <Search size={16} className="lux-search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by Order ID, Name, or Email..."
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setPage(1);
+                                    }}
+                                />
+                            </div>
+                            <div className="d-flex gap-2 flex-wrap align-items-center">
+                                <button className="lux-btn-ghost" onClick={exportCsv}><Download size={14} className="mr-1" /> CSV</button>
+                                <button className="lux-btn-ghost" onClick={exportPdf}><FileText size={14} className="mr-1" /> PDF</button>
+                                <button className="lux-btn-ghost" onClick={resetFilters}><Sparkles size={14} className="mr-1" /> Reset</button>
+                            </div>
+                        </div>
 
-                <div className="quick-date-row">
-                    <div className="quick-date-title">
-                        <CalendarDays size={15} /> Smart Date Filters
-                    </div>
-                    <div className="quick-date-actions">
-                        {DATE_PRESETS.map((preset) => (
-                            <button
-                                key={preset.key}
-                                type="button"
-                                className={`preset-btn ${datePreset === preset.key ? 'active' : ''}`}
-                                onClick={() => applyDatePreset(preset.key)}
-                            >
-                                {preset.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                        {/* Filters */}
+                        <div className="p-3 bg-light border-bottom d-flex flex-wrap gap-3 align-items-end lux-filters-bar">
+                            <div className="lux-filter-item">
+                                <label>Start Date</label>
+                                <input
+                                    type="date"
+                                    className="lux-input-sm"
+                                    value={fromDate}
+                                    max={toDate || undefined}
+                                    onChange={(e) => {
+                                        setDatePreset('custom');
+                                        setFromDate(e.target.value);
+                                        setPage(1);
+                                    }}
+                                />
+                            </div>
+                            <div className="lux-filter-item">
+                                <label>End Date</label>
+                                <input
+                                    type="date"
+                                    className="lux-input-sm"
+                                    value={toDate}
+                                    min={fromDate || undefined}
+                                    onChange={(e) => {
+                                        setDatePreset('custom');
+                                        setToDate(e.target.value);
+                                        setPage(1);
+                                    }}
+                                />
+                            </div>
+                            <div className="lux-filter-item">
+                                <label>Payment</label>
+                                <select
+                                    className="lux-select-sm"
+                                    value={paymentStatus}
+                                    onChange={(e) => {
+                                        setPaymentStatus(e.target.value);
+                                        setPage(1);
+                                    }}
+                                >
+                                    {PAYMENT_STATUSES.map((status) => (
+                                        <option key={status} value={status}>{status}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="lux-filter-item">
+                                <label>Status</label>
+                                <select
+                                    className="lux-select-sm"
+                                    value={selectedStatus}
+                                    onChange={(e) => {
+                                        setSelectedStatus(e.target.value);
+                                        setPage(1);
+                                    }}
+                                >
+                                    <option value="">All Statuses</option>
+                                    {ALLOWED_STATUSES.map((status) => (
+                                        <option key={status} value={status}>{status}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="lux-filter-item lux-filter-presets">
+                                <div className="lux-btn-group">
+                                    {DATE_PRESETS.map((preset) => (
+                                        <button
+                                            key={preset.key}
+                                            type="button"
+                                            className={`lux-btn-group-item ${datePreset === preset.key ? 'active' : ''}`}
+                                            onClick={() => applyDatePreset(preset.key)}
+                                        >
+                                            {preset.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
 
-                <div className="customization-row">
-                    <div className="custom-title">
-                        <SlidersHorizontal size={15} /> Customization
-                    </div>
-                    <div className="custom-controls">
-                        <label>
-                            Rows
-                            <select
-                                value={rowsPerPage}
-                                onChange={(e) => {
-                                    setRowsPerPage(Number(e.target.value));
-                                    setPage(1);
-                                }}
-                            >
-                                <option value={10}>10</option>
-                                <option value={25}>25</option>
-                                <option value={50}>50</option>
-                            </select>
-                        </label>
+                        {/* Bulk Actions row */}
+                        <div className="p-3 bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div className="d-flex align-items-center gap-2 flex-wrap">
+                                <select className="lux-select-sm" style={{width: 'auto'}} value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}>
+                                    {ALLOWED_STATUSES.map((status) => (
+                                        <option key={status} value={status}>{status}</option>
+                                    ))}
+                                </select>
+                                <button className="lux-btn-secondary" onClick={handleBulkUpdate} disabled={bulkUpdating || bulkDeleting || selectedOrders.size === 0}>
+                                    {bulkUpdating ? <Loader2 size={14} className="spin mr-1" /> : <Package size={14} className="mr-1" />} Bulk Update Selected
+                                </button>
+                                <button className="lux-btn-danger" onClick={handleBulkDelete} disabled={bulkUpdating || bulkDeleting || selectedOrders.size === 0}>
+                                    {bulkDeleting ? <Loader2 size={14} className="spin mr-1" /> : <Trash2 size={14} className="mr-1" />} Bulk Delete
+                                </button>
+                            </div>
+                            <div className="d-flex align-items-center gap-3 text-muted small font-weight-bold">
+                                <label className="mb-0 d-flex align-items-center cursor-pointer">
+                                    <input type="checkbox" className="mr-2" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+                                    Auto Refresh
+                                </label>
+                                <span>Rows: 
+                                    <select className="ml-1 border-0 bg-transparent outline-none font-weight-bold" value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setPage(1); }}>
+                                        <option value={10}>10</option>
+                                        <option value={25}>25</option>
+                                        <option value={50}>50</option>
+                                    </select>
+                                </span>
+                            </div>
+                        </div>
 
-                        <label>
-                            Density
-                            <select value={density} onChange={(e) => setDensity(e.target.value)}>
-                                <option value="compact">Compact</option>
-                                <option value="comfortable">Comfortable</option>
-                            </select>
-                        </label>
+                        {/* Table */}
+                        <div className="lux-table-responsive">
+                            {loading ? (
+                                <div className="text-center py-5 text-muted">
+                                    <Loader2 size={24} className="spin mb-2 mx-auto" />
+                                    <p>Loading orders...</p>
+                                </div>
+                            ) : filteredOrders.length === 0 ? (
+                                <div className="text-center py-5 text-muted">
+                                    <Package size={32} className="mb-2 opacity-50 mx-auto" />
+                                    <p>No orders found matching your criteria.</p>
+                                </div>
+                            ) : (
+                                <table className="lux-table">
+                                    <thead>
+                                        <tr>
+                                            <th className="text-center" style={{width: '50px'}}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectAll && filteredOrders.length > 0}
+                                                    onChange={(e) => handleSelectAll(e.target.checked)}
+                                                />
+                                            </th>
+                                            <th>Order ID</th>
+                                            <th>Customer</th>
+                                            <th className="hide-mobile">Email</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th className="hide-mobile">Items</th>
+                                            <th className="hide-mobile">Updated</th>
+                                            <th className="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredOrders.map((order) => {
+                                            const IconComp = STATUS_ICONS[order.orderStatus] || STATUS_ICONS.Pending;
+                                            const statusClass = STATUS_COLORS[order.orderStatus] || STATUS_COLORS.Pending;
 
-                        <label className="actual-only-toggle">
-                            <input
-                                type="checkbox"
-                                checked={actualOnly}
-                                onChange={(e) => setActualOnly(e.target.checked)}
-                            />
-                            Show only actual customer data
-                        </label>
-
-                        <button type="button" className="reset-btn" onClick={resetFilters}>
-                            <Sparkles size={14} /> Reset Filters
-                        </button>
-                    </div>
-                </div>
-
-                <div className="toolbar-second-row">
-                    <div className="toolbar-stats">
-                        <span>Selected: {stats.selected}</span>
-                        <span>Orders: {stats.total}</span>
-                        <span>Revenue: INR {stats.revenue.toLocaleString('en-IN')}</span>
-                    </div>
-
-                    <div className="toolbar-actions">
-                        <label className="auto-refresh-toggle">
-                            <input
-                                type="checkbox"
-                                checked={autoRefresh}
-                                onChange={(e) => setAutoRefresh(e.target.checked)}
-                            />
-                            Auto refresh
-                        </label>
-                        <button className="btn-export btn-csv" onClick={exportCsv}>
-                            <Download size={14} /> Export CSV
-                        </button>
-                        <button className="btn-export btn-pdf" onClick={exportPdf}>
-                            <FileText size={14} /> Export PDF
-                        </button>
-                    </div>
-                </div>
-
-                <div className="bulk-row">
-                    <select value={bulkStatus} onChange={(e) => setBulkStatus(e.target.value)}>
-                        {ALLOWED_STATUSES.map((status) => (
-                            <option key={status} value={status}>{status}</option>
-                        ))}
-                    </select>
-                    <button onClick={handleBulkUpdate} disabled={bulkUpdating || bulkDeleting}>
-                        {bulkUpdating ? <Loader2 size={14} className="spin" /> : <Package size={14} />} Bulk Update Selected
-                    </button>
-                    <button className="bulk-delete-btn" onClick={handleBulkDelete} disabled={bulkUpdating || bulkDeleting}>
-                        {bulkDeleting ? <Loader2 size={14} className="spin" /> : <span>🗑</span>} Bulk Delete Selected
-                    </button>
+                                            return (
+                                                <tr key={order.orderId} className={`lux-table-row ${selectedOrders.has(order.orderId) ? 'lux-row-selected' : ''}`}>
+                                                    <td className="text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedOrders.has(order.orderId)}
+                                                            onChange={() => handleOrderSelect(order.orderId)}
+                                                        />
+                                                    </td>
+                                                    <td className="lux-td-id">
+                                                        <div className="font-weight-bold color-ink">{String(order.orderId || '').slice(-8)}</div>
+                                                        <button type="button" className="lux-link-btn mt-1" onClick={() => setDetailOrder(order)}>View Details</button>
+                                                    </td>
+                                                    <td>
+                                                        <strong className="color-ink d-block">{order.userName || 'N/A'}</strong>
+                                                        <span className="text-muted small d-block d-md-none">{order.userEmail}</span>
+                                                    </td>
+                                                    <td className="hide-mobile color-muted">{order.userEmail || 'N/A'}</td>
+                                                    <td><strong className="lux-price-tag">INR {Number(order.finalAmount || 0).toLocaleString('en-IN')}</strong></td>
+                                                    <td>
+                                                        <span className={`lux-badge ${statusClass}`}>
+                                                            <IconComp size={12} className="mr-1" /> {order.orderStatus || 'Pending'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="hide-mobile font-weight-bold">{order.productCount || (order.products || []).length || 0}</td>
+                                                    <td className="hide-mobile color-muted">{new Date(order.updatedAt || Date.now()).toLocaleDateString('en-IN')}</td>
+                                                    <td className="text-right">
+                                                        <button
+                                                            type="button"
+                                                            className="lux-btn-action"
+                                                            onClick={() => openActionDrawer(order)}
+                                                        >
+                                                            <Sparkles size={14} className="mr-1" /> Update
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                        
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="lux-pagination">
+                                <button className="lux-page-btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
+                                <span className="lux-page-info">Page {page} of {totalPages}</span>
+                                <button className="lux-page-btn" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
+                            </div>
+                        )}
+                    </motion.div>
                 </div>
             </div>
-
-            {notification && (
-                <div className={`orders-notification ${notification.type}`}>{notification.message}</div>
-            )}
-
-            <div className="admin-orders-table-wrap">
-                {loading ? (
-                    <div className="loading-block">
-                        <Loader2 size={20} className="spin" /> Loading orders...
-                    </div>
-                ) : filteredOrders.length === 0 ? (
-                    <div className="loading-block">No orders found for selected filters.</div>
-                ) : (
-                    <table className={`admin-orders-table keep-layout-table density-${density}`}>
-                        <thead>
-                            <tr>
-                                <th className="text-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectAll && filteredOrders.length > 0}
-                                        onChange={(e) => handleSelectAll(e.target.checked)}
-                                    />
-                                </th>
-                                <th>Order ID</th>
-                                <th>Customer</th>
-                                <th>Email</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Items</th>
-                                <th>Updated</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredOrders.map((order) => {
-                                const IconComp = STATUS_ICONS[order.orderStatus] || STATUS_ICONS.Pending;
-                                const statusClass = STATUS_COLORS[order.orderStatus] || STATUS_COLORS.Pending;
-
-                                return (
-                                    <tr key={order.orderId}>
-                                        <td className="text-center" data-label="Select">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedOrders.has(order.orderId)}
-                                                onChange={() => handleOrderSelect(order.orderId)}
-                                            />
-                                        </td>
-                                        <td className="order-id-col" data-label="Order ID">
-                                            <div>{String(order.orderId || '').slice(-8)}</div>
-                                            <button className="details-link" onClick={() => setDetailOrder(order)}>View Details</button>
-                                        </td>
-                                        <td data-label="Customer" className="customer-col">
-                                            <div className="customer-name">{order.userName || 'N/A'}</div>
-                                            {order.userEmail && order.userEmail !== 'N/A' ? (
-                                                <div className="customer-email-mini">{order.userEmail}</div>
-                                            ) : null}
-                                        </td>
-                                        <td data-label="Email">{order.userEmail || 'N/A'}</td>
-                                        <td data-label="Amount" className="amount-col">INR {Number(order.finalAmount || 0).toLocaleString('en-IN')}</td>
-                                        <td data-label="Status">
-                                            <span className={`status-pill ${statusClass}`}>
-                                                <IconComp size={13} /> {order.orderStatus || 'Pending'}
-                                            </span>
-                                        </td>
-                                        <td data-label="Items">{order.productCount || (order.products || []).length || 0} items</td>
-                                        <td data-label="Updated">{new Date(order.updatedAt || Date.now()).toLocaleDateString('en-IN')}</td>
-                                        <td data-label="Action" className="action-cell">
-                                            <button
-                                                type="button"
-                                                className="open-action-drawer-btn"
-                                                onClick={() => openActionDrawer(order)}
-                                            >
-                                                <Sparkles size={14} /> Update Status
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-
-            {totalPages > 1 && (
-                <div className="pagination-row">
-                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Previous</button>
-                    <span>Page {page} of {totalPages}</span>
-                    <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</button>
-                </div>
-            )}
 
             <OrderDetailsDrawer
                 open={Boolean(detailOrder)}
@@ -1133,7 +1131,100 @@ export default function AdminOrders() {
                 onTomorrow={() => applyQuickDeliveryPreset(1)}
                 onApply={applyOrderAction}
             />
+
+            {/* Luxury Styles Embedded */}
+            <style dangerouslySetInnerHTML={{ __html: `
+                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Jost:wght@400;500;600;700&display=swap');
+
+                .lux-admin-page { font-family: 'Jost', sans-serif; }
+
+                /* Banner */
+                .lux-banner { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 24px; padding: 32px 40px; color: white; box-shadow: 0 20px 40px rgba(15,23,42,0.12); border: 1px solid rgba(212,175,55,0.2); }
+                .lux-banner-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+                .lux-eyebrow { display: inline-flex; align-items: center; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #D4AF37; font-weight: 600; margin-bottom: 8px; }
+                .lux-banner-title { font-family: 'Playfair Display', serif; font-size: clamp(24px, 3vw, 36px); font-weight: 800; color: #ffffff; margin: 0 0 4px; }
+                .lux-banner-title span { color: #D4AF37; }
+                .lux-banner-sub { color: #94a3b8; margin: 0; font-size: 14px; }
+                .lux-banner-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+                .lux-stat-box { background: linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05)); border: 1px solid rgba(212,175,55,0.3); border-radius: 16px; padding: 12px 20px; display: flex; flex-direction: column; }
+                .lux-stat-box span { font-size: 11px; text-transform: uppercase; color: #D4AF37; letter-spacing: 0.5px; }
+                .lux-stat-box strong { font-size: 24px; font-weight: 700; color: #fff; line-height: 1.2; }
+
+                /* Card & Table */
+                .lux-card { background: #fff; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); border: 1px solid rgba(212,175,55,0.1); overflow: hidden; }
+                .lux-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 24px; background: #fafbfc; }
+                .lux-search-box { position: relative; }
+                .lux-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+                .lux-search-box input { width: 100%; padding: 10px 16px 10px 40px; border-radius: 999px; border: 1px solid #e2e8f0; background: #fff; font-size: 13px; transition: all 0.2s; outline: none; }
+                .lux-search-box input:focus { border-color: #D4AF37; box-shadow: 0 0 0 3px rgba(212,175,55,0.1); }
+                .lux-btn-ghost { background: transparent; border: 1px solid #e2e8f0; color: #475569; padding: 8px 16px; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; }
+                .lux-btn-ghost:hover { background: #f8fafc; color: #0f172a; border-color: #cbd5e1; }
+
+                /* Filters */
+                .lux-filters-bar { background: #f8fafc; border-top: 1px solid #f1f5f9; }
+                .lux-filter-item { display: flex; flex-direction: column; gap: 4px; }
+                .lux-filter-item label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin: 0; }
+                .lux-input-sm, .lux-select-sm { padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; color: #0f172a; outline: none; transition: all 0.2s; background: #fff; cursor: pointer; }
+                .lux-input-sm:focus, .lux-select-sm:focus { border-color: #D4AF37; box-shadow: 0 0 0 3px rgba(212,175,55,0.1); }
+
+                .lux-btn-group { display: flex; background: #e2e8f0; padding: 3px; border-radius: 10px; }
+                .lux-btn-group-item { background: transparent; border: none; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #64748b; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+                .lux-btn-group-item.active { background: #fff; color: #0f172a; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+
+                .lux-btn-secondary { background: #f1f5f9; border: 1px solid #e2e8f0; color: #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; }
+                .lux-btn-secondary:hover:not(:disabled) { background: #e2e8f0; color: #0f172a; }
+                .lux-btn-danger { background: #fef2f2; border: 1px solid #fecaca; color: #ef4444; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; }
+                .lux-btn-danger:hover:not(:disabled) { background: #fee2e2; color: #b91c1c; }
+                .lux-btn-secondary:disabled, .lux-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+                /* Table */
+                .lux-table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+                .lux-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+                .lux-table th { background: #fff; padding: 16px 24px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: 1px solid #e2e8f0; text-align: left; }
+                .lux-table td { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 14px; }
+                .lux-table-row { transition: all 0.2s; }
+                .lux-table-row:hover td { background: #fafbfc; }
+                .lux-row-selected td { background: #fefce8 !important; }
+
+                .lux-link-btn { background: transparent; border: none; color: #D4AF37; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 0; cursor: pointer; transition: color 0.2s; }
+                .lux-link-btn:hover { color: #b8860b; text-decoration: underline; }
+
+                .lux-td-id { font-family: monospace; color: #94a3b8; font-size: 12px; }
+                .color-ink { color: #0f172a; }
+                .color-muted { color: #64748b; }
+                .lux-price-tag { color: #0f766e; font-weight: 700; }
+                .lux-badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+                .status-pending { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+                .status-confirmed { background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; }
+                .status-packed { background: #f3e8ff; color: #9333ea; border: 1px solid #e9d5ff; }
+                .status-shipped { background: #e0e7ff; color: #4f46e5; border: 1px solid #c7d2fe; }
+                .status-out-for-delivery { background: #fdf4ff; color: #c026d3; border: 1px solid #fae8ff; }
+                .status-delivered { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+                .lux-btn-action { display: inline-flex; align-items: center; padding: 8px 16px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #D4AF37; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px rgba(15,23,42,0.1); }
+                .lux-btn-action:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(15,23,42,0.2); background: #0f172a; }
+
+                .lux-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 20px; background: #fff; border-top: 1px solid #e2e8f0; }
+                .lux-page-btn { background: #fff; border: 1px solid #e2e8f0; color: #0f172a; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+                .lux-page-btn:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+                .lux-page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+                .lux-page-info { font-size: 13px; font-weight: 600; color: #64748b; }
+
+                .spin { animation: spin 1s linear infinite; }
+                @keyframes spin { 100% { transform: rotate(360deg); } }
+
+                @media (max-width: 768px) {
+                    .hide-mobile { display: none !important; }
+                    .lux-table { min-width: 100%; }
+                    .lux-banner { padding: 24px; }
+                    .lux-toolbar { flex-direction: column; align-items: stretch; }
+                    .lux-search-box { max-width: 100% !important; }
+                    .lux-filters-bar { flex-direction: column; align-items: stretch !important; }
+                    .lux-filter-presets { overflow-x: auto; padding-bottom: 4px; }
+                    .lux-btn-group { min-width: max-content; }
+                }
+            `}} />
         </div>
-        </>
     );
 }

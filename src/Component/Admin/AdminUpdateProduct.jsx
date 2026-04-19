@@ -8,7 +8,7 @@ import { getMaincategory } from '../../Store/ActionCreaters/MaincategoryActionCr
 import { getSubcategory } from '../../Store/ActionCreaters/SubcategoryActionCreators'
 import { getBrand } from '../../Store/ActionCreaters/BrandActionCreators'
 import { motion } from 'framer-motion'
-import { Save, ArrowLeft, Image as ImageIcon, Ruler, Palette, BadgePercent, LayoutList } from 'lucide-react'
+import { Save, ArrowLeft, Image as ImageIcon, Ruler, Palette, BadgePercent, LayoutList, Package, PackagePlus, IndianRupee, Tag, Layers, AlignLeft } from 'lucide-react'
 import './SystemControlCenter.css'
 
 export default function AdminUpdateProduct() {
@@ -97,257 +97,216 @@ function postData(e) {
     navigate("/admin-product");
 }
     return (
-        <div style={{ backgroundColor: "#fcfcfc", minHeight: "100vh" }} className="py-5">
+        <div className="lux-admin-page" style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
             {/* Premium Sidebar */}
             <LefNav />
 
             {/* Main Content Area */}
             <div className="admin-main-content">
-                <div className="container-fluid">
-                    <div className="w-100">
-                        <motion.div initial={{opacity:0, scale:0.98}} animate={{opacity:1, scale:1}} className="bg-white p-4 p-lg-5 shadow-2xl rounded-3xl">
-                            <div className="d-flex align-items-center mb-4 mb-lg-5 pb-3 border-bottom">
-                                 <Link to="/admin-product" className="btn btn-light rounded-circle p-2 mr-3 shadow-sm hover-shadow d-flex transition">
-                                    <ArrowLeft size={18} />
-                                 </Link>
-                                 <h4 className="font-weight-bold mb-0 text-dark">Overhaul Boutique Listing</h4>
+                <div className="container-fluid px-lg-4 py-4">
+                    
+                    {/* Luxury Header Banner */}
+                    <motion.div 
+                        className="lux-banner mb-4"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <div className="lux-banner-content">
+                            <div>
+                                <div className="lux-eyebrow"><Package size={14} className="mr-1"/> Inventory</div>
+                                <h1 className="lux-banner-title">Update <span>Product</span></h1>
+                                <p className="lux-banner-sub">Modify details, pricing and stock for {data.name || 'this item'}.</p>
                             </div>
+                            <div className="lux-banner-actions">
+                                <Link to="/admin-product" className="lux-btn-ghost">
+                                    <ArrowLeft size={16} className="mr-2"/> Back to Catalog
+                                </Link>
+                            </div>
+                        </div>
+                    </motion.div>
 
+                    <div className="w-100">
+                        <motion.div 
+                            initial={{opacity:0, y:20}} 
+                            animate={{opacity:1, y:0}} 
+                            transition={{ delay: 0.2 }}
+                            className="lux-card p-4 p-md-5"
+                        >
                             <form onSubmit={postData}>
-                                {/* Product Header (Large Field) */}
-                                <div className="mb-4 mb-lg-5">
-                                    <label className="text-muted small font-weight-bold ls-1 uppercase">Full Product Nomenclature</label>
-                                    <div className="input-group luxury-input-wrap border shadow-sm rounded-xl">
-                                        <div className="p-3 text-info border-right"><LayoutList size={22} /></div>
-                                        <input type="text" name="name" value={data.name} className="form-control border-0 font-weight-bold py-3 py-lg-4 h-100 shadow-none" placeholder="Designer Article Name" onChange={getData} required />
-                                    </div>
+                                {/* Section: Basic Details */}
+                                <div className="mb-4">
+                                    <label className="lux-label"><AlignLeft size={14} className="mr-1"/> Product Name</label>
+                                    <input type="text" name="name" value={data.name} placeholder='e.g. Premium Silk Evening Dress' className='lux-input' onChange={getData} required />
                                 </div>
 
-                                {/* Dropdown Matrix */}
-                                <div className="row mb-4 mb-lg-3 g-2 g-md-3">
-                                    {[
-                                        { label: "Department", name: "maincategory", options: maincat, val: data.maincategory },
-                                        { label: "Seasonality", name: "subcategory", options: subcat, val: data.subcategory },
-                                        { label: "Craft Label", name: "brand", options: brand, val: data.brand },
-                                        { label: "Status", name: "stock", options: [
-                                            { id: 'in', name: 'Active: In Stock', value: 'In Stock' },
-                                            { id: 'out', name: 'On Request: Sold Out', value: 'Out of Stock' }
-                                        ], val: data.stock, isStatus: true }
-                                    ].map((field, idx) => (
-                                        <div key={idx} className="col-12 col-md-3 mb-3 d-flex flex-column" style={{minWidth:'200px',flex:'1 1 240px',overflow:'visible',whiteSpace:'normal'}}>
-                                            <label className="text-muted small font-weight-bold uppercase mb-2 d-block">{field.label}</label>
-                                            {field.isStatus ? (
-                                                <select name="stock" value={data.stock} className="form-control rounded-xl p-2 p-lg-3 border-light shadow-sm admin-big-select" style={{width:'100%',whiteSpace:'normal',overflow:'visible',textOverflow:'unset',fontSize:'1.15rem',lineHeight:'1.5',minWidth:'180px',maxWidth:'100%'}} onChange={getData}>
-                                                    {field.options.map(opt => <option key={opt.id} value={opt.value}>{opt.name}</option>)}
-                                                </select>
-                                            ) : (
-                                                <select name={field.name} value={field.val} className="form-control rounded-xl p-2 p-lg-3 border-light shadow-sm admin-big-select" style={{width:'100%',whiteSpace:'normal',overflow:'visible',textOverflow:'unset',fontSize:'1.15rem',lineHeight:'1.5',minWidth:'180px',maxWidth:'100%'}} onChange={getData}>
-                                                    {field.options.map(opt => <option key={opt.id} value={opt.name}>{opt.name}</option>)}
-                                                </select>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Color, Price, Discount in one row */}
-                                <div className="row mb-4 mb-lg-3 g-2 g-md-3">
-                                    <div className="col-12 col-md-4 mb-3">
-                                        <div className="spec-item">
-                                            <Palette size={16} className="text-info"/>
-                                            <input name="color" value={data.color} placeholder="Visual Tint" onChange={getData} className="form-control"/>
+                                {/* Section: Categorization */}
+                                <div className="row mb-4 g-3">
+                                    <div className="col-sm-6 col-lg-3 mb-3 mb-lg-0">
+                                        <label className="lux-label"><Layers size={14} className="mr-1"/> Main Category</label>
+                                        <div className="lux-select-wrap">
+                                            <select name="maincategory" value={data.maincategory} onChange={getData} className="lux-select">
+                                                {maincat?.map((item, index) => <option key={index} value={item.name}>{item.name}</option>)}
+                                            </select>
                                         </div>
                                     </div>
-                                    <div className="col-6 col-md-4 mb-3">
-                                        <div className="spec-item">
-                                            <label>₹</label>
-                                            <input type="number" name="baseprice" value={data.baseprice} onChange={getData} className="form-control font-weight-bold text-dark"/>
+                                    <div className="col-sm-6 col-lg-3 mb-3 mb-lg-0">
+                                        <label className="lux-label"><Layers size={14} className="mr-1"/> Sub Category</label>
+                                        <div className="lux-select-wrap">
+                                            <select name="subcategory" value={data.subcategory} onChange={getData} className="lux-select">
+                                                {subcat?.map((item, index) => <option key={index} value={item.name}>{item.name}</option>)}
+                                            </select>
                                         </div>
                                     </div>
-                                    <div className="col-6 col-md-4 mb-3">
-                                        <div className="spec-item">
-                                            <BadgePercent size={18} className="text-danger"/>
-                                            <input type="number" name="discount" value={data.discount} onChange={getData} className="form-control text-danger"/>
+                                    <div className="col-sm-6 col-lg-3 mb-3 mb-sm-0">
+                                        <label className="lux-label"><Tag size={14} className="mr-1"/> Brand</label>
+                                        <div className="lux-select-wrap">
+                                            <select name="brand" value={data.brand} onChange={getData} className="lux-select">
+                                                {brand?.map((item, index) => <option key={index} value={item.name}>{item.name}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="col-sm-6 col-lg-3">
+                                        <label className="lux-label"><Package size={14} className="mr-1"/> Stock Status</label>
+                                        <div className="lux-select-wrap">
+                                            <select name="stock" value={data.stock} onChange={getData} className="lux-select">
+                                                <option value="In Stock">In Stock</option>
+                                                <option value="Out of Stock">Out of Stock</option>
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Size section below all */}
-                                <div className="row mb-4 mb-lg-5 g-2 g-md-3">
-                                    <div className="col-12">
-                                        <div className="spec-item size-spec-item" style={{flexDirection:'column', alignItems:'flex-start', background:'transparent', border:'none', boxShadow:'none', padding:0}}>
-                                            <div style={{display:'flex',alignItems:'center',gap:'0.5rem',marginBottom:8}}>
-                                                <Ruler size={16} className="text-info"/>
-                                                <span style={{fontWeight:600,fontSize:'13px'}}>Size</span>
-                                            </div>
-                                            <div className="size-grid-responsive">
-                                                <div className="size-row">
-                                                    {['XS','S','M','L','XL','XXL',26,28,30,32,34,36,38,40,'5-6','6-7','7-8','8-9','9-10','10-11','11-12','12-13','13-14','14-15','15-16'].map((sz) => (
-                                                        <label key={sz} className="size-checkbox-label size-center">
-                                                            <input
-                                                                type="checkbox"
-                                                                name="size"
-                                                                value={sz.toString()}
-                                                                checked={Array.isArray(data.size) ? data.size.includes(sz.toString()) : false}
-                                                                onChange={getData}
-                                                            />
-                                                            <span>{sz}</span>
-                                                        </label>
-                                                    ))}
+                                {/* Section: Pricing & Attributes */}
+                                <div className="row mb-4 g-3">
+                                    <div className="col-md-4 mb-3 mb-md-0">
+                                        <label className="lux-label"><Palette size={14} className="mr-1"/> Color Variant</label>
+                                        <input type="text" name='color' value={data.color} placeholder='e.g. Midnight Blue' onChange={getData} className='lux-input' required />
+                                    </div>
+                                    <div className="col-sm-6 col-md-4 mb-3 mb-sm-0">
+                                        <label className="lux-label"><IndianRupee size={14} className="mr-1"/> Base Price (₹)</label>
+                                        <input type="number" name='baseprice' value={data.baseprice} placeholder='0.00' onChange={getData} className='lux-input' required min="0" />
+                                    </div>
+                                    <div className="col-sm-6 col-md-4">
+                                        <label className="lux-label"><BadgePercent size={14} className="mr-1"/> Discount (%)</label>
+                                        <input type="number" name='discount' value={data.discount} placeholder='0' onChange={getData} className='lux-input lux-input-highlight' required min="0" max="100" />
+                                    </div>
+                                </div>
+
+                                {/* Section: Sizes */}
+                                <div className="mb-4">
+                                    <label className="lux-label">Available Sizes</label>
+                                    <div className="lux-size-wrap">
+                                        {['XS','S','M','L','XL','XXL','26','28','30','32','34','36','38','40','5-6','6-7','7-8','8-9','9-10','10-11','11-12','12-13','13-14','14-15','15-16'].map((sz) => (
+                                            <label key={sz} className="lux-size-label">
+                                                <input
+                                                    type="checkbox"
+                                                    name="size"
+                                                    value={sz.toString()}
+                                                    checked={Array.isArray(data.size) ? data.size.includes(sz.toString()) : false}
+                                                    onChange={getData}
+                                                />
+                                                <span className="lux-size-pill">{sz}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Section: Description */}
+                                <div className="mb-4">
+                                    <label className="lux-label"><AlignLeft size={14} className="mr-1"/> Editorial Description</label>
+                                    <textarea name="description" rows="4" value={data.description} onChange={getData} className='lux-textarea' placeholder="Detailed product description..."></textarea>
+                                </div>
+
+                                {/* Section: Images */}
+                                <div className="mb-5">
+                                    <label className="lux-label mb-3"><ImageIcon size={14} className="mr-1"/> Product Images</label>
+                                    <div className="row g-3">
+                                        {['pic1', 'pic2', 'pic3', 'pic4'].map((picName, index) => (
+                                            <div className="col-6 col-md-3 mb-3 mb-md-0" key={picName}>
+                                                <div className="lux-file-box">
+                                                    <input type="file" name={picName} onChange={getFile} className="lux-file-input" accept="image/*" />
+                                                    <div className="lux-file-content">
+                                                        {data[picName] && typeof data[picName] === 'string' ? (
+                                                            <img src={data[picName]} alt="Current" style={{height: '40px', objectFit: 'contain', marginBottom: '8px', borderRadius: '4px'}} />
+                                                        ) : (
+                                                            <ImageIcon size={24} className="mb-2 opacity-50" />
+                                                        )}
+                                                        <span>{index === 0 ? 'Main Image' : `Angle ${index + 1}`}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <style>{`
-                                        .size-grid-responsive {
-                                            width: 100%;
-                                            max-width: 100%;
-                                            margin-bottom: 2px;
-                                            display: flex;
-                                            flex-direction: column;
-                                            gap: 8px;
-                                            overflow-x: auto;
-                                        }
-                                        .size-row {
-                                            display: flex;
-                                            gap: 10px;
-                                            flex-wrap: wrap;
-                                            justify-content: flex-start;
-                                        }
-                                        .size-checkbox-label {
-                                            background: #f5f7fa;
-                                            border-radius: 10px;
-                                            padding: 10px 0;
-                                            color: #1a1a1a;
-                                            border: 2px solid #d1d5db;
-                                            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-                                            font-weight: 700;
-                                            font-size: 1.08em;
-                                            transition: all 0.2s;
-                                            display: flex;
-                                            flex-direction: column;
-                                            align-items: center;
-                                            justify-content: center;
-                                            cursor: pointer;
-                                            min-width: 60px;
-                                            max-width: 80px;
-                                            width: 100%;
-                                            box-sizing: border-box;
-                                            text-align: center;
-                                            gap: 2px;
-                                        }
-                                        .size-checkbox-label input[type='checkbox'] {
-                                            accent-color: #007bff;
-                                            width: 22px;
-                                            height: 22px;
-                                            margin: 0 0 2px 0;
-                                            display: block;
-                                        }
-                                        .size-checkbox-label input[type='checkbox']:checked + span {
-                                            color: #007bff;
-                                            font-weight: 900;
-                                        }
-                                        @media (max-width: 991px) {
-                                            .size-row {
-                                                gap: 8px;
-                                            }
-                                            .size-checkbox-label {
-                                                padding: 8px 0;
-                                                font-size: 1em;
-                                            }
-                                        }
-                                        @media (max-width: 767px) {
-                                            .size-row {
-                                                gap: 7px;
-                                            }
-                                            .size-checkbox-label {
-                                                padding: 7px 0;
-                                                font-size: 0.97em;
-                                            }
-                                        }
-                                        @media (max-width: 600px) {
-                                            .size-grid-responsive {
-                                                gap: 7px;
-                                            }
-                                            .size-row {
-                                                flex-direction: row;
-                                                flex-wrap: wrap;
-                                                gap: 7px;
-                                                justify-content: flex-start;
-                                            }
-                                            .size-checkbox-label {
-                                                width: 100%;
-                                                padding: 12px 0;
-                                                font-size: 1.08em;
-                                                border-radius: 14px;
-                                            }
-                                            .size-spec-item {
-                                                margin-top: 12px;
-                                            }
-                                        }
-                                        @media (max-width: 480px) {
-                                            .size-row {
-                                                gap: 6px;
-                                            }
-                                            .size-checkbox-label {
-                                                padding: 8px 0;
-                                                font-size: 0.97em;
-                                            }
-                                        }
-                                            `}</style>
-                                        </div>
+                                        ))}
                                     </div>
                                 </div>
 
-                                {/* Description Editor */}
-                                <div className="mb-4 mb-lg-5">
-                                    <label className="text-muted small font-weight-bold uppercase mb-2 d-block">EDITORIAL DESCRIPTION</label>
-                                    <textarea name="description" value={data.description} rows="4" className="form-control border shadow-sm p-3 p-lg-4 rounded-2xl" style={{backgroundColor:"#fbfbfb"}} onChange={getData}></textarea>
-                                </div>
-
-                                {/* Digital Asset Management */}
-                                <div className="row mb-4 mb-lg-5">
-                                    {["pic1", "pic2", "pic3", "pic4"].map((pic, i) => (
-                                        <div key={i} className="col-6 col-md-3 mb-3 text-center">
-                                            <div className="asset-box bg-light rounded-2xl p-3 p-lg-4 border shadow-inner">
-                                                <ImageIcon size={24} className="text-muted opacity-50 mb-2"/>
-                                                <p className="xx-small text-muted font-weight-bold uppercase mb-2">Perspective {i+1}</p>
-                                                <input type="file" name={pic} className="form-control-file small-file-btn" onChange={getFile}/>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.98 }} type="submit" className="btn btn-dark btn-block py-3 rounded-pill shadow-xl font-weight-bold ls-2 mt-4 d-flex align-items-center justify-content-center">
-                                    <Save size={20} className="mr-2" /> PUBLISH ALL REVISIONS
+                                <motion.button
+                                    whileHover={{ y: -2 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    type='submit'
+                                    className='lux-btn-submit'
+                                >
+                                    <Save size={18} /> SYNC REVISIONS
                                 </motion.button>
                             </form>
                         </motion.div>
                     </div>
                 </div>
             </div>
+            
+            {/* Luxury Styles Embedded */}
             <style dangerouslySetInnerHTML={{ __html: `
-                .admin-big-select, .admin-big-select option {
-                    font-size: 1.15rem !important;
-                    line-height: 1.5 !important;
-                    white-space: normal !important;
-                    overflow: visible !important;
-                    text-overflow: unset !important;
-                    min-width: 180px !important;
-                    max-width: 100% !important;
+                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Jost:wght@400;500;600;700&display=swap');
+
+                .lux-admin-page { font-family: 'Jost', sans-serif; }
+
+                /* Banner */
+                .lux-banner {
+                    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                    border-radius: 24px; padding: 32px 40px; color: white;
+                    box-shadow: 0 20px 40px rgba(15,23,42,0.12);
+                    border: 1px solid rgba(212,175,55,0.2);
                 }
-                .shadow-2xl { box-shadow: 0 40px 100px -10px rgba(0,0,0,0.12) !important; }
-                .rounded-2xl { border-radius: 20px !important; } .rounded-3xl { border-radius: 42px !important; }
-                .spec-item { display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 5px 15px; border-radius: 50px; border: 1.5px solid #eee; }
-                .spec-item input { border: none !important; background: transparent; height: 45px; width: 100%; outline: none !important; font-size: 13px; font-weight: 700; }
-                .ls-2 { letter-spacing: 2px; } .ls-1 { letter-spacing: 1px; }
-                .small-file-btn { font-size: 9px; cursor: pointer; color: #17a2b8; font-weight: bold; }
-                .row.g-2>[class*='col-'] { margin-bottom: 12px; }
-                .row.g-2>[class*='col-'] > * { min-width: 160px; }
-                @media (max-width: 991px) {
-                    .row.g-2>[class*='col-'] { min-width: 100%; }
-                }
-                @media (max-width: 767px) {
-                    .spec-item { padding: 5px 10px; }
-                    .spec-item input { height: 38px; font-size: 12px; }
-                    .row.g-2>[class*='col-'] { margin-bottom: 10px; min-width: 100%; }
+                .lux-banner-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+                .lux-eyebrow { display: inline-flex; align-items: center; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #D4AF37; font-weight: 600; margin-bottom: 8px; }
+                .lux-banner-title { font-family: 'Playfair Display', serif; font-size: clamp(24px, 3vw, 36px); font-weight: 800; color: #ffffff; margin: 0 0 4px; }
+                .lux-banner-title span { color: #D4AF37; }
+                .lux-banner-sub { color: #94a3b8; margin: 0; font-size: 14px; }
+                .lux-btn-ghost { display: inline-flex; align-items: center; padding: 10px 20px; border-radius: 999px; background: rgba(255,255,255,0.1); color: #fff; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; text-decoration: none; transition: all 0.3s; border: 1px solid rgba(255,255,255,0.2); }
+                .lux-btn-ghost:hover { background: rgba(255,255,255,0.2); color: #D4AF37; border-color: rgba(212,175,55,0.5); }
+
+                /* Card & Forms */
+                .lux-card { background: #fff; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.04); border: 1px solid rgba(212,175,55,0.1); }
+                .lux-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 8px; display: flex; align-items: center; }
+                .lux-input, .lux-select, .lux-textarea { width: 100%; padding: 14px 18px; border-radius: 12px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: 14px; font-weight: 500; transition: all 0.2s; outline: none; color: #0f172a; font-family: inherit; }
+                .lux-input:focus, .lux-select:focus, .lux-textarea:focus { border-color: #D4AF37; background: #fff; box-shadow: 0 0 0 4px rgba(212,175,55,0.1); }
+                .lux-input-highlight { color: #ef4444 !important; font-weight: 700 !important; }
+                .lux-select-wrap { position: relative; }
+                .lux-select { appearance: none; -webkit-appearance: none; padding-right: 40px; cursor: pointer; }
+                .lux-select-wrap::after { content: ''; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #64748b; pointer-events: none; }
+
+                /* Size Pills */
+                .lux-size-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+                .lux-size-label { cursor: pointer; position: relative; margin: 0; }
+                .lux-size-label input { position: absolute; opacity: 0; cursor: pointer; }
+                .lux-size-pill { padding: 8px 16px; border-radius: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; font-size: 13px; font-weight: 600; color: #64748b; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; min-width: 50px; }
+                .lux-size-label:hover .lux-size-pill { border-color: #cbd5e1; background: #e2e8f0; }
+                .lux-size-label input:checked ~ .lux-size-pill { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #D4AF37; border-color: #0f172a; box-shadow: 0 4px 10px rgba(15,23,42,0.2); }
+
+                /* File Upload */
+                .lux-file-box { border: 2px dashed #cbd5e1; border-radius: 16px; padding: 24px 12px; text-align: center; background: #f8fafc; transition: all 0.2s; cursor: pointer; position: relative; overflow: hidden; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+                .lux-file-box:hover { border-color: #D4AF37; background: #fffdf5; }
+                .lux-file-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
+                .lux-file-content { display: flex; flex-direction: column; align-items: center; color: #64748b; font-size: 12px; font-weight: 600; }
+                
+                /* Submit Button */
+                .lux-btn-submit { width: 100%; padding: 18px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #D4AF37; border: none; border-radius: 14px; font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; box-shadow: 0 10px 20px rgba(15,23,42,0.15); display: flex; justify-content: center; align-items: center; gap: 8px; }
+                .lux-btn-submit:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(15,23,42,0.25); background: #0f172a; }
+
+                @media (max-width: 768px) {
+                    .lux-banner { padding: 24px; }
+                    .lux-banner-actions { margin-top: 16px; width: 100%; }
+                    .lux-btn-ghost { width: 100%; justify-content: center; }
                 }
             `}} />
         </div>

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, memo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { addNewslatter, getNewslatter } from "../Store/ActionCreaters/NewslatterActionCreators"
 import { motion } from 'framer-motion'
 
-export default function Newslatter() {
+const Newslatter = () => {
     var [email, setemail] = useState("")
     var [show, setshow] = useState(false)
     var [msg, setmsg] = useState("")
@@ -79,4 +79,6 @@ export default function Newslatter() {
             `}} />
         </section>
     )
-}
+};
+
+export default memo(Newslatter);

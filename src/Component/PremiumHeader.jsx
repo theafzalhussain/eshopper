@@ -1,6 +1,6 @@
-import React from "react";
+import React, { memo } from "react";
 
-export default function PremiumHeader({ title, subtitle }) {
+const PremiumHeader = ({ title, subtitle }) => {
   return (
     <div style={{ textAlign: "center", margin: "32px 0 24px 0" }}>
       <div style={{ letterSpacing: 2, color: "#C9A84C", fontWeight: 600, fontSize: 13, textTransform: "uppercase", marginBottom: 8 }}>
@@ -25,4 +25,6 @@ export default function PremiumHeader({ title, subtitle }) {
       {subtitle && <div style={{ color: "#e5e5e5", fontSize: 18, marginTop: 12 }}>{subtitle}</div>}
     </div>
   );
-}
+};
+
+export default memo(PremiumHeader);

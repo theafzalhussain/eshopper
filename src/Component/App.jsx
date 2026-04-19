@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { ToastProvider } from './ToastNotification'
 import Navbaar from './Navbaar'
 import Footer from './Footer'
-import ChatBot from './ChatBot'
 import { useMembership } from './MembershipContext'
 
+const ChatBot = lazy(() => import('./ChatBot'))
 const Home = lazy(() => import('./Home'))
 const About = lazy(() => import('./About'))
 const Contact = lazy(() => import('./Contact'))
@@ -60,7 +60,9 @@ const AppShell = ({ children }) => {
     <>
       <ScrollToTop />
       <Navbaar />
-      <ChatBot />
+      <Suspense fallback={null}>
+        <ChatBot />
+      </Suspense>
       {children}
       {shouldShowFooter && <Footer />}
     </>

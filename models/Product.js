@@ -22,4 +22,8 @@ const productSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+// 1. Indexing in Models
+productSchema.index({ maincategory: 1, subcategory: 1 });
+productSchema.index({ name: 'text', brand: 'text' }); // For text search
+
 module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);

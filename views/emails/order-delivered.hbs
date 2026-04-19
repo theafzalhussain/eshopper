@@ -24,8 +24,8 @@
       .igrid td { display: block; width: 100%; padding:0 0 10px 0 !important; }
       
       /* Global Responsive Classes */
-      .mobile-stack { display: block !important; width: 100% !important; padding: 0 !important; margin-bottom: 12px !important; box-sizing: border-box !important; }
-      .mobile-btn { display: block !important; width: 100% !important; box-sizing: border-box !important; margin: 10px 0 !important; }
+      .mobile-stack { display: block !important; width: 100% !important; padding: 0 12px !important; margin-bottom: 16px !important; box-sizing: border-box !important; }
+      .mobile-btn { display: inline-block !important; width: auto !important; min-width: 220px !important; box-sizing: border-box !important; margin: 8px 4px !important; }
       .mobile-flex-btn { width: 100% !important; min-width: unset !important; margin-left: 0 !important; margin-right: 0 !important; margin-bottom: 10px !important; }
       .mobile-hero-title { font-size: 26px !important; line-height: 1.3 !important; }
       .mobile-section-title { font-size: 20px !important; }
@@ -59,7 +59,6 @@
       <tr>
         <td style="background:linear-gradient(120deg,#111111,#1a1813);border-bottom:2px solid #d4af37;text-align:center;padding:35px 15px;">
           <div style="font-family:Georgia,'Times New Roman',serif;font-size:42px;color:#d4af37;line-height:1;margin-bottom:12px;">&#10003;</div>
-          <div style="font-family:'Playfair Display', Georgia, serif;font-size:34px;font-weight:700;line-height:1.2;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;">ORDER DELIVERED</div>
           <div class="mobile-hero-title" style="font-family:'Playfair Display', Georgia, serif;font-size:34px;font-weight:700;line-height:1.2;letter-spacing:1.5px;text-transform:uppercase;color:#ffffff;">ORDER DELIVERED</div>
           <div style="color:#c5a059;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-top:14px;">Order #{{orderId}} &bull; {{deliveredOn}}</div>
         </td>
@@ -129,19 +128,19 @@
           <div style="margin-top:28px;border:1px solid #d4af37;border-radius:12px;padding:24px;background:#1a1813;text-align:center;box-shadow: 0 4px 15px rgba(212,175,55,0.1);">
             <div style="font-size:32px;color:#d4af37;margin-bottom:8px;">&#9671;</div>
             <h3 style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:24px;margin:0 0 8px;">Your Tax Invoice is Ready</h3>
-            <h3 class="mobile-section-title" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:24px;margin:0 0 8px;">Your Tax Invoice is Ready</h3>
             <p style="color:#d3c7a8;font-size:15px;margin:0 0 20px;">Download your official GST invoice for warranty, return, and tax purposes.</p>
-            <a href="{{finalInvoiceUrl}}" style="display:inline-block;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000;text-decoration:none;padding:14px 24px;border-radius:6px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">DOWNLOAD TAX INVOICE</a>
-            <a class="mobile-btn" href="{{finalInvoiceUrl}}" style="display:inline-block;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000;text-decoration:none;padding:14px 24px;border-radius:6px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">DOWNLOAD TAX INVOICE</a>
+            <div style="text-align: center; margin-top: 16px;">
+              <a class="mobile-btn" href="{{finalInvoiceUrl}}" target="_blank" style="display:inline-block;text-align:center;text-decoration:none;font-weight:700;border-radius:6px;padding:16px 24px;font-size:13px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:1px;text-transform:uppercase;margin:8px 6px;min-width:200px;box-sizing:border-box;">DOWNLOAD TAX INVOICE</a>
+            </div>
           </div>
 
           <div style="margin-top:24px;border:1px solid #2a2a2a;border-radius:12px;padding:24px;background:#0d0e10;text-align:center;">
             <h4 style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:20px;margin:0 0 8px;">How was your experience?</h4>
-            <h4 class="mobile-section-title" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:20px;margin:0 0 8px;">How was your experience?</h4>
             <p style="color:#c8cdd7;font-size:15px;margin:0;">Rate your order and help us serve you better</p>
             <div style="color:#f4d64b;font-size:36px;letter-spacing:6px;margin:12px 0;line-height:1;">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <a href="{{reviewUrl}}" style="display:inline-block;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">WRITE A REVIEW</a>
-            <a class="mobile-btn" href="{{reviewUrl}}" style="display:inline-block;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">WRITE A REVIEW</a>
+            <div style="text-align: center; margin-top: 10px;">
+              <a class="mobile-btn" href="{{reviewUrl}}" target="_blank" style="display:inline-block;text-align:center;text-decoration:none;font-weight:700;border-radius:6px;padding:16px 24px;font-size:13px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1px;text-transform:uppercase;margin:8px 6px;min-width:200px;box-sizing:border-box;">WRITE A REVIEW</a>
+            </div>
           </div>
         </td>
       </tr>
@@ -149,36 +148,25 @@
       <tr>
         <td class="section" style="padding:22px 20px;border-top:1px solid #272a30;">
           <div class="box" style="border:1px solid #2a2a2a;border-radius:8px;padding:20px;background:#0d0e10;">
-            <h3 class="heading" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:22px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;">WHAT YOU RECEIVED</h3>
             <h3 class="heading mobile-section-title" style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:22px;margin:0 0 16px;letter-spacing:1px;text-transform:uppercase;">WHAT YOU RECEIVED</h3>
             <table class="items" role="presentation" width="100%" style="width:100%;border:1px solid #222;border-radius:6px;overflow:hidden;border-collapse:collapse;">
               <tr>
-                <th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">ITEM</th>
-                <th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">DETAILS</th>
-                <th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">QTY</th>
-                <th style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">PRICE</th>
-                <th class="mobile-table-header" style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">ITEM</th>
-                <th class="mobile-table-header" style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">DETAILS</th>
-                <th class="mobile-table-header" style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">QTY</th>
-                <th class="mobile-table-header" style="text-align:left;font-size:13px;color:#efcb4a;background:#13161b;padding:10px;border-bottom:1px solid #2d313a;">PRICE</th>
+                <th class="mobile-table-header" style="text-align:center;font-size:12px;color:#efcb4a;background:#13161b;padding:12px;border-bottom:1px solid #2d313a;">ITEM</th>
+                <th class="mobile-table-header" style="text-align:left;font-size:12px;color:#efcb4a;background:#13161b;padding:12px;border-bottom:1px solid #2d313a;">DETAILS</th>
+                <th class="mobile-table-header" style="text-align:center;font-size:12px;color:#efcb4a;background:#13161b;padding:12px;border-bottom:1px solid #2d313a;">QTY</th>
+                <th class="mobile-table-header" style="text-align:right;font-size:12px;color:#efcb4a;background:#13161b;padding:12px;border-bottom:1px solid #2d313a;">PRICE</th>
               </tr>
               {{#each items}}
               <tr>
-                <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><img src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;max-width:100%;display:block;" /></td>
-                <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><strong>{{name}}</strong><br><span style="color:#b4bac6;">Fashion</span></td>
-                <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
-                <td style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">INR {{subtotal}}</td>
-                <td class="mobile-table-cell" style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><img class="mobile-thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;max-width:100%;display:block;" /></td>
-                <td class="mobile-table-cell" style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;"><strong>{{name}}</strong><br><span style="color:#b4bac6;">Fashion</span></td>
-                <td class="mobile-table-cell" style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</td>
-                <td class="mobile-table-cell" style="padding:12px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:top;">INR {{subtotal}}</td>
+                <td class="mobile-table-cell" style="padding:16px 10px; border-bottom:1px solid #292d37; vertical-align:middle; width:80px; text-align:center;"><img class="thumb mobile-thumb" src="{{imageUrl}}" alt="{{name}}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid #3a3e48;display:inline-block;" /></td>
+                <td class="mobile-table-cell" style="padding:16px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:middle; text-align:left;"><strong style="color:#ffffff;display:block;margin-bottom:4px;">{{name}}</strong><span class="dim" style="color:#b4bac6; font-size:12px;">Size: {{size}} &nbsp;|&nbsp; Color: {{color}}</span></td>
+                <td class="mobile-table-cell" style="padding:16px 10px; color:#eef0f4; font-size:14px; border-bottom:1px solid #292d37; vertical-align:middle; text-align:center;"><span style="background:#1a1a1a; padding:4px 12px; border-radius:4px; border:1px solid #333; font-weight:bold;">{{#if quantity}}{{quantity}}{{else}}{{qty}}{{/if}}</span></td>
+                <td class="mobile-table-cell" style="padding:16px 10px; color:#d4af37; font-size:14px; font-weight:700; border-bottom:1px solid #292d37; vertical-align:middle; text-align:right;">INR {{subtotal}}</td>
               </tr>
               {{/each}}
               <tr>
-                <td colspan="3" style="padding:12px 10px; background:#1a1813; color:#d4af37; font-weight:800; font-size:15px; border-bottom:none;">Total Paid</td>
-                <td style="padding:12px 10px; background:#1a1813; color:#d4af37; font-weight:800; font-size:15px; border-bottom:none;">INR {{totalPaid}}</td>
-                <td colspan="3" class="mobile-table-cell" style="padding:12px 10px; background:#1a1813; color:#d4af37; font-weight:800; font-size:15px; border-bottom:none;">Total Paid</td>
-                <td class="mobile-table-cell" style="padding:12px 10px; background:#1a1813; color:#d4af37; font-weight:800; font-size:15px; border-bottom:none;">INR {{totalPaid}}</td>
+                <td colspan="3" class="mobile-table-cell" style="padding:16px 10px; background:#1a1813; color:#d4af37; font-weight:800; font-size:14px; border-bottom:none; text-align:right; text-transform:uppercase; letter-spacing:1px;">Total Paid</td>
+                <td class="mobile-table-cell" style="padding:16px 10px; background:#1a1813; color:#d4af37; font-weight:800; font-size:15px; border-bottom:none; text-align:right;">INR {{totalPaid}}</td>
               </tr>
             </table>
 
@@ -186,8 +174,9 @@
               <div style="font-size:32px;color:#d4af37;margin-bottom:8px;line-height:1;">&#10022;</div>
               <h4 style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:22px;margin:0 0 8px;">Share the Luxury!</h4>
               <p style="color:#d3c7a8;font-size:15px;margin:0 0 16px;">Refer a friend to eShopper Luxe and you both get <strong>10% OFF</strong> your next purchase.</p>
-              <a href="{{referralShareUrl}}" style="display:inline-block;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Share &amp; Earn 10% Off</a>
-              <a class="mobile-btn" href="{{referralShareUrl}}" style="display:inline-block;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Share &amp; Earn 10% Off</a>
+              <div style="text-align: center; margin-top: 10px;">
+                <a class="mobile-btn" href="{{referralShareUrl}}" target="_blank" style="display:inline-block;text-align:center;text-decoration:none;font-weight:700;border-radius:6px;padding:16px 24px;font-size:13px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:1px;text-transform:uppercase;margin:8px 6px;min-width:200px;box-sizing:border-box;">SHARE &amp; EARN 10% OFF</a>
+              </div>
               <div style="margin-top:16px;color:#888;font-size:13px;text-transform:uppercase;letter-spacing:1px;">Your Personal Code</div>
               <div style="margin-top:6px;display:inline-block;background:#0a0a0c;border:1px dashed #d4af37;color:#d4af37;padding:10px 20px;border-radius:6px;font-weight:800;font-size:22px;letter-spacing:3px;">{{referralCode}}</div>
             </div>
@@ -196,14 +185,12 @@
               <h4 style="font-family:'Playfair Display', Georgia, serif;color:#d4af37;font-size:20px;margin:0 0 16px;text-align:center;">Important Information</h4>
               <table class="igrid" role="presentation" style="width:100%;border-collapse:collapse;">
                 <tr>
-                  <td style="width:50%;padding-right:4px;vertical-align:top;">
                   <td class="mobile-stack" style="width:50%;padding-right:4px;vertical-align:top;">
                     <div style="border:1px solid #2a2a2a;border-radius:8px;background:#0d0e10;padding:16px;text-align:center;min-height:90px;">
                       <div style="color:#d4af37;font-size:18px;font-family:'Playfair Display', Georgia, serif;margin-bottom:6px;">7-Day Returns</div>
                       <div style="color:#aeb5c6;font-size:14px;line-height:1.45;">Easy returns within 7 days if not satisfied.</div>
                     </div>
                   </td>
-                  <td style="width:50%;padding-left:4px;vertical-align:top;">
                   <td class="mobile-stack" style="width:50%;padding-left:4px;vertical-align:top;">
                     <div style="border:1px solid #2a2a2a;border-radius:8px;background:#0d0e10;padding:16px;text-align:center;min-height:90px;">
                       <div style="color:#d4af37;font-size:18px;font-family:'Playfair Display', Georgia, serif;margin-bottom:6px;">Warranty</div>
@@ -219,11 +206,9 @@
 
       <tr><td style="padding:24px 20px;border-top:1px solid #2a2e36;text-align:center;background:#0d0e10;">
         <h4 style="font-family:'Playfair Display', Georgia, serif;margin:0 0 16px;font-size:24px;color:#d4af37;font-weight:400;">Need Help or Have Questions?</h4>
-        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
-          <a href="{{whatsappUrl}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#06140b;border:1px solid #25d366;color:#25d366;text-align:center;letter-spacing:0.5px;">WhatsApp Support</a>
-          <a href="tel:{{supportPhone}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#151820;border:1px solid #756225;color:#f0d07a;text-align:center;letter-spacing:0.5px;margin-left:8px;">Call Us</a>
-          <a class="mobile-flex-btn" href="{{whatsappUrl}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#06140b;border:1px solid #25d366;color:#25d366;text-align:center;letter-spacing:0.5px;">WhatsApp Support</a>
-          <a class="mobile-flex-btn" href="tel:{{supportPhone}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#151820;border:1px solid #756225;color:#f0d07a;text-align:center;letter-spacing:0.5px;margin-left:8px;">Call Us</a>
+        <div style="text-align: center; margin-top: 10px;">
+          <a class="mobile-btn" href="{{whatsappUrl}}" target="_blank" style="display:inline-block;text-align:center;text-decoration:none;font-weight:700;border-radius:6px;padding:16px 32px;font-size:13px;background:#06140b;border:1px solid #25d366;color:#25d366;letter-spacing:1px;text-transform:uppercase;margin:8px 6px;min-width:200px;box-sizing:border-box;">WHATSAPP SUPPORT</a>
+          <a class="mobile-btn" href="tel:{{supportPhone}}" target="_blank" style="display:inline-block;text-align:center;text-decoration:none;font-weight:700;border-radius:6px;padding:16px 32px;font-size:13px;background:#151820;border:1px solid #756225;color:#f0d07a;letter-spacing:1px;text-transform:uppercase;margin:8px 6px;min-width:200px;box-sizing:border-box;">CALL US</a>
         </div>
         <div style="margin-top:16px;">
           <a href="mailto:{{supportEmail}}" style="color:#d4af37;font-size:15px;text-decoration:none;">{{supportEmail}}</a>
@@ -233,9 +218,9 @@
       <tr><td style="padding:24px 14px;border-top:1px solid #1a1a1a;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;background:#0b0c0e;">
         {{> social-footer}}
         {{> brand-story-footer}}
-        <div style="margin-top:14px;">&copy; 2024 E-Shopper Boutique Luxe. All rights reserved.</div>
-        <div>{{companyAddress}}</div>
-        <div style="margin-top: 14px;">
+        <div style="margin-top:14px; text-align:center;">&copy; 2024 E-Shopper Boutique Luxe. All rights reserved.</div>
+        <div style="text-align:center;">{{companyAddress}}</div>
+        <div style="margin-top: 14px; text-align:center;">
           <a href="{{privacyPolicyUrl}}" style="color:#d4af37;text-decoration:none;margin:0 6px;">Privacy</a> | 
           <a href="{{termsUrl}}" style="color:#d4af37;text-decoration:none;margin:0 6px;">Terms</a> | 
           <a href="{{returnPolicyUrl}}" style="color:#d4af37;text-decoration:none;margin:0 6px;">Return Policy</a>

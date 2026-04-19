@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, memo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowUp,
@@ -56,7 +56,7 @@ const fallbackFooterData = {
   ]
 }
 
-export default function Footer() {
+const Footer = () => {
   const toast = useToast()
   // Robust admin detection (same as Shop.jsx)
   const [role, setRole] = useState(() => String(localStorage.getItem('role') || '').toLowerCase())
@@ -865,4 +865,6 @@ export default function Footer() {
       `}} />
     </footer>
   )
-}
+};
+
+export default memo(Footer);

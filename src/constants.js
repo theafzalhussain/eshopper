@@ -16,11 +16,8 @@ export const BASE_URL = isDev
   : configuredProdApiUrl;
 
 // Socket transport strategy:
-// - Local dev: polling by default (avoids noisy websocket close warnings in React StrictMode)
-// - Deployed envs: websocket + polling fallback
-export const SOCKET_TRANSPORTS = (isDev && !forceWebSocket)
-  ? ['polling']
-  : ['websocket', 'polling'];
+// Forced websocket to prevent 400 Bad Request in PM2 cluster mode
+export const SOCKET_TRANSPORTS = ['websocket'];
 
 // ===== FRONTEND URLs =====
 // Always use production domain

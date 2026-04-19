@@ -7,6 +7,10 @@ function* createCartSaga(action) {
         if (!action || !action.payload) return;
         console.log("Cart Saga Payload:", action.payload); // Debug log
         let response = yield createCartAPI(action.payload);
+        if (!response) {
+            console.error("API returned undefined response in createCartSaga");
+            return;
+        }
         const cartData = response.cart || response;
         yield put({ type: ADD_CART_RED, data: cartData });
     } catch (e) { console.error("❌ Cart Add Error:", e) }
@@ -17,6 +21,10 @@ function* getCartSaga() {
         const userId = localStorage.getItem("userid");
         if (!userId) throw new Error("User ID required.");
         let response = yield getCartAPI(userId);
+        if (!response) {
+            console.error("API returned undefined response in getCartSaga");
+            return;
+        }
         const cartData = response.cart || response;
         yield put({ type: GET_CART_RED, data: cartData });
     } catch (e) { console.error("❌ Cart Fetch Error:", e) }
@@ -26,6 +34,10 @@ function* deleteCartSaga(action) {
     try {
         if (!action || !action.payload) return;
         let response = yield deleteCartAPI(action.payload);
+        if (!response) {
+            console.error("API returned undefined response in deleteCartSaga");
+            return;
+        }
         const cartData = response.cart || response;
         yield put({ type: DELETE_CART_RED, data: cartData });
     } catch (e) { console.error("❌ Cart Delete Error:", e) }
@@ -35,6 +47,10 @@ function* updateCartSaga(action) {
     try {
         if (!action || !action.payload) return;
         let response = yield updateCartAPI(action.payload);
+        if (!response) {
+            console.error("API returned undefined response in updateCartSaga");
+            return;
+        }
         const cartData = response.cart || response;
         yield put({ type: UPDATE_CART_RED, data: cartData });
     } catch (e) { console.error("❌ Cart Update Error:", e) }

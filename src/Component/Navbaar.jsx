@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, ShoppingCart, User } from 'lucide-react'
+import { Menu, X, ShoppingCart, User, Sparkles, Phone, Mail } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { BASE_URL } from '../constants'
 import { getCart } from '../Store/ActionCreaters/CartActionCreators'
@@ -140,18 +140,22 @@ export default function Navbaar() {
 
     return (
         <header className={`header-main ${isScrolled ? 'header-fixed' : ''}`}>
-            {/* --- 🌟 TOP RIBBON (Optimized Spacing) --- */}
-            <div className="top-premium-ribbon text-white d-none d-lg-block">
+            {/* --- 🌟 ULTRA PREMIUM TOP RIBBON --- */}
+            <div className="top-premium-ribbon d-none d-lg-block">
                 <div className="container h-100 d-flex align-items-center justify-content-between">
                     <div className="d-flex align-items-center">
-                        <span className="dot-blink mr-2"></span>
-                        <span className="ribbon-text font-weight-bold">
-                            Welcome to Eshopper Luxury Concierge • Edition 2024
+                        <Sparkles size={13} className="text-gold mr-2 pulse-gold" />
+                        <span className="ribbon-text">
+                            Welcome to Eshopper Luxury Concierge <span className="ribbon-divider">|</span> Exclusive 2025-2026 Collection
                         </span>
                     </div>
                     <div className="d-flex align-items-center">
-                        <span className="ribbon-text opacity-75 mr-4"><i className="icon-phone mr-1 text-info"></i> +91 8447859784</span>
-                        <span className="ribbon-text opacity-75"><i className="icon-envelope mr-1 text-info"></i> info@eshopper.com</span>
+                        <a href="tel:+918447859784" className="ribbon-link mr-4">
+                            <Phone size={12} className="text-gold mr-2" /> +91 8447859784
+                        </a>
+                        <a href="mailto:support@eshopperr.me" className="ribbon-link">
+                            <Mail size={12} className="text-gold mr-2" /> support@eshopperr.me
+                        </a>
                     </div>
                 </div>
             </div>

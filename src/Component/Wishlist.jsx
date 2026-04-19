@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { getWishlist } from '../Store/ActionCreaters/WishlistActionCreators'
+import { getWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators'
+import { addCart } from '../Store/ActionCreaters/CartActionCreators'
 import { Link } from 'react-router-dom'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper'
 import axios from 'axios'
@@ -126,8 +127,8 @@ export default function Wishlist() {
         setRemovingIds((prev) => [...prev, itemId])
         setActionLoading(true)
         try {
-            await axios.delete(`/wishlist/${itemId}`)
-            await fetchWishlist()
+            dispatch(deleteWishlist({ id: itemId }))
+            setWishlist((prev) => prev.filter((item) => (item.id || item._id) !== itemId))
             toast.success('Item removed from wishlist.')
         } catch (e) {
             toast.error('Failed to remove item.')
@@ -143,15 +144,18 @@ export default function Wishlist() {
         setMovingIds((prev) => [...prev, itemId])
         setActionLoading(true)
         try {
-            await axios.post('/api/cart', {
+            dispatch(addCart({
                 userId,
                 productId,
-                quantity: 1,
-                size: item.size,
-                color: item.color,
-            })
-            await axios.delete(`/wishlist/${itemId}`)
-            await fetchWishlist()
+                quantity: item.quantity || item.qty || 1,
+                size: item.size || "",
+                color: item.color || "",
+                name: item.name,
+                price: item.price,
+                pic: item.pic || item.pic1,
+            }))
+            dispatch(deleteWishlist({ id: itemId }))
+            setWishlist((prev) => prev.filter(x => (x.id || x._id) !== itemId))
             toast.success('Moved to cart successfully.')
         } catch (e) {
             toast.error('Failed to move item to cart.')
@@ -169,16 +173,19 @@ export default function Wishlist() {
             for (const item of visibleWishlist) {
                 const itemId = item.id || item._id
                 const productId = item.productid || item.product || itemId
-                await axios.post('/api/cart', {
+                dispatch(addCart({
                     userId,
                     productId,
-                    quantity: 1,
-                    size: item.size,
-                    color: item.color,
-                })
-                await axios.delete(`/wishlist/${itemId}`)
+                    quantity: item.quantity || item.qty || 1,
+                    size: item.size || "",
+                    color: item.color || "",
+                    name: item.name,
+                    price: item.price,
+                    pic: item.pic || item.pic1,
+                }))
+                dispatch(deleteWishlist({ id: itemId }))
             }
-            await fetchWishlist()
+            setWishlist(prev => prev.filter(x => !visibleWishlist.some(v => (v.id || v._id) === (x.id || x._id))))
             toast.success('All visible wishlist items moved to cart.')
         } catch (e) {
             toast.error('Failed to move all items to cart.')
