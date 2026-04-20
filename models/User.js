@@ -12,7 +12,21 @@ const userSchema = new mongoose.Schema({
     city: { type: String },
     state: { type: String },
     pin: { type: String },
+    latitude: { type: Number },
+    longitude: { type: Number },
     pic: { type: String },
+    addresses: [{
+        type: { type: String, default: 'Home' },
+        fullName: String,
+        phone: String,
+        addressline1: String,
+        city: String,
+        state: String,
+        pin: String,
+        latitude: Number,
+        longitude: Number,
+        country: { type: String, default: 'India' }
+    }],
     settings: {
         notifications: {
             orderUpdates: { type: Boolean, default: true },

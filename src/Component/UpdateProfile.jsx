@@ -22,10 +22,12 @@ import {
     EyeOff,
     MessageSquare,
     Truck,
+    X,
     Sparkles,
 } from 'lucide-react'
 import Spinner from './Spinner'
 import { BASE_URL } from '../constants'
+import { useToast } from './ToastNotification'
 
 const defaultSettings = {
     notifications: {
@@ -70,6 +72,7 @@ export default function Updateprofile() {
     const users = useSelector((state) => state.UserStateData)
     const dispatch = useDispatch()
     const navigate = useNavigate()
+    const toast = useToast()
 
     useEffect(() => {
         dispatch(getUser())
@@ -150,15 +153,20 @@ export default function Updateprofile() {
     }
 
     function getFile(e) {
-        const file = e.target.files[0]
+        const file = e.target.files[0];
         if (file) {
-            if (previewObjectUrl) {
-                URL.revokeObjectURL(previewObjectUrl)
+            // 5MB size limit (matches backend)
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('File too large. Please select an image under 5MB.');
+                return;
             }
-            const nextObjectUrl = URL.createObjectURL(file)
-            setdata({ ...data, pic: file })
-            setPreview(nextObjectUrl)
-            setPreviewObjectUrl(nextObjectUrl)
+            if (previewObjectUrl) {
+                URL.revokeObjectURL(previewObjectUrl);
+            }
+            const nextObjectUrl = URL.createObjectURL(file);
+            setdata({ ...data, pic: file });
+            setPreview(nextObjectUrl);
+            setPreviewObjectUrl(nextObjectUrl);
         }
     }
 
@@ -173,12 +181,24 @@ export default function Updateprofile() {
 
         if (data.password || data.confirmPassword) {
             if (!data.password || !data.confirmPassword || data.password !== data.confirmPassword) {
-                setToastMessage('Password confirmation does not match')
-                setShowToast(true)
-                setTimeout(() => setShowToast(false), 2200)
-                return
+                toast.error('Password confirmation does not match');
+                return;
             }
         }
+
+            // Address & Contact Validation
+            if (data.phone && !/^[0-9]{10}$/.test(data.phone)) {
+                return toast.error('Please enter a valid 10-digit phone number.');
+            }
+            if (data.addressline1 && data.addressline1.length < 5) {
+                return toast.error('Address Line 1 must be at least 5 characters long.');
+            }
+            if (data.pin && !/^[0-9]{6}$/.test(data.pin)) {
+                return toast.error('Please enter a valid 6-digit Pincode.');
+            }
+            if ((data.city && data.city.length < 2) || (data.state && data.state.length < 2)) {
+                return toast.error('Please enter a valid City and State.');
+            }
 
         setLoading(true);
         
@@ -241,14 +261,17 @@ export default function Updateprofile() {
             if (mergedUpdatedUser?.pic) localStorage.setItem("pic", mergedUpdatedUser.pic)
             localStorage.setItem('profile_cache', JSON.stringify(mergedUpdatedUser))
 
+            // Update preview image in real time if new pic is present
+            if (mergedUpdatedUser?.pic) {
+                setPreview(mergedUpdatedUser.pic);
+            }
+
             // Keep Redux list in sync for other components.
             dispatch(getUser())
 
             window.dispatchEvent(new CustomEvent('profile-updated', { detail: mergedUpdatedUser }))
-            setToastMessage(data.password ? 'Security settings updated successfully' : 'Profile updated successfully')
-            setShowToast(true)
+            toast.success(data.password ? 'Security settings updated successfully' : 'Profile updated successfully')
             setTimeout(() => {
-                setShowToast(false)
                 if (location.state && location.state.from === 'checkout') {
                     navigate(-1) // Go back to checkout
                 } else {
@@ -257,9 +280,7 @@ export default function Updateprofile() {
             }, 900)
         } catch (error) {
             console.error('Profile update failed:', error)
-            setToastMessage('Profile update failed. Please try again.')
-            setShowToast(true)
-            setTimeout(() => setShowToast(false), 2200)
+            toast.error('Profile update failed. Please try again.');
         } finally {
             setLoading(false)
         }
@@ -376,6 +397,80 @@ export default function Updateprofile() {
         },
     ]
 
+    // Autofill address using current location
+    const [locationLoading, setLocationLoading] = useState(false);
+    const [mapCoords, setMapCoords] = useState(null);
+    async function handleUseCurrentLocation() {
+        if (!navigator.geolocation) {
+            toast.error('Geolocation is not supported by your browser');
+            return;
+        }
+        setLocationLoading(true);
+        toast.info('Detecting precise location... 🛰️');
+
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 0
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    setMapCoords({ lat: latitude, lng: longitude });
+                    
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=en&addressdetails=1&zoom=18`);
+                    const dataGeo = await response.json();
+                    const addr = dataGeo.address || {};
+
+                    // Deep & Accurate Location Extraction
+                    const house = addr.house_number || "";
+                    const premise = addr.amenity || addr.building || addr.shop || addr.office || addr.historic || "";
+                    const street = addr.road || addr.street || addr.pedestrian || addr.path || "";
+                    const area = addr.neighbourhood || addr.residential || addr.suburb || "";
+                    const district = addr.city_district || addr.district || addr.county || "";
+
+                    // Combine all detailed parts into Address Line 1
+                    const fullAddressParts = [];
+                    if (house) fullAddressParts.push(`House No. ${house}`);
+                    if (premise) fullAddressParts.push(premise);
+                    if (street) fullAddressParts.push(street);
+                    if (area) fullAddressParts.push(area);
+                    if (district) fullAddressParts.push(district);
+
+                    const fullAddress = [...new Set(fullAddressParts)].filter(Boolean).join(", ");
+
+                    const landmark = addr.point_of_interest || addr.landmark || addr.commercial || "";
+
+                    const toTitle = (str) => str ? str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : "";
+
+                    setdata(prev => ({
+                        ...prev,
+                        addressline1: toTitle(fullAddress) || prev.addressline1,
+                        // Keeping addressline2 as is, since it's optional for flat/apt numbers
+                        landmark: toTitle(landmark) || prev.landmark,
+                        city: toTitle(addr.city || addr.town || addr.village || addr.municipality),
+                        state: toTitle(addr.state),
+                        pin: addr.postcode || prev.pin
+                    }));
+
+                    toast.success('📍 Highly accurate live location fetched!');
+
+                } catch (error) {
+                    toast.error('Could not fetch precise address details.');
+                } finally {
+                    setLocationLoading(false);
+                }
+            },
+            (error) => {
+                toast.error('Location Access Denied or Weak GPS Signal.');
+                setLocationLoading(false);
+            },
+            options
+        );
+    }
+
     return (
         <>
             {loading && <Spinner />}
@@ -383,11 +478,6 @@ export default function Updateprofile() {
             <div className="upd-root">
                 <div className="upd-ambient upd-ambient-a" />
                 <div className="upd-ambient upd-ambient-b" />
-
-                <div className={`upd-toast${showToast ? ' visible' : ''}`}>
-                    <CheckCircle2 size={15} />
-                    {toastMessage}
-                </div>
 
                 <div className="container py-5">
                     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
@@ -489,6 +579,60 @@ export default function Updateprofile() {
                                                 </label>
 
                                                 <div className="upd-divider-title">Delivery Address</div>
+
+                                                <button type="button" className="upd-location-btn" onClick={handleUseCurrentLocation} disabled={locationLoading} style={{marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6}}>
+                                                    <MapPin size={15} /> {locationLoading ? 'Detecting Location...' : 'Use Current Location'}
+                                                </button>
+
+                                                {mapCoords && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: -10 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '220px',
+                                                            borderRadius: '12px',
+                                                            overflow: 'hidden',
+                                                            position: 'relative',
+                                                            border: '1px solid #e8ddc4',
+                                                            marginBottom: '16px',
+                                                            boxShadow: '0 8px 16px rgba(0,0,0,0.06)'
+                                                        }}
+                                                    >
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => setMapCoords(null)}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: '8px',
+                                                                right: '8px',
+                                                                background: '#fff',
+                                                                border: 'none',
+                                                                borderRadius: '50%',
+                                                                width: '28px',
+                                                                height: '28px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                cursor: 'pointer',
+                                                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                                                                zIndex: 10
+                                                            }}
+                                                            title="Close Map"
+                                                        >
+                                                            <X size={16} color="#111" />
+                                                        </button>
+                                                        <iframe
+                                                            width="100%"
+                                                            height="100%"
+                                                            frameBorder="0"
+                                                            scrolling="no"
+                                                            style={{ border: 0 }}
+                                                            src={`https://maps.google.com/maps?q=${mapCoords.lat},${mapCoords.lng}&t=&z=16&ie=UTF8&iwloc=&output=embed`}
+                                                            title="Current Location"
+                                                        />
+                                                    </motion.div>
+                                                )}
 
                                                 <label className="upd-field">
                                                     <span className="upd-label"><MapPin size={14} /> Street Address</span>
@@ -1221,31 +1365,6 @@ export default function Updateprofile() {
                 .upd-save-btn:disabled {
                     opacity: 0.6;
                     cursor: not-allowed;
-                }
-
-                .upd-toast {
-                    position: fixed;
-                    top: 18px;
-                    left: 50%;
-                    transform: translateX(-50%) translateY(-8px);
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                    padding: 10px 14px;
-                    border-radius: 999px;
-                    background: rgba(17, 17, 17, 0.92);
-                    color: #fff;
-                    border: 1px solid rgba(201,168,76,0.28);
-                    box-shadow: 0 16px 32px rgba(13,13,13,0.22);
-                    z-index: 9999;
-                    opacity: 0;
-                    pointer-events: none;
-                    transition: opacity 0.2s ease, transform 0.2s ease;
-                }
-
-                .upd-toast.visible {
-                    opacity: 1;
-                    transform: translateX(-50%) translateY(0);
                 }
 
                 @media (max-width: 992px) {

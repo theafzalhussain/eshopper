@@ -1083,10 +1083,14 @@ export default function SingleProductPage() {
     // Prepare product data for checkout
     const checkoutProduct = {
       ...p,
+      productid: p.id || p._id || id,
+      product: p, // Support for components expecting nested product object
       size: selectedSize,
       color: selectedColor,
       quantity: qty,
       price: membershipType === 'Elite' ? Math.round(Number(p.finalprice || 0) * 0.9) : Number(p.finalprice || 0),
+      pic: p.pic1 || p.pic, // Standardized image key for checkout mapping
+      image: p.pic1 || p.pic,
     };
     // Save to sessionStorage (or localStorage) for checkout page to read
     sessionStorage.setItem('directCheckoutProduct', JSON.stringify(checkoutProduct));

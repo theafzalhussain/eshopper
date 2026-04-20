@@ -1424,18 +1424,24 @@ export default function Home() {
           border-radius:4px; text-decoration:none;
           transition:all 0.4s cubic-bezier(0.16,1,0.3,1);
           position:relative; overflow:hidden;
+          z-index: 1;
         }
         .hx-view-all-btn::before {
           content:'';
           position:absolute; inset:0;
-          background:#0a0a0a;
-          transform:translateX(-100%);
-          transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);
-          z-index:0;
+          background:linear-gradient(135deg, #c8a96e 0%, #a07848 100%);
+          transform:translateX(-101%);
+          transition:transform 0.5s cubic-bezier(0.16,1,0.3,1);
+          z-index:-1;
         }
         .hx-view-all-btn:hover::before { transform:translateX(0); }
-        .hx-view-all-btn:hover { color:#fff; border-color:#0a0a0a; }
-        .hx-view-all-btn span, .hx-va-arrow { position:relative; z-index:1; }
+        .hx-view-all-btn:hover { 
+          color:#fff; 
+          border-color:#a07848; 
+          box-shadow: 0 12px 24px rgba(200, 169, 110, 0.35); 
+        }
+        .hx-view-all-btn span, .hx-va-arrow { position:relative; z-index:1; transition: transform 0.3s ease; }
+        .hx-view-all-btn:hover .hx-va-arrow { transform: translateX(6px); }
         /* Skeleton */
         .hx-loading-state { display:grid; grid-template-columns:repeat(4,1fr); gap:24px; }
         .hx-skeleton { background:#fff; border-radius:16px; overflow:hidden; padding:0 0 20px; }

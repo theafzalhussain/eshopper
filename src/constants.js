@@ -17,7 +17,7 @@ export const BASE_URL = isDev
 
 // Socket transport strategy:
 // Forced websocket to prevent 400 Bad Request in PM2 cluster mode
-export const SOCKET_TRANSPORTS = ['websocket'];
+export const SOCKET_TRANSPORTS = ['polling', 'websocket'];
 
 // ===== FRONTEND URLs =====
 // Always use production domain

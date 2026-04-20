@@ -30,6 +30,7 @@ export default function Confirmation() {
   const [shared, setShared] = useState(false);
   const [heroTheme, setHeroTheme] = useState('light');
   const syncInProgressRef = useRef(false);
+  const hasCelebratedRef = useRef(false);
 
   const localUserId = localStorage.getItem('userid');
   const userId =
@@ -111,6 +112,10 @@ export default function Confirmation() {
 
   useEffect(() => {
     if (!order || !userId) return;
+
+    if (window.history.state?.usr?.direct) {
+      return;
+    }
 
     dispatch(clearCart({ userid: userId }));
     axios.post(`${BASE_URL}${API_ENDPOINTS.CLEAR_CART}/${userId}`).catch(() => {});
@@ -593,23 +598,44 @@ export default function Confirmation() {
   }, [order?.estimatedArrival]);
 
   useEffect(() => {
-    if (!loading && order) {
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.4 },
-        colors: ['#D4AF37', '#1e293b', '#ffffff', '#10b981']
-      });
+    if (!loading && order && !hasCelebratedRef.current) {
+      hasCelebratedRef.current = true;
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 6,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.65 },
+          colors: ['#D4AF37', '#E8C97A', '#1e293b', '#ffffff', '#10b981'],
+          zIndex: 9999
+        });
+        confetti({
+          particleCount: 6,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.65 },
+          colors: ['#D4AF37', '#E8C97A', '#1e293b', '#ffffff', '#10b981'],
+          zIndex: 9999
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
     }
-  }, [loading, order?.orderId]);
+  }, [loading, order]);
 
   if (loading || !order) {
     return (
       <div className='lux-confirm-loading'>
-        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }}>
-          <Sparkles size={48} color="#D4AF37" strokeWidth={1.5} />
+        <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 3, ease: "linear" }}>
+          <Sparkles size={54} color="#D4AF37" strokeWidth={1.2} />
         </motion.div>
-        <p className='lux-loading-text'>Securing your luxury confirmation...</p>
+        <p className='lux-loading-text'>Preparing your luxury confirmation...</p>
         <style>{styles}</style>
       </div>
     );
@@ -714,7 +740,7 @@ export default function Confirmation() {
         </motion.section>
 
         {/* Assurance Features */}
-        <motion.section className='lux-assurance' initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.section className='lux-assurance assurance-strip' initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           {assurancePoints.map((point) => (
             <div className='lux-assurance-card' key={point.title}>
               <point.icon size={16} />
@@ -785,7 +811,9 @@ export default function Confirmation() {
               
               <div className='lux-summary-total'>
                 <span>Payable Amount</span>
-                <strong>{money(finalAmount)}</strong>
+                <strong>
+                  {money(finalAmount)} <Sparkles size={18} className="ml-1" style={{ display: 'inline', color: '#D4AF37', marginTop: '-4px' }} />
+                </strong>
               </div>
             </div>
             

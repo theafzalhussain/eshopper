@@ -85,7 +85,7 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // With timeout and better error handling
 export async function fastAPI(endpoint, method = "GET", data = null, retryCount = 0, customBaseUrl = null) {
-    console.log("API CALL:", endpoint, method, data); // Debug log
+    console.log(`API CALL: ${endpoint} ${method} ${data ? JSON.stringify(data) : ''}`); // Debug log
     const isFD = data instanceof FormData;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);

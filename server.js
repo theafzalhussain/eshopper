@@ -1982,6 +1982,16 @@ const User = mongoose.model('User', new mongoose.Schema({
     city: String,
     state: String,
     pin: String,
+    addresses: [{
+        type: { type: String, default: 'Home' },
+        fullName: String,
+        phone: String,
+        addressline1: String,
+        city: String,
+        state: String,
+        pin: String,
+        country: { type: String, default: 'India' }
+    }],
     otp: String,
     otpExpires: Date,
     lastLogin: { type: Date, default: Date.now }, // Track last login
@@ -3845,6 +3855,63 @@ app.put('/api/admin/users/:id/membership', async (req, res) => {
 });
 
 // ==================== COMPATIBILITY API ALIASES ====================
+
+// --- ADDRESS MANAGEMENT ROUTES ---
+app.get('/api/user/:id/addresses', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+        
+        res.json({ addresses: user.addresses || [] });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+app.post('/api/user/:id/addresses', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+        
+        if (!user.addresses) user.addresses = [];
+        user.addresses.push(req.body);
+        await user.save();
+        
+        res.status(201).json({ message: "Address added successfully", addresses: user.addresses });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+app.put('/api/user/:id/addresses/:addressId', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const address = user.addresses.id(req.params.addressId);
+        if (!address) return res.status(404).json({ message: "Address not found" });
+
+        address.set(req.body);
+        await user.save();
+        res.json({ message: "Address updated successfully", addresses: user.addresses });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+app.delete('/api/user/:id/addresses/:addressId', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        user.addresses.pull({ _id: req.params.addressId });
+        await user.save();
+        res.json({ message: "Address deleted successfully", addresses: user.addresses });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
 // These aliases keep legacy frontend calls working without 404 errors.
 app.get('/api/user/:id', async (req, res) => {
     try {
