@@ -7,14 +7,16 @@
   }
 }
 */
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
+import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
 import { getUser } from '../Store/ActionCreaters/UserActionCreators';
 import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import { optimizeCloudinaryUrl, optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
+import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
+import axios from 'axios';
+import { BASE_URL } from '../constants';
 
 // ─────────────────────────────────────────────
 // CONSTANTS
@@ -133,6 +135,7 @@ export default function Home() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [scrollY, setScrollY]             = useState(0);
   const heroRef = useRef(null);
+  const [reviewStats, setReviewStats] = useState({});
   const countdown = useCountdown(5);
 
   // ── Fast loading ──
@@ -155,6 +158,38 @@ export default function Home() {
     const timer = setInterval(() => setCurrentSlide((p) => (p === 3 ? 0 : p + 1)), 5000);
     return () => clearInterval(timer);
   }, [dispatch]);
+
+  useEffect(() => {
+    async function fetchReviewStats() {
+      try {
+        const response = await axios.get(`${BASE_URL}/api/reviews`);
+        if (response.data.success) {
+          const statsMap = {};
+          response.data.reviews.forEach(review => {
+            if (review.products && Array.isArray(review.products)) {
+              review.products.forEach(productId => {
+                if (!statsMap[productId]) {
+                  statsMap[productId] = { totalRating: 0, count: 0 };
+                }
+                statsMap[productId].totalRating += Number(review.rating) || 0;
+                statsMap[productId].count += 1;
+              });
+            }
+          });
+
+          const finalStats = {};
+          for (const productId in statsMap) {
+            finalStats[productId] = {
+              count: statsMap[productId].count,
+              average: parseFloat((statsMap[productId].totalRating / statsMap[productId].count).toFixed(1))
+            };
+          }
+          setReviewStats(finalStats);
+        }
+      } catch (error) {}
+    }
+    fetchReviewStats();
+  }, [product.length]);
 
   useEffect(() => {
     if (!wishlistToast.show) return;
@@ -537,8 +572,12 @@ export default function Home() {
 
           {displayProducts.length > 0 ? (
             <div className="hx-product-grid">
-              {displayProducts.map((item, index) => (
-                <motion.div
+              {displayProducts.map((item, index) => {
+                const stats = reviewStats[item.id];
+                const ratingValue = stats ? stats.average : (item.rating || 0);
+                const reviewCount = stats ? stats.count : 0;
+
+                return (<motion.div
                   key={item.id}
                   className="hx-pcard"
                   initial={{ opacity: 0, y: 30 }}
@@ -601,8 +640,8 @@ export default function Home() {
                     <div className="hx-pcard-top">
                       <span className="hx-pcard-brand">{item.brand}</span>
                       <div className="hx-pcard-rating">
-                        <span className="hx-stars">{'★'.repeat(Math.floor(item.rating || 4.5))}</span>
-                        <span className="hx-rating-val">({(item.rating || 4.5).toFixed(1)})</span>
+                        <span className="hx-stars">{'★'.repeat(Math.floor(ratingValue))}</span>
+                        <span className="hx-rating-val">({ratingValue > 0 ? `${ratingValue.toFixed(1)} (${reviewCount})` : 'New'})</span>
                       </div>
                     </div>
 
@@ -636,7 +675,7 @@ export default function Home() {
                     </div>
                   </div>
                 </motion.div>
-              ))}
+              )})}
             </div>
           ) : (
             <div className="hx-loading-state">

@@ -1,16 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Star, User, BadgeCheck, ThumbsUp, X, Loader2, Camera, Sparkles, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, User, BadgeCheck, ThumbsUp, X, Loader2, Camera, Sparkles, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from './ToastNotification';
 import { BASE_URL } from '../constants';
 
-export default function ProductReviews({ productId }) {
+export default function ProductReviews({ productId, onStatsUpdate }) {
     const toast = useToast();
     const [reviews, setReviews] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refresh, setRefresh] = useState(0);
     const [showModal, setShowModal] = useState(false);
+    const [editingReviewId, setEditingReviewId] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [highlightedReviewId, setHighlightedReviewId] = useState(null);
     const [visibleCount, setVisibleCount] = useState(4);
@@ -18,6 +19,7 @@ export default function ProductReviews({ productId }) {
     const [newReview, setNewReview] = useState({ rating: 5, title: '', comment: '', pics: [] });
     const [sortBy, setSortBy] = useState('newest');
     const [lightbox, setLightbox] = useState({ isOpen: false, images: [], index: 0 });
+    const currentUserId = localStorage.getItem('userid');
     
     useEffect(() => {
         let isMounted = true;
@@ -55,7 +57,7 @@ export default function ProductReviews({ productId }) {
 
     const handleImageChange = (e) => {
         const files = Array.from(e.target.files);
-        if (files.length + newReview.pics.length > 5) {
+        if (files.length + newReview.pics.length + (newReview.existingPics?.length || 0) > 5) {
             toast.error('You can upload up to 5 images.');
             return;
         }
@@ -74,7 +76,16 @@ export default function ProductReviews({ productId }) {
     };
 
     const removeImage = (index) => {
-        setNewReview(prev => ({ ...prev, pics: prev.pics.filter((_, i) => i !== index) }));
+        const existingLen = (newReview.existingPics || []).length;
+        if (index < existingLen) {
+            setNewReview(prev => ({
+                ...prev,
+                existingPics: prev.existingPics.filter((_, i) => i !== index)
+            }));
+        } else {
+            const fileIndex = index - existingLen;
+            setNewReview(prev => ({ ...prev, pics: prev.pics.filter((_, i) => i !== fileIndex) }));
+        }
         setPreviewImgs(prev => prev.filter((_, i) => i !== index));
     };
 
@@ -109,6 +120,31 @@ export default function ProductReviews({ productId }) {
         }
     };
 
+    const handleDeleteReview = async (reviewId) => {
+        if (!window.confirm("Are you sure you want to delete this review?")) return;
+        try {
+            await axios.delete(`${BASE_URL}/api/review/${reviewId}?userId=${currentUserId}`);
+            setReviews(prev => prev.filter(r => r._id !== reviewId));
+            toast.success('Review deleted successfully');
+            setRefresh(prev => prev + 1);
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'Failed to delete review');
+        }
+    };
+
+    const openEditModal = (review) => {
+        setEditingReviewId(review._id);
+        setNewReview({
+            rating: review.rating,
+            title: review.title,
+            comment: review.comment,
+            pics: [],
+            existingPics: review.pics && review.pics.length > 0 ? review.pics : (review.pic ? [review.pic] : [])
+        });
+        setPreviewImgs(review.pics && review.pics.length > 0 ? review.pics : (review.pic ? [review.pic] : []));
+        setShowModal(true);
+    };
+
     const handleReviewSubmit = async () => {
         const userId = localStorage.getItem('userid');
         if (!userId) {
@@ -134,17 +170,24 @@ export default function ProductReviews({ productId }) {
                 });
             }
 
-            const response = await axios.post(`${BASE_URL}/api/review`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            
-            toast.success('Review submitted successfully! ⭐');
+            let response;
+            if (editingReviewId) {
+                response = await axios.put(`${BASE_URL}/api/review/${editingReviewId}`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                toast.success('Review updated successfully! ✨');
+            } else {
+                response = await axios.post(`${BASE_URL}/api/review`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                toast.success('Review submitted successfully! ⭐');
+            }
             
             // 🔴 OPTIMISTIC UI UPDATE: Inject directly into state for 100% instant display
             const serverReview = response.data?.review || response.data?.data || {};
             const newOptimisticReview = {
                 ...serverReview,
-                _id: serverReview._id || ('new-' + Date.now()),
+                _id: serverReview._id || editingReviewId || ('new-' + Date.now()),
                 userName: serverReview.userName || localStorage.getItem('name') || 'Verified Buyer',
                 userPic: serverReview.userPic || localStorage.getItem('pic') || '',
                 rating: Number(newReview.rating),
@@ -152,9 +195,14 @@ export default function ProductReviews({ productId }) {
                 comment: newReview.comment,
                 pics: previewImgs.length > 0 ? previewImgs : (serverReview.pics || serverReview.pic ? [serverReview.pic] : []), 
                 createdAt: serverReview.createdAt || new Date().toISOString(),
-                helpfulVotes: []
+                helpfulVotes: serverReview.helpfulVotes || []
             };
-            setReviews(prev => [newOptimisticReview, ...prev]);
+
+            if (editingReviewId) {
+                setReviews(prev => prev.map(r => r._id === editingReviewId ? { ...r, ...newOptimisticReview } : r));
+            } else {
+                setReviews(prev => [newOptimisticReview, ...prev]);
+            }
 
             // Highlight the newly added review for 4 seconds
             setHighlightedReviewId(newOptimisticReview._id);
@@ -162,7 +210,8 @@ export default function ProductReviews({ productId }) {
 
             // Instantly close and reset the modal
             setShowModal(false);
-            setNewReview({ rating: 5, title: '', comment: '', pics: [] });
+            setEditingReviewId(null);
+            setNewReview({ rating: 5, title: '', comment: '', pics: [], existingPics: [] });
             setPreviewImgs([]);
             
             setTimeout(() => {
@@ -178,7 +227,8 @@ export default function ProductReviews({ productId }) {
     const closeModal = () => {
         if (!submitting) {
             setShowModal(false);
-            setNewReview({ rating: 5, title: '', comment: '', pics: [] });
+            setEditingReviewId(null);
+            setNewReview({ rating: 5, title: '', comment: '', pics: [], existingPics: [] });
             setPreviewImgs([]);
         }
     };
@@ -214,6 +264,13 @@ export default function ProductReviews({ productId }) {
         if (ratingCounts[star] !== undefined) ratingCounts[star]++;
     });
     
+    // 🔴 Pass stats up to parent component
+    useEffect(() => {
+        if (onStatsUpdate) {
+            onStatsUpdate({ count: totalReviews, average: parseFloat(avgRating) });
+        }
+    }, [totalReviews, avgRating, onStatsUpdate]);
+
     // 🔴 Sort reviews dynamically based on user selection
     const sortedReviews = [...reviews].sort((a, b) => {
         if (sortBy === 'highest') {
@@ -360,9 +417,17 @@ export default function ProductReviews({ productId }) {
                                                     </motion.span>
                                                 )}
                                             </div>
-                                            <span className="text-muted small" style={{ fontSize: "12px" }}>
-                                                {new Date(review.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                            </span>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <span className="text-muted small" style={{ fontSize: "12px" }}>
+                                                    {new Date(review.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                </span>
+                                                {currentUserId === String(review.userId) && (
+                                                    <div className="d-flex gap-1 ml-2 pl-2" style={{borderLeft: "1px solid rgba(0,0,0,0.1)"}}>
+                                                        <button className="rev-action-btn edit-btn" onClick={() => openEditModal(review)} title="Edit Review"><Pencil size={14} /></button>
+                                                        <button className="rev-action-btn delete-btn" onClick={() => handleDeleteReview(review._id)} title="Delete Review"><Trash2 size={14} /></button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="d-flex align-items-center mt-1 gap-2">
                                             <div className="d-flex">
@@ -456,7 +521,7 @@ export default function ProductReviews({ productId }) {
                                 <button className="pr-modal-close" onClick={closeModal} disabled={submitting}>
                                     <X size={20} />
                                 </button>
-                                <h3 className="pr-modal-title">Write a Review</h3>
+                                <h3 className="pr-modal-title">{editingReviewId ? 'Edit Review' : 'Write a Review'}</h3>
                                 <p className="text-muted small mb-0">Share your experience with this premium product</p>
                             </div>
 
@@ -528,7 +593,7 @@ export default function ProductReviews({ productId }) {
 
                             <div className="p-4 border-top" style={{ backgroundColor: "#f8f9fa", borderBottomLeftRadius: "20px", borderBottomRightRadius: "20px" }}>
                                 <button className="pr-submit-btn" onClick={handleReviewSubmit} disabled={submitting}>
-                                    {submitting ? <><Loader2 size={16} className="spin-anim" /> Submitting...</> : <><Sparkles size={16} /> Submit Review</>}
+                                    {submitting ? <><Loader2 size={16} className="spin-anim" /> {editingReviewId ? 'Updating...' : 'Submitting...'}</> : <><Sparkles size={16} /> {editingReviewId ? 'Update Review' : 'Submit Review'}</>}
                                 </button>
                             </div>
                         </motion.div>
@@ -599,6 +664,9 @@ export default function ProductReviews({ productId }) {
                     70% { box-shadow: 0 0 0 12px rgba(212,175,55,0); }
                     100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
                 }
+                .rev-action-btn { background: transparent; border: none; color: #94a3b8; padding: 4px 6px; border-radius: 6px; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+                .rev-action-btn.edit-btn:hover { background: rgba(212,175,55,0.1); color: #D4AF37; transform: translateY(-1px); }
+                .rev-action-btn.delete-btn:hover { background: rgba(239,68,68,0.1); color: #ef4444; transform: translateY(-1px); }
                 .premium-filter-wrapper { display: flex; align-items: center; gap: 10px; }
                 .filter-label { font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
                 .select-container { position: relative; display: flex; align-items: center; }

@@ -9,6 +9,8 @@ import { getBrand } from '../Store/ActionCreaters/BrandActionCreators';
 import { getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
 import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
+import { BASE_URL } from '../constants';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 
 export default function Shop() {
@@ -32,6 +34,7 @@ export default function Shop() {
     var [selectedSizes, setSelectedSizes] = useState({})
     var [cartNotifications, setCartNotifications] = useState({})
     const toast = useToast();
+    const [reviewStats, setReviewStats] = useState({});
     var [selectedColors, setSelectedColors] = useState({})
     var [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -172,6 +175,38 @@ export default function Shop() {
         dispatch(getCart())
         dispatch(getWishlist())
     }, [dispatch])
+
+    useEffect(() => {
+        async function fetchReviewStats() {
+          try {
+            const response = await axios.get(`${BASE_URL}/api/reviews`);
+            if (response.data.success) {
+              const statsMap = {};
+              response.data.reviews.forEach(review => {
+                if (review.products && Array.isArray(review.products)) {
+                  review.products.forEach(productId => {
+                    if (!statsMap[productId]) {
+                      statsMap[productId] = { totalRating: 0, count: 0 };
+                    }
+                    statsMap[productId].totalRating += Number(review.rating) || 0;
+                    statsMap[productId].count += 1;
+                  });
+                }
+              });
+    
+              const finalStats = {};
+              for (const productId in statsMap) {
+                finalStats[productId] = {
+                  count: statsMap[productId].count,
+                  average: parseFloat((statsMap[productId].totalRating / statsMap[productId].count).toFixed(1))
+                };
+              }
+              setReviewStats(finalStats);
+            }
+          } catch (error) {}
+        }
+        fetchReviewStats();
+    }, [product.length]);
 
     useEffect(() => { setmc(maincat) }, [maincat])
 
@@ -420,8 +455,11 @@ export default function Shop() {
                     {/* Grid */}
                     <div className="lux-grid">
                         <AnimatePresence>
-                            {filteredProducts.map((item, index) => (
-                                <motion.div key={item.id} layout
+                            {filteredProducts.map((item, index) => {
+                                const stats = reviewStats[item.id];
+                                const ratingValue = stats ? stats.average : (item.rating || 0);
+                                const reviewCount = stats ? stats.count : 0;
+                                return (<motion.div key={item.id} layout
                                     initial={{ opacity: 0, y: 24 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.94 }}
@@ -464,8 +502,8 @@ export default function Shop() {
                                         <div className="lux-cmeta">
                                             <span className="lux-cbrand">{item.brand}</span>
                                             <div className="lux-crating">
-                                                <span className="lux-stars">{[1,2,3,4,5].map(s=><span key={s}>{s<=Math.floor(item.rating||4.5)?'★':'☆'}</span>)}</span>
-                                                <span className="lux-rnum">({(item.rating||4.5).toFixed(1)})</span>
+                                                <span className="lux-stars">{[1,2,3,4,5].map(s=><span key={s}>{s<=Math.floor(ratingValue)?'★':'☆'}</span>)}</span>
+                                                <span className="lux-rnum">({ratingValue > 0 ? `${ratingValue.toFixed(1)} (${reviewCount})` : 'New'})</span>
                                             </div>
                                         </div>
                                         <h3 className="lux-cname">
@@ -534,7 +572,7 @@ export default function Shop() {
                                         )}
                                     </div>
                                 </motion.div>
-                            ))}
+                            )})}
                         </AnimatePresence>
                     </div>
 

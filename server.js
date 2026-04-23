@@ -836,6 +836,63 @@ app.post('/api/review', (req, res) => {
     });
 });
 
+// 🔴 EDIT REVIEW
+app.put('/api/review/:id', (req, res) => {
+    upload(req, res, async (err) => {
+        if (err) return res.status(400).json({ success: false, message: "Image upload failed" });
+
+        try {
+            const { userId, rating, title, comment, existingPics } = req.body;
+            const review = await Review.findById(req.params.id);
+            
+            if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
+            if (String(review.userId) !== String(userId)) return res.status(403).json({ success: false, message: 'Unauthorized to edit this review' });
+
+            let newPics = [];
+            if (req.files && req.files.pics && req.files.pics.length > 0) {
+                newPics = req.files.pics.map(file => file.path);
+            }
+
+            let retainedPics = [];
+            if (existingPics) {
+                try { retainedPics = JSON.parse(existingPics); } catch (e) { retainedPics = []; }
+            }
+
+            review.rating = Number(rating) || review.rating;
+            review.title = title || review.title;
+            review.comment = comment || review.comment;
+            
+            if (existingPics || newPics.length > 0) {
+                review.pics = [...retainedPics, ...newPics].slice(0, 5); // Max 5 pics
+                review.pic = review.pics[0] || '';
+            }
+
+            await review.save();
+            return res.status(200).json({ success: true, message: "Review updated successfully", review });
+        } catch (error) {
+            console.error('Edit Review Error:', error.message);
+            return res.status(500).json({ success: false, message: 'Internal Server Error' });
+        }
+    });
+});
+
+// 🔴 DELETE REVIEW
+app.delete('/api/review/:id', async (req, res) => {
+    try {
+        const userId = req.body.userId || req.query.userId;
+        const review = await Review.findById(req.params.id);
+        
+        if (!review) return res.status(404).json({ success: false, message: 'Review not found' });
+        if (String(review.userId) !== String(userId)) return res.status(403).json({ success: false, message: 'Unauthorized' });
+
+        await Review.findByIdAndDelete(req.params.id);
+        res.status(200).json({ success: true, message: 'Review deleted successfully' });
+    } catch (error) {
+        console.error('Delete Review Error:', error.message);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+});
+
 // 🔴 GET REVIEWS FOR A SPECIFIC PRODUCT
 app.get('/api/review/:productId', async (req, res) => {
     try {
@@ -894,6 +951,16 @@ app.get('/api/reviews', async (req, res) => {
         res.status(200).json({ success: true, reviews });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to fetch reviews' });
+    }
+});
+
+// 🔴 GET REVIEW BY ORDER ID
+app.get('/api/reviews/order/:orderId', async (req, res) => {
+    try {
+        const review = await Review.findOne({ orderId: req.params.orderId }).lean();
+        res.status(200).json({ success: true, review });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch order review' });
     }
 });
 

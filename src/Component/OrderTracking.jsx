@@ -7,6 +7,7 @@ import confetti from 'canvas-confetti'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
+import { useToast } from './ToastNotification'
 import {
   Package, Archive, Truck, MapPin, BadgeCheck, Calendar,
   RefreshCw, Copy, Clock3, Home, Phone, Mail, Sparkles, Gauge, Wallet,
@@ -1576,6 +1577,7 @@ export default function OrderTracking() {
   const { orderId } = useParams()
   const navigate = useNavigate()
   const userId = useMemo(() => pickStoredUserId(), [])
+  const toast = useToast()
   const supportEmail = 'support@eshopperr.me'
 
   const [status, setStatus] = useState('Ordered')
@@ -1583,7 +1585,6 @@ export default function OrderTracking() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [socketConnected, setSocketConnected] = useState(false)
-  const [toasts, setToasts] = useState([])
   const [didCelebrate, setDidCelebrate] = useState(false)
   const [statusTimeline, setStatusTimeline] = useState([])
   const [refreshing, setRefreshing] = useState(false)
@@ -1599,6 +1600,7 @@ export default function OrderTracking() {
   const [reviewImages, setReviewImages] = useState([])
   const [reviewImagePreviews, setReviewImagePreviews] = useState([])
   const [submittingReview, setSubmittingReview] = useState(false)
+  const [orderReview, setOrderReview] = useState(null)
   const REVIEW_TEXT_MAX_LENGTH = 500
 
   const activeIndex = useMemo(() => Math.max(0, STEPS.indexOf(status)), [status])
@@ -1897,24 +1899,17 @@ export default function OrderTracking() {
     [activeIndex, timelineEventMap]
   )
 
-  const pushToast = useCallback((title, message, timeout = 2800) => {
-    const id = Date.now() + Math.random()
-    const newToast = { id, title, message }
-    setToasts(prev => [...prev, newToast])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), timeout)
-  }, [])
-
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files)
     if (files.length + reviewImages.length > 5) {
-        pushToast('⚠️ Limit Exceeded', 'You can upload up to 5 images.', 3000)
+        toast.warning('You can upload up to 5 images.', 3000)
         return
     }
     const validFiles = []
     const newPreviews = []
     files.forEach(file => {
         if (file.size > 5 * 1024 * 1024) {
-            pushToast('⚠️ File Too Large', `Image ${file.name} is over 5MB.`, 3000)
+            toast.warning(`Image ${file.name} is over 5MB.`, 3000)
         } else {
             validFiles.push(file)
             newPreviews.push(URL.createObjectURL(file))
@@ -1929,13 +1924,24 @@ export default function OrderTracking() {
     setReviewImagePreviews(prev => prev.filter((_, i) => i !== index))
   }
 
+  useEffect(() => {
+    if (!orderId) return
+    axios.get(`${BASE_URL}/api/reviews/order/${orderId}`)
+      .then(res => {
+        if (res.data.success && res.data.review) {
+          setOrderReview(res.data.review)
+        }
+      })
+      .catch(err => console.log('Could not fetch order review', err))
+  }, [orderId])
+
   const handleReviewSubmit = useCallback(async () => {
     if (!reviewTitle.trim()) {
-      pushToast('⚠️ Missing Details', 'Please provide a title for your review.', 3000)
+      toast.warning('Please provide a title for your review.', 3000)
       return
     }
     if (!reviewText.trim()) {
-      pushToast('⚠️ Missing Details', 'Please write a brief review before submitting.', 3000)
+      toast.warning('Please write a brief review before submitting.', 3000)
       return
     }
     
@@ -1959,19 +1965,20 @@ export default function OrderTracking() {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 15000
       })
-      pushToast('⭐ Review Submitted', 'Thank you for your valuable feedback!', 3000)
+      toast.success('Review Submitted! Thank you for your valuable feedback!', 3000)
       setShowReviewModal(false)
+      setOrderReview({ rating: reviewRating, title: reviewTitle, comment: reviewText })
       setReviewTitle('')
       setReviewText('')
       setReviewRating(5)
       setReviewImages([])
       setReviewImagePreviews([])
     } catch (error) {
-      pushToast('❌ Submission Failed', error?.response?.data?.message || 'Could not submit your review. Try again.', 3000)
+      toast.error(error?.response?.data?.message || 'Submission Failed. Could not submit your review. Try again.', 3000)
     } finally {
       setSubmittingReview(false)
     }
-  }, [reviewTitle, reviewText, reviewRating, reviewImages, userId, orderId, orderItemsDetailed, pushToast])
+  }, [reviewTitle, reviewText, reviewRating, reviewImages, userId, orderId, orderItemsDetailed, toast])
 
   const showStatusToast = (nextStatus) => {
     const messages = {
@@ -1980,7 +1987,7 @@ export default function OrderTracking() {
       Shipped: '🚚 On Its Way',
       Delivered: '🎉 Successfully Delivered!'
     }
-    pushToast('📨 Order Updated', messages[nextStatus] || `Status: ${nextStatus}`, 3500)
+    toast.info(messages[nextStatus] || `Order Status Updated: ${nextStatus}`, 3500)
   }
 
   const formatDeliveryDate = (dateString) => {
@@ -2154,15 +2161,15 @@ export default function OrderTracking() {
       const response = await axios.get(target, { responseType: 'blob', timeout: 120000 })
       const blob = new Blob([response.data], { type: 'application/pdf' })
       openBlobPdf(blob, inline)
-      pushToast('🧾 Invoice Ready', inline ? 'Invoice preview opened' : 'Invoice download started', 2200)
+      toast.success(inline ? 'Invoice preview opened' : 'Invoice download started', 2200)
     } catch (error) {
       const fallbackBlob = buildClientInvoiceBlob()
       if (fallbackBlob) {
         openBlobPdf(fallbackBlob, inline)
         const serverMsg = error?.response?.data?.message
-        pushToast('🧾 Invoice Ready', serverMsg ? `${serverMsg}. Opened backup invoice.` : 'Opened backup invoice copy.', 2800)
+        toast.info(serverMsg ? `${serverMsg}. Opened backup invoice.` : 'Opened backup invoice copy.', 2800)
       } else {
-        pushToast('❌ Invoice Error', error?.response?.data?.message || 'Unable to generate invoice right now', 2600)
+        toast.error(error?.response?.data?.message || 'Unable to generate invoice right now', 2600)
       }
     } finally {
       setInvoiceLoading(false)
@@ -2202,7 +2209,7 @@ export default function OrderTracking() {
     if (refreshing) return
     setRefreshing(true)
     await fetchOrderData({ silent: true })
-    pushToast('🔄 Refreshed', 'Order data synced with backend', 1800)
+    toast.success('Order data synced with backend', 1800)
     setRefreshing(false)
   }
 
@@ -2211,10 +2218,10 @@ export default function OrderTracking() {
     try {
       await navigator.clipboard.writeText(orderId)
       setCopiedOrderId(true)
-      pushToast('📋 Copied', `Order ID ${orderId} copied`, 1800)
+      toast.success(`Order ID ${orderId} copied`, 1800)
       setTimeout(() => setCopiedOrderId(false), 1500)
     } catch {
-      pushToast('⚠️ Copy Failed', 'Could not copy order ID. Try again.', 2200)
+      toast.error('Could not copy order ID. Try again.', 2200)
       setCopiedOrderId(false)
     }
   }
@@ -2251,8 +2258,8 @@ export default function OrderTracking() {
     if (!popup) {
       window.location.href = supportMailtoUrl
     }
-    pushToast('📧 Email Support', 'Support draft opened with your order details', 2400)
-  }, [pushToast, supportGmailUrl, supportMailtoUrl])
+    toast.info('Support draft opened with your order details', 2400)
+  }, [toast, supportGmailUrl, supportMailtoUrl])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -2542,19 +2549,6 @@ export default function OrderTracking() {
           )}
         </AnimatePresence>
 
-        {/* Toast Notifications */}
-        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {toasts.map((toast) => (
-            <motion.div key={toast.id} initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              style={{ minWidth: 280, background: '#FFFFFF', border: '1px solid rgba(201,168,76,0.2)', color: '#0A0A0A', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: '14px 16px', position: 'relative' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.06em', color: 'var(--gold-dk)', marginBottom: 4 }}>
-                {toast.title}
-              </div>
-              <div style={{ fontSize: 12, color: '#666' }}>{toast.message}</div>
-            </motion.div>
-          ))}
-        </div>
-
         {/* Hero Section */}
         <div className="ot-hero">
           <div className="ot-hero-orb1" />
@@ -2732,6 +2726,16 @@ export default function OrderTracking() {
                     <span className="ot-delivered-meta-value">{addressText}</span>
                   </div>
                 )}
+                {orderReview && (
+                  <div className="ot-delivered-meta-item">
+                    <span className="ot-delivered-meta-label">Your Rating</span>
+                    <span className="ot-delivered-meta-value" style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star key={star} size={16} fill={star <= orderReview.rating ? "#D4AF37" : "none"} color={star <= orderReview.rating ? "#D4AF37" : "rgba(201,168,76,0.35)"} />
+                      ))}
+                    </span>
+                  </div>
+                )}
               </div>
             </motion.div>
           ) : getDeliveryInfo ? (
@@ -2870,11 +2874,23 @@ export default function OrderTracking() {
                             </div>
                           )}
                       {event?.step === 'Delivered' ? (
-                        addressText && (
-                          <div className="ot-inline-note" style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.2)', color: '#047857' }}>
-                            Delivered to: {addressText}
-                          </div>
-                        )
+                        <>
+                          {addressText && (
+                            <div className="ot-inline-note" style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.2)', color: '#047857' }}>
+                              Delivered to: {addressText}
+                            </div>
+                          )}
+                          {orderReview && (
+                            <div className="ot-inline-note" style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.04))', borderColor: 'rgba(201,168,76,0.3)', color: '#9A7A20', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px' }}>
+                              <span style={{fontWeight: 800, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em'}}>Your Rating:</span>
+                              <div style={{ display: 'flex', gap: '2px' }}>
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star key={star} size={14} fill={star <= orderReview.rating ? "#D4AF37" : "none"} color={star <= orderReview.rating ? "#D4AF37" : "rgba(201,168,76,0.35)"} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         (event?.details?.deliverySchedule?.locationName || event?.details?.locationName || event?.details?.deliverySchedule?.latitude != null || event?.details?.latitude != null) && (
                           <div className="ot-inline-note" style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.2)', color: '#047857' }}>

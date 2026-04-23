@@ -8,7 +8,7 @@ import {
   Clock3, PackageSearch, Search, SlidersHorizontal,
   X, ArrowLeft, ChevronRight, MessageCircle,
   MapPin, Calendar, RotateCcw, Package,
-  CreditCard, TrendingUp, CheckCircle2, Truck, KeyRound
+  CreditCard, TrendingUp, CheckCircle2, Truck, KeyRound, Star
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════
@@ -463,6 +463,18 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
     return getCountdownText(etaDate)
   }, [etaDate, nowTick])
 
+  const [orderReview, setOrderReview] = useState(null)
+  useEffect(() => {
+    if (norm === 'Delivered') {
+      axios.get(`${BASE_URL}/api/reviews/order/${item.orderId}`)
+        .then(res => {
+          if (res.data.success && res.data.review) {
+            setOrderReview(res.data.review)
+          }
+        }).catch(() => {})
+    }
+  }, [item.orderId, norm])
+
   return (
     <motion.div
       ref={ref}
@@ -522,18 +534,38 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
 
         {/* Product */}
         {name && (
-          <div className="mop2-product">
-            <div className="mop2-product-img">
-              {img
-                ? <img src={img} alt={name} />
-                : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.15)', fontSize:10 }}>IMG</div>
-              }
+          <div className="mop2-product" style={{ flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '220px' }}>
+              <div className="mop2-product-img">
+                {img
+                  ? <img src={img} alt={name} />
+                  : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.15)', fontSize:10 }}>IMG</div>
+                }
+              </div>
+              <div>
+                <div className="mop2-product-name">{name}</div>
+                <div className="mop2-product-price">₹{price.toLocaleString('en-IN')}</div>
+              </div>
             </div>
-            <div>
-              <div className="mop2-product-name">{name}</div>
-              <div className="mop2-product-price">₹{price.toLocaleString('en-IN')} · Qty {firstQty}</div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginLeft: 'auto' }}>
+              {/* Review Rating (Middle-Right Premium Look) */}
+              {norm === 'Delivered' && orderReview && (
+                <div style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.04))', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '8px', padding: '6px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', boxShadow: '0 4px 15px rgba(201,168,76,0.08)' }}>
+                  <span style={{fontWeight: 800, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#9A7A20'}}>Your Rating</span>
+                  <div style={{ display: 'flex', gap: '2px' }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star key={star} size={13} fill={star <= orderReview.rating ? "#D4AF37" : "none"} color={star <= orderReview.rating ? "#D4AF37" : "rgba(201,168,76,0.35)"} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--ink)' }}>Qty: {firstQty}</div>
+                {extras > 0 && <div className="mop2-more" style={{ margin: '4px 0 0 0' }}>+{extras} more</div>}
+              </div>
             </div>
-            {extras > 0 && <div className="mop2-more">+{extras} more</div>}
           </div>
         )}
 

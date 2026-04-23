@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from "../Store/ActionCreaters/ProductActionCreators"
@@ -998,6 +998,7 @@ export default function SingleProductPage() {
   const [toastVisible, setToastVisible] = useState(false);
   const [validationErr, setValidationErr] = useState('');
   const [cartLoading, setCartLoading] = useState(false);
+  const [reviewStats, setReviewStats] = useState({ count: 0, average: 0.0 });
 
   const toastTimer = useRef(null);
 
@@ -1018,6 +1019,10 @@ export default function SingleProductPage() {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToastVisible(false), 2800);
   }
+
+  const handleReviewStatsUpdate = useCallback((stats) => {
+    setReviewStats(stats);
+  }, []);
 
   function switchImage(img) {
     setImgSwitching(true);
@@ -1247,9 +1252,9 @@ export default function SingleProductPage() {
 
               {/* Rating */}
               <div className="lux-rating-bar">
-                <StarRating value={p.rating || 4.5} />
-                <span className="lux-rating-num">{(p.rating || 4.5).toFixed(1)}</span>
-                <span className="lux-review-ct">({p.reviews || 0} reviews)</span>
+                <StarRating value={reviewStats.count > 0 ? reviewStats.average : (p.rating || 0)} />
+                <span className="lux-rating-num">{(reviewStats.count > 0 ? reviewStats.average : (p.rating || 0)).toFixed(1)}</span>
+                <span className="lux-review-ct">({reviewStats.count > 0 ? reviewStats.count : (p.reviews || 0)} reviews)</span>
                 <span className="lux-verified">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--green)"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="var(--green)" strokeWidth="2" fill="none"/></svg>
                   Verified
@@ -1449,7 +1454,7 @@ export default function SingleProductPage() {
 
             {/* Ratings & Reviews */}
             <div className="lux-ratings-reviews mx-auto" style={{maxWidth: '1100px'}}>
-              <ProductReviews productId={id} />
+              <ProductReviews productId={id} onStatsUpdate={handleReviewStatsUpdate} />
             </div>
 
             <hr style={{ borderTop: '1px dashed rgba(212,175,55,0.3)', margin: '3rem 0' }} />
