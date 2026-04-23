@@ -20,6 +20,8 @@ const userSchema = new mongoose.Schema({
         fullName: String,
         phone: String,
         addressline1: String,
+        addressline2: String, // Added
+        landmark: String,     // Added
         city: String,
         state: String,
         pin: String,

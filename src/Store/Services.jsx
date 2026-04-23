@@ -60,7 +60,7 @@ const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const checkRateLimit = (endpoint) => {
     const now = Date.now();
     // Normalize endpoint key so "/api/cart?x=1" and "/api/cart" are grouped correctly.
-    const key = endpoint.split('?')[0].split('/').filter(Boolean)[0] || 'root';
+    const key = endpoint.split('?')[0] || 'root';
 
     if (!rateLimiter.has(key)) {
         rateLimiter.set(key, { count: 0, resetTime: now + RATE_LIMIT_WINDOW });

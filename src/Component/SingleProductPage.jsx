@@ -6,6 +6,7 @@ import { getCart, addCart } from "../Store/ActionCreaters/CartActionCreators"
 import { getWishlist, addWishlist } from "../Store/ActionCreaters/WishlistActionCreators"
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryHelper';
 import { useMembership } from './MembershipContext'
+import ProductReviews from './ProductReviews'
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 const styles = `
@@ -1219,88 +1220,6 @@ export default function SingleProductPage() {
                 </div>
               )}
               </div>
-
-              {/* --- PREMIUM PRODUCT INFO SECTION (NOW BELOW IMAGES ONLY) --- */}
-              <div className="lux-premium-info-wrap" style={{marginTop:'2.5rem',marginBottom:'2.5rem',boxShadow:'0 2px 24px #0001',borderRadius:'1.2rem',background:'#fff',padding:'2.2rem 1.5rem',maxWidth:'500px',width:'100%'}}>
-                {/* Tabs */}
-                <div className="lux-tabs" style={{marginBottom:'1.5rem'}}>
-                  <button className={`lux-tab ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')}>Product Details</button>
-                  <button className={`lux-tab ${activeTab === 'features' ? 'active' : ''}`} onClick={() => setActiveTab('features')}>Features</button>
-                  <button className={`lux-tab ${activeTab === 'care' ? 'active' : ''}`} onClick={() => setActiveTab('care')}>Care Guide</button>
-                </div>
-                <div className="lux-tab-content" style={{marginBottom:'2.2rem'}}>
-                  {activeTab === 'details' && (
-                    <div className="lux-desc" style={{fontSize:'1.08rem',lineHeight:1.8}}>
-                      {p.description || 'A premium quality product crafted with the finest materials. Designed for comfort, style, and durability. Perfect for everyday wear and special occasions alike.'}
-                    </div>
-                  )}
-                  {activeTab === 'features' && (
-                    <ul style={{paddingLeft:'1.2rem',fontSize:'1.08rem',lineHeight:2}}>
-                      <li>100% Authentic, luxury-grade material</li>
-                      <li>Ultra-soft, breathable & skin-friendly</li>
-                      <li>Modern tailored fit for all-day comfort</li>
-                      <li>Premium stitching & finishing</li>
-                      <li>Exclusive design, limited edition</li>
-                      <li>Made for both casual & formal occasions</li>
-                    </ul>
-                  )}
-                  {activeTab === 'care' && (
-                    <div className="lux-desc" style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize:'1.08rem',lineHeight:2 }}>
-                      <div>🧺 Machine wash cold with similar colours</div>
-                      <div>🚫 Do not bleach or tumble dry</div>
-                      <div>🌡️ Iron on low heat if needed</div>
-                      <div>🏪 Store in a cool, dry place away from direct sunlight</div>
-                    </div>
-                  )}
-                </div>
-                {/* Ratings & Reviews */}
-                <div className="lux-ratings-reviews" style={{marginBottom:'2.2rem'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:'1.5rem',flexWrap:'wrap'}}>
-                    <div style={{fontSize:'2.2rem',fontWeight:700,color:'#B8960C',display:'flex',alignItems:'center',gap:'0.5rem'}}>
-                      <span>{(p.rating || 4.5).toFixed(1)}</span>
-                      <StarRating value={p.rating || 4.5} />
-                    </div>
-                    <div style={{fontSize:'1.1rem',color:'#888'}}>({p.reviews || 0} Reviews)</div>
-                  </div>
-                  {/* Ratings breakdown bars (static demo) */}
-                  <div style={{marginTop:'1.2rem',maxWidth:'340px'}}>
-                    {[5,4,3,2,1].map(star => (
-                      <div key={star} style={{display:'flex',alignItems:'center',gap:'0.7rem',marginBottom:'0.3rem'}}>
-                        <span style={{width:22}}>{star}★</span>
-                        <div style={{flex:1,background:'#f3f3f3',borderRadius:8,overflow:'hidden',height:8}}>
-                          <div style={{width:`${p.rating ? Math.max(0,Math.min(100,star*20-10)) : star*18}%`,background:'#B8960C',height:'100%'}}></div>
-                        </div>
-                        <span style={{fontSize:12,color:'#888'}}>{Math.floor((p.reviews||20)*(star/15))}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* FAQ / Info Section */}
-                <div className="lux-faq-info" style={{marginTop:'1.5rem',display:'grid',gap:'1.2rem',gridTemplateColumns:'1fr 1fr',maxWidth:'700px'}}>
-                  <div>
-                    <div style={{fontWeight:600,marginBottom:4}}>Why this product?</div>
-                    <div style={{color:'#555'}}>Handpicked for luxury, comfort, and timeless style. Trusted by 10,000+ premium buyers.</div>
-                  </div>
-                  <div>
-                    <div style={{fontWeight:600,marginBottom:4}}>Material</div>
-                    <div style={{color:'#555'}}>Premium combed cotton blend, eco-friendly dyes, and sustainable sourcing.</div>
-                  </div>
-                  <div>
-                    <div style={{fontWeight:600,marginBottom:4}}>Care</div>
-                    <div style={{color:'#555'}}>Easy machine wash, no bleach, low iron, and quick dry.</div>
-                  </div>
-                  <div>
-                    <div style={{fontWeight:600,marginBottom:4}}>Return/Exchange</div>
-                    <div style={{color:'#555'}}>30-day hassle-free returns & instant exchange support.</div>
-                  </div>
-                </div>
-                {/* Responsive: Stack FAQ on mobile */}
-                <style>{`
-                  @media (max-width: 700px) {
-                    .lux-faq-info { grid-template-columns: 1fr !important; }
-                  }
-                `}</style>
-              </div>
             </div>
             
 
@@ -1489,6 +1408,70 @@ export default function SingleProductPage() {
               </div>
 
             
+            </div>
+          </div>
+
+          {/* --- PREMIUM PRODUCT INFO & REVIEWS SECTION (FULL WIDTH) --- */}
+          <div className="lux-premium-info-wrap mt-5 p-4 p-md-5" style={{boxShadow:'0 12px 40px rgba(0,0,0,0.04)',borderRadius:'24px',background:'#fff',width:'100%', border:'1px solid rgba(212,175,55,0.15)'}}>
+            {/* Tabs */}
+            <div className="lux-tabs d-flex justify-content-center flex-wrap" style={{marginBottom:'2.5rem', borderBottom:'2px solid rgba(212,175,55,0.15)'}}>
+              <button className={`lux-tab ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')} style={{fontSize: '14px', padding: '12px 24px', fontWeight: 700}}>Product Details</button>
+              <button className={`lux-tab ${activeTab === 'features' ? 'active' : ''}`} onClick={() => setActiveTab('features')} style={{fontSize: '14px', padding: '12px 24px', fontWeight: 700}}>Features</button>
+              <button className={`lux-tab ${activeTab === 'care' ? 'active' : ''}`} onClick={() => setActiveTab('care')} style={{fontSize: '14px', padding: '12px 24px', fontWeight: 700}}>Care Guide</button>
+            </div>
+            <div className="lux-tab-content mx-auto text-center" style={{marginBottom:'3.5rem', maxWidth: '800px'}}>
+              {activeTab === 'details' && (
+                <div className="lux-desc" style={{fontSize:'1.1rem',lineHeight:1.8, color: '#4b5563'}}>
+                  {p.description || 'A premium quality product crafted with the finest materials. Designed for comfort, style, and durability. Perfect for everyday wear and special occasions alike.'}
+                </div>
+              )}
+              {activeTab === 'features' && (
+                <ul style={{listStyle: 'none', padding: 0, fontSize:'1.1rem',lineHeight:2, color: '#4b5563', display: 'inline-block', textAlign: 'left'}}>
+                  <li><span style={{color: '#D4AF37', marginRight: '8px'}}>✨</span> 100% Authentic, luxury-grade material</li>
+                  <li><span style={{color: '#D4AF37', marginRight: '8px'}}>✨</span> Ultra-soft, breathable & skin-friendly</li>
+                  <li><span style={{color: '#D4AF37', marginRight: '8px'}}>✨</span> Modern tailored fit for all-day comfort</li>
+                  <li><span style={{color: '#D4AF37', marginRight: '8px'}}>✨</span> Premium stitching & finishing</li>
+                  <li><span style={{color: '#D4AF37', marginRight: '8px'}}>✨</span> Exclusive design, limited edition</li>
+                  <li><span style={{color: '#D4AF37', marginRight: '8px'}}>✨</span> Made for both casual & formal occasions</li>
+                </ul>
+              )}
+              {activeTab === 'care' && (
+                <div className="lux-desc d-inline-block text-left" style={{ fontSize:'1.1rem',lineHeight:2, color: '#4b5563' }}>
+                  <div>🧺 Machine wash cold with similar colours</div>
+                  <div>🚫 Do not bleach or tumble dry</div>
+                  <div>🌡️ Iron on low heat if needed</div>
+                  <div>🏪 Store in a cool, dry place away from direct sunlight</div>
+                </div>
+              )}
+            </div>
+
+            <hr style={{ borderTop: '1px dashed rgba(212,175,55,0.3)', margin: '3rem 0' }} />
+
+            {/* Ratings & Reviews */}
+            <div className="lux-ratings-reviews mx-auto" style={{maxWidth: '1100px'}}>
+              <ProductReviews productId={id} />
+            </div>
+
+            <hr style={{ borderTop: '1px dashed rgba(212,175,55,0.3)', margin: '3rem 0' }} />
+
+            {/* FAQ / Info Section */}
+            <div className="lux-faq-info mx-auto" style={{display:'grid',gap:'1.5rem',gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',maxWidth:'1000px'}}>
+              <div className="p-4 rounded" style={{background: '#f8f9fa', border: '1px solid rgba(0,0,0,0.05)'}}>
+                <div style={{fontWeight:700,marginBottom:8, fontSize: '15px', color: '#0A0A0A'}}>Why this product?</div>
+                <div style={{color:'#64748b', fontSize: '13px', lineHeight: 1.6}}>Handpicked for luxury, comfort, and timeless style. Trusted by 10,000+ premium buyers.</div>
+              </div>
+              <div className="p-4 rounded" style={{background: '#f8f9fa', border: '1px solid rgba(0,0,0,0.05)'}}>
+                <div style={{fontWeight:700,marginBottom:8, fontSize: '15px', color: '#0A0A0A'}}>Material</div>
+                <div style={{color:'#64748b', fontSize: '13px', lineHeight: 1.6}}>Premium combed cotton blend, eco-friendly dyes, and sustainable sourcing.</div>
+              </div>
+              <div className="p-4 rounded" style={{background: '#f8f9fa', border: '1px solid rgba(0,0,0,0.05)'}}>
+                <div style={{fontWeight:700,marginBottom:8, fontSize: '15px', color: '#0A0A0A'}}>Care</div>
+                <div style={{color:'#64748b', fontSize: '13px', lineHeight: 1.6}}>Easy machine wash, no bleach, low iron, and quick dry.</div>
+              </div>
+              <div className="p-4 rounded" style={{background: '#f8f9fa', border: '1px solid rgba(0,0,0,0.05)'}}>
+                <div style={{fontWeight:700,marginBottom:8, fontSize: '15px', color: '#0A0A0A'}}>Return/Exchange</div>
+                <div style={{color:'#64748b', fontSize: '13px', lineHeight: 1.6}}>30-day hassle-free returns & instant exchange support.</div>
+              </div>
             </div>
           </div>
         </div>

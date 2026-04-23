@@ -728,7 +728,174 @@ io.on('connection', (socket) => {
     });
 });
 
+// 1. Sabse pehle Models wale section mein Review model confirm karein
+const Review = mongoose.model('Review', new mongoose.Schema({ 
+    userId: String, 
+    orderId: String, 
+    rating: Number, 
+    title: String, 
+    comment: String, 
+    products: Array, 
+    pic: String,
+    pics: Array,
+    helpfulVotes: { type: [String], default: [] }
+}, { timestamps: true }));
 
+app.put('/api/review/:id/helpful', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const reviewId = req.params.id.trim();
+        
+        console.log(`👍 Helpful vote requested for Review ID: ${reviewId} by User: ${userId}`);
+        
+        if (!userId) return res.status(400).json({ success: false, message: 'User ID required' });
+        
+        const review = await Review.findById(reviewId);
+        if (!review) {
+            console.log(`❌ Review ${reviewId} not found in database`);
+            return res.status(404).json({ success: false, message: 'Review not found' });
+        }
+        
+        if (!Array.isArray(review.helpfulVotes)) {
+            review.helpfulVotes = [];
+        }
+        
+        const index = review.helpfulVotes.indexOf(userId);
+        if (index === -1) {
+            review.helpfulVotes.push(userId); // Add vote
+            console.log(`✅ Vote added`);
+        } else {
+            review.helpfulVotes.splice(index, 1); // Remove vote (toggle off)
+            console.log(`✅ Vote removed`);
+        }
+        
+        await review.save();
+        res.json({ success: true, helpfulVotes: review.helpfulVotes });
+    } catch (error) {
+        console.error('Helpful vote error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+// 2. Ab ye Route likhein (Ise external routes catch-alls se pehle rakhein)
+app.post('/api/review', (req, res) => {
+    // Ise 'upload' middleware ke saath wrap karein kyunki frontend se image bhej rahe ho
+    upload(req, res, async (err) => {
+        if (err) {
+            console.error("❌ Multer Error:", err.message);
+            return res.status(400).json({ success: false, message: "Image upload failed" });
+        }
+
+        try {
+            const { userId, orderId, rating, title, comment, products } = req.body;
+            let pic = '';
+            let pics = [];
+
+            // Agar photo upload hui hai toh Cloudinary URL uthayein
+            if (req.files && req.files.pic && req.files.pic[0]) {
+                pic = req.files.pic[0].path;
+            }
+            
+            // Multiple photos handling
+            if (req.files && req.files.pics && req.files.pics.length > 0) {
+                pics = req.files.pics.map(file => file.path);
+                if (!pic) pic = pics[0]; // backward compatibility
+            }
+
+            // Products list ko array mein badlein (kyunki frontend stringify karke bhej raha hai)
+            let parsedProducts = [];
+            try {
+                parsedProducts = products ? JSON.parse(products) : [];
+            } catch (e) {
+                parsedProducts = [];
+            }
+
+            const newReview = new Review({
+                userId,
+                orderId,
+                rating: Number(rating) || 5,
+                title: title || '',
+                comment: comment || '',
+                products: parsedProducts,
+                pic: pic,
+                pics: pics
+            });
+
+            await newReview.save();
+            console.log("✅ Review successfully saved for Order:", orderId);
+            
+            return res.status(200).json({ 
+                success: true, 
+                message: "Review stored successfully", 
+                review: newReview 
+            });
+        } catch (error) {
+            console.error('❌ Review Save Error:', error.message);
+            return res.status(500).json({ success: false, message: 'Internal Server Error' });
+        }
+    });
+});
+
+// 🔴 GET REVIEWS FOR A SPECIFIC PRODUCT
+app.get('/api/review/:productId', async (req, res) => {
+    try {
+        const { productId } = req.params;
+
+        let objId = null;
+        try {
+            if (mongoose.Types.ObjectId.isValid(productId)) {
+                objId = new mongoose.Types.ObjectId(productId);
+            }
+        } catch(e) {}
+
+        // Hume wo saare reviews chahiye jinke 'products' array mein ye productId ho
+        const reviews = await Review.find({ 
+            $or: [
+                { productId: productId },
+                { products: productId },
+                { products: { $in: [productId] } },
+                ...(objId ? [
+                    { productId: objId },
+                    { products: objId },
+                    { products: { $in: [objId] } }
+                ] : [])
+            ]
+        }).sort({ createdAt: -1 }).lean();
+
+        // Attach user details dynamically for a richer review display
+        for (let r of reviews) {
+            if (r.userId) {
+                try {
+                    const cleanUserId = String(r.userId).replace(/['"]/g, '');
+                    const userDoc = await User.findById(cleanUserId).select('name username pic').lean();
+                    
+                    if (userDoc) {
+                        r.userName = userDoc.name || userDoc.username || 'Verified Customer';
+                        r.userPic = userDoc.pic;
+                    }
+                } catch (e) { 
+                    console.error('⚠️ Review user fetch error:', e.message);
+                }
+            }
+        }
+
+        // Agar koi review nahi milta toh khali array bhejenge (404 nahi)
+        res.status(200).json({ success: true, reviews });
+    } catch (error) {
+        console.error('❌ Fetch Reviews Error:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to fetch reviews' });
+    }
+});
+
+// 🔴 GET ALL REVIEWS (Optional - for admin dashboard)
+app.get('/api/reviews', async (req, res) => {
+    try {
+        const reviews = await Review.find().sort({ createdAt: -1 });
+        res.status(200).json({ success: true, reviews });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to fetch reviews' });
+    }
+});
 
 app.use('/api', cartRoutes);
 app.use('/api/admin', adminRoutes);
@@ -1648,7 +1815,8 @@ const upload = multer({
 }).fields([
     { name: 'pic', maxCount: 1 }, { name: 'pic1', maxCount: 1 },
     { name: 'pic2', maxCount: 1 }, { name: 'pic3', maxCount: 1 },
-    { name: 'pic4', maxCount: 1 }
+    { name: 'pic4', maxCount: 1 },
+    { name: 'pics', maxCount: 5 }
 ]);
 
 // 📧 BREVO EMAIL SERVICE - Production Final Fix

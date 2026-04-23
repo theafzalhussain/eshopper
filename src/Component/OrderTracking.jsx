@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { io } from 'socket.io-client'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -10,7 +10,7 @@ import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import {
   Package, Archive, Truck, MapPin, BadgeCheck, Calendar,
   RefreshCw, Copy, Clock3, Home, Phone, Mail, Sparkles, Gauge, Wallet,
-  FileText, Download, Navigation, KeyRound
+  FileText, Download, Navigation, KeyRound, ShieldCheck, PackageCheck, Star, X, Loader2, Camera
 } from 'lucide-react'
 
 const STEPS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered']
@@ -35,7 +35,7 @@ const STATUS_SUBTEXT = {
   Packed: 'Your item has been carefully packed with premium care.',
   Shipped: 'Your package is in transit via our courier partner.',
   'Out for Delivery': 'Your order is out for delivery and will reach you today.',
-  Delivered: 'Delivered! We hope you enjoy your purchase.'
+  Delivered: 'Your premium package has been successfully delivered. We hope you love your new purchase!'
 }
 
 const normalizeStatus = (value = '') => {
@@ -286,7 +286,6 @@ const CSS = `
   --shadow-g: 0 12px 40px rgba(201,168,76,0.08);
   --shadow-soft: 0 4px 20px rgba(10,10,10,0.04);
 }
-
 .ot-page {
   font-family: 'DM Sans', sans-serif;
   background: linear-gradient(135deg, #fafaf8 0%, #f5f3ef 100%);
@@ -294,7 +293,6 @@ const CSS = `
   padding: 80px 20px 60px;
   position: relative;
 }
-
 .ot-hero {
   background: linear-gradient(135deg, #f9f7f3 0%, #f2ede5 50%, #ede7df 100%);
   padding: 48px 0 44px;
@@ -303,14 +301,12 @@ const CSS = `
   border-bottom: 1px solid var(--bd);
   margin-bottom: 40px;
 }
-
 .ot-hero-orb1 {
   position: absolute; top: -80px; right: -80px;
   width: 320px; height: 320px;
   background: radial-gradient(circle, rgba(201,168,76,0.08) 0%, transparent 65%);
   border-radius: 50%; pointer-events: none;
 }
-
 .ot-hero-orb2 {
   position: absolute; bottom: -60px; left: 5%;
   width: 220px; height: 220px;
@@ -319,17 +315,15 @@ const CSS = `
 }
 
 .ot-hero-inner {
-  max-width: 1180px; margin: 0 auto; padding: 0 28px;
-  display: flex; align-items: flex-end; justify-content: space-between;
-  flex-wrap: wrap; gap: 20px; position: relative; z-index: 1;
+  max-width: 1180px; margin: 0 auto; padding: 0 28px; display: flex;
+  align-items: flex-end; justify-content: space-between; flex-wrap: wrap;
+  gap: 20px; position: relative; z-index: 1;
 }
-
 .ot-eyebrow {
   font-size: 10px; letter-spacing: 0.26em; text-transform: uppercase;
   color: var(--gold-dk); font-weight: 700; margin-bottom: 10px;
   display: flex; align-items: center; gap: 10px;
 }
-
 .ot-eyebrow::before {
   content: ''; display: inline-block;
   width: 28px; height: 1px;
@@ -342,20 +336,16 @@ const CSS = `
   font-weight: 700; color: var(--ink);
   letter-spacing: -0.02em; line-height: 1; margin: 0 0 8px;
 }
-
 .ot-header-title em {
   font-style: italic; color: var(--gold);
 }
-
 .ot-header-sub {
   font-size: 13px; color: var(--ash);
   letter-spacing: 0.05em; margin: 0;
 }
-
 .ot-hero-right {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
 }
-
 .ot-hero-actions {
   display: flex;
   gap: 10px;
@@ -378,7 +368,6 @@ const CSS = `
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .ot-ghost-btn:hover {
   border-color: var(--gold);
   background: rgba(201,168,76,0.08);
@@ -388,7 +377,6 @@ const CSS = `
   opacity: 0.7;
   cursor: not-allowed;
 }
-
 .ot-back-btn {
   display: flex; align-items: center; gap: 8px;
   padding: 9px 20px; background: transparent;
@@ -398,7 +386,6 @@ const CSS = `
   text-transform: uppercase; cursor: pointer;
   transition: all 0.22s;
 }
-
 .ot-back-btn:hover {
   background: rgba(201,168,76,0.08); border-color: var(--gold);
 }
@@ -413,7 +400,6 @@ const CSS = `
   transition: all 0.28s cubic-bezier(.25,.46,.45,.94);
   position: relative;
 }
-
 .ot-card::before {
   content: '';
   position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
@@ -426,7 +412,6 @@ const CSS = `
   border-color: rgba(201,168,76,0.3);
   box-shadow: 0 20px 48px rgba(201,168,76,0.12), var(--shadow-g);
 }
-
 .ot-card:hover::before {
   opacity: 1;
 }
@@ -437,7 +422,6 @@ const CSS = `
   gap: 14px;
   margin-bottom: 26px;
 }
-
 .ot-kpi {
   background: var(--white);
   border: 1px solid var(--bd);
@@ -445,14 +429,12 @@ const CSS = `
   padding: 16px;
   box-shadow: var(--shadow-soft);
 }
-
 .ot-kpi-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
 }
-
 .ot-kpi-label {
   font-size: 10px;
   letter-spacing: 0.18em;
@@ -460,7 +442,6 @@ const CSS = `
   color: var(--ash);
   font-weight: 700;
 }
-
 .ot-kpi-value {
   font-family: 'Playfair Display', serif;
   font-size: 28px;
@@ -468,7 +449,6 @@ const CSS = `
   color: var(--ink);
   letter-spacing: -0.01em;
 }
-
 .ot-kpi-sub {
   margin-top: 6px;
   font-size: 12px;
@@ -492,12 +472,10 @@ const CSS = `
   margin-bottom: 0;
   height: 100%;
 }
-
 .ot-stack {
   display: grid;
   gap: 18px;
 }
-
 .ot-mini-card {
   background: linear-gradient(145deg, #ffffff 0%, #faf7f2 100%);
   border: 1px solid var(--bd);
@@ -505,7 +483,6 @@ const CSS = `
   padding: 18px;
   box-shadow: var(--shadow-soft);
 }
-
 .ot-mini-title {
   display: flex;
   align-items: center;
@@ -517,7 +494,6 @@ const CSS = `
   font-weight: 700;
   margin-bottom: 12px;
 }
-
 .ot-mini-row {
   display: flex;
   justify-content: space-between;
@@ -526,22 +502,18 @@ const CSS = `
   border-bottom: 1px dashed rgba(201,168,76,0.2);
   font-size: 13px;
 }
-
 .ot-mini-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
-
 .ot-mini-key {
   color: var(--ash);
 }
-
 .ot-mini-val {
   color: var(--ink);
   font-weight: 600;
   text-align: right;
 }
-
 .ot-inline-note {
   margin-top: 8px;
   padding: 8px 10px;
@@ -551,7 +523,6 @@ const CSS = `
   border: 1px solid rgba(26,140,140,0.16);
   color: #0f6f6f;
 }
-
 .ot-map-frame {
   width: 100%;
   height: 210px;
@@ -562,7 +533,6 @@ const CSS = `
   background: linear-gradient(145deg, #f7f3ec 0%, #eee7da 100%);
   box-shadow: 0 14px 30px rgba(15,15,15,0.08);
 }
-
 .ot-map-shell {
   background: linear-gradient(135deg, #fff 0%, #faf8f2 100%);
   border: 1px solid rgba(201,168,76,0.2);
@@ -572,7 +542,6 @@ const CSS = `
   display: flex;
   flex-direction: column;
 }
-
 .ot-map-head {
   display: flex;
   justify-content: space-between;
@@ -580,7 +549,6 @@ const CSS = `
   gap: 8px;
   margin-bottom: 10px;
 }
-
 .ot-map-title {
   display: inline-flex;
   align-items: center;
@@ -591,7 +559,6 @@ const CSS = `
   color: var(--gold-dk);
   font-weight: 700;
 }
-
 .ot-map-tag {
   padding: 6px 10px;
   border-radius: 999px;
@@ -603,7 +570,6 @@ const CSS = `
   text-transform: uppercase;
   font-weight: 700;
 }
-
 .ot-map-source {
   display: flex;
   align-items: center;
@@ -615,7 +581,6 @@ const CSS = `
   border: 1px solid rgba(201,168,76,0.14);
   background: rgba(201,168,76,0.06);
 }
-
 .ot-map-source-label {
   display: inline-flex;
   align-items: center;
@@ -630,14 +595,12 @@ const CSS = `
   border: 1px solid rgba(201,168,76,0.22);
   background: rgba(201,168,76,0.08);
 }
-
 .ot-map-source-value {
   font-size: 12px;
   color: var(--ink);
   font-weight: 600;
   text-align: right;
 }
-
 .ot-map-placeholder {
   width: 100%;
   height: 100%;
@@ -650,7 +613,6 @@ const CSS = `
   flex: 1;
   text-transform: uppercase;
 }
-
 .ot-link-btn {
   width: 100%;
   display: inline-flex;
@@ -669,36 +631,30 @@ const CSS = `
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .ot-link-btn:hover {
   border-color: #9A7A20;
   box-shadow: 0 10px 24px rgba(201,168,76,0.28);
   transform: translateY(-1px);
 }
-
 .ot-section-title {
   font-family: 'Playfair Display', serif;
   font-size: 22px; font-weight: 700;
   color: var(--ink); margin: 0 0 16px;
   letter-spacing: -0.01em;
 }
-
 .ot-label {
   font-size: 10px; letter-spacing: 0.2em;
   text-transform: uppercase; color: var(--ash);
   font-weight: 700; margin-bottom: 6px;
 }
-
 .ot-value {
   font-size: 16px; font-weight: 600; color: var(--ink);
 }
-
 .ot-value.gold {
   font-family: 'Playfair Display', serif;
   font-size: 28px; color: var(--gold-dk);
   font-weight: 700; letter-spacing: -0.01em;
 }
-
 .ot-chip {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 6px 16px; border-radius: 20px;
@@ -706,7 +662,6 @@ const CSS = `
   letter-spacing: 0.15em; text-transform: uppercase;
   border: 1px solid;
 }
-
 .ot-btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: 8px; padding: 14px 24px; border: none;
@@ -716,18 +671,15 @@ const CSS = `
   cursor: pointer; transition: all 0.22s;
   position: relative; overflow: hidden;
 }
-
 .ot-btn-primary {
   background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dk) 100%);
   color: var(--white);
   box-shadow: 0 4px 14px rgba(201,168,76,0.2);
 }
-
 .ot-btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 28px rgba(201,168,76,0.3);
 }
-
 .ot-btn-secondary {
   background: transparent;
   border: 1.5px solid #25D366;
@@ -741,7 +693,6 @@ const CSS = `
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(37,211,102,0.12);
 }
-
 .ot-progress-bar {
   position: relative; margin: 38px 0 32px;
   height: 8px; border-radius: 99px;
@@ -749,7 +700,6 @@ const CSS = `
   overflow: hidden;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
 }
-
 .ot-progress-fill {
   position: absolute; top: 0; left: 0;
   height: 100%; border-radius: 99px;
@@ -757,36 +707,30 @@ const CSS = `
   box-shadow: 0 0 20px rgba(201,168,76,0.15);
   transition: width 0.7s cubic-bezier(.25,.46,.45,.94);
 }
-
 .ot-stepper {
   display: flex; justify-content: space-between;
   gap: 8px; margin-bottom: 32px;
   align-items: flex-start;
 }
-
 .ot-step {
   display: flex; flex-direction: column;
   align-items: center; gap: 8px;
   flex: 1; position: relative;
   text-align: center;
 }
-
 .ot-step::after {
   content: ''; position: absolute;
   top: 20px; left: 50%; right: -50%;
   height: 2px; background: rgba(201,168,76,0.1);
   transition: background 0.4s ease;
 }
-
 .ot-step.done::after {
   background: var(--teal);
   box-shadow: 0 0 8px rgba(26,140,140,0.3);
 }
-
 .ot-step:last-child::after {
   display: none;
 }
-
 .ot-step-dot {
   width: 44px; height: 44px; border-radius: 50%;
   border: 2px solid rgba(201,168,76,0.15);
@@ -796,7 +740,6 @@ const CSS = `
   position: relative; z-index: 2;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-
 .ot-step.done .ot-step-dot {
   background: var(--teal);
   border-color: var(--teal);
@@ -811,27 +754,22 @@ const CSS = `
   box-shadow: 0 0 20px rgba(201,168,76,0.4);
   animation: pulse-step 2s infinite;
 }
-
 @keyframes pulse-step {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
 }
-
 .ot-step-label {
   font-size: 11px; font-weight: 600;
   color: var(--ash); transition: all 0.3s;
   max-width: 70px;
 }
-
 .ot-step.active .ot-step-label,
 .ot-step.done .ot-step-label {
   color: var(--ink); font-weight: 700;
 }
-
 .ot-step.active .ot-step-label {
   color: var(--gold);
 }
-
 .ot-live-badge {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 8px 18px; border-radius: 20px;
@@ -839,19 +777,16 @@ const CSS = `
   letter-spacing: 0.12em; text-transform: uppercase;
   border: 1px solid; margin: 18px 0;
 }
-
 .ot-live-badge.on {
   background: rgba(34,197,94,0.1);
   color: #16a34a;
   border-color: rgba(34,197,94,0.3);
 }
-
 .ot-live-badge.off {
   background: rgba(239,68,68,0.1);
   color: #dc2626;
   border-color: rgba(239,68,68,0.3);
 }
-
 .ot-live-dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: currentColor; animation: pulse-live 2s infinite;
@@ -861,7 +796,6 @@ const CSS = `
   0%, 100% { box-shadow: 0 0 0 2px rgba(22,163,74,0.2); }
   50% { box-shadow: 0 0 0 4px rgba(22,163,74,0.04); }
 }
-
 .ot-delivery-card {
   background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.04) 100%);
   border: 1px solid rgba(34,197,94,0.2);
@@ -873,26 +807,21 @@ const CSS = `
   flex-direction: column;
   align-items: center;
 }
-
 .ot-delivery-card.delivered {
   background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.04) 100%);
   border-color: rgba(34,197,94,0.2);
 }
-
 .ot-delivery-card.expected {
   background: linear-gradient(135deg, rgba(16,185,129,0.09) 0%, rgba(201,168,76,0.08) 100%);
   border-color: rgba(34,197,94,0.25);
 }
-
 .ot-delivery-icon {
   font-size: 28px; margin-bottom: 12px;
 }
-
 .ot-delivery-headline {
   font-size: 18px; font-weight: 700;
   color: #16a34a; margin: 8px 0;
 }
-
 .ot-delivery-meta {
   font-size: 12px; color: var(--ash);
 }
@@ -909,20 +838,17 @@ const CSS = `
   text-transform: uppercase;
   font-weight: 700;
 }
-
 .ot-fin-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
 }
-
 .ot-fin-block {
   background: linear-gradient(140deg, #ffffff 0%, #faf8f3 100%);
   border: 1px solid rgba(201,168,76,0.16);
   border-radius: 8px;
   padding: 14px;
 }
-
 .ot-fin-title {
   font-size: 10px;
   letter-spacing: 0.18em;
@@ -931,24 +857,20 @@ const CSS = `
   font-weight: 700;
   margin-bottom: 8px;
 }
-
 .ot-fin-value {
   font-size: 20px;
   font-weight: 700;
   color: var(--ink);
 }
-
 .ot-fin-value.gold {
   color: var(--gold-dk);
   font-family: 'Playfair Display', serif;
 }
-
 .ot-fin-extra {
   margin-top: 10px;
   display: grid;
   gap: 6px;
 }
-
 .ot-fin-extra-row {
   display: flex;
   justify-content: space-between;
@@ -956,12 +878,10 @@ const CSS = `
   font-size: 12px;
   color: #6b7280;
 }
-
 .ot-fin-extra-row strong {
   color: #111827;
   text-align: right;
 }
-
 .ot-finance-shell {
   background: linear-gradient(135deg, #fff 0%, #fbf8f2 100%);
   border: 1px solid rgba(201,168,76,0.22);
@@ -969,7 +889,6 @@ const CSS = `
   padding: 18px;
   box-shadow: 0 16px 34px rgba(15,15,15,0.05);
 }
-
 .ot-finance-head {
   display: flex;
   align-items: center;
@@ -977,13 +896,11 @@ const CSS = `
   gap: 10px;
   margin-bottom: 14px;
 }
-
 .ot-finance-title {
   font-family: 'Playfair Display', serif;
   font-size: 22px;
   color: var(--ink);
 }
-
 .ot-finance-tag {
   border: 1px solid rgba(201,168,76,0.35);
   background: rgba(201,168,76,0.09);
@@ -995,7 +912,6 @@ const CSS = `
   text-transform: uppercase;
   font-weight: 700;
 }
-
 .ot-delivery-hero {
   width: 100%;
   text-align: center;
@@ -1008,7 +924,6 @@ const CSS = `
   border: 1px solid rgba(201,168,76,0.26);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 16px 38px rgba(15,15,15,0.06);
 }
-
 .ot-delivery-pill {
   display: inline-flex;
   align-items: center;
@@ -1024,13 +939,11 @@ const CSS = `
   text-transform: uppercase;
   margin-bottom: 10px;
 }
-
 .ot-items-grid {
   display: grid; gap: 16px;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   margin-bottom: 24px;
 }
-
 .ot-item-card {
   background: var(--smoke);
   border: 1px solid var(--bd);
@@ -1039,13 +952,11 @@ const CSS = `
   text-align: center;
   transition: all 0.2s;
 }
-
 .ot-item-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 16px rgba(0,0,0,0.08);
   border-color: rgba(201,168,76,0.3);
 }
-
 .ot-item-image {
   width: 100%; height: 120px;
   border-radius: 6px;
@@ -1053,18 +964,15 @@ const CSS = `
   object-fit: cover;
   background: var(--fog);
 }
-
 .ot-item-name {
   font-size: 12px; font-weight: 600;
   color: var(--ink); margin-bottom: 6px;
   line-height: 1.3;
 }
-
 .ot-item-price {
   font-size: 14px; font-weight: 700;
   color: var(--gold-dk);
 }
-
 .ot-item-qty {
   display: inline-flex;
   align-items: center;
@@ -1078,7 +986,6 @@ const CSS = `
   font-weight: 700;
   letter-spacing: 0.05em;
 }
-
 .ot-timeline-event {
   display: flex; gap: 18px;
   padding: 18px; margin-bottom: 16px;
@@ -1088,18 +995,15 @@ const CSS = `
   border-left: 3px solid var(--teal);
   transition: all 0.2s;
 }
-
 .ot-timeline-event.done {
   border-left-color: var(--teal);
   background: linear-gradient(135deg, rgba(26,140,140,0.05), transparent);
 }
-
 .ot-timeline-event.active {
   border-left-color: var(--gold);
   background: linear-gradient(135deg, rgba(201,168,76,0.08), transparent);
   box-shadow: 0 4px 12px rgba(201,168,76,0.1);
 }
-
 .ot-timeline-dot {
   width: 40px; height: 40px;
   border-radius: 50%;
@@ -1123,20 +1027,230 @@ const CSS = `
   border-color: var(--gold);
   box-shadow: 0 0 16px rgba(201,168,76,0.3);
 }
-
 .ot-timeline-title {
   font-size: 16px; font-weight: 700;
   color: var(--ink); margin: 0 0 4px;
 }
-
 .ot-timeline-text {
   font-size: 13px; color: var(--ash);
   margin: 8px 0;
 }
 
+/* --- PREMIUM OTP CARD --- */
+.ot-otp-premium-card {
+  background: linear-gradient(145deg, #111111 0%, #1a1a1a 100%);
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 16px;
+  padding: 32px 28px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+}
+.ot-otp-premium-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(201,168,76,0.15), transparent 60%);
+  pointer-events: none;
+}
+.ot-otp-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px;
+  position: relative; z-index: 1;
+}
+.ot-otp-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-lt); margin: 0;
+}
+.ot-otp-warning-chip {
+  background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5;
+  padding: 6px 12px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.ot-otp-code-wrap {
+  text-align: center; margin: 24px 0; position: relative; z-index: 1;
+}
+.ot-otp-code {
+  font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 700; letter-spacing: 0.3em; color: var(--white);
+  text-shadow: 0 0 20px rgba(201,168,76,0.4); margin: 0;
+}
+.ot-otp-instruction {
+  font-size: 12px; color: #a1a1aa; margin: 8px 0 0; font-weight: 500;
+}
+.ot-otp-details-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px;
+  margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);
+  position: relative; z-index: 1;
+}
+.ot-otp-detail-item { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.ot-otp-detail-label { font-size: 10px; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+.ot-otp-detail-value { font-size: 14px; color: var(--white); font-weight: 600; }
+
+/* --- PREMIUM EXPECTED DELIVERY CARD --- */
+.ot-expected-card {
+  background: linear-gradient(135deg, #ffffff 0%, #faf8f2 100%);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(201,168,76,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.ot-expected-card::after {
+  content: ''; position: absolute; right: -50px; top: -50px; width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(201,168,76,0.1) 0%, transparent 60%);
+  border-radius: 50%; pointer-events: none;
+}
+.ot-expected-icon-wrap {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(201,168,76,0.1); border: 1px solid rgba(201,168,76,0.25);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gold-dk); flex-shrink: 0;
+}
+.ot-expected-content { flex: 1; min-width: 240px; text-align: left; }
+.ot-expected-kicker { font-size: 10px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-dk); margin-bottom: 8px; }
+.ot-expected-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--ink); margin: 0 0 6px; }
+.ot-expected-meta { font-size: 14px; color: var(--ash); margin: 0; line-height: 1.5; }
+.ot-expected-countdown { background: var(--ink); color: var(--gold-lt); padding: 12px 24px; border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; box-shadow: 0 8px 20px rgba(0,0,0,0.15); flex-shrink: 0; text-align: center; z-index: 1; }
+
 .ot-timeline-time {
   font-size: 11px; color: var(--ash);
   display: flex; align-items: center; gap: 6px;
+}
+.ot-delivered-premium {
+  background: linear-gradient(145deg, #111 0%, #1a1a1a 100%);
+  border: 1px solid rgba(201,168,76,0.3);
+  color: #fff;
+  padding: 36px 28px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 24px;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+}
+.ot-delivered-premium::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(201,168,76,0.15), transparent 60%);
+  pointer-events: none;
+}
+.ot-delivered-icon-wrap {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: rgba(201,168,76,0.06);
+  border: 1px solid rgba(201,168,76,0.25);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--gold-lt);
+  margin-bottom: 18px;
+  box-shadow: 0 0 30px rgba(201,168,76,0.12);
+  position: relative; z-index: 1;
+}
+.ot-delivered-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px; font-weight: 600;
+  color: var(--gold-lt); margin: 0 0 10px;
+  position: relative; z-index: 1; letter-spacing: 0.5px;
+}
+.ot-delivered-sub {
+  font-size: 14px; color: #a1a1aa; max-width: 420px; margin: 0 auto 24px; line-height: 1.6;
+  position: relative; z-index: 1;
+}
+.ot-delivered-meta-box {
+  display: inline-flex; gap: 32px;
+  border-top: 1px solid rgba(201,168,76,0.15);
+  padding-top: 24px; text-align: left;
+  position: relative; z-index: 1;
+}
+.ot-delivered-meta-item {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.ot-delivered-meta-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: #888; font-weight: 700;
+}
+.ot-delivered-meta-value {
+  font-size: 15px; font-weight: 600; color: #fff;
+}
+.ot-verification-premium {
+  background: linear-gradient(135deg, #f0fbf4 0%, #ffffff 100%);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-left: 4px solid #16a34a;
+  padding: 24px 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  box-shadow: 0 12px 30px rgba(22,163,74,0.08);
+  border-radius: 12px; margin-bottom: 24px;
+}
+.ot-ver-left { display: flex; align-items: center; gap: 16px; }
+.ot-ver-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: #dcfce7; color: #16a34a;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(34,197,94,0.2);
+  box-shadow: 0 4px 12px rgba(34,197,94,0.15);
+}
+.ot-ver-title { font-size: 15px; font-weight: 800; color: #14532d; margin: 0 0 6px; }
+.ot-ver-sub { font-size: 13px; color: #166534; margin: 0; line-height: 1.4; }
+.ot-ver-right {
+  text-align: right; background: #fff; border: 1px dashed rgba(34,197,94,0.5);
+  padding: 12px 20px; border-radius: 10px; min-width: max-content;
+}
+.ot-ver-time-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: #16a34a; margin-bottom: 4px; font-weight: 800; }
+.ot-ver-time-val { font-size: 14px; font-weight: 800; color: #14532d; }
+
+/* Review Modal */
+.ot-modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.ot-modal-card {
+  background: linear-gradient(145deg, #111111 0%, #1a1a1a 100%);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 20px;
+  width: 100%; max-width: 480px;
+  padding: 32px;
+  position: relative;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 40px rgba(201,168,76,0.1);
+}
+.ot-modal-close {
+  position: absolute; top: 20px; right: 20px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%;
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #a1a1aa;
+  cursor: pointer; transition: all 0.2s;
+}
+.ot-modal-close:hover { color: var(--gold-lt); border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.1); transform: rotate(90deg); }
+.ot-modal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px; font-weight: 700; color: var(--gold-lt);
+  margin: 0 0 8px;
+}
+.ot-modal-sub {
+  font-size: 13px; color: #a1a1aa; margin: 0 0 24px;
+}
+.ot-star-row {
+  display: flex; gap: 8px; margin-bottom: 24px; justify-content: center;
+}
+.ot-star-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: #333; transition: transform 0.2s, color 0.2s;
+}
+.ot-star-btn:hover { transform: scale(1.1); }
+.ot-star-btn.active { color: var(--gold); }
+.ot-textarea {
+  width: 100%; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+  padding: 16px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; color: var(--white); outline: none;
+  resize: vertical; min-height: 120px; margin-bottom: 24px;
+  background: #1a1a1a;
+}
+.ot-textarea:focus {
+  border-color: var(--gold); background: #111; box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
 }
 
 @media (max-width: 768px) {
@@ -1148,6 +1262,10 @@ const CSS = `
   .ot-kpi-grid { grid-template-columns: 1fr 1fr; }
   .ot-shell { grid-template-columns: 1fr; }
   .ot-top-premium-grid { grid-template-columns: 1fr; }
+  .ot-verification-premium { flex-direction: column; align-items: flex-start; padding: 20px; }
+  .ot-ver-right { width: 100%; text-align: left; }
+  .ot-delivered-meta-box { flex-direction: column; gap: 16px; text-align: center; width: 100%; }
+  .ot-delivered-meta-item { align-items: center; }
 }
 @media (max-width: 1100px) and (min-width: 769px) {
   .ot-top-premium-grid {
@@ -1158,6 +1276,299 @@ const CSS = `
 @keyframes fadeInDown {
   from { opacity: 0; transform: translateY(-20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Review Modal - Premium */
+.rev-modal-card {
+  width: 100%;
+  max-width: 580px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+.rev-modal-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+  text-align: center;
+  position: relative;
+}
+.rev-modal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gold-lt);
+  margin: 0 0 4px;
+}
+.rev-modal-subtitle {
+  font-size: 13px;
+  color: #a1a1aa;
+  margin: 0;
+}
+.rev-modal-body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+.rev-product-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(201,168,76,0.05);
+  border: 1px solid rgba(201,168,76,0.15);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 24px;
+}
+.rev-product-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid rgba(201,168,76,0.2);
+}
+.rev-product-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--white);
+  margin: 0;
+}
+.rev-product-more {
+  font-size: 12px;
+  color: var(--gold-dk);
+  margin: 4px 0 0;
+}
+.rev-rating-section {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.rev-form-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.rev-star-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.rev-star-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #333;
+  transition: transform 0.2s, color 0.2s;
+}
+.rev-star-btn:hover {
+  transform: scale(1.15);
+  color: var(--gold-lt);
+}
+.rev-star-btn.active {
+  color: var(--gold);
+  filter: drop-shadow(0 0 8px rgba(201,168,76,0.4));
+}
+.rev-rating-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold-dk);
+  min-height: 20px;
+}
+.rev-form-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+.rev-input, .rev-textarea {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--white);
+  background: #1a1a1a;
+  outline: none;
+  transition: all 0.2s;
+}
+.rev-input:focus, .rev-textarea:focus {
+  border-color: var(--gold);
+  background: #111;
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.15);
+}
+.rev-input::placeholder, .rev-textarea::placeholder {
+  color: #555;
+}
+.rev-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+.rev-char-counter {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  font-size: 11px;
+  color: #a1a1aa;
+  background: rgba(255,255,255,0.05);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.rev-modal-footer {
+  padding: 20px 28px;
+  border-top: 1px solid rgba(201,168,76,0.15);
+  background: rgba(0,0,0,0.2);
+}
+.rev-submit-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dk) 100%);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.22s;
+  box-shadow: 0 8px 20px rgba(201,168,76,0.25);
+}
+.rev-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(201,168,76,0.35);
+}
+.rev-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+.rev-image-upload-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 140px;
+  border: 1px dashed rgba(201,168,76,0.3);
+  border-radius: 8px;
+  background: rgba(201,168,76,0.03);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.rev-image-upload-wrap:hover {
+  background: rgba(201,168,76,0.08);
+  border-color: rgba(201,168,76,0.6);
+}
+.rev-image-upload-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 24px;
+  width: 100%;
+  height: 100%;
+  transition: color 0.2s ease;
+  margin: 0;
+}
+.rev-image-upload-btn:hover {
+  color: var(--gold-lt);
+}
+.rev-image-upload-btn span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.rev-upload-hint {
+  font-size: 10px !important;
+  color: #71717a !important;
+  letter-spacing: 0.05em !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  margin-top: 2px;
+}
+.rev-image-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+.rev-image-preview img {
+  max-height: 160px;
+  width: auto;
+  border-radius: 6px;
+  border: 1px solid rgba(201,168,76,0.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  object-fit: contain;
+}
+.rev-image-remove {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(20,20,20,0.8);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50%;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+.rev-image-remove:hover {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: #ef4444;
+  transform: scale(1.1);
+}
+.rev-image-preview-multi { position: relative; width: 80px; height: 80px; flex: 0 0 auto; border-radius: 8px; border: 1px solid rgba(201,168,76,0.4); box-shadow: 0 4px 12px rgba(0,0,0,0.5); overflow: hidden; }
+.rev-image-preview-multi img { width: 100%; height: 100%; object-fit: cover; }
+.rev-image-remove-multi { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; color: #fff; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; z-index: 5; }
+.rev-image-remove-multi:hover { background: #ef4444; border-color: #ef4444; transform: scale(1.1); }
+.rev-image-upload-btn-multi { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #a1a1aa; cursor: pointer; margin: 0; transition: color 0.2s ease, background 0.2s ease; border-radius: 8px; border: 1px dashed rgba(201,168,76,0.3); background: rgba(201,168,76,0.03); }
+.rev-image-upload-btn-multi:hover { color: var(--gold-lt); background: rgba(201,168,76,0.08); border-color: rgba(201,168,76,0.6); }
+.rev-image-upload-btn-multi span { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.ot-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .rev-modal-card {
+    max-height: 95vh;
+    border-radius: 20px;
+  }
+  .rev-modal-header, .rev-modal-body, .rev-modal-footer {
+    padding: 20px;
+  }
+  .rev-modal-title {
+    font-size: 22px;
+  }
+  .rev-star-btn svg {
+    width: 24px;
+    height: 24px;
+  }
 }
 `
 
@@ -1179,6 +1590,16 @@ export default function OrderTracking() {
   const [copiedOrderId, setCopiedOrderId] = useState(false)
   const [invoiceLoading, setInvoiceLoading] = useState(false)
   const [nowTick, setNowTick] = useState(Date.now())
+
+  // Review Modal States
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewTitle, setReviewTitle] = useState('')
+  const [reviewText, setReviewText] = useState('')
+  const [reviewImages, setReviewImages] = useState([])
+  const [reviewImagePreviews, setReviewImagePreviews] = useState([])
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const REVIEW_TEXT_MAX_LENGTH = 500
 
   const activeIndex = useMemo(() => Math.max(0, STEPS.indexOf(status)), [status])
   const progressPercent = useMemo(() => (activeIndex / (STEPS.length - 1)) * 100, [activeIndex])
@@ -1240,7 +1661,7 @@ export default function OrderTracking() {
       if (!quantity) quantity = 1
 
       return {
-        id: String(item?._id || item?.id || item?.productid?._id || `${item?.sku || item?.name || 'item'}-${index}`),
+        id: String(item?.productid?._id || item?.productid || item?.productId || item?._id || item?.id || `${item?.sku || item?.name || 'item'}-${index}`),
         name: item?.title || item?.name || item?.productName || item?.productid?.name || `Item ${index + 1}`,
         description: item?.description || item?.productid?.description || '',
         quantity,
@@ -1483,12 +1904,81 @@ export default function OrderTracking() {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), timeout)
   }, [])
 
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length + reviewImages.length > 5) {
+        pushToast('⚠️ Limit Exceeded', 'You can upload up to 5 images.', 3000)
+        return
+    }
+    const validFiles = []
+    const newPreviews = []
+    files.forEach(file => {
+        if (file.size > 5 * 1024 * 1024) {
+            pushToast('⚠️ File Too Large', `Image ${file.name} is over 5MB.`, 3000)
+        } else {
+            validFiles.push(file)
+            newPreviews.push(URL.createObjectURL(file))
+        }
+    })
+    setReviewImages(prev => [...prev, ...validFiles])
+    setReviewImagePreviews(prev => [...prev, ...newPreviews])
+  }
+
+  const removeImage = (index) => {
+    setReviewImages(prev => prev.filter((_, i) => i !== index))
+    setReviewImagePreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleReviewSubmit = useCallback(async () => {
+    if (!reviewTitle.trim()) {
+      pushToast('⚠️ Missing Details', 'Please provide a title for your review.', 3000)
+      return
+    }
+    if (!reviewText.trim()) {
+      pushToast('⚠️ Missing Details', 'Please write a brief review before submitting.', 3000)
+      return
+    }
+    
+    setSubmittingReview(true)
+    try {
+      const formData = new FormData()
+      formData.append('userId', userId)
+      formData.append('orderId', orderId)
+      formData.append('rating', reviewRating)
+      formData.append('title', reviewTitle)
+      formData.append('comment', reviewText)
+      formData.append('products', JSON.stringify(orderItemsDetailed.map(item => item.id)))
+      
+      if (reviewImages && reviewImages.length > 0) {
+        reviewImages.forEach(file => {
+            formData.append('pics', file) 
+        })
+      }
+
+      await axios.post(`${BASE_URL}/api/review`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 15000
+      })
+      pushToast('⭐ Review Submitted', 'Thank you for your valuable feedback!', 3000)
+      setShowReviewModal(false)
+      setReviewTitle('')
+      setReviewText('')
+      setReviewRating(5)
+      setReviewImages([])
+      setReviewImagePreviews([])
+    } catch (error) {
+      pushToast('❌ Submission Failed', error?.response?.data?.message || 'Could not submit your review. Try again.', 3000)
+    } finally {
+      setSubmittingReview(false)
+    }
+  }, [reviewTitle, reviewText, reviewRating, reviewImages, userId, orderId, orderItemsDetailed, pushToast])
+
   const showStatusToast = (nextStatus) => {
     const messages = {
       Ordered: '✅ Order Confirmed',
       Packed: '📦 Packed & Ready',
       Shipped: '🚚 On Its Way',
-      Delivered: '🎉 Delivered!'
+      Delivered: '🎉 Successfully Delivered!'
     }
     pushToast('📨 Order Updated', messages[nextStatus] || `Status: ${nextStatus}`, 3500)
   }
@@ -1922,6 +2412,136 @@ export default function OrderTracking() {
     <>
       <style>{CSS}</style>
       <div className="ot-page">
+        <AnimatePresence>
+          {showReviewModal && (
+        <div className="ot-modal-overlay" onClick={() => { if (!submittingReview) { setShowReviewModal(false); setReviewImages([]); setReviewImagePreviews([]); }}}>
+              <motion.div
+                className="ot-modal-card rev-modal-card"
+                onClick={e => e.stopPropagation()}
+                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 250 }}
+              >
+                <div className="rev-modal-header">
+              <button className="ot-modal-close" onClick={() => { setShowReviewModal(false); setReviewImages([]); setReviewImagePreviews([]); }} disabled={submittingReview}>
+                    <X size={20} />
+                  </button>
+                  <h3 className="rev-modal-title">Write a Review</h3>
+                  <p className="rev-modal-subtitle">Share your experience with order #{orderId}</p>
+                </div>
+
+                <div className="rev-modal-body">
+                  {/* Product Info */}
+                  {orderItemsDetailed.length > 0 && (
+                    <div className="rev-product-info">
+                      <img src={orderItemsDetailed[0].image} alt={orderItemsDetailed[0].name} className="rev-product-img" />
+                      <div>
+                        <p className="rev-product-name">{orderItemsDetailed[0].name}</p>
+                        {orderItemsDetailed.length > 1 && (
+                          <p className="rev-product-more">...and {orderItemsDetailed.length - 1} more item(s)</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Star Rating */}
+                  <div className="rev-rating-section">
+                    <label className="rev-form-label">Your Overall Rating</label>
+                    <div className="rev-star-row">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          className={`rev-star-btn ${star <= reviewRating ? 'active' : ''}`}
+                          onClick={() => setReviewRating(star)}
+                          aria-label={`Rate ${star} stars`}
+                        >
+                          <Star size={28} fill={star <= reviewRating ? 'currentColor' : 'none'} />
+                        </button>
+                      ))}
+                    </div>
+                    <p className="rev-rating-label">
+                      {['Terrible', 'Poor', 'Average', 'Good', 'Excellent'][reviewRating - 1]}
+                    </p>
+                  </div>
+
+                  {/* Review Title */}
+                  <div className="rev-form-group">
+                    <label className="rev-form-label" htmlFor="reviewTitle">Review Headline</label>
+                    <input
+                      id="reviewTitle"
+                      type="text"
+                      className="rev-input"
+                      placeholder="What's most important to know?"
+                      value={reviewTitle}
+                      onChange={(e) => setReviewTitle(e.target.value)}
+                      disabled={submittingReview}
+                      maxLength={100}
+                    />
+                  </div>
+
+                  {/* Review Text */}
+                  <div className="rev-form-group">
+                    <label className="rev-form-label" htmlFor="reviewText">Your Review</label>
+                    <textarea
+                      id="reviewText"
+                      className="rev-textarea"
+                      placeholder="Tell us what you loved, or where we can improve..."
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      disabled={submittingReview}
+                      maxLength={REVIEW_TEXT_MAX_LENGTH}
+                    />
+                    <div className="rev-char-counter">
+                      {reviewText.length} / {REVIEW_TEXT_MAX_LENGTH}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Image Upload */}
+                <div className="rev-form-group">
+                  <label className="rev-form-label">Add Photos (Optional, up to 5)</label>
+                  <div className="rev-image-upload-wrap" style={{ flexDirection: reviewImagePreviews.length > 0 ? 'row' : 'column', flexWrap: 'wrap', padding: reviewImagePreviews.length > 0 ? '12px' : '24px', justifyContent: reviewImagePreviews.length > 0 ? 'flex-start' : 'center', gap: '10px' }}>
+                    {reviewImagePreviews.map((imgSrc, idx) => (
+                        <div key={idx} className="rev-image-preview-multi">
+                            <img src={imgSrc} alt={`Preview ${idx}`} />
+                            <button type="button" className="rev-image-remove-multi" onClick={() => removeImage(idx)}>
+                                <X size={12} />
+                            </button>
+                        </div>
+                    ))}
+                    {reviewImagePreviews.length < 5 && (
+                        <label className="rev-image-upload-btn-multi" style={{ flex: reviewImagePreviews.length > 0 ? '0 0 auto' : '1', width: reviewImagePreviews.length > 0 ? '80px' : '100%', height: reviewImagePreviews.length > 0 ? '80px' : '100%' }}>
+                            <Camera size={reviewImagePreviews.length > 0 ? 20 : 24} strokeWidth={1.5} />
+                            {reviewImagePreviews.length === 0 && <span>Upload Images</span>}
+                            {reviewImagePreviews.length === 0 && <span className="rev-upload-hint">Max 5MB per image</span>}
+                            <input type="file" accept="image/*" multiple onChange={handleImageChange} hidden disabled={submittingReview} />
+                        </label>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rev-modal-footer">
+                  <button className="rev-submit-btn" onClick={handleReviewSubmit} disabled={submittingReview}>
+                    {submittingReview ? (
+                      <>
+                        <Loader2 size={16} className="ot-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} />
+                        Submit Review
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         {/* Toast Notifications */}
         <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {toasts.map((toast) => (
@@ -2043,59 +2663,95 @@ export default function OrderTracking() {
           </motion.div>
 
           {showDeliveryOtpCard && (
-            <motion.div className="ot-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} style={{ borderColor: 'rgba(220,38,38,0.25)', background: 'linear-gradient(135deg, rgba(254,242,242,0.88) 0%, rgba(255,255,255,0.95) 100%)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
-                <div className="ot-label" style={{ marginBottom: 0, color: '#b91c1c' }}>Delivery Verification OTP</div>
-                <div className="ot-chip" style={{ background: 'rgba(220,38,38,0.1)', borderColor: 'rgba(220,38,38,0.28)', color: '#b91c1c' }}>
-                  <KeyRound size={13} /> Share at doorstep only
+            <motion.div className="ot-otp-premium-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+              <div className="ot-otp-header">
+                <h4 className="ot-otp-title">Secure Delivery Verification</h4>
+                <div className="ot-otp-warning-chip">
+                  <KeyRound size={12} /> Doorstep Only
                 </div>
               </div>
-              <div style={{ fontSize: '34px', letterSpacing: '0.28em', fontWeight: 800, color: '#7f1d1d', textAlign: 'center', margin: '6px 0 8px' }}>
-                {deliveryOtpCode}
+              <div className="ot-otp-code-wrap">
+                <p className="ot-otp-code">{deliveryOtpCode}</p>
+                <p className="ot-otp-instruction">Please share this OTP with the luxury concierge rider only after receiving your package.</p>
               </div>
-              <p style={{ margin: 0, textAlign: 'center', fontSize: 13, color: '#7f1d1d' }}>
-                Package receive karne ke baad hi rider ko OTP batayein.
-              </p>
-              <div className="ot-fin-extra" style={{ marginTop: 12 }}>
-                <div className="ot-fin-extra-row"><span>OTP Expires</span><strong>{deliveryOtpExpiresAtLabel}</strong></div>
-                <div className="ot-fin-extra-row"><span>Rider</span><strong>{order?.deliverySchedule?.deliveryAgent || 'Assigned soon'}</strong></div>
-                <div className="ot-fin-extra-row"><span>Rider Phone</span><strong>{order?.deliverySchedule?.riderPhone || 'Pending'}</strong></div>
+              <div className="ot-otp-details-grid">
+                <div className="ot-otp-detail-item">
+                  <span className="ot-otp-detail-label">Expires On</span>
+                  <span className="ot-otp-detail-value">{deliveryOtpExpiresAtLabel}</span>
+                </div>
+                <div className="ot-otp-detail-item">
+                  <span className="ot-otp-detail-label">Concierge Rider</span>
+                  <span className="ot-otp-detail-value">{order?.deliverySchedule?.deliveryAgent || 'Assigned soon'}</span>
+                </div>
+                <div className="ot-otp-detail-item">
+                  <span className="ot-otp-detail-label">Contact</span>
+                  <span className="ot-otp-detail-value">{order?.deliverySchedule?.riderPhone || 'Pending'}</span>
+                </div>
               </div>
             </motion.div>
           )}
 
           {status === 'Delivered' && deliveryOtpVerifiedAtLabel && (
-            <motion.div className="ot-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} style={{ borderColor: 'rgba(34,197,94,0.25)', background: 'linear-gradient(135deg, rgba(240,253,244,0.85) 0%, rgba(255,255,255,0.96) 100%)' }}>
-              <div className="ot-label" style={{ color: '#166534' }}>Delivery Verification Completed</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ color: '#166534', fontWeight: 700 }}>Your order was marked delivered only after OTP verification.</div>
-                <div style={{ color: '#166534', fontSize: 12, fontWeight: 700 }}>Verified On: {deliveryOtpVerifiedAtLabel}</div>
+            <motion.div className="ot-verification-premium" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+              <div className="ot-ver-left">
+                <div className="ot-ver-icon">
+                <ShieldCheck size={28} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h4 className="ot-ver-title">Secure Delivery Verified</h4>
+                  <p className="ot-ver-sub">Your order was handed over successfully after OTP authentication.</p>
+                </div>
+              </div>
+              <div className="ot-ver-right">
+                <div className="ot-ver-time-label">Verified On</div>
+                <div className="ot-ver-time-val">{deliveryOtpVerifiedAtLabel}</div>
               </div>
             </motion.div>
           )}
 
           {/* Delivery Status */}
           {status === 'Delivered' ? (
-            <motion.div className="ot-card ot-delivery-card delivered" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="ot-delivery-icon">✅</div>
-              <div className="ot-delivery-headline">Delivered Successfully!</div>
-              <p style={{ fontSize: 14, color: '#666', margin: '8px 0' }}>Thank you for your purchase.</p>
-              <div className="ot-delivery-meta">
-                Delivered on {new Date(order?.updatedAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                {order?.shippingAddress?.city ? ` to ${order.shippingAddress.city}` : ''}
+            <motion.div className="ot-delivered-premium" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="ot-delivered-icon-wrap">
+                <PackageCheck size={34} strokeWidth={1.5} />
+              </div>
+              <h2 className="ot-delivered-title">Delivered Successfully!</h2>
+              <p className="ot-delivered-sub">
+                Thank you for your purchase. We hope your premium experience with Boutique Luxe was exceptional.
+              </p>
+              <div className="ot-delivered-meta-box">
+                <div className="ot-delivered-meta-item">
+                  <span className="ot-delivered-meta-label">Delivered On</span>
+                  <span className="ot-delivered-meta-value">
+                    {new Date(order?.updatedAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+                {addressText && (
+                  <div className="ot-delivered-meta-item">
+                    <span className="ot-delivered-meta-label">Delivery Address</span>
+                    <span className="ot-delivered-meta-value">{addressText}</span>
+                  </div>
+                )}
               </div>
             </motion.div>
           ) : getDeliveryInfo ? (
-            <motion.div className="ot-card ot-delivery-card expected" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <div className="ot-delivery-hero">
-                <div className="ot-delivery-pill">Expected Delivery</div>
-                <div className="ot-delivery-icon">📅</div>
-                <div className="ot-delivery-headline">{formatDeliveryDate(getDeliveryInfo.date)}{getDeliveryInfo.time ? ` at ${getDeliveryInfo.time}` : ''}</div>
-                <div className="ot-delivery-meta">
-                  Expected delivery: {new Date(getDeliveryInfo.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+            <motion.div className="ot-expected-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="ot-expected-icon-wrap">
+                <Calendar size={28} strokeWidth={1.5} />
+              </div>
+              <div className="ot-expected-content">
+                <div className="ot-expected-kicker">Expected Delivery</div>
+                <h3 className="ot-expected-title">
+                  {formatDeliveryDate(getDeliveryInfo.date)}
+                  {getDeliveryInfo.time ? ` at ${getDeliveryInfo.time}` : ''}
+                </h3>
+                <p className="ot-expected-meta">
+                  Scheduled for {new Date(getDeliveryInfo.date).toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })}
                   {order?.shippingAddress?.city ? ` to ${order.shippingAddress.city}` : ''}
-                </div>
-                <div className="ot-delivery-countdown">{deliveryCountdown}</div>
+                </p>
+              </div>
+              <div className="ot-expected-countdown">
+                {deliveryCountdown}
               </div>
             </motion.div>
           ) : null}
@@ -2207,20 +2863,28 @@ export default function OrderTracking() {
                               Delivery Slot: {formatDeliverySchedule(event.details.deliverySchedule)}
                             </div>
                           )}
-                          {(event?.details?.deliverySchedule?.deliveryAgent || event?.details?.deliveryAgent) && (
+                      {event?.step !== 'Delivered' && (event?.details?.deliverySchedule?.deliveryAgent || event?.details?.deliveryAgent) && (
                             <div className="ot-inline-note" style={{ background: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.2)', color: '#1e40af' }}>
                               Rider: {event.details.deliverySchedule?.deliveryAgent || event.details.deliveryAgent}
                               {event.details.deliverySchedule?.riderPhone || event.details.riderPhone ? ` (${event.details.deliverySchedule?.riderPhone || event.details.riderPhone})` : ''}
                             </div>
                           )}
-                          {(event?.details?.deliverySchedule?.locationName || event?.details?.locationName || event?.details?.deliverySchedule?.latitude != null || event?.details?.latitude != null) && (
-                            <div className="ot-inline-note" style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.2)', color: '#047857' }}>
-                              {(() => {
-                                const locationInfo = getTimelineLocation(event?.details || {})
-                                return `Location: ${locationInfo.label || 'Live coordinates'}${locationInfo.coordsText}`
-                              })()}
-                            </div>
-                          )}
+                      {event?.step === 'Delivered' ? (
+                        addressText && (
+                          <div className="ot-inline-note" style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.2)', color: '#047857' }}>
+                            Delivered to: {addressText}
+                          </div>
+                        )
+                      ) : (
+                        (event?.details?.deliverySchedule?.locationName || event?.details?.locationName || event?.details?.deliverySchedule?.latitude != null || event?.details?.latitude != null) && (
+                          <div className="ot-inline-note" style={{ background: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.2)', color: '#047857' }}>
+                            {(() => {
+                              const locationInfo = getTimelineLocation(event?.details || {})
+                              return `Location: ${locationInfo.label || 'Live coordinates'}${locationInfo.coordsText}`
+                            })()}
+                          </div>
+                        )
+                      )}
                           {event?.step === 'Out for Delivery' && (event?.details?.deliveryOtp || order?.deliveryOtp) && (
                             <div className="ot-inline-note" style={{ background: 'rgba(220,38,38,0.08)', borderColor: 'rgba(220,38,38,0.2)', color: '#b91c1c' }}>
                               Delivery OTP: <strong style={{ letterSpacing: '0.12em' }}>{event?.details?.deliveryOtp || order?.deliveryOtp}</strong>
@@ -2403,6 +3067,11 @@ export default function OrderTracking() {
             <motion.button className="ot-btn ot-btn-primary" onClick={() => navigate('/my-orders')} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               ← Back to My Orders
             </motion.button>
+            {status === 'Delivered' && (
+              <motion.button className="ot-btn ot-btn-primary" onClick={() => setShowReviewModal(true)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ background: 'linear-gradient(145deg, #111 0%, #1a1a1a 100%)', border: '1px solid rgba(201,168,76,0.5)', color: '#E8C97A' }}>
+                <Star size={15} style={{ marginRight: '6px' }} /> Write a Review
+              </motion.button>
+            )}
             <motion.button className="ot-btn ot-btn-primary" onClick={() => navigate('/shop')} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ background: 'linear-gradient(135deg, var(--teal) 0%, #0f6f6f 100%)' }}>
               Reorder Similar
             </motion.button>

@@ -92,21 +92,13 @@ export default function Checkout() {
         setShowAddressModal(true);
     }, []);
     const handleDeleteAddress = useCallback((addressId) => {
-        // For premium users, show toast instead of alert
-        if (membershipType === 'Premium') {
-            axios.delete(`${BASE_URL}/api/user/${user?._id || user?.id}/addresses/${addressId}`)
-                .then(() => {
-                    toast.success('Address deleted successfully!');
-                    window.location.reload();
-                })
-                .catch(() => toast.error('Failed to delete address'));
-        } else {
-            if (window.confirm('Are you sure you want to delete this address?')) {
-                axios.delete(`${BASE_URL}/api/user/${user?._id || user?.id}/addresses/${addressId}`)
-                    .then(() => window.location.reload())
-                    .catch(() => alert('Failed to delete address'));
-            }
-        }
+        // Always delete directly and show toast notification
+        axios.delete(`${BASE_URL}/api/user/${user?._id || user?.id}/addresses/${addressId}`)
+            .then(() => {
+                toast.success('Address deleted successfully!');
+                window.location.reload();
+            })
+            .catch(() => toast.error('Failed to delete address'));
     }, [membershipType, user, toast]);
 
     useEffect(() => {
@@ -224,8 +216,10 @@ export default function Checkout() {
             // If the ID starts with 'default-', treat it as a new address rather than an update
             if (editAddress && editAddress._id && !String(editAddress._id).startsWith('default-')) {
                 await axios.put(`${BASE_URL}/api/user/${user?._id || user?.id}/addresses/${editAddress._id}`, addressFormData);
+                toast.success('Address updated successfully!');
             } else {
                 await axios.post(`${BASE_URL}/api/user/${user?._id || user?.id}/addresses`, addressFormData);
+                toast.success('Address added successfully!');
             }
             setShowAddressModal(false);
             window.location.reload(); // Refresh the address selection context
