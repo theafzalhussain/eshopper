@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, memo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowUp,
   BadgeCheck,
@@ -57,6 +58,8 @@ const fallbackFooterData = {
 }
 
 const Footer = () => {
+  const navigate = useNavigate()
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const toast = useToast()
   // Robust admin detection (same as Shop.jsx)
   const [role, setRole] = useState(() => String(localStorage.getItem('role') || '').toLowerCase())
@@ -244,13 +247,48 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const handleTransitionNavigate = (path) => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      navigate(path);
+      window.scrollTo(0, 0);
+      setIsTransitioning(false);
+    }, 500);
+  };
+
   return (
     <footer className="esh-footer-shell">
       <div className="esh-footer-bg" aria-hidden="true"></div>
+      
+      {/* ─── PAGE TRANSITION OVERLAY ─── */}
+      <AnimatePresence>
+        {isTransitioning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            style={{
+              position: 'fixed', inset: 0, backgroundColor: '#0a0a0a',
+              zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15, duration: 0.3 }}
+              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', color: '#c8a96e', letterSpacing: '4px', textTransform: 'uppercase' }}
+            >
+              Curating Selection
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="container esh-footer-container">
         <div className="esh-footer-top">
           <div className="esh-brand-block">
-            <Link to="/" className="footer-logo-link" aria-label="eShopper home">
+              <Link to="/" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/'); }} className="footer-logo-link" aria-label="eShopper home">
               <div className="footer-logo-wrapper">
                 <span className="footer-logo-e">E</span>
                 <div className="footer-logo-text-box">
@@ -279,7 +317,7 @@ const Footer = () => {
             <h3>Quick Links</h3>
             <ul>
               {quickLinks.map((item) => (
-                <li key={item.to}><Link to={item.to}>{item.label}</Link></li>
+                  <li key={item.to}><Link to={item.to} onClick={(e) => { e.preventDefault(); handleTransitionNavigate(item.to); }}>{item.label}</Link></li>
               ))}
             </ul>
           </div>
@@ -291,17 +329,18 @@ const Footer = () => {
                 mainCategories.map((cat) => {
                   const categoryName = String(cat?.name || '').trim()
                   const categoryKey = categoryName.toLowerCase().replace(/\s+/g, '-')
-                  return <li key={cat.id || cat._id || categoryKey}><Link to={`/shop/${encodeURIComponent(categoryName)}`}>{cat.name}</Link></li>
+                    const path = `/shop/${encodeURIComponent(categoryName)}`;
+                    return <li key={cat.id || cat._id || categoryKey}><Link to={path} onClick={(e) => { e.preventDefault(); handleTransitionNavigate(path); }}>{cat.name}</Link></li>
                 })
               ) : (
                 <>
-                  <li><Link to="/shop/Mens">Mens</Link></li>
-                  <li><Link to="/shop/Women">Women</Link></li>
-                  <li><Link to="/shop/Kids">Kids</Link></li>
-                  <li><Link to="/shop/Boys">Boys</Link></li>
-                  <li><Link to="/shop/Fashion">Fashion Essentials</Link></li>
-                  <li><Link to="/shop/Beauty">Beauty & Care</Link></li>
-                  <li><Link to="/shop/Electronics">Electronics</Link></li>
+                    <li><Link to="/shop/Mens" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Mens'); }}>Mens</Link></li>
+                    <li><Link to="/shop/Women" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Women'); }}>Women</Link></li>
+                    <li><Link to="/shop/Kids" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Kids'); }}>Kids</Link></li>
+                    <li><Link to="/shop/Boys" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Boys'); }}>Boys</Link></li>
+                    <li><Link to="/shop/Fashion" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Fashion'); }}>Fashion Essentials</Link></li>
+                    <li><Link to="/shop/Beauty" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Beauty'); }}>Beauty & Care</Link></li>
+                    <li><Link to="/shop/Electronics" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Electronics'); }}>Electronics</Link></li>
                 </>
               )}
             </ul>

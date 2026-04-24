@@ -39,6 +39,7 @@ export default function Shop() {
     const [reviewStats, setReviewStats] = useState({});
     var [selectedColors, setSelectedColors] = useState({})
     var [sidebarOpen, setSidebarOpen] = useState(false)
+    var [isLoading, setIsLoading] = useState(true)
 
     // ── Admin detection (reactive) ──
     const [isAdmin, setIsAdmin] = useState(false);
@@ -110,10 +111,9 @@ export default function Shop() {
         .trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ')
 
     const CATEGORY_GROUPS = [
-        { key: 'kids', aliases: ['kid', 'kids', 'boy', 'boys', 'child', 'children'] },
-        { key: 'girls', aliases: ['girl', 'girls'] },
+        { key: 'kids', aliases: ['kid', 'kids', 'boy', 'boys', 'girl', 'girls', 'child', 'children'] },
         { key: 'women', aliases: ['woman', 'women', 'womens', 'lady', 'ladies', 'female'] },
-        { key: 'mens', aliases: ['man', 'men', 'mens'] }
+        { key: 'mens', aliases: ['man', 'men', 'mens', 'male'] }
     ]
 
     const resolveCategoryGroup = (value) => {
@@ -216,6 +216,15 @@ export default function Shop() {
         }
         fetchReviewStats();
     }, [product.length]);
+
+    // Dismiss loader when products are loaded, or fallback after a timeout (if empty)
+    useEffect(() => {
+        if (product && product.length > 0) {
+            setIsLoading(false);
+        }
+        const timer = setTimeout(() => setIsLoading(false), 1500);
+        return () => clearTimeout(timer);
+    }, [product]);
 
     useEffect(() => { setmc(maincat) }, [maincat])
 
@@ -481,7 +490,25 @@ export default function Shop() {
                     {/* Grid */}
                     <div className="lux-grid">
                         <AnimatePresence>
-                            {filteredProducts.map((item, index) => {
+                            {isLoading ? (
+                                Array.from({ length: 8 }).map((_, idx) => (
+                                    <motion.div key={`skeleton-${idx}`}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="lux-card lux-skeleton-card"
+                                    >
+                                        <div className="lux-img-wrap lux-shimmer" style={{ background: '#f0ede8' }} />
+                                        <div className="lux-cbody">
+                                            <div className="lux-shimmer" style={{ height: '10px', width: '30%', background: '#f0ede8', borderRadius: '4px', marginBottom: '12px' }} />
+                                            <div className="lux-shimmer" style={{ height: '18px', width: '80%', background: '#f0ede8', borderRadius: '4px', marginBottom: '12px' }} />
+                                            <div className="lux-shimmer" style={{ height: '12px', width: '50%', background: '#f0ede8', borderRadius: '4px', marginBottom: '24px' }} />
+                                            <div className="lux-shimmer" style={{ height: '36px', width: '100%', background: '#f0ede8', borderRadius: '4px', marginTop: 'auto' }} />
+                                        </div>
+                                    </motion.div>
+                                ))
+                            ) : (
+                                filteredProducts.map((item, index) => {
                                 const stats = reviewStats[item.id];
                                 const ratingValue = stats ? stats.average : (item.rating || 0);
                                 const reviewCount = stats ? stats.count : 0;
@@ -602,11 +629,11 @@ export default function Shop() {
                                         )}
                                     </div>
                                 </motion.div>
-                            )})}
+                            )}))}
                         </AnimatePresence>
                     </div>
 
-                    {filteredProducts.length === 0 && (
+                    {!isLoading && filteredProducts.length === 0 && (
                         <div className="lux-empty">
                             <div className="lux-eico">◇</div>
                             <h4>No pieces match your selection</h4>
@@ -1158,6 +1185,18 @@ export default function Shop() {
                     cursor:pointer; transition:all 0.25s;
                 }
                 .lux-ebtn:hover { background:transparent; color:var(--ink); border-color:var(--gold); }
+
+                /* Skeleton Loading */
+                .lux-skeleton-card { border-color: rgba(0,0,0,0.04); box-shadow: none; pointer-events: none; }
+                .lux-shimmer {
+                    background: linear-gradient(90deg, #f0ede8 25%, #e8e5e0 50%, #f0ede8 75%);
+                    background-size: 200% 100%;
+                    animation: luxShimmer 1.5s infinite linear;
+                }
+                @keyframes luxShimmer {
+                    0% { background-position: 200% 0; }
+                    100% { background-position: -200% 0; }
+                }
 
                 /* Accessibility */
                 @media (prefers-reduced-motion: reduce) {

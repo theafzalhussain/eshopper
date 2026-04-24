@@ -13,6 +13,7 @@ export default function Navbaar() {
     const desktopProfileDropdownRef = useRef(null)
     const mobileProfileDropdownRef = useRef(null)
     const [isScrolled, setIsScrolled] = useState(false)
+    const [isTransitioning, setIsTransitioning] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
     const [profilePic, setProfilePic] = useState(localStorage.getItem('pic') || '')
@@ -121,7 +122,17 @@ export default function Navbaar() {
         return () => window.removeEventListener('profile-updated', onProfileUpdated)
     }, [location.pathname])
 
-    const logout = () => { localStorage.clear(); navigate("/login") }
+    const handleTransitionNavigate = (path) => {
+        if (isTransitioning) return;
+        setIsTransitioning(true);
+        setTimeout(() => {
+            navigate(path);
+            window.scrollTo(0, 0);
+            setIsTransitioning(false);
+        }, 500);
+    };
+
+    const logout = () => { localStorage.clear(); handleTransitionNavigate("/login") }
     const isActive = (path) => location.pathname === path
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen((prev) => {
@@ -140,6 +151,31 @@ export default function Navbaar() {
 
     return (
         <header className={`header-main ${isScrolled ? 'header-fixed' : ''}`}>
+            {/* ─── PAGE TRANSITION OVERLAY ─── */}
+            <AnimatePresence>
+                {isTransitioning && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        style={{
+                            position: 'fixed', inset: 0, backgroundColor: '#0a0a0a',
+                            zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.15, duration: 0.3 }}
+                            style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', color: '#c8a96e', letterSpacing: '4px', textTransform: 'uppercase' }}
+                        >
+                            Curating Selection
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* --- 🌟 ULTRA PREMIUM TOP RIBBON --- */}
             <div className="top-premium-ribbon d-none d-lg-block">
                 <div className="container h-100 d-flex align-items-center justify-content-between">
@@ -165,7 +201,7 @@ export default function Navbaar() {
                 <div className="container">
                     <div className="d-flex align-items-center justify-content-between w-100">
                         {/* --- ORIGINAL LOGO --- */}
-                        <Link className="navbar-brand d-flex align-items-center mb-0" to="/">
+                        <Link className="navbar-brand d-flex align-items-center mb-0" to="/" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/'); }}>
                             <motion.div 
                                 initial={{ x: -20, opacity: 0 }}
                                 animate={{ x: 0, opacity: 1 }}
@@ -182,18 +218,18 @@ export default function Navbaar() {
                         {/* --- DESKTOP NAV (Hidden on Mobile) --- */}
                         <div className="desktop-nav d-none d-lg-flex align-items-center">
                             <ul className="navbar-nav d-flex align-items-center">
-                                <li className="nav-item mx-2"><Link to="/" className={`nav-link premium-nav-link ${isActive('/')?'active-link':''}`}>Home</Link></li>
-                                <li className="nav-item mx-2"><Link to="/shop/All/" className={`nav-link premium-nav-link ${isActive('/shop/All/')?'active-link':''}`}>Shop</Link></li>
-                                <li className="nav-item mx-2"><Link to="/about" className={`nav-link premium-nav-link ${isActive('/about')?'active-link':''}`}>About</Link></li>
-                                <li className="nav-item mx-2"><Link to="/contact" className={`nav-link premium-nav-link ${isActive('/contact')?'active-link':''}`}>Contact</Link></li>
+                                <li className="nav-item mx-2"><Link to="/" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/'); }} className={`nav-link premium-nav-link ${isActive('/')?'active-link':''}`}>Home</Link></li>
+                                <li className="nav-item mx-2"><Link to="/shop/All/" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/All/'); }} className={`nav-link premium-nav-link ${isActive('/shop/All/')?'active-link':''}`}>Shop</Link></li>
+                                <li className="nav-item mx-2"><Link to="/about" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/about'); }} className={`nav-link premium-nav-link ${isActive('/about')?'active-link':''}`}>About</Link></li>
+                                <li className="nav-item mx-2"><Link to="/contact" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/contact'); }} className={`nav-link premium-nav-link ${isActive('/contact')?'active-link':''}`}>Contact</Link></li>
                                 {role === "Admin" && (
                                     <li className="nav-item mx-2">
-                                        <Link to="/admin-home" className="badge-admin-pill">ADMIN</Link>
+                                        <Link to="/admin-home" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/admin-home'); }} className="badge-admin-pill">ADMIN</Link>
                                     </li>
                                 )}
                             </ul>
                             <div className="navbar-right-box d-flex align-items-center ml-4">
-                                <Link to="/cart" className="text-dark mr-4 h5 position-relative mb-0" title="Shopping Cart">
+                                <Link to="/cart" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/cart'); }} className="text-dark mr-4 h5 position-relative mb-0" title="Shopping Cart">
                                     <motion.div
                                         initial={{ scale: 0.8, opacity: 0 }}
                                         animate={{ 
@@ -300,19 +336,19 @@ export default function Navbaar() {
                                                         </div>
                                                     </div>
                                                     <div className="dropdown-divider"></div>
-                                                    <Link className="dropdown-item premium-dropdown-item" to="/profile" onClick={() => setIsProfileMenuOpen(false)}>
+                                                    <Link className="dropdown-item premium-dropdown-item" to="/profile" onClick={(e) => { e.preventDefault(); setIsProfileMenuOpen(false); handleTransitionNavigate('/profile'); }}>
                                                         <i className="icon-vcard mr-2"></i>
                                                         <span>My Profile</span>
                                                     </Link>
-                                                    <Link className="dropdown-item premium-dropdown-item" to="/my-orders" onClick={() => setIsProfileMenuOpen(false)}>
+                                                    <Link className="dropdown-item premium-dropdown-item" to="/my-orders" onClick={(e) => { e.preventDefault(); setIsProfileMenuOpen(false); handleTransitionNavigate('/my-orders'); }}>
                                                         <ShoppingCart size={14} className="mr-2" style={{display:'inline'}} />
                                                         <span>My Orders</span>
                                                     </Link>
-                                                    <Link className="dropdown-item premium-dropdown-item" to="/wishlist" onClick={() => setIsProfileMenuOpen(false)}>
+                                                    <Link className="dropdown-item premium-dropdown-item" to="/wishlist" onClick={(e) => { e.preventDefault(); setIsProfileMenuOpen(false); handleTransitionNavigate('/wishlist'); }}>
                                                         <i className="icon-heart mr-2"></i>
                                                         <span>Wishlist</span>
                                                     </Link>
-                                                    <Link className="dropdown-item premium-dropdown-item" to="/update-profile" onClick={() => setIsProfileMenuOpen(false)}>
+                                                    <Link className="dropdown-item premium-dropdown-item" to="/update-profile" onClick={(e) => { e.preventDefault(); setIsProfileMenuOpen(false); handleTransitionNavigate('/update-profile'); }}>
                                                         <i className="icon-settings mr-2"></i>
                                                         <span>Settings</span>
                                                     </Link>
@@ -325,7 +361,7 @@ export default function Navbaar() {
                                             )}
                                         </AnimatePresence>
                                     </div>
-                                ) : <Link to="/login" className="btn btn-dark rounded-pill px-4 btn-sm font-weight-bold shadow-sm">LOGIN</Link>}
+                                ) : <Link to="/login" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/login'); }} className="btn btn-dark rounded-pill px-4 btn-sm font-weight-bold shadow-sm">LOGIN</Link>}
                             </div>
                         </div>
 
@@ -384,19 +420,19 @@ export default function Navbaar() {
                                                     </div>
                                                 </div>
                                                 <div className="dropdown-divider"></div>
-                                                <Link className="dropdown-item premium-dropdown-item" to="/profile" onClick={() => setIsProfileMenuOpen(false)}>
+                                                <Link className="dropdown-item premium-dropdown-item" to="/profile" onClick={(e) => { e.preventDefault(); setIsProfileMenuOpen(false); handleTransitionNavigate('/profile'); }}>
                                                     <i className="icon-vcard mr-2"></i>
                                                     <span>My Profile</span>
                                                 </Link>
-                                                <Link className="dropdown-item premium-dropdown-item" to="/my-orders" onClick={() => setIsProfileMenuOpen(false)}>
+                                                <Link className="dropdown-item premium-dropdown-item" to="/my-orders" onClick={(e) => { e.preventDefault(); setIsProfileMenuOpen(false); handleTransitionNavigate('/my-orders'); }}>
                                                     <ShoppingCart size={14} className="mr-2" style={{display:'inline'}} />
                                                     <span>My Orders</span>
                                                 </Link>
-                                                <Link className="dropdown-item premium-dropdown-item" to="/wishlist" onClick={() => setIsProfileMenuOpen(false)}>
+                                                <Link className="dropdown-item premium-dropdown-item" to="/wishlist" onClick={(e) => { e.preventDefault(); setIsProfileMenuOpen(false); handleTransitionNavigate('/wishlist'); }}>
                                                     <i className="icon-heart mr-2"></i>
                                                     <span>Wishlist</span>
                                                 </Link>
-                                                <Link className="dropdown-item premium-dropdown-item" to="/update-profile" onClick={() => setIsProfileMenuOpen(false)}>
+                                                <Link className="dropdown-item premium-dropdown-item" to="/update-profile" onClick={(e) => { e.preventDefault(); setIsProfileMenuOpen(false); handleTransitionNavigate('/update-profile'); }}>
                                                     <i className="icon-settings mr-2"></i>
                                                     <span>Settings</span>
                                                 </Link>
@@ -412,7 +448,7 @@ export default function Navbaar() {
                                 </div>
                             )}
 
-                            <Link to="/cart" className="mobile-cart-link position-relative" title="Shopping Cart">
+                            <Link to="/cart" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/cart'); }} className="mobile-cart-link position-relative" title="Shopping Cart">
                                 <motion.div
                                     className="mobile-cart-btn"
                                     whileHover={{ scale: 1.1 }}
@@ -494,20 +530,20 @@ export default function Navbaar() {
                                         <span className="mobile-sheet-handle" />
                                     </div>
                                     <nav className="mobile-nav">
-                                        <Link to="/" className={`mobile-nav-link ${isActive('/')?'active':''}`}>
+                                        <Link to="/" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/'); }} className={`mobile-nav-link ${isActive('/')?'active':''}`}>
                                             <span>Home</span>
                                         </Link>
-                                        <Link to="/shop/All/" className={`mobile-nav-link ${isActive('/shop/All/')?'active':''}`}>
+                                        <Link to="/shop/All/" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/All/'); }} className={`mobile-nav-link ${isActive('/shop/All/')?'active':''}`}>
                                             <span>Shop</span>
                                         </Link>
-                                        <Link to="/about" className={`mobile-nav-link ${isActive('/about')?'active':''}`}>
+                                        <Link to="/about" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/about'); }} className={`mobile-nav-link ${isActive('/about')?'active':''}`}>
                                             <span>About</span>
                                         </Link>
-                                        <Link to="/contact" className={`mobile-nav-link ${isActive('/contact')?'active':''}`}>
+                                        <Link to="/contact" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/contact'); }} className={`mobile-nav-link ${isActive('/contact')?'active':''}`}>
                                             <span>Contact</span>
                                         </Link>
                                         {role === "Admin" && (
-                                            <Link to="/admin-home" className="mobile-nav-link">
+                                            <Link to="/admin-home" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/admin-home'); }} className="mobile-nav-link">
                                                 <span className="badge-admin-pill">ADMIN</span>
                                             </Link>
                                         )}
@@ -516,7 +552,7 @@ export default function Navbaar() {
                                     <div className="mobile-menu-footer">
                                         {localStorage.getItem("login") ? (
                                             <>
-                                                <Link to="/profile" className="mobile-footer-btn mobile-footer-btn-profile">
+                                                <Link to="/profile" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/profile'); }} className="mobile-footer-btn mobile-footer-btn-profile">
                                                     {profilePic ? (
                                                         <img src={profilePic} alt={name || 'User'} className="mobile-user-img mr-2" />
                                                     ) : (
@@ -524,7 +560,7 @@ export default function Navbaar() {
                                                     )}
                                                     {name}
                                                 </Link>
-                                                <Link to="/my-orders" className="mobile-footer-btn mobile-footer-btn-orders">
+                                                <Link to="/my-orders" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/my-orders'); }} className="mobile-footer-btn mobile-footer-btn-orders">
                                                     <ShoppingCart size={18} className="mr-2" style={{display:'inline'}} />
                                                     My Orders
                                                 </Link>
@@ -533,7 +569,7 @@ export default function Navbaar() {
                                                 </button>
                                             </>
                                         ) : (
-                                            <Link to="/login" className="mobile-footer-btn mobile-footer-btn-login">
+                                            <Link to="/login" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/login'); }} className="mobile-footer-btn mobile-footer-btn-login">
                                                 LOGIN
                                             </Link>
                                         )}

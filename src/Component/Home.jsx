@@ -62,7 +62,7 @@ const sliderData = [
     desc: "Discover the latest trends in summer fashion with premium fabrics and elegant designs",
     img: "/assets/images/CR-3.png",
     color: "linear-gradient(135deg, #fdfbfb 0%, #f0ede8 100%)",
-    link: "/shop/Female",
+    link: "/shop/Women",
     accent: "#c8a96e",
   },
   {
@@ -71,7 +71,7 @@ const sliderData = [
     desc: "Redefine your style with sophisticated urban wear crafted for modern gentlemen",
     img: "/assets/images/CR-6.png",
     color: "linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 100%)",
-    link: "/shop/Male",
+    link: "/shop/Men",
     accent: "#c8a96e",
     dark: true,
   },
@@ -142,6 +142,7 @@ export default function Home() {
   const countdown = useCountdown(5);
   const [nlEmail, setNlEmail] = useState('');
   const [nlLoading, setNlLoading] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // ── Fast loading ──
   const displayProducts = useMemo(() => {
@@ -286,12 +287,50 @@ export default function Home() {
     }
   };
 
-  const handleEditorialClick = (cat) => navigate(`/shop?category=${cat}`);
+  const handleTransitionNavigate = (path) => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      navigate(path);
+      setIsTransitioning(false);
+    }, 500);
+  };
+
+  const handleEditorialClick = (cat) => {
+    const categoryPath = cat === 'men' ? 'Men' : cat === 'women' ? 'Women' : cat === 'kids' ? 'Kids' : 'All';
+    navigate(`/shop/${categoryPath}`);
+    handleTransitionNavigate(`/shop/${categoryPath}`);
+  };
 
   const slide = sliderData[currentSlide];
 
   return (
     <div className="hx-root">
+      {/* ─── PAGE TRANSITION OVERLAY ─── */}
+      <AnimatePresence>
+        {isTransitioning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            style={{
+              position: 'fixed', inset: 0, backgroundColor: '#0a0a0a',
+              zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.15, duration: 0.3 }}
+              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', color: '#c8a96e', letterSpacing: '4px', textTransform: 'uppercase' }}
+            >
+              Curating Selection
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ─── WISHLIST TOAST ─── */}
       <AnimatePresence>
         {wishlistToast.show && (
@@ -371,11 +410,11 @@ export default function Home() {
                   <p className={`hx-hero-desc ${slide.dark ? 'hx-desc-light' : ''}`}>{slide.desc}</p>
 
                   <div className="hx-hero-cta">
-                    <Link to={slide.link} className="hx-btn-primary" style={{ background: `linear-gradient(135deg, ${slide.accent} 0%, ${slide.accent}cc 100%)` }}>
+                  <Link to={slide.link} onClick={(e) => { e.preventDefault(); handleTransitionNavigate(slide.link); }} className="hx-btn-primary" style={{ background: `linear-gradient(135deg, ${slide.accent} 0%, ${slide.accent}cc 100%)` }}>
                       <span>EXPLORE COLLECTION</span>
                       <span className="hx-btn-arrow">→</span>
                     </Link>
-                    <Link to="/shop/All" className={`hx-btn-ghost ${slide.dark ? 'hx-btn-ghost-light' : ''}`}>
+                  <Link to="/shop/All" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/All'); }} className={`hx-btn-ghost ${slide.dark ? 'hx-btn-ghost-light' : ''}`}>
                       VIEW ALL
                     </Link>
                   </div>
@@ -575,7 +614,7 @@ export default function Home() {
                 </React.Fragment>
               ))}
             </div>
-            <Link to="/shop/All?tag=Sale" className="hx-deals-btn">GRAB THE DEAL →</Link>
+            <Link to="/shop/All?tag=Sale" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/All?tag=Sale'); }} className="hx-deals-btn">GRAB THE DEAL →</Link>
           </div>
           <div className="hx-deals-right">
             <div className="hx-deals-tags">
@@ -742,7 +781,7 @@ export default function Home() {
           )}
 
           <div className="hx-view-all-wrap">
-            <Link to="/shop/All" className="hx-view-all-btn">
+            <Link to="/shop/All" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/All'); }} className="hx-view-all-btn">
               VIEW COMPLETE COLLECTION <span className="hx-va-arrow">→</span>
             </Link>
           </div>
@@ -777,7 +816,7 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <Link to="/shop/All" className="hx-story-btn">DISCOVER OUR STORY →</Link>
+            <Link to="/shop/All" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/All'); }} className="hx-story-btn">DISCOVER OUR STORY →</Link>
           </motion.div>
           <motion.div
             className="hx-story-img-stack"
@@ -820,7 +859,7 @@ export default function Home() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.07, duration: 0.6 }}
-                onClick={() => navigate(`/shop/${l.tag === 'WOMEN' ? 'Female' : l.tag === 'MEN' ? 'Male' : 'Kids'}`)}
+                onClick={() => handleTransitionNavigate(`/shop/${l.tag === 'WOMEN' ? 'Women' : l.tag === 'MEN' ? 'Men' : 'Kids'}`)}
                 whileHover={{ scale: 0.98 }}
               >
                 <img src={l.img} alt={l.label} className="hx-lb-img" loading="lazy" />
