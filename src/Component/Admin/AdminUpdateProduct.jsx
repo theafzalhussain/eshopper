@@ -8,7 +8,7 @@ import { getMaincategory } from '../../Store/ActionCreaters/MaincategoryActionCr
 import { getSubcategory } from '../../Store/ActionCreaters/SubcategoryActionCreators'
 import { getBrand } from '../../Store/ActionCreaters/BrandActionCreators'
 import { motion } from 'framer-motion'
-import { Save, ArrowLeft, Image as ImageIcon, Ruler, Palette, BadgePercent, LayoutList, Package, PackagePlus, IndianRupee, Tag, Layers, AlignLeft } from 'lucide-react'
+import { Save, ArrowLeft, Image as ImageIcon, Ruler, Palette, BadgePercent, LayoutList, Package, PackagePlus, IndianRupee, Tag, Layers, AlignLeft, Sparkles } from 'lucide-react'
 import './SystemControlCenter.css'
 
 export default function AdminUpdateProduct() {
@@ -26,7 +26,7 @@ export default function AdminUpdateProduct() {
     let [data, setdata] = useState({
         name: "", maincategory: "", subcategory: "", brand: "",
         color: "", size: [], baseprice: 0, discount: 0, finalprice: 0,
-        stock: "In Stock", description: "", pic1: "", pic2: "", pic3: "", pic4: ""
+        stock: "In Stock", newArrival: false, isSale: false, description: "", pic1: "", pic2: "", pic3: "", pic4: ""
     })
 
     // --- FORM DATA RE-POULATION ---
@@ -50,6 +50,8 @@ export default function AdminUpdateProduct() {
                 }
                 return { ...old, size: newSizes };
             });
+        } else if (type === 'checkbox' && (name === 'newArrival' || name === 'isSale')) {
+            setdata((old) => ({ ...old, [name]: checked }));
         } else {
             setdata((old) => ({ ...old, [name]: value }));
         }
@@ -84,6 +86,8 @@ function postData(e) {
         formData.append("size", data.size);
     }
     formData.append("stock", data.stock);
+    formData.append("newArrival", data.newArrival ? true : false);
+    formData.append("isSale", data.isSale ? true : false);
     formData.append("description", data.description);
 
     // Agar image ki field mein File object hai tabhi use add karein
@@ -137,7 +141,7 @@ function postData(e) {
                                 {/* Section: Basic Details */}
                                 <div className="mb-4">
                                     <label className="lux-label"><AlignLeft size={14} className="mr-1"/> Product Name</label>
-                                    <input type="text" name="name" value={data.name} placeholder='e.g. Premium Silk Evening Dress' className='lux-input' onChange={getData} required />
+                                    <input type="text" name="name" value={data.name || ""} placeholder='e.g. Premium Silk Evening Dress' className='lux-input' onChange={getData} required />
                                 </div>
 
                                 {/* Section: Categorization */}
@@ -145,7 +149,7 @@ function postData(e) {
                                     <div className="col-sm-6 col-lg-3 mb-3 mb-lg-0">
                                         <label className="lux-label"><Layers size={14} className="mr-1"/> Main Category</label>
                                         <div className="lux-select-wrap">
-                                            <select name="maincategory" value={data.maincategory} onChange={getData} className="lux-select">
+                                            <select name="maincategory" value={data.maincategory || ""} onChange={getData} className="lux-select">
                                                 {maincat?.map((item, index) => <option key={index} value={item.name}>{item.name}</option>)}
                                             </select>
                                         </div>
@@ -153,7 +157,7 @@ function postData(e) {
                                     <div className="col-sm-6 col-lg-3 mb-3 mb-lg-0">
                                         <label className="lux-label"><Layers size={14} className="mr-1"/> Sub Category</label>
                                         <div className="lux-select-wrap">
-                                            <select name="subcategory" value={data.subcategory} onChange={getData} className="lux-select">
+                                            <select name="subcategory" value={data.subcategory || ""} onChange={getData} className="lux-select">
                                                 {subcat?.map((item, index) => <option key={index} value={item.name}>{item.name}</option>)}
                                             </select>
                                         </div>
@@ -161,7 +165,7 @@ function postData(e) {
                                     <div className="col-sm-6 col-lg-3 mb-3 mb-sm-0">
                                         <label className="lux-label"><Tag size={14} className="mr-1"/> Brand</label>
                                         <div className="lux-select-wrap">
-                                            <select name="brand" value={data.brand} onChange={getData} className="lux-select">
+                                            <select name="brand" value={data.brand || ""} onChange={getData} className="lux-select">
                                                 {brand?.map((item, index) => <option key={index} value={item.name}>{item.name}</option>)}
                                             </select>
                                         </div>
@@ -169,10 +173,21 @@ function postData(e) {
                                     <div className="col-sm-6 col-lg-3">
                                         <label className="lux-label"><Package size={14} className="mr-1"/> Stock Status</label>
                                         <div className="lux-select-wrap">
-                                            <select name="stock" value={data.stock} onChange={getData} className="lux-select">
+                                            <select name="stock" value={data.stock || "In Stock"} onChange={getData} className="lux-select">
                                                 <option value="In Stock">In Stock</option>
                                                 <option value="Out of Stock">Out of Stock</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                    <div className="col-sm-6 col-lg-3">
+                                        <label className="lux-label"><Sparkles size={14} className="mr-1"/> Product Tags</label>
+                                        <div className="d-flex align-items-center h-100" style={{gap: '16px', marginTop: '-4px'}}>
+                                            <label className="d-flex align-items-center mb-0" style={{cursor:'pointer', fontSize:'13px', fontWeight:600, color:'#0f172a'}}>
+                                                <input type="checkbox" name="newArrival" checked={data.newArrival || false} onChange={getData} className="mr-2" style={{width:'16px', height:'16px', accentColor:'#D4AF37'}} /> New Arrival
+                                            </label>
+                                            <label className="d-flex align-items-center mb-0" style={{cursor:'pointer', fontSize:'13px', fontWeight:600, color:'#0f172a'}}>
+                                                <input type="checkbox" name="isSale" checked={data.isSale || false} onChange={getData} className="mr-2" style={{width:'16px', height:'16px', accentColor:'#D4AF37'}} /> Sale
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
@@ -181,15 +196,15 @@ function postData(e) {
                                 <div className="row mb-4 g-3">
                                     <div className="col-md-4 mb-3 mb-md-0">
                                         <label className="lux-label"><Palette size={14} className="mr-1"/> Color Variant</label>
-                                        <input type="text" name='color' value={data.color} placeholder='e.g. Midnight Blue' onChange={getData} className='lux-input' required />
+                                        <input type="text" name='color' value={data.color || ""} placeholder='e.g. Midnight Blue' onChange={getData} className='lux-input' required />
                                     </div>
                                     <div className="col-sm-6 col-md-4 mb-3 mb-sm-0">
                                         <label className="lux-label"><IndianRupee size={14} className="mr-1"/> Base Price (₹)</label>
-                                        <input type="number" name='baseprice' value={data.baseprice} placeholder='0.00' onChange={getData} className='lux-input' required min="0" />
+                                        <input type="number" name='baseprice' value={data.baseprice || 0} placeholder='0.00' onChange={getData} className='lux-input' required min="0" />
                                     </div>
                                     <div className="col-sm-6 col-md-4">
                                         <label className="lux-label"><BadgePercent size={14} className="mr-1"/> Discount (%)</label>
-                                        <input type="number" name='discount' value={data.discount} placeholder='0' onChange={getData} className='lux-input lux-input-highlight' required min="0" max="100" />
+                                        <input type="number" name='discount' value={data.discount || 0} placeholder='0' onChange={getData} className='lux-input lux-input-highlight' required min="0" max="100" />
                                     </div>
                                 </div>
 
@@ -215,7 +230,7 @@ function postData(e) {
                                 {/* Section: Description */}
                                 <div className="mb-4">
                                     <label className="lux-label"><AlignLeft size={14} className="mr-1"/> Editorial Description</label>
-                                    <textarea name="description" rows="4" value={data.description} onChange={getData} className='lux-textarea' placeholder="Detailed product description..."></textarea>
+                                    <textarea name="description" rows="4" value={data.description || ""} onChange={getData} className='lux-textarea' placeholder="Detailed product description..."></textarea>
                                 </div>
 
                                 {/* Section: Images */}

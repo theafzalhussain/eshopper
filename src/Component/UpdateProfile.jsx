@@ -580,8 +580,9 @@ export default function Updateprofile() {
 
                                                 <div className="upd-divider-title">Delivery Address</div>
 
-                                                <button type="button" className="upd-location-btn" onClick={handleUseCurrentLocation} disabled={locationLoading} style={{marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6}}>
-                                                    <MapPin size={15} /> {locationLoading ? 'Detecting Location...' : 'Use Current Location'}
+                                                <button type="button" className="upd-location-btn" onClick={handleUseCurrentLocation} disabled={locationLoading}>
+                                                    {locationLoading ? <Loader2 size={16} className="upd-spin" /> : <MapPin size={16} />} 
+                                                    {locationLoading ? 'Detecting Precise Location...' : 'Use Current Location'}
                                                 </button>
 
                                                 {mapCoords && (
@@ -1364,6 +1365,41 @@ export default function Updateprofile() {
                 .upd-reset-btn:disabled,
                 .upd-save-btn:disabled {
                     opacity: 0.6;
+                    cursor: not-allowed;
+                }
+
+                .upd-location-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);
+                    color: #D4AF37;
+                    border: 1px solid #111111;
+                    border-radius: 12px;
+                    padding: 12px 20px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    width: 100%;
+                    margin-bottom: 16px;
+                    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+                }
+                .upd-location-btn:hover:not(:disabled) {
+                    background: #D4AF37;
+                    color: #111111;
+                    border-color: #D4AF37;
+                    box-shadow: 0 12px 24px rgba(212, 175, 55, 0.25);
+                    transform: translateY(-2px);
+                }
+                .upd-location-btn:disabled {
+                    background: #f3f4f6;
+                    color: #94a3b8;
+                    border-color: #e2e8f0;
+                    box-shadow: none;
                     cursor: not-allowed;
                 }
 

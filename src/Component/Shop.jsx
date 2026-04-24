@@ -20,6 +20,7 @@ export default function Shop() {
     const location = useLocation();
     const params = new URLSearchParams(location.search);
     const category = params.get('category');
+    const tagParam = params.get('tag');
 
     // --- STATES ---
     var [mc, setmc] = useState(maincat)
@@ -30,6 +31,7 @@ export default function Shop() {
     var [max, setmax] = useState(10000)
     var [search, setSearch] = useState("")
     var [searchInput, setSearchInput] = useState("")
+    var [tagFilter, setTagFilter] = useState(tagParam || "All")
     var [sortBy, setSortBy] = useState("newest")
     var [selectedSizes, setSelectedSizes] = useState({})
     var [cartNotifications, setCartNotifications] = useState({})
@@ -74,6 +76,13 @@ export default function Shop() {
             window.removeEventListener('focus', checkAdmin);
         };
     }, [location]);
+
+    // Sync Tag filter with URL params
+    useEffect(() => {
+        if (tagParam) {
+            setTagFilter(tagParam);
+        }
+    }, [tagParam]);
 
     // Debounce Search Input to prevent laggy re-renders on every keystroke
     useEffect(() => {
@@ -285,6 +294,13 @@ export default function Shop() {
     const filteredProducts = useMemo(() => {
         let temp = [...product];
         if (category) { temp = temp.filter((x) => matchesCategory(x.maincategory, category) || matchesCategory(x.subcategory, category)); }
+        
+        if (tagFilter === 'New Arrivals') {
+            temp = temp.filter(x => x.newArrival);
+        } else if (tagFilter === 'Sale') {
+            temp = temp.filter(x => x.isSale);
+        }
+        
         if (mc !== 'All') temp = temp.filter(x => matchesCategory(x.maincategory, mc));
         if (sc !== 'All') temp = temp.filter(x => matchesCategory(x.subcategory, sc));
         if (br !== 'All') temp = temp.filter(x => normalizeCategory(x.brand) === normalizeCategory(br));
@@ -303,7 +319,7 @@ export default function Shop() {
         else if (sortBy === "high") temp.sort((a, b) => b.finalprice - a.finalprice);
         else temp.reverse();
         return temp;
-    }, [product, mc, sc, br, size, min, max, search, sortBy, category]);
+    }, [product, mc, sc, br, size, min, max, search, sortBy, category, tagFilter]);
 
     return (
         <div className="lux-shop-root">
@@ -379,6 +395,16 @@ export default function Shop() {
                             <div className="lux-sw">
                                 <svg className="lux-si" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                                 <input className="lux-sinp" type="text" placeholder="Search pieces…" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+                            </div>
+                        </div>
+
+                        {/* Highlights (Sale / New Arrival) */}
+                        <div className="lux-fg">
+                            <label className="lux-fl"><span className="lux-fl-icon">✨</span>Highlights</label>
+                            <div className="lux-sgrid">
+                                {['All', 'New Arrivals', 'Sale'].map((t, i) => (
+                                    <button key={i} onClick={() => setTagFilter(t)} className={`lux-sp ${tagFilter === t ? 'active' : ''}`}>{t}</button>
+                                ))}
                             </div>
                         </div>
 
@@ -466,7 +492,11 @@ export default function Shop() {
                                     transition={{ duration: 0.38, delay: Math.min(index * 0.035, 0.4) }}
                                     className="lux-card"
                                 >
-                                    {item.discount > 0 && <div className="lux-ribbon">{item.discount}% OFF</div>}
+                                    <div className="lux-pcard-badges">
+                                        {item.isSale && <span className="lux-badge lux-badge-sale">✦ SALE</span>}
+                                        {!item.isSale && item.discount > 0 && <span className="lux-badge lux-badge-discount">✦ {item.discount}% OFF</span>}
+                                        {item.newArrival && <span className="lux-badge lux-badge-new">✨ NEW ARRIVAL</span>}
+                                    </div>
 
                                     <button
                                         type="button"
@@ -956,12 +986,35 @@ export default function Shop() {
                     box-shadow: 0 16px 48px rgba(184,150,90,0.13), 0 4px 16px rgba(26,22,18,0.06);
                     transform: translateY(-7px);
                 }
-                .lux-ribbon {
-                    position: absolute; top: 14px; left: 14px; z-index: 10;
-                    background: var(--ink); color: var(--gold-light);
-                    padding: 5px 11px; border-radius: 2px;
-                    font-size: 9px; font-weight: 700; font-family: var(--sans);
-                    letter-spacing: 1px; text-transform: uppercase;
+                .lux-pcard-badges { position:absolute; top:14px; left:14px; display:flex; flex-direction:column; gap:8px; z-index:10; }
+                .lux-badge {
+                    padding: 6px 10px; border-radius: 4px;
+                    font-size: 9px; font-weight: 800; letter-spacing: 1.5px;
+                    text-transform: uppercase; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+                    display: inline-flex; align-items: center; gap: 4px;
+                    backdrop-filter: blur(4px);
+                    font-family: var(--sans);
+                }
+                .lux-badge-sale {
+                    background: linear-gradient(135deg, #111 0%, #2a2a2a 100%);
+                    color: #D4AF37;
+                    border: 1px solid rgba(212,175,55,0.4);
+                    animation: luxSalePulse 2s infinite;
+                }
+                @keyframes luxSalePulse {
+                    0% { box-shadow: 0 4px 10px rgba(0,0,0,0.15), 0 0 0 0 rgba(212,175,55,0.4); }
+                    70% { box-shadow: 0 4px 10px rgba(0,0,0,0.15), 0 0 0 8px rgba(212,175,55,0); }
+                    100% { box-shadow: 0 4px 10px rgba(0,0,0,0.15), 0 0 0 0 rgba(212,175,55,0); }
+                }
+                .lux-badge-new {
+                    background: linear-gradient(135deg, #D4AF37 0%, #9A7A20 100%);
+                    color: #fff;
+                    border: 1px solid #E8C97A;
+                }
+                .lux-badge-discount {
+                    background: linear-gradient(135deg, #111 0%, #2a2a2a 100%);
+                    color: #E8C97A;
+                    border: 1px solid rgba(212,175,55,0.3);
                 }
                 .lux-wish {
                     position: absolute; top: 12px; right: 12px; z-index: 12;

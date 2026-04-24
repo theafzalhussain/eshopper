@@ -10,7 +10,7 @@ import BuyerProfile from './BuyerProfile'
 import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
-import { ArrowRight, ShoppingBag, Clock3, Heart, ShoppingCart, Package, Shield, Settings, LayoutGrid, Sparkles, Star } from 'lucide-react'
+import { ArrowRight, ShoppingBag, Clock3, Heart, ShoppingCart, Package, Shield, Settings, LayoutGrid, Sparkles, Star, UserCog } from 'lucide-react'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
@@ -592,26 +592,9 @@ export default function Profile() {
                                 transition={{ delay: 0.6 }}
                             >
                                 <Link to="/update-profile" style={{ textDecoration: 'none',marginBottom: '12px' }}>
-                                    <motion.button
-                                        whileHover={{ scale: 1.02, y: -2 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        style={{
-                                            width: '100%',
-                                            padding: '12px 24px',
-                                            background: 'linear-gradient(135deg, #17a2b8, #138496)',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            fontWeight: '700',
-                                            fontSize: '13px',
-                                            letterSpacing: '0.4px',
-                                            boxShadow: 'none',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                        }}
-                                    >
-                                        ✏️ EDIT PROFILE
-                                    </motion.button>
+                                    <button className="btn-premium-edit">
+                                        <UserCog size={16} /> EDIT PROFILE
+                                    </button>
                                 </Link>
                             </motion.div>
                         </div>
@@ -949,6 +932,33 @@ export default function Profile() {
                     }
                 }
                 
+                .btn-premium-edit {
+                    width: 100%;
+                    padding: 14px 24px;
+                    background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);
+                    color: #D4AF37;
+                    border: 1px solid #111111;
+                    border-radius: 12px;
+                    font-weight: 700;
+                    font-size: 12px;
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
+                    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                }
+                .btn-premium-edit:hover {
+                    background: #D4AF37;
+                    color: #111111;
+                    border-color: #D4AF37;
+                    box-shadow: 0 12px 24px rgba(212, 175, 55, 0.25);
+                    transform: translateY(-2px);
+                }
+
                 /* Responsive */
                 @media (max-width: 768px) {
                     .profile-header-luxury { padding-top: 2rem !important; padding-bottom: 2rem !important; }

@@ -94,38 +94,31 @@ export default function Contact() {
     return (
         <div style={{ backgroundColor: "#f8f9fa" }}>
             {/* --- PREMIUM LUXURY HEADER --- */}
-            <div className="hero-wrap hero-bread py-5 compact-contact-hero" style={{ background: 'linear-gradient(120deg, #18120f 60%, #2d2217 100%)', backgroundSize: 'cover', backgroundPosition: 'center', borderBottom: '2px solid #c9a84c', padding: 0 }}>
-                <div className="container-fluid px-0">
-                    <div className="row no-gutters slider-text align-items-center justify-content-center">
-                        <div className="col-12 col-md-10 text-center px-2 px-md-0">
-                            <div className="contact-hero-eyebrow" style={{ letterSpacing: 2, color: '#c9a84c', fontWeight: 600, fontSize: 13, marginBottom: 12 }}>
-                                — GET IN TOUCH —
-                            </div>
-                            <motion.h1 initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-2 bread contact-hero-title" style={{ color: '#fff', fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: '3.2rem', letterSpacing: '-1px', lineHeight: 1.1 }}>
-                                <span style={{ color: '#fff' }}>Premium&nbsp;</span>
-                                <span style={{ color: '#c9a84c', fontStyle: 'italic' }}>Luxury</span>
-                                <span style={{ color: '#fff' }}>&nbsp;Support</span>
-                            </motion.h1>
-                            <div className="contact-hero-desc text-white-50 mt-2" style={{ fontSize: 18, fontWeight: 400, maxWidth: 700, margin: '0 auto', letterSpacing: 0.2 }}>
-                                Our concierge team is ready to help you with any query, feedback, or collaboration. Experience the luxury of personal support.
-                            </div>
+            <div className="contact-premium-hero">
+                <div className="contact-hero-bg-glow"></div>
+                <div className="container">
+                    <div className="row justify-content-center text-center">
+                        <div className="col-12 col-md-10 col-lg-8">
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }} 
+                                animate={{ opacity: 1, y: 0 }} 
+                                transition={{ duration: 0.8, ease: "easeOut" }}
+                            >
+                                <div className="contact-eyebrow">
+                                    <span className="contact-eyebrow-line"></span>
+                                    GET IN TOUCH
+                                    <span className="contact-eyebrow-line"></span>
+                                </div>
+                                <h1 className="contact-title">
+                                    Premium <em>Luxury</em> Support
+                                </h1>
+                                <p className="contact-desc">
+                                    Our concierge team is ready to help you with any query, feedback, or collaboration. Experience the luxury of personal support.
+                                </p>
+                            </motion.div>
                         </div>
                     </div>
                 </div>
-                                <style>{`
-                                    .contact-hero-title {font-size: 3.2rem;}
-                                    .contact-hero-desc {font-size: 18px;}
-                                    @media (max-width: 900px) {
-                                        .contact-hero-title {font-size: 2.1rem !important;}
-                                        .contact-hero-desc {font-size: 1.1rem !important;}
-                                    }
-                                    @media (max-width: 600px) {
-                                        .compact-contact-hero {padding: 16px 0 10px 0 !important;}
-                                        .contact-hero-title {font-size: 1.15rem !important;}
-                                        .contact-hero-desc {font-size: 0.93rem !important;}
-                                        .contact-hero-eyebrow {margin-bottom: 7px !important;}
-                                    }
-                                `}</style>
             </div>
 
             <section className="ftco-section contact-section">
@@ -270,16 +263,71 @@ export default function Contact() {
 
             {/* --- CUSTOM CSS FOR PREMIUM FEEL --- */}
             <style dangerouslySetInnerHTML={{ __html: `
-                .compact-contact-hero {
-                    min-height: 220px;
+                /* --- HERO SECTION --- */
+                .contact-premium-hero {
+                    position: relative;
+                    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+                    padding: clamp(60px, 10vw, 100px) 20px;
+                    overflow: hidden;
+                    border-bottom: 1px solid rgba(201,168,76,0.2);
                     display: flex;
                     align-items: center;
+                    justify-content: center;
+                    min-height: 40vh;
                 }
-                .contact-hero-title {
+                .contact-hero-bg-glow {
+                    position: absolute;
+                    top: -50%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 80vw;
+                    height: 80vw;
+                    background: radial-gradient(circle, rgba(201,168,76,0.08) 0%, transparent 60%);
+                    border-radius: 50%;
+                    pointer-events: none;
+                }
+                .contact-eyebrow {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 12px;
+                    color: #C9A84C;
+                    font-size: clamp(10px, 2vw, 12px);
+                    font-weight: 700;
+                    letter-spacing: 0.3em;
+                    text-transform: uppercase;
+                    margin-bottom: 20px;
+                }
+                .contact-eyebrow-line {
+                    width: 30px;
+                    height: 1px;
+                    background: linear-gradient(90deg, transparent, #C9A84C, transparent);
+                }
+                .contact-title {
                     font-family: 'Playfair Display', serif;
-                    font-weight: 400;
+                    font-size: clamp(2.5rem, 6vw, 4.5rem);
+                    color: #ffffff;
+                    font-weight: 600;
+                    line-height: 1.1;
+                    margin-bottom: 20px;
+                    letter-spacing: -0.01em;
+                }
+                .contact-title em {
+                    font-style: italic;
+                    background: linear-gradient(135deg, #E8C97A 0%, #C9A84C 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    padding-right: 8px;
+                }
+                .contact-desc {
+                    color: #a1a1aa;
+                    font-size: clamp(14px, 2.5vw, 18px);
+                    line-height: 1.6;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    font-weight: 300;
                     letter-spacing: 0.02em;
-                    font-size: clamp(2rem, 4vw, 2.9rem);
                 }
                 .contact-form-heading {
                     font-family: 'Playfair Display', serif;
@@ -543,7 +591,6 @@ export default function Contact() {
                     height: 22px;
                 }
                 @media (max-width: 767px) {
-                    .compact-contact-hero { min-height: 180px; }
                     .contact-info {
                         margin-bottom: 1.5rem !important;
                     }

@@ -541,41 +541,36 @@ export default function Cart() {
                 </div>
             )}
             {/* Premium Luxury Header Section */}
-            <div
-                className="premium-header py-5 text-center mb-0 position-relative"
-                style={{
-                    background: "linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
-                    color: "#fff",
-                    borderBottomLeftRadius: 32,
-                    borderBottomRightRadius: 32,
-                    boxShadow: "0 6px 32px 0 rgba(44,62,80,0.12)",
-                    overflow: "hidden",
-                    zIndex: 2,
-                }}
-            >
-                <motion.h1
-                    initial={{ opacity: 0, y: -30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, type: "spring", stiffness: 80 }}
-                    className="display-4 font-weight-bold mb-2 premium-title"
-                    style={{ letterSpacing: 1, fontFamily: 'Montserrat, serif', color: '#fff', textShadow: '0 2px 16px rgba(0,0,0,0.18)' }}
-                >
-                    Shopping Cart
-                </motion.h1>
-                <motion.p
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3, duration: 0.7 }}
-                    className="lead mb-3 premium-subtitle"
-                    style={{ color: '#e0e0e0', fontWeight: 400, fontSize: 22, fontFamily: 'Montserrat, serif', textShadow: '0 1px 8px rgba(0,0,0,0.10)' }}
-                >
-                    Luxury picks, ready for checkout
-                </motion.p>
-                <nav className="small mt-2">
-                    <Link to="/" className="text-info">Home</Link>
-                    <span className="text-white-50"> / Cart</span>
-                </nav>
-                {/* Decorative SVG or Icon can be added here for extra luxury */}
+            <div className="cart-premium-hero">
+                <div className="cart-hero-bg-glow"></div>
+                <div className="container position-relative" style={{ zIndex: 1 }}>
+                    <div className="row justify-content-center text-center">
+                        <div className="col-12 col-md-10 col-lg-8">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.8, ease: "easeOut" }}
+                            >
+                                <div className="cart-eyebrow">
+                                    <span className="cart-eyebrow-line"></span>
+                                    CHECKOUT
+                                    <span className="cart-eyebrow-line"></span>
+                                </div>
+                                <h1 className="cart-title">
+                                    Shopping <em>Cart</em>
+                                </h1>
+                                <p className="cart-desc">
+                                    Luxury picks, ready for checkout
+                                </p>
+                                <nav className="cart-breadcrumb mt-4">
+                                    <Link to="/" className="cart-breadcrumb-link">Home</Link>
+                                    <span className="cart-breadcrumb-sep">/</span>
+                                    <span className="cart-breadcrumb-current">Cart</span>
+                                </nav>
+                            </motion.div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="container py-5">
@@ -946,8 +941,95 @@ export default function Cart() {
                         radial-gradient(circle at 98% 4%, rgba(253, 230, 138, 0.22), transparent 30%),
                         linear-gradient(180deg, #f5f7fa 0%, #edf1f5 100%);
                 }
-                .cart-hero-band {
-                    background: linear-gradient(120deg, #1f2937, #111827 55%, #374151);
+                /* --- HERO SECTION --- */
+                .cart-premium-hero {
+                    position: relative;
+                    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+                    padding: clamp(60px, 8vw, 80px) 20px;
+                    overflow: hidden;
+                    border-bottom: 1px solid rgba(201,168,76,0.2);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 40px;
+                }
+                .cart-hero-bg-glow {
+                    position: absolute;
+                    top: -50%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 80vw;
+                    height: 80vw;
+                    background: radial-gradient(circle, rgba(201,168,76,0.08) 0%, transparent 60%);
+                    border-radius: 50%;
+                    pointer-events: none;
+                }
+                .cart-eyebrow {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 12px;
+                    color: #C9A84C;
+                    font-size: clamp(10px, 2vw, 12px);
+                    font-weight: 700;
+                    letter-spacing: 0.3em;
+                    text-transform: uppercase;
+                    margin-bottom: 20px;
+                }
+                .cart-eyebrow-line {
+                    width: 30px;
+                    height: 1px;
+                    background: linear-gradient(90deg, transparent, #C9A84C, transparent);
+                }
+                .cart-title {
+                    font-family: 'Playfair Display', serif;
+                    font-size: clamp(2.5rem, 6vw, 4rem);
+                    color: #ffffff;
+                    font-weight: 600;
+                    line-height: 1.1;
+                    margin-bottom: 16px;
+                    letter-spacing: -0.01em;
+                }
+                .cart-title em {
+                    font-style: italic;
+                    background: linear-gradient(135deg, #E8C97A 0%, #C9A84C 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    background-clip: text;
+                    padding-right: 8px;
+                }
+                .cart-desc {
+                    color: #a1a1aa;
+                    font-size: clamp(14px, 2.5vw, 18px);
+                    line-height: 1.6;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    font-weight: 300;
+                    letter-spacing: 0.02em;
+                }
+                .cart-breadcrumb {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 1px;
+                    text-transform: uppercase;
+                }
+                .cart-breadcrumb-link {
+                    color: #C9A84C;
+                    text-decoration: none;
+                    transition: color 0.2s ease;
+                }
+                .cart-breadcrumb-link:hover {
+                    color: #E8C97A;
+                }
+                .cart-breadcrumb-sep {
+                    color: rgba(255,255,255,0.2);
+                }
+                .cart-breadcrumb-current {
+                    color: #fff;
                 }
                 .cart-premium-intro {
                     border: 1px solid #e7ebf0;

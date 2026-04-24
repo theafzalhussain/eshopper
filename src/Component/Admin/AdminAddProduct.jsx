@@ -8,7 +8,7 @@ import { getMaincategory } from '../../Store/ActionCreaters/MaincategoryActionCr
 import { getSubcategory } from '../../Store/ActionCreaters/SubcategoryActionCreators'
 import { getBrand } from '../../Store/ActionCreaters/BrandActionCreators'
 import { motion } from 'framer-motion'
-import { Save, ArrowLeft, Image as ImageIcon, Ruler, Palette, BadgePercent, LayoutList, Package, IndianRupee, Tag, Layers, AlignLeft } from 'lucide-react'
+import { Save, ArrowLeft, Image as ImageIcon, Ruler, Palette, BadgePercent, LayoutList, Package, IndianRupee, Tag, Layers, AlignLeft, Sparkles } from 'lucide-react'
 import './SystemControlCenter.css'
 
 export default function AdminAddProduct() {
@@ -23,6 +23,8 @@ export default function AdminAddProduct() {
         baseprice: 0,
         discount: 0,
         stock: "In Stock",
+        newArrival: false,
+        isSale: false,
         description: "This is Sample Product",
         pic1: "",
         pic2: "",
@@ -48,6 +50,8 @@ export default function AdminAddProduct() {
                 }
                 return { ...old, size: newSizes };
             });
+        } else if (type === 'checkbox' && (name === 'newArrival' || name === 'isSale')) {
+            setdata((old) => ({ ...old, [name]: checked }));
         } else {
             setdata((old) => ({ ...old, [name]: value }));
         }
@@ -90,6 +94,8 @@ export default function AdminAddProduct() {
         formData.append("discount", d)
         formData.append("finalprice", fp)
         formData.append("stock", data.stock)
+        formData.append("newArrival", data.newArrival ? true : false)
+        formData.append("isSale", data.isSale ? true : false)
         formData.append("description", data.description)
 
         // Files append (Agar user ne select ki hain)
@@ -186,6 +192,17 @@ export default function AdminAddProduct() {
                                                 <option value="In Stock">In Stock</option>
                                                 <option value="Out of Stock">Out of Stock</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                    <div className="col-sm-6 col-lg-3">
+                                        <label className="lux-label"><Sparkles size={14} className="mr-1"/> Product Tags</label>
+                                        <div className="d-flex align-items-center h-100" style={{gap: '16px', marginTop: '-4px'}}>
+                                            <label className="d-flex align-items-center mb-0" style={{cursor:'pointer', fontSize:'13px', fontWeight:600, color:'#0f172a'}}>
+                                                <input type="checkbox" name="newArrival" checked={data.newArrival} onChange={getData} className="mr-2" style={{width:'16px', height:'16px', accentColor:'#D4AF37'}} /> New Arrival
+                                            </label>
+                                            <label className="d-flex align-items-center mb-0" style={{cursor:'pointer', fontSize:'13px', fontWeight:600, color:'#0f172a'}}>
+                                                <input type="checkbox" name="isSale" checked={data.isSale} onChange={getData} className="mr-2" style={{width:'16px', height:'16px', accentColor:'#D4AF37'}} /> Sale
+                                            </label>
                                         </div>
                                     </div>
                                 </div>

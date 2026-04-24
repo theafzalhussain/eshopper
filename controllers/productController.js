@@ -24,6 +24,8 @@ module.exports = {
             if (body.size && !Array.isArray(body.size)) {
                 body.size = [body.size];
             }
+            body.newArrival = body.newArrival === 'true' || body.newArrival === true;
+            body.isSale = body.isSale === 'true' || body.isSale === true;
             // Cloudinary returns file info in req.files
             if (req.files) {
                 if (req.files.pic1 && req.files.pic1[0] && req.files.pic1[0].path) body.pic1 = req.files.pic1[0].path;
@@ -64,12 +66,19 @@ module.exports = {
             if (updateData.size && !Array.isArray(updateData.size)) {
                 updateData.size = [updateData.size];
             }
+            updateData.newArrival = updateData.newArrival === 'true' || updateData.newArrival === true;
+            updateData.isSale = updateData.isSale === 'true' || updateData.isSale === true;
             // Convert numeric fields
             if (updateData.baseprice) updateData.baseprice = Number(updateData.baseprice);
             if (updateData.discount) updateData.discount = Number(updateData.discount);
             if (updateData.finalprice) updateData.finalprice = Number(updateData.finalprice);
 
-            const product = await Product.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true });
+            const productId = req.params.id || req.body.id || req.body._id;
+            if (!productId) {
+                return res.status(400).json({ error: 'Product ID is required for update' });
+            }
+            
+            const product = await Product.findByIdAndUpdate(productId, { $set: updateData }, { new: true });
             // Emit dashboard update event
             if (typeof req.app.get === 'function') {
                 const io = req.app.get('io');

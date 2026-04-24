@@ -17,6 +17,7 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import axios from 'axios';
 import { BASE_URL } from '../constants';
+import { useToast } from './ToastNotification';
 
 // ─────────────────────────────────────────────
 // CONSTANTS
@@ -126,6 +127,7 @@ export default function Home() {
   const wishlist   = useSelector((state) => state.WishlistStateData);
   const dispatch   = useDispatch();
   const navigate   = useNavigate();
+  const toast      = useToast();
 
   const [currentSlide, setCurrentSlide]   = useState(0);
   const [welcomeUser, setWelcomeUser]     = useState("");
@@ -134,12 +136,36 @@ export default function Home() {
   const [quickView, setQuickView]         = useState(null);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [scrollY, setScrollY]             = useState(0);
+  const [activeFilter, setActiveFilter]   = useState('All');
   const heroRef = useRef(null);
   const [reviewStats, setReviewStats] = useState({});
   const countdown = useCountdown(5);
+  const [nlEmail, setNlEmail] = useState('');
+  const [nlLoading, setNlLoading] = useState(false);
 
   // ── Fast loading ──
-  const displayProducts = useMemo(() => [...product].reverse().slice(0, 8), [product]);
+  const displayProducts = useMemo(() => {
+    let filtered = [...product].reverse();
+    const norm = (str) => String(str || '').toLowerCase().trim();
+
+    if (activeFilter === 'New Arrivals') {
+      filtered = filtered.filter(p => p.newArrival);
+    } else if (activeFilter === 'Sale') {
+      filtered = filtered.filter(p => p.isSale === true); // Strictly filter by Admin 'Sale' checkbox
+    } else if (activeFilter === 'Men') {
+      const aliases = ['man', 'men', 'mens', 'male', 'gents'];
+      filtered = filtered.filter(p => aliases.includes(norm(p.maincategory)) || aliases.includes(norm(p.subcategory)));
+    } else if (activeFilter === 'Women') {
+      const aliases = ['woman', 'women', 'womens', 'lady', 'ladies', 'ladie', 'female'];
+      filtered = filtered.filter(p => aliases.includes(norm(p.maincategory)) || aliases.includes(norm(p.subcategory)));
+    } else if (activeFilter === 'Kids') {
+      const aliases = ['kid', 'kids', 'boy', 'boys', 'noy', 'girl', 'girls', 'child', 'children'];
+      filtered = filtered.filter(p => aliases.includes(norm(p.maincategory)) || aliases.includes(norm(p.subcategory)));
+    } else if (activeFilter !== 'All') {
+      filtered = filtered.filter(p => p.maincategory === activeFilter || p.subcategory === activeFilter);
+    }
+    return filtered.slice(0, 8);
+  }, [product, activeFilter]);
 
   // ── Scroll parallax ──
   useEffect(() => {
@@ -235,6 +261,30 @@ export default function Home() {
       }
     }
   }
+
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault();
+    const emailTrimmed = nlEmail.trim().toLowerCase();
+    if (!emailTrimmed) {
+      toast.warning('Please enter your email address.');
+      return;
+    }
+    setNlLoading(true);
+    try {
+      await axios.post(`${BASE_URL}/newslatter`, { email: emailTrimmed });
+      setNlEmail('');
+      toast.success("Welcome to the club! You've been subscribed. ✨");
+    } catch (err) {
+      const message = String(err?.response?.data?.message || err?.response?.data?.error || err?.message || '').toLowerCase();
+      if (message.includes('duplicate') || message.includes('already') || message.includes('e11000')) {
+        toast.info('You are already on our VIP list! 🌟');
+      } else {
+        toast.error('Subscription failed. Please try again.');
+      }
+    } finally {
+      setNlLoading(false);
+    }
+  };
 
   const handleEditorialClick = (cat) => navigate(`/shop?category=${cat}`);
 
@@ -525,7 +575,7 @@ export default function Home() {
                 </React.Fragment>
               ))}
             </div>
-            <Link to="/shop/All" className="hx-deals-btn">GRAB THE DEAL →</Link>
+            <Link to="/shop/All?tag=Sale" className="hx-deals-btn">GRAB THE DEAL →</Link>
           </div>
           <div className="hx-deals-right">
             <div className="hx-deals-tags">
@@ -562,8 +612,8 @@ export default function Home() {
             {['All', 'New Arrivals', 'Sale', 'Men', 'Women', 'Kids'].map((f, i) => (
               <motion.button
                 key={f}
-                className={`hx-filter-pill ${i === 0 ? 'hx-filter-active' : ''}`}
-                onClick={() => navigate(i === 0 ? '/shop/All' : `/shop/${f}`)}
+                className={`hx-filter-pill ${activeFilter === f ? 'hx-filter-active' : ''}`}
+                onClick={() => setActiveFilter(f)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >{f}</motion.button>
@@ -604,8 +654,9 @@ export default function Home() {
 
                     {/* Badges */}
                     <div className="hx-pcard-badges">
-                      {item.discount > 0 && <span className="hx-badge hx-badge-sale">-{item.discount}%</span>}
-                      {index < 2 && <span className="hx-badge hx-badge-new">NEW IN</span>}
+                      {item.isSale && <span className="hx-badge hx-badge-sale">✦ SALE</span>}
+                      {!item.isSale && item.discount > 0 && <span className="hx-badge hx-badge-discount">✦ {item.discount}% OFF</span>}
+                      {item.newArrival && <span className="hx-badge hx-badge-new">✨ NEW ARRIVAL</span>}
                     </div>
 
                     {/* Wishlist button */}
@@ -841,14 +892,18 @@ export default function Home() {
           <span className="hx-eyebrow hx-eyebrow-gold">JOIN THE CLUB</span>
           <h2 className="hx-nl-title">Get Exclusive Access</h2>
           <p className="hx-nl-sub">Subscribe for early drops, style tips & member-only discounts</p>
-          <div className="hx-nl-form">
+          <form className="hx-nl-form" onSubmit={handleNewsletterSubmit}>
             <input
               type="email"
               className="hx-nl-input"
               placeholder="Enter your email address"
+              value={nlEmail}
+              onChange={(e) => setNlEmail(e.target.value)}
+              required
+              disabled={nlLoading}
             />
-            <button className="hx-nl-btn">SUBSCRIBE</button>
-          </div>
+            <button type="submit" className="hx-nl-btn" disabled={nlLoading}>{nlLoading ? 'JOINING...' : 'SUBSCRIBE'}</button>
+          </form>
           <p className="hx-nl-note">No spam, ever. Unsubscribe anytime. 🔒</p>
         </motion.div>
       </section>
@@ -1391,13 +1446,35 @@ export default function Home() {
         .hx-pcard:hover .hx-pcard-img { transform:scale(1.08); }
         .hx-pcard-grad { position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 50%); opacity:0; transition:opacity 0.4s; }
         .hx-pcard:hover .hx-pcard-grad { opacity:1; }
-        .hx-pcard-badges { position:absolute; top:14px; left:14px; display:flex; flex-direction:column; gap:6px; z-index:3; }
+        .hx-pcard-badges { position:absolute; top:14px; left:14px; display:flex; flex-direction:column; gap:8px; z-index:3; }
         .hx-badge {
-          padding:6px 12px; border-radius:6px;
-          font-size:10px; font-weight:800; letter-spacing:1px;
+          padding: 6px 10px; border-radius: 4px;
+          font-size: 9px; font-weight: 800; letter-spacing: 1.5px;
+          text-transform: uppercase; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+          display: inline-flex; align-items: center; gap: 4px;
+          backdrop-filter: blur(4px);
         }
-        .hx-badge-sale { background:#0a0a0a; color:#c8a96e; }
-        .hx-badge-new { background:#c8a96e; color:#fff; }
+        .hx-badge-sale {
+          background: linear-gradient(135deg, #111 0%, #2a2a2a 100%);
+          color: #D4AF37;
+          border: 1px solid rgba(212,175,55,0.4);
+          animation: hxSalePulse 2s infinite;
+        }
+        @keyframes hxSalePulse {
+          0% { box-shadow: 0 4px 10px rgba(0,0,0,0.15), 0 0 0 0 rgba(212,175,55,0.4); }
+          70% { box-shadow: 0 4px 10px rgba(0,0,0,0.15), 0 0 0 8px rgba(212,175,55,0); }
+          100% { box-shadow: 0 4px 10px rgba(0,0,0,0.15), 0 0 0 0 rgba(212,175,55,0); }
+        }
+        .hx-badge-new {
+          background: linear-gradient(135deg, #D4AF37 0%, #9A7A20 100%);
+          color: #fff;
+          border: 1px solid #E8C97A;
+        }
+        .hx-badge-discount {
+          background: linear-gradient(135deg, #111 0%, #2a2a2a 100%);
+          color: #E8C97A;
+          border: 1px solid rgba(212,175,55,0.3);
+        }
         .hx-wish-btn {
           position:absolute; top:14px; right:14px; z-index:3;
           width:40px; height:40px; border-radius:50%;

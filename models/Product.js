@@ -13,6 +13,8 @@ const productSchema = new mongoose.Schema({
     finalprice: { type: Number, required: true },
     stock: { type: String },
     description: { type: String },
+    newArrival: { type: Boolean, default: false },
+    isSale: { type: Boolean, default: false },
     pic1: { type: String },
     pic2: { type: String },
     pic3: { type: String },
