@@ -13,7 +13,6 @@ export default function Navbaar() {
     const desktopProfileDropdownRef = useRef(null)
     const mobileProfileDropdownRef = useRef(null)
     const [isScrolled, setIsScrolled] = useState(false)
-    const [isTransitioning, setIsTransitioning] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
     const [profilePic, setProfilePic] = useState(localStorage.getItem('pic') || '')
@@ -123,13 +122,8 @@ export default function Navbaar() {
     }, [location.pathname])
 
     const handleTransitionNavigate = (path) => {
-        if (isTransitioning) return;
-        setIsTransitioning(true);
-        setTimeout(() => {
-            navigate(path);
-            window.scrollTo(0, 0);
-            setIsTransitioning(false);
-        }, 500);
+        navigate(path);
+        window.scrollTo(0, 0);
     };
 
     const logout = () => { localStorage.clear(); handleTransitionNavigate("/login") }
@@ -151,30 +145,6 @@ export default function Navbaar() {
 
     return (
         <header className={`header-main ${isScrolled ? 'header-fixed' : ''}`}>
-            {/* ─── PAGE TRANSITION OVERLAY ─── */}
-            <AnimatePresence>
-                {isTransitioning && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4, ease: "easeInOut" }}
-                        style={{
-                            position: 'fixed', inset: 0, backgroundColor: '#0a0a0a',
-                            zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: 0.15, duration: 0.3 }}
-                            style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', color: '#c8a96e', letterSpacing: '4px', textTransform: 'uppercase' }}
-                        >
-                            Curating Selection
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             {/* --- 🌟 ULTRA PREMIUM TOP RIBBON --- */}
             <div className="top-premium-ribbon d-none d-lg-block">

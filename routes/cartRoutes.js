@@ -31,4 +31,10 @@ router.post('/cart/delivery-estimate', cartController.setDeliveryEstimate);
 // Get order summary for current cart
 router.get('/cart/order-summary', cartController.getOrderSummary);
 
+// Update Cart Options (Delivery Speed & Insurance)
+router.post('/cart/options', cartController.updateCartOptions);
+
+// Toggle Gift Wrap for an Item
+router.put('/cart/item/:itemId', cartController.updateCartItem);
+
 module.exports = router;

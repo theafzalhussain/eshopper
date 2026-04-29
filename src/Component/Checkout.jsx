@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import axios from 'axios'
 import { getUser } from "../Store/ActionCreaters/UserActionCreators"
 import { clearCart, getCart } from "../Store/ActionCreaters/CartActionCreators"
+import { getProduct } from '../Store/ActionCreaters/ProductActionCreators'
 import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
@@ -48,7 +49,7 @@ export default function Checkout() {
     const [mode, setMode] = useState("UPI")
     const [user, setuser] = useState({})
     const [cart, setcart] = useState([])
-    const [deliveryEstimate, setDeliveryEstimate] = useState({ pincode: '', estimatedDate: null, label: '' })
+    const [deliverySpeed, setDeliverySpeed] = useState('standard')
     const [subtotal, setSubtotal] = useState(0)
     const [shipping, setshipping] = useState(0)
     const [placingOrder, setplacingOrder] = useState(false)
@@ -64,9 +65,11 @@ export default function Checkout() {
     const [showPriceDetails, setShowPriceDetails] = useState(true)
     const [deliverySlot, setDeliverySlot] = useState('Evening 6 PM - 9 PM')
     const [showPromoBanner, setShowPromoBanner] = useState(true)
+    const [backendSummary, setBackendSummary] = useState(null)
 
     const userState = useSelector((state) => state.UserStateData)
     const cartState = useSelector((state) => state.CartStateData)
+    const productState = useSelector((state) => state.ProductStateData)
     const users = userState || []
     const carts = cartState?.items || []
     const cartDeliveryEstimate = cartState?.deliveryEstimate || {}
@@ -81,6 +84,34 @@ export default function Checkout() {
         const timer = setTimeout(() => setShowPromoBanner(false), 20000);
         return () => clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        const fetchCheckoutData = async () => {
+            const uid = localStorage.getItem("userid");
+            if (!uid || location.state?.direct) return;
+            
+            try {
+                const sumRes = await axios.get(`${BASE_URL}/api/cart/order-summary?userId=${uid}`);
+                if (sumRes.data?.summary) {
+                    setBackendSummary(sumRes.data.summary);
+                    if (sumRes.data.summary.giftWrapCharge > 0) setGiftWrap(true);
+                    if (sumRes.data.summary.insuranceCharge > 0) setDeliveryProtection(true);
+                    else setDeliveryProtection(false);
+                }
+                
+                const cartRes = await axios.get(`${BASE_URL}/api/cart?userId=${uid}`);
+                if (cartRes.data?.cart) {
+                    setDeliverySpeed(cartRes.data.cart.deliverySpeed || 'standard');
+                    if (cartRes.data.cart.items?.some(i => i.giftWrap)) {
+                        setGiftWrap(true);
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to fetch backend summary for checkout", e);
+            }
+        };
+        fetchCheckoutData();
+    }, [location.state?.direct]);
 
     // Handler for Add/Edit/Delete address
     const handleAddAddress = useCallback(() => {
@@ -235,35 +266,51 @@ export default function Checkout() {
         return { label: 'UPI / Wallet', fee: 0 }
     }, [mode])
 
-    const { gst, giftWrapCharge, protectionCharge, ecoCharge, paymentFee, instantDiscount, preDiscountTotal, totalSavings } = useMemo(() => {
-        const calcGst = Math.round(subtotal * 0.05)
-        const calcGift = giftWrap ? 99 : 0
-        const calcProtection = deliveryProtection ? 49 : 0
-        const calcEco = ecoPackaging ? 19 : 0
-        const calcFee = paymentMeta.fee
-        
-        let calcInstant = 0
-        if (mode === 'Card') {
-            calcInstant = Math.round(subtotal * 0.10) // 10% Discount for Cards
-        } else if (mode === 'UPI') {
-            calcInstant = 50 // Flat ₹50 Discount for UPI
+    const { gst, giftWrapCharge, protectionCharge, ecoCharge, paymentFee, instantDiscount, preDiscountTotal, totalSavings, expressFee, mrpDiscount } = useMemo(() => {
+        let currentSubtotal = subtotal;
+        let currentShipping = shipping;
+        let calcBaseDiscount = 0;
+
+        if (backendSummary && !location.state?.direct) {
+            currentSubtotal = backendSummary.subtotal || subtotal;
+            currentShipping = backendSummary.shipping || shipping;
+            calcBaseDiscount = backendSummary.baseDiscount || backendSummary.discount || 0;
         }
-        calcInstant = Math.min(subtotal, calcInstant) // Ensure discount doesn't exceed subtotal
+
+        const calcGift = giftWrap ? 99 : 0;
+        const calcProtection = deliveryProtection ? 49 : 0;
+        const calcExpress = deliverySpeed === 'express' ? 49 : 0;
+        const calcEco = ecoPackaging ? 19 : 0;
+        const calcFee = paymentMeta.fee;
+        
+        let calcInstant = 0;
+        if (mode === 'Card') {
+            calcInstant = Math.round(currentSubtotal * 0.10); // 10% Discount for Cards
+        } else if (mode === 'UPI') {
+            calcInstant = 50; // Flat ₹50 Discount for UPI
+        }
+        calcInstant = Math.min(currentSubtotal, calcInstant); // Ensure discount doesn't exceed subtotal
+
+        const taxableAmount = Math.max(0, currentSubtotal - calcBaseDiscount - Number(appliedCoupon.discount || 0));
+        const calcGst = Math.round(taxableAmount * 0.05);
 
         return {
             gst: calcGst,
             giftWrapCharge: calcGift,
             protectionCharge: calcProtection,
+            expressFee: calcExpress,
+            mrpDiscount: calcBaseDiscount,
             ecoCharge: calcEco,
             paymentFee: calcFee,
             instantDiscount: calcInstant,
-            preDiscountTotal: subtotal + shipping + calcGst + calcGift + calcProtection + calcEco + calcFee,
-            totalSavings: Number(appliedCoupon.discount || 0) + Number(calcInstant || 0)
+            preDiscountTotal: currentSubtotal + currentShipping + calcGst + calcGift + calcProtection + calcExpress + calcEco + calcFee,
+            totalSavings: Number(appliedCoupon.discount || 0) + Number(calcInstant || 0) + Number(calcBaseDiscount || 0)
         }
-    }, [subtotal, shipping, giftWrap, deliveryProtection, ecoPackaging, paymentMeta.fee, appliedCoupon.discount, mode])
+    }, [subtotal, shipping, giftWrap, deliveryProtection, ecoPackaging, paymentMeta.fee, appliedCoupon.discount, mode, backendSummary, location.state?.direct, deliverySpeed])
 
     useEffect(() => {
         dispatch(getUser())
+        dispatch(getProduct())
         if (!location.state?.direct) {
             dispatch(getCart())
         }
@@ -293,13 +340,6 @@ export default function Checkout() {
                 setshipping(0);
             }
             return;
-        }
-
-        // Get deliveryEstimate from Redux cart state (backend value)
-        if (cartDeliveryEstimate && cartDeliveryEstimate.estimatedDate) {
-            setDeliveryEstimate(cartDeliveryEstimate)
-        } else {
-            setDeliveryEstimate({ pincode: '', estimatedDate: null, label: '' })
         }
 
         if (carts && carts.length > 0) {
@@ -339,35 +379,24 @@ export default function Checkout() {
     }, [location.state?.direct, membershipType, cartDeliveryEstimate, carts])
 
     const final = useMemo(() => {
+        let currentSubtotal = backendSummary && !location.state?.direct ? (backendSummary.subtotal || subtotal) : subtotal;
+        let currentShipping = backendSummary && !location.state?.direct ? (backendSummary.shipping || shipping) : shipping;
         return Math.max(
             0,
-            subtotal + shipping + gst + giftWrapCharge + protectionCharge + ecoCharge + paymentFee - Number(appliedCoupon.discount || 0) - instantDiscount
+            currentSubtotal + currentShipping + gst + giftWrapCharge + protectionCharge + expressFee + ecoCharge + paymentFee - Number(appliedCoupon.discount || 0) - instantDiscount - mrpDiscount
         )
-    }, [subtotal, shipping, gst, giftWrapCharge, protectionCharge, ecoCharge, paymentFee, appliedCoupon.discount, instantDiscount])
+    }, [subtotal, shipping, gst, giftWrapCharge, protectionCharge, expressFee, ecoCharge, paymentFee, appliedCoupon.discount, instantDiscount, mrpDiscount, backendSummary, location.state?.direct])
 
     const totalItems = useMemo(() => {
         return cart.reduce((acc, item) => acc + Number(item.quantity ?? item.qty ?? 1), 0)
     }, [cart])
 
-    // Use backend deliveryEstimate from cart (same as Cart page)
     const estimatedDelivery = useMemo(() => {
-        if (deliveryEstimate && deliveryEstimate.estimatedDate) {
-            const dt = new Date(deliveryEstimate.estimatedDate)
-            return dt.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
-        }
-        
-        // Standard fallback ETA (4 days) for Direct Buy or if backend estimate is unavailable
-        const defaultDt = new Date()
-        defaultDt.setDate(defaultDt.getDate() + 4)
-        return defaultDt.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })
-    }, [deliveryEstimate])
-
-    // Real-time update: whenever cartDeliveryEstimate changes, update deliveryEstimate state
-    useEffect(() => {
-        if (cartDeliveryEstimate && cartDeliveryEstimate.estimatedDate) {
-            setDeliveryEstimate(cartDeliveryEstimate)
-        }
-    }, [cartDeliveryEstimate])
+        const today = new Date();
+        const days = deliverySpeed === 'express' ? 2 : 5;
+        const eta = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
+        return eta.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+    }, [deliverySpeed]);
 
     const deliverySlots = useMemo(() => ([
         'Morning 9 AM - 12 PM',
@@ -468,20 +497,21 @@ export default function Checkout() {
                 razorpayOrderId: paymentDetails.razorpayOrderId,
                 razorpayPaymentId: paymentDetails.razorpayPaymentId,
                 razorpaySignature: paymentDetails.razorpaySignature,
-                totalAmount: subtotal,
-                shippingAmount: shipping,
+                totalAmount: backendSummary && !location.state?.direct ? (backendSummary.subtotal || subtotal) : subtotal,
+                shippingAmount: backendSummary && !location.state?.direct ? (backendSummary.shipping || shipping) : shipping,
                 gstAmount: gst,
                 finalAmount: final,
                 couponCode: appliedCoupon.code || undefined,
                 couponDiscount: Number(appliedCoupon.discount || 0),
-                discountAmount: Number(instantDiscount || 0),
+                discountAmount: Number(instantDiscount || 0) + Number(mrpDiscount || 0),
                 giftWrapCharge,
                 protectionCharge,
                 ecoCharge,
                 paymentFee,
-                extraCharges: giftWrapCharge + protectionCharge + ecoCharge + paymentFee,
+                extraCharges: giftWrapCharge + protectionCharge + ecoCharge + paymentFee + expressFee,
                 preDiscountTotal,
                 notes: orderNotes,
+                deliverySpeed,
                 deliverySlot,
                 shippingAddress: addressPayload,
                 products: normalizedProducts
@@ -678,8 +708,8 @@ export default function Checkout() {
                         <p className="mb-0 text-muted">Review your curated selection and finalize details.</p>
                     </div>
                     <div className="eta-chip d-flex align-items-center gap-2">
-                        <CalendarCheck size={16} className="text-gold" style={{marginTop: '-2px'}}/> 
-                        <span>Guaranteed Delivery: <strong className="text-dark">{estimatedDelivery || '—'}</strong></span>
+                        <CalendarCheck size={16} className="text-gold" style={{marginTop: '-2px'}}/>
+                        <span>Guaranteed Delivery: <strong className="text-dark">{estimatedDelivery || '—'}</strong>{deliverySpeed === 'express' && <span className="text-danger ml-1 font-weight-bold" style={{fontSize: '11px', letterSpacing: '0.5px'}}>⚡ EXPRESS</span>}</span>
                     </div>
                 </div>
 
@@ -715,16 +745,18 @@ export default function Checkout() {
                                         <input type="checkbox" checked={deliveryProtection} onChange={(e) => setDeliveryProtection(e.target.checked)} />
                                     </span>
                                 </label>
-                                <label className="extra-row shipping-option-row mb-0">
-                                    <span>
-                                        <strong>🎁 Gift Wrapping</strong>
-                                        <small>Premium wrapping with message card</small>
-                                    </span>
-                                    <span className="d-flex align-items-center gap-2">
-                                        <span className="price-tag text-gold">₹99</span>
-                                        <input type="checkbox" checked={giftWrap} onChange={(e) => setGiftWrap(e.target.checked)} />
-                                    </span>
-                                </label>
+                                {(!backendSummary || location.state?.direct) && (
+                                    <label className="extra-row shipping-option-row mb-0">
+                                        <span>
+                                            <strong>🎁 Gift Wrapping</strong>
+                                            <small>Premium wrapping with message card</small>
+                                        </span>
+                                        <span className="d-flex align-items-center gap-2">
+                                            <span className="price-tag text-gold">₹99</span>
+                                            <input type="checkbox" checked={giftWrap} onChange={(e) => setGiftWrap(e.target.checked)} />
+                                        </span>
+                                    </label>
+                                )}
                                 <label className="extra-row mb-0 mt-2">
                                     <span>
                                         <strong>Eco Packaging</strong>
@@ -829,21 +861,28 @@ export default function Checkout() {
 
                             <div className="checkout-items mb-4 premium-scroll" style={{ maxHeight: '280px', overflowY: 'auto' }}>
                                 {cart.map((item, index) => {
+                                    const itemId = item._id || item.id;
+                                    const prodId = item.productid || item.product?._id || item.productId || itemId;
+                                    const fullProduct = (productState || []).find(p => String(p.id || p._id) === String(prodId)) || {};
+                                    
+                                    const itemName = item.name || item.product?.name || item.productid?.name || fullProduct.name || 'Product';
+                                    const itemBrand = item.brand || item.product?.brand || item.productid?.brand || fullProduct.brand || 'Brand';
                                     const lineQty = Number(item.quantity ?? item.qty ?? 1)
-                                    const linePrice = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0)
+                                    const linePrice = Number(item.price ?? item.product?.finalprice ?? item.productid?.finalprice ?? fullProduct.finalprice ?? fullProduct.price ?? 0)
                                     const lineTotal = Number(item.total ?? (lineQty * linePrice))
-                                    const linePic = item.pic || item.product?.pic1 || "/assets/images/noimage.png"
+                                    const linePic = item.pic || item.product?.pic1 || item.productid?.pic1 || fullProduct.pic1 || "/assets/images/noimage.png"
 
                                     return (
-                                        <div key={item._id || item.id || index} className="checkout-item-row">
+                                        <div key={itemId || index} className="checkout-item-row">
                                             <img src={optimizeCloudinaryUrlAdvanced(linePic, { maxWidth: 220, crop: 'fill' })} width="68" height="68" loading="lazy" decoding="async" className="rounded shadow-sm object-fit-cover" alt="item" />
                                             <div className="item-mid">
-                                                <h6 className="mb-1 font-weight-bold text-dark">{item.name || item.product?.name || 'Product'}</h6>
+                                                <div style={{ fontSize: '10px', fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px' }}>{itemBrand}</div>
+                                                <h6 className="mb-1 font-weight-bold text-dark">{itemName}</h6>
                                                 <div className="line-highlight-wrap">
                                                     <span className="qty-pill">Qty {lineQty}</span>
                                                     <span className="line-meta">x ₹{linePrice}</span>
                                                 </div>
-                                                <div className="sku-pill">SKU {String(item._id || item.id || '').slice(0, 12)}...</div>
+                                                <div className="sku-pill">SKU {String(itemId || '').slice(0, 12)}...</div>
                                             </div>
                                             <div className="item-total">₹{lineTotal}</div>
                                         </div>
@@ -870,15 +909,19 @@ export default function Checkout() {
                                 <AnimatePresence initial={false}>
                                     {showPriceDetails ? (
                                         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
-                                            <div className="price-row"><span>Items Subtotal</span><strong>₹{subtotal}</strong></div>
+                                            <div className="price-row"><span>Items Subtotal</span><strong>₹{backendSummary && !location.state?.direct ? (backendSummary.subtotal || subtotal) : subtotal}</strong></div>
+                                            {mrpDiscount > 0 ? (
+                                                <div className="price-row text-success"><span>Discount on MRP</span><strong>-₹{mrpDiscount}</strong></div>
+                                            ) : null}
                                             {instantDiscount > 0 ? (
                                                 <div className="price-row text-success"><span>Instant Discount</span><strong>-₹{instantDiscount}</strong></div>
                                             ) : null}
-                                            <div className="price-row"><span>Shipping</span><strong>{shipping === 0 ? "FREE" : `₹${shipping}`}</strong></div>
+                                            <div className="price-row"><span>Shipping</span><strong>{(backendSummary && !location.state?.direct ? (backendSummary.shipping || 0) : shipping) === 0 ? "FREE" : `₹${backendSummary && !location.state?.direct ? (backendSummary.shipping || 0) : shipping}`}</strong></div>
+                                            {expressFee > 0 ? <div className="price-row"><span>Express Delivery</span><strong>₹{expressFee}</strong></div> : null}
                                             <div className="price-row"><span>GST (5%)</span><strong>₹{gst}</strong></div>
                                             <div className="price-row"><span>Payment Fee ({paymentMeta.label})</span><strong>{paymentFee ? `₹${paymentFee}` : 'FREE'}</strong></div>
                                             {deliveryProtection ? <div className="price-row"><span>Delivery Protection</span><strong>₹{protectionCharge}</strong></div> : null}
-                                            {giftWrap ? <div className="price-row"><span>Luxury Gift Wrap</span><strong>₹{giftWrapCharge}</strong></div> : null}
+                                            {giftWrapCharge > 0 ? <div className="price-row"><span>Luxury Gift Wrap</span><strong>₹{giftWrapCharge}</strong></div> : null}
                                             {ecoPackaging ? <div className="price-row"><span>Eco Packaging</span><strong>₹{ecoCharge}</strong></div> : null}
                                             {appliedCoupon.code && appliedCoupon.discount > 0 ? (
                                                 <div className="price-row text-success">

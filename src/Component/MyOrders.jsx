@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import { io } from 'socket.io-client'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
+import { getProduct } from '../Store/ActionCreaters/ProductActionCreators'
 import {
   Clock3, PackageSearch, Search, SlidersHorizontal,
   X, ArrowLeft, ChevronRight, MessageCircle,
@@ -429,13 +431,16 @@ function Progress({ status, updatedAt }) {
 // ═══════════════════════════════════════════════════════════════════
 // ORDER CARD
 // ═══════════════════════════════════════════════════════════════════
-const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onWA, nowTick }, ref) {
+const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onWA, nowTick, productState }, ref) {
   const norm   = normalizeStatus(item.orderStatus)
   const st     = ST[norm] || ST['Ordered']
   const items  = item.orderItems || item.products || []
   const first  = items[0] || {}
+  const prodId = first.productid || first.product || first.productId || first._id || first.id || ''
+  const fullProduct = (productState || []).find(p => String(p.id || p._id) === String(prodId)) || {}
   const img    = first.image || first.pic || first.pic1 || ''
-  const name   = first.title || first.name || ''
+  const name   = first.title || first.name || fullProduct.name || ''
+  const brand  = first.brand || fullProduct.brand || ''
   const price  = Number(first.price || first.finalprice || 0)
   const extras = items.length > 1 ? items.length - 1 : 0
   const firstQty = getItemQty(first)
@@ -543,6 +548,7 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
                 }
               </div>
               <div>
+                {brand && <div style={{ fontSize: '10px', fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px' }}>{brand}</div>}
                 <div className="mop2-product-name">{name}</div>
                 <div className="mop2-product-price">₹{price.toLocaleString('en-IN')}</div>
               </div>
@@ -620,6 +626,7 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
 // ═══════════════════════════════════════════════════════════════════
 export default function MyOrders() {
   const navigate  = useNavigate()
+  const dispatch  = useDispatch()
   const userId    = localStorage.getItem('userid')
   const socketRef = useRef(null)
 
@@ -633,6 +640,7 @@ export default function MyOrders() {
   const [showAdv, setShowAdv] = useState(false)
   const [liveOn,  setLiveOn]  = useState(false)
   const [nowTick, setNowTick] = useState(Date.now())
+  const productState = useSelector((state) => state.ProductStateData) || []
 
   const fetchOrdersList = useCallback(async ({ silent = false } = {}) => {
     if (!userId) {
@@ -690,7 +698,8 @@ export default function MyOrders() {
   // FETCH
   useEffect(() => {
     fetchOrdersList()
-  }, [fetchOrdersList])
+    dispatch(getProduct())
+  }, [fetchOrdersList, dispatch])
 
   // SOCKET
   useEffect(() => {
@@ -928,7 +937,7 @@ export default function MyOrders() {
             <AnimatePresence mode="popLayout">
               {filtered.map((item, idx) => (
                 <OrderCard key={item.orderId} item={item} idx={idx}
-                  navigate={navigate} onWA={openWA} nowTick={nowTick} />
+                  navigate={navigate} onWA={openWA} nowTick={nowTick} productState={productState} />
               ))}
             </AnimatePresence>
           ) : (

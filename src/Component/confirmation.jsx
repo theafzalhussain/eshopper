@@ -5,6 +5,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Package, Truck, CheckCircle2, Printer, Plus, ShieldCheck, RotateCcw, Headphones, Copy, RefreshCw, Share2, FileText, Radar, Sparkles, CreditCard, Calendar, ChevronRight } from 'lucide-react';
 import { clearCart, getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
+import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
 import { API_ENDPOINTS, BASE_URL, BRAND_LOGO_URL, FRONTEND_URL, SOCKET_TRANSPORTS } from '../constants';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import io from 'socket.io-client';
@@ -17,6 +18,7 @@ export default function Confirmation() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const users = useSelector((state) => state.UserStateData || []);
+  const productState = useSelector((state) => state.ProductStateData || []);
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,7 @@ export default function Confirmation() {
   }
 
   useEffect(() => {
+    dispatch(getProduct());
     async function syncOrder() {
       const locationState = window.history.state?.usr;
       let fallbackOrder = null;
@@ -763,18 +766,24 @@ export default function Confirmation() {
               <div className='lux-items-wrap'>
                 {items.map((item, idx) => {
                   const qty = Number(item.quantity ?? item.qty ?? 1);
-                  const price = Number(item.price ?? item.product?.finalprice ?? item.product?.price ?? 0);
-                  const lineTotal = Number(item.total ?? qty * price);
-                  const pic = item.pic || item.product?.pic1 || '/assets/images/noimage.png';
+              const prodId = item.productid || item.product?._id || item.product || item._id || item.id || '';
+              const fullProduct = productState.find(p => String(p.id || p._id) === String(prodId)) || {};
+              
+              const itemName = item.name || item.product?.name || item.productid?.name || fullProduct.name || 'Premium Product';
+              const itemBrand = item.brand || item.product?.brand || item.productid?.brand || fullProduct.brand || 'Premium Brand';
+              const price = Number(item.price ?? item.product?.finalprice ?? item.productid?.finalprice ?? fullProduct.finalprice ?? fullProduct.price ?? 0);
+              const lineTotal = Number(item.total ?? (qty * price));
+              const pic = item.pic || item.product?.pic1 || item.productid?.pic1 || fullProduct.pic1 || '/assets/images/noimage.png';
 
                   return (
                     <div key={item._id || item.id || idx} className='lux-item'>
                       <img src={optimizeCloudinaryUrlAdvanced(pic, { maxWidth: 240, crop: 'fill' })} alt='product' />
                       <div className='lux-item-details'>
-                        <div className='lux-item-name'>{item.name || item.product?.name || 'Premium Product'}</div>
+                        <div className='lux-item-brand'>{itemBrand}</div>
+                        <div className='lux-item-name'>{itemName}</div>
                         <div className='lux-item-meta'>
-                          <span>Qty: {qty}</span> • 
-                          <span>SKU: {String(item._id || item.id || '').slice(0, 8).toUpperCase()}</span>
+                          <span>Qty: {qty}</span> <span className="mx-2 text-muted">•</span> 
+                          <span>SKU: {String(prodId).slice(0, 8).toUpperCase()}</span>
                         </div>
                       </div>
                       <div className='lux-item-price'>{money(lineTotal)}</div>
@@ -941,10 +950,11 @@ const styles = `
     display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid #f1f5f9; border-radius: 16px; margin-bottom: 12px; transition: all 0.3s ease; background: #fafbfc;
   }
   .lux-item:hover { border-color: rgba(212, 175, 55, 0.3); background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.03); }
-  .lux-item img { width: 72px; height: 72px; object-fit: cover; border-radius: 12px; border: 1px solid #e2e8f0; }
-  .lux-item-details { flex: 1; }
-  .lux-item-name { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
-  .lux-item-meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: #64748b; font-weight: 500; }
+  .lux-item img { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; border: 1px solid #e2e8f0; }
+  .lux-item-details { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .lux-item-brand { font-size: 10px; font-weight: 800; color: #D4AF37; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
+  .lux-item-name { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 6px; line-height: 1.3; }
+  .lux-item-meta { display: flex; align-items: center; font-size: 12px; color: #64748b; font-weight: 500; }
   .lux-item-price { font-size: 16px; font-weight: 800; color: #0f766e; }
   
   /* Summary */

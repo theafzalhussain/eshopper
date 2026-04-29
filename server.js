@@ -3598,8 +3598,9 @@ const placeOrderHandler = async (req, res) => {
             preDiscountTotal,
             shippingAddress,
             products,
-            couponCode,
-            couponDiscount
+                       couponCode,
+            couponDiscount,
+            deliverySpeed
         } = req.body;
 
         if (!userId || !Array.isArray(products) || products.length === 0) {
@@ -3637,7 +3638,8 @@ const placeOrderHandler = async (req, res) => {
         const orderId = await generateOrderId();
         const orderDate = new Date();
         const estimatedArrival = new Date(orderDate);
-        estimatedArrival.setDate(orderDate.getDate() + 7);
+ const deliveryDays = deliverySpeed === 'express' ? 2 : 5;
+        estimatedArrival.setDate(orderDate.getDate() + deliveryDays);
 
         const total = Number(totalAmount ?? cleanProducts.reduce((sum, item) => sum + item.total, 0));
         const shipping = Number(shippingAmount ?? ((total > 0 && total < 1000) ? 150 : 0));
@@ -3705,6 +3707,7 @@ const placeOrderHandler = async (req, res) => {
         }
 
         const payable = Math.max(0, Number(finalAmount ?? (total + shipping - validCouponDiscount)));
+        // const payable = Math.max(0, Number(finalAmount ?? (total + shipping + gst + safeExtraCharges - baseDiscount - validCouponDiscount)));
 
         const addressPayload = shippingAddress || {
             fullName: user.name || '',

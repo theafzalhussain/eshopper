@@ -163,6 +163,13 @@ exports.applyCoupon = async (req, res) => {
 
         discount = Math.max(0, Math.min(discount, subtotal));
 
+        // Force save coupon data to DB
+        await Cart.findOneAndUpdate(
+            query,
+            { $set: { couponCode: couponDoc.code, couponDiscount: discount } },
+            { strict: false }
+        );
+
         return res.json({
             success: true,
             discount,
@@ -362,6 +369,7 @@ const mapCartItem = (item, userId) => ({
     size: item.size || item.product?.size || '',
     price: Number(item.price || item.product?.finalprice || item.product?.price || 0),
     quantity: Number(item.quantity || item.qty || 1),
+    giftWrap: item.giftWrap || false,
     pic: item.pic || item.pic1 || item.product?.pic1 || item.product?.pic || '/assets/images/noimage.png',
 });
 
@@ -381,6 +389,8 @@ const mapCartForClient = (cart) => {
             estimatedDate: cart.deliveryEstimate?.estimatedDate || null,
             label: deliveryEstimateLabel,
         },
+        deliverySpeed: cart.get ? cart.get('deliverySpeed') : (cart.deliverySpeed || 'standard'),
+        insuranceAdded: cart.get ? cart.get('insuranceAdded') : (cart.insuranceAdded || false),
         deliveryEstimateLabel,
         createdAt: cart.createdAt,
     };
@@ -728,22 +738,121 @@ exports.getOrderSummary = async (req, res) => {
                 : { userid: userId };
 
         const user = await require('../models/User').findById(userId).select('membershipType totalOrders');
-            let cart = await Cart.findOne(query).populate('items.product');
+        let cart = await Cart.findOne(query).populate('items.product');
         if (!cart) return res.json({ success: true, summary: { subtotal: 0, discount: 0, shipping: 0, gst: 0, grandTotal: 0 } });
+        
         let subtotal = 0;
+        let giftWrapCharge = 0;
+        
         cart.items.forEach(item => {
-                subtotal += ((item.price || item.product?.finalprice || item.product?.price || 0) * (item.quantity || item.qty || 1));
+            subtotal += ((item.price || item.product?.finalprice || item.product?.price || 0) * (item.quantity || item.qty || 1));
+            if (item.giftWrap) {
+                giftWrapCharge += 99; // ₹99 per gift wrap
+            }
         });
+        
         // Luxury logic: 10% discount if subtotal > 2000
-        let discount = subtotal > 2000 ? Math.round(subtotal * 0.1) : 0;
+        let baseDiscount = subtotal > 2000 ? Math.round(subtotal * 0.1) : 0;
+        let couponCode = cart.get ? cart.get('couponCode') : cart.couponCode;
+        let couponDiscount = 0;
+        
+        if (couponCode) {
+            const couponDoc = await Coupon.findOne({ code: couponCode, isActive: true });
+            if (couponDoc && subtotal >= Number(couponDoc.minCartValue || 0)) {
+                if (couponDoc.type === 'percent') {
+                    couponDiscount = Math.round((subtotal * Number(couponDoc.value || 0)) / 100);
+                    if (Number(couponDoc.maxDiscount || 0) > 0) {
+                        couponDiscount = Math.min(couponDiscount, Number(couponDoc.maxDiscount));
+                    }
+                } else {
+                    couponDiscount = Math.round(Number(couponDoc.value || 0));
+                }
+                couponDiscount = Math.max(0, Math.min(couponDiscount, subtotal));
+            }
+        }
+        let totalSavings = baseDiscount + couponDiscount;
+        
         // Shipping: FREE for Elite users, otherwise free if subtotal >= 2000, else 150
         const isElite = String(user?.membershipType || '').toLowerCase() === 'elite';
         let shipping = isElite ? 0 : (subtotal >= 2000 ? 0 : (subtotal > 0 ? 150 : 0));
-        // GST: 5% on (subtotal - discount)
-        let gst = Math.round((subtotal - discount) * 0.05);
-        let grandTotal = subtotal - discount + shipping + gst;
-        res.json({ success: true, summary: { subtotal, discount, shipping, gst, grandTotal } });
+        
+        let deliverySpeed = cart.get ? cart.get('deliverySpeed') : cart.deliverySpeed;
+        let insuranceAdded = cart.get ? cart.get('insuranceAdded') : cart.insuranceAdded;
+        let expressDeliveryFee = deliverySpeed === 'express' ? 49 : 0;
+        let insuranceCharge = insuranceAdded ? 49 : 0;
+        
+        // GST: 5% on (subtotal - totalSavings)
+        let gst = Math.round((subtotal - totalSavings) * 0.05);
+        let grandTotal = subtotal - totalSavings + shipping + gst + giftWrapCharge + expressDeliveryFee + insuranceCharge;
+        
+        res.json({ success: true, summary: { 
+            subtotal, 
+            baseDiscount,
+            couponDiscount,
+            discount: baseDiscount, // For backwards compatibility
+            totalSavings,
+            shipping, 
+            gst, 
+            giftWrapCharge,
+            expressDeliveryFee,
+            insuranceCharge,
+            grandTotal 
+        } });
     } catch (err) {
+        console.error('[ERROR] /api/cart/order-summary:', err);
         res.status(500).json({ success: false, message: 'Failed to get summary.' });
+    }
+};
+
+// Update Cart Options (Delivery Speed & Insurance)
+exports.updateCartOptions = async (req, res) => {
+    try {
+        const { userId, deliverySpeed, insuranceAdded } = req.body;
+        if (!userId) return res.status(400).json({ success: false, message: 'User ID required.' });
+
+        const query = mongoose.Types.ObjectId.isValid(userId)
+            ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+            : { userid: userId };
+
+        // Force save fields bypassing schema limitations
+        const updatedCart = await Cart.findOneAndUpdate(
+            query,
+            { $set: { deliverySpeed, insuranceAdded } },
+            { new: true, strict: false }
+        ).populate('items.product savedItems.product');
+
+        if (!updatedCart) return res.status(404).json({ success: false, message: 'Cart not found.' });
+
+        res.json({ success: true, message: 'Cart options updated', cart: mapCartForClient(updatedCart) });
+    } catch (err) {
+        console.error('[ERROR] /api/cart/options:', err);
+        res.status(500).json({ success: false, message: 'Failed to update cart options.' });
+    }
+};
+
+// Toggle Gift Wrap for an Item
+exports.updateCartItem = async (req, res) => {
+    try {
+        const { itemId } = req.params;
+        const { giftWrap, userId } = req.body;
+
+        if (!userId) return res.status(400).json({ success: false, message: 'User ID required.' });
+
+        const query = mongoose.Types.ObjectId.isValid(userId)
+            ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
+            : { userid: userId };
+
+        const updatedCart = await Cart.findOneAndUpdate(
+            { ...query, "items._id": itemId },
+            { $set: { "items.$.giftWrap": giftWrap } },
+            { new: true }
+        ).populate('items.product savedItems.product');
+
+        if (!updatedCart) return res.status(404).json({ success: false, message: 'Cart or Item not found' });
+
+        res.json({ success: true, message: 'Item updated successfully', cart: mapCartForClient(updatedCart) });
+    } catch (err) {
+        console.error('[ERROR] /api/cart/item/:itemId:', err);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
