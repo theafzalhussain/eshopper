@@ -9,8 +9,8 @@
     margin-left: 260px;
     width: calc(100% - 260px);
     padding: 1.1rem 1rem 1rem;
-  }
-}
+  } 
+ }
 
 .orders-toolbar-panel {
   background: linear-gradient(145deg, #f9fbfe 0%, #eef3fa 100%);
@@ -646,7 +646,7 @@
   }
 }
 
-@media (max-width: 860px) {
+@media (max-width: 991px) {
   .filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -662,7 +662,7 @@
   }
 }
 
-@media (max-width: 920px) {
+@media (max-width: 991px) {
   .keep-layout-table {
     min-width: 0;
   }

@@ -405,7 +405,12 @@ export default function AdminOrders() {
             }
 
             if (featureFilter !== 'All') {
-                if (featureFilter === 'Express' && order.deliverySpeed !== 'express') return false;
+                const totalExtras = Number(order.extraCharges || 0);
+                const knownExtras = Number(order.giftWrapCharge || 0) + Number(order.protectionCharge || 0) + Number(order.ecoCharge || 0) + Number(order.paymentFee || 0);
+                const deducedExpress = Math.max(0, totalExtras - knownExtras);
+                const hasExpress = order.deliverySpeed === 'express' || Number(order.expressDeliveryFee || order.expressFee || 0) > 0 || deducedExpress === 49;
+
+                if (featureFilter === 'Express' && !hasExpress) return false;
                 if (featureFilter === 'GiftWrap' && !(Number(order.giftWrapCharge || 0) > 0)) return false;
                 if (featureFilter === 'CarePlus' && !(Number(order.protectionCharge || 0) > 0)) return false;
                 if (featureFilter === 'EcoBox' && !(Number(order.ecoCharge || 0) > 0)) return false;
@@ -1083,7 +1088,13 @@ export default function AdminOrders() {
                                                 <td data-label="Services">
                                                     <div className="font-weight-bold mb-1">{order.productCount || (order.products || []).length || 0} Items</div>
                                                     <div className="d-flex flex-wrap" style={{ gap: '4px', maxWidth: '160px' }}>
-                                                        {order.deliverySpeed === 'express' && <span className="lux-badge-tag" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>⚡ Express</span>}
+                                                        {(() => {
+                                                            const totalExtras = Number(order.extraCharges || 0);
+                                                            const knownExtras = Number(order.giftWrapCharge || 0) + Number(order.protectionCharge || 0) + Number(order.ecoCharge || 0) + Number(order.paymentFee || 0);
+                                                            const deducedExpress = Math.max(0, totalExtras - knownExtras);
+                                                            const hasExpress = order.deliverySpeed === 'express' || Number(order.expressDeliveryFee || order.expressFee || 0) > 0 || deducedExpress === 49;
+                                                            return hasExpress ? <span className="lux-badge-tag" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>⚡ Express</span> : null;
+                                                        })()}
                                                         {order.giftWrapCharge > 0 && <span className="lux-badge-tag" style={{ background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>🎁 Gift Wrap</span>}
                                                         {order.protectionCharge > 0 && <span className="lux-badge-tag" style={{ background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}>🛡️ Care+</span>}
                                                         {order.ecoCharge > 0 && <span className="lux-badge-tag" style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}>🌱 Eco Box</span>}

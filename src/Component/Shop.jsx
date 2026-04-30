@@ -1206,7 +1206,7 @@ export default function Shop() {
                     max-width: 1600px; margin: 0 auto;
                     padding: 24px 24px 60px; gap: 24px;
                 }
-                .mp-backdrop { display: none; position: fixed; inset: 0; background: rgba(40,44,63,0.5); z-index: 399; backdrop-filter: blur(2px); }
+                .mp-backdrop { display: none; position: fixed; inset: 0; background: rgba(40,44,63,0.5); z-index: 1040; backdrop-filter: blur(2px); }
 
                 /* ── SIDEBAR ── */
                 .mp-sidebar {
@@ -1653,13 +1653,17 @@ export default function Shop() {
                     .mp-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
                     .mp-grid.compact { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
                     .mp-backdrop { display: block; }
-                    .mp-sidebar { position: fixed; top: 0; left: 0; width: 320px; height: 100vh; max-height: none; z-index: 400; border-radius: 0; transform: translateX(-110%); transition: transform 0.32s cubic-bezier(0.16,1,0.3,1); }
+                    .mp-sidebar { position: fixed; top: 0; left: 0; width: 320px; height: 100vh; max-height: none; z-index: 1050; border-radius: 0; transform: translateX(-110%); transition: transform 0.32s cubic-bezier(0.16,1,0.3,1); }
                     .mp-sidebar.open { transform: translateX(0); box-shadow: 0 0 60px rgba(40,44,63,0.25); }
                     .mp-sb-inner { border-radius: 0; min-height: 100vh; }
                     .mp-sb-close { display: flex; }
                     .mp-qv-modal { grid-template-columns: 1fr; max-width: 460px; max-height: 92vh; }
                     .mp-qv-img { aspect-ratio: 4/4.2; max-height: 50vh; }
                     .mp-qv-body { padding: 20px 22px 22px; }
+                }
+                @media (max-width: 900px) {
+                    .mp-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+                    .mp-grid.compact { grid-template-columns: repeat(2, 1fr); gap: 12px; }
                 }
                 @media (max-width: 640px) {
                     .mp-hero { min-height: 240px; padding: 44px 18px; }
@@ -1683,10 +1687,15 @@ export default function Shop() {
                     .mp-qv-actions { flex-direction: column; }
                     .mp-recent-card { flex: 0 0 140px; }
                 }
+                @media (max-width: 500px) {
+                    .mp-grid { grid-template-columns: 1fr; }
+                    .mp-grid.compact { grid-template-columns: 1fr; }
+                }
                 @media (max-width: 420px) {
                     .mp-hero-title { font-size: 1.9rem; }
                     .mp-hstat span { font-size: 24px; }
                     .mp-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+                    .mp-grid { grid-template-columns: 1fr; gap: 8px; }
                     .mp-cbody { padding: 8px 10px 10px; gap: 3px; }
                     .mp-cbrand { font-size: 12px; }
                     .mp-cname { font-size: 11px; }

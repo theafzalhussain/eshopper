@@ -135,10 +135,18 @@ export default function OrderDetailsDrawer({ open, onClose, order, onOrderRemove
     const protectionCharge = Math.max(0, toNumber(fullOrderData?.protectionCharge || 0));
     const ecoCharge = Math.max(0, toNumber(fullOrderData?.ecoCharge || 0));
     const paymentFee = Math.max(0, toNumber(fullOrderData?.paymentFee || 0));
-    const segmentedCharges = giftWrapCharge + protectionCharge + ecoCharge + paymentFee;
+    
     const rawExtraCharges = Math.max(0, toNumber(fullOrderData?.extraCharges || 0));
+    const knownExtras = giftWrapCharge + protectionCharge + ecoCharge + paymentFee;
+    const deducedExpress = Math.max(0, rawExtraCharges - knownExtras);
+
+    const resolvedSpeed = fullOrderData?.deliverySpeed || '';
+    const explicitExpress = Number(fullOrderData?.expressDeliveryFee || fullOrderData?.expressFee || 0);
+    const expressFee = explicitExpress > 0 ? explicitExpress : (String(resolvedSpeed).toLowerCase() === 'express' ? 49 : (deducedExpress === 49 ? 49 : 0));
+
+    const segmentedCharges = knownExtras + expressFee;
     const otherCharges = rawExtraCharges > 0
-      ? Math.max(0, segmentedCharges > 0 && rawExtraCharges >= segmentedCharges ? rawExtraCharges - segmentedCharges : rawExtraCharges)
+      ? Math.max(0, rawExtraCharges >= segmentedCharges ? rawExtraCharges - segmentedCharges : rawExtraCharges)
       : 0;
     const preDiscountRaw = Math.max(0, toNumber(fullOrderData?.preDiscountTotal || 0));
     const preDiscountTotal = preDiscountRaw > 0 ? preDiscountRaw : Math.max(0, subtotal + discountAmount + couponDiscount);
@@ -158,6 +166,7 @@ export default function OrderDetailsDrawer({ open, onClose, order, onOrderRemove
       protectionCharge,
       ecoCharge,
       paymentFee,
+      expressFee,
       otherCharges,
       finalAmount,
       itemCount
@@ -173,6 +182,9 @@ export default function OrderDetailsDrawer({ open, onClose, order, onOrderRemove
     fullOrderData?.protectionCharge,
     fullOrderData?.ecoCharge,
     fullOrderData?.paymentFee,
+    fullOrderData?.expressDeliveryFee,
+    fullOrderData?.expressFee,
+    fullOrderData?.deliverySpeed,
     fullOrderData?.extraCharges,
     fullOrderData?.preDiscountTotal,
     fullOrderData?.finalAmount,
@@ -414,6 +426,7 @@ export default function OrderDetailsDrawer({ open, onClose, order, onOrderRemove
                                         <div className="lux-price-row"><span>Subtotal</span><strong>{formatAmount(paymentSummary.subtotal)}</strong></div>
                                         <div className="lux-price-row"><span>Shipping</span><strong>{formatAmount(paymentSummary.shipping)}</strong></div>
                                         {paymentSummary.gstAmount > 0 && <div className="lux-price-row"><span>Taxes (GST)</span><strong>{formatAmount(paymentSummary.gstAmount)}</strong></div>}
+                                        {paymentSummary.expressFee > 0 && <div className="lux-price-row"><span>Express Delivery</span><strong>{formatAmount(paymentSummary.expressFee)}</strong></div>}
                                         {paymentSummary.giftWrapCharge > 0 && <div className="lux-price-row"><span>Gift Wrap</span><strong>{formatAmount(paymentSummary.giftWrapCharge)}</strong></div>}
                                         {paymentSummary.protectionCharge > 0 && <div className="lux-price-row"><span>Protection</span><strong>{formatAmount(paymentSummary.protectionCharge)}</strong></div>}
                                         {paymentSummary.ecoCharge > 0 && <div className="lux-price-row"><span>Eco Charge</span><strong>{formatAmount(paymentSummary.ecoCharge)}</strong></div>}
