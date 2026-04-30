@@ -4672,7 +4672,7 @@ async function startServer() {
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit)
-                    .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products deliverySchedule deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt').lean();
+                    .select('orderId userid userName userEmail orderStatus paymentStatus finalAmount updatedAt createdAt products deliverySchedule deliveryOtp deliveryOtpSentAt deliveryOtpExpiresAt deliveryOtpVerifiedAt couponCode couponDiscount giftWrapCharge protectionCharge ecoCharge extraCharges deliverySpeed').lean();
 
                 const hydratedOrders = await Promise.all(
                     orders.map(async (item) => {
@@ -4704,7 +4704,14 @@ async function startServer() {
                         deliveryOtpExpiresAt: item.deliveryOtpExpiresAt || null,
                         deliveryOtpVerifiedAt: item.deliveryOtpVerifiedAt || null,
                         productCount: normalizeOrderProducts(item.products).reduce((sum, product) => sum + Number(product.quantity || 0), 0),
-                        updatedAt: item.updatedAt || item.createdAt || new Date()
+                        updatedAt: item.updatedAt || item.createdAt || new Date(),
+                        couponCode: item.couponCode || '',
+                        couponDiscount: Number(item.couponDiscount || 0),
+                        giftWrapCharge: Number(item.giftWrapCharge || 0),
+                        protectionCharge: Number(item.protectionCharge || 0),
+                        ecoCharge: Number(item.ecoCharge || 0),
+                        extraCharges: Number(item.extraCharges || 0),
+                        deliverySpeed: item.deliverySpeed || ''
                     }))
                 });
             } catch (e) {
@@ -4875,6 +4882,7 @@ async function startServer() {
                     deliveryOtpExpiresAt: ensuredOrder.deliveryOtpExpiresAt || null,
                     deliveryOtpVerifiedAt: ensuredOrder.deliveryOtpVerifiedAt || null,
                     estimatedArrival: ensuredOrder.estimatedArrival || null,
+                    deliverySpeed: ensuredOrder.deliverySpeed || '',
                     orderDate: ensuredOrder.orderDate || ensuredOrder.createdAt,
                     createdAt: ensuredOrder.createdAt,
                     updatedAt: ensuredOrder.updatedAt

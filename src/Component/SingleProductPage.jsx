@@ -1,29 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
 import { getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
 import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
 import { useMembership } from './MembershipContext';
+import ProductReviews from './ProductReviews';
+import { motion } from 'framer-motion';
+import axios from 'axios';
+import { BASE_URL } from '../constants';
 
 /* ─── Mock data ─────────────────────────────────────────────────────────────── */
-const FBT = [
-  { name:"Oxford Dress Shirt", price:2499, mrp:3499, img:"https://images.unsplash.com/photo-1562157873-818bc0726f68?w=300&q=80" },
-  { name:"Slim Fit Chinos",    price:3299, mrp:4999, img:"https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=300&q=80" },
-  { name:"Derby Leather Shoes",price:5999, mrp:8499, img:"https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=300&q=80" },
-];
-
-const RATING_DIST = [
-  { stars:5,pct:68 },{ stars:4,pct:18 },{ stars:3,pct:8 },{ stars:2,pct:3 },{ stars:1,pct:3 },
-];
-
-const REVIEWS = [
-  { user:"Rahul M.",  initial:"R", date:"12 Jan 2025", rating:5, body:"Absolutely stunning blazer. The cashmere quality is exceptional — soft, warm, and holds its shape perfectly. Received so many compliments at my sister's wedding.", verified:true,  helpful:34 },
-  { user:"Priya S.",  initial:"P", date:"5 Feb 2025",  rating:4, body:"The fit is amazing and the material feels genuinely premium. Slight colour difference from the website photo but overall very happy. Delivery was on time and packaging was luxurious.", verified:true,  helpful:18 },
-  { user:"Arjun K.",  initial:"A", date:"28 Feb 2025", rating:5, body:"Best blazer I've owned. Worn it to 3 formal events — still looks brand new. The stitching quality is top-tier.", verified:false, helpful:22 },
-  { user:"Meera T.",  initial:"M", date:"15 Mar 2025", rating:4, body:"Lovely product. Sizing runs slightly large — I'd recommend going one size down. The charcoal colour is rich and sophisticated.", verified:true,  helpful:9  },
-];
-
 const QA_LIST = [
   { q:"Is this true to size or does it run small/large?", a:"Fits true to size. For a relaxed fit, we recommend going one size up.", votes:12 },
   { q:"Is the fabric pre-shrunk?", a:"Yes, all fabrics are pre-washed and pre-shrunk to minimise further shrinkage after washing.", votes:8 },
@@ -57,12 +44,6 @@ const CARE_ITEMS = [
   { icon:"💧", text:"Spot clean with a damp cloth for minor stains" },
 ];
 
-const SIZE_GUIDE = [
-  ["36","36–37","16.5","29","25"],["38","38–39","17","29.5","25.5"],
-  ["40","40–41","17.5","30","26"],["42","42–43","18","30.5","26.5"],
-  ["44","44–45","18.5","31","27"],["46","46–47","19","31.5","27.5"],
-];
-
 /* ─── Styles ────────────────────────────────────────────────────────────────── */
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Jost:wght@200;300;400;500;600;700&display=swap');
@@ -79,6 +60,31 @@ const STYLES = `
   --sh-md:0 12px 40px rgba(0,0,0,0.12);--sh-lg:0 24px 80px rgba(0,0,0,0.16);
   --r-sm:4px;--r-md:8px;--r-lg:16px;--r-xl:24px;
   --tr:all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+.pd-accordion-wrap{margin-top:24px;border:1px solid var(--border-light);border-radius:var(--r-lg);background:var(--cloud);overflow:hidden;box-shadow:var(--sh-sm);}
+.pd-accordion-item + .pd-accordion-item{border-top:1px solid var(--border-light);}
+.pd-accordion-head{width:100%;display:flex;align-items:center;justify-content:space-between;padding:16px 18px;background:transparent;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:700;color:var(--ink);letter-spacing:0.1em;text-transform:uppercase;transition:var(--tr);}
+.pd-accordion-head:hover{background:var(--fog);}
+.pd-accordion-chev{font-size:13px;transition:transform 0.3s ease;color:var(--text-light);}
+.pd-accordion-chev.up{transform:rotate(180deg);}
+.pd-accordion-body{overflow:hidden;max-height:0;transition:max-height 0.4s ease, padding 0.4s ease;padding:0 18px;}
+.pd-accordion-body.open{max-height:500px;padding:0 18px 18px;}
+.pd-accordion-content{border-top:1px dashed var(--border-mid);padding-top:16px;}
+
+/* Accordion Content Styling */
+.pd-accordion-content .pd-desc { font-size: 14px; line-height: 1.8; color: var(--text-body); }
+.pd-accordion-content .pd-feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; color: var(--text-body); }
+.pd-accordion-content .pd-feat-item { display: flex; align-items: flex-start; gap: 10px; background: var(--fog); padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--border-light); }
+.pd-accordion-content .pd-feat-dot { flex-shrink: 0; margin-top: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--gold-glow); border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--gold); font-weight: 700; }
+.pd-accordion-content .pd-spec-table { width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--border-light); border-radius: var(--r-md); overflow: hidden; }
+.pd-accordion-content .pd-spec-table tr:nth-child(even) { background: var(--fog); }
+.pd-accordion-content .pd-spec-table td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); color: var(--text-body); }
+.pd-accordion-content .pd-spec-table tr:last-child td { border-bottom: none; }
+.pd-accordion-content .pd-spec-table td:first-child { color: var(--text-light); font-weight: 600; padding-right: 16px; white-space: nowrap; }
+.pd-accordion-content .pd-care-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; color: var(--text-body); }
+.pd-accordion-content .pd-care-item { display: flex; align-items: center; gap: 10px; background: var(--fog); padding: 12px; border-radius: var(--r-md); border: 1px solid var(--border-light); }
+.pd-accordion-content .pd-care-icon { font-size: 20px; color: var(--gold-light); }
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 
@@ -102,7 +108,7 @@ const STYLES = `
 .pd-shell{max-width:1380px;margin:0 auto;padding:32px 40px 130px;}
 .pd-body{display:grid;grid-template-columns:52% 1fr;gap:56px;align-items:start;}
 
-.pd-gallery{position:sticky;top:20px;}
+.pd-gallery{position:sticky;top:20px;z-index:50;}
 .pd-gal-inner{display:flex;gap:12px;}
 .pd-gal-thumbs{display:flex;flex-direction:column;gap:8px;flex-shrink:0;}
 .pd-thumb{width:68px;height:82px;border:1.5px solid var(--border-light);border-radius:6px;overflow:hidden;cursor:pointer;background:var(--cloud);transition:var(--tr);}
@@ -110,12 +116,13 @@ const STYLES = `
 .pd-thumb.on{border-color:var(--gold);border-width:2px;box-shadow:0 0 0 3px var(--gold-glow);}
 .pd-thumb img{width:100%;height:100%;object-fit:cover;}
 
-.pd-main-wrap{flex:1;position:relative;background:var(--cloud);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border-light);box-shadow:var(--sh-md);cursor:crosshair;aspect-ratio:3/4;}
-.pd-main-img{width:100%;height:100%;object-fit:contain;padding:24px;display:block;pointer-events:none;transition:opacity 0.22s ease;}
+.pd-main-wrap{flex:1;position:relative;background:var(--cloud);border-radius:var(--r-lg);border:1px solid var(--border-light);box-shadow:var(--sh-md);cursor:crosshair;aspect-ratio:3/4;}
+.pd-main-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;transition:opacity 0.22s ease;border-radius:calc(var(--r-lg) - 1px);background:#fff;}
 .pd-main-img.fade{opacity:0;}
-.pd-zoom-lens{position:absolute;width:120px;height:120px;border:2px solid var(--gold);border-radius:6px;pointer-events:none;z-index:10;background:rgba(212,175,55,0.07);display:none;}
-.pd-zoom-panel{position:absolute;right:calc(100% + 14px);top:0;width:360px;height:100%;border:1px solid var(--border-light);border-radius:var(--r-lg);overflow:hidden;background:var(--cloud);box-shadow:var(--sh-lg);display:none;z-index:20;pointer-events:none;}
-.pd-main-wrap:hover .pd-zoom-lens,.pd-main-wrap:hover .pd-zoom-panel{display:block;}
+.pd-zoom-lens{position:absolute;width:120px;height:120px;border:2px solid var(--gold);border-radius:6px;pointer-events:none;z-index:10;background:rgba(212,175,55,0.07);opacity:0;visibility:hidden;transition:opacity 0.2s ease, visibility 0.2s ease;}
+.pd-zoom-panel{position:absolute;left:calc(100% + 28px);top:0;width:100%;height:100%;border:1px solid var(--border-light);border-radius:var(--r-lg);overflow:hidden;background:var(--cloud);box-shadow:var(--sh-lg);z-index:100;pointer-events:none;opacity:0;visibility:hidden;transition:opacity 0.2s ease, visibility 0.2s ease;}
+.pd-zoom-panel.fade { opacity: 0 !important; }
+.pd-main-wrap:hover .pd-zoom-lens, .pd-main-wrap:hover .pd-zoom-panel, .pd-main-wrap:active .pd-zoom-lens, .pd-main-wrap:active .pd-zoom-panel { opacity: 1; visibility: visible; }
 
 .pd-img-actions{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:8px;z-index:4;}
 .pd-img-btn{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:var(--tr);box-shadow:0 2px 12px rgba(0,0,0,0.1);}
@@ -131,8 +138,8 @@ const STYLES = `
 .pd-dot.on{background:var(--gold);width:18px;border-radius:3px;}
 .pd-badge{position:absolute;top:16px;left:0;background:linear-gradient(135deg,#1A7A4A,#27ae60);color:#fff;font-size:10px;font-weight:800;letter-spacing:0.14em;padding:7px 16px 7px 12px;clip-path:polygon(0 0,100% 0,88% 100%,0 100%);z-index:3;}
 .pd-elite-badge{position:absolute;bottom:46px;left:12px;background:linear-gradient(135deg,#B8960C,#D4AF37);color:#fff;font-size:9px;font-weight:700;letter-spacing:0.12em;padding:5px 12px;border-radius:20px;z-index:3;box-shadow:0 3px 14px rgba(184,150,12,0.45);}
-.pd-view-strip{display:flex;gap:7px;margin-top:10px;}
-.pd-view-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border:1px solid var(--border-mid);border-radius:var(--r-md);background:var(--cloud);font-family:'Jost',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-body);cursor:pointer;transition:var(--tr);}
+.pd-view-strip{display:flex;gap:8px;margin-top:12px;width:100%;justify-content:center;}
+.pd-view-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border:1px solid var(--border-mid);border-radius:var(--r-md);background:var(--cloud);font-family:'Jost',sans-serif;font-size:12px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-body);cursor:pointer;transition:var(--tr);white-space:nowrap;width:45%;margin:0 auto;}
 .pd-view-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-light);}
 
 .pd-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
@@ -331,31 +338,6 @@ const STYLES = `
 .pd-care-item{display:flex;align-items:flex-start;gap:12px;background:var(--cloud);border:1px solid var(--border-light);border-radius:var(--r-md);padding:14px 16px;font-size:13px;color:var(--text-body);line-height:1.5;}
 .pd-care-icon{font-size:18px;flex-shrink:0;}
 
-.pd-rev-section{display:grid;grid-template-columns:180px 1fr;gap:40px;align-items:start;}
-.pd-rev-big{text-align:center;background:var(--cloud);border:1px solid var(--border-light);border-radius:var(--r-lg);padding:24px 16px;}
-.pd-rev-num{font-family:'Playfair Display',serif;font-size:60px;font-weight:700;color:var(--ink);line-height:1;}
-.pd-rev-star-row{display:flex;justify-content:center;gap:3px;margin:8px 0;}
-.pd-rev-ct{font-size:12px;color:var(--text-light);}
-.pd-rev-bars{display:flex;flex-direction:column;gap:9px;}
-.pd-rev-bar-row{display:flex;align-items:center;gap:10px;}
-.pd-rev-bar-lbl{font-size:11px;color:var(--text-light);width:30px;text-align:right;flex-shrink:0;}
-.pd-rev-bar-track{flex:1;height:8px;background:var(--border-light);border-radius:10px;overflow:hidden;}
-.pd-rev-bar-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#F5A623,#F9D06D);transition:width 1.2s ease;}
-.pd-rev-bar-pct{font-size:11px;color:var(--text-light);width:34px;}
-.pd-rev-cards{display:grid;gap:16px;margin-top:32px;}
-.pd-rev-card{background:var(--cloud);border:1px solid var(--border-light);border-radius:var(--r-lg);padding:20px 22px;transition:var(--tr);}
-.pd-rev-card:hover{box-shadow:var(--sh-sm);border-color:var(--border-mid);}
-.pd-rev-card-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
-.pd-rev-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--gold));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0;}
-.pd-rev-meta{flex:1;}
-.pd-rev-user{font-size:13px;font-weight:700;color:var(--ink);}
-.pd-rev-date{font-size:11px;color:var(--text-light);}
-.pd-rev-body{font-size:13px;color:var(--text-body);line-height:1.7;}
-.pd-rev-vbadge{display:inline-flex;align-items:center;gap:5px;background:var(--green-light);color:var(--green);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:10px;}
-.pd-rev-helpful{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--text-light);}
-.pd-rev-helpful button{background:none;border:1px solid var(--border-mid);border-radius:4px;padding:4px 11px;font-family:'Jost',sans-serif;font-size:11px;cursor:pointer;color:var(--text-body);transition:var(--tr);}
-.pd-rev-helpful button:hover{border-color:var(--teal);color:var(--teal);}
-
 .pd-qa-list{display:grid;gap:14px;}
 .pd-qa-item{background:var(--cloud);border:1px solid var(--border-light);border-radius:var(--r-lg);padding:18px 22px;transition:var(--tr);}
 .pd-qa-item:hover{box-shadow:var(--sh-sm);}
@@ -369,22 +351,29 @@ const STYLES = `
 .pd-qa-ask-btn{background:var(--teal);color:#fff;border:none;border-radius:6px;padding:10px 18px;font-family:'Jost',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:var(--tr);}
 .pd-qa-ask-btn:hover{background:var(--teal-mid);}
 
-.pd-fbt{background:var(--cloud);border:1px solid var(--border-light);border-radius:var(--r-xl);padding:32px 36px;margin-top:48px;box-shadow:var(--sh-xs);}
-.pd-fbt-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:var(--ink);margin-bottom:4px;}
-.pd-fbt-sub{font-size:12px;color:var(--text-light);margin-bottom:24px;}
-.pd-fbt-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
-.pd-fbt-product{display:flex;flex-direction:column;align-items:center;gap:7px;}
-.pd-fbt-img{width:90px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--border-light);box-shadow:var(--sh-xs);}
-.pd-fbt-name{font-size:11px;color:var(--text-body);text-align:center;max-width:90px;line-height:1.4;font-weight:500;}
-.pd-fbt-price{font-size:13px;font-weight:700;color:var(--ink);}
-.pd-fbt-mrp{font-size:11px;color:var(--text-light);text-decoration:line-through;}
-.pd-fbt-plus{font-size:24px;color:var(--border-mid);font-weight:300;}
-.pd-fbt-total{margin-left:auto;text-align:right;background:linear-gradient(135deg,rgba(212,175,55,0.06),transparent);border:1px solid rgba(212,175,55,0.2);border-radius:var(--r-lg);padding:16px 22px;}
-.pd-fbt-total-lbl{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-light);font-weight:700;}
-.pd-fbt-total-price{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--ink);margin:6px 0 2px;}
-.pd-fbt-total-save{font-size:12px;color:var(--green);font-weight:700;}
-.pd-fbt-btn{margin-top:22px;background:var(--ink);color:#fff;border:none;border-radius:6px;padding:14px 30px;font-family:'Jost',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;transition:var(--tr);}
-.pd-fbt-btn:hover{background:var(--charcoal);transform:translateY(-1px);box-shadow:0 8px 24px rgba(10,10,10,0.2);}
+.pd-fbt{background:var(--cloud);border:1px solid var(--border-light);border-radius:var(--r-xl);padding:40px;margin-top:56px;box-shadow:var(--sh-md);text-align:center;}
+.pd-fbt-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.pd-fbt-sub{font-size:14px;color:var(--text-light);margin-bottom:32px;}
+.pd-fbt-row{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;}
+.pd-fbt-product{display:flex;flex-direction:column;align-items:center;gap:12px;width:150px;text-align:center;}
+.pd-fbt-img-wrap{position:relative;width:100%;aspect-ratio:3/4;border-radius:12px;overflow:hidden;border:1px solid var(--border-light);box-shadow:var(--sh-sm);}
+.pd-fbt-img{width:100%;height:100%;object-fit:cover;transition:var(--tr);}
+.pd-fbt-product:hover .pd-fbt-img{transform:scale(1.08);}
+.pd-fbt-badge{position:absolute;top:8px;left:8px;background:linear-gradient(135deg,#111,#2a2a2a);color:var(--gold);border:1px solid rgba(212,175,55,0.4);font-size:9px;font-weight:800;padding:4px 8px;border-radius:4px;letter-spacing:1px;z-index:2;}
+.pd-fbt-info{display:flex;flex-direction:column;gap:4px;width:100%;}
+.pd-fbt-brand{font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:0.15em;font-weight:800;}
+.pd-fbt-name{font-size:13px;color:var(--ink);line-height:1.4;font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.pd-fbt-price-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:2px;}
+.pd-fbt-price{font-size:15px;font-weight:800;color:var(--teal);}
+.pd-fbt-mrp{font-size:12px;color:var(--text-light);text-decoration:line-through;}
+.pd-fbt-plus{font-size:32px;color:var(--gold);font-weight:300;}
+.pd-fbt-total{margin:32px auto 0;max-width:320px;text-align:center;background:linear-gradient(135deg,rgba(212,175,55,0.06),rgba(212,175,55,0.02));border:1px solid rgba(212,175,55,0.3);border-radius:var(--r-lg);padding:24px 32px;box-shadow:var(--sh-sm);}
+.pd-fbt-total-lbl{font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-light);font-weight:700;}
+.pd-fbt-total-price{font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:var(--ink);margin:8px 0 4px;}
+.pd-fbt-total-save{font-size:13px;color:var(--green);font-weight:700;}
+.pd-fbt-btn-wrap{text-align:center;margin-top:24px;}
+.pd-fbt-btn{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:16px 36px;font-family:'Jost',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;cursor:pointer;transition:var(--tr);box-shadow:0 8px 24px rgba(10,10,10,0.15);}
+.pd-fbt-btn:hover{background:var(--charcoal);transform:translateY(-2px);box-shadow:0 12px 32px rgba(10,10,10,0.25);}
 
 .pd-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.55);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;animation:pdFade 0.2s ease;}
 @keyframes pdFade{from{opacity:0}to{opacity:1}}
@@ -409,9 +398,9 @@ const STYLES = `
 
 @media(max-width:1100px){
   .pd-body{grid-template-columns:1fr;gap:32px;}
-  .pd-gallery{position:relative;top:auto;}
+  .pd-gallery{position:relative;top:auto;z-index:1;}
   .pd-gal-thumbs{display:none;}
-  .pd-zoom-panel{display:none!important;}
+  .pd-zoom-panel{left:0;}
   .pd-offer-grid{grid-template-columns:1fr;}
   .pd-rev-section{grid-template-columns:1fr;}
   .pd-fbt-total{display:none;}
@@ -425,6 +414,9 @@ const STYLES = `
   .pd-gift-opts{grid-template-columns:1fr;}
   .pd-proof{gap:10px;font-size:10px;}
   .pd-sticky{padding:12px 16px;}
+  .pd-zoom-lens, .pd-zoom-panel { display: none !important; }
+  .pd-view-strip{gap:8px;flex-wrap:wrap;}
+  .pd-view-btn{font-size:10px;padding:8px 12px;letter-spacing:0.04em;gap:5px;flex-grow:1;}
 }
 `;
 
@@ -490,24 +482,37 @@ export default function ProductDetail() {
   const [delErr, setDelErr]             = useState(false);
   const [delOk, setDelOk]               = useState(false);
   const [toast, setToast]               = useState('');
-  const [toastVis, setToastVis]         = useState(false);
-  const [tab, setTab]                   = useState('details');
+  const [toastVis, setToastVis]         = useState(false);  const [tab, setTab]                   = useState('reviews');
   const [sizeModal, setSizeModal]       = useState(false);
+  const [videoModal, setVideoModal]     = useState(false);
+  const [view360Modal, setView360Modal] = useState(false);
+  const [szUnit, setSzUnit]             = useState('in');
+  const [rotY, setRotY]                 = useState(0);
+  const [dragStartX, setDragStartX]     = useState(0);
+  const [isDragging360, setIsDragging360] = useState(false);
   const [finderModal, setFinderModal]   = useState(false);
   const [emiOpen, setEmiOpen]           = useState(false);
+  const [openAccordion, setOpenAccordion] = useState('details');
   const [coupon, setCoupon]             = useState('');
   const [couponMsg, setCouponMsg]       = useState('');
   const [couponErr, setCouponErr]       = useState(false);
-  const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [appliedCouponData, setAppliedCouponData] = useState(null);
+  const [couponsList, setCouponsList]   = useState([]);
   const [shareOpen, setShareOpen]       = useState(false);
   const [stickyVis, setStickyVis]       = useState(false);
   const [giftWrap, setGiftWrap]         = useState(false);
   const [giftMsg, setGiftMsg]           = useState(false);
-  const [finderChest, setFinderChest]   = useState('');
+  const [finderMeasure, setFinderMeasure] = useState('');
   const [finderResult, setFinderResult] = useState('');
+  const [reviewStats, setReviewStats]   = useState({ count: 0, average: 0 });
   const [viewCount]                     = useState(Math.floor(Math.random() * 14) + 5);
   const [boughtCount]                   = useState(Math.floor(Math.random() * 180) + 70);
   const saleEnd = useRef(Date.now() + 4 * 3600_000 + 27 * 60_000).current;
+
+  // Ensure Details accordion is always open by default when a product loads
+  useEffect(() => {
+    setOpenAccordion('details');
+  }, [id]);
 
   const ctaRef     = useRef(null);
   const toastTmr   = useRef(null);
@@ -520,6 +525,15 @@ export default function ProductDetail() {
     dispatch(getProduct());
     dispatch(getCart());
     dispatch(getWishlist());
+
+    // Fetch real coupons from DB
+    axios.get(`${BASE_URL}/coupon`)
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setCouponsList(res.data.filter(c => c.isActive));
+        }
+      })
+      .catch(err => console.log('Failed to fetch coupons', err));
   }, [dispatch]);
 
   useEffect(() => {
@@ -565,6 +579,20 @@ export default function ProductDetail() {
     toastTmr.current = setTimeout(() => setToastVis(false), 2800);
   }
 
+  // Auto-remove coupon if quantity decreases and subtotal drops below minCartValue
+  useEffect(() => {
+    if (appliedCouponData && p) {
+      const baseFinal = Number(p.finalprice || p.price || 0);
+      const curDiscountedPrice = membershipType === 'Elite' ? Math.round(baseFinal * 0.9) : baseFinal;
+      const totalCartVal = curDiscountedPrice * qty;
+      if (appliedCouponData.minCartValue && totalCartVal < appliedCouponData.minCartValue) {
+          setCouponErr(true);
+          setCouponMsg(`Coupon removed: Min order value of ₹${appliedCouponData.minCartValue} required.`);
+          setAppliedCouponData(null);
+      }
+    }
+  }, [qty, p, appliedCouponData, membershipType]);
+
   // ─── Actions ───
   function handleAddToCart() {
     const userId = localStorage.getItem('userid');
@@ -606,7 +634,20 @@ export default function ProductDetail() {
     const userId = localStorage.getItem('userid');
     if (!userId) { navigate('/login', { state: { from: location.pathname } }); return; }
     
-    const elitePrice = membershipType === 'Elite' ? Math.round(Number(p.finalprice || 0) * 0.9) : Number(p.finalprice || 0);
+    const baseFinal = Number(p.finalprice || p.price || 0);
+    const elitePrice = membershipType === 'Elite' ? Math.round(baseFinal * 0.9) : baseFinal;
+    let subtotal = elitePrice * Number(qty);
+    let discountAmt = 0;
+    
+    if (appliedCouponData) {
+        if (appliedCouponData.type === 'percent') {
+            discountAmt = Math.round((subtotal * appliedCouponData.value) / 100);
+            if (appliedCouponData.maxDiscount > 0 && discountAmt > appliedCouponData.maxDiscount) discountAmt = appliedCouponData.maxDiscount;
+        } else {
+            discountAmt = appliedCouponData.value;
+        }
+    }
+
     const productForDirectCheckout = {
         productid: p.id || p._id,
         name: p.name,
@@ -615,7 +656,12 @@ export default function ProductDetail() {
         size: selSize,
         color: selColor,
         pic: p.pic1 || p.pic || '',
-        total: elitePrice * Number(qty)
+        total: subtotal,
+        couponCode: appliedCouponData?.code || '',
+        couponDiscount: discountAmt,
+        giftWrap: giftWrap,
+        giftMsg: giftMsg,
+        finalPayable: Math.max(0, subtotal - discountAmt + (giftWrap ? 99 : 0))
     };
     
     sessionStorage.setItem('directCheckoutProduct', JSON.stringify(productForDirectCheckout));
@@ -630,9 +676,11 @@ export default function ProductDetail() {
     if (wishlisted) {
       const existing = wishlist.find(item => String(item.productid?._id || item.productid || item.product) === String(p.id || p._id) && String(item.userid) === String(userId));
       if (existing) { dispatch(deleteWishlist({ id: existing.id || existing._id })); toast_('Removed from wishlist'); }
+      setWishlisted(false);
     } else {
        dispatch(addWishlist({ productid: p.id || p._id, userid: userId, name: p.name, color: selColor, size: selSize, price: Number(p.finalprice || 0), pic: p.pic1 || p.pic || '' }));
        toast_('❤️ Saved to Wishlist');
+       setWishlisted(true);
     }
   }
 
@@ -643,27 +691,54 @@ export default function ProductDetail() {
   }
 
   function handleMouseMove(e) {
+    if (window.innerWidth <= 768) return; // Disable zoom processing on mobile
     const wrap = imgWrapRef.current, lens = lensRef.current, zoom = zoomRef.current;
     if (!wrap || !lens || !zoom) return;
+
     const rect = wrap.getBoundingClientRect();
-    const lw = 120, lh = 120;
-    let x = e.clientX - rect.left - lw/2, y = e.clientY - rect.top - lh/2;
+    const ZOOM_LEVEL = 2.5;
+    const lw = rect.width / ZOOM_LEVEL;
+    const lh = rect.height / ZOOM_LEVEL;
+
+    lens.style.width = `${lw}px`;
+    lens.style.height = `${lh}px`;
+    
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    }
+
+    let x = clientX - rect.left - lw/2, y = clientY - rect.top - lh/2;
     x = Math.max(0, Math.min(x, rect.width - lw));
     y = Math.max(0, Math.min(y, rect.height - lh));
-    lens.style.left = x+'px'; lens.style.top = y+'px';
-    const cx = zoom.offsetWidth/lw, cy = zoom.offsetHeight/lh;
-    zoom.style.backgroundImage    = `url(${mainImg})`;
-    zoom.style.backgroundSize     = `${rect.width*cx}px ${rect.height*cy}px`;
-    zoom.style.backgroundPosition = `-${x*cx}px -${y*cy}px`;
+    lens.style.left = `${x}px`;
+    lens.style.top = `${y}px`;
+
+    zoom.style.backgroundImage    = `url("${mainImg}")`;
+    zoom.style.backgroundSize     = `${rect.width * ZOOM_LEVEL}px ${rect.height * ZOOM_LEVEL}px`;
+    zoom.style.backgroundPosition = `-${x * ZOOM_LEVEL}px -${y * ZOOM_LEVEL}px`;
     zoom.style.backgroundRepeat   = 'no-repeat';
   }
 
   function applyCouponCode() {
     const code = coupon.trim().toUpperCase();
-    if      (code==='ELITE10')  { setAppliedCoupon(code); setCouponMsg('✓ Applied! Extra 10% off.'); setCouponErr(false); }
-    else if (code==='HDFC10')   { setCouponMsg('✓ HDFC10 valid — 10% off via HDFC at checkout.'); setCouponErr(false); }
-    else if (code==='GIFTWRAP') { setCouponMsg('✓ Free premium gift wrap added!'); setCouponErr(false); setGiftWrap(true); }
-    else                        { setCouponMsg('Invalid code. Try ELITE10, HDFC10 or GIFTWRAP.'); setCouponErr(true); setAppliedCoupon(''); }
+    if (!code) { setCouponErr(true); setCouponMsg('Please enter a coupon code.'); return; }
+    
+    const found = couponsList.find(c => c.code.toUpperCase() === code);
+    if (!found) {
+        setCouponErr(true); setCouponMsg('Invalid or expired coupon code.'); setAppliedCouponData(null); return;
+    }
+    
+    const currentCartValue = (membershipType === 'Elite' ? Math.round(Number(p.finalprice || 0) * 0.9) : Number(p.finalprice || 0)) * qty;
+    if (found.minCartValue && currentCartValue < found.minCartValue) {
+        setCouponErr(true); setCouponMsg(`Minimum order value of ₹${found.minCartValue} required.`); setAppliedCouponData(null); return;
+    }
+    
+    setAppliedCouponData(found);
+    setCouponErr(false);
+    setCouponMsg(`✓ Applied! ${found.title || 'Coupon added successfully.'}`);
   }
 
   function checkDelivery() {
@@ -671,14 +746,140 @@ export default function ProductDetail() {
     else { setDelMsg('Please enter a valid 6-digit pincode.'); setDelErr(true); setDelOk(false); }
   }
 
+  // ─── Dynamic Size Chart from DB Categories ───
+  const sizeChartInfo = useMemo(() => {
+    if (!p) return { headers: [], data: [], type: 'Chest' };
+    
+    const main = String(p.maincategory || '').toLowerCase();
+    const sub = String(p.subcategory || '').toLowerCase();
+    
+    const isBottom = ['jean', 'trouser', 'pant', 'short', 'skirt', 'legging', 'jogger', 'track', 'chino', 'lower', 'bottom'].some(kw => sub.includes(kw));
+    const isKid = ['kid', 'boy', 'girl'].some(kw => main.includes(kw) || sub.includes(kw));
+    const isWomen = ['women', 'woman', 'lady', 'ladies', 'female'].some(kw => main.includes(kw) || sub.includes(kw));
+    const isShoe = ['shoe', 'sneaker', 'heel', 'flat', 'boot', 'footwear'].some(kw => sub.includes(kw));
+
+    if (isShoe) {
+        return {
+            headers: ["UK/India Size", "Euro Size", "US Size", "Foot Length (cm)"],
+            data: [
+                ["6", "40", "7", "24.6"], ["7", "41", "8", "25.4"], ["8", "42", "9", "26.2"],
+                ["9", "43", "10", "27.1"], ["10", "44", "11", "27.9"], ["11", "45", "12", "28.8"]
+            ],
+            type: 'Foot Length (cm)'
+        };
+    }
+    if (isKid) {
+       return {
+          headers: ["Size/Age", "Chest (in)", "Waist (in)", "Height (in)"],
+          data: [
+              ["2-3Y", "22", "21", "38"], ["4-5Y", "24", "22", "43"], ["6-7Y", "26", "23.5", "48"],
+              ["8-9Y", "28", "25", "53"], ["10-11Y", "30", "26.5", "58"]
+          ],
+          type: 'Age (Yrs)'
+       };
+    }
+    if (isBottom) {
+        if (isWomen) {
+            return {
+                headers: ["Size", "Waist (in)", "Hip (in)", "Inseam (in)"],
+                data: [
+                    ["26", "26", "34", "28"], ["28", "28", "36", "28"], ["30", "30", "38", "28"],
+                    ["32", "32", "40", "30"], ["34", "34", "42", "30"], ["36", "36", "44", "30"]
+                ],
+                type: 'Waist'
+            };
+        } else {
+            return {
+                headers: ["Size", "Waist (in)", "Hip (in)", "Inseam (in)"],
+                data: [
+                    ["28", "28", "36", "30"], ["30", "30", "38", "30"], ["32", "32", "40", "32"],
+                    ["34", "34", "42", "32"], ["36", "36", "44", "32"], ["38", "38", "46", "34"], ["40", "40", "48", "34"]
+                ],
+                type: 'Waist'
+            };
+        }
+    } else {
+        if (isWomen) {
+            return {
+                headers: ["Size", "Bust (in)", "Waist (in)", "Hip (in)", "Shoulder (in)"],
+                data: [
+                    ["XS", "32", "26", "34", "14"], ["S", "34", "28", "36", "14.5"], ["M", "36", "30", "38", "15"],
+                    ["L", "38", "32", "40", "15.5"], ["XL", "40", "34", "42", "16"], ["XXL", "42", "36", "44", "16.5"]
+                ],
+                type: 'Bust'
+            };
+        } else {
+            return {
+                headers: ["Size", "Chest (in)", "Shoulder (in)", "Length (in)", "Sleeve (in)"],
+                data: [
+                    ["S", "38", "16.5", "27", "24"], ["M", "40", "17", "28", "24.5"], ["L", "42", "17.5", "29", "25"],
+                    ["XL", "44", "18", "30", "25.5"], ["XXL", "46", "18.5", "31", "26"]
+                ],
+                type: 'Chest'
+            };
+        }
+    }
+  }, [p]);
+
   function findMySize() {
-    const chest = Number(finderChest);
-    if (!chest) { toast_('Enter your chest measurement.'); return; }
-    const rec = chest<=32?'36':chest<=34?'38':chest<=37?'40':chest<=39?'42':chest<=41?'44':'46';
-    setFinderResult(`Recommended size: ${rec} (based on ${chest}" chest)`);
-    const match = resolvedSizes.find(s => s===rec);
+    const measurement = Number(finderMeasure);
+    if (!measurement) { toast_(`Enter your ${sizeChartInfo.type.split(' ')[0]} measurement.`); return; }
+    
+    let rec = '';
+    if (sizeChartInfo.type === 'Waist') {
+       rec = measurement <= 27 ? '26' : measurement <= 29 ? '28' : measurement <= 31 ? '30' : measurement <= 33 ? '32' : measurement <= 35 ? '34' : measurement <= 37 ? '36' : measurement <= 39 ? '38' : '40';
+    } else if (sizeChartInfo.type === 'Bust') {
+       rec = measurement <= 33 ? 'XS' : measurement <= 35 ? 'S' : measurement <= 37 ? 'M' : measurement <= 39 ? 'L' : measurement <= 41 ? 'XL' : 'XXL';
+    } else if (sizeChartInfo.type === 'Foot Length (cm)') {
+       rec = measurement <= 24.6 ? '6' : measurement <= 25.4 ? '7' : measurement <= 26.2 ? '8' : measurement <= 27.1 ? '9' : measurement <= 27.9 ? '10' : '11';
+    } else if (sizeChartInfo.type === 'Age (Yrs)') {
+       rec = measurement <= 3 ? '2-3Y' : measurement <= 5 ? '4-5Y' : measurement <= 7 ? '6-7Y' : measurement <= 9 ? '8-9Y' : '10-11Y';
+    } else {
+       rec = measurement <= 39 ? 'S' : measurement <= 41 ? 'M' : measurement <= 43 ? 'L' : measurement <= 45 ? 'XL' : 'XXL';
+    }
+    
+    setFinderResult(`Recommended size: ${rec} (based on ${measurement} ${sizeChartInfo.type === 'Age (Yrs)' ? 'Yrs' : sizeChartInfo.type.includes('cm') ? 'cm' : 'inches'})`);
+    const match = resolvedSizes.find(s => String(s).toLowerCase() === String(rec).toLowerCase() || String(s).toLowerCase() === String(measurement).toLowerCase());
     if (match) setSelSize(match);
   }
+
+  // ─── Dynamic Frequently Bought Together ───
+  const fbtProducts = useMemo(() => {
+    if (!p || p.notFound || allProducts.length === 0) return [];
+    const related = allProducts.filter(x => String(x.id || x._id) !== String(p.id || p._id));
+    
+    // 1. Strictly match the maincategory (e.g., Men, Women, Kids, Boys, Girls)
+    let sameMain = related.filter(x => String(x.maincategory).toLowerCase() === String(p.maincategory).toLowerCase());
+
+    // 2. Separate into same subcategory vs different subcategory to encourage bundling (e.g., Jeans + T-shirt)
+    let sameSub = sameMain.filter(x => String(x.subcategory).toLowerCase() === String(p.subcategory).toLowerCase());
+    let diffSub = sameMain.filter(x => String(x.subcategory).toLowerCase() !== String(p.subcategory).toLowerCase());
+
+    let recommendations = [];
+    if (sameMain.length >= 3) {
+        // Mix them: 1 from same subcategory, 2 from complementary categories
+        if (sameSub.length >= 1 && diffSub.length >= 2) recommendations = [sameSub[0], diffSub[0], diffSub[1]];
+        else if (diffSub.length >= 3) recommendations = diffSub.slice(0, 3);
+        else recommendations = sameMain.slice(0, 3);
+    } else {
+        recommendations = sameMain; // Strict fallback to whatever is left in the same demographic
+    }
+
+    return recommendations.slice(0, 3).map(item => {
+      const mPrice = Number(item.finalprice || item.price || 0);
+      const mMrp = Number(item.baseprice || item.mrp || 0);
+      const mDisc = item.discount || (mMrp > mPrice ? Math.round(((mMrp - mPrice) / mMrp) * 100) : 0);
+      return {
+        id: item.id || item._id,
+        name: item.name,
+        brand: item.brand,
+        price: mPrice,
+        mrp: mMrp,
+        discount: mDisc,
+        img: item.pic1 || '/assets/images/noimage.png'
+      };
+    });
+  }, [p, allProducts]);
 
   // ─── Computed Fallbacks ───
   if (!p && !allProducts.length) return <div className="pd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Loading product...</div>;
@@ -693,14 +894,56 @@ export default function ProductDetail() {
   const pBase = Number(p.baseprice || p.mrp || 0);
   const pFinal = Number(p.finalprice || p.price || 0);
   const pDiscount = p.discount || (pBase > pFinal ? Math.round(((pBase - pFinal) / pBase) * 100) : 0);
-  const pRating = p.rating || 4.7;
-  const pReviews = p.reviewCount || p.reviews || 248;
+  const pRating = reviewStats.count > 0 ? reviewStats.average : (p.rating || 0);
+  const pReviews = reviewStats.count > 0 ? reviewStats.count : (p.reviewCount || p.reviews || 0);
 
-  const discountedPrice = appliedCoupon === 'ELITE10' ? Math.round(pFinal * 0.9) : pFinal;
+  const discountedPrice = membershipType === 'Elite' ? Math.round(pFinal * 0.9) : pFinal;
   const pointsEarned = Math.round(discountedPrice / 10);
-  const fbtTotal = pFinal + FBT.reduce((a,b) => a + b.price, 0);
-  const fbtMrp   = pBase + 14797;
+  
+  let couponDiscountValue = 0;
+  if (appliedCouponData) {
+      let totalCartVal = discountedPrice * qty;
+      if (appliedCouponData.type === 'percent') {
+          couponDiscountValue = Math.round((totalCartVal * appliedCouponData.value) / 100);
+          if (appliedCouponData.maxDiscount > 0 && couponDiscountValue > appliedCouponData.maxDiscount) couponDiscountValue = appliedCouponData.maxDiscount;
+      } else {
+          couponDiscountValue = appliedCouponData.value;
+      }
+  }
+  
+  const fbtTotal = pFinal + fbtProducts.reduce((sum, item) => sum + item.price, 0);
+  const fbtMrp   = pBase + fbtProducts.reduce((sum, item) => sum + item.mrp, 0);
   const fbtSave  = fbtMrp - fbtTotal;
+
+  function handleAddAllToCart() {
+    const userId = localStorage.getItem('userid');
+    if (!userId) { navigate('/login', { state: { from: location.pathname } }); return; }
+    if (!selSize && p?.size) { 
+      setValErr('Please select a size for the main product.'); 
+      toast_('Please select a size for the main product.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return; 
+    }
+    setValErr('');
+    
+    handleAddToCart(); // Add main product
+    
+    fbtProducts.forEach(fbt => {
+      const fbtFull = allProducts.find(x => String(x.id || x._id) === String(fbt.id));
+      if(fbtFull) {
+          const fbtSize = Array.isArray(fbtFull.size) ? fbtFull.size[0] : (String(fbtFull.size||'').split(',')[0]?.trim() || "");
+          const fbtColor = Array.isArray(fbtFull.color) ? fbtFull.color[0] : (String(fbtFull.color||'').split(',')[0]?.trim() || "");
+          const fElite = membershipType === 'Elite' ? Math.round(fbt.price * 0.9) : fbt.price;
+          dispatch(addCart({
+             userId, productId: fbtFull.id || fbtFull._id, quantity: 1,
+             price: fElite, size: fbtSize, color: fbtColor, name: fbtFull.name, pic: fbtFull.pic1 || fbtFull.pic || ''
+          }));
+      }
+    });
+
+    toast_(`Added ${fbtProducts.length + 1} items to cart!`);
+    setTimeout(() => dispatch(getCart()), 500);
+  }
 
   return (
     <div className="pd">
@@ -738,11 +981,17 @@ export default function ProductDetail() {
                 ))}
               </div>
 
-              <div className="pd-main-wrap" ref={imgWrapRef} onMouseMove={handleMouseMove}>
+              <div 
+                className="pd-main-wrap" 
+                ref={imgWrapRef} 
+                onMouseMove={handleMouseMove}
+                onTouchMove={handleMouseMove}
+                onTouchStart={handleMouseMove}
+              >
                 <span className="pd-badge">{pDiscount}% OFF</span>
                 <span className="pd-elite-badge">⭐ Elite 10% Off</span>
                 <div className="pd-zoom-lens" ref={lensRef} />
-                <div className="pd-zoom-panel" ref={zoomRef} />
+                <div className={`pd-zoom-panel${imgFade ? ' fade' : ''}`} ref={zoomRef} />
 
                 <div className="pd-img-actions">
                   <button className={`pd-img-btn wish${wishlisted?' on':''}`} onClick={handleWishlistToggle}>
@@ -780,9 +1029,43 @@ export default function ProductDetail() {
             </div>
 
             <div className="pd-view-strip">
-              <button className="pd-view-btn" onClick={() => toast_('360° View coming soon!')}>🔄 360° View</button>
-              <button className="pd-view-btn" onClick={() => toast_('Video preview coming soon!')}>▶ Video</button>
+              <button className="pd-view-btn" onClick={() => setView360Modal(true)}>🔄 360° View</button>
+              {p?.videoUrl && (
+                <button className="pd-view-btn" onClick={() => setVideoModal(true)}>▶ Video</button>
+              )}
               <button className="pd-view-btn" onClick={() => toast_('Try at Home available at checkout!')}>🏠 Try at Home</button>
+            </div>
+
+            {/* ══ ACCORDION DETAILS ══ */}
+            <div className="pd-accordion-wrap">
+              {[
+                { id: 'details', title: 'Details', content: <p className="pd-desc">{p.description || p.details || 'A premium luxury product featuring the finest craftsmanship. Meticulously designed to provide both supreme comfort and unparalleled elegance.'}</p> },
+                { id: 'features', title: 'Features', content: (
+                  <div className="pd-feat-grid">
+                    {FEATURES.map((f,i)=><div key={i} className="pd-feat-item"><span className="pd-feat-dot">✦</span>{f}</div>)}
+                  </div>
+                )},
+                { id: 'specs', title: 'Specifications', content: (
+                  <table className="pd-spec-table">
+                    <tbody>{SPECS.map(([k,v])=><tr key={k}><td>{k}</td><td>{v}</td></tr>)}</tbody>
+                  </table>
+                )},
+                { id: 'care', title: 'Care Guide', content: (
+                  <div className="pd-care-grid">
+                    {CARE_ITEMS.map((c,i)=><div key={i} className="pd-care-item"><span className="pd-care-icon">{c.icon}</span>{c.text}</div>)}
+                  </div>
+                )}
+              ].map(item => (
+                <div key={item.id} className="pd-accordion-item">
+                  <button className="pd-accordion-head" onClick={() => setOpenAccordion(openAccordion === item.id ? null : item.id)}>
+                    <span>{item.title}</span>
+                    <span className={`pd-accordion-chev${openAccordion === item.id ? ' up' : ''}`}>▾</span>
+                  </button>
+                  <div className={`pd-accordion-body${openAccordion === item.id ? ' open' : ''}`}>
+                    <div className="pd-accordion-content">{item.content}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -827,8 +1110,8 @@ export default function ProductDetail() {
               </div>
               <div className="pd-price-inc">Inclusive of all taxes · Free shipping above ₹999</div>
               <div className="pd-price-lowest">📉 Lowest price in 90 days</div>
-              {appliedCoupon && (
-                <div className="pd-coupon-applied">🎉 Coupon <strong>{appliedCoupon}</strong> — extra ₹{Math.round(pFinal*0.1).toLocaleString('en-IN')} off</div>
+              {appliedCouponData && (
+                <div className="pd-coupon-applied">🎉 Coupon <strong>{appliedCouponData.code}</strong> — extra ₹{couponDiscountValue.toLocaleString('en-IN')} off</div>
               )}
             </div>
 
@@ -905,7 +1188,7 @@ export default function ProductDetail() {
                 </button>
               </div>
               <button className="pd-btn-buy" onClick={handleBuyNow}>⚡ Buy Now</button>
-              <button className="pd-btn-notify" onClick={() => toast_('🔔 Price drop alert set!')}>🔔 Notify Me on Price Drop</button>
+              {/* <button className="pd-btn-notify" onClick={() => toast_('🔔 Price drop alert set!')}>🔔 Notify Me on Price Drop</button> */}
             </div>
 
             {/* Coupon */}
@@ -918,7 +1201,7 @@ export default function ProductDetail() {
               </div>
               {couponMsg && <div className={`pd-coupon-msg${couponErr?' err':''}`}>{couponMsg}</div>}
               <div className="pd-coupon-chips">
-                {['ELITE10','HDFC10','GIFTWRAP'].map(c=><span key={c} className="pd-coupon-chip" onClick={()=>setCoupon(c)}>{c}</span>)}
+                {couponsList.map(c=><span key={c.code} className="pd-coupon-chip" onClick={()=>setCoupon(c.code)}>{c.code}</span>)}
               </div>
             </div>
 
@@ -944,7 +1227,7 @@ export default function ProductDetail() {
             </div>
 
             {/* EMI */}
-            <div className="pd-emi">
+            {/* <div className="pd-emi">
               <div className="pd-emi-head" onClick={()=>setEmiOpen(o=>!o)}>
                 <span className="pd-emi-title">
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
@@ -962,7 +1245,7 @@ export default function ProductDetail() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </div> */}
 
             {/* Delivery */}
             <div className="pd-delivery">
@@ -1025,66 +1308,18 @@ export default function ProductDetail() {
         {/* ══ BOTTOM ══ */}
         <div className="pd-bottom">
           <div className="pd-tabs">
-            {[{id:'details',label:'Details'},{id:'features',label:'Features'},{id:'specs',label:'Specifications'},{id:'care',label:'Care Guide'},{id:'reviews',label:`Reviews (${pReviews})`},{id:'qa',label:`Q&A (${QA_LIST.length})`}].map(t=>(
+            {[{id:'reviews',label:`Reviews (${pReviews})`},{id:'qa',label:`Q&A (${QA_LIST.length})`}].map(t=>(
               <button key={t.id} className={`pd-tab${tab===t.id?' on':''}`} onClick={()=>setTab(t.id)}>{t.label}</button>
             ))}
           </div>
 
           <div className="pd-tab-body">
-            {tab==='details' && <p className="pd-desc">{p.description || p.details || 'A premium luxury product featuring the finest craftsmanship. Meticulously designed to provide both supreme comfort and unparalleled elegance.'}</p>}
-
-            {tab==='features' && (
-              <div className="pd-feat-grid">
-                {FEATURES.map((f,i)=><div key={i} className="pd-feat-item"><span className="pd-feat-dot">✦</span>{f}</div>)}
-              </div>
-            )}
-
-            {tab==='specs' && (
-              <table className="pd-spec-table">
-                <tbody>{SPECS.map(([k,v])=><tr key={k}><td>{k}</td><td>{v}</td></tr>)}</tbody>
-              </table>
-            )}
-
-            {tab==='care' && (
-              <div className="pd-care-grid">
-                {CARE_ITEMS.map((c,i)=><div key={i} className="pd-care-item"><span className="pd-care-icon">{c.icon}</span>{c.text}</div>)}
-              </div>
-            )}
-
-            {tab==='reviews' && (
-              <div>
-                <div className="pd-rev-section">
-                  <div className="pd-rev-big">
-                    <div className="pd-rev-num">{pRating}</div>
-                    <div className="pd-rev-star-row"><Stars rating={pRating} size={18}/></div>
-                    <div className="pd-rev-ct">{pReviews} reviews</div>
-                  </div>
-                  <div className="pd-rev-bars">
-                    {RATING_DIST.map(r=>(
-                      <div key={r.stars} className="pd-rev-bar-row">
-                        <span className="pd-rev-bar-lbl">{r.stars}★</span>
-                        <div className="pd-rev-bar-track"><div className="pd-rev-bar-fill" style={{ width:`${r.pct}%` }}/></div>
-                        <span className="pd-rev-bar-pct">{r.pct}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="pd-rev-cards">
-                  {REVIEWS.map((r,i)=>(
-                    <div key={i} className="pd-rev-card">
-                      <div className="pd-rev-card-top">
-                        <div className="pd-rev-avatar">{r.initial}</div>
-                        <div className="pd-rev-meta"><div className="pd-rev-user">{r.user}</div><div className="pd-rev-date">{r.date}</div></div>
-                        <Stars rating={r.rating} size={12}/>
-                      </div>
-                      <p className="pd-rev-body">{r.body}</p>
-                      {r.verified && <div className="pd-rev-vbadge"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Verified Purchase</div>}
-                      <div className="pd-rev-helpful">Was this helpful? <button onClick={()=>toast_('Thanks!')}>👍 Yes ({r.helpful})</button> <button onClick={()=>toast_('Thanks!')}>👎 No</button></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div style={{ display: tab === 'reviews' ? 'block' : 'none' }}>
+              <ProductReviews 
+                productId={p.id || p._id} 
+                onStatsUpdate={setReviewStats} 
+              />
+            </div>
 
             {tab==='qa' && (
               <div>
@@ -1109,35 +1344,78 @@ export default function ProductDetail() {
           </div>
 
           {/* FBT */}
-          <div className="pd-fbt">
-            <div className="pd-fbt-title">Frequently Bought Together</div>
-            <div className="pd-fbt-sub">Complete the look — save more when you bundle</div>
+          <motion.div 
+            className="pd-fbt"
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={{
+              hidden: { opacity: 0, y: 40 },
+              show: {
+                opacity: 1, y: 0,
+                transition: { duration: 0.6, ease: "easeOut", staggerChildren: 0.1, delayChildren: 0.3 }
+              }
+            }}
+          >
+            <motion.div variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }} className="pd-fbt-title">Frequently Bought Together</motion.div>
+            <motion.div variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }} className="pd-fbt-sub">Complete the look — save more when you bundle</motion.div>
             <div className="pd-fbt-row">
-              <div className="pd-fbt-product">
-                <img src={displayPics[0]} alt={p.name} className="pd-fbt-img"/>
-                <div className="pd-fbt-name">{p.name}</div>
-                <div className="pd-fbt-price">₹{pFinal.toLocaleString('en-IN')}</div>
-                <div className="pd-fbt-mrp">₹{pBase.toLocaleString('en-IN')}</div>
-              </div>
-              {FBT.map(fp=>(
-                <React.Fragment key={fp.name}>
-                  <span className="pd-fbt-plus">+</span>
-                  <div className="pd-fbt-product">
-                    <img src={fp.img} alt={fp.name} className="pd-fbt-img"/>
-                    <div className="pd-fbt-name">{fp.name}</div>
-                    <div className="pd-fbt-price">₹{fp.price.toLocaleString('en-IN')}</div>
-                    <div className="pd-fbt-mrp">₹{fp.mrp.toLocaleString('en-IN')}</div>
+              <motion.div 
+                variants={{ hidden: { opacity: 0, scale: 0.9 }, show: { opacity: 1, scale: 1, transition: { duration: 0.4 } } }} 
+                whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                className="pd-fbt-product"
+              >
+                <div className="pd-fbt-img-wrap">
+                  <img src={displayPics[0]} alt={p.name} className="pd-fbt-img"/>
+                  {pDiscount > 0 && <span className="pd-fbt-badge">{pDiscount}% OFF</span>}
+                </div>
+                <div className="pd-fbt-info">
+                  <div className="pd-fbt-brand">{p.brand || 'Boutique Luxe'}</div>
+                  <div className="pd-fbt-name">{p.name}</div>
+                  <div className="pd-fbt-price-row">
+                    <span className="pd-fbt-price">₹{pFinal.toLocaleString('en-IN')}</span>
+                    {pBase > pFinal && <span className="pd-fbt-mrp">₹{pBase.toLocaleString('en-IN')}</span>}
                   </div>
+                </div>
+              </motion.div>
+              {fbtProducts.map(fp=>(
+                <React.Fragment key={fp.id}>
+                  <motion.span variants={{ hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0, transition: { duration: 0.3 } } }} className="pd-fbt-plus">+</motion.span>
+                  <motion.div 
+                    variants={{ hidden: { opacity: 0, scale: 0.9 }, show: { opacity: 1, scale: 1, transition: { duration: 0.4 } } }}
+                    whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                  >
+                    <Link to={`/single-product/${fp.id}`} className="pd-fbt-product" style={{textDecoration: 'none'}} onClick={() => window.scrollTo(0,0)}>
+                      <div className="pd-fbt-img-wrap">
+                        <img src={fp.img} alt={fp.name} className="pd-fbt-img"/>
+                        {fp.discount > 0 && <span className="pd-fbt-badge">{fp.discount}% OFF</span>}
+                      </div>
+                      <div className="pd-fbt-info">
+                        <div className="pd-fbt-brand">{fp.brand || 'Boutique Luxe'}</div>
+                        <div className="pd-fbt-name">{fp.name}</div>
+                        <div className="pd-fbt-price-row">
+                          <span className="pd-fbt-price">₹{fp.price.toLocaleString('en-IN')}</span>
+                          {fp.mrp > fp.price && <span className="pd-fbt-mrp">₹{fp.mrp.toLocaleString('en-IN')}</span>}
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
                 </React.Fragment>
               ))}
-              <div className="pd-fbt-total">
-                <div className="pd-fbt-total-lbl">Bundle Total</div>
-                <div className="pd-fbt-total-price">₹{fbtTotal.toLocaleString('en-IN')}</div>
-                <div className="pd-fbt-total-save">You save ₹{fbtSave.toLocaleString('en-IN')}</div>
-              </div>
             </div>
-            <button className="pd-fbt-btn" onClick={()=>toast_('All 4 items added to cart!')}>Add All to Cart</button>
-          </div>
+            {fbtProducts.length > 0 && (
+              <motion.div variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.5 } } }} className="pd-fbt-footer">
+                <div className="pd-fbt-total">
+                  <div className="pd-fbt-total-lbl">Bundle Total</div>
+                  <div className="pd-fbt-total-price">₹{fbtTotal.toLocaleString('en-IN')}</div>
+                  <div className="pd-fbt-total-save">You save ₹{fbtSave.toLocaleString('en-IN')}</div>
+                </div>
+                <div className="pd-fbt-btn-wrap">
+                  <button className="pd-fbt-btn" onClick={handleAddAllToCart}>Add All {fbtProducts.length + 1} to Cart</button>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
         </div>
       </div>
 
@@ -1161,11 +1439,46 @@ export default function ProductDetail() {
               <div className="pd-modal-title">Size Chart</div>
               <button className="pd-modal-close" onClick={()=>setSizeModal(false)}>✕</button>
             </div>
-            <table className="pd-sz-table">
-              <thead><tr><th>Size</th><th>Chest (in)</th><th>Shoulder (in)</th><th>Length (in)</th><th>Sleeve (in)</th></tr></thead>
-              <tbody>{SIZE_GUIDE.map(row=><tr key={row[0]}>{row.map((c,i)=><td key={i}>{c}</td>)}</tr>)}</tbody>
-            </table>
-            <p className="pd-sz-hint">💡 <strong>How to measure:</strong> Measure your chest at its fullest point. If between sizes, size up for a relaxed fit or down for a slim fit. All measurements in inches.</p>
+            {sizeChartInfo.headers.some(h => h.includes('(in)')) && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                <div style={{ display: 'inline-flex', background: 'var(--fog)', borderRadius: '8px', padding: '4px', border: '1px solid var(--border-light)' }}>
+                  <button 
+                    onClick={() => setSzUnit('in')} 
+                    style={{ padding: '6px 20px', borderRadius: '6px', border: 'none', background: szUnit === 'in' ? 'var(--ink)' : 'transparent', color: szUnit === 'in' ? '#fff' : 'var(--text-body)', cursor: 'pointer', fontFamily: "'Jost', sans-serif", fontSize: '12px', fontWeight: 600, transition: 'var(--tr)' }}>
+                    Inches
+                  </button>
+                  <button 
+                    onClick={() => setSzUnit('cm')} 
+                    style={{ padding: '6px 20px', borderRadius: '6px', border: 'none', background: szUnit === 'cm' ? 'var(--ink)' : 'transparent', color: szUnit === 'cm' ? '#fff' : 'var(--text-body)', cursor: 'pointer', fontFamily: "'Jost', sans-serif", fontSize: '12px', fontWeight: 600, transition: 'var(--tr)' }}>
+                    Centimeters
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="pd-sz-table-wrap">
+              <table className="pd-sz-table">
+                <thead><tr>{sizeChartInfo.headers.map((h, i)=><th key={i}>{szUnit === 'cm' ? h.replace('(in)', '(cm)') : h}</th>)}</tr></thead>
+                <tbody>
+                  {sizeChartInfo.data.map(row => (
+                    <tr key={row[0]}>
+                      {row.map((c, i) => {
+                        const header = sizeChartInfo.headers[i];
+                        let displayVal = c;
+                        if (szUnit === 'cm' && header && header.includes('(in)')) {
+                          const num = parseFloat(c);
+                          if (!isNaN(num)) {
+                            displayVal = (num * 2.54).toFixed(1);
+                            if (displayVal.endsWith('.0')) displayVal = displayVal.slice(0, -2);
+                          }
+                        }
+                        return <td key={i}>{displayVal}</td>;
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="pd-sz-hint">💡 <strong>How to measure:</strong> Measure your {sizeChartInfo.type.split(' ')[0].toLowerCase()} at its fullest point. If between sizes, size up for a relaxed fit or down for a slim fit. All measurements are standard industry approximations.</p>
           </div>
         </div>
       )}
@@ -1180,11 +1493,82 @@ export default function ProductDetail() {
             </div>
             <p style={{ fontSize:13,color:'var(--text-body)',marginBottom:20,lineHeight:1.7 }}>Enter your measurements and we'll recommend the best size.</p>
             <div className="pd-finder-row">
-              <label className="pd-finder-lbl">Chest (inches)</label>
-              <input className="pd-finder-inp" type="number" placeholder="e.g. 38" value={finderChest} onChange={e=>setFinderChest(e.target.value)} />
+              <label className="pd-finder-lbl">{sizeChartInfo.type}</label>
+              <input className="pd-finder-inp" type="number" placeholder={sizeChartInfo.type.includes('Age') ? "e.g. 6" : "e.g. 32"} value={finderMeasure} onChange={e=>setFinderMeasure(e.target.value)} />
             </div>
             <button className="pd-btn-cart" onClick={findMySize} style={{ marginTop:8 }}>Find My Size</button>
             {finderResult && <div className="pd-finder-result">{finderResult}</div>}
+          </div>
+        </div>
+      )}
+
+      {/* Video Modal */}
+      {videoModal && p?.videoUrl && (
+        <div className="pd-overlay" onClick={() => setVideoModal(false)}>
+          <div className="pd-modal" style={{ maxWidth: '800px', padding: 0, overflow: 'hidden', background: '#0a0a0a' }} onClick={e => e.stopPropagation()}>
+            <button className="pd-modal-close" style={{ position: 'absolute', top: 16, right: 16, zIndex: 10, background: 'rgba(255,255,255,0.9)', border: 'none' }} onClick={() => setVideoModal(false)}>✕</button>
+            <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+              {p.videoUrl.includes('youtube.com') || p.videoUrl.includes('youtu.be') ? (
+                <iframe 
+                  src={p.videoUrl} 
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }} 
+                  allow="autoplay; encrypted-media" 
+                  allowFullScreen 
+                  title="Product Video"
+                />
+              ) : (
+                <video 
+                  src={p.videoUrl} 
+                  controls 
+                  autoPlay 
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} 
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 360 View Modal */}
+      {view360Modal && (
+        <div className="pd-overlay" onClick={() => setView360Modal(false)}>
+          <div className="pd-modal" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div className="pd-modal-head">
+              <div className="pd-modal-title">360° Interactive View</div>
+              <button className="pd-modal-close" onClick={() => setView360Modal(false)}>✕</button>
+            </div>
+            <div 
+              style={{ position: 'relative', width: '100%', height: '400px', background: 'var(--fog)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: isDragging360 ? 'grabbing' : 'grab' }}
+              onMouseDown={(e) => { setIsDragging360(true); setDragStartX(e.clientX); }}
+              onMouseMove={(e) => {
+                if (isDragging360) {
+                  setRotY(prev => prev + (e.clientX - dragStartX) * 0.8);
+                  setDragStartX(e.clientX);
+                }
+              }}
+              onMouseUp={() => setIsDragging360(false)}
+              onMouseLeave={() => setIsDragging360(false)}
+              onTouchStart={(e) => { setIsDragging360(true); setDragStartX(e.touches[0].clientX); }}
+              onTouchMove={(e) => {
+                if (isDragging360) {
+                  setRotY(prev => prev + (e.touches[0].clientX - dragStartX) * 0.8);
+                  setDragStartX(e.touches[0].clientX);
+                }
+              }}
+              onTouchEnd={() => setIsDragging360(false)}
+            >
+              <motion.img 
+                src={displayPics[0]} 
+                alt="360 View" 
+                style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))', userSelect: 'none', pointerEvents: 'none' }}
+                animate={{ rotateY: rotY }}
+                transition={{ type: 'tween', ease: 'linear', duration: 0 }}
+              />
+              <div style={{ position: 'absolute', bottom: 16, background: 'rgba(255,255,255,0.9)', padding: '6px 16px', borderRadius: '20px', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink)', boxShadow: 'var(--sh-sm)', pointerEvents: 'none' }}>
+                 Drag to Rotate
+              </div>
+            </div>
+            <p className="pd-sz-hint" style={{ marginTop: 24 }}>💡 Full 360° interactive models require product-specific 3D assets (.glb/.gltf) or image sequences. This is a simulated showcase preview.</p>
           </div>
         </div>
       )}

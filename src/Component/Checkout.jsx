@@ -334,6 +334,14 @@ export default function Checkout() {
                 setSubtotal(sum);
                 setshipping(ship);
                 setAppliedCoupon({ code: '', discount: 0 });
+                setAppliedCoupon({ 
+                    code: product.couponCode || '', 
+                    discount: Number(product.couponDiscount || 0) 
+                });
+                setGiftWrap(product.giftWrap || false);
+                if (product.giftMsg) {
+                    setOrderNotes('Please include a gift message with this order.');
+                }
             } catch {
                 setcart([]);
                 setSubtotal(0);
@@ -474,6 +482,8 @@ export default function Checkout() {
                 city: selectedAddress.city || '',
                 state: selectedAddress.state || '',
                 pin: selectedAddress.pin || '',
+                    deliverySlot: deliverySlot,
+                    deliveryTime: deliverySlot,
                 country: 'India',
                 addressId: selectedAddress._id !== 'default-1' ? selectedAddress._id : undefined
             } : {
@@ -485,6 +495,8 @@ export default function Checkout() {
                 city: user?.city || '',
                 state: user?.state || '',
                 pin: user?.pin || '',
+                    deliverySlot: deliverySlot,
+                    deliveryTime: deliverySlot,
                 country: 'India'
             };
 
@@ -510,27 +522,36 @@ export default function Checkout() {
                 paymentFee,
                 extraCharges: giftWrapCharge + protectionCharge + ecoCharge + paymentFee + expressFee,
                 preDiscountTotal,
-                notes: orderNotes,
+                    notes: orderNotes ? `${orderNotes} | Delivery Slot: ${deliverySlot}` : `Delivery Slot: ${deliverySlot}`,
                 deliverySpeed,
                 deliverySlot,
+                    deliveryTime: deliverySlot,
+                    timeSlot: deliverySlot,
+                deliverySchedule: {
+                        time: deliverySlot,
+                        slot: deliverySlot
+                },
                 shippingAddress: addressPayload,
                 products: normalizedProducts
             }
 
             const response = await axios.post(`${BASE_URL}/api/place-order`, payload, { timeout: 20000 })
             const responseData = response?.data || {};
-            const placedOrder = responseData.order || responseData;
+            const placedOrder = responseData.order || responseData.data || responseData;
 
             if (placedOrder && (placedOrder.orderId || placedOrder._id || responseData.success)) {
                 isSuccess = true;
                 localStorage.setItem('lastPlacedOrder', JSON.stringify(placedOrder))
                 localStorage.removeItem('appliedCoupon')
-                if (!location.state?.direct) {
-                    dispatch(clearCart({ userid }))
-                }
-                window.dispatchEvent(new Event('membership-updated'))
+                
                 toast.success("Order Placed Successfully! 🎉");
-                navigate("/confirmation", { replace: true, state: { order: placedOrder, direct: location.state?.direct } })
+                
+                // Navigate with a slight delay to avoid React batching conflicts and let Razorpay close cleanly
+                setTimeout(() => {
+                    navigate("/confirmation", { replace: true, state: { order: placedOrder, direct: location.state?.direct, selectedTimeSlot: deliverySlot } })
+                    window.dispatchEvent(new Event('membership-updated'))
+                }, 300);
+                
                 return true;
             }
 

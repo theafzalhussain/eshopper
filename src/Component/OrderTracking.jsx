@@ -90,12 +90,17 @@ const formatDateTimeShort = (value) => {
   return dt.toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-const formatDeliverySchedule = (deliverySchedule = null) => {
+const formatDeliverySchedule = (deliverySchedule = null, orderObj = null) => {
   if (!deliverySchedule) return ''
   const baseDate = deliverySchedule?.date || deliverySchedule?.estimatedDelivery
   if (!baseDate) return ''
   const dateLabel = formatDateTimeShort(baseDate)
-  const timeLabel = deliverySchedule?.time ? ` • ${deliverySchedule.time}` : ''
+  let notesSlot = null;
+  if (orderObj?.notes && String(orderObj.notes).includes('Delivery Slot:')) {
+    notesSlot = String(orderObj.notes).split('Delivery Slot:')[1].trim();
+  }
+  const timeVal = notesSlot || orderObj?.shippingAddress?.deliverySlot || orderObj?.shippingAddress?.deliveryTime || orderObj?.deliverySlot || orderObj?.deliveryTime || deliverySchedule?.time
+  const timeLabel = timeVal ? ` • ${timeVal}` : ''
   return `${dateLabel}${timeLabel}`
 }
 
@@ -1669,6 +1674,7 @@ export default function OrderTracking() {
         quantity,
         unitPrice,
         lineTotal,
+        baseprice: Number(item?.baseprice ?? item?.productid?.baseprice ?? item?.product?.baseprice ?? item?.originalPrice ?? unitPrice),
         image: resolveItemImage(item)
       }
     }),
@@ -1702,6 +1708,18 @@ export default function OrderTracking() {
   }, [order?.discountAmount, order?.discount])
 
   const gstAmount = useMemo(() => Math.max(0, pickAmount(order, ['gstAmount', 'gst', 'taxAmount', 'tax'])), [order])
+
+  const giftWrapCharge = useMemo(() => Number(order?.giftWrapCharge || 0), [order]);
+  const protectionCharge = useMemo(() => Number(order?.protectionCharge || 0), [order]);
+  const ecoCharge = useMemo(() => Number(order?.ecoCharge || 0), [order]);
+  const paymentFee = useMemo(() => Number(order?.paymentFee || 0), [order]);
+  const expressFee = useMemo(() => {
+    const knownExtras = giftWrapCharge + protectionCharge + ecoCharge + paymentFee;
+    const totalExtras = Number(order?.extraCharges || 0);
+    const deducedExpress = Math.max(0, totalExtras - knownExtras);
+    const resolvedSpeed = order?.deliverySpeed || '';
+    return Number(order?.expressDeliveryFee || order?.expressFee || 0) || (String(resolvedSpeed).toLowerCase() === 'express' ? 49 : (deducedExpress === 49 ? 49 : 0));
+  }, [order, giftWrapCharge, protectionCharge, ecoCharge, paymentFee]);
 
   const extraChargesAmount = useMemo(() => {
     const aggregate = parseFiniteNumber(
@@ -1742,6 +1760,17 @@ export default function OrderTracking() {
     if (Number.isFinite(parsed) && parsed > 0) return parsed
     return computedFinalWithoutInference
   }, [order?.finalAmount, computedFinalWithoutInference])
+
+  const mrpTotalAmount = useMemo(() => {
+    let sum = 0;
+    orderItemsDetailed.forEach(item => {
+      const base = Number(item?.baseprice || item.unitPrice);
+      const finalBase = base > item.unitPrice ? base : item.unitPrice;
+      sum += finalBase * item.quantity;
+    });
+    return sum > subtotalAmount ? sum : subtotalAmount;
+  }, [orderItemsDetailed, subtotalAmount]);
+  const mrpDiscountAmount = useMemo(() => mrpTotalAmount - subtotalAmount, [mrpTotalAmount, subtotalAmount]);
 
   const inferredBreakdown = useMemo(() => {
     const explicitBreakdownTotal = gstAmount + extraChargesAmount + totalDiscountAmount
@@ -1800,6 +1829,9 @@ export default function OrderTracking() {
     () => (inferredBreakdown.applied ? inferredBreakdown.discount : discountAmount),
     [inferredBreakdown, discountAmount]
   )
+
+  const displayInstantDiscountAmount = Math.max(0, displayDiscountAmount - mrpDiscountAmount);
+  const displayPaymentMethod = order?.paymentMethod === 'UPI' ? 'UPI / Wallet' : (order?.paymentMethod || 'UPI / Wallet');
 
   const displayTotalDiscountAmount = useMemo(
     () => Math.max(0, displayCouponAmount + displayDiscountAmount),
@@ -2014,9 +2046,13 @@ export default function OrderTracking() {
     const fallbackDate = order?.estimatedDelivery || order?.estimatedArrival
     const resolvedDate = scheduleDate || fallbackDate
     if (!resolvedDate) return null
+    let notesSlot = null;
+    if (order?.notes && String(order.notes).includes('Delivery Slot:')) {
+      notesSlot = String(order.notes).split('Delivery Slot:')[1].trim();
+    }
     return {
       date: resolvedDate,
-      time: order?.deliverySchedule?.time || null,
+      time: notesSlot || order?.shippingAddress?.deliverySlot || order?.shippingAddress?.deliveryTime || order?.deliverySlot || order?.deliverySchedule?.time || order?.deliveryTime || null,
       source: scheduleDate ? 'schedule' : 'estimate'
     }
   }, [order])
@@ -2637,16 +2673,20 @@ export default function OrderTracking() {
                 </div>
 
                 <div className="ot-fin-block">
-                  <div className="ot-label">Amount Paid</div>
+                  <div className="ot-label">Payable Amount</div>
                   <div className="ot-fin-value gold">{formatMoney(finalAmount)}</div>
                   <div className="ot-fin-extra">
-                    <div className="ot-fin-extra-row"><span>Total Quantity</span><strong>{totalItemCount} item{totalItemCount === 1 ? '' : 's'}</strong></div>
-                    <div className="ot-fin-extra-row"><span>Subtotal</span><strong>{formatMoney(subtotalAmount)}</strong></div>
-                    <div className="ot-fin-extra-row"><span>Shipping</span><strong>{shippingAmount > 0 ? formatMoney(shippingAmount) : 'Free'}</strong></div>
-                    <div className="ot-fin-extra-row"><span>GST</span><strong>{formatMoney(displayGstAmount)}</strong></div>
-                    <div className="ot-fin-extra-row"><span>Charges</span><strong>{formatMoney(displayExtraChargesAmount)}</strong></div>
-                    <div className="ot-fin-extra-row"><span>Coupon ({order?.couponCode || 'N/A'})</span><strong>{displayCouponAmount > 0 ? `-${formatMoney(displayCouponAmount)}` : formatMoney(0)}</strong></div>
-                    <div className="ot-fin-extra-row"><span>Discount</span><strong>{displayDiscountAmount > 0 ? `-${formatMoney(displayDiscountAmount)}` : formatMoney(0)}</strong></div>
+                    <div className="ot-fin-extra-row"><span>Items Subtotal</span><strong>{formatMoney(mrpTotalAmount)}</strong></div>
+                    {mrpDiscountAmount > 0 ? <div className="ot-fin-extra-row" style={{ color: '#16a34a' }}><span>Discount on MRP</span><strong>-{formatMoney(mrpDiscountAmount)}</strong></div> : null}
+                    {displayInstantDiscountAmount > 0 ? <div className="ot-fin-extra-row" style={{ color: '#16a34a' }}><span>Instant Discount</span><strong>-{formatMoney(displayInstantDiscountAmount)}</strong></div> : null}
+                    <div className="ot-fin-extra-row"><span>Shipping</span><strong>{shippingAmount === 0 ? 'FREE' : formatMoney(shippingAmount)}</strong></div>
+                    {expressFee > 0 ? <div className="ot-fin-extra-row"><span>Express Delivery</span><strong>{formatMoney(expressFee)}</strong></div> : null}
+                    {displayGstAmount > 0 ? <div className="ot-fin-extra-row"><span>GST (5%)</span><strong>{formatMoney(displayGstAmount)}</strong></div> : null}
+                    {paymentFee > 0 ? <div className="ot-fin-extra-row"><span>Payment Fee ({displayPaymentMethod})</span><strong>{formatMoney(paymentFee)}</strong></div> : (order?.paymentMethod !== 'COD' ? <div className="ot-fin-extra-row"><span>Payment Fee ({displayPaymentMethod})</span><strong>FREE</strong></div> : null)}
+                    {protectionCharge > 0 ? <div className="ot-fin-extra-row"><span>Delivery Protection</span><strong>{formatMoney(protectionCharge)}</strong></div> : null}
+                    {giftWrapCharge > 0 ? <div className="ot-fin-extra-row"><span>Luxury Gift Wrap</span><strong>{formatMoney(giftWrapCharge)}</strong></div> : null}
+                    {ecoCharge > 0 ? <div className="ot-fin-extra-row"><span>Eco Packaging</span><strong>{formatMoney(ecoCharge)}</strong></div> : null}
+                    {displayCouponAmount > 0 ? <div className="ot-fin-extra-row" style={{ color: '#16a34a' }}><span>Coupon {order?.couponCode ? `(${order.couponCode})` : ''}</span><strong>-{formatMoney(displayCouponAmount)}</strong></div> : null}
                     {billingAdjustmentAmount !== 0 && (
                       <div className="ot-fin-extra-row"><span>Billing Adjustment</span><strong>{billingAdjustmentAmount > 0 ? formatMoney(billingAdjustmentAmount) : `-${formatMoney(Math.abs(billingAdjustmentAmount))}`}</strong></div>
                     )}
@@ -2827,14 +2867,22 @@ export default function OrderTracking() {
               {/* Timeline */}
               {statusTimeline.length > 0 && (
                 <motion.div className="ot-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-                  <h3 className="ot-section-title">📍 Journey Timeline</h3>
+                  <h3 className="ot-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <span>📍 Journey Timeline</span>
+                    {expressFee > 0 ? (
+                      <span style={{ background: 'linear-gradient(135deg, #111 0%, #2a2a2a 100%)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.4)', padding: '4px 12px', borderRadius: '999px', fontSize: '10px', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 4px 15px rgba(212,175,55,0.15)', fontFamily: "'DM Sans', sans-serif" }}>
+                        <span style={{ fontSize: '12px', marginTop: '-1px', filter: 'drop-shadow(0 0 4px rgba(212,175,55,0.8))' }}>⚡</span> EXPRESS
+                      </span>
+                    ) : (
+                      <span style={{ background: '#f8fafc', color: '#475569', padding: '4px 12px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', border: '1px solid #e2e8f0', fontFamily: "'DM Sans', sans-serif" }}>
+                        Est: {getDeliveryInfo ? formatDeliveryDate(getDeliveryInfo.date) : 'Pending'}
+                      </span>
+                    )}
+                  </h3>
                   {latestMapUpdate && (
                     <div className="ot-map-source" style={{ marginBottom: 14 }}>
                       <div>
                         <div className="ot-map-source-label">Timeline Update</div>
-                        <div className="ot-map-source-value">
-                          {latestMapUpdate.label}{latestMapUpdate.coordsText || ''}
-                        </div>
                         {latestMapUpdate.note ? (
                           <div className="ot-map-source-value" style={{ marginTop: 4, fontSize: 11, color: '#6b7280', fontWeight: 500 }}>
                             {latestMapUpdate.note}
@@ -2864,7 +2912,7 @@ export default function OrderTracking() {
                           </div>
                           {event?.details?.deliverySchedule && (
                             <div className="ot-inline-note">
-                              Delivery Slot: {formatDeliverySchedule(event.details.deliverySchedule)}
+                            Delivery Slot: {formatDeliverySchedule(event.details.deliverySchedule, order)}
                             </div>
                           )}
                       {event?.step !== 'Delivered' && (event?.details?.deliverySchedule?.deliveryAgent || event?.details?.deliveryAgent) && (

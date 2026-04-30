@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { io } from 'socket.io-client'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators'
+import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper'
 import {
   Clock3, PackageSearch, Search, SlidersHorizontal,
   X, ArrowLeft, ChevronRight, MessageCircle,
@@ -237,7 +238,7 @@ const CSS = `
   font-family:'Playfair Display',serif;
   font-size:24px;font-weight:700;color:var(--ink);letter-spacing:0;
 }
-.mop2-order-date{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ash);margin-top:3px;}
+.mop2-order-date{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);font-weight:700;margin-top:3px;}
 .mop2-chip{padding:6px 16px;border-radius:3px;font-size:10px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;flex-shrink:0;border:1px solid;}
 
 .mop2-card-body{padding:22px 24px;}
@@ -249,7 +250,7 @@ const CSS = `
 }
 @media(max-width:500px){.mop2-meta-row{grid-template-columns:1fr;}}
 .mop2-meta-cell{background:var(--white);padding:16px 18px;}
-.mop2-meta-lbl{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ash);font-weight:700;margin-bottom:6px;}
+.mop2-meta-lbl{font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink);font-weight:800;margin-bottom:6px;}
 .mop2-meta-val{font-size:16px;font-weight:600;color:var(--ink);}
 .mop2-meta-val.gold{font-family:'Playfair Display',serif;font-size:28px;color:var(--gold-dk);letter-spacing:-0.01em;font-weight:700;}
 
@@ -266,7 +267,7 @@ const CSS = `
 
 /* PROGRESS */
 .mop2-prog-wrap{margin-bottom:22px;}
-.mop2-prog-lbl{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ash);font-weight:700;margin-bottom:16px;}
+.mop2-prog-lbl{font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink);font-weight:800;margin-bottom:16px;}
 .mop2-prog-track{display:flex;align-items:flex-start;justify-content:space-between;position:relative;padding-top:0;}
 .mop2-prog-line{position:absolute;top:5px;left:5px;right:5px;height:2px;background:rgba(201,168,76,0.1);z-index:0;}
 .mop2-prog-fill{position:absolute;top:5px;left:5px;height:2px;background:linear-gradient(90deg,var(--teal),var(--gold));z-index:1;border-radius:1px;transition:width 0.7s cubic-bezier(.25,.46,.45,.94);}
@@ -438,10 +439,14 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
   const first  = items[0] || {}
   const prodId = first.productid || first.product || first.productId || first._id || first.id || ''
   const fullProduct = (productState || []).find(p => String(p.id || p._id) === String(prodId)) || {}
-  const img    = first.image || first.pic || first.pic1 || ''
+  const img    = first.image || first.pic || first.pic1 || fullProduct.pic1 || '/assets/images/noimage.png'
   const name   = first.title || first.name || fullProduct.name || ''
   const brand  = first.brand || fullProduct.brand || ''
   const price  = Number(first.price || first.finalprice || 0)
+  const knownExtras = Number(item.giftWrapCharge || 0) + Number(item.protectionCharge || 0) + Number(item.ecoCharge || 0) + Number(item.paymentFee || 0);
+  const totalExtras = Number(item.extraCharges || 0);
+  const deducedExpress = Math.max(0, totalExtras - knownExtras);
+  const isExpress = String(item.deliverySpeed || '').toLowerCase() === 'express' || Number(item.expressFee || item.expressDeliveryFee || 0) > 0 || deducedExpress === 49;
   const extras = items.length > 1 ? items.length - 1 : 0
   const firstQty = getItemQty(first)
   const totalQty = items.reduce((sum, product) => sum + getItemQty(product), 0)
@@ -498,9 +503,16 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
           <div className="mop2-order-date">
             <Clock3 size={11} />
             {new Date(item.updatedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
+            {isExpress && (
+              <span style={{ marginLeft: '12px', background: 'linear-gradient(135deg, #111 0%, #2a2a2a 100%)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.4)', padding: '2px 8px', borderRadius: '999px', fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '3px', boxShadow: '0 2px 8px rgba(212,175,55,0.15)' }}>
+                <span style={{ fontSize: '10px', marginTop: '-1px' }}>⚡</span> EXPRESS
+              </span>
+            )}
           </div>
         </div>
-        <span className="mop2-chip" style={{ background:st.bg, color:st.color, borderColor:st.border }}>{norm}</span>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <span className="mop2-chip" style={{ background:st.bg, color:st.color, borderColor:st.border }}>{norm}</span>
+        </div>
       </div>
 
       {/* BODY */}
@@ -519,19 +531,19 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
           {/* Right: Subtotal, Shipping, Total */}
           <div style={{ background:'var(--white)', padding:'16px 18px' }}>
             <div style={{ marginBottom:'10px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--ash)', fontWeight:'700' }}>Subtotal</span>
+              <span style={{ fontSize:'11px', letterSpacing:'0.15em', textTransform:'uppercase', color:'var(--ink)', fontWeight:'800' }}>Subtotal</span>
               <span style={{ fontSize:'14px', fontWeight:'600', color:'var(--ink)' }}>₹{Number(item.totalAmount||0).toLocaleString('en-IN')}</span>
             </div>
             <div style={{ marginBottom:'10px', paddingBottom:'10px', borderBottom:'1px dashed rgba(201,168,76,0.2)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--ash)', fontWeight:'700' }}>Shipping</span>
+              <span style={{ fontSize:'11px', letterSpacing:'0.15em', textTransform:'uppercase', color:'var(--ink)', fontWeight:'800' }}>Shipping</span>
               <span style={{ fontSize:'14px', fontWeight:'600', color:'var(--gold-dk)' }}>₹{Number(item.shippingAmount||0).toLocaleString('en-IN')}</span>
             </div>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--ash)', fontWeight:'700' }}>Total</span>
+              <span style={{ fontSize:'11px', letterSpacing:'0.15em', textTransform:'uppercase', color:'var(--ink)', fontWeight:'800' }}>Total</span>
               <span style={{ fontSize:'18px', fontWeight:'700', color:'var(--gold-dk)' }}>₹{Number(item.finalAmount||0).toLocaleString('en-IN')}</span>
             </div>
             <div style={{ marginTop:'8px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <span style={{ fontSize:'10px', letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--ash)', fontWeight:'700' }}>Total Qty</span>
+              <span style={{ fontSize:'11px', letterSpacing:'0.15em', textTransform:'uppercase', color:'var(--ink)', fontWeight:'800' }}>Total Qty</span>
               <span style={{ fontSize:'13px', fontWeight:'700', color:'var(--ink)' }}>{totalQty} item{totalQty===1?'':'s'}</span>
             </div>
           </div>
@@ -542,10 +554,7 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
           <div className="mop2-product" style={{ flexWrap: 'wrap', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '220px' }}>
               <div className="mop2-product-img">
-                {img
-                  ? <img src={img} alt={name} />
-                  : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.15)', fontSize:10 }}>IMG</div>
-                }
+                <img src={optimizeCloudinaryUrlAdvanced(img, { maxWidth: 120, crop: 'fill' })} alt={name} loading="lazy" />
               </div>
               <div>
                 {brand && <div style={{ fontSize: '10px', fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px' }}>{brand}</div>}

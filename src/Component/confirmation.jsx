@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Package, Truck, CheckCircle2, Printer, Plus, ShieldCheck, RotateCcw, Headphones, Copy, RefreshCw, Share2, FileText, Radar, Sparkles, CreditCard, Calendar, ChevronRight } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Download, Plus, ShieldCheck, RotateCcw, Headphones, Copy, RefreshCw, Share2, FileText, Radar, Sparkles, CreditCard, Calendar, ChevronRight } from 'lucide-react';
 import { clearCart, getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
 import { API_ENDPOINTS, BASE_URL, BRAND_LOGO_URL, FRONTEND_URL, SOCKET_TRANSPORTS } from '../constants';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
+import { useToast } from './ToastNotification';
 import io from 'socket.io-client';
 import confetti from 'canvas-confetti';
 
@@ -16,7 +17,9 @@ const formatDate = (d) => new Date(d || Date.now()).toLocaleDateString('en-IN', 
 
 export default function Confirmation() {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
+  const toast = useToast();
   const users = useSelector((state) => state.UserStateData || []);
   const productState = useSelector((state) => state.ProductStateData || []);
 
@@ -33,6 +36,7 @@ export default function Confirmation() {
   const [heroTheme, setHeroTheme] = useState('light');
   const syncInProgressRef = useRef(false);
   const hasCelebratedRef = useRef(false);
+  const hasClearedCartRef = useRef(false);
 
   const localUserId = localStorage.getItem('userid');
   const userId =
@@ -71,7 +75,7 @@ export default function Confirmation() {
   useEffect(() => {
     dispatch(getProduct());
     async function syncOrder() {
-      const locationState = window.history.state?.usr;
+      const locationState = location.state;
       let fallbackOrder = null;
 
       if (locationState?.order) {
@@ -116,12 +120,15 @@ export default function Confirmation() {
   useEffect(() => {
     if (!order || !userId) return;
 
-    if (window.history.state?.usr?.direct) {
+    if (location.state?.direct) {
       return;
     }
 
-    dispatch(clearCart({ userid: userId }));
-    axios.post(`${BASE_URL}${API_ENDPOINTS.CLEAR_CART}/${userId}`).catch(() => {});
+      if (!hasClearedCartRef.current) {
+        dispatch(clearCart({ userid: userId }));
+        axios.post(`${BASE_URL}${API_ENDPOINTS?.CLEAR_CART || '/api/cart/clear'}/${userId}`).catch(() => {});
+        hasClearedCartRef.current = true;
+      }
   }, [order, userId, dispatch]);
 
   useEffect(() => {
@@ -238,8 +245,9 @@ export default function Confirmation() {
     }).catch(() => {});
   }
 
-  function handlePremiumInvoice() {
+  function handleDownloadInvoice() {
     if (!order) return;
+    toast.success("Preparing tax invoice...");
 
     const items = Array.isArray(order.products) ? order.products : [];
     const invoiceDate = formatDate(order.createdAt || Date.now());
@@ -249,8 +257,31 @@ export default function Confirmation() {
     const shipping = Number(order.shippingAmount || 0);
     const couponDiscount = Number(order.couponDiscount || 0);
     const finalAmount = Number(order.finalAmount || 0);
-    const taxEstimate = Math.max(0, Math.round(subtotal * 0.05));
-    const baseAmount = Math.max(0, subtotal - taxEstimate);
+    
+    const gstAmount = Number(order.gstAmount || 0);
+    const instantDiscount = Number(order.discountAmount || order.discount || 0);
+    const giftWrapCharge = Number(order.giftWrapCharge || 0);
+    const protectionCharge = Number(order.protectionCharge || 0);
+    const ecoCharge = Number(order.ecoCharge || 0);
+    const paymentFee = Number(order.paymentFee || 0);
+    const totalExtras = Number(order.extraCharges || 0);
+    const knownExtras = giftWrapCharge + protectionCharge + ecoCharge + paymentFee;
+    const deducedExpress = Math.max(0, totalExtras - knownExtras);
+    const resolvedSpeed = order.deliverySpeed || location.state?.order?.deliverySpeed || '';
+    const expressFee = Number(order.expressDeliveryFee || order.expressFee || 0) || (String(resolvedSpeed).toLowerCase() === 'express' ? 49 : (deducedExpress === 49 ? 49 : 0));
+    const displayPaymentMethod = order.paymentMethod === 'UPI' ? 'UPI / Wallet' : (order.paymentMethod || 'UPI / Wallet');
+
+    const taxEstimate = gstAmount > 0 ? gstAmount : Math.max(0, Math.round(subtotal * 0.05));
+
+    let calcMrpTotal = 0;
+    items.forEach(p => {
+        const qty = Number(p.quantity ?? p.qty ?? 1);
+        const price = Number(p.price ?? p.product?.finalprice ?? p.product?.price ?? 0);
+        const baseprice = Number(p.baseprice ?? p.product?.baseprice ?? price);
+        calcMrpTotal += (baseprice > price ? baseprice : price) * qty;
+    });
+    const displayMrpTotal = calcMrpTotal > subtotal ? calcMrpTotal : subtotal;
+    const displayMrpDiscount = displayMrpTotal - subtotal;
 
     const rows = items.map((p, idx) => {
       const qty = Number(p.quantity ?? p.qty ?? 1);
@@ -523,11 +554,17 @@ export default function Confirmation() {
               </div>
 
               <div class="totals">
-                <div class="row"><span>Taxable Value</span><strong>${money(baseAmount)}</strong></div>
-                <div class="row"><span>GST (Est.)</span><strong>${money(taxEstimate)}</strong></div>
-                <div class="row"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
+                <div class="row"><span>Items Subtotal</span><strong>${money(displayMrpTotal)}</strong></div>
+                ${displayMrpDiscount > 0 ? `<div class="row" style="color: #16a34a;"><span>Discount on MRP</span><strong>-${money(displayMrpDiscount)}</strong></div>` : ''}
+                ${instantDiscount > 0 ? `<div class="row" style="color: #16a34a;"><span>Instant Discount</span><strong>-${money(instantDiscount)}</strong></div>` : ''}
                 <div class="row"><span>Shipping</span><strong>${shipping === 0 ? 'FREE' : money(shipping)}</strong></div>
-                <div class="row"><span>Coupon Discount</span><strong>${couponDiscount > 0 ? '-' + money(couponDiscount) : money(0)}</strong></div>
+                ${expressFee > 0 ? `<div class="row"><span>Express Delivery</span><strong>${money(expressFee)}</strong></div>` : ''}
+                ${taxEstimate > 0 ? `<div class="row"><span>GST (5%)</span><strong>${money(taxEstimate)}</strong></div>` : ''}
+                <div class="row"><span>Payment Fee (${displayPaymentMethod})</span><strong>${paymentFee > 0 ? money(paymentFee) : 'FREE'}</strong></div>
+                ${protectionCharge > 0 ? `<div class="row"><span>Delivery Protection</span><strong>${money(protectionCharge)}</strong></div>` : ''}
+                ${giftWrapCharge > 0 ? `<div class="row"><span>Luxury Gift Wrap</span><strong>${money(giftWrapCharge)}</strong></div>` : ''}
+                ${ecoCharge > 0 ? `<div class="row"><span>Eco Packaging</span><strong>${money(ecoCharge)}</strong></div>` : ''}
+                ${couponDiscount > 0 ? `<div class="row" style="color: #16a34a;"><span>Coupon ${order.couponCode ? `(${order.couponCode})` : ''}</span><strong>-${money(couponDiscount)}</strong></div>` : ''}
                 <div class="grand"><span>Grand Total</span><span>${money(finalAmount)}</span></div>
               </div>
             </div>
@@ -543,14 +580,17 @@ export default function Confirmation() {
     `;
 
     const popup = window.open('', '_blank');
-    if (!popup) return;
-    popup.document.open();
-    popup.document.write(html);
-    popup.document.close();
-    popup.focus();
-    setTimeout(() => {
-      popup.print();
-    }, 350);
+    if (popup) {
+      popup.document.open();
+      popup.document.write(html);
+      popup.document.close();
+      popup.focus();
+      setTimeout(() => {
+        popup.print();
+      }, 350);
+    } else {
+      toast.error("Popup blocked! Please allow popups to view the invoice.");
+    }
   }
 
   async function handleQuickAdd(product) {
@@ -568,7 +608,7 @@ export default function Confirmation() {
         userId: currentUserId,
         productId,
         quantity: 1,
-        size: Array.isArray(product?.size) ? (product?.size[0] || "") : (product?.size || ""),
+        size: Array.isArray(product?.size) ? (product?.size[0] || "") : (typeof product?.size === 'string' ? product.size.split(',')[0].trim() : (product?.size || "")),
         color: typeof product?.color === 'string' ? product?.color.split(',')[0] : (product?.color || ""),
         price: Number(product?.finalprice || product?.price || 0),
         name: product?.name || "",
@@ -578,6 +618,7 @@ export default function Confirmation() {
       dispatch(addCart(payload));
 
       dispatch(getCart());
+      toast.success(`${product?.name || 'Item'} added to cart! 🛍️`);
 
       setQuickAddedMap((prev) => ({ ...prev, [String(productId)]: true }));
       setTimeout(() => {
@@ -647,11 +688,42 @@ export default function Confirmation() {
   const items = Array.isArray(order.products) ? order.products : [];
   const shippingAddress = order.shippingAddress || {};
   const paymentMethod = order.paymentMethod || 'UPI';
-  const deliverySlot = order.deliverySlot || 'Evening 6 PM - 9 PM';
+  
+  let notesSlot = null;
+  if (order?.notes && String(order.notes).includes('Delivery Slot:')) {
+    notesSlot = String(order.notes).split('Delivery Slot:')[1].trim();
+  }
+  const deliverySlot = notesSlot || order?.shippingAddress?.deliverySlot || order?.shippingAddress?.deliveryTime || order?.deliverySlot || order?.deliverySchedule?.time || order?.deliveryTime || 'Standard Delivery';
+
   const subtotal = Number(order.totalAmount || 0);
   const shipping = Number(order.shippingAmount || 0);
   const finalAmount = Number(order.finalAmount || 0);
   const couponDiscount = Number(order.couponDiscount || 0);
+
+  const gstAmount = Number(order.gstAmount || 0);
+  const instantDiscount = Number(order.discountAmount || order.discount || 0);
+  const giftWrapCharge = Number(order.giftWrapCharge || 0);
+  const protectionCharge = Number(order.protectionCharge || 0);
+  const ecoCharge = Number(order.ecoCharge || 0);
+  const paymentFee = Number(order.paymentFee || 0);
+  const totalExtras = Number(order.extraCharges || 0);
+  const knownExtras = giftWrapCharge + protectionCharge + ecoCharge + paymentFee;
+  const deducedExpress = Math.max(0, totalExtras - knownExtras);
+  const resolvedSpeed = order.deliverySpeed || location.state?.order?.deliverySpeed || '';
+  const expressFee = Number(order.expressDeliveryFee || order.expressFee || 0) || (String(resolvedSpeed).toLowerCase() === 'express' ? 49 : (deducedExpress === 49 ? 49 : 0));
+  const displayPaymentMethod = order.paymentMethod === 'UPI' ? 'UPI / Wallet' : (order.paymentMethod || 'UPI / Wallet');
+
+  const taxEstimate = gstAmount > 0 ? gstAmount : Math.max(0, Math.round(subtotal * 0.05));
+
+  let calcMrpTotal = 0;
+  items.forEach(p => {
+      const qty = Number(p.quantity ?? p.qty ?? 1);
+      const price = Number(p.price ?? p.product?.finalprice ?? p.product?.price ?? 0);
+      const baseprice = Number(p.baseprice ?? p.product?.baseprice ?? price);
+      calcMrpTotal += (baseprice > price ? baseprice : price) * qty;
+  });
+  const displayMrpTotal = calcMrpTotal > subtotal ? calcMrpTotal : subtotal;
+  const displayMrpDiscount = displayMrpTotal - subtotal;
 
   const timeline = [
     { title: 'Order Received', meta: 'Now', icon: Package },
@@ -708,6 +780,12 @@ export default function Confirmation() {
             <CheckCircle2 size={14} className="mr-2" style={{ display: 'inline' }} />
             ORDER CONFIRMED
           </div>
+          {order.couponCode && order.couponDiscount > 0 && (
+            <div className='lux-hero-badge' style={{ marginLeft: '12px', borderColor: '#10b981', color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
+              <Sparkles size={14} className="mr-2" style={{ display: 'inline' }} />
+              SAVED ₹{order.couponDiscount} ({order.couponCode})
+            </div>
+          )}
           
           <h1>Thank you for your order, {customerName}.</h1>
           <p className='lux-hero-sub'>Your exclusive pieces are being prepared. Order ID: {order.orderId || 'N/A'}</p>
@@ -723,9 +801,9 @@ export default function Confirmation() {
               <Radar size={14} />
               <span>Track Live</span>
             </button>
-            <button className='lux-btn lux-btn-outline' onClick={handlePremiumInvoice}>
-              <FileText size={14} />
-              <span>View Tax Invoice</span>
+            <button className='lux-btn lux-btn-outline' onClick={handleDownloadInvoice}>
+              <Download size={14} />
+              <span>Download Invoice</span>
             </button>
             <button className='lux-btn lux-btn-outline' onClick={handleCopyOrderId}>
               <Copy size={14} />
@@ -794,7 +872,14 @@ export default function Confirmation() {
             </div>
 
             <div className='lux-card mt-4'>
-              <h4>Order Journey</h4>
+              <h4>
+                <span>Order Journey</span>
+                {expressFee > 0 ? (
+                  <span className="lux-express-badge"><span className="lux-express-icon">⚡</span> EXPRESS</span>
+                ) : (
+                  <span className="lux-standard-badge">Standard: {estimatedDate}</span>
+                )}
+              </h4>
               <div className='lux-timeline'>
                 <div className="lux-timeline-progress" style={{ width: `${timelineProgress}%` }} />
                 {timeline.map((step, i) => (
@@ -814,9 +899,23 @@ export default function Confirmation() {
             <div className='lux-card'>
               <h4>Summary</h4>
               
-              <div className='lux-summary-row'><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
+              <div className='lux-summary-row'><span>Items Subtotal</span><strong>{money(displayMrpTotal)}</strong></div>
+              {displayMrpDiscount > 0 && (
+                <div className='lux-summary-row text-success'><span>Discount on MRP</span><strong>-{money(displayMrpDiscount)}</strong></div>
+              )}
+              {instantDiscount > 0 && (
+                <div className='lux-summary-row text-success'><span>Instant Discount</span><strong>-{money(instantDiscount)}</strong></div>
+              )}
               <div className='lux-summary-row'><span>Shipping</span><strong>{shipping === 0 ? 'FREE' : money(shipping)}</strong></div>
-              {couponDiscount > 0 ? <div className='lux-summary-row text-success'><span>Coupon Discount</span><strong>-{money(couponDiscount)}</strong></div> : null}
+              {expressFee > 0 && <div className='lux-summary-row'><span>Express Delivery</span><strong>{money(expressFee)}</strong></div>}
+              {taxEstimate > 0 && <div className='lux-summary-row'><span>GST (5%)</span><strong>{money(taxEstimate)}</strong></div>}
+              <div className='lux-summary-row'><span>Payment Fee ({displayPaymentMethod})</span><strong>{paymentFee > 0 ? money(paymentFee) : 'FREE'}</strong></div>
+              {protectionCharge > 0 && <div className='lux-summary-row'><span>Delivery Protection</span><strong>{money(protectionCharge)}</strong></div>}
+              {giftWrapCharge > 0 && <div className='lux-summary-row'><span>Luxury Gift Wrap</span><strong>{money(giftWrapCharge)}</strong></div>}
+              {ecoCharge > 0 && <div className='lux-summary-row'><span>Eco Packaging</span><strong>{money(ecoCharge)}</strong></div>}
+              {couponDiscount > 0 && (
+                <div className='lux-summary-row text-success'><span>Coupon {order.couponCode ? `(${order.couponCode})` : ''}</span><strong>-{money(couponDiscount)}</strong></div>
+              )}
               
               <div className='lux-summary-total'>
                 <span>Payable Amount</span>
@@ -834,6 +933,16 @@ export default function Confirmation() {
                 {shippingAddress.city || '-'}, {shippingAddress.state || '-'} {shippingAddress.pin || shippingAddress.zipCode || '-'}
               </div>
             </div>
+
+            {(order.notes || giftWrapCharge > 0) && (
+              <div className='lux-card mt-4'>
+                <h4>Gift & Special Notes</h4>
+                <ul style={{ fontSize: '14px', lineHeight: '1.8', color: '#334155', paddingLeft: '20px', marginBottom: 0 }}>
+                  {giftWrapCharge > 0 && <li><strong>Premium Gift Wrap:</strong> Included</li>}
+                  {order.notes && <li><strong>Notes:</strong> {order.notes}</li>}
+                </ul>
+              </div>
+            )}
           </motion.div>
         </div>
 
@@ -841,10 +950,16 @@ export default function Confirmation() {
           <motion.section className='lux-card mt-4' initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <h4>You May Also Like</h4>
             <div className='lux-rec-scroll'>
-              {recommended.map((p, i) => (
+              {recommended.map((p, i) => {
+                const price = Number(p.finalprice || p.price || 0);
+                const baseprice = Number(p.baseprice || price);
+                const discount = p.discount ? Number(p.discount) : (baseprice > price ? Math.round(((baseprice - price) / baseprice) * 100) : 0);
+
+                return (
                 <div key={p._id || p.id || i} className='lux-rec-card'>
                   <div className='lux-rec-img'>
                     <img src={optimizeCloudinaryUrlAdvanced(p.pic1 || '/assets/images/noimage.png', { maxWidth: 420, crop: 'fill' })} alt={p.name || 'product'} />
+                    {discount > 0 && <div className='lux-rec-ribbon'>✦ {discount}% OFF</div>}
                     <button
                       className='lux-rec-quick'
                       onClick={() => handleQuickAdd(p)}
@@ -854,18 +969,22 @@ export default function Confirmation() {
                       {quickAddedMap[String(p._id || p.id)] ? 'Added' : (quickAddingId === String(p._id || p.id) ? 'Adding...' : 'Quick Add')}
                     </button>
                   </div>
+                  <div className='lux-rec-brand'>{p.brand || 'Boutique Luxe'}</div>
                   <div className='lux-rec-title'>{p.name || 'Product'}</div>
-                  <div className='lux-rec-price'>{money(p.finalprice || p.price || 0)}</div>
+                  <div className='lux-rec-price-row'>
+                    <span className='lux-rec-price'>{money(price)}</span>
+                    {baseprice > price && <del className='lux-rec-baseprice'>{money(baseprice)}</del>}
+                  </div>
                   <button className='lux-rec-view' onClick={() => navigate(`/single-product/${encodeURIComponent(p._id || p.id || '')}`)}>View Details</button>
                 </div>
-              ))}
+              )})}
             </div>
           </motion.section>
         ) : null}
       </div>
 
-      <button className='lux-print-fab' onClick={handlePremiumInvoice} title='Print Receipt'>
-        <Printer size={17} />
+      <button className='lux-print-fab' onClick={handleDownloadInvoice} title='Download Invoice'>
+        <Download size={17} />
       </button>
 
       <style>{styles}</style>
@@ -944,6 +1063,25 @@ const styles = `
   .lux-count-pill {
     font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 700; background: #f1f5f9; color: #475569; padding: 4px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;
   }
+  .lux-express-badge { 
+    position: relative; overflow: hidden; background: linear-gradient(145deg, #111 0%, #2a2a2a 100%); 
+    color: #D4AF37; border: 1px solid rgba(212, 175, 55, 0.4); padding: 5px 14px; border-radius: 999px; 
+    font-size: 10px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; 
+    display: inline-flex; align-items: center; gap: 6px; 
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.1); font-family: 'Jost', sans-serif; 
+  }
+  .lux-express-badge::after {
+    content: ''; position: absolute; top: 0; left: -150%; width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.5), transparent);
+    transform: skewX(-20deg); animation: luxBadgeShine 3s infinite ease-in-out;
+  }
+  @keyframes luxBadgeShine { 0% { left: -150%; } 20% { left: 200%; } 100% { left: 200%; } }
+  .lux-express-icon { display: inline-block; color: #fff; animation: luxExpressPulse 1.5s ease-in-out infinite; transform-origin: center; filter: drop-shadow(0 0 4px rgba(212,175,55,0.8)); }
+  @keyframes luxExpressPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+  }
+  .lux-standard-badge { background: #f8fafc; color: #475569; padding: 4px 12px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid #e2e8f0; font-family: 'Jost', sans-serif; }
   
   /* Items */
   .lux-item {
@@ -1001,8 +1139,12 @@ const styles = `
   .lux-rec-quick { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; background: rgba(255,255,255,0.95); color: #0f172a; padding: 8px 16px; border-radius: 999px; font-size: 12px; font-weight: 700; border: none; display: flex; align-items: center; gap: 6px; transition: all 0.3s; cursor: pointer; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
   .lux-rec-card:hover .lux-rec-quick { transform: translateX(-50%) translateY(0); opacity: 1; }
   .lux-rec-quick:hover { background: #D4AF37; color: #fff; }
+  .lux-rec-ribbon { position: absolute; top: 0; left: 0; background: linear-gradient(135deg, #111 0%, #2a2a2a 100%); color: #D4AF37; border-bottom: 1px solid rgba(201,168,76,0.4); font-size: 10px; font-weight: 800; letter-spacing: 1px; padding: 6px 14px 6px 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 5; clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 50%, 100% 100%, 0 100%); padding-right: 18px; }
+  .lux-rec-brand { font-size: 10px; font-weight: 800; color: #D4AF37; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lux-rec-title { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lux-rec-price { font-size: 15px; font-weight: 800; color: #D4AF37; margin-bottom: 12px; }
+  .lux-rec-price-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+  .lux-rec-price { font-size: 15px; font-weight: 800; color: #D4AF37; margin-bottom: 0; }
+  .lux-rec-baseprice { font-size: 12px; color: #94a3b8; text-decoration: line-through; }
   .lux-rec-view { width: 100%; background: #f8fafc; color: #0f172a; border: 1px solid #e2e8f0; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; transition: all 0.3s; cursor: pointer; }
   .lux-rec-view:hover { background: #0f172a; color: #fff; border-color: #0f172a; }
   

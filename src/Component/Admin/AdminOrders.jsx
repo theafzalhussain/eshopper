@@ -199,6 +199,7 @@ export default function AdminOrders() {
     const [search, setSearch] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('All');
+    const [featureFilter, setFeatureFilter] = useState('All');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [datePreset, setDatePreset] = useState('all');
@@ -403,13 +404,21 @@ export default function AdminOrders() {
                 if (normalizedPayment !== String(paymentStatus).toLowerCase()) return false;
             }
 
+            if (featureFilter !== 'All') {
+                if (featureFilter === 'Express' && order.deliverySpeed !== 'express') return false;
+                if (featureFilter === 'GiftWrap' && !(Number(order.giftWrapCharge || 0) > 0)) return false;
+                if (featureFilter === 'CarePlus' && !(Number(order.protectionCharge || 0) > 0)) return false;
+                if (featureFilter === 'EcoBox' && !(Number(order.ecoCharge || 0) > 0)) return false;
+                if (featureFilter === 'Coupon' && !order.couponCode) return false;
+            }
+
             if (!actualOnly) return true;
 
             const hasActualName = order.userName && order.userName !== 'N/A' && !isGenericCustomerName(order.userName);
             const hasActualEmail = order.userEmail && order.userEmail !== 'N/A';
             return hasActualName || hasActualEmail;
         }),
-        [normalizedOrders, search, selectedStatus, paymentStatus, fromDate, toDate, actualOnly]
+        [normalizedOrders, search, selectedStatus, paymentStatus, fromDate, toDate, actualOnly, featureFilter]
     );
 
     const applyDatePreset = (preset) => {
@@ -451,6 +460,7 @@ export default function AdminOrders() {
         setSearch('');
         setSelectedStatus('');
         setPaymentStatus('All');
+        setFeatureFilter('All');
         setFromDate('');
         setToDate('');
         setDatePreset('all');
@@ -944,6 +954,24 @@ export default function AdminOrders() {
                                     ))}
                                 </select>
                             </div>
+                            <div className="lux-filter-item">
+                                <label>Services</label>
+                                <select
+                                    className="lux-select-sm"
+                                    value={featureFilter}
+                                    onChange={(e) => {
+                                        setFeatureFilter(e.target.value);
+                                        setPage(1);
+                                    }}
+                                >
+                                    <option value="All">All Services</option>
+                                    <option value="Express">⚡ Express</option>
+                                    <option value="GiftWrap">🎁 Gift Wrap</option>
+                                    <option value="CarePlus">🛡️ Care+</option>
+                                    <option value="EcoBox">🌱 Eco Box</option>
+                                    <option value="Coupon">🎟️ With Coupon</option>
+                                </select>
+                            </div>
                             <div className="lux-filter-item lux-filter-presets">
                                 <div className="lux-btn-group">
                                     {DATE_PRESETS.map((preset) => (
@@ -1018,7 +1046,7 @@ export default function AdminOrders() {
                                             <th className="hide-mobile">Email</th>
                                             <th>Amount</th>
                                             <th>Status</th>
-                                            <th className="hide-mobile">Items</th>
+                                            <th>Services</th>
                                             <th className="hide-mobile">Updated</th>
                                             <th className="text-right">Action</th>
                                         </tr>
@@ -1052,7 +1080,16 @@ export default function AdminOrders() {
                                                             <IconComp size={12} className="mr-1" /> {order.orderStatus || 'Pending'}
                                                         </span>
                                                     </td>
-                                                    <td className="hide-mobile font-weight-bold">{order.productCount || (order.products || []).length || 0}</td>
+                                                <td data-label="Services">
+                                                    <div className="font-weight-bold mb-1">{order.productCount || (order.products || []).length || 0} Items</div>
+                                                    <div className="d-flex flex-wrap" style={{ gap: '4px', maxWidth: '160px' }}>
+                                                        {order.deliverySpeed === 'express' && <span className="lux-badge-tag" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>⚡ Express</span>}
+                                                        {order.giftWrapCharge > 0 && <span className="lux-badge-tag" style={{ background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>🎁 Gift Wrap</span>}
+                                                        {order.protectionCharge > 0 && <span className="lux-badge-tag" style={{ background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }}>🛡️ Care+</span>}
+                                                        {order.ecoCharge > 0 && <span className="lux-badge-tag" style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}>🌱 Eco Box</span>}
+                                                        {order.couponCode && <span className="lux-badge-tag" style={{ background: '#eef2ff', color: '#4338ca', border: '1px solid #c7d2fe' }}>🎟️ {order.couponCode}</span>}
+                                                    </div>
+                                                </td>
                                                     <td className="hide-mobile color-muted">{new Date(order.updatedAt || Date.now()).toLocaleDateString('en-IN')}</td>
                                                     <td className="text-right">
                                                         <button
@@ -1201,6 +1238,8 @@ export default function AdminOrders() {
                 .status-shipped { background: #e0e7ff; color: #4f46e5; border: 1px solid #c7d2fe; }
                 .status-out-for-delivery { background: #fdf4ff; color: #c026d3; border: 1px solid #fae8ff; }
                 .status-delivered { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+                .lux-badge-tag { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; white-space: nowrap; letter-spacing: 0.3px; display: inline-flex; align-items: center; }
 
                 .lux-btn-action { display: inline-flex; align-items: center; padding: 8px 16px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #D4AF37; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px rgba(15,23,42,0.1); }
                 .lux-btn-action:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(15,23,42,0.2); background: #0f172a; }
