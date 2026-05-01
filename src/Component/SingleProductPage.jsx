@@ -383,9 +383,10 @@ const STYLES = `
 .pd-modal-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:var(--ink);}
 .pd-modal-close{width:34px;height:34px;border-radius:50%;border:1px solid var(--border-light);background:var(--fog);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text-light);transition:var(--tr);}
 .pd-modal-close:hover{background:var(--border-light);color:var(--ink);}
+.pd-sz-table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .pd-sz-table{width:100%;border-collapse:collapse;font-size:13px;}
-.pd-sz-table th{background:var(--ink);color:#fff;padding:11px 14px;text-align:center;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;}
-.pd-sz-table td{padding:10px 14px;text-align:center;border-bottom:1px solid var(--border-light);color:var(--text-body);}
+.pd-sz-table th{background:var(--ink);color:#fff;padding:11px 14px;text-align:center;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;white-space:nowrap;}
+.pd-sz-table td{padding:10px 14px;text-align:center;border-bottom:1px solid var(--border-light);color:var(--text-body);white-space:nowrap;}
 .pd-sz-table tr:nth-child(even) td{background:var(--fog);}
 .pd-sz-hint{font-size:12px;color:var(--text-light);margin-top:18px;line-height:1.8;background:var(--fog);border-radius:var(--r-md);padding:14px 16px;}
 .pd-finder-row{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
@@ -417,6 +418,11 @@ const STYLES = `
   .pd-zoom-lens, .pd-zoom-panel { display: none !important; }
   .pd-view-strip{gap:8px;flex-wrap:wrap;}
   .pd-view-btn{font-size:10px;padding:8px 12px;letter-spacing:0.04em;gap:5px;flex-grow:1;}
+}
+@media(max-width:500px){
+  .pd-modal { padding: 20px 16px; }
+  .pd-modal-title { font-size: 18px; }
+  .pd-sz-table th, .pd-sz-table td { padding: 8px 10px; font-size: 11px; }
 }
 `;
 
@@ -498,7 +504,6 @@ export default function ProductDetail() {
   const [couponErr, setCouponErr]       = useState(false);
   const [appliedCouponData, setAppliedCouponData] = useState(null);
   const [couponsList, setCouponsList]   = useState([]);
-  const [shareOpen, setShareOpen]       = useState(false);
   const [stickyVis, setStickyVis]       = useState(false);
   const [giftWrap, setGiftWrap]         = useState(false);
   const [giftMsg, setGiftMsg]           = useState(false);
@@ -681,6 +686,24 @@ export default function ProductDetail() {
        dispatch(addWishlist({ productid: p.id || p._id, userid: userId, name: p.name, color: selColor, size: selSize, price: Number(p.finalprice || 0), pic: p.pic1 || p.pic || '' }));
        toast_('❤️ Saved to Wishlist');
        setWishlisted(true);
+    }
+  }
+
+  function handleShare() {
+    if (!p) return;
+    const shareUrl = window.location.href;
+    const shareTitle = p.name || 'Eshopper Premium Product';
+    const shareText = `Check out this amazing product: ${shareTitle} at Eshopper Boutique Luxe!`;
+
+    if (navigator.share) {
+      navigator.share({ title: shareTitle, text: shareText, url: shareUrl }).catch(() => {});
+    } else {
+      // Fallback for desktop browsers: copy link to clipboard
+      navigator.clipboard.writeText(shareUrl).then(() => {
+          toast_('Link copied! You can now share it.');
+      }).catch(() => {
+          toast_('Sharing not supported on this browser.');
+      });
     }
   }
 
@@ -999,23 +1022,12 @@ export default function ProductDetail() {
                       <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
                     </svg>
                   </button>
-                  <div style={{ position:'relative' }}>
-                    <button className="pd-img-btn" onClick={() => setShareOpen(o=>!o)}>
-                      <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                      </svg>
-                    </button>
-                    {shareOpen && (
-                      <div className="pd-share-drop">
-                        {[{icon:'🔗',label:'Copy Link'},{icon:'💬',label:'WhatsApp'},{icon:'📸',label:'Instagram'},{icon:'𝕏',label:'Twitter / X'}].map(s=>(
-                          <div key={s.label} className="pd-share-item" onClick={() => { toast_(`Opening ${s.label}…`); setShareOpen(false); }}>
-                            <span>{s.icon}</span>{s.label}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <button className="pd-img-btn" onClick={handleShare} title="Share">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    </svg>
+                  </button>
                 </div>
 
                 <img src={mainImg} className={`pd-main-img${imgFade?' fade':''}`} alt={p.name} />

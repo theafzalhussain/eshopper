@@ -8,6 +8,8 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import { useToast } from './ToastNotification'
+import { useSelector, useDispatch } from 'react-redux'
+import { getProduct } from '../Store/ActionCreaters/ProductActionCreators'
 import {
   Package, Archive, Truck, MapPin, BadgeCheck, Calendar,
   RefreshCw, Copy, Clock3, Home, Phone, Mail, Sparkles, Gauge, Wallet,
@@ -1273,6 +1275,34 @@ const CSS = `
   .ot-delivered-meta-box { flex-direction: column; gap: 16px; text-align: center; width: 100%; }
   .ot-delivered-meta-item { align-items: center; }
 }
+@media (max-width: 400px) {
+  .ot-page { padding: 40px 12px 60px; }
+.ot-hero {}
+  .ot-hero-inner { padding: 0 8px;display: flex; align-items: center; justify-content: center;  }
+  .ot-header-title { font-size: 26px; }
+  .ot-hero-actions { flex-direction: column; width: 100%; }
+  .ot-ghost-btn, .ot-back-btn { width: 100%; justify-content: center; }
+  .ot-card, .ot-mini-card, .ot-kpi { padding: 14px; }
+  .ot-kpi-grid { grid-template-columns: 1fr; gap: 12px; }
+  .ot-kpi-value { font-size: 26px; }
+  .ot-stepper { gap: 1px; }
+  .ot-step-dot { width: 30px; height: 30px; }
+  .ot-step-dot svg { width: 15px; height: 15px; }
+  .ot-step-label { font-size: 7.5px; max-width: 48px; word-break: break-word; }
+  .ot-timeline-event { padding: 12px; gap: 10px; }
+  .ot-timeline-dot { width: 30px; height: 30px; }
+  .ot-timeline-dot svg { width: 15px; height: 15px; }
+  .ot-otp-premium-card, .ot-expected-card, .ot-delivered-premium { padding: 14px; }
+  .ot-otp-code { font-size: 26px; }
+  .ot-expected-title { font-size: 18px; }
+  .ot-delivered-title { font-size: 20px; }
+  .ot-mini-row, .ot-fin-extra-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .ot-mini-val, .ot-fin-extra-row strong { text-align: left; word-break: break-word; }
+  .ot-map-source { flex-direction: column; align-items: flex-start; }
+  .ot-map-source-value { text-align: left; margin-top: 6px; word-break: break-word; }
+  .ot-btn { width: 100%; }
+  .rev-modal-header, .rev-modal-body, .rev-modal-footer { padding: 16px; }
+}
 @media (max-width: 1100px) and (min-width: 769px) {
   .ot-top-premium-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1584,6 +1614,12 @@ export default function OrderTracking() {
   const userId = useMemo(() => pickStoredUserId(), [])
   const toast = useToast()
   const supportEmail = 'support@eshopperr.me'
+  
+  const dispatch = useDispatch()
+  const productState = useSelector((state) => state.ProductStateData) || []
+  useEffect(() => {
+    dispatch(getProduct())
+  }, [dispatch])
 
   const [status, setStatus] = useState('Ordered')
   const [order, setOrder] = useState(null)
@@ -1667,18 +1703,22 @@ export default function OrderTracking() {
       }
       if (!quantity) quantity = 1
 
+          const prodId = String(item?.productid?._id || item?.productid || item?.productId || item?._id || item?.id || `${item?.sku || item?.name || 'item'}-${index}`)
+          const fullProduct = productState.find(p => String(p.id || p._id) === prodId) || {}
+
       return {
-        id: String(item?.productid?._id || item?.productid || item?.productId || item?._id || item?.id || `${item?.sku || item?.name || 'item'}-${index}`),
-        name: item?.title || item?.name || item?.productName || item?.productid?.name || `Item ${index + 1}`,
-        description: item?.description || item?.productid?.description || '',
+            id: prodId,
+            name: item?.title || item?.name || item?.productName || item?.productid?.name || fullProduct.name || `Item ${index + 1}`,
+            brand: item?.brand || item?.productid?.brand || item?.product?.brand || fullProduct.brand || '',
+            description: item?.description || item?.productid?.description || fullProduct.description || '',
         quantity,
         unitPrice,
         lineTotal,
-        baseprice: Number(item?.baseprice ?? item?.productid?.baseprice ?? item?.product?.baseprice ?? item?.originalPrice ?? unitPrice),
-        image: resolveItemImage(item)
+            baseprice: Number(item?.baseprice ?? item?.productid?.baseprice ?? item?.product?.baseprice ?? item?.originalPrice ?? fullProduct.baseprice ?? unitPrice),
+            image: resolveItemImage(item) || resolveItemImage({ pic1: fullProduct.pic1 })
       }
     }),
-    [orderItems]
+        [orderItems, productState]
   )
 
   const totalItemCount = useMemo(
@@ -2826,6 +2866,7 @@ export default function OrderTracking() {
                         ) : (
                           <div className="ot-item-image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>No Image</div>
                         )}
+                        {item.brand && <p style={{ fontSize: '10px', fontWeight: 800, color: '#C9A84C', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px 0' }}>{item.brand}</p>}
                         <p className="ot-item-name">{item.name}</p>
                         <div className="ot-item-qty">Ordered Qty: {item.quantity}</div>
                         <p className="ot-item-price">{formatMoney(item.lineTotal)}</p>

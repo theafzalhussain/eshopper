@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
+import { getBrand } from '../Store/ActionCreaters/BrandActionCreators';
 import { getUser } from '../Store/ActionCreaters/UserActionCreators';
 import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
@@ -125,6 +126,7 @@ function Pad(n) { return String(n).padStart(2, '0'); }
 export default function Home() {
   const product    = useSelector((state) => state.ProductStateData);
   const wishlist   = useSelector((state) => state.WishlistStateData);
+  const brandData  = useSelector((state) => state.BrandStateData) || [];
   const dispatch   = useDispatch();
   const navigate   = useNavigate();
   const toast      = useToast();
@@ -168,6 +170,38 @@ export default function Home() {
     return filtered.slice(0, 8);
   }, [product, activeFilter]);
 
+  // ── Extract unique brands dynamically from backend products ──
+  const premiumBrands = useMemo(() => {
+    // Premium fallback images for brands without products
+    const defaultImages = [
+      'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?q=80&w=1025&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'https://images.unsplash.com/photo-1617822077662-caee20368d7d?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'https://media.istockphoto.com/id/1148893542/photo/stylish-jeans-clothing-store-stands-showcase-boutique.jpg?s=2048x2048&w=is&k=20&c=PHhHzb_VotXJSPDiepAxZGOY_2dkV9XjSvgdTjiDnCg=',
+      'https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      'https://assets.myntassets.com/h_1440,q_75,w_1080/v1/assets/images/28913990/2024/9/26/b3e3cd7c-fcc8-422e-8dc0-2f49013ff49b1727354856899-Red-Tape-Men-Colourblocked-PU-High-Top-Sneakers-190172735485-1.jpg',     
+      'https://assets.myntassets.com/h_1440,q_75,w_1080/v1/assets/images/28913990/2024/9/26/b3e3cd7c-fcc8-422e-8dc0-2f49013ff49b1727354856899-Red-Tape-Men-Colourblocked-PU-High-Top-Sneakers-190172735485-1.jpg',
+      'https://assets.myntassets.com/h_1440,q_75,w_1080/v1/assets/images/28913990/2024/9/26/b3e3cd7c-fcc8-422e-8dc0-2f49013ff49b1727354856899-Red-Tape-Men-Colourblocked-PU-High-Top-Sneakers-190172735485-1.jpg',
+    ];
+
+    if (brandData && brandData.length > 0) {
+      return brandData.map((b, i) => {
+        const prodWithBrand = product.find(p => p.brand === b.name && p.pic1);
+        return {
+          name: b.name,
+          img: b.pic || b.image || b.pic1 || (prodWithBrand ? prodWithBrand.pic1 : defaultImages[i % defaultImages.length])
+        };
+      });
+    }
+
+    const brandMap = new Map();
+    [...product].reverse().forEach(p => {
+      if (p.brand && !brandMap.has(p.brand)) {
+        brandMap.set(p.brand, p.pic1 || defaultImages[brandMap.size % defaultImages.length]);
+      }
+    });
+    return Array.from(brandMap.entries()).slice(0, 24).map(([name, img]) => ({ name, img }));
+  }, [product, brandData]);
+
   // ── Scroll parallax ──
   useEffect(() => {
     const onScroll = () => setScrollY(window.scrollY);
@@ -180,6 +214,7 @@ export default function Home() {
     dispatch(getProduct());
     dispatch(getUser());
     dispatch(getWishlist());
+    dispatch(getBrand());
     const storedName = localStorage.getItem("name");
     if (storedName) setWelcomeUser(storedName);
     const timer = setInterval(() => setCurrentSlide((p) => (p === 3 ? 0 : p + 1)), 5000);
@@ -626,6 +661,46 @@ export default function Home() {
             <p className="hx-deals-sub">
               Our biggest sale of the season is live. Shop premium styles at unbeatable prices — before they're gone.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════
+          NEW: THE BRAND ATELIER (Dynamic)
+      ════════════════════════════════════════ */}
+      <section className="hx-brands">
+        <div className="hx-container">
+          <motion.div
+            className="hx-section-head"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+          >
+            <span className="hx-eyebrow">THE BRAND ATELIER</span>
+            <h2 className="hx-section-title">Discover by <em>Brand</em></h2>
+            <p className="hx-section-sub">Explore our curated selection of world-class luxury houses.</p>
+          </motion.div>
+
+          <div className="hx-brands-grid">
+            {premiumBrands.map((brand, i) => (
+              <motion.div
+                key={i}
+                className="hx-brand-card"
+                onClick={() => handleTransitionNavigate(`/shop/All?brand=${encodeURIComponent(brand.name)}`)}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05, duration: 0.5 }}
+              >
+                <img src={optimizeCloudinaryUrlAdvanced(brand.img, { maxWidth: 400, crop: 'fill' })} alt={brand.name} className="hx-brand-img" loading="lazy" />
+                <div className="hx-brand-overlay" />
+                <div className="hx-brand-content">
+                  <h3 className="hx-brand-name">{brand.name}</h3>
+                  <span className="hx-brand-link">DISCOVER</span>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -1428,6 +1503,62 @@ export default function Home() {
         .hx-dtag-outline { background:transparent; color:#c8a96e; border:1.5px solid #c8a96e; }
         .hx-deals-sub { font-size:16px; color:rgba(255,255,255,0.55); line-height:1.8; max-width:400px; }
 
+        /* ── BRANDS ATELIER ── */
+        .hx-brands { background:#fff; padding:100px 0; border-top:1px solid #f0ede8; }
+        .hx-brands-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+          gap: 24px;
+        }
+        .hx-brand-card {
+          position: relative; overflow: hidden;
+          border-radius: 12px; cursor: pointer;
+          aspect-ratio: 16/9; background: #f8f6f2;
+        transition: transform 0.6s cubic-bezier(0.16,1,0.3,1), box-shadow 0.6s cubic-bezier(0.16,1,0.3,1);
+        transform: perspective(1000px) translateZ(0);
+      }
+      .hx-brand-card:hover {
+        transform: perspective(1000px) translateZ(30px) translateY(-10px);
+        box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+        z-index: 2;
+      }
+      .hx-brand-card::after {
+        content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        transform: skewX(-25deg); pointer-events: none; z-index: 1; transition: none;
+      }
+      .hx-brand-card:hover::after {
+        left: 150%;
+        transition: left 0.8s cubic-bezier(0.16,1,0.3,1);
+        }
+        .hx-brand-img {
+          width: 100%; height: 100%; object-fit: cover;
+          transition: transform 0.8s cubic-bezier(0.16,1,0.3,1);
+        }
+        .hx-brand-card:hover .hx-brand-img { transform: scale(1.08); }
+        .hx-brand-overlay {
+          position: absolute; inset: 0;
+          background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 60%, transparent 100%);
+        z-index: 2;
+        }
+        .hx-brand-content {
+          position: absolute; bottom: 0; left: 0; right: 0;
+          padding: 20px; text-align: center;
+        z-index: 3;
+        }
+        .hx-brand-name {
+          font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: #fff;
+          letter-spacing: 2px; margin: 0 0 10px; text-transform: uppercase;
+          text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .hx-brand-link {
+          font-size: 9px; font-weight: 700; letter-spacing: 2.5px; color: #fff;
+          border: 1px solid rgba(255,255,255,0.4); padding: 8px 24px;
+          transition: all 0.4s ease; display: inline-block; text-transform: uppercase;
+          background: rgba(0,0,0,0.15); backdrop-filter: blur(4px);
+        }
+        .hx-brand-card:hover .hx-brand-link { background: #fff; color: #0a0a0a; border-color: #fff; }
+
         /* ── PRODUCTS ── */
         .hx-products { background:#f8f6f2; padding:100px 0; }
         .hx-filter-row { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:48px; }
@@ -1845,6 +1976,11 @@ export default function Home() {
           .hx-product-grid { grid-template-columns:repeat(3,1fr); }
           .hx-test-grid { grid-template-columns:repeat(2,1fr); }
           .hx-loading-state { grid-template-columns:repeat(3,1fr); }
+          .hx-brands-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (max-width:900px) {
+          .hx-brands-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+          .hx-brands { padding: 60px 0; }
         }
         @media (max-width:992px) {
           .hx-container { padding:0 24px; }
@@ -1977,6 +2113,10 @@ export default function Home() {
         @media (max-width: 375px) {
           .hx-hero-title { font-size: 1.1rem !important; }
           .hx-hero-img { max-height: 18vh; }
+          .hx-brands-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .hx-brand-name { font-size: 18px; }
+          .hx-brand-content { padding: 16px; }
+          .hx-brand-link { padding: 6px 16px; font-size: 8px; }
         }
 
         /* Accessibility */

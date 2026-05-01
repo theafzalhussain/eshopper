@@ -314,8 +314,23 @@ const CSS = `
 @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 @media(max-width:640px){
-  .mop2-hero-inner{flex-direction:column;align-items:flex-start;}
-  .mop2-actions{flex-direction:column;}
+  .mop2-hero-inner { padding: 0 16px; flex-direction: column; align-items: flex-start; }
+  .mop2-main { padding: 24px 16px 0; }
+  .mop2-search-row { flex-wrap: wrap; }
+  .mop2-search-wrap { flex: 1 1 100%; }
+  .mop2-filter-btn, .mop2-clear-btn { flex: 1; justify-content: center; }
+  .mop2-actions { flex-direction: column; }
+}
+@media(max-width:500px){
+  .mop2-hero-title { font-size: 32px; }
+  .mop2-card-head, .mop2-card-body { padding: 16px; }
+  .mop2-order-id { font-size: 16px; word-break: break-all; }
+  .mop2-product { flex-direction: column; align-items: flex-start !important; gap: 12px; }
+  .mop2-product-left { min-width: 100% !important; }
+  .mop2-product-right { margin-left: 0 !important; width: 100%; justify-content: space-between; }
+  .mop2-prog-lbl2 { font-size: 7.5px; max-width: 44px; word-break: break-word; }
+  .mop2-prog-dot { width: 7px; height: 7px; }
+  .mop2-status-eta-wrap, .mop2-status-otp-wrap { flex-wrap: wrap; }
 }
 `
 
@@ -437,11 +452,11 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
   const st     = ST[norm] || ST['Ordered']
   const items  = item.orderItems || item.products || []
   const first  = items[0] || {}
-  const prodId = first.productid || first.product || first.productId || first._id || first.id || ''
+  const prodId = first.productid?._id || first.productid?.id || first.productid || first.product?._id || first.product || first.productId || first._id || first.id || ''
   const fullProduct = (productState || []).find(p => String(p.id || p._id) === String(prodId)) || {}
-  const img    = first.image || first.pic || first.pic1 || fullProduct.pic1 || '/assets/images/noimage.png'
-  const name   = first.title || first.name || fullProduct.name || ''
-  const brand  = first.brand || fullProduct.brand || ''
+  const img    = first.image || first.pic || first.pic1 || first.productid?.pic1 || first.productid?.image || fullProduct.pic1 || '/assets/images/noimage.png'
+  const name   = first.title || first.name || first.productid?.name || fullProduct.name || ''
+  const brand  = first.brand || first.productid?.brand || first.product?.brand || fullProduct.brand || ''
   const price  = Number(first.price || first.finalprice || 0)
   const knownExtras = Number(item.giftWrapCharge || 0) + Number(item.protectionCharge || 0) + Number(item.ecoCharge || 0) + Number(item.paymentFee || 0);
   const totalExtras = Number(item.extraCharges || 0);
@@ -518,9 +533,9 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
       {/* BODY */}
       <div className="mop2-card-body">
         {/* Price Breakdown */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1px', marginBottom:'20px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.1)', borderRadius:'6px', overflow:'hidden' }}>
+        <div className="mop2-meta-row">
           {/* Left: Amount Paid & Payment Method */}
-          <div style={{ background:'var(--white)', padding:'16px 18px' }}>
+          <div className="mop2-meta-cell">
             <div className="mop2-meta-lbl">Amount Paid</div>
             <div className="mop2-meta-val gold">₹{Number(item.finalAmount||0).toLocaleString('en-IN')}</div>
             <div style={{ marginTop:'12px', paddingTop:'12px', borderTop:'1px solid rgba(201,168,76,0.1)' }}>
@@ -529,7 +544,7 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
             </div>
           </div>
           {/* Right: Subtotal, Shipping, Total */}
-          <div style={{ background:'var(--white)', padding:'16px 18px' }}>
+          <div className="mop2-meta-cell">
             <div style={{ marginBottom:'10px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <span style={{ fontSize:'11px', letterSpacing:'0.15em', textTransform:'uppercase', color:'var(--ink)', fontWeight:'800' }}>Subtotal</span>
               <span style={{ fontSize:'14px', fontWeight:'600', color:'var(--ink)' }}>₹{Number(item.totalAmount||0).toLocaleString('en-IN')}</span>
@@ -552,7 +567,7 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
         {/* Product */}
         {name && (
           <div className="mop2-product" style={{ flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '220px' }}>
+            <div className="mop2-product-left" style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '220px' }}>
               <div className="mop2-product-img">
                 <img src={optimizeCloudinaryUrlAdvanced(img, { maxWidth: 120, crop: 'fill' })} alt={name} loading="lazy" />
               </div>
@@ -563,7 +578,7 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
               </div>
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginLeft: 'auto' }}>
+            <div className="mop2-product-right" style={{ display: 'flex', alignItems: 'center', gap: '20px', marginLeft: 'auto' }}>
               {/* Review Rating (Middle-Right Premium Look) */}
               {norm === 'Delivered' && orderReview && (
                 <div style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.04))', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '8px', padding: '6px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', boxShadow: '0 4px 15px rgba(201,168,76,0.08)' }}>
@@ -585,7 +600,7 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
         )}
 
         {norm !== 'Delivered' && (
-          <div style={{ marginBottom:'16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:'10px', padding:'9px 12px', border:'1px solid rgba(26,140,140,0.2)', borderRadius:'6px', background:'rgba(26,140,140,0.06)' }}>
+          <div className="mop2-status-eta-wrap" style={{ marginBottom:'16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:'10px', padding:'9px 12px', border:'1px solid rgba(26,140,140,0.2)', borderRadius:'6px', background:'rgba(26,140,140,0.06)' }}>
             <span style={{ display:'inline-flex', alignItems:'center', gap:'6px', fontSize:'11px', fontWeight:'700', letterSpacing:'0.08em', textTransform:'uppercase', color:'#0f766e' }}>
               <Calendar size={12} /> ETA {etaLabel}
             </span>
@@ -594,7 +609,7 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
         )}
 
         {norm === 'Out for Delivery' && deliveryOtpCode && !item.deliveryOtpVerifiedAt && (
-          <div style={{ marginBottom:'16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:'10px', padding:'10px 12px', border:'1px solid rgba(220,38,38,0.22)', borderRadius:'6px', background:'rgba(220,38,38,0.06)' }}>
+          <div className="mop2-status-otp-wrap" style={{ marginBottom:'16px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:'10px', padding:'10px 12px', border:'1px solid rgba(220,38,38,0.22)', borderRadius:'6px', background:'rgba(220,38,38,0.06)' }}>
             <span style={{ display:'inline-flex', alignItems:'center', gap:'6px', fontSize:'11px', fontWeight:'700', letterSpacing:'0.08em', textTransform:'uppercase', color:'#b91c1c' }}>
               <KeyRound size={12} /> Delivery OTP
             </span>

@@ -24,11 +24,12 @@ export default function Shop() {
     const params = new URLSearchParams(location.search);
     const category = params.get('category');
     const tagParam = params.get('tag');
+    const brandParam = params.get('brand');
 
     // --- STATES ---
     var [mc, setmc] = useState(maincat)
     var [sc, setsc] = useState("All")
-    var [br, setbr] = useState("All")
+    var [br, setbr] = useState(brandParam || "All")
     var [size, setSize] = useState("All")
     var [min, setmin] = useState(0)
     var [max, setmax] = useState(500000)
@@ -96,6 +97,12 @@ export default function Shop() {
     useEffect(() => {
         if (tagParam) setTagFilter(tagParam);
     }, [tagParam]);
+
+    useEffect(() => {
+        if (brandParam) {
+            setbr(brandParam);
+        }
+    }, [brandParam]);
 
     useEffect(() => {
         const t = setTimeout(() => setSearch(searchInput), 300);
