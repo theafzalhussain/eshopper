@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "title": "Chatbot QA Checklist",
+    "version": "1.0",
+    "createdAt": "2026-05-06",
+    "purpose": "Manual or automated validation for language routing, luxury tone, typo tolerance, and product intent handling"
+  },
+  "validationRules": [
+    "English input must return professional English output.",
+    "Hindi or Hinglish input must return natural Hindi output.",
+    "Tone must remain official, human, concise, and user-friendly.",
+    "Common spelling mistakes should still map to the correct user intent.",
+    "Product requests should show relevant shortlist behavior."
+  ],
+  "testCases": [
+    {
+      "id": "T01",
+      "prompt": "hello, suggest party wear under 2500",
+      "expected": "English, premium-professional response; asks or refines as needed"
+    },
+    {
+      "id": "T02",
+      "prompt": "hloo sugst pparty wear undr 2500",
+      "expected": "Interprets typo query correctly; product intent still works"
+    },
+    {
+      "id": "T03",
+      "prompt": "how r u",
+      "expected": "Short, warm, human English response"
+    },
+    {
+      "id": "T04",
+      "prompt": "hwo are yuo",
+      "expected": "Still interpreted as how-are-you; polished English reply"
+    },
+    {
+      "id": "T05",
+      "prompt": "mujhe office wear dikhao budget 1800",
+      "expected": "Hindi response; relevant product guidance"
+    },
+    {
+      "id": "T06",
+      "prompt": "muje ofice wear dikhaoo budjet 1800",
+      "expected": "Hindi typo query understood; similar intent result to T05"
+    },
+    {
+      "id": "T07",
+      "prompt": "return polciy kya hai",
+      "expected": "Hindi support response with return policy details"
+    },
+    {
+      "id": "T08",
+      "prompt": "refnd sttaus pls",
+      "expected": "English support response; refund intent understood"
+    },
+    {
+      "id": "T09",
+      "prompt": "Reply in English please",
+      "expected": "Preference switches to English"
+    },
+    {
+      "id": "T10",
+      "prompt": "Hindi me baat karo",
+      "expected": "Preference switches to Hindi"
+    },
+    {
+      "id": "T11",
+      "prompt": "show mens black shirt size m",
+      "expected": "Filters understood: audience + color + size"
+    },
+    {
+      "id": "T12",
+      "prompt": "sho me mnz blak shrt siz m",
+      "expected": "Misspelled product filters still interpreted correctly"
+    }
+  ],
+  "regressionChecks": [
+    {
+      "id": "R01",
+      "check": "Chat widget opens and closes correctly on desktop and mobile"
+    },
+    {
+      "id": "R02",
+      "check": "No console runtime errors during chat flow"
+    },
+    {
+      "id": "R03",
+      "check": "Cached repeat prompts feel faster than first request"
+    },
+    {
+      "id": "R04",
+      "check": "Product cards remain visible and relevant after typo queries"
+    },
+    {
+      "id": "R05",
+      "check": "Fallback replies remain professional and avoid robotic or slang output"
+    }
+  ],
+  "signoff": {
+    "totalPassed": 0,
+    "totalFailed": 0,
+    "blockingIssues": [],
+    "readyForProduction": false
+  }
+}

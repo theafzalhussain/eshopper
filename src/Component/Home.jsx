@@ -276,16 +276,17 @@ export default function Home() {
     if (!localStorage.getItem("login")) {
       navigate("/login");
     } else {
+      const productId = p.id || p._id;
       const d = wishlist.find(
-        (item) => item.productid === p.id && item.userid === localStorage.getItem("userid")
+        (item) => String(item.productid) === String(productId) && String(item.userid) === String(localStorage.getItem("userid"))
       );
       if (d) {
-        dispatch(deleteWishlist({ id: d.id }));
+        dispatch(deleteWishlist({ id: d.id || d._id }));
         setWishlistToast({ show: true, text: "Removed from Wishlist" });
       } else {
         const sizeStr = Array.isArray(p.size) ? (p.size[0] || "") : p.size;
         dispatch(addWishlist({
-          productid: p.id,
+          productid: productId,
           userid: localStorage.getItem("userid"),
           name: p.name,
           color: p.color,
@@ -1976,10 +1977,10 @@ export default function Home() {
           .hx-product-grid { grid-template-columns:repeat(3,1fr); }
           .hx-test-grid { grid-template-columns:repeat(2,1fr); }
           .hx-loading-state { grid-template-columns:repeat(3,1fr); }
-          .hx-brands-grid { grid-template-columns: repeat(4, 1fr); }
+          .hx-brands-grid { grid-template-columns: repeat(4, 1fr); gap: 20px; }
         }
         @media (max-width:900px) {
-          .hx-brands-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+          .hx-brands-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
           .hx-brands { padding: 60px 0; }
         }
         @media (max-width:992px) {
@@ -2109,14 +2110,17 @@ export default function Home() {
             min-width: 180px;
             justify-content: center;
           }
+          .hx-brands-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .hx-brand-name { font-size: 15px; letter-spacing: 0.5px; margin-bottom: 8px; }
+          .hx-brand-content { padding: 15px 8px; transform: translateY(0); }
+          .hx-brand-link { opacity: 1; font-size: 9px; }
+          .hx-brand-divider { width: 30px; margin-bottom: 10px; }
         }
         @media (max-width: 375px) {
           .hx-hero-title { font-size: 1.1rem !important; }
           .hx-hero-img { max-height: 18vh; }
-          .hx-brands-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-          .hx-brand-name { font-size: 18px; }
-          .hx-brand-content { padding: 16px; }
-          .hx-brand-link { padding: 6px 16px; font-size: 8px; }
+          .hx-brand-name { font-size: 13px; }
+          .hx-brand-link { font-size: 8px; }
         }
 
         /* Accessibility */

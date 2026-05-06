@@ -140,7 +140,8 @@ export default function Wishlist() {
 
     async function moveToCart(item) {
         const itemId = item.id || item._id
-        const productId = item.productid || item.product || itemId
+        const rawProduct = item.productid || item.product || itemId
+        const productId = (rawProduct && (rawProduct._id || rawProduct.id)) ? (rawProduct._id || rawProduct.id) : rawProduct
         setMovingIds((prev) => [...prev, itemId])
         setActionLoading(true)
         try {
@@ -171,8 +172,9 @@ export default function Wishlist() {
         setActionLoading(true)
         try {
             for (const item of visibleWishlist) {
-                const itemId = item.id || item._id
-                const productId = item.productid || item.product || itemId
+                    const itemId = item.id || item._id
+                    const rawProduct = item.productid || item.product || itemId
+                    const productId = (rawProduct && (rawProduct._id || rawProduct.id)) ? (rawProduct._id || rawProduct.id) : rawProduct
                 dispatch(addCart({
                     userId,
                     productId,
@@ -323,7 +325,8 @@ export default function Wishlist() {
                                 const itemId = item.id || item._id
                                 const removing = removingIds.includes(itemId)
                                 const moving = movingIds.includes(itemId)
-                                const productId = item.productid || item.product || ''
+                                const rawProduct = item.productid || item.product || ''
+                                const productId = (rawProduct && (rawProduct._id || rawProduct.id)) ? (rawProduct._id || rawProduct.id) : rawProduct
                                 const price = Number(item.price || 0)
 
                                 return (

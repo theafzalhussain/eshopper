@@ -729,7 +729,7 @@ io.on('connection', (socket) => {
 });
 
 // 1. Sabse pehle Models wale section mein Review model confirm karein
-const Review = mongoose.model('Review', new mongoose.Schema({ 
+const Review = mongoose.models.Review || mongoose.connection.models.Review || mongoose.model('Review', new mongoose.Schema({ 
     userId: String, 
     orderId: String, 
     rating: Number, 
@@ -2202,8 +2202,8 @@ const enqueueEmailJob = async (jobType, payload) => {
 const toJSONCustom = { virtuals: true, versionKey: false, transform: (doc, ret) => { ret.id = ret._id; delete ret._id; } };
 const opts = { toJSON: toJSONCustom, timestamps: true };
 
-const OTPRecord = mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
-const User = mongoose.model('User', new mongoose.Schema({
+const OTPRecord = mongoose.models.OTPRecord || mongoose.connection.models.OTPRecord || mongoose.model('OTPRecord', new mongoose.Schema({ email: String, otp: String, createdAt: { type: Date, expires: 600, default: Date.now } }));
+const User = mongoose.models.User || mongoose.connection.models.User || mongoose.model('User', new mongoose.Schema({
     name: String,
     username: { type: String, unique: true, sparse: true },
     email: { type: String, unique: true, sparse: true },
@@ -2234,17 +2234,17 @@ const User = mongoose.model('User', new mongoose.Schema({
     lockUntil: Date
 }, opts));
 const Product = require('./models/Product');
-const Maincategory = mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
-const Subcategory = mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
-const Brand = mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
+const Maincategory = mongoose.models.Maincategory || mongoose.connection.models.Maincategory || mongoose.model('Maincategory', new mongoose.Schema({ name: String }, opts));
+const Subcategory = mongoose.models.Subcategory || mongoose.connection.models.Subcategory || mongoose.model('Subcategory', new mongoose.Schema({ name: String }, opts));
+const Brand = mongoose.models.Brand || mongoose.connection.models.Brand || mongoose.model('Brand', new mongoose.Schema({ name: String }, opts));
 const Cart = require('./models/Cart');
 const Coupon = require('./models/Coupon');
-const Wishlist = mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
-const Checkout = mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, paidAt: { type: Date, default: null }, razorpayOrderId: { type: String, default: '' }, razorpayPaymentId: { type: String, default: '' }, razorpaySignature: { type: String, default: '' }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, couponCode: { type: String, default: '' }, couponDiscount: { type: Number, default: 0 }, discountAmount: { type: Number, default: 0 }, gstAmount: { type: Number, default: 0 }, giftWrapCharge: { type: Number, default: 0 }, protectionCharge: { type: Number, default: 0 }, ecoCharge: { type: Number, default: 0 }, paymentFee: { type: Number, default: 0 }, extraCharges: { type: Number, default: 0 }, preDiscountTotal: { type: Number, default: 0 }, products: Array }, opts));
+const Wishlist = mongoose.models.Wishlist || mongoose.connection.models.Wishlist || mongoose.model('Wishlist', new mongoose.Schema({ userid: String, productid: String, name: String, color: String, size: String, price: Number, pic: String }, opts));
+const Checkout = mongoose.models.Checkout || mongoose.connection.models.Checkout || mongoose.model('Checkout', new mongoose.Schema({ userid: String, paymentmode: String, orderstatus: { type: String, default: "Order Placed" }, paymentstatus: { type: String, default: "Pending" }, paidAt: { type: Date, default: null }, razorpayOrderId: { type: String, default: '' }, razorpayPaymentId: { type: String, default: '' }, razorpaySignature: { type: String, default: '' }, totalAmount: Number, shippingAmount: Number, finalAmount: Number, couponCode: { type: String, default: '' }, couponDiscount: { type: Number, default: 0 }, discountAmount: { type: Number, default: 0 }, gstAmount: { type: Number, default: 0 }, giftWrapCharge: { type: Number, default: 0 }, protectionCharge: { type: Number, default: 0 }, ecoCharge: { type: Number, default: 0 }, paymentFee: { type: Number, default: 0 }, extraCharges: { type: Number, default: 0 }, preDiscountTotal: { type: Number, default: 0 }, products: Array }, opts));
 const Order = require('./models/Order');
-const Contact = mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" } }, opts));
-const Newslatter = mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
-const FooterConfig = mongoose.model('FooterConfig', new mongoose.Schema({
+const Contact = mongoose.models.Contact || mongoose.connection.models.Contact || mongoose.model('Contact', new mongoose.Schema({ name: String, email: String, phone: String, subject: String, message: String, status: { type: String, default: "Active" } }, opts));
+const Newslatter = mongoose.models.Newslatter || mongoose.connection.models.Newslatter || mongoose.model('Newslatter', new mongoose.Schema({ email: { type: String, unique: true } }, opts));
+const FooterConfig = mongoose.models.FooterConfig || mongoose.connection.models.FooterConfig || mongoose.model('FooterConfig', new mongoose.Schema({
     brand: {
         name: { type: String, default: 'eShopper Boutique Luxe' },
         tagline: { type: String, default: 'Trusted Premium Commerce Experience' }
@@ -4237,6 +4237,10 @@ async function startServer() {
         // --- server.js AI REFACTOR START ---
         const geminiApiKey = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
         const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
+        let cachedChatCatalog = "";
+        let cachedChatCatalogAt = 0;
+        const CHAT_CATALOG_TTL_MS = 5 * 60 * 1000;
+        const CHAT_CATALOG_LIMIT = Math.max(12, Number(process.env.CHATBOT_CATALOG_LIMIT || 30));
         let cachedGenerateModels = [];
         let cachedAt = 0;
         const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
@@ -4337,6 +4341,144 @@ async function startServer() {
             });
 
             return extractGeminiText(response.data);
+        };
+
+        const normalizeCatalogNumber = (value) => {
+            const num = Number(value);
+            return Number.isFinite(num) ? num : 0;
+        };
+
+        const normalizeCatalogList = (value) => {
+            if (!value) return '';
+            if (Array.isArray(value)) {
+                return value.map((item) => String(item || '').trim()).filter(Boolean).join(', ');
+            }
+            return String(value || '').trim();
+        };
+
+        const getChatCatalogSummary = async () => {
+            const now = Date.now();
+            if (cachedChatCatalog && (now - cachedChatCatalogAt) < CHAT_CATALOG_TTL_MS) {
+                return cachedChatCatalog;
+            }
+
+            const allProducts = await Product.find(
+                {},
+                'name maincategory subcategory brand color size baseprice finalprice discount rating reviews newArrival isSale createdAt'
+            ).lean();
+
+            if (!allProducts.length) {
+                cachedChatCatalog = 'Catalog is currently empty.';
+                cachedChatCatalogAt = now;
+                return cachedChatCatalog;
+            }
+
+            const priceValues = allProducts
+                .map((product) => normalizeCatalogNumber(product.finalprice || product.baseprice))
+                .filter((value) => value > 0);
+
+            const minPrice = priceValues.length ? Math.min(...priceValues) : 0;
+            const maxPrice = priceValues.length ? Math.max(...priceValues) : 0;
+            const avgPrice = priceValues.length
+                ? Math.round(priceValues.reduce((sum, value) => sum + value, 0) / priceValues.length)
+                : 0;
+
+            const discounted = allProducts.filter((product) => normalizeCatalogNumber(product.discount) > 0);
+            const avgDiscount = discounted.length
+                ? Math.round(discounted.reduce((sum, product) => sum + normalizeCatalogNumber(product.discount), 0) / discounted.length)
+                : 0;
+
+            const categoryCounts = {};
+            const brandCounts = {};
+            let newArrivals = 0;
+            let onSale = 0;
+
+            allProducts.forEach((product) => {
+                const category = String(product.maincategory || '').trim();
+                if (category) {
+                    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+                }
+
+                const brand = String(product.brand || '').trim();
+                if (brand) {
+                    brandCounts[brand] = (brandCounts[brand] || 0) + 1;
+                }
+
+                if (product.newArrival) newArrivals += 1;
+                if (product.isSale || normalizeCatalogNumber(product.discount) > 0) onSale += 1;
+            });
+
+            const topCategories = Object.entries(categoryCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8)
+                .map(([name]) => name);
+
+            const topBrands = Object.entries(brandCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6)
+                .map(([name]) => name);
+
+            const scored = allProducts
+                .map((product) => {
+                    let score = 0;
+                    if (product.newArrival) score += 3;
+                    if (product.isSale || normalizeCatalogNumber(product.discount) > 0) score += 2;
+                    if (normalizeCatalogNumber(product.rating) >= 4.5) score += 2;
+                    if (normalizeCatalogNumber(product.reviews) >= 5) score += 1;
+                    return { product, score };
+                })
+                .sort((a, b) => b.score - a.score);
+
+            const sampleProducts = scored.map(({ product }) => product).slice(0, CHAT_CATALOG_LIMIT);
+
+            const formatProductLine = (product) => {
+                const name = String(product.name || 'Product').trim();
+                const category = [product.maincategory, product.subcategory].filter(Boolean).join('/');
+                const brand = product.brand ? `Brand: ${product.brand}` : '';
+                const color = product.color ? `Color: ${product.color}` : '';
+                const sizes = normalizeCatalogList(product.size);
+                const sizeText = sizes ? `Sizes: ${sizes}` : '';
+                const basePrice = normalizeCatalogNumber(product.baseprice);
+                const finalPrice = normalizeCatalogNumber(product.finalprice || basePrice);
+                const discount = normalizeCatalogNumber(product.discount);
+                let priceText = '';
+                if (finalPrice > 0) {
+                    priceText = basePrice > 0 && discount > 0
+                        ? `Price: Rs.${finalPrice} (MRP Rs.${basePrice}, ${discount}% off)`
+                        : `Price: Rs.${finalPrice}`;
+                } else if (basePrice > 0) {
+                    priceText = `Price: Rs.${basePrice}`;
+                }
+                const tags = [product.newArrival ? 'new' : '', product.isSale ? 'sale' : '']
+                    .filter(Boolean)
+                    .join(', ');
+                const tagText = tags ? `Tags: ${tags}` : '';
+                const parts = [
+                    category ? `Category: ${category}` : '',
+                    brand,
+                    color,
+                    sizeText,
+                    priceText,
+                    tagText
+                ].filter(Boolean);
+
+                return `- ${name}${parts.length ? ` | ${parts.join(' | ')}` : ''}`;
+            };
+
+            const summaryLines = [
+                `Catalog stats: ${allProducts.length} products. Price range: Rs.${minPrice}-${maxPrice} (avg Rs.${avgPrice}).`,
+                `New arrivals: ${newArrivals}. On sale: ${onSale}. Average discount: ${avgDiscount}%.`,
+                topCategories.length ? `Popular categories: ${topCategories.join(', ')}.` : '',
+                topBrands.length ? `Top brands: ${topBrands.join(', ')}.` : ''
+            ].filter(Boolean).join('\n');
+
+            const productLines = sampleProducts.length
+                ? `Catalog sample:\n${sampleProducts.map(formatProductLine).join('\n')}`
+                : 'Catalog sample: None.';
+
+            cachedChatCatalog = `${summaryLines}\n\n${productLines}`;
+            cachedChatCatalogAt = now;
+            return cachedChatCatalog;
         };
 
         // 🔴 REAL-TIME ORDER TRACKING - Get single order
@@ -5510,23 +5652,26 @@ async function startServer() {
                 if (!genAI) {
                     console.error("⚠️ GEMINI_API_KEY missing or invalid");
                     return res.json({
-                        text: "I’m here to help with fashion recommendations. Our AI service is refreshing right now—please try again in a moment.",
+                        text: "I'm here to help with fashion recommendations. Our AI service is refreshing right now. Please try again in a moment.",
                         fallback: true
                     });
                 }
 
                 console.log(`💬 AI Context check for: ${prompt.substring(0, 30)}...`);
 
-                // 📊 DATABASE SYNC: Products की लिस्ट निकाल रहे हैं
-                const allProducts = await Product.find({}, 'name baseprice maincategory');
-                const productDataSummary = allProducts.map(p => `- ${p.name} (Rs.${p.baseprice})`).slice(0, 15).join("\n");
+                // Database sync: fetch product catalog summary
+                const productDataSummary = await getChatCatalogSummary();
 
-                const systemInstruction = `You are the Expert Fashion Stylist for 'eShopper Boutique Luxe'. 
-            Your only goal is to suggest clothes from this inventory:\n${productDataSummary}\n
-            Rules: 
-            1. Suggest real items from the list above.
-            2. Be extremely polite and stylish.
-            3. Keep answers under 3 lines.`;
+                const systemInstruction = `You are Eshopper's highly intelligent AI Fashion Consultant.
+Catalog snapshot (Active Store Products):\n${productDataSummary}\n
+Guidelines:
+1. Reply naturally in the user's language (English, Hindi, or Hinglish).
+2. **CRITICAL CATEGORY FILTERING**: 
+   - If user asks for "Men" or "Mens", suggest ONLY Men's products.
+   - If user asks for "Women", "Ladies", or "Female", suggest ONLY Women's products.
+   - If user asks for "Kids", "Girls", or "Boys", suggest ONLY Kids'/Children's products. Do NOT mix adult products when kids are requested.
+3. Read the Catalog Snapshot carefully and ONLY suggest products that actually exist in it. Do not invent products.
+4. Be friendly, helpful, and concise (3-5 sentences). Mention exact prices and discounts if recommending an item.`;
 
                 // 🛠️ ROLE FIX: Roles normalized for stable prompt composition
                 let cleanHistory = (history || []).map(m => ({
@@ -5626,7 +5771,7 @@ async function startServer() {
             } catch (error) {
                 console.error("❌ Chat API Error:", error.message);
                 res.json({
-                    text: "I’m having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
+                    text: "I'm having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
                     fallback: true
                 });
             }

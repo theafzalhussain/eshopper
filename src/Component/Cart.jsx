@@ -376,7 +376,8 @@ export default function Cart() {
     async function moveToWishlist(item) {
         const itemId = item._id || item.id;
         const user = userId || localStorage.getItem('userid');
-        const product = item.productid || item.product?._id || item.product || itemId;
+        const rawProduct = item.productid || item.product || itemId;
+        const product = (rawProduct && (rawProduct._id || rawProduct.id)) ? (rawProduct._id || rawProduct.id) : rawProduct;
         if (!user) { toast.error('Please login first.'); return; }
         setMovingIds((prev) => [...prev, itemId]);
         try {
@@ -399,7 +400,13 @@ export default function Cart() {
                 }
             }
             await axios.post('/api/wishlist', {
-                user, product, size, color, price, pic, name,
+                userid: user,
+                productid: product,
+                size,
+                color,
+                price,
+                pic,
+                name,
                 quantity: item.quantity || item.qty || 1
             });
             await removeProduct(itemId, true);
@@ -1355,24 +1362,62 @@ export default function Cart() {
                     </div>
                 ) : !cartLoading && (
                     <motion.div
-                        className="lx-empty"
+                        className="lx-empty-premium"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <div className="lx-eico lx-eico-bag">
-                            <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                                <path d="M3 6h18" />
-                                <path d="M16 10a4 4 0 0 1-8 0" />
-                            </svg>
+                        {/* Trust Badges Section */}
+                        <div className="lx-empty-trust-section">
+                            <div className="lx-empty-trust-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                <span>100% Secure</span>
+                            </div>
+                            <div className="lx-empty-trust-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/></svg>
+                                <span>Easy Returns</span>
+                            </div>
+                            <div className="lx-empty-trust-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                                <span>Free Shipping</span>
+                            </div>
+                            <div className="lx-empty-trust-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L15.09 8.26H22L17.55 12.52L20.64 18.78L12 13.61L3.36 18.78L6.45 12.52L2 8.26H8.91L12 2Z"/></svg>
+                                <span>Authentic</span>
+                            </div>
                         </div>
-                        <h4>Your bag is empty</h4>
-                        <p>Looks like you haven't added anything yet. Let's pick something special for you.</p>
-                        <Link to="/shop/All" className="lx-ebtn">START SHOPPING</Link>
-                        {savedItems.length > 0 && (
-                            <p className="lx-empty-hint">You have <strong>{savedItems.length}</strong> item{savedItems.length !== 1 ? 's' : ''} saved for later.</p>
-                        )}
+
+                        {/* Empty Bag Section */}
+                        <div className="lx-empty">
+                            <div className="lx-eico lx-eico-bag-premium">
+                                <svg width="90" height="90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                                    <path d="M3 6h18" />
+                                    <path d="M16 10a4 4 0 0 1-8 0" />
+                                </svg>
+                            </div>
+                            <h4 className="lx-empty-title">Your bag is empty</h4>
+                            <p className="lx-empty-subtitle">Looks like you haven't added anything yet. Let's pick something special for you.</p>
+                            
+                            <div className="lx-empty-actions">
+                                <Link to="/shop/All" className="lx-ebtn lx-ebtn-primary">
+                                    <span>START SHOPPING</span>
+                                </Link>
+                            </div>
+
+                            {savedItems.length > 0 && (
+                                <p className="lx-empty-hint">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    You have <strong>{savedItems.length}</strong> item{savedItems.length !== 1 ? 's' : ''} saved for later.
+                                </p>
+                            )}
+
+                            {/* Optional: Quick Links */}
+                            <div className="lx-empty-quick-links">
+                                <Link to="/shop/All" className="lx-quick-link">Shop New Arrivals</Link>
+                                <Link to="/shop/All" className="lx-quick-link">View Bestsellers</Link>
+                            </div>
+                        </div>
                     </motion.div>
                 )}
             </div>
@@ -2420,6 +2465,145 @@ export default function Cart() {
                     box-shadow: 0 4px 14px rgba(255,63,108,0.28);
                 }
                 .lx-ebtn:hover { background: var(--pink-dark); border-color: var(--pink-dark); color: #fff; transform: translateY(-2px); box-shadow: 0 8px 22px rgba(255,63,108,0.4); }
+
+                /* Premium Empty State */
+                .lx-empty-premium {
+                    padding: 40px 24px;
+                }
+                .lx-empty-trust-section {
+                    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px;
+                    margin-bottom: 48px; padding: 0;
+                    max-width: 800px; margin-left: auto; margin-right: auto;
+                }
+                .lx-empty-trust-item {
+                    display: flex; flex-direction: column; align-items: center; gap: 8px;
+                    padding: 14px 12px;
+                    background: var(--white); border: 1px solid var(--line);
+                    border-radius: var(--r-lg); text-align: center;
+                    box-shadow: var(--shadow);
+                    transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+                    font-size: 12px; font-weight: 600; color: var(--ink);
+                }
+                .lx-empty-trust-item:hover {
+                    border-color: var(--gold); box-shadow: 0 4px 16px rgba(201,169,110,0.15);
+                    transform: translateY(-2px);
+                }
+                .lx-empty-trust-item svg { color: var(--gold); flex-shrink: 0; }
+                
+                .lx-empty {
+                    text-align: center; padding: 80px 24px;
+                    background: linear-gradient(135deg, var(--white) 0%, #fafbfc 100%);
+                    border: 1px solid var(--line);
+                    border-radius: var(--r-lg); box-shadow: var(--shadow-lg);
+                    position: relative; overflow: hidden;
+                }
+                .lx-empty::before {
+                    content: ''; position: absolute; inset: 0;
+                    background: radial-gradient(ellipse at 50% 50%, rgba(201,169,110,0.04) 0%, transparent 70%);
+                    pointer-events: none;
+                }
+                .lx-empty > * { position: relative; z-index: 1; }
+                
+                .lx-eico-bag-premium {
+                    color: var(--pink);
+                    background: linear-gradient(135deg, var(--pink-soft) 0%, #ffe4ec 100%);
+                    width: 140px; height: 140px;
+                    border-radius: 50%; display: flex;
+                    align-items: center; justify-content: center;
+                    margin: 0 auto 32px;
+                    box-shadow: 0 8px 28px rgba(255,63,108,0.25);
+                    animation: float-bag 3s ease-in-out infinite;
+                }
+                @keyframes float-bag { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+
+                .lx-empty-title {
+                    font-family: var(--serif); font-size: 36px; font-weight: 700;
+                    color: var(--ink); margin: 0 0 12px;
+                    letter-spacing: -0.3px;
+                }
+                .lx-empty-subtitle {
+                    font-size: 15px; color: var(--ink-soft);
+                    margin: 0 auto 32px; max-width: 480px;
+                    line-height: 1.6; letter-spacing: 0.2px;
+                }
+                
+                .lx-empty-actions {
+                    display: flex; gap: 12px; justify-content: center;
+                    flex-wrap: wrap; margin-bottom: 24px;
+                }
+                .lx-ebtn-primary {
+                    background: linear-gradient(135deg, var(--pink) 0%, var(--pink-dark) 100%);
+                    border: 1px solid var(--pink-dark);
+                    padding: 16px 40px;
+                    font-size: 13px; font-weight: 800; letter-spacing: 1.8px;
+                    border-radius: 8px; box-shadow: 0 6px 20px rgba(255,63,108,0.35);
+                    transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+                    position: relative;
+                }
+                .lx-ebtn-primary::before {
+                    content: ''; position: absolute; inset: 0;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                    border-radius: 8px;
+                    opacity: 0; transition: opacity 0.3s;
+                }
+                .lx-ebtn-primary:hover {
+                    background: linear-gradient(135deg, var(--pink-dark) 0%, #e63853 100%);
+                    transform: translateY(-3px);
+                    box-shadow: 0 10px 28px rgba(255,63,108,0.45);
+                }
+                .lx-ebtn-primary:hover::before { opacity: 1; }
+
+                .lx-empty-quick-links {
+                    display: flex; gap: 12px; justify-content: center;
+                    flex-wrap: wrap; margin-top: 28px; padding-top: 24px;
+                    border-top: 1px solid rgba(0, 0, 0, 0.05);
+                }
+                .lx-quick-link {
+                    padding: 10px 18px; border-radius: 6px;
+                    font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+                    color: var(--pink); background: var(--pink-soft);
+                    border: 1px solid rgba(255,63,108,0.3);
+                    text-decoration: none;
+                    transition: all 0.2s;
+                    cursor: pointer;
+                }
+                .lx-quick-link:hover {
+                    background: var(--pink); color: #fff;
+                    border-color: var(--pink);
+                    box-shadow: 0 4px 12px rgba(255,63,108,0.25);
+                }
+
+                .lx-empty-hint {
+                    font-size: 13px; color: var(--ink-soft);
+                    margin: 18px auto 0; display: flex; align-items: center;
+                    justify-content: center; gap: 8px; max-width: 420px;
+                }
+                .lx-empty-hint svg { flex-shrink: 0; }
+                .lx-empty-hint strong { color: var(--gold); font-weight: 700; }
+
+                /* Mobile Responsive */
+                @media (max-width: 768px) {
+                    .lx-empty-trust-section {
+                        grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 32px;
+                    }
+                    .lx-empty-trust-item { padding: 12px 8px; font-size: 11px; }
+                    .lx-empty { padding: 60px 16px; }
+                    .lx-eico-bag-premium { width: 110px; height: 110px; margin-bottom: 24px; }
+                    .lx-empty-title { font-size: 28px; }
+                    .lx-empty-subtitle { font-size: 14px; margin-bottom: 24px; }
+                    .lx-ebtn-primary { padding: 14px 32px; font-size: 12px; }
+                    .lx-empty-actions { margin-bottom: 20px; }
+                }
+                @media (max-width: 480px) {
+                    .lx-empty-trust-section { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 24px; }
+                    .lx-empty-trust-item { padding: 10px 6px; font-size: 10px; }
+                    .lx-empty { padding: 40px 12px; }
+                    .lx-eico-bag-premium { width: 90px; height: 90px; margin-bottom: 20px; }
+                    .lx-empty-title { font-size: 24px; }
+                    .lx-empty-subtitle { font-size: 13px; margin-bottom: 20px; }
+                    .lx-ebtn-primary { padding: 12px 24px; font-size: 11px; letter-spacing: 1.2px; }
+                    .lx-quick-link { padding: 8px 14px; font-size: 11px; }
+                }
 
                 /* Skeletons */
                 .lx-skel { pointer-events: none; }

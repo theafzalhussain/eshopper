@@ -1695,19 +1695,26 @@ export default function Shop() {
                     .mp-recent-card { flex: 0 0 140px; }
                 }
                 @media (max-width: 500px) {
-                    .mp-grid { grid-template-columns: 1fr; }
-                    .mp-grid.compact { grid-template-columns: 1fr; }
+                    .mp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+                    .mp-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+                    .mp-cbody { padding: 8px 10px 10px; gap: 3px; }
+                    .mp-cbrand { font-size: 12px; }
+                    .mp-cname { font-size: 11px; }
+                    .mp-ccat { font-size: 9px; }
+                    .mp-price { font-size: 13px; }
+                    .mp-orig { font-size: 11px; }
+                    .mp-addbtn { font-size: 9px; padding: 7px 9px; }
                 }
                 @media (max-width: 420px) {
                     .mp-hero-title { font-size: 1.9rem; }
                     .mp-hstat span { font-size: 24px; }
-                    .mp-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-                    .mp-grid { grid-template-columns: 1fr; gap: 8px; }
-                    .mp-cbody { padding: 8px 10px 10px; gap: 3px; }
-                    .mp-cbrand { font-size: 12px; }
-                    .mp-cname { font-size: 11px; }
-                    .mp-price { font-size: 14px; }
-                    .mp-addbtn { font-size: 9px; padding: 8px 10px; }
+                    .mp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+                    .mp-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+                    .mp-cbody { padding: 7px 9px 9px; gap: 2px; }
+                    .mp-cbrand { font-size: 11px; }
+                    .mp-cname { font-size: 10px; }
+                    .mp-price { font-size: 12px; }
+                    .mp-addbtn { font-size: 8px; padding: 7px 9px; }
                     .mp-sbtn { min-width: 24px; height: 22px; font-size: 9px; }
                     .mp-ribbon { font-size: 9px; padding: 5px 14px 5px 8px; }
                 }

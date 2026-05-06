@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
@@ -10,26 +10,30 @@ import BuyerProfile from './BuyerProfile'
 import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
-import { ArrowRight, ShoppingBag, Clock3, Heart, ShoppingCart, Package, Shield, Settings, LayoutGrid, Sparkles, Star, UserCog } from 'lucide-react'
+import {
+    ArrowRight, ShoppingBag, Clock3, Heart, ShoppingCart,
+    Package, Shield, Settings, LayoutGrid, Sparkles, Star,
+    UserCog, Crown, Award, ChevronRight, TrendingUp, Zap,
+    Gift, Headphones, Truck, Wifi, WifiOff, CheckCircle2,
+    Circle, Dot, IndianRupee, BarChart3, Target, Bell
+} from 'lucide-react'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 
+/* ══════════════════════════════════════════════════════════════
+   PURE LOGIC — ZERO CHANGES (backend / Redux / socket untouched)
+══════════════════════════════════════════════════════════════ */
 function normalizeProfileUserPayload(rawUser = {}, prevUser = {}) {
     const source = (rawUser && typeof rawUser === 'object' && rawUser.user && typeof rawUser.user === 'object')
-        ? rawUser.user
-        : rawUser
+        ? rawUser.user : rawUser
 
     const pickMapped = (keys = []) => {
-        for (const key of keys) {
-            if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined && source[key] !== null) {
+        for (const key of keys)
+            if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined && source[key] !== null)
                 return source[key]
-            }
-        }
-        for (const key of keys) {
-            if (Object.prototype.hasOwnProperty.call(prevUser, key) && prevUser[key] !== undefined && prevUser[key] !== null) {
+        for (const key of keys)
+            if (Object.prototype.hasOwnProperty.call(prevUser, key) && prevUser[key] !== undefined && prevUser[key] !== null)
                 return prevUser[key]
-            }
-        }
         return ''
     }
 
@@ -53,30 +57,717 @@ function normalizeProfileUserPayload(rawUser = {}, prevUser = {}) {
     }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   STYLES
+══════════════════════════════════════════════════════════════ */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,600&display=swap');
+
+/* ── RESET / BASE ─────────────────────────────────────────── */
+.pf2 { font-family: 'Inter', sans-serif; background: #f4f3ef; min-height: 100vh; padding-bottom: 80px; }
+.pf2 *, .pf2 *::before, .pf2 *::after { box-sizing: border-box; }
+.pf2 a { text-decoration: none; }
+.pf2 button { font-family: 'Inter', sans-serif; }
+
+/* ── HERO ─────────────────────────────────────────────────── */
+.pf2-hero {
+    position: relative;
+    background: #0a0a0a;
+    min-height: 240px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    padding-bottom: 0;
+}
+.pf2-hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 60% 80% at 80% 20%, rgba(201,168,76,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 60% at 10% 80%, rgba(201,168,76,0.08) 0%, transparent 60%),
+        linear-gradient(160deg, #0a0a0a 0%, #13100a 50%, #0f0f0f 100%);
+}
+.pf2-hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+}
+.pf2-hero-inner {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 48px 24px 0;
+    display: flex;
+    align-items: flex-end;
+    gap: 0;
+    flex-wrap: wrap;
+}
+.pf2-hero-text { flex: 1; padding-bottom: 40px; }
+.pf2-hero-greeting {
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(201,168,76,0.7);
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.pf2-hero-greeting::before, .pf2-hero-greeting::after {
+    content: '';
+    width: 28px; height: 1px;
+    background: rgba(201,168,76,0.4);
+    display: block;
+}
+.pf2-hero-name {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(30px, 5vw, 46px);
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 8px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+}
+.pf2-hero-sub {
+    font-size: 13.5px;
+    color: rgba(255,255,255,0.45);
+    margin: 0 0 20px;
+    letter-spacing: 0.01em;
+}
+.pf2-socket-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+}
+.pf2-socket-dot.live {
+    background: rgba(16,185,129,0.12);
+    color: #10b981;
+    border: 1px solid rgba(16,185,129,0.2);
+}
+.pf2-socket-dot.offline {
+    background: rgba(239,68,68,0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.18);
+}
+.pf2-socket-dot .blink {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pf2-blink 1.4s infinite;
+}
+@keyframes pf2-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* ── STAT CARDS (overlap hero) ───────────────────────────── */
+.pf2-stats-row {
+    display: flex;
+    gap: 10px;
+    max-width: 1200px;
+    margin: -22px auto 28px;
+    padding: 0 24px;
+    position: relative;
+    z-index: 10;
+    flex-wrap: wrap;
+}
+.pf2-stat {
+    flex: 1;
+    min-width: 130px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.06);
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: transform 0.22s, box-shadow 0.22s;
+    cursor: default;
+}
+.pf2-stat:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.12); }
+.pf2-stat-icon {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.pf2-stat-val { font-size: 21px; font-weight: 800; color: #0f0f0f; line-height: 1; margin-bottom: 3px; }
+.pf2-stat-lbl { font-size: 10.5px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* ── CONTAINER ──────────────────────────────────────────── */
+.pf2-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* ── TIER PROGRESS ──────────────────────────────────────── */
+.pf2-tier-bar {
+    background: #fff;
+    border-radius: 18px;
+    border: 1px solid rgba(0,0,0,0.06);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+.pf2-tier-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #C9A84C, #9A7A20);
+    box-shadow: 0 6px 18px rgba(201,168,76,0.3);
+}
+.pf2-tier-texts { flex: 1; min-width: 0; }
+.pf2-tier-name {
+    font-size: 15px; font-weight: 800; color: #0f0f0f; margin-bottom: 3px;
+    display: flex; align-items: center; gap: 8px;
+}
+.pf2-tier-sub { font-size: 12px; color: #6b7280; margin-bottom: 9px; }
+.pf2-progress-track {
+    height: 6px; background: #f3f4f6; border-radius: 999px; overflow: hidden; position: relative;
+}
+.pf2-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #C9A84C, #E8C97A);
+    position: relative;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+}
+.pf2-progress-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 20px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5));
+    animation: pf2-shimmer 1.8s infinite;
+}
+@keyframes pf2-shimmer { 0% { opacity: 0 } 50% { opacity: 1 } 100% { opacity: 0 } }
+.pf2-tier-milestones {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.pf2-tier-milestone {
+    font-size: 11px; font-weight: 700; color: #9ca3af; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.pf2-tier-milestone.reached { color: #C9A84C; }
+.pf2-tier-milestone-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #e5e7eb;
+    border: 1.5px solid transparent;
+}
+.pf2-tier-milestone.reached .pf2-tier-milestone-dot {
+    background: #C9A84C;
+    border-color: rgba(201,168,76,0.3);
+    box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
+}
+
+/* ── TABS ─────────────────────────────────────────────────── */
+.pf2-tabs-wrap {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.06);
+    padding: 6px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.pf2-tabs-wrap::-webkit-scrollbar { display: none; }
+.pf2-tab {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+.pf2-tab:hover { background: #f9f8f5; color: #0f0f0f; }
+.pf2-tab.active {
+    background: #0a0a0a;
+    color: #E8C97A;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.pf2-layout { display: flex; gap: 20px;  }
+.pf2-sidebar { flex: 0 0 288px; max-width: 300px; }
+.pf2-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+@media (max-width: 992px) {
+    .pf2-layout { flex-direction: column; }
+    .pf2-sidebar { flex: 0 0 100%; max-width: 100%; }
+}
+@media (max-width: 640px) {
+    .pf2-hero-inner { padding: 36px 16px 0; }
+    .pf2-stats-row { padding: 0 16px; gap: 8px; }
+    .pf2-stat { min-width: 125px; }
+    .pf2-container { padding: 0 16px; }
+    .pf2-tier-bar { flex-direction: column; text-align: center; }
+    .pf2-tier-milestones { justify-content: center; }
+}
+    @media (max-width: 350px) {
+    .pf2-stat {
+    padding: 16px 8px;
+    max-width: 100%;
+    }    
+}
+
+/* ── SIDEBAR CARD ────────────────────────────────────────── */
+.pf2-profile-card {
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid rgba(0,0,0,0.06);
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    position: sticky;
+    top: 120px;
+    }
+    .pf2-profile-card-top {
+    background: linear-gradient(160deg, #0a0a0a 0%, #18130a 100%);
+    padding: 40px 24px 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.pf2-profile-card-top::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(201,168,76,0.2), transparent 70%);
+    border-radius: 50%;
+}
+.pf2-avatar-wrap {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 16px;
+}
+.pf2-avatar-spin {
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: conic-gradient(#C9A84C 0%, #E8C97A 35%, #9A7A20 65%, #C9A84C 100%);
+    z-index: 0;
+}
+.pf2-avatar-img, .pf2-avatar-fallback {
+    position: relative;
+    z-index: 1;
+    width: 145px; height: 145px;
+    border-radius: 50%;
+    border: 6px solid #fff;
+    display: block;
+    object-fit: cover;
+}
+.pf2-avatar-fallback {
+    background: linear-gradient(135deg, #1a1305, #2a1f0a);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 42px; font-weight: 700; color: #C9A84C;
+}
+.pf2-card-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px; font-weight: 700; color: #fff;
+    margin: 0 0 6px; line-height: 1.2; letter-spacing: 0.5px;
+}
+.pf2-card-email { font-size: 14px; color: rgba(255,255,255,0.6); margin: 0 0 20px; word-break: break-all; }
+.pf2-card-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 0;
+}
+.pf2-card-badge.silver {
+    background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.2);
+}
+.pf2-card-badge.gold {
+    background: rgba(201,168,76,0.15); color: #E8C97A; border: 1px solid rgba(201,168,76,0.25);
+}
+.pf2-card-badge.elite {
+    background: linear-gradient(135deg, #C9A84C, #9A7A20); color: #fff;
+    box-shadow: 0 4px 14px rgba(201,168,76,0.35);
+}
+.pf2-card-wave {
+    height: 24px;
+    background: #fff;
+    margin-top: 20px;
+    border-radius: 24px 24px 0 0;
+}
+.pf2-card-bottom { padding: 20px 28px 28px; }
+.pf2-mini-stats {
+    display: flex; justify-content: space-around;
+    margin-bottom: 24px; padding-bottom: 24px;
+    border-bottom: 1px solid rgba(201,168,76,0.1);
+}
+.pf2-mini-stat-val { font-size: 20px; font-weight: 800; color: #C9A84C; line-height: 1; margin-bottom: 6px; }
+.pf2-mini-stat-lbl { font-size: 11px; color: #9ca3af; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+.pf2-mini-divider { width: 1px; background: rgba(201,168,76,0.1); margin: 4px 0; }
+.pf2-edit-btn {
+    width: 100%; padding: 16px;
+    background: #0a0a0a; color: #E8C97A;
+    border: 1.5px solid #0a0a0a;
+    border-radius: 12px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
+    text-decoration: none;
+}
+.pf2-edit-btn:hover {
+    background: #C9A84C; border-color: #C9A84C; color: #0a0a0a;
+    box-shadow: 0 8px 26px rgba(201,168,76,0.3);
+    transform: translateY(-2px);
+    text-decoration: none;
+}
+
+/* ── SECTION CARD ────────────────────────────────────────── */
+.pf2-card {
+    background: #fff;
+    border-radius: 18px;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 2px 14px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+.pf2-card-header {
+    padding: 20px 22px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+.pf2-card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px; font-weight: 600; color: #0f0f0f;
+    display: flex; align-items: center; gap: 8px;
+}
+.pf2-card-body { padding: 0 22px 22px; }
+
+/* ── QUICK ACTIONS ───────────────────────────────────────── */
+.pf2-quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 480px) { .pf2-quick-grid { grid-template-columns: 1fr; } }
+.pf2-quick-btn {
+    padding: 20px 18px;
+    border-radius: 14px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.24s cubic-bezier(0.4,0,0.2,1);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+    background: #f8f7f3;
+}
+.pf2-quick-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.09); }
+.pf2-quick-btn.gold { border-color: rgba(201,168,76,0.25); }
+.pf2-quick-btn.gold:hover { border-color: #C9A84C; background: #fdf9ef; }
+.pf2-quick-btn.green { border-color: rgba(16,185,129,0.2); }
+.pf2-quick-btn.green:hover { border-color: #10b981; background: #f0fdf8; }
+.pf2-quick-btn.dark { background: #0a0a0a; border-color: rgba(201,168,76,0.2); }
+.pf2-quick-btn.dark:hover { border-color: rgba(201,168,76,0.5); box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
+.pf2-quick-icon {
+    width: 46px; height: 46px;
+    border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.pf2-quick-title { font-size: 14px; font-weight: 700; color: #0f0f0f; margin-bottom: 2px; }
+.pf2-quick-sub   { font-size: 12px; color: #9ca3af; }
+.pf2-quick-btn.dark .pf2-quick-title { color: #fff; }
+.pf2-quick-btn.dark .pf2-quick-sub   { color: rgba(255,255,255,0.45); }
+.pf2-quick-arrow { margin-left: auto; flex-shrink: 0; }
+
+/* ── SPENDING SUMMARY ────────────────────────────────────── */
+.pf2-spending-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+@media (max-width: 480px) { .pf2-spending-row { grid-template-columns: 1fr; } }
+.pf2-spend-item {
+    padding: 16px 14px;
+    border-radius: 13px;
+    background: #f8f7f3;
+    border: 1px solid rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+.pf2-spend-item:hover { transform: translateY(-2px); }
+.pf2-spend-icon-wrap {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+}
+.pf2-spend-val { font-size: 17px; font-weight: 800; color: #0f0f0f; margin-bottom: 2px; }
+.pf2-spend-lbl { font-size: 10.5px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
+
+/* ── RECENT ORDERS ───────────────────────────────────────── */
+.pf2-view-all {
+    display: flex; align-items: center; gap: 5px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: #0a0a0a;
+    color: #E8C97A;
+    border: 1.5px solid #C9A84C;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+.pf2-view-all:hover { background: #C9A84C; color: #0a0a0a; text-decoration: none; }
+.pf2-order-item {
+    padding: 16px 18px;
+    border: 1.5px solid rgba(0,0,0,0.06);
+    border-radius: 14px;
+    background: #f8f7f3;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+}
+.pf2-order-item:last-child { margin-bottom: 0; }
+.pf2-order-item:hover {
+    border-color: rgba(201,168,76,0.28);
+    background: #fff;
+    box-shadow: 0 8px 26px rgba(0,0,0,0.07);
+    transform: translateY(-2px);
+}
+.pf2-order-item::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 14px 0 0 14px;
+    opacity: 0;
+    transition: opacity 0.22s;
+}
+.pf2-order-item:hover::before { opacity: 1; background: #C9A84C; }
+.pf2-order-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pf2-order-id { font-size: 14px; font-weight: 700; color: #0f0f0f; margin-bottom: 4px; }
+.pf2-order-date { font-size: 11.5px; color: #9ca3af; display: flex; align-items: center; gap: 5px; }
+.pf2-status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 13px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap;
+}
+.pf2-order-bottom {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid rgba(201,168,76,0.1);
+    flex-wrap: wrap; gap: 10px;
+}
+.pf2-order-amount { font-size: 18px; font-weight: 800; color: #C9A84C; }
+.pf2-order-amount-lbl { font-size: 9.5px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.pf2-track-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 8px 18px; border-radius: 999px;
+    background: #0a0a0a; color: #E8C97A;
+    border: 1.5px solid #C9A84C;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    cursor: pointer; transition: all 0.2s;
+}
+.pf2-track-btn:hover { background: #C9A84C; color: #0a0a0a; box-shadow: 0 4px 16px rgba(201,168,76,0.28); }
+
+/* ORDER STATUS STEPPER */
+.pf2-stepper { display: flex; align-items: center; gap: 0; margin: 12px 0 2px; }
+.pf2-step { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+.pf2-step-dot {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid #e5e7eb;
+    background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; color: #9ca3af;
+    position: relative; z-index: 1;
+    transition: all 0.3s;
+}
+.pf2-step-dot.done { background: #C9A84C; border-color: #C9A84C; color: #fff; }
+.pf2-step-dot.active {
+    background: #fff; border-color: #C9A84C; color: #C9A84C;
+    box-shadow: 0 0 0 4px rgba(201,168,76,0.15);
+}
+.pf2-step-lbl { font-size: 9px; color: #9ca3af; font-weight: 600; text-align: center; white-space: nowrap; }
+.pf2-step-lbl.done { color: #C9A84C; }
+.pf2-step-lbl.active { color: #0f0f0f; font-weight: 700; }
+.pf2-step-line {
+    flex: 1; height: 2px;
+    background: #e5e7eb;
+    margin: 0 -1px;
+    position: relative;
+    align-self: flex-start;
+    margin-top: 10px;
+    transition: background 0.3s;
+}
+.pf2-step-line.done { background: linear-gradient(90deg, #C9A84C, #E8C97A); }
+
+/* ── BENEFITS GRID ───────────────────────────────────────── */
+.pf2-benefits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 600px) { .pf2-benefits { grid-template-columns: 1fr 1fr; } }
+.pf2-benefit {
+    padding: 18px 14px; border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.06);
+    background: #f8f7f3; text-align: center;
+    transition: all 0.22s;
+}
+.pf2-benefit:hover { transform: translateY(-3px); border-color: rgba(201,168,76,0.2); box-shadow: 0 8px 22px rgba(0,0,0,0.07); }
+.pf2-benefit-icon {
+    width: 46px; height: 46px;
+    border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 11px;
+}
+.pf2-benefit-title { font-size: 12.5px; font-weight: 700; color: #0f0f0f; margin-bottom: 3px; }
+.pf2-benefit-sub   { font-size: 11px; color: #9ca3af; line-height: 1.4; }
+
+/* ── TRUST BANNER ────────────────────────────────────────── */
+.pf2-trust {
+    display: flex; align-items: center; justify-content: center;
+    gap: 28px; padding: 20px 28px;
+    background: #fff;
+    border: 1px solid rgba(201,168,76,0.14);
+    border-radius: 18px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.04);
+}
+.pf2-trust-item { display: flex; align-items: center; gap: 10px; }
+.pf2-trust-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pf2-trust-title { font-size: 12px; font-weight: 700; color: #0f0f0f; }
+.pf2-trust-sub   { font-size: 10.5px; color: #9ca3af; }
+
+/* ── EMPTY STATE ─────────────────────────────────────────── */
+.pf2-empty {
+    padding: 44px 24px; text-align: center;
+    background: #f8f7f3; border-radius: 14px;
+}
+.pf2-empty-icon { opacity: 0.25; margin-bottom: 14px; }
+.pf2-empty-text { font-size: 13.5px; color: #6b7280; margin-bottom: 18px; }
+.pf2-shop-link {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 11px 28px; border-radius: 999px;
+    background: linear-gradient(135deg, #C9A84C, #9A7A20);
+    color: #fff; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    text-decoration: none; transition: all 0.22s;
+}
+.pf2-shop-link:hover { box-shadow: 0 8px 24px rgba(201,168,76,0.38); transform: translateY(-2px); color: #fff; text-decoration: none; }
+`
+
+/* ══════════════════════════════════════════════════════════════
+   MINI HELPERS
+══════════════════════════════════════════════════════════════ */
+function getGreeting() {
+    const h = new Date().getHours()
+    if (h < 12) return 'Good Morning'
+    if (h < 17) return 'Good Afternoon'
+    return 'Good Evening'
+}
+
+function getInitials(name = '') {
+    return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() || '?'
+}
+
+/* ORDER STEPPER */
+const STEPS = ['Ordered', 'Packed', 'Shipped', 'Delivered']
+function OrderStepper({ status }) {
+    const norm = (s = '') => {
+        const r = String(s).trim().toLowerCase()
+        if (r === 'order placed' || r === 'ordered') return 0
+        if (r === 'packed')    return 1
+        if (r === 'shipped')   return 2
+        if (r === 'delivered') return 3
+        return 0
+    }
+    const cur = norm(status)
+    return (
+        <div className="pf2-stepper">
+            {STEPS.map((step, i) => (
+                <React.Fragment key={step}>
+                    {i > 0 && <div className={`pf2-step-line${i <= cur ? ' done' : ''}`} />}
+                    <div className="pf2-step">
+                        <div className={`pf2-step-dot${i < cur ? ' done' : i === cur ? ' active' : ''}`}>
+                            {i < cur ? <CheckCircle2 size={11} /> : i + 1}
+                        </div>
+                        <div className={`pf2-step-lbl${i < cur ? ' done' : i === cur ? ' active' : ''}`}>{step}</div>
+                    </div>
+                </React.Fragment>
+            ))}
+        </div>
+    )
+}
+
+/* STATUS STYLES */
+function getStatusStyle(status) {
+    const s = String(status).trim().toLowerCase()
+    if (s === 'order placed' || s === 'ordered') return { bg: '#e0f2fe', color: '#0ea5e9' }
+    if (s === 'packed')    return { bg: '#fef3c7', color: '#f59e0b' }
+    if (s === 'shipped')   return { bg: '#fef9c3', color: '#ca8a04' }
+    if (s === 'delivered') return { bg: '#dcfce7', color: '#16a34a' }
+    return { bg: '#e0f2fe', color: '#0ea5e9' }
+}
+function normLabel(status) {
+    const s = String(status).trim().toLowerCase()
+    if (s === 'order placed' || s === 'ordered') return 'Ordered'
+    if (s === 'packed')    return 'Packed'
+    if (s === 'shipped')   return 'Shipped'
+    if (s === 'delivered') return 'Delivered'
+    return 'Ordered'
+}
+
+/* TIER CONFIG */
+const TIER_CONFIG = {
+    Silver: { next: 'Gold',   ordersNeeded: 10, color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+    Gold:   { next: 'Elite',  ordersNeeded: 30, color: '#C9A84C', bg: 'rgba(201,168,76,0.12)'  },
+    Elite:  { next: null,     ordersNeeded: 0,  color: '#C9A84C', bg: 'rgba(201,168,76,0.12)'  },
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+══════════════════════════════════════════════════════════════ */
 export default function Profile() {
-    var users = useSelector((state) => state.UserStateData)
+    /* ── REDUX (untouched) ── */
+    var users    = useSelector((state) => state.UserStateData)
     var wishlist = useSelector((state) => state.WishlistStateData)
-    var orders = useSelector((state) => state.CheckoutStateData)
-    
+    var orders   = useSelector((state) => state.CheckoutStateData)
+
     const cachedProfileAtBoot = (() => {
-        try {
-            const cached = localStorage.getItem('profile_cache')
-            return cached ? JSON.parse(cached) : null
-        } catch (e) {
-            return null
-        }
+        try { const c = localStorage.getItem('profile_cache'); return c ? JSON.parse(c) : null }
+        catch (e) { return null }
     })()
 
-    var [user, setuser] = useState(() => {
-        try {
-            return cachedProfileAtBoot || {}
-        } catch (e) {
-            return {}
-        }
-    })
-    const [recentOrders, setRecentOrders] = useState([])
+    var [user, setuser] = useState(() => { try { return cachedProfileAtBoot || {} } catch (e) { return {} } })
+    const [recentOrders, setRecentOrders]   = useState([])
     const [loadingRecent, setLoadingRecent] = useState(false)
-    const [isLoading, setIsLoading] = useState(true)
+    const [isLoading, setIsLoading]         = useState(true)
     const socketRef = useRef(null)
     const [socketConnected, setSocketConnected] = useState(false)
     const [activeTab, setActiveTab] = useState('overview')
@@ -85,6 +776,7 @@ export default function Profile() {
     var navigate = useNavigate()
     const { membershipType, totalOrders } = useMembership()
 
+    /* ── API CALLS (untouched) ── */
     async function loadLatestUserProfile() {
         const userId = localStorage.getItem("userid")
         if (!userId) return
@@ -99,20 +791,17 @@ export default function Profile() {
                 })
             }
         } catch (e) {
-            // Compatibility fallback for older deployed APIs.
             try {
-                const fallbackRes = await axios.get(`${BASE_URL}/api/user/${userId}`, { timeout: 12000 })
-                if (fallbackRes?.data && typeof fallbackRes.data === 'object') {
+                const fb = await axios.get(`${BASE_URL}/api/user/${userId}`, { timeout: 12000 })
+                if (fb?.data && typeof fb.data === 'object') {
                     hasFreshProfileRef.current = true
                     setuser((prev) => {
-                        const normalized = normalizeProfileUserPayload(fallbackRes.data, prev)
+                        const normalized = normalizeProfileUserPayload(fb.data, prev)
                         localStorage.setItem('profile_cache', JSON.stringify(normalized))
                         return normalized
                     })
                 }
-            } catch (fallbackErr) {
-                // Keep Redux-derived fallback if direct fetch fails.
-            }
+            } catch (_) { }
         }
     }
 
@@ -122,10 +811,8 @@ export default function Profile() {
         dispatch(getCheckout())
     }
 
-    useEffect(() => {
-        getAPIData()
-        loadLatestUserProfile()
-    }, [])
+    /* ── EFFECTS (untouched) ── */
+    useEffect(() => { getAPIData(); loadLatestUserProfile() }, [])
 
     useEffect(() => {
         const handleProfileUpdated = (event) => {
@@ -141,30 +828,18 @@ export default function Profile() {
             loadLatestUserProfile()
             dispatch(getUser())
         }
-
         window.addEventListener('profile-updated', handleProfileUpdated)
         return () => window.removeEventListener('profile-updated', handleProfileUpdated)
     }, [dispatch])
 
-    // Update user state whenever users data changes
     useEffect(() => {
         const userId = localStorage.getItem("userid")
-        if (!userId) {
-            setIsLoading(false)
-            return
-        }
-
-        if (hasFreshProfileRef.current) {
-            setIsLoading(false)
-            return
-        }
-        
-        // Check both 'id' and '_id' fields for MongoDB compatibility
+        if (!userId) { setIsLoading(false); return }
+        if (hasFreshProfileRef.current) { setIsLoading(false); return }
         if (users && users.length > 0) {
             const data = users.find((item) => {
                 const itemId = String(item.id || item._id || item.userid || '')
-                const currentUserId = String(userId)
-                return itemId === currentUserId
+                return itemId === String(userId)
             })
             if (data) {
                 console.log('✅ User data loaded:', { id: data.id || data._id, name: data.name, email: data.email })
@@ -188,783 +863,574 @@ export default function Profile() {
                 setLoadingRecent(true)
                 const { data } = await axios.get(`${BASE_URL}/api/orders/recent/${userId}?limit=4`, { timeout: 10000 })
                 setRecentOrders(Array.isArray(data?.orders) ? data.orders : [])
-            } catch (e) {
-                setRecentOrders([])
-            } finally {
-                setLoadingRecent(false)
-            }
+            } catch (e) { setRecentOrders([]) }
+            finally { setLoadingRecent(false) }
         }
-
         fetchRecentOrders()
     }, [orders.length])
 
-    // 🔴 INITIALIZE SOCKET.IO FOR REAL-TIME STATUS UPDATES IN RECENT STATUS
     useEffect(() => {
         const userId = localStorage.getItem("userid")
         if (!userId) return
-
         let mounted = true
         const socket = io(BASE_URL, {
-            auth: { userId },
-            transports: SOCKET_TRANSPORTS,
-            reconnection: true,
-            reconnectionDelay: 3000,
-            reconnectionDelayMax: 10000,
-            reconnectionAttempts: 3,
-            forceNew: false
+            auth: { userId }, transports: SOCKET_TRANSPORTS,
+            reconnection: true, reconnectionDelay: 3000,
+            reconnectionDelayMax: 10000, reconnectionAttempts: 3, forceNew: false
         })
-
         socketRef.current = socket
-
-        socket.on('connect', () => {
-            if (mounted) {
-                setSocketConnected(true)
-                console.log('✅ Profile Socket connected for real-time updates')
-            }
-        })
-
-        socket.on('disconnect', () => {
-            if (mounted) {
-                setSocketConnected(false)
-                console.log('❌ Profile Socket disconnected')
-            }
-        })
-
-        // 🔴 LISTEN FOR STATUS UPDATES AND UPDATE RECENT ORDERS IN REAL-TIME
+        socket.on('connect',    () => { if (mounted) { setSocketConnected(true);  console.log('✅ Profile Socket connected') } })
+        socket.on('disconnect', () => { if (mounted) { setSocketConnected(false); console.log('❌ Profile Socket disconnected') } })
         socket.on('statusUpdate', (payload) => {
             if (payload?.orderId && payload?.status && mounted) {
                 console.log('🔄 Real-time status update in Recent Status:', payload)
-                setRecentOrders((prevOrders) => {
-                    return prevOrders.map((order) => {
-                        if (order.orderId === payload.orderId) {
-                            return {
-                                ...order,
-                                orderStatus: payload.status,
-                                updatedAt: payload.updatedAt || new Date().toISOString()
-                            }
-                        }
-                        return order
-                    })
-                })
+                setRecentOrders((prev) => prev.map((o) =>
+                    o.orderId === payload.orderId
+                        ? { ...o, orderStatus: payload.status, updatedAt: payload.updatedAt || new Date().toISOString() }
+                        : o
+                ))
             }
         })
-
-        return () => {
-            mounted = false
-            if (socket) {
-                socket.disconnect()
-            }
-        }
+        return () => { mounted = false; if (socket) socket.disconnect() }
     }, [])
 
+    /* ── DERIVED DATA ── */
+    const uid             = localStorage.getItem('userid')
+    const currentWishlist = wishlist.filter(x => x.userid === uid)
+    const currentOrders   = orders.filter(x => x.userid === uid)
+    const resolvedTier    = String(user.membershipType || membershipType || 'Silver')
+    const resolvedOrderCount = Number(user.totalOrders ?? totalOrders ?? 0)
+    const tierClass       = resolvedTier.toLowerCase()
+    const TierIcon        = tierClass === 'elite' ? Crown : Award
+    const tierConf        = TIER_CONFIG[resolvedTier] || TIER_CONFIG.Silver
 
-    const normalizeStatus = (value = '') => {
-        const raw = String(value).trim().toLowerCase()
-        if (raw === 'order placed' || raw === 'ordered') return 'Ordered'
-        if (raw === 'packed') return 'Packed'
-        if (raw === 'shipped') return 'Shipped'
-        if (raw === 'delivered') return 'Delivered'
-        return 'Ordered'
-    }
+    /* Tier progress — from real order count */
+    const tierProgress = useMemo(() => {
+        if (resolvedTier === 'Elite') return { pct: 100, ordersLeft: 0 }
+        const needed = tierConf.ordersNeeded
+        const pct    = Math.min(100, Math.round((resolvedOrderCount / needed) * 100))
+        return { pct, ordersLeft: Math.max(0, needed - resolvedOrderCount) }
+    }, [resolvedTier, resolvedOrderCount, tierConf])
 
-    const getStatusStyles = (status) => {
-        const s = normalizeStatus(status)
-        if (s === 'Ordered') return { bg: '#e0f2fe', color: '#0ea5e9' }
-        if (s === 'Packed') return { bg: '#fef3c7', color: '#f59e0b' }
-        if (s === 'Shipped') return { bg: '#fef9c3', color: '#ca8a04' }
-        return { bg: '#dcfce7', color: '#16a34a' }
-    }
+    /* Spending summary — from real orders */
+    const spendingSummary = useMemo(() => {
+        const total = currentOrders.reduce((s, o) => s + Number(o.finalAmount || o.amount || 0), 0)
+        const avg   = currentOrders.length ? Math.round(total / currentOrders.length) : 0
+        const max   = currentOrders.reduce((m, o) => Math.max(m, Number(o.finalAmount || o.amount || 0)), 0)
+        return { total, avg, max }
+    }, [currentOrders])
 
-    // Animation Variants
-    const containerVariants = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-    }
-
-    const profileTabs = [
-        { id: 'overview', label: 'Overview', icon: LayoutGrid },
-        { id: 'wishlist', label: 'Wishlist', icon: Heart },
-        { id: 'orders', label: 'Orders', icon: Package },
-        { id: 'settings', label: 'Settings', icon: Settings },
-        { id: 'benefits', label: 'Benefits', icon: Sparkles }
+    /* Tabs */
+    const tabs = [
+        { id: 'overview', label: 'Overview',   icon: LayoutGrid  },
+        { id: 'wishlist', label: 'Wishlist',   icon: Heart       },
+        { id: 'orders',   label: 'My Orders',  icon: Package     },
+        { id: 'spending', label: 'Spending',   icon: BarChart3   },
+        { id: 'benefits', label: 'Benefits',   icon: Sparkles    },
+        { id: 'settings', label: 'Settings',   icon: Settings    },
     ]
 
-    const currentWishlist = wishlist.filter(x => x.userid === localStorage.getItem('userid'))
-    const currentOrders = orders.filter(x => x.userid === localStorage.getItem('userid'))
-    const selectedTabMeta = {
-        overview: {
-            title: 'Account Snapshot',
-            subtitle: 'Quick actions and membership overview',
-            cards: [
-                { label: 'Wishlist items', value: currentWishlist.length, tone: '#D4AF37' },
-                { label: 'Total orders', value: currentOrders.length, tone: '#10b981' },
-                { label: 'Member tier', value: String(membershipType || 'Silver'), tone: '#0ea5b7' }
-            ]
-        },
-        wishlist: {
-            title: 'Saved Pieces',
-            subtitle: 'Your most loved products in one place',
-            cards: currentWishlist.slice(0, 3).map((item) => ({
-                label: item.name || 'Wishlist item',
-                value: `₹${Number(item.price || 0).toLocaleString('en-IN')}`,
-                tone: '#D4AF37'
-            }))
-        },
-        orders: {
-            title: 'Recent Orders',
-            subtitle: 'Continue tracking your latest purchases',
-            cards: recentOrders.slice(0, 3).map((item) => ({
-                label: item.orderId || 'Order',
-                value: normalizeStatus(item.orderStatus),
-                tone: getStatusStyles(item.orderStatus).color
-            }))
-        },
-        settings: {
-            title: 'Account Settings',
-            subtitle: 'Profile and account management shortcuts',
-            cards: [
-                { label: 'Edit profile', value: 'Update your personal info', tone: '#17a2b8' },
-                { label: 'Security', value: 'Change password anytime', tone: '#6366f1' },
-                { label: 'Support', value: 'Contact luxury concierge', tone: '#ef4444' }
-            ]
-        },
-        benefits: {
-            title: 'Premium Benefits',
-            subtitle: 'What your membership unlocks',
-            cards: [
-                { label: 'Fast delivery', value: 'Priority shipping', tone: '#10b981' },
-                { label: 'Rewards', value: 'Exclusive offers & perks', tone: '#D4AF37' },
-                { label: 'Assistance', value: 'VIP chat support', tone: '#0ea5b7' }
-            ]
-        }
+    /* Benefits */
+    const benefits = [
+        { icon: Truck,       color: '#10b981', bg: '#ecfdf5', title: 'Priority Delivery',  sub: 'Faster shipping always'         },
+        { icon: Gift,        color: '#C9A84C', bg: '#fdf9ef', title: 'Exclusive Rewards',  sub: 'Earn points on every order'     },
+        { icon: Headphones,  color: '#6366f1', bg: '#eef2ff', title: 'VIP Support',        sub: '24/7 concierge assistance'      },
+        { icon: Zap,         color: '#f59e0b', bg: '#fffbeb', title: 'Early Access',        sub: 'New arrivals first'             },
+        { icon: Shield,      color: '#0ea5e9', bg: '#e0f2fe', title: 'Secure Payments',    sub: '256-bit encryption'             },
+        { icon: Star,        color: '#C9A84C', bg: '#fdf9ef', title: 'Member-Only Deals',  sub: 'Exclusive pricing & offers'     },
+    ]
+
+    /* Tab panel cards */
+    const tabPanelData = {
+        overview: [
+            { label: 'Wishlist', value: currentWishlist.length,          color: '#C9A84C' },
+            { label: 'Orders',   value: currentOrders.length,            color: '#10b981' },
+            { label: 'Tier',     value: resolvedTier,                    color: '#0ea5b7' },
+        ],
+        wishlist: currentWishlist.slice(0,3).map(i => ({
+            label: i.name || 'Item',
+            value: `₹${Number(i.price||0).toLocaleString('en-IN')}`,
+            color: '#C9A84C'
+        })),
+        orders: recentOrders.slice(0,3).map(i => ({
+            label: i.orderId || 'Order',
+            value: normLabel(i.orderStatus),
+            color: getStatusStyle(i.orderStatus).color
+        })),
+        spending: [
+            { label: 'Total Spent', value: `₹${spendingSummary.total.toLocaleString('en-IN')}`, color: '#C9A84C' },
+            { label: 'Avg Order',   value: `₹${spendingSummary.avg.toLocaleString('en-IN')}`,   color: '#10b981' },
+            { label: 'Highest',     value: `₹${spendingSummary.max.toLocaleString('en-IN')}`,   color: '#6366f1' },
+        ],
+        benefits: [
+            { label: 'Fast Delivery', value: 'Priority', color: '#10b981' },
+            { label: 'Rewards',       value: 'Active',   color: '#C9A84C' },
+            { label: 'Support',       value: 'VIP',      color: '#6366f1' },
+        ],
+        settings: [
+            { label: 'Edit Profile', value: 'Update info',       color: '#17a2b8' },
+            { label: 'Security',     value: 'Password & 2FA',    color: '#6366f1' },
+            { label: 'Help',         value: 'Concierge support', color: '#ef4444' },
+        ],
     }
+    const tabCards = tabPanelData[activeTab] || tabPanelData.overview
 
-    const tabContent = selectedTabMeta[activeTab] || selectedTabMeta.overview
-
+    /* ── RENDER ── */
     return (
-        <div className="profile-page-luxury" style={{ backgroundColor: "#fafaf8", minHeight: "100vh", paddingBottom: "60px" }}>
-            {/* --- PREMIUM LUXURY HEADER --- */}
-            <div className="profile-header-luxury py-5 mb-5" style={{ 
-                background: 'linear-gradient(135deg, #0A0A0A 0%, #1a1a1a 50%, #2a2a2a 100%)',
-                color: "white",
-                position: 'relative',
-                overflow: 'hidden'
-            }}>
-                <div className="container text-center">
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <h1 className="font-weight-bold mb-2" style={{ fontSize: '36px', letterSpacing: '0.5px', color: '#D4AF37' }}>
-                            ✨ Welcome Back
-                        </h1>
-                        <p className="mb-0" style={{ fontSize: '15px', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.3px' }}>
-                            Manage your luxury account & exclusive member benefits
-                        </p>
-                    </motion.div>
+        <div className="pf2">
+            <style dangerouslySetInnerHTML={{ __html: CSS }} />
+
+            {/* ══ HERO ════════════════════════════════════════ */}
+            <div className="pf2-hero">
+                <div className="pf2-hero-bg" />
+                <div className="pf2-hero-grid" />
+                <div className="pf2-hero-inner">
+                    <div className="pf2-hero-text">
+                        <motion.div
+                            initial={{ opacity: 0, y: -16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <div className="pf2-hero-greeting">{getGreeting()}</div>
+                            <h1 className="pf2-hero-name">
+                                {isLoading
+                                    ? 'Your Account'
+                                    : user.name ? `${user.name.split(' ')[0]}'s Space` : 'My Account'
+                                }
+                            </h1>
+                            <p className="pf2-hero-sub">
+                                Manage your orders, wishlist &amp; {resolvedTier} member benefits
+                            </p>
+                            {/* Live socket indicator */}
+                            <span className={`pf2-socket-dot ${socketConnected ? 'live' : 'offline'}`}>
+                                <span className="blink" />
+                                {socketConnected ? 'Live Updates Active' : 'Connecting...'}
+                            </span>
+                        </motion.div>
+                    </div>
                 </div>
             </div>
 
-            <div className="container">
-                {/* Feature Tabs */}
-                <motion.div
-                    className="mb-4 p-3 p-md-4 rounded-3xl bg-white shadow-lg"
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.12, duration: 0.45 }}
-                    style={{ border: '1px solid rgba(212,175,55,0.1)' }}
+            {/* ══ STAT STRIP ═══════════════════════════════════ */}
+            <div className="pf2-stats-row">
+                {[
+                    { icon: Heart,      bg: '#fdf9ef', color: '#C9A84C', label: 'Wishlist',     val: isLoading ? '—' : currentWishlist.length },
+                    { icon: Package,    bg: '#ecfdf5', color: '#10b981', label: 'Orders',        val: isLoading ? '—' : currentOrders.length   },
+                    { icon: TierIcon,   bg: '#fdf9ef', color: '#C9A84C', label: 'Member Tier',   val: isLoading ? '—' : resolvedTier            },
+                    { icon: IndianRupee,bg: '#eef2ff', color: '#6366f1', label: 'Total Spent',   val: isLoading ? '—' : `₹${(spendingSummary.total/1000).toFixed(1)}K` },
+                ].map((s, i) => (
+                    <motion.div key={s.label} className="pf2-stat"
+                        initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.07, duration: 0.38 }}
+                        whileHover={{ scale: 1.02 }}
+                    >
+                        <div className="pf2-stat-icon" style={{ background: s.bg }}>
+                            <s.icon size={18} color={s.color} strokeWidth={2} />
+                        </div>
+                        <div>
+                            <div className="pf2-stat-val">{s.val}</div>
+                            <div className="pf2-stat-lbl">{s.label}</div>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+
+            <div className="pf2-container">
+
+                {/* ══ TIER PROGRESS BAR ════════════════════════ */}
+                <motion.div className="pf2-tier-bar"
+                    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.18, duration: 0.4 }}
                 >
-                    <div className="d-flex flex-wrap gap-2 mb-3">
-                        {profileTabs.map((tab) => {
-                            const TabIcon = tab.icon
-                            const active = activeTab === tab.id
+                    <div className="pf2-tier-icon">
+                        <TierIcon size={22} color="#fff" strokeWidth={2} />
+                    </div>
+                    <div className="pf2-tier-texts">
+                        <div className="pf2-tier-name">
+                            {resolvedTier} Member
+                            {tierConf.next && (
+                                <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>
+                                    · {tierProgress.ordersLeft} orders to {tierConf.next}
+                                </span>
+                            )}
+                        </div>
+                        <div className="pf2-tier-sub">
+                            {resolvedTier === 'Elite'
+                                ? 'You have reached our highest tier. Enjoy all premium benefits.'
+                                : `${resolvedOrderCount} of ${tierConf.ordersNeeded} orders to unlock ${tierConf.next} membership`
+                            }
+                        </div>
+                        <div className="pf2-progress-track">
+                            <motion.div className="pf2-progress-fill"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${tierProgress.pct}%` }}
+                                transition={{ duration: 1.1, ease: 'easeOut', delay: 0.3 }}
+                            />
+                        </div>
+                    </div>
+                    {/* Tier milestones */}
+                    <div className="pf2-tier-milestones">
+                        {['Silver', 'Gold', 'Elite'].map((t) => {
+                            const reached = ['Silver', 'Gold', 'Elite'].indexOf(t) <= ['Silver', 'Gold', 'Elite'].indexOf(resolvedTier)
                             return (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className="btn btn-sm rounded-pill d-inline-flex align-items-center"
-                                    style={{
-                                        padding: '10px 16px',
-                                        border: active ? '1px solid #0A0A0A' : '1px solid rgba(212,175,55,0.18)',
-                                        background: active ? 'linear-gradient(135deg, #0A0A0A, #1f2937)' : '#fff',
-                                        color: active ? '#fff' : '#334155',
-                                        fontWeight: 700,
-                                        letterSpacing: '0.2px',
-                                        boxShadow: active ? '0 10px 24px rgba(10,10,10,0.14)' : 'none'
-                                    }}
-                                >
-                                    <TabIcon size={14} className="mr-2" />
-                                    {tab.label}
-                                </button>
+                                <div key={t} className={`pf2-tier-milestone${reached ? ' reached' : ''}`}>
+                                    <div className="pf2-tier-milestone-dot" />
+                                    <span style={{ fontSize: 9 }}>{t}</span>
+                                </div>
                             )
                         })}
                     </div>
-
-                    <div className="row align-items-stretch">
-                        <div className="col-lg-4 mb-3 mb-lg-0">
-                            <div className="h-100 p-4 rounded-3xl" style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.08), rgba(16,185,129,0.06))', border: '1px solid rgba(212,175,55,0.12)' }}>
-                                <div className="d-flex align-items-center justify-content-between mb-2">
-                                    <div style={{ fontSize: '12px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#64748b', fontWeight: 800 }}>{tabContent.title}</div>
-                                    <Star size={15} color="#D4AF37" />
-                                </div>
-                                <h5 className="font-weight-bold mb-2" style={{ color: '#0A0A0A' }}>{tabContent.subtitle}</h5>
-                                <p className="mb-0" style={{ color: '#64748b', fontSize: '14px' }}>
-                                    Tap through quick ecommerce-style sections: orders, wishlist, settings and benefits.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="col-lg-8">
-                            <div className="row">
-                                {tabContent.cards.map((card, index) => (
-                                    <div className="col-md-4 mb-3" key={`${card.label}-${index}`}>
-                                        <div className="h-100 p-4 rounded-3xl bg-white border" style={{ borderColor: 'rgba(212,175,55,0.12)', boxShadow: '0 12px 30px rgba(0,0,0,0.04)' }}>
-                                            <div style={{ fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, marginBottom: '8px' }}>
-                                                {card.label}
-                                            </div>
-                                            <div style={{ fontSize: '18px', fontWeight: 800, color: card.tone || '#0A0A0A' }}>
-                                                {card.value}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
                 </motion.div>
 
-                <div className="row">
-                    {/* --- LEFT SIDE: PREMIUM PROFILE CARD --- */}
-                    <motion.div 
-                        className="col-lg-4 mb-4" 
-                        initial={{ opacity: 0, x: -30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <div className="card border-0 shadow-lg rounded-3xl overflow-hidden text-center p-5" style={{
-                            background: 'linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%)',
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
-                            border: '1px solid rgba(212,175,55,0.1)'
-                        }}>
-                            {/* Premium Profile Picture with Animated Gold Border */}
-                            {isLoading ? (
-                                <Skeleton circle={true} height={180} width={180} style={{ margin: '0 auto 20px' }} />
-                            ) : (
-                                <motion.div
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ delay: 0.2, duration: 0.5 }}
-                                    className="position-relative d-inline-block mx-auto mb-4"
-                                >
-                                    <div style={{
-                                        position: 'relative',
-                                        display: 'inline-block',
-                                        width: '160px',
-                                        height: '160px'
-                                    }}>
-                                        {/* Animated Gold Border */}
-                                        <motion.div
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-                                            style={{
-                                                position: 'absolute',
-                                                inset: '-4px',
-                                                borderRadius: '50%',
-                                                background: 'linear-gradient(135deg, #D4AF37, #b8860b, #D4AF37)',
-                                                padding: '2px',
-                                                zIndex: 1
-                                            }}
-                                        />
-                                        
-                                        {/* Profile Image */}
-                                        <img 
-                                            src={user.pic || "/assets/images/noimage.png"} 
-                                            className="rounded-circle"
-                                            style={{
-                                                width: "160px", 
-                                                height: "160px", 
-                                                objectFit: "cover",
-                                                position: 'relative',
-                                                zIndex: 2,
-                                                border: '4px solid #fff',
-                                                boxShadow: '0 10px 40px rgba(212,175,55,0.3)'
-                                            }}
-                                            alt="User" 
-                                        />
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {/* User Name with Status Badge */}
-                            {isLoading ? (
-                                <Skeleton count={2} style={{ marginTop: '16px' }} />
-                            ) : (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3, duration: 0.4 }}
-                                >
-                                    <h4 className="font-weight-bold mb-2" style={{ color: '#0A0A0A', fontSize: '24px', letterSpacing: '0.2px' }}>
-                                        {user.name?.split(' ')[0]}
-                                    </h4>
-
-                                    {(() => {
-                                        const resolvedTier = String(user.membershipType || membershipType || 'Silver')
-                                        const resolvedOrders = Number(user.totalOrders ?? totalOrders ?? 0)
-                                        const badgeStyles = {
-                                            Elite: {
-                                                background: 'linear-gradient(135deg, #D4AF37, #b8860b)',
-                                                color: '#fff',
-                                                boxShadow: '0 6px 16px rgba(212,175,55,0.3)',
-                                            },
-                                            Gold: {
-                                                background: 'linear-gradient(135deg, #f7d774, #d4af37)',
-                                                color: '#5a4600',
-                                                boxShadow: '0 6px 16px rgba(212,175,55,0.25)',
-                                            },
-                                            Silver: {
-                                                background: 'linear-gradient(135deg, #e2e8f0, #cbd5e1)',
-                                                color: '#334155',
-                                                boxShadow: '0 6px 16px rgba(148,163,184,0.22)',
-                                            },
-                                        }
-
-                                        const styleForTier = badgeStyles[resolvedTier] || badgeStyles.Silver
-
-                                        return (
-                                            <motion.div
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                transition={{ delay: 0.35, type: 'spring', stiffness: 300 }}
-                                                style={{
-                                                    display: 'inline-block',
-                                                    padding: '6px 14px',
-                                                    borderRadius: '20px',
-                                                    fontSize: '11px',
-                                                    fontWeight: '700',
-                                                    letterSpacing: '0.8px',
-                                                    textTransform: 'uppercase',
-                                                    marginBottom: '16px',
-                                                    ...styleForTier,
-                                                }}
-                                            >
-                                                {resolvedTier} Member · {resolvedOrders} Orders
-                                            </motion.div>
-                                        )
-                                    })()}
-                                </motion.div>
-                            )}
-
-                            <hr style={{ margin: '24px 0', border: '1px solid rgba(212,175,55,0.2)' }} />
-
-                            {/* Stats Grid */}
-                            {isLoading ? (
-                                <Skeleton count={1} height={60} />
-                            ) : (
-                                <motion.div 
-                                    className="d-flex justify-content-around text-center mt-3 mb-4"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.5 }}
-                                >
-                                    <motion.div whileHover={{ scale: 1.05 }}>
-                                        <h5 className="font-weight-bold mb-1" style={{ color: '#D4AF37', fontSize: '20px' }}>
-                                            {wishlist.filter(x => x.userid === localStorage.getItem("userid")).length}
-                                        </h5>
-                                        <small className="text-muted" style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>❤️ Wishlist</small>
-                                    </motion.div>
-                                    <div style={{  width: '1px', background: 'rgba(212,175,55,0.2)' }}></div>
-                                    <motion.div whileHover={{ scale: 1.05 }}>
-                                        <h5 className="font-weight-bold mb-1" style={{ color: '#D4AF37', fontSize: '20px' }}>
-                                            {orders.filter(x => x.userid === localStorage.getItem("userid")).length}
-                                        </h5>
-                                        <small className="text-muted" style={{ fontSize: '11px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>📦 Orders</small>
-                                    </motion.div>
-                                </motion.div>
-                            )}
-
-                            {/* Premium Navigation Buttons */}
-                            <motion.div
-                                className="d-grid gap-2"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.6 }}
+                {/* ══ TABS ══════════════════════════════════════ */}
+                <motion.div className="pf2-tabs-wrap"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.22, duration: 0.38 }}
+                >
+                    {tabs.map(tab => {
+                        const Icon = tab.icon
+                        return (
+                            <button key={tab.id}
+                                className={`pf2-tab${activeTab === tab.id ? ' active' : ''}`}
+                                onClick={() => setActiveTab(tab.id)}
                             >
-                                <Link to="/update-profile" style={{ textDecoration: 'none',marginBottom: '12px' }}>
-                                    <button className="btn-premium-edit">
-                                        <UserCog size={16} /> EDIT PROFILE
-                                    </button>
+                                <Icon size={13} strokeWidth={2.2} />
+                                {tab.label}
+                            </button>
+                        )
+                    })}
+                </motion.div>
+
+                {/* Tab summary strip */}
+                <AnimatePresence mode="wait">
+                    <motion.div key={activeTab}
+                        style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}
+                        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.26 }}
+                    >
+                        {tabCards.map((c, i) => (
+                            <div key={i} style={{
+                                background: '#fff', borderRadius: 14, border: '1px solid rgba(0,0,0,0.06)',
+                                padding: '16px 16px', boxShadow: '0 2px 12px rgba(0,0,0,0.04)'
+                            }}>
+                                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#9ca3af', fontWeight: 700, marginBottom: 8 }}>{c.label}</div>
+                                <div style={{ fontSize: 20, fontWeight: 800, color: c.color }}>{c.value}</div>
+                            </div>
+                        ))}
+                    </motion.div>
+                </AnimatePresence>
+
+                {/* ══ MAIN LAYOUT ═══════════════════════════════ */}
+                <div className="pf2-layout">
+
+                    {/* ── SIDEBAR ─────────────────────────────── */}
+                    <motion.div className="pf2-sidebar"
+                        initial={{ opacity: 0, x: -22 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.48, delay: 0.08 }}
+                    >
+                        <div className="pf2-profile-card">
+                            <div className="pf2-profile-card-top">
+                                {isLoading ? (
+                                    <div style={{ paddingBottom: 20 }}>
+                                        <Skeleton circle height={108} width={108} style={{ margin: '0 auto 16px' }} />
+                                        <Skeleton count={2} />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <motion.div className="pf2-avatar-wrap"
+                                            initial={{ scale: 0.8, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            transition={{ delay: 0.2, duration: 0.42 }}
+                                        >
+                                            <motion.div className="pf2-avatar-spin"
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
+                                            />
+                                            {user.pic
+                                                ? <img src={user.pic} className="pf2-avatar-img" alt={user.name} />
+                                                : <div className="pf2-avatar-fallback">{getInitials(user.name)}</div>
+                                            }
+                                        </motion.div>
+                                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+                                            <p className="pf2-card-name">{user.name || 'Your Name'}</p>
+                                            <p className="pf2-card-email">{user.email || ''}</p>
+                                            <div className={`pf2-card-badge ${tierClass}`} style={{ marginBottom: 0 }}>
+                                                <TierIcon size={11} strokeWidth={2.5} />
+                                                {resolvedTier} · {resolvedOrderCount} Orders
+                                            </div>
+                                        </motion.div>
+                                    </>
+                                )}
+                                <div className="pf2-card-wave" />
+                            </div>
+                            <div className="pf2-card-bottom">
+                                {isLoading ? <Skeleton height={44} /> : (
+                                    <motion.div className="pf2-mini-stats"
+                                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                                        transition={{ delay: 0.38 }}
+                                    >
+                                        <motion.div style={{ textAlign: 'center' }} whileHover={{ scale: 1.08 }}>
+                                            <div className="pf2-mini-stat-val">{currentWishlist.length}</div>
+                                            <div className="pf2-mini-stat-lbl">Wishlist</div>
+                                        </motion.div>
+                                        <div className="pf2-mini-divider" />
+                                        <motion.div style={{ textAlign: 'center' }} whileHover={{ scale: 1.08 }}>
+                                            <div className="pf2-mini-stat-val">{currentOrders.length}</div>
+                                            <div className="pf2-mini-stat-lbl">Orders</div>
+                                        </motion.div>
+                                        <div className="pf2-mini-divider" />
+                                        <motion.div style={{ textAlign: 'center' }} whileHover={{ scale: 1.08 }}>
+                                            <div className="pf2-mini-stat-val">
+                                                {spendingSummary.total >= 1000
+                                                    ? `₹${(spendingSummary.total/1000).toFixed(1)}K`
+                                                    : `₹${spendingSummary.total}`
+                                                }
+                                            </div>
+                                            <div className="pf2-mini-stat-lbl">Spent</div>
+                                        </motion.div>
+                                    </motion.div>
+                                )}
+                                <Link to="/update-profile" className="pf2-edit-btn">
+                                    <UserCog size={14} strokeWidth={2} />
+                                    Edit Profile
                                 </Link>
-                            </motion.div>
+                            </div>
                         </div>
                     </motion.div>
 
-                    {/* --- RIGHT SIDE: ACCOUNT DETAILS & QUICK LINKS --- */}
-                    <motion.div 
-                        className="col-lg-8" 
-                        initial={{ opacity: 0, x: 30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6 }}
+                    {/* ── MAIN CONTENT ─────────────────────────── */}
+                    <motion.div className="pf2-main"
+                        initial={{ opacity: 0, x: 22 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.48, delay: 0.08 }}
                     >
-                        {/* Account Details Section */}
-                        <motion.div 
-                            className="card border-0 shadow-lg rounded-3xl p-5 bg-white mb-4 profile-details-shell"
-                            style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.06)', border: '1px solid rgba(212,175,55,0.08)' }}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
+                        {/* Buyer Profile Details */}
+                        <motion.div className="pf2-card"
+                            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.18 }}
                         >
-                            {isLoading ? (
-                                <div>
-                                    <Skeleton count={5} style={{ marginBottom: '16px', height: '60px' }} />
+                            <div style={{ padding: 24 }}>
+                                {isLoading
+                                    ? <Skeleton count={6} height={56} style={{ marginBottom: 10 }} />
+                                    : <BuyerProfile user={user} />
+                                }
+                            </div>
+                        </motion.div>
+
+                        {/* Quick Actions */}
+                        <motion.div className="pf2-card"
+                            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.24 }}
+                        >
+                            <div className="pf2-card-header">
+                                <div className="pf2-card-title"><Zap size={15} color="#C9A84C" /> Quick Actions</div>
+                            </div>
+                            <div className="pf2-card-body">
+                                <div className="pf2-quick-grid" style={{ marginBottom: 10 }}>
+                                    <motion.button className="pf2-quick-btn gold" onClick={() => navigate('/wishlist')}
+                                        whileHover={{ y: -3 }} whileTap={{ scale: 0.97 }}
+                                    >
+                                        <div className="pf2-quick-icon" style={{ background: 'rgba(201,168,76,0.1)' }}>
+                                            <Heart size={20} color="#C9A84C" strokeWidth={2} />
+                                        </div>
+                                        <div>
+                                            <div className="pf2-quick-title">My Wishlist</div>
+                                            <div className="pf2-quick-sub">{currentWishlist.length} saved items</div>
+                                        </div>
+                                        <ChevronRight size={15} color="#C9A84C" className="pf2-quick-arrow" />
+                                    </motion.button>
+
+                                    <motion.button className="pf2-quick-btn green" onClick={() => navigate('/cart')}
+                                        whileHover={{ y: -3 }} whileTap={{ scale: 0.97 }}
+                                    >
+                                        <div className="pf2-quick-icon" style={{ background: 'rgba(16,185,129,0.1)' }}>
+                                            <ShoppingCart size={20} color="#10b981" strokeWidth={2} />
+                                        </div>
+                                        <div>
+                                            <div className="pf2-quick-title">My Cart</div>
+                                            <div className="pf2-quick-sub">Ready for checkout</div>
+                                        </div>
+                                        <ChevronRight size={15} color="#10b981" className="pf2-quick-arrow" />
+                                    </motion.button>
                                 </div>
-                            ) : (
-                                <BuyerProfile user={user} />
-                            )}
+                                <motion.button className="pf2-quick-btn dark" onClick={() => navigate('/my-orders')}
+                                    whileHover={{ y: -2 }} whileTap={{ scale: 0.97 }}
+                                    style={{ width: '100%' }}
+                                >
+                                    <div className="pf2-quick-icon" style={{ background: 'rgba(201,168,76,0.15)' }}>
+                                        <Package size={20} color="#C9A84C" strokeWidth={2} />
+                                    </div>
+                                    <div>
+                                        <div className="pf2-quick-title">All My Orders</div>
+                                        <div className="pf2-quick-sub">{currentOrders.length} total purchases</div>
+                                    </div>
+                                    <ArrowRight size={18} color="rgba(201,168,76,0.7)" className="pf2-quick-arrow" />
+                                </motion.button>
+                            </div>
                         </motion.div>
 
-                        {/* PREMIUM NAVIGATION CARDS GRID */}
-                        <motion.div 
-                            className="row mb-4"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3, staggerChildren: 0.1 }}
+                        {/* Spending Summary — from real order data */}
+                        <motion.div className="pf2-card"
+                            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
                         >
-                            {/* Wishlist Card */}
-                            <motion.div 
-                                className="col-md-6 mb-3"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.35 }}
-                            >
-                                <motion.button
-                                    onClick={() => navigate("/wishlist")}
-                                    whileHover={{ y: -4, scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="p-5 w-100 rounded-3xl border-0 text-left"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.08))',
-                                        border: '2px solid #D4AF37',
-                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        cursor: 'pointer',
-                                        boxShadow: 'none'
-                                    }}
-                                >
-                                    <Heart size={28} style={{ color: '#D4AF37', marginBottom: '12px' }} />
-                                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#0A0A0A', marginBottom: '4px' }}>
-                                        My Wishlist
+                            <div className="pf2-card-header">
+                                <div className="pf2-card-title"><BarChart3 size={15} color="#6366f1" /> Spending Summary</div>
+                            </div>
+                            <div className="pf2-card-body">
+                                {isLoading ? <Skeleton count={1} height={80} /> : (
+                                    <div className="pf2-spending-row">
+                                        {[
+                                            { icon: IndianRupee, color: '#C9A84C', bg: '#fdf9ef', label: 'Total Spent', val: `₹${spendingSummary.total.toLocaleString('en-IN')}` },
+                                            { icon: TrendingUp,  color: '#10b981', bg: '#ecfdf5', label: 'Avg Order',   val: `₹${spendingSummary.avg.toLocaleString('en-IN')}`   },
+                                            { icon: Target,      color: '#6366f1', bg: '#eef2ff', label: 'Highest Order',val: `₹${spendingSummary.max.toLocaleString('en-IN')}`   },
+                                        ].map((s, i) => (
+                                            <motion.div key={s.label} className="pf2-spend-item"
+                                                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.3 + i * 0.07 }}
+                                                whileHover={{ y: -2 }}
+                                            >
+                                                <div className="pf2-spend-icon-wrap" style={{ background: s.bg }}>
+                                                    <s.icon size={16} color={s.color} strokeWidth={2} />
+                                                </div>
+                                                <div className="pf2-spend-val">{s.val}</div>
+                                                <div className="pf2-spend-lbl">{s.label}</div>
+                                            </motion.div>
+                                        ))}
                                     </div>
-                                    <div style={{ fontSize: '12px', color: '#666', letterSpacing: '0.2px' }}>
-                                        {wishlist.filter(x => x.userid === localStorage.getItem("userid")).length} saved items
-                                    </div>
-                                </motion.button>
-                            </motion.div>
-
-                            {/* Cart Card */}
-                            <motion.div 
-                                className="col-md-6 mb-3"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.40 }}
-                            >
-                                <motion.button
-                                    onClick={() => navigate("/cart")}
-                                    whileHover={{ y: -4, scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="p-5 w-100 rounded-3xl border-0 text-left"
-                                    style={{
-                                        background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))',
-                                        border: '2px solid #10b981',
-                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        cursor: 'pointer',
-                                        boxShadow: 'none'
-                                    }}
-                                >
-                                    <ShoppingCart size={28} style={{ color: '#10b981', marginBottom: '12px' }} />
-                                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#0A0A0A', marginBottom: '4px' }}>
-                                        My Cart
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: '#666', letterSpacing: '0.2px' }}>
-                                        Ready for checkout
-                                    </div>
-                                </motion.button>
-                            </motion.div>
-
-                            {/* Orders Card - Full Row on Mobile */}
-                            <motion.div 
-                                className="col-12"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.45 }}
-                            >
-                                <motion.button
-                                    onClick={() => navigate("/my-orders")}
-                                    whileHover={{ y: -4, scale: 1.01 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="p-5 w-100 rounded-3xl border-0 text-left"
-                                    style={{
-                                        background: 'linear-gradient(135deg, #1a1a1a, #2a2a2a)',
-                                        border: '2px solid rgba(212,175,55,0.3)',
-                                        color: '#fff',
-                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        cursor: 'pointer',
-                                        boxShadow: 'none'
-                                    }}
-                                >
-                                    <Package size={28} style={{ color: '#D4AF37', marginBottom: '12px' }} />
-                                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#fff', marginBottom: '4px' }}>
-                                        All Orders
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', letterSpacing: '0.2px' }}>
-                                        {orders.filter(x => x.userid === localStorage.getItem("userid")).length} total purchases
-                                    </div>
-                                </motion.button>
-                            </motion.div>
+                                )}
+                            </div>
                         </motion.div>
 
-                        {/* Recent Orders Section */}
-                        <motion.div 
-                            className="card border-0 shadow-lg rounded-3xl p-5 bg-white"
-                            style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.06)', border: '1px solid rgba(212,175,55,0.08)' }}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.4 }}
+                        {/* Recent Orders with Stepper */}
+                        <motion.div className="pf2-card"
+                            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.36 }}
                         >
-                            <div className="d-flex flex-wrap align-items-center justify-content-between mb-4">
-                                <h5 className="font-weight-bold mb-0" style={{ color: '#0A0A0A', fontSize: '18px', letterSpacing: '0.3px' }}>
-                                    🚀 Recent Orders
-                                </h5>
-                                <Link to="/my-orders" className="btn btn-sm rounded-pill px-4" style={{
-                                    background: 'linear-gradient(135deg, #D4AF37, #b8860b)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    fontWeight: '700',
-                                    fontSize: '12px',
-                                    letterSpacing: '0.3px'
-                                }}>
-                                    VIEW ALL <ArrowRight size={12} className="ml-1" />
+                            <div className="pf2-card-header">
+                                <div className="pf2-card-title"><Package size={15} color="#C9A84C" /> Recent Orders</div>
+                                <Link to="/my-orders" className="pf2-view-all">
+                                    VIEW ALL <ArrowRight size={11} />
                                 </Link>
                             </div>
-
-                            {loadingRecent || isLoading ? (
-                                <div>
-                                    <Skeleton count={3} height={80} style={{ marginBottom: '12px' }} />
-                                </div>
-                            ) : recentOrders.length ? (
-                                <AnimatePresence mode="wait">
-                                    <motion.div>
-                                        {recentOrders.map((item, idx) => {
-                                            const statusStyle = getStatusStyles(item.orderStatus)
-                                            const label = normalizeStatus(item.orderStatus)
-                                            return (
-                                                <motion.div
-                                                    key={item.orderId}
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: idx * 0.05 }}
-                                                    whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(212,175,55,0.15)' }}
-                                                    onClick={() => navigate(`/order-tracking/${item.orderId}`)}
-                                                    className="p-4 mb-3 rounded-2xl cursor-pointer"
-                                                    style={{
-                                                        border: '1.5px solid rgba(212,175,55,0.1)',
-                                                        background: 'linear-gradient(135deg, #f9fafb, #f3f4f6)',
-                                                        boxShadow: '0 6px 16px rgba(0,0,0,0.04)',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                                    }}
-                                                >
-                                                    <div className="d-flex flex-wrap align-items-center justify-content-between">
-                                                        <div>
-                                                            <div className="font-weight-bold" style={{ color: '#0A0A0A', fontSize: '15px', letterSpacing: '0.2px' }}>
-                                                                Order #{item.orderId}
+                            <div className="pf2-card-body">
+                                {(loadingRecent || isLoading) ? (
+                                    <Skeleton count={3} height={96} style={{ marginBottom: 10 }} />
+                                ) : recentOrders.length ? (
+                                    <AnimatePresence mode="wait">
+                                        <motion.div>
+                                            {recentOrders.map((item, idx) => {
+                                                const st  = getStatusStyle(item.orderStatus)
+                                                const lbl = normLabel(item.orderStatus)
+                                                return (
+                                                    <motion.div key={item.orderId}
+                                                        className="pf2-order-item"
+                                                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: idx * 0.06 }}
+                                                        onClick={() => navigate(`/order-tracking/${item.orderId}`)}
+                                                    >
+                                                        <div className="pf2-order-top">
+                                                            <div>
+                                                                <div className="pf2-order-id">Order #{item.orderId}</div>
+                                                                <div className="pf2-order-date">
+                                                                    <Clock3 size={11} color="#C9A84C" />
+                                                                    {new Date(item.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                </div>
                                                             </div>
-                                                            <div className="small text-muted mt-2 d-flex align-items-center" style={{ fontSize: '12px' }}>
-                                                                <Clock3 size={13} className="mr-2" style={{ color: '#D4AF37' }} />
-                                                                {new Date(item.updatedAt).toLocaleString('en-IN', { 
-                                                                    day: 'numeric', 
-                                                                    month: 'short', 
-                                                                    year: 'numeric'
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                        <div className="d-flex align-items-center mt-2 mt-md-0" style={{ gap: '12px' }}>
-                                                            <motion.span
-                                                                initial={{ scale: 0.8 }}
-                                                                animate={{ scale: 1 }}
-                                                                className="px-4 py-2 rounded-pill font-weight-bold"
-                                                                style={{
-                                                                    background: statusStyle.bg,
-                                                                    color: statusStyle.color,
-                                                                    fontSize: '12px',
-                                                                    fontWeight: 700,
-                                                                    letterSpacing: '0.4px',
-                                                                    boxShadow: `0 4px 12px ${statusStyle.color}20`
-                                                                }}
+                                                            <motion.span className="pf2-status-pill"
+                                                                initial={{ scale: 0.85 }} animate={{ scale: 1 }}
+                                                                style={{ background: st.bg, color: st.color, boxShadow: `0 2px 8px ${st.color}20` }}
                                                             >
-                                                                {label}
+                                                                <Dot size={14} />
+                                                                {lbl}
                                                             </motion.span>
                                                         </div>
-                                                    </div>
 
-                                                    <div className="d-flex flex-wrap align-items-center justify-content-between mt-4 pt-4" style={{ borderTop: '1px solid rgba(212,175,55,0.1)' }}>
-                                                        <div className="small">
-                                                            <div style={{ fontSize: '11px', color: '#999', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Amount</div>
-                                                            <div className="font-weight-bold mt-1" style={{ fontSize: '17px', color: '#D4AF37' }}>
-                                                                ₹{Number(item.finalAmount || 0).toLocaleString('en-IN')}
+                                                        {/* Order stepper — connected to real status */}
+                                                        <OrderStepper status={item.orderStatus} />
+
+                                                        <div className="pf2-order-bottom">
+                                                            <div>
+                                                                <div className="pf2-order-amount-lbl">Order Total</div>
+                                                                <div className="pf2-order-amount">
+                                                                    ₹{Number(item.finalAmount || 0).toLocaleString('en-IN')}
+                                                                </div>
                                                             </div>
+                                                            <motion.button className="pf2-track-btn"
+                                                                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
+                                                                onClick={(e) => { e.stopPropagation(); navigate(`/order-tracking/${item.orderId}`) }}
+                                                            >
+                                                                TRACK <ArrowRight size={11} />
+                                                            </motion.button>
                                                         </div>
-                                                        <motion.button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                navigate(`/order-tracking/${item.orderId}`)
-                                                            }}
-                                                            whileHover={{ scale: 1.04, y: -1 }}
-                                                            whileTap={{ scale: 0.95 }}
-                                                            className="btn btn-sm rounded-pill px-4"
-                                                            style={{
-                                                                background: 'linear-gradient(135deg, #0A0A0A, #2a2a2a)',
-                                                                color: '#D4AF37',
-                                                                border: '1.5px solid #D4AF37',
-                                                                fontWeight: '700',
-                                                                fontSize: '11px',
-                                                                letterSpacing: '0.3px',
-                                                                boxShadow: 'none',
-                                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                                            }}
-                                                        >
-                                                            TRACK <ArrowRight size={12} className="ml-1" />
-                                                        </motion.button>
-                                                    </div>
-                                                </motion.div>
-                                            )
-                                        })}
-                                    </motion.div>
-                                </AnimatePresence>
-                            ) : (
-                                <div className="p-5 text-center rounded-2xl" style={{ background: 'linear-gradient(135deg, #f9fafb, #f3f4f6)' }}>
-                                    <ShoppingBag size={40} className="text-muted opacity-50" style={{ marginBottom: '12px' }} />
-                                    <p className="mt-2 text-muted mb-3" style={{ fontSize: '14px' }}>No recent orders yet</p>
-                                    <Link to="/shop/All" className="btn btn-sm rounded-pill px-4" style={{
-                                        background: 'linear-gradient(135deg, #D4AF37, #b8860b)',
-                                        color: '#fff',
-                                        border: 'none',
-                                        fontWeight: '700',
-                                        fontSize: '12px',
-                                        letterSpacing: '0.3px'
-                                    }}>
-                                        START SHOPPING
-                                    </Link>
+                                                    </motion.div>
+                                                )
+                                            })}
+                                        </motion.div>
+                                    </AnimatePresence>
+                                ) : (
+                                    <div className="pf2-empty">
+                                        <div className="pf2-empty-icon"><ShoppingBag size={42} color="#9ca3af" /></div>
+                                        <p className="pf2-empty-text">No orders yet — start shopping!</p>
+                                        <Link to="/shop/All" className="pf2-shop-link">
+                                            <ShoppingBag size={13} /> Start Shopping
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+
+                        {/* Benefits Grid */}
+                        <motion.div className="pf2-card"
+                            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.44 }}
+                        >
+                            <div className="pf2-card-header">
+                                <div className="pf2-card-title"><Sparkles size={15} color="#C9A84C" /> {resolvedTier} Member Benefits</div>
+                            </div>
+                            <div className="pf2-card-body">
+                                <div className="pf2-benefits">
+                                    {benefits.map((b, i) => (
+                                        <motion.div key={b.title} className="pf2-benefit"
+                                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.44 + i * 0.05 }}
+                                            whileHover={{ translateY: -3 }}
+                                        >
+                                            <div className="pf2-benefit-icon" style={{ background: b.bg }}>
+                                                <b.icon size={18} color={b.color} strokeWidth={2} />
+                                            </div>
+                                            <div className="pf2-benefit-title">{b.title}</div>
+                                            <div className="pf2-benefit-sub">{b.sub}</div>
+                                        </motion.div>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
+                        </motion.div>
+
+                        {/* Trust Banner */}
+                        <motion.div className="pf2-trust"
+                            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.52 }}
+                        >
+                            {[
+                                { icon: Shield,   color: '#0ea5e9', bg: '#e0f2fe', title: 'SSL Encrypted',    sub: '256-bit security'       },
+                                { icon: Wifi,     color: '#10b981', bg: '#ecfdf5', title: socketConnected ? 'Live Updates' : 'Reconnecting', sub: socketConnected ? 'Real-time socket' : 'Attempting connection' },
+                                { icon: Package,  color: '#C9A84C', bg: '#fdf9ef', title: 'Order Tracking',   sub: 'Step-by-step status'    },
+                                { icon: Bell,     color: '#6366f1', bg: '#eef2ff', title: 'Instant Alerts',   sub: 'Status notifications'   },
+                            ].map((t) => (
+                                <div key={t.title} className="pf2-trust-item">
+                                    <div className="pf2-trust-icon" style={{ background: t.bg }}>
+                                        <t.icon size={16} color={t.color} strokeWidth={2} />
+                                    </div>
+                                    <div>
+                                        <div className="pf2-trust-title">{t.title}</div>
+                                        <div className="pf2-trust-sub">{t.sub}</div>
+                                    </div>
+                                </div>
+                            ))}
                         </motion.div>
                     </motion.div>
                 </div>
-
-                {/* TRUST ELEMENTS FOOTER */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className="mt-6 p-4 rounded-2xl"
-                    style={{
-                        background: 'linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.04))',
-                        border: '1.5px solid rgba(212,175,55,0.2)',
-                        marginTop: '60px'
-                    }}
-                >
-                    <div className="d-flex align-items-center justify-content-center" style={{ gap: '12px' }}>
-                        <Shield size={20} style={{ color: '#D4AF37' }} />
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#0A0A0A', letterSpacing: '0.3px' }}>
-                                🔐 ENCRYPTED & SECURE
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
-                                Your personal data is encrypted and protected with enterprise-grade security protocols
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
             </div>
-
-            {/* --- PREMIUM STYLING --- */}
-            <style dangerouslySetInnerHTML={{ __html: `
-                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Jost:wght@300;400;500;600&display=swap');
-
-                .profile-page-luxury {
-                    font-family: 'Jost', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-                }
-
-                .profile-page-luxury h1 {
-                    font-family: 'Playfair Display', serif;
-                    font-weight: 600;
-                }
-
-                .profile-details-shell {
-                    padding: 26px !important;
-                }
-                
-                .rounded-3xl { border-radius: 24px !important; }
-                .rounded-2xl { border-radius: 20px !important; }
-                .rounded-1xl { border-radius: 15px !important; }
-                
-                .cursor-pointer { cursor: pointer; }
-                
-                /* Skeleton Loading Shimmer */
-                .react-loading-skeleton {
-                    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-                    background-size: 200% 100%;
-                    animation: skeleton-loading 1.5s infinite;
-                }
-                
-                @keyframes skeleton-loading {
-                    0% { background-position: 200% 0; }
-                    100% { background-position: -200% 0; }
-                }
-                
-                /* Gold Accent Animations */
-                @keyframes gold-glow {
-                    0%, 100% {
-                        box-shadow: 0 8px 20px rgba(212,175,55,0.2);
-                    }
-                    50% {
-                        box-shadow: 0 8px 40px rgba(212,175,55,0.4);
-                    }
-                }
-                
-                .btn-premium-edit {
-                    width: 100%;
-                    padding: 14px 24px;
-                    background: linear-gradient(135deg, #111111 0%, #2a2a2a 100%);
-                    color: #D4AF37;
-                    border: 1px solid #111111;
-                    border-radius: 12px;
-                    font-weight: 700;
-                    font-size: 12px;
-                    letter-spacing: 0.1em;
-                    text-transform: uppercase;
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                }
-                .btn-premium-edit:hover {
-                    background: #D4AF37;
-                    color: #111111;
-                    border-color: #D4AF37;
-                    box-shadow: 0 12px 24px rgba(212, 175, 55, 0.25);
-                    transform: translateY(-2px);
-                }
-
-                /* Responsive */
-                @media (max-width: 768px) {
-                    .profile-header-luxury { padding-top: 2rem !important; padding-bottom: 2rem !important; }
-                    h1 { font-size: 28px !important; }
-                }
-            `}} />
         </div>
     )
 }
