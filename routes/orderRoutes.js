@@ -8,6 +8,7 @@ const orderController = require('../controllers/orderController');
 
 // User order APIs
 router.get('/api/user/orders', orderController.getUserOrdersList);
+router.get('/api/user/:userId/orders', orderController.getUserOrdersList);
 router.get('/api/orders/:orderId', orderController.getUserOrderDetails);
 router.post('/api/orders/:orderId/cancel', orderController.cancelOrder);
 router.post('/api/orders/:orderId/return', orderController.requestReturn);

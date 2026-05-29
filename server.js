@@ -33,6 +33,7 @@ require('jspdf-autotable');
 const QRCode = require('qrcode');
 const compression = require('compression');
 const { sendOrderStatus, registerTemplatePartials } = require('./mailController');
+const Activity = require('./models/Activity');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -968,6 +969,10 @@ app.get('/api/reviews/order/:orderId', async (req, res) => {
 
 app.use('/api', cartRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Register order routes before /api/user/:id handlers so /api/user/orders does not get shadowed.
+app.use(orderRoutes);
+
 app.use('/api/user', userRoutes);
 app.use('/user', userRoutes);
 
@@ -977,45 +982,41 @@ app.use('/product', productRoutes);
 // Image proxy for Cloudinary/local images (used by frontend optimize helpers)
 app.use('/img', imageProxy);
 
-// Register order routes (fixes missing /api/admin/delete-orders)
-app.use(orderRoutes);
-
 // 🔒 SECURITY HEADERS
 // 🔒 SECURITY HEADERS
 app.use(helmet({ contentSecurityPolicy: false }));
 
-app.get('/api/membership/check', async (req, res) => {
+app.post('/api/activity-log', async (req, res) => {
     try {
-        const userId = String(req.query.userId || '').trim();
-        if (!userId) {
-            return res.status(400).json({ message: 'userId is required' });
+        const action = String(req.body?.action || '').trim();
+        const userId = String(req.body?.userId || '').trim();
+        const userEmail = String(req.body?.userEmail || '').trim();
+        const meta = req.body?.meta && typeof req.body.meta === 'object' ? req.body.meta : {};
+
+        if (!action) {
+            return res.status(400).json({ success: false, message: 'action is required' });
         }
 
-        let user = null;
-        if (mongoose.Types.ObjectId.isValid(userId)) {
-            user = await User.findById(userId).select('membershipType totalOrders').lean();
+        const payload = {
+            action,
+            userEmail,
+            meta,
+            ip: String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim(),
+            userAgent: String(req.headers['user-agent'] || '').trim()
+        };
+
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            payload.userId = userId;
         }
 
-        if (!user) {
-            user = await User.findOne({ $or: [{ userid: userId }, { id: userId }] }).select('membershipType totalOrders').lean();
-        }
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        const totalOrders = Number(user.totalOrders || 0);
-        const membershipType = user.membershipType || getMembershipTypeFromOrders(totalOrders);
-
-        return res.json({
+        const activity = await Activity.create(payload);
+        return res.status(201).json({
             success: true,
-            userId,
-            membershipType,
-            totalOrders
+            id: activity?._id || null
         });
     } catch (err) {
-        console.error('Membership check error:', err && err.message ? err.message : err);
-        return res.status(500).json({ message: 'Failed to check membership' });
+        console.error('Activity log error:', err && err.message ? err.message : err);
+        return res.status(500).json({ success: false, message: 'Failed to log activity' });
     }
 });
 
@@ -4059,12 +4060,18 @@ app.post('/api/razorpay/verify-payment', (req, res) => {
 
 app.get('/api/membership/check', async (req, res) => {
     try {
-        const userId = req.query.userId || req.query.id || req.query.userid;
+        const userId = String(req.query.userId || req.query.id || req.query.userid || '').trim();
         if (!userId) {
             return res.status(400).json({ success: false, message: 'User ID required.' });
         }
 
-        const user = await User.findById(userId).select('membershipType totalOrders name email');
+        let user = null;
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+            user = await User.findById(userId).select('membershipType totalOrders name email');
+        }
+        if (!user) {
+            user = await User.findOne({ $or: [{ userid: userId }, { id: userId }] }).select('membershipType totalOrders name email');
+        }
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
         }
