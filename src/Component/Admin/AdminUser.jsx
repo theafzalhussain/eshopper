@@ -6,16 +6,44 @@ import { motion } from 'framer-motion'
 import { Trash2, Shield, User as UserIcon, Crown, Search, Mail, Phone as PhoneIcon, ChevronDown, ShieldCheck } from 'lucide-react'
 import axios from 'axios'
 import { BASE_URL } from '../../constants'
+import { getAdminHeaders } from './adminAuth'
 import './SystemControlCenter.css'
 
 export default function AdminUsers() {
-    const users = useSelector((state) => state.UserStateData)
-    const dispatch = useDispatch()
+    const [users, setUsers] = useState([])
     const [membershipFilter, setMembershipFilter] = useState('All')
     const [searchTerm, setSearchTerm] = useState('')
     const [upgradingIds, setUpgradingIds] = useState([])
 
-    useEffect(() => { dispatch(getUser()) }, [dispatch])
+    const fetchAdminUsers = async () => {
+        try {
+            const timeCache = new Date().getTime();
+            const resp = await axios.get(`${BASE_URL}/api/admin/users?t=${timeCache}`, { headers: getAdminHeaders() })
+            if (resp.data && Array.isArray(resp.data.users)) {
+                setUsers(resp.data.users)
+            }
+        } catch (error) {
+            console.error('Failed to fetch admin users:', error)
+        }
+    }
+
+    useEffect(() => { fetchAdminUsers() }, [])
+
+    // Realtime: refresh users when backend emits relevant DB changes
+    useEffect(() => {
+        const handler = (e) => {
+            try {
+                const data = (e && e.detail) || {};
+                const coll = (data.collection || '').toString().toLowerCase();
+                if (!coll) return;
+                if (['users', 'user', 'orders', 'order', 'checkout', 'checkouts'].includes(coll)) {
+                    fetchAdminUsers();
+                }
+            } catch (err) { console.warn('Realtime admin user handler error', err && err.message); }
+        };
+        window.addEventListener('realtime:dbChange', handler);
+        return () => window.removeEventListener('realtime:dbChange', handler);
+    }, []);
 
     const filteredUsers = useMemo(() => {
         let result = users || []
@@ -34,12 +62,46 @@ export default function AdminUsers() {
         return result
     }, [users, membershipFilter, searchTerm])
 
+    const handleDeleteUser = async (userId, userName) => {
+        if (!window.confirm(`Permanently delete user ${userName}?`)) return;
+        
+        // Optimistically remove user from UI instantly
+        setUsers(prev => prev.filter(u => u.id !== userId && u._id !== userId));
+
+        try {
+            await axios.delete(`${BASE_URL}/user/${userId}`, { headers: getAdminHeaders() });
+            // Let the background refetch silently
+            fetchAdminUsers();
+        } catch (error) {
+            console.error('Delete user failed:', error);
+            alert(error?.response?.data?.message || 'Failed to delete user');
+            // Revert state if failed
+            fetchAdminUsers();
+        }
+    }
+
     const upgradeMembership = async (userId, membershipType) => {
         setUpgradingIds((prev) => [...prev, userId])
+
+        // Optimistically update membership in UI instantly
+        setUsers(prev => prev.map(u => (u.id === userId || u._id === userId) ? { ...u, membershipType } : u));
+
         try {
-            await axios.put(`${BASE_URL}/api/admin/users/${userId}/membership`, { membershipType })
-            dispatch(getUser())
+            const response = await axios.put(
+                `${BASE_URL}/api/admin/users/${userId}/membership`,
+                { membershipType },
+                { headers: getAdminHeaders() }
+            )
+            // Log the response for debugging
+            console.log('Membership update response:', response.data);
+            // Let the background refetch silently so we get enriched details too
+            fetchAdminUsers()
+            // Small delay to ensure state updates are processed
+            setTimeout(() => {
+                console.log('Membership update completed for user:', userId);
+            }, 100)
         } catch (error) {
+            console.error('Membership update failed:', error);
             alert(error?.response?.data?.message || 'Failed to update membership')
         } finally {
             setUpgradingIds((prev) => prev.filter((id) => id !== userId))
@@ -48,6 +110,8 @@ export default function AdminUsers() {
 
     const totalUsers = users.length;
     const eliteUsers = users.filter(u => u.membershipType === 'Elite').length;
+    const goldUsers = users.filter(u => u.membershipType === 'Gold').length;
+    const silverUsers = users.filter(u => String(u.membershipType || 'Silver') === 'Silver').length;
 
     return (
         <div className="lux-admin-users-page" style={{ backgroundColor: "#f8f9fa", minHeight: "100vh" }}>
@@ -75,6 +139,14 @@ export default function AdminUsers() {
                                 <div className="lux-stat-box">
                                     <span>Total Members</span>
                                     <strong>{totalUsers}</strong>
+                                </div>
+                                <div className="lux-stat-box lux-stat-silver">
+                                    <span>Silver Tier</span>
+                                    <strong>{silverUsers}</strong>
+                                </div>
+                                <div className="lux-stat-box lux-stat-gold">
+                                    <span>Gold Tier</span>
+                                    <strong>{goldUsers}</strong>
                                 </div>
                                 <div className="lux-stat-box lux-stat-gold">
                                     <span>Elite Tier</span>
@@ -209,7 +281,7 @@ export default function AdminUsers() {
                                                         
                                                         <button 
                                                             className="lux-btn-delete" 
-                                                            onClick={() => { if(window.confirm(`Permanently delete user ${row.name}?`)) dispatch(deleteUser({ id: rowId })) }}
+                                                            onClick={() => handleDeleteUser(rowId, row.name)}
                                                             title="Delete User"
                                                         >
                                                             <Trash2 size={14} />
@@ -282,6 +354,10 @@ export default function AdminUsers() {
                 .lux-stat-box span { font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; }
                 .lux-stat-gold span { color: #D4AF37; }
                 .lux-stat-box strong { font-size: 24px; font-weight: 700; color: #fff; line-height: 1.2; }
+                .lux-stat-silver {
+                    background: rgba(255,255,255,0.06);
+                    border-color: rgba(226,232,240,0.18);
+                }
 
                 /* Main Card */
                 .lux-users-card {

@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import { useSelector, useDispatch } from 'react-redux';
 import { getCart } from '../Store/ActionCreaters/CartActionCreators';
-import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
+import { getWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
+import { queryClient } from '../queries/queryClient';
+import { catalogQueryKeys } from '../queries/catalogQueries';
 import { GET_CART_RED } from '../Store/Constant';
 import { useToast } from './ToastNotification';
 import axios from 'axios';
@@ -399,7 +401,7 @@ export default function Cart() {
                     price = price || 0;
                 }
             }
-            await axios.post('/api/wishlist', {
+            await axios.post('/wishlist', {
                 userid: user,
                 productid: product,
                 size,
@@ -411,6 +413,7 @@ export default function Cart() {
             });
             await removeProduct(itemId, true);
             await refreshSummaryOnly();
+            dispatch(getWishlist());
             toast.success('Moved to wishlist successfully.');
         } catch (e) {
             toast.error('Failed to move item to wishlist.');
@@ -505,7 +508,7 @@ export default function Cart() {
         }
 
         fetchCartAndSummary();
-        dispatch(getProduct());
+        queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
 
         return () => {
             if (socketRef.current) {
@@ -1148,7 +1151,7 @@ export default function Cart() {
                                                 debouncedUpdateCartOptions({ deliverySpeed: 'express', insuranceAdded });
                                             }}
                                         >
-                                            <span className="lx-do-badge">EXPRESS</span>
+                                            <span className="lux-express-badge"> <span className="lux-express-icon">⚡</span> EXPRESS</span>
                                             <span className="lx-do-name">Next Day</span>
                                             <span className="lx-do-eta">By {expectedDelivery}</span>
                                             <span className="lx-do-fee">+₹{EXPRESS_DELIVERY_FEE}</span>

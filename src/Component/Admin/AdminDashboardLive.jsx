@@ -5,6 +5,8 @@ import DashboardMetrics from './DashboardMetrics';
 import DashboardCharts from './DashboardCharts';
 import DashboardActivity from './DashboardActivity';
 import DashboardTodo from './DashboardTodo';
+import { getAdminHeaders } from './adminAuth';
+import { BASE_URL } from '../../constants';
 
 
 export default function AdminDashboardLive() {
@@ -19,7 +21,9 @@ export default function AdminDashboardLive() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/admin/dashboard');
+        const res = await fetch(`${BASE_URL}/api/admin/dashboard`, {
+          headers: getAdminHeaders()
+        });
         if (!res.ok) throw new Error('Failed to fetch dashboard data');
         const json = await res.json();
         if (mounted) setData(json);
@@ -55,7 +59,12 @@ export default function AdminDashboardLive() {
   return (
     <div>
       <DashboardMetrics metrics={data.metrics} />
-      <DashboardCharts monthlyData={data.monthlyData} salesByCategory={data.salesByCategory} />
+      <DashboardCharts
+        monthlyData={data.monthlyData}
+        salesByCategory={data.salesByCategory}
+        salesBySize={data.salesBySize}
+        availableSizes={data.availableSizes}
+      />
       <DashboardActivity activity={data.activity} />
       <DashboardTodo todos={data.todos} />
     </div>

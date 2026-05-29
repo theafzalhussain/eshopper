@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, ShoppingCart, BellRing, BellOff, CheckCheck } from 'lucide-react';
+import { AlertTriangle, ShoppingCart, BellRing, BellOff, CheckCheck, Mail } from 'lucide-react';
 import { getSocket } from './socket';
 
 const MAX_ITEMS = 8;
@@ -31,7 +31,7 @@ const toTimeAgo = (value) => {
   return `${day}d ago`;
 };
 
-const buildInitialFeed = ({ orders = [], products = [] }) => {
+const buildInitialFeed = ({ orders = [], products = [], contacts = [] }) => {
   const orderItems = (orders || [])
     .slice(0, 6)
     .map((order) => ({
@@ -53,7 +53,17 @@ const buildInitialFeed = ({ orders = [], products = [] }) => {
       at: product.updatedAt || new Date().toISOString()
     }));
 
-  return [...orderItems, ...stockItems]
+  const contactItems = (contacts || [])
+    .slice(0, 4)
+    .map((contact) => ({
+      id: `contact-${contact._id || contact.id || Math.random()}`,
+      type: 'contact',
+      title: `Support message from ${contact.name || contact.email || 'Customer'}`,
+      detail: String(contact.message || '').slice(0, 70) || 'New message received',
+      at: contact.createdAt || new Date().toISOString()
+    }));
+
+  return [...orderItems, ...stockItems, ...contactItems]
     .sort((a, b) => new Date(b.at) - new Date(a.at))
     .slice(0, MAX_ITEMS);
 };
@@ -68,7 +78,8 @@ export default function RecentActivityFeed({
   const seededFeed = useMemo(() => {
     const recentOrders = activityData?.recentOrders || orders;
     const lowStockProducts = activityData?.lowStock || products;
-    return buildInitialFeed({ orders: recentOrders, products: lowStockProducts });
+    const recentContacts = activityData?.recentContacts || [];
+    return buildInitialFeed({ orders: recentOrders, products: lowStockProducts, contacts: recentContacts });
   }, [activityData, orders, products]);
   const [feed, setFeed] = useState(seededFeed);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -137,10 +148,22 @@ export default function RecentActivityFeed({
       }, true);
     };
 
+    const onSupportMessage = (payload) => {
+      pushItem({
+        id: `contact-live-${payload?._id || Date.now()}`,
+        type: 'contact',
+        title: `Support message from ${payload?.name || payload?.email || 'Customer'}`,
+        detail: String(payload?.message || '').slice(0, 70) || 'New support message',
+        at: payload?.createdAt || new Date().toISOString()
+      }, true);
+    };
+
     socket.on('newOrder', onNewOrder);
+    socket.on('newContact', onSupportMessage);
 
     return () => {
       socket.off('newOrder', onNewOrder);
+      socket.off('newContact', onSupportMessage);
     };
   }, [lowStockCount]);
 
@@ -217,7 +240,7 @@ export default function RecentActivityFeed({
               transition={{ duration: 0.24 }}
             >
               <div className={`scc-activity-dot ${item.type === 'stock' ? 'is-stock' : 'is-order'}`}>
-                {item.type === 'stock' ? <AlertTriangle size={13} /> : <ShoppingCart size={13} />}
+                {item.type === 'stock' ? <AlertTriangle size={13} /> : item.type === 'contact' ? <Mail size={13} /> : <ShoppingCart size={13} />}
               </div>
               <div className="scc-activity-copy">
                 <div className="scc-activity-title">{item.title}</div>

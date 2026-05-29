@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
     Home, Users, Layers, Grid, Tag,
     ShoppingBag, MessageSquare, Send, CheckSquare, Package, TicketPercent,
-    Menu, X, LayoutDashboard, Moon, Sun
+    Menu, X, LayoutDashboard, Moon, Sun, Activity
 } from 'lucide-react'
 import './SystemControlCenter.css'
 
@@ -50,7 +50,9 @@ export default function LefNav() {
     const menuItems = [
         { name: "Dashboard", path: "/admin-home", icon: Home },
         { name: "Users", path: "/admin-user", icon: Users },
-        { name: "Orders", path: "/admin-orders", icon: Package },
+        { name: "Order Lifecycle", path: "/admin-orders", icon: Package },
+        { name: "Activity Log", path: "/admin-activities", icon: Activity },
+        { name: "Deploy Checks", path: "/admin-deploy-checks", icon: CheckSquare },
         { name: "Main Categories", path: "/admin-maincategory", icon: Layers },
         { name: "Sub Categories", path: "/admin-subcategory", icon: Grid },
         { name: "Brands", path: "/admin-brand", icon: Tag },
@@ -58,7 +60,7 @@ export default function LefNav() {
         { name: "Coupons", path: "/admin-coupon", icon: TicketPercent },
         { name: "Contact", path: "/admin-contact", icon: MessageSquare },
         { name: "Newsletters", path: "/admin-newsletter", icon: Send },
-        { name: "Checkouts", path: "/admin-checkout", icon: CheckSquare },
+        // { name: "Checkouts", path: "/admin-checkout", icon: CheckSquare },
     ]
 
     const sidebarVariants = {
@@ -278,8 +280,10 @@ export default function LefNav() {
                 .premium-admin-sidebar {
                     position: fixed;
                     top: 110px; /* Below header (40px ribbon + ~70px navbar) */
+                    bottom: 0;
                     left: 0;
-                    height: calc(100vh - 110px); /* Full height minus header */
+                    height: auto;
+                    min-height: calc(100vh - 110px); /* Full height minus header */
                     width: 260px;
                     background: rgba(248, 250, 252, 0.96);
                     border-right: 1px solid rgba(203, 213, 225, 0.6);
@@ -289,6 +293,18 @@ export default function LefNav() {
                     z-index: 1040; /* Below header z-index of 1050 */
                     overflow-y: auto;
                     overflow-x: hidden;
+                }
+
+                .premium-sidebar-header,
+                .premium-nav-items,
+                .premium-sidebar-footer {
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+
+                .premium-nav-items {
+                    min-height: 0;
+                    overflow-y: auto;
                 }
 
                 /* Custom Scrollbar */
@@ -310,7 +326,9 @@ export default function LefNav() {
                     .premium-admin-sidebar {
                         position: fixed;
                         top: 75px; /* Below mobile header (35px ribbon + ~40px navbar) */
-                        height: calc(100vh - 75px); /* Full height minus mobile header */
+                        bottom: 0;
+                        height: auto;
+                        min-height: calc(100vh - 75px); /* Full height minus mobile header */
                         z-index: 1040;
                         transform: translateX(-100%) !important; /* Override framer-motion */
                         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -327,6 +345,12 @@ export default function LefNav() {
                     .premium-admin-sidebar {
                         position: fixed;
                         transform: translateX(0) !important; /* Override framer-motion */
+                    }
+
+                    .premium-admin-sidebar {
+                        top: 110px;
+                        bottom: 0;
+                        height: auto;
                     }
 
                     /* Hide mobile toggle on desktop */
@@ -612,5 +636,7 @@ export default function LefNav() {
                 }
             `}} />
         </>
+        
     )
 }
+

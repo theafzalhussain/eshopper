@@ -3,7 +3,9 @@ import { useToast } from '../ToastNotification'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import LefNav from './LefNav'
 import { useSelector, useDispatch } from 'react-redux'
-import { getProduct, updateProduct } from '../../Store/ActionCreaters/ProductActionCreators'
+import { updateProduct } from '../../Store/ActionCreaters/ProductActionCreators'
+import { queryClient } from '../../queries/queryClient'
+import { catalogQueryKeys } from '../../queries/catalogQueries'
 import { getMaincategory } from '../../Store/ActionCreaters/MaincategoryActionCreators'
 import { getSubcategory } from '../../Store/ActionCreaters/SubcategoryActionCreators'
 import { getBrand } from '../../Store/ActionCreaters/BrandActionCreators'
@@ -31,7 +33,8 @@ export default function AdminUpdateProduct() {
 
     // --- FORM DATA RE-POULATION ---
     useEffect(() => {
-        dispatch(getProduct()); dispatch(getMaincategory()); dispatch(getSubcategory()); dispatch(getBrand());
+        queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
+        dispatch(getMaincategory()); dispatch(getSubcategory()); dispatch(getBrand());
 
         // Handling both standard ID and MongoDB _id
         const item = products.find((x) => (x.id || x._id) === id)

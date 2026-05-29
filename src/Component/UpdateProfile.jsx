@@ -52,12 +52,52 @@ const defaultSettings = {
         pushNotifications: true,
     },
 }
+const safeString = (value) => (value === undefined || value === null ? '' : String(value))
+
+const normalizeProfileData = (current = {}) => {
+    const currentSettings = current.settings || {}
+    return {
+        ...current,
+        name: safeString(current.name),
+        username: safeString(current.username),
+        email: safeString(current.email),
+        phone: safeString(current.phone),
+        addressline1: safeString(current.addressline1 || current.streetAddress),
+        addressline2: safeString(current.addressline2),
+        landmark: safeString(current.landmark),
+        deliveryNotes: safeString(current.deliveryNotes || current.deliveryInstructions),
+        pin: safeString(current.pin || current.postalCode),
+        city: safeString(current.city),
+        state: safeString(current.state),
+        pic: current.pic || null,
+        password: '',
+        confirmPassword: '',
+        settings: {
+            notifications: {
+                ...defaultSettings.notifications,
+                ...(currentSettings.notifications || {}),
+            },
+            privacy: {
+                ...defaultSettings.privacy,
+                ...(currentSettings.privacy || {}),
+            },
+            security: {
+                ...defaultSettings.security,
+                ...(currentSettings.security || {}),
+            },
+            communication: {
+                ...defaultSettings.communication,
+                ...(currentSettings.communication || {}),
+            },
+        }
+    }
+}
 
 export default function Updateprofile() {
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('personal')
     const [data, setdata] = useState({
-        name: "", email: "", phone: "", addressline1: "",
+        name: "", username: "", email: "", phone: "", addressline1: "",
         addressline2: "", landmark: "", pin: "", city: "", state: "", pic: null,
         deliveryNotes: "", password: "", confirmPassword: "", settings: defaultSettings
     })
@@ -80,35 +120,7 @@ export default function Updateprofile() {
         if (users.length > 0) {
             const current = users.find((item) => (item.id || item._id) === userId)
             if (current) {
-                const currentSettings = current.settings || {}
-                const normalized = {
-                    ...current,
-                    password: "",
-                    confirmPassword: "",
-                    addressline1: current.addressline1 || current.streetAddress || "",
-                    addressline2: current.addressline2 || "",
-                    landmark: current.landmark || "",
-                    deliveryNotes: current.deliveryNotes || current.deliveryInstructions || "",
-                    pin: current.pin || current.postalCode || "",
-                    settings: {
-                        notifications: {
-                            ...defaultSettings.notifications,
-                            ...(currentSettings.notifications || {}),
-                        },
-                        privacy: {
-                            ...defaultSettings.privacy,
-                            ...(currentSettings.privacy || {}),
-                        },
-                        security: {
-                            ...defaultSettings.security,
-                            ...(currentSettings.security || {}),
-                        },
-                        communication: {
-                            ...defaultSettings.communication,
-                            ...(currentSettings.communication || {}),
-                        },
-                    }
-                }
+                const normalized = normalizeProfileData(current)
                 setdata(normalized)
                 setInitialData(normalized)
                 if (current.pic) setPreview(current.pic)
@@ -128,15 +140,15 @@ export default function Updateprofile() {
         const { name, value } = e.target
         if (name === 'phone') {
             const cleanPhone = value.replace(/[^\d+\-\s]/g, '').slice(0, 15)
-            setdata({ ...data, [name]: cleanPhone })
+            setdata((prev) => ({ ...prev, [name]: cleanPhone }))
             return
         }
         if (name === 'pin') {
             const cleanPin = value.replace(/\D/g, '').slice(0, 6)
-            setdata({ ...data, [name]: cleanPin })
+            setdata((prev) => ({ ...prev, [name]: cleanPin }))
             return
         }
-        setdata({ ...data, [name]: value })
+        setdata((prev) => ({ ...prev, [name]: safeString(value) }))
     }
 
     function updateSetting(section, key, value) {
@@ -164,7 +176,7 @@ export default function Updateprofile() {
                 URL.revokeObjectURL(previewObjectUrl);
             }
             const nextObjectUrl = URL.createObjectURL(file);
-            setdata({ ...data, pic: file });
+            setdata((prev) => ({ ...prev, pic: file }));
             setPreview(nextObjectUrl);
             setPreviewObjectUrl(nextObjectUrl);
         }
@@ -172,7 +184,7 @@ export default function Updateprofile() {
 
     function resetForm() {
         if (!initialData) return
-        setdata(initialData)
+        setdata(normalizeProfileData(initialData))
         setPreview(initialData.pic || null)
     }
 
@@ -205,6 +217,7 @@ export default function Updateprofile() {
         let formData = new FormData();
         formData.append("id", localStorage.getItem("userid"));
         formData.append("name", data.name);
+        if (safeString(data.username).trim()) formData.append("username", safeString(data.username).trim());
         formData.append("email", data.email);
         formData.append("phone", data.phone);
         formData.append("addressline1", data.addressline1 || "");
@@ -244,6 +257,7 @@ export default function Updateprofile() {
                 id: localStorage.getItem("userid"),
                 _id: latestUser?._id || latestUser?.id || localStorage.getItem("userid"),
                 name: data.name || '',
+                username: data.username || '',
                 email: data.email || '',
                 phone: data.phone || '',
                 addressline1: data.addressline1 || '',
@@ -269,6 +283,28 @@ export default function Updateprofile() {
             // Keep Redux list in sync for other components.
             dispatch(getUser())
 
+            try {
+                await fetch(`${BASE_URL}/api/activity-log`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'Profile updated',
+                        userId: mergedUpdatedUser._id || localStorage.getItem('userid'),
+                        userEmail: mergedUpdatedUser.email || data.email || '',
+                        meta: {
+                            hasPhoto: Boolean(mergedUpdatedUser.pic),
+                            updatedFields: Object.keys(data || {}).filter((key) => {
+                                if (key === 'settings') return true
+                                if (key === 'password' || key === 'confirmPassword') return Boolean(data[key])
+                                return Boolean(data[key])
+                            })
+                        }
+                    })
+                })
+            } catch (activityError) {
+                console.warn('Profile activity log failed:', activityError)
+            }
+
             window.dispatchEvent(new CustomEvent('profile-updated', { detail: mergedUpdatedUser }))
             toast.success(data.password ? 'Security settings updated successfully' : 'Profile updated successfully')
             setTimeout(() => {
@@ -289,6 +325,7 @@ export default function Updateprofile() {
     const hasUnsavedChanges = initialData
         ? (
             initialData.name !== data.name ||
+            initialData.username !== data.username ||
             initialData.email !== data.email ||
             initialData.phone !== data.phone ||
             initialData.addressline1 !== data.addressline1 ||
@@ -565,6 +602,11 @@ export default function Updateprofile() {
                                                     <label className="upd-field">
                                                         <span className="upd-label"><User2 size={14} /> Full Name</span>
                                                         <input type="text" name="name" value={data.name} onChange={getData} required />
+                                                    </label>
+
+                                                    <label className="upd-field">
+                                                        <span className="upd-label"><ShieldCheck size={14} /> Username</span>
+                                                        <input type="text" name="username" value={data.username} onChange={getData} placeholder="your username" />
                                                     </label>
 
                                                     <label className="upd-field">

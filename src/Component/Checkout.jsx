@@ -5,7 +5,8 @@ import { useSelector, useDispatch } from 'react-redux'
 import axios from 'axios'
 import { getUser } from "../Store/ActionCreaters/UserActionCreators"
 import { clearCart, getCart } from "../Store/ActionCreaters/CartActionCreators"
-import { getProduct } from '../Store/ActionCreaters/ProductActionCreators'
+import { queryClient } from '../queries/queryClient';
+import { catalogQueryKeys } from '../queries/catalogQueries';
 import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
@@ -71,7 +72,7 @@ export default function Checkout() {
     const cartState = useSelector((state) => state.CartStateData)
     const productState = useSelector((state) => state.ProductStateData)
     const users = userState || []
-    const carts = cartState?.items || []
+    const carts = cartState?.items || (Array.isArray(cartState) ? cartState : [])
     const cartDeliveryEstimate = cartState?.deliveryEstimate || {}
     const { membershipType } = useMembership()
 
@@ -310,7 +311,7 @@ export default function Checkout() {
 
     useEffect(() => {
         dispatch(getUser())
-        dispatch(getProduct())
+        queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
         if (!location.state?.direct) {
             dispatch(getCart())
         }
@@ -730,7 +731,7 @@ export default function Checkout() {
                     </div>
                     <div className="eta-chip d-flex align-items-center gap-2">
                         <CalendarCheck size={16} className="text-gold" style={{marginTop: '-2px'}}/>
-                        <span>Guaranteed Delivery: <strong className="text-dark">{estimatedDelivery || '—'}</strong>{deliverySpeed === 'express' && <span className="text-danger ml-1 font-weight-bold" style={{fontSize: '11px', letterSpacing: '0.5px'}}>⚡ EXPRESS</span>}</span>
+                        <span>Guaranteed Delivery: <strong className="text-dark">{estimatedDelivery || '—'}</strong>{deliverySpeed === 'express' && <span className="lux-express-badge" style={{ marginLeft: 8, fontSize: '11px' }}><span className="lux-express-icon">⚡</span> EXPRESS</span>}</span>
                     </div>
                 </div>
 

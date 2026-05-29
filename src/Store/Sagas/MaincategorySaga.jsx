@@ -1,16 +1,22 @@
-import { takeEvery, put } from "redux-saga/effects"
+import { takeEvery, put, call } from "redux-saga/effects"
 import { createMaincategoryAPI, deleteMaincategoryAPI, getMaincategoryAPI, updateMaincategoryAPI } from "../Services"
 import { ADD_MAINCATEGORY, ADD_MAINCATEGORY_RED, DELETE_MAINCATEGORY, DELETE_MAINCATEGORY_RED, GET_MAINCATEGORY, GET_MAINCATEGORY_RED, UPDATE_MAINCATEGORY, UPDATE_MAINCATEGORY_RED } from "../Constant"
+import { invalidateCatalogQueries, catalogQueryKeys, fetchMaincategories } from "../../queries/catalogQueries"
+import { queryClient } from "../../queries/queryClient"
 
 function* createMaincategorySaga(action) {
     try {
         let response = yield createMaincategoryAPI(action.payload)
         yield put({ type: ADD_MAINCATEGORY_RED, data: response })
+        yield call(invalidateCatalogQueries)
     } catch (e) { console.error("Maincategory Add Error:", e) }
 }
 function* getMaincategorySaga() {
     try {
-        let response = yield getMaincategoryAPI()
+        const response = yield call([queryClient, queryClient.fetchQuery], {
+            queryKey: catalogQueryKeys.maincategories,
+            queryFn: ({ signal }) => fetchMaincategories({ signal })
+        })
         yield put({ type: GET_MAINCATEGORY_RED, data: response })
     } catch (e) { console.error("Maincategory Fetch Error:", e) }
 }
@@ -18,12 +24,14 @@ function* deleteMaincategorySaga(action) {
     try {
         yield deleteMaincategoryAPI(action.payload)
         yield put({ type: DELETE_MAINCATEGORY_RED, data: action.payload })
+        yield call(invalidateCatalogQueries)
     } catch (e) { console.error("Maincategory Delete Error:", e) }
 }
 function* updateMaincategorySaga(action) {
     try {
         yield updateMaincategoryAPI(action.payload)
         yield put({ type: UPDATE_MAINCATEGORY_RED, data: action.payload })
+        yield call(invalidateCatalogQueries)
     } catch (e) { console.error("Maincategory Update Error:", e) }
 }
 

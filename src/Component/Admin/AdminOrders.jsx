@@ -230,9 +230,13 @@ export default function AdminOrders() {
     const [actionDeliveryOtp, setActionDeliveryOtp] = useState('');
 
     const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const localApiUrl = process.env.REACT_APP_LOCAL_API_URL || SHARED_BASE_URL || process.env.REACT_APP_API_URL || 'http://localhost:5000';
-    const remoteApiUrl = process.env.REACT_APP_BASE_URL || SHARED_BASE_URL || 'https://eshopper-qtgl.onrender.com';
-    const [apiBaseUrl, setApiBaseUrl] = useState(isLocalHost && process.env.REACT_APP_USE_LOCAL_API === 'true' ? localApiUrl : remoteApiUrl);
+        const envBase = process.env.REACT_APP_BASE_URL || '';
+        const envApi = process.env.REACT_APP_API_URL || '';
+        const localApiUrl = process.env.REACT_APP_LOCAL_API_URL || SHARED_BASE_URL || envApi || 'http://localhost:5000';
+        const remoteApiUrl = (envBase && !envBase.includes('localhost') && !envBase.includes('127.0.0.1'))
+            ? envBase
+            : (SHARED_BASE_URL || envApi || 'https://eshopper-qtgl.onrender.com');
+        const [apiBaseUrl, setApiBaseUrl] = useState(isLocalHost && process.env.REACT_APP_USE_LOCAL_API === 'true' ? localApiUrl : remoteApiUrl);
     const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
 
     const showNotification = (message, type = 'info') => {
@@ -702,17 +706,18 @@ export default function AdminOrders() {
                     ? `${apiBaseUrl}/api/admin/confirm-order`
                     : `${apiBaseUrl}/api/update-order-status`;
 
-                const config = bulkStatus === 'Confirmed'
-                    ? { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} }
-                    : {};
+                const config = { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} };
 
-                const response = bulkStatus === 'Confirmed'
-                    ? await axios.post(endpoint, { orderId }, config)
-                    : await axios.post(endpoint, { orderId, status: bulkStatus });
+                const payload = bulkStatus === 'Confirmed'
+                    ? { orderId }
+                    : { orderId, status: bulkStatus };
+
+                const response = await axios.post(endpoint, payload, config);
 
                 if (response.data.success) success += 1;
                 else failed += 1;
             } catch (error) {
+                console.error(`Bulk update failed for ${orderId}:`, error?.response?.data || error.message);
                 failed += 1;
             }
         }
@@ -1081,9 +1086,16 @@ export default function AdminOrders() {
                                                     <td className="hide-mobile color-muted">{order.userEmail || 'N/A'}</td>
                                                     <td><strong className="lux-price-tag">INR {Number(order.finalAmount || 0).toLocaleString('en-IN')}</strong></td>
                                                     <td>
-                                                        <span className={`lux-badge ${statusClass}`}>
-                                                            <IconComp size={12} className="mr-1" /> {order.orderStatus || 'Pending'}
-                                                        </span>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                            <span className={`lux-badge ${statusClass}`}>
+                                                                <IconComp size={12} className="mr-1" /> {order.orderStatus || 'Pending'}
+                                                            </span>
+                                                            {order?.cancellation && order.cancellation.status && order.cancellation.status !== 'NOT_CANCELLED' && (
+                                                                <span className="lux-badge-tag" style={{ background: '#fff7ed', color: '#b45309', border: '1px solid #fde68a', fontSize: '11px' }} title={order.cancellation.reason || order.cancellation.status}>
+                                                                    ⚠️ Cancel: {order.cancellation.status}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 <td data-label="Services">
                                                     <div className="font-weight-bold mb-1">{order.productCount || (order.products || []).length || 0} Items</div>

@@ -40,7 +40,7 @@
 .scc-container {
   background: linear-gradient(135deg, var(--slate-deep) 0%, #0c1117 50%, var(--slate-deep) 100%);
   min-height: 100vh;
-  padding: 2rem;
+  padding: 0;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -61,6 +61,7 @@
   max-width: calc(100% - 260px);
   box-sizing: border-box;
   min-width: 0;
+  padding-bottom: 0;
 }
 
 /* Mobile and Tablet - Sidebar hidden, full width content */
@@ -74,8 +75,7 @@
   }
 
   .scc-container {
-    padding: 1rem;
-    padding-top: 80px;
+    padding: 0;
   }
 }
 

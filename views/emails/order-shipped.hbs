@@ -177,22 +177,24 @@
             </table>
 
             <div style="text-align: center; margin-top: 30px;">
-              <a class="btn btn-primary mobile-btn" href="{{liveTrackingUrl}}" target="_blank"
-                style="display:inline-block;text-align:center;text-decoration:none;font-weight:700;border-radius:6px;padding:16px 32px;font-size:14px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:1.5px;text-transform:uppercase;margin:8px 6px;min-width:180px;">LIVE TRACKING</a>
-              <a class="btn btn-secondary mobile-btn" href="{{carrierWebsiteUrl}}" target="_blank"
-                style="display:inline-block;text-align:center;text-decoration:none;font-weight:700;border-radius:6px;padding:16px 32px;font-size:14px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1.5px;text-transform:uppercase;margin:8px 6px;min-width:180px;">CARRIER WEBSITE</a>
+              <div style="display:block;width:100%;">
+                <a class="mobile-btn" href="{{liveTrackingUrl}}" target="_blank"
+                  style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:18px 24px;font-size:15px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:2px;text-transform:uppercase;margin:0 0 14px 0;box-shadow:0 6px 16px rgba(212,175,55,0.3);">LIVE TRACKING</a>
+                <a class="mobile-btn" href="{{carrierWebsiteUrl}}" target="_blank"
+                  style="display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;font-weight:800;border-radius:10px;padding:18px 24px;font-size:15px;background:#151820;color:#d4af37;border:2px solid #d4af37;letter-spacing:2px;text-transform:uppercase;margin:0;box-shadow:0 6px 16px rgba(212,175,55,0.15);">CARRIER WEBSITE</a>
+              </div>
+            </div>
+            
+            <div style="margin-top:28px;border-top:1px solid #2a2e36;padding-top:20px;text-align:center;">
+              <h4 style="font-family:'Playfair Display', Georgia, serif;margin:0 0 14px;font-size:20px;color:#f1f2f5;font-weight:400;">Need Help with Your Delivery?</h4>
+              <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px;align-items:center;">
+                <a class="mobile-flex-btn" href="{{whatsappUrl}}" target="_blank" style="background:linear-gradient(90deg,#25d366,#1ed66d);color:#0f1912;text-decoration:none;border-radius:10px;padding:14px 20px;font-weight:800;display:inline-block;text-align:center;min-width:140px;box-shadow:0 4px 12px rgba(37,211,102,0.25);">WhatsApp Support</a>
+                <a class="mobile-flex-btn" href="tel:{{supportPhone}}" style="background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;text-decoration:none;border-radius:10px;padding:14px 20px;font-weight:800;display:inline-block;text-align:center;min-width:140px;box-shadow:0 4px 12px rgba(212,175,55,0.25);">CALL SUPPORT</a>
+              </div>
             </div>
           </div>
         </td>
       </tr>
-
-      <tr><td style="padding:24px 20px;border-top:1px solid #2a2e36;text-align:center;background:#0d0e10;">
-        <h4 style="font-family:'Playfair Display', Georgia, serif;margin:0 0 16px;font-size:24px;color:#d4af37;font-weight:400;">Need Help with Your Delivery?</h4>
-        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
-          <a class="mobile-flex-btn" href="{{whatsappUrl}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#06140b;border:1px solid #25d366;color:#25d366;text-align:center;letter-spacing:0.5px;">WhatsApp Support</a>
-          <a class="mobile-flex-btn" href="tel:{{supportPhone}}" style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#151820;border:1px solid #756225;color:#f0d07a;text-align:center;letter-spacing:0.5px;margin-left:8px;">Call Us</a>
-        </div>
-      </td></tr>
 
       <tr><td style="padding:24px 14px;border-top:1px solid #1a1a1a;text-align:center;color:#9ea4b2;font-size:12px;line-height:1.7;background:#0b0c0e;">
         {{> social-footer}}

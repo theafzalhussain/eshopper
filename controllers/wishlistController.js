@@ -1,5 +1,6 @@
 const Wishlist = require('../models/Wishlist');
 const mongoose = require('mongoose');
+const { logActivity } = require('../utils/activityLogger');
 
 // Add to wishlist
 exports.addToWishlist = async (req, res) => {
@@ -44,6 +45,11 @@ exports.addToWishlist = async (req, res) => {
       qty: Number(quantity || qty || 1)
     });
     await wishlist.save();
+    await logActivity(req, {
+      action: 'Wishlist item added',
+      userId,
+      meta: { productId, size, color, quantity: Number(quantity || qty || 1) }
+    });
     res.json({ success: true, message: 'Added to wishlist.' });
   } catch (err) {
     console.error('[WISHLIST] 500 error:', err);
@@ -61,12 +67,13 @@ exports.getWishlist = async (req, res) => {
         ? { $or: [{ user: new mongoose.Types.ObjectId(user) }, { userid: user }] }
         : { userid: user };
 
-    let wishlist = await Wishlist.findOne(query).populate('products.product');
+    let wishlist = await Wishlist.findOne(query).populate('products.product', 'name finalprice price pic1').lean();
     if (!wishlist) return res.json([]);
 
     // Map products to ensure they never appear blank even if old data is broken
-    const mappedProducts = wishlist.products.map(p => {
-        const obj = p.toObject();
+    const mappedProducts = (wishlist.products || []).map(p => {
+        // Since we used .lean(), 'p' is already a plain object, we don't need .toObject()
+        const obj = typeof p.toObject === 'function' ? p.toObject() : p;
         const flatId = obj.product?._id || obj.product || obj.productid || obj.productId;
         return {
             ...obj,
@@ -89,18 +96,73 @@ exports.getWishlist = async (req, res) => {
 // Remove from wishlist
 exports.removeFromWishlist = async (req, res) => {
   try {
-    const user = req.body.user || req.query.user || req.body.userId || req.body.userid;
+    let user = req.body.user || req.query.user || req.body.userId || req.body.userid || req.query.userId || req.query.userid;
     const { id } = req.params;
+
+    const shouldRemoveItem = (item) => {
+      return String(item?._id) === String(id) || String(item?.product) === String(id) || String(item?.productid) === String(id);
+    };
+
+    // Fallback: try Authorization header (frontend stores userid as bearer token)
+    if (!user) {
+      const authHeader = String(req.headers.authorization || req.headers.Authorization || '').trim();
+      if (authHeader.toLowerCase().startsWith('bearer ')) {
+        user = authHeader.split(' ')[1];
+      } else if (req.headers['x-admin-userid']) {
+        user = String(req.headers['x-admin-userid']);
+      } else if (req.user && (req.user.sub || req.user._id || req.user.id)) {
+        user = req.user.sub || req.user._id || req.user.id;
+      }
+    }
 
     const query = mongoose.Types.ObjectId.isValid(user) 
         ? { $or: [{ user: new mongoose.Types.ObjectId(user) }, { userid: user }] }
         : { userid: user };
 
+    console.log('[WISHLIST] removeFromWishlist params:', { user, id });
     let wishlist = await Wishlist.findOne(query);
-    if (!wishlist) return res.status(404).json({ success: false, message: 'Wishlist not found.' });
 
-    wishlist.products = wishlist.products.filter(p => String(p._id) !== String(id) && String(p.product) !== String(id) && String(p.productid) !== String(id));
+    // If no user-specific wishlist is found, fall back to removing the item from any wishlist that contains it.
+    if (!wishlist) {
+      const matchedWishlists = await Wishlist.find({
+        $or: [
+          { 'products._id': id },
+          { 'products.product': mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id },
+          { 'products.productid': mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id },
+          { 'products.productid': id }
+        ]
+      });
+
+      let modifiedCount = 0;
+      for (const doc of matchedWishlists) {
+        const before = doc.products.length;
+        doc.products = doc.products.filter((item) => !shouldRemoveItem(item));
+        if (doc.products.length !== before) {
+          await doc.save();
+          modifiedCount += 1;
+        }
+      }
+
+      console.log('[WISHLIST] global removal result:', { matched: matchedWishlists.length, modified: modifiedCount });
+      if (modifiedCount > 0) {
+        await logActivity(req, {
+          action: 'Wishlist item removed (global)',
+          userId: user,
+          meta: { itemId: id }
+        });
+        return res.json({ success: true, message: 'Removed from wishlist.' });
+      }
+
+      return res.status(404).json({ success: false, message: 'Wishlist not found.' });
+    }
+
+    wishlist.products = wishlist.products.filter((item) => !shouldRemoveItem(item));
     await wishlist.save();
+    await logActivity(req, {
+      action: 'Wishlist item removed',
+      userId: user,
+      meta: { itemId: id }
+    });
     res.json({ success: true, message: 'Removed from wishlist.' });
   } catch (err) {
     console.error('[WISHLIST] removeFromWishlist error:', err);

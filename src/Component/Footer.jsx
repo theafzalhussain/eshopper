@@ -21,7 +21,8 @@ import {
   Boxes,
   X
 } from 'lucide-react'
-import { createNewslatterAPI, getFooterDataAPI, getMaincategoryAPI } from '../Store/Services'
+import { useSelector } from 'react-redux'
+import { createNewslatterAPI, getFooterDataAPI } from '../Store/Services'
 import { useToast } from './ToastNotification'
 
 const fallbackFooterData = {
@@ -61,6 +62,7 @@ const Footer = () => {
   const navigate = useNavigate()
   const [isTransitioning, setIsTransitioning] = useState(false)
   const toast = useToast()
+  const reduxMainCategories = useSelector((state) => state.MaincategoryStateData) || []
   // Robust admin detection (same as Shop.jsx)
   const [role, setRole] = useState(() => String(localStorage.getItem('role') || '').toLowerCase())
   const [isAdmin, setIsAdmin] = useState(false);
@@ -105,14 +107,25 @@ const Footer = () => {
   const [mainCategories, setMainCategories] = useState([])
 
   useEffect(() => {
+    const categoryList = Array.isArray(reduxMainCategories) ? reduxMainCategories : []
+    const menCategory = categoryList.find((item) => String(item?.name || '').trim().toLowerCase() === 'mens')
+    const orderedCategories = menCategory
+      ? [menCategory, ...categoryList.filter((item) => item !== menCategory)]
+      : [{ name: 'Mens' }, ...categoryList]
+    const filteredCategories = orderedCategories.filter((item) => {
+      const name = String(item?.name || '').trim().toLowerCase()
+      return name !== 'ladies' && name !== 'lady'
+    })
+
+    setMainCategories(filteredCategories.slice(0, 5))
+  }, [reduxMainCategories])
+
+  useEffect(() => {
     let mounted = true
 
     const loadFooterData = async () => {
       try {
-        const [footerResponse, categoriesResponse] = await Promise.all([
-          getFooterDataAPI(),
-          getMaincategoryAPI()
-        ])
+        const footerResponse = await getFooterDataAPI()
 
         if (!mounted) return
 
@@ -130,18 +143,6 @@ const Footer = () => {
             ? footerResponse.userFeatures
             : fallbackFooterData.userFeatures
         })
-
-        const categoryList = Array.isArray(categoriesResponse) ? categoriesResponse : []
-        const menCategory = categoryList.find((item) => String(item?.name || '').trim().toLowerCase() === 'mens')
-        const orderedCategories = menCategory
-          ? [menCategory, ...categoryList.filter((item) => item !== menCategory)]
-          : [{ name: 'Mens' }, ...categoryList]
-        const filteredCategories = orderedCategories.filter((item) => {
-          const name = String(item?.name || '').trim().toLowerCase()
-          return name !== 'ladies' && name !== 'lady'
-        })
-
-        setMainCategories(filteredCategories.slice(0, 5))
       } catch (err) {
         console.warn('Footer data load issue:', err?.message || err)
       }

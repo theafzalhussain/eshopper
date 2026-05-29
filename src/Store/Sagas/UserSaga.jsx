@@ -1,11 +1,14 @@
 import { takeEvery, put } from "redux-saga/effects"
 // यहाँ हमने forgetPasswordAPI की जगह resetPasswordAPI कर दिया है
-import { getUserAPI, updateUserAPI, resetPasswordAPI, createUserAPI, deleteUserAPI } from "../Services" 
+import { getUserAPI, getSingleUserAPI, updateUserAPI, resetPasswordAPI, createUserAPI, deleteUserAPI } from "../Services" 
 import { ADD_USER, ADD_USER_RED, GET_USER, GET_USER_RED, UPDATE_USER, UPDATE_USER_RED, FORGET_PASSWORD, DELETE_USER, DELETE_USER_RED } from "../Constant"
 
 function* getUserSaga() {
     try {
-        let res = yield getUserAPI();
+        const userId = localStorage.getItem('userid');
+        const isLoggedIn = localStorage.getItem('login') === 'true';
+        if (!userId || !isLoggedIn) return;
+        let res = yield getSingleUserAPI(userId);
         yield put({ type: GET_USER_RED, data: res });
     } catch (e) { console.error("Get User Error:", e) }
 }

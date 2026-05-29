@@ -1,7 +1,9 @@
 /* === CSS RESET & GLOBAL STYLES === */
 html {
   box-sizing: border-box;
-  font-size: 16px;
+  font-size: 13px; /* Reduced further */
+  zoom: 0.8; /* Scales down the entire website globally to 80% */
+  
 }
 *, *::before, *::after {
   box-sizing: inherit;
@@ -16,7 +18,7 @@ body {
   padding: 0;
   background: linear-gradient(135deg, #18191A 0%, #23272F 100%);
   color: #fff;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
 }
 *, *::before, *::after {
   box-sizing: inherit;
@@ -31,22 +33,36 @@ body {
   padding: 0;
   background: linear-gradient(135deg, #18191A 0%, #23272F 100%);
   color: #fff;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+a,
+a:hover,
+a:focus,
+a:active {
+  text-decoration: none !important;
 }
 
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Roboto:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,600;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,600;1,700&display=swap');
 
 
 body {
-  font-family: 'Inter', 'Roboto', Arial, sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
   background: linear-gradient(135deg, #18191A 0%, #23272F 100%);
   color: #fff;
 }
 
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Inter', 'Roboto', Arial, sans-serif;
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 .glass {
@@ -67,6 +83,246 @@ h1, h2, h3, h4, h5, h6 {
 
 .transition-custom {
   transition-timing-function: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* Premium express badge styles - shared across components */
+.lux-express-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 8px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f4d77a;
+  border: 1px solid rgba(212,175,55,0.32);
+  background: linear-gradient(135deg, rgba(14,14,18,0.98) 0%, rgba(33,28,15,0.98) 100%);
+  box-shadow: 0 8px 26px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+  font-family: 'DM Sans', Inter, Roboto, sans-serif;
+}
+.lux-express-badge .lux-express-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(212,175,55,0.22), rgba(249,115,22,0.18));
+  border: 1px solid rgba(212,175,55,0.22);
+  color: #ffd56a;
+  box-shadow: 0 0 0 3px rgba(212,175,55,0.08);
+  font-size: 12px;
+}
+.lux-standard-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+  background: linear-gradient(135deg, #fafafa 0%, #eef2f7 100%);
+  border: 1px solid rgba(148,163,184,0.15);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+  font-family: 'DM Sans', Inter, Roboto, sans-serif;
+}
+
+/* Responsive adjustments for express badge */
+@media (max-width: 600px) {
+  .lux-express-badge {
+    font-size: 0.75rem;
+    padding: 5px 10px;
+    gap: 6px;
+  }
+  .lux-express-badge .lux-express-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .lux-express-badge { font-size: 0.72rem; padding: 4px 8px; }
+  .lux-express-badge .lux-express-icon { width: 16px; height: 16px; font-size: 9px; }
+}
+
+/* Make the express badge more compact inside delivery option (Cart) to avoid overlap */
+.lx-delivery-opt .lux-express-badge {
+  gap: 8px;
+  padding: 4px 8px 4px 6px;
+  font-size: 0.78rem;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+}
+.lx-delivery-opt .lux-express-badge .lux-express-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  margin-right: 2px;
+}
+.lx-delivery-opt .lux-express-badge { margin-right: 8px; display: inline-flex; align-items: center; }
+
+@media (max-width: 520px) {
+  .lx-delivery-opt .lux-express-badge { padding: 3px 6px; gap: 6px; font-size: 0.72rem; margin-right: 6px; }
+  .lx-delivery-opt .lux-express-badge .lux-express-icon { width: 14px; height: 14px; font-size: 9px; }
+  .lx-delivery-opt { gap: 8px; }
+}
+
+/* Admin Activities - responsive + premium filters */
+.admin-activities-shell .admin-filters {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 0.8fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.admin-activities-shell .admin-field {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  background: linear-gradient(180deg, rgba(15,23,42,0.94), rgba(15,23,42,0.82));
+  border: 1px solid rgba(148,163,184,0.18);
+  border-radius: 12px;
+  color: #fff;
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+  -webkit-appearance: none;
+  appearance: none;
+  z-index: 2;
+}
+.admin-activities-shell .admin-field:focus {
+  border-color: rgba(125,211,252,0.5);
+  box-shadow: 0 8px 28px rgba(14,165,233,0.08);
+}
+.admin-activities-shell .admin-filters > div { position: relative; }
+
+/* Ensure native select dropdowns show above other panels on small screens */
+.admin-activities-shell select.admin-field { z-index: 2000; }
+
+/* mobile layout */
+@media (max-width: 820px) {
+  .admin-activities-shell .admin-filters { grid-template-columns: 1fr; }
+  .admin-activities-shell .admin-field { padding: 12px 12px 12px 40px; font-size: 14px; }
+}
+
+@media (max-width: 420px) {
+  .admin-activities-shell .admin-filters { gap: 8px; }
+  .admin-activities-shell .admin-field { padding-left: 40px; font-size: 13px; }
+  .admin-activities-shell .admin-filters svg { left: 10px !important; }
+}
+
+/* Premium touches for dropdowns and search */
+.admin-activities-shell .admin-field option { color: #0f172a; }
+.admin-activities-shell .admin-filters .admin-field::-ms-expand { display: none; }
+.admin-activities-shell .admin-filters .admin-field::placeholder { color: #94a3b8; }
+
+/* Activity list responsiveness */
+.admin-activities-shell .activity-list-item { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; }
+@media (max-width: 640px) { .admin-activities-shell .activity-list-item { grid-template-columns: 1fr; } }
+
+/* Additional admin responsive & animation tweaks */
+.admin-activities-shell {
+  overflow: visible !important; /* allow dropdowns to overflow */
+  padding: 0.75rem !important;
+}
+.admin-toprow { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+@media (max-width: 820px) {
+  .admin-toprow { flex-direction: column; align-items: stretch; }
+  .admin-toprow .admin-refresh-btn { margin-left: 0; align-self: flex-start; }
+}
+
+.admin-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(13,148,136,0.22), rgba(15,118,110,0.28));
+  color: #d6fbff;
+  border: 1px solid rgba(45,212,191,0.22);
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(13,148,136,0.12);
+  transition: transform 0.18s cubic-bezier(.2,.9,.3,1), box-shadow 0.18s;
+}
+.admin-refresh-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(13,148,136,0.18); }
+.admin-refresh-btn:active { transform: translateY(-1px); }
+
+/* custom arrow for select when supported */
+.admin-activities-shell select.admin-field {
+  background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.18) 50%), linear-gradient(135deg, rgba(255,255,255,0.18) 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(1em + 2px), calc(100% - 13px) calc(1em + 2px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 44px;
+}
+.admin-activities-shell select.admin-field::-ms-expand { display: none; }
+
+/* Make touch targets larger on small screens */
+@media (max-width: 480px) {
+  .admin-activities-shell .admin-field { padding: 14px 14px 14px 44px; font-size: 15px; }
+  .admin-refresh-btn { padding: 12px 16px; }
+}
+
+/* Premium animated field wrapper */
+.admin-field-wrap {
+  position: relative;
+  transition: transform 0.22s cubic-bezier(.2,.9,.3,1), box-shadow 0.22s, border-color 0.22s;
+  border-radius: 12px;
+}
+.admin-field-wrap:focus-within {
+  transform: translateY(-4px);
+  z-index: 2100; /* ensure lifted above other elements */
+}
+
+.admin-field {
+  transition: background 0.25s ease, box-shadow 0.25s ease, transform 0.18s ease;
+  background: linear-gradient(180deg, rgba(8,12,16,0.42), rgba(12,18,24,0.62));
+  border: 1px solid rgba(148,163,184,0.12);
+  padding: 12px 44px 12px 40px;
+  border-radius: 12px;
+  color: #e6f7ff;
+  font-size: 14px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.admin-field:focus {
+  outline: none;
+  box-shadow: 0 18px 40px rgba(14,165,233,0.08), 0 6px 18px rgba(0,0,0,0.18);
+  border-color: rgba(125,211,252,0.5);
+  transform: translateY(-2px);
+}
+
+/* Dropdown arrow animation */
+.admin-field-wrap::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateY(-50%) rotate(0deg);
+  border-right: 2px solid rgba(255,255,255,0.7);
+  border-bottom: 2px solid rgba(255,255,255,0.7);
+  transform-origin: center;
+  transition: transform 0.22s ease, opacity 0.18s;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.admin-field-wrap:focus-within::after { transform: translateY(-50%) rotate(180deg); opacity: 1; }
+
+/* Ensure select uses full width on small screens and dropdown not clipped */
+@media (max-width: 600px) {
+  .admin-field { font-size: 15px; padding: 12px 48px 12px 44px; }
+  .admin-field-wrap { z-index: 9999; }
+  .admin-activities-shell { overflow: visible !important; }
+}
+
+/* subtle floating animation for the whole filters row on load */
+.admin-filters { animation: adminFiltersFloat 700ms ease both; }
+@keyframes adminFiltersFloat {
+  0% { transform: translateY(6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 
 /* === UNIVERSAL CHECKBOX STYLES === */

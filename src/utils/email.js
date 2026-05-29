@@ -31,6 +31,8 @@ async function sendTransactionalEmail({ toEmail, toName, subject, htmlContent, a
         }));
     }
     try {
+        // debug: log a small preview of the HTML content being sent
+        try { console.log('[EMAIL DEBUG] htmlContent preview:', htmlContent && htmlContent.substring ? htmlContent.substring(0, 300) : '[no htmlContent]'); } catch (e) { /* ignore */ }
         const response = await axios.post(
             'https://api.brevo.com/v3/smtp/email',
             payload,

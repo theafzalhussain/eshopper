@@ -1,3 +1,20 @@
+import { BASE_URL } from '../constants';
+
+const buildProxyUrl = (src, options = {}) => {
+  if (!src) return src;
+  const encodedSrc = encodeURIComponent(src);
+  const params = [];
+  if (options.maxWidth) params.push(`w=${Number(options.maxWidth)}`);
+  if (options.quality) params.push(`q=${Number(options.quality)}`);
+  const query = params.length ? `&${params.join('&')}` : '';
+  return `${BASE_URL}/img?src=${encodedSrc}${query}`;
+};
+
+const isProxyUrl = (url) => {
+  if (!url) return false;
+  return url.includes('/img?src=');
+};
+
 /**
  * Optimizes Cloudinary URLs with automatic format and quality compression
  * @param {string} url - The original image URL
@@ -5,6 +22,7 @@
  */
 export const optimizeCloudinaryUrl = (url) => {
   if (!url) return url;
+  if (isProxyUrl(url) || url.startsWith('data:')) return url;
 
   // Check if it's a Cloudinary URL
   if (!url.includes('cloudinary')) {
@@ -31,7 +49,8 @@ export const optimizeCloudinaryUrl = (url) => {
   // - q_auto: Auto-detect and apply the optimal quality
   // - w_auto: Auto-scale based on device width
   // - dpr_auto: Auto-detect device pixel ratio
-  return `${baseUrl}f_auto,q_auto:good,dpr_auto,w_auto/${imagePath}`;
+  const optimizedUrl = `${baseUrl}f_auto,q_auto:good,dpr_auto,w_auto/${imagePath}`;
+  return buildProxyUrl(optimizedUrl);
 };
 
 /**
@@ -44,6 +63,7 @@ export const optimizeCloudinaryUrl = (url) => {
  */
 export const optimizeCloudinaryUrlAdvanced = (url, options = {}) => {
   if (!url) return url;
+  if (isProxyUrl(url) || url.startsWith('data:')) return url;
 
   // Check if it's a Cloudinary URL
   if (!url.includes('cloudinary')) {
@@ -76,5 +96,6 @@ export const optimizeCloudinaryUrlAdvanced = (url, options = {}) => {
 
   const transformationString = transformations.join(',');
 
-  return `${baseUrl}${transformationString}/${imagePath}`;
+  const optimizedUrl = `${baseUrl}${transformationString}/${imagePath}`;
+  return buildProxyUrl(optimizedUrl, { maxWidth: options.maxWidth });
 };

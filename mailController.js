@@ -140,10 +140,45 @@ const registerTemplatePartials = () => {
 
 const renderTemplate = (fileName, payload = {}) => {
     registerTemplatePartials();
+    // Enrich payload with sensible defaults so email CTAs work reliably
+    const enriched = enrichPayload(payload || {});
     const templatePath = path.join(__dirname, 'views', 'emails', fileName);
     const source = fs.readFileSync(templatePath, 'utf8');
     const template = handlebars.compile(source);
-    return template(payload || {});
+    return template(enriched);
+};
+
+const enrichPayload = (p = {}) => {
+    const out = Object.assign({}, p);
+    const FRONTEND = process.env.FRONTEND_BASE_URL || 'https://eshopperr.me';
+    // basic site links
+    out.shopUrl = out.shopUrl || FRONTEND + '/';
+    out.websiteUrl = out.websiteUrl || FRONTEND;
+    out.privacyPolicyUrl = out.privacyPolicyUrl || FRONTEND + '/privacy';
+    out.termsUrl = out.termsUrl || FRONTEND + '/terms';
+    out.helpCenterUrl = out.helpCenterUrl || FRONTEND + '/help';
+    out.companyAddress = out.companyAddress || process.env.COMPANY_ADDRESS || '';
+    out.supportEmail = out.supportEmail || process.env.SUPPORT_EMAIL || 'support@eshopperr.me';
+    out.supportPhone = out.supportPhone || process.env.SUPPORT_PHONE || '';
+    out.instagramUrl = out.instagramUrl || process.env.INSTAGRAM_URL || 'https://instagram.com/eshopperr';
+    out.whatsappUrl = out.whatsappUrl || process.env.WHATSAPP_URL || '';
+
+    // Order-specific links
+    if (out.orderId) {
+        out.trackingUrl = out.trackingUrl || `${FRONTEND}/order/${encodeURIComponent(out.orderId)}/track`;
+        out.liveTrackingUrl = out.liveTrackingUrl || `${FRONTEND}/order/${encodeURIComponent(out.orderId)}/live`;
+        out.placedInvoiceUrl = out.placedInvoiceUrl || `${FRONTEND}/order/${encodeURIComponent(out.orderId)}/receipt`;
+        out.confirmationInvoiceUrl = out.confirmationInvoiceUrl || `${FRONTEND}/order/${encodeURIComponent(out.orderId)}/receipt`;
+        out.finalInvoiceUrl = out.finalInvoiceUrl || `${FRONTEND}/order/${encodeURIComponent(out.orderId)}/invoice`;
+        out.reviewUrl = out.reviewUrl || `${FRONTEND}/order/${encodeURIComponent(out.orderId)}/review`;
+    }
+
+    // Tracking via carrier
+    if (out.trackingNumber && !out.carrierWebsiteUrl) {
+        out.carrierWebsiteUrl = `https://www.google.com/search?q=${encodeURIComponent(out.trackingNumber)}`;
+    }
+
+    return out;
 };
 
 // Order Received

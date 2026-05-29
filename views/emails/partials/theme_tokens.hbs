@@ -326,3 +326,16 @@ body {
     width: 100% !important;
   }
 }
+
+/* Large screens: increase button and icon sizes for premium displays */
+@media only screen and (min-width: 1200px) {
+  :root {
+    --btn-size: 16px;
+    --btn-py: 14px;
+    --btn-px: 20px;
+    --btn-radius: 12px;
+  }
+  .btn { font-size: 18px !important; padding: 18px 24px !important; }
+  .p-icon { width: 52px !important; height: 52px !important; font-size: 20px !important; }
+  .p-label { font-size: 12px !important; }
+}

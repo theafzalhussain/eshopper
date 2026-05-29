@@ -10,7 +10,8 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
+import { queryClient } from '../queries/queryClient';
+import { catalogQueryKeys } from '../queries/catalogQueries';
 import { getBrand } from '../Store/ActionCreaters/BrandActionCreators';
 import { getUser } from '../Store/ActionCreaters/UserActionCreators';
 import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
@@ -145,6 +146,7 @@ export default function Home() {
   const [nlEmail, setNlEmail] = useState('');
   const [nlLoading, setNlLoading] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [optimisticWishlist, setOptimisticWishlist] = useState({});
 
   // ── Fast loading ──
   const displayProducts = useMemo(() => {
@@ -211,9 +213,11 @@ export default function Home() {
 
   // ── Init ──
   useEffect(() => {
-    dispatch(getProduct());
-    dispatch(getUser());
-    dispatch(getWishlist());
+    // Only dispatch if logged in and not already in store
+    if (localStorage.getItem('login') === 'true' && localStorage.getItem('userid')) {
+        dispatch(getUser());
+        dispatch(getWishlist());
+    }
     dispatch(getBrand());
     const storedName = localStorage.getItem("name");
     if (storedName) setWelcomeUser(storedName);
@@ -265,10 +269,17 @@ export default function Home() {
   }, []);
 
   // ── Wishlist logic (unchanged) ──
+  const getWishlistProductId = (item) => {
+    return item?.productid?._id || item?.productid || item?.productId || item?.product?._id || item?.product || item?.id || item?._id || null;
+  };
+
   const isInWishlist = (productId) => {
-    const userId = localStorage.getItem("userid");
-    return wishlist.some(
-      (item) => String(item.productid) === String(productId) && String(item.userid) === String(userId)
+    if (!productId) return false;
+    if (Object.prototype.hasOwnProperty.call(optimisticWishlist, productId)) {
+      return !!optimisticWishlist[productId];
+    }
+    return (wishlist || []).some((item) =>
+      String(getWishlistProductId(item)) === String(productId)
     );
   };
 
@@ -277,17 +288,20 @@ export default function Home() {
       navigate("/login");
     } else {
       const productId = p.id || p._id;
-      const d = wishlist.find(
-        (item) => String(item.productid) === String(productId) && String(item.userid) === String(localStorage.getItem("userid"))
+      const userId = localStorage.getItem("userid");
+      const d = (wishlist || []).find(
+        (item) => String(getWishlistProductId(item)) === String(productId)
       );
       if (d) {
-        dispatch(deleteWishlist({ id: d.id || d._id }));
+        setOptimisticWishlist(prev => ({ ...prev, [productId]: false }));
+        dispatch(deleteWishlist({ id: d.id || d._id || productId }));
         setWishlistToast({ show: true, text: "Removed from Wishlist" });
       } else {
         const sizeStr = Array.isArray(p.size) ? (p.size[0] || "") : p.size;
+        setOptimisticWishlist(prev => ({ ...prev, [productId]: true }));
         dispatch(addWishlist({
           productid: productId,
-          userid: localStorage.getItem("userid"),
+          userid: userId,
           name: p.name,
           color: p.color,
           size: sizeStr,
@@ -298,6 +312,20 @@ export default function Home() {
       }
     }
   }
+
+  useEffect(() => {
+    if (!wishlist) return;
+    const next = { ...optimisticWishlist };
+    let changed = false;
+    Object.keys(optimisticWishlist).forEach(pid => {
+      const real = (wishlist || []).some(it => String(getWishlistProductId(it)) === String(pid));
+      if (optimisticWishlist[pid] === !!real) {
+        delete next[pid];
+        changed = true;
+      }
+    });
+    if (changed) setOptimisticWishlist(next);
+  }, [wishlist]);
 
   const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
@@ -578,7 +606,7 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ duration: 0.7 }}
             >
-              <img src="/assets/images/choose-1.jpg" className="hx-ed-img" alt="Man" loading="lazy" />
+              <img src="/assets/images/choose-1.jpg" className="hx-ed-img" alt="Man" />
               <div className="hx-ed-overlay" />
               <div className="hx-ed-content">
                 <span className="hx-ed-tag">EDITORIAL</span>
@@ -599,7 +627,7 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.1 }}
                 style={{ flex: 1 }}
               >
-                <img src="/assets/images/CR-1.png" className="hx-ed-img" alt="Women" loading="lazy" />
+                <img src="/assets/images/CR-1.png" className="hx-ed-img" alt="Women" />
                 <div className="hx-ed-overlay" />
                 <div className="hx-ed-content">
                   <span className="hx-ed-tag">WOMEN</span>
@@ -618,7 +646,7 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.2 }}
                 style={{ flex: 1 }}
               >
-                <img src="/assets/images/kids3.png" className="hx-ed-img" alt="Kids" loading="lazy" />
+                <img src="/assets/images/kids3.png" className="hx-ed-img" alt="Kids" />
                 <div className="hx-ed-overlay" />
                 <div className="hx-ed-content">
                   <span className="hx-ed-tag">KIDS</span>
@@ -901,8 +929,8 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.1 }}
           >
-            <img src="/assets/images/CR-1.png" className="hx-story-img hx-story-img-back" alt="story" loading="lazy" />
-            <img src="/assets/images/CR-3.png" className="hx-story-img hx-story-img-front" alt="story" loading="lazy" />
+            <img src="/assets/images/CR-1.png" className="hx-story-img hx-story-img-back" alt="story" />
+            <img src="/assets/images/CR-3.png" className="hx-story-img hx-story-img-front" alt="story" />
             <div className="hx-story-badge-float">
               <span className="hx-sbf-num">50K+</span>
               <span className="hx-sbf-label">Happy Customers</span>

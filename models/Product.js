@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { applyMongooseQueryCache } = require('../utils/mongooseQueryCache');
 
 
 const productSchema = new mongoose.Schema({
@@ -25,7 +26,13 @@ const productSchema = new mongoose.Schema({
 });
 
 // 1. Indexing in Models
-productSchema.index({ maincategory: 1, subcategory: 1 });
-productSchema.index({ name: 'text', brand: 'text' }); // For text search
+productSchema.index({ maincategory: 1, subcategory: 1, brand: 1, createdAt: -1 });
+productSchema.index({ maincategory: 1, brand: 1, finalprice: 1, createdAt: -1 });
+productSchema.index({ name: 'text', brand: 'text', description: 'text' }); // For text search
+
+productSchema.plugin(applyMongooseQueryCache, {
+    namespace: 'product',
+    defaultTtlMs: 30000
+});
 
 module.exports = mongoose.models.Product || mongoose.model('Product', productSchema);

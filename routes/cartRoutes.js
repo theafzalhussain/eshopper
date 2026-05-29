@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const cartController = require('../controllers/cartController');
+const { cacheMiddleware } = require('../utils/cache');
 
 // Add item to cart
 router.post('/cart', cartController.addToCart);
@@ -9,10 +10,10 @@ router.post('/cart', cartController.addToCart);
 router.post('/cart/apply-coupon', cartController.applyCoupon);
 
 // List active coupons
-router.get('/cart/coupons', cartController.getAvailableCoupons);
+router.get('/cart/coupons', cacheMiddleware(300), cartController.getAvailableCoupons);
 
 // Get cart for current user
-router.get('/cart', cartController.getCart);
+router.get('/cart', cacheMiddleware(120), cartController.getCart);
 
 // Update quantity for a cart item
 router.put('/cart/update-quantity/:itemId', cartController.updateQuantity);
@@ -29,7 +30,7 @@ router.delete('/cart/remove-saved-item/:itemId', cartController.removeSavedItem)
 router.post('/cart/delivery-estimate', cartController.setDeliveryEstimate);
 
 // Get order summary for current cart
-router.get('/cart/order-summary', cartController.getOrderSummary);
+router.get('/cart/order-summary', cacheMiddleware(120), cartController.getOrderSummary);
 
 // Update Cart Options (Delivery Speed & Insurance)
 router.post('/cart/options', cartController.updateCartOptions);

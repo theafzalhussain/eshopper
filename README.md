@@ -99,3 +99,7 @@ Keep both values in the backend environment only. Do not expose the secret to th
 
 - If Razorpay checkout does not open, verify that the browser can load `https://checkout.razorpay.com/v1/checkout.js`.
 - If payment verification fails, rotate the secret if it has been exposed and recheck the signature logic.
+
+## BullMQ Queueing
+
+The backend uses an in-memory fallback queue for email, refund, and report jobs. No Redis configuration is required for local development.

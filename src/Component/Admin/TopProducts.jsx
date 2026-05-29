@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, TrendingUp, ShoppingBag, ArrowRight, RefreshCw, Star } from 'lucide-react';
 import { getSocket } from './socket';
+import { getAdminHeaders } from './adminAuth';
 import { BASE_URL } from '../../constants';
 import './SystemControlCenter.css';
 
@@ -11,7 +12,9 @@ export default function TopProducts({ topProducts = [] }) {
 
   const fetchTopProducts = useCallback(async () => {
     try {
-      const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`);
+      const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`, {
+        headers: getAdminHeaders()
+      });
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
       setProducts(data.topProducts || []);

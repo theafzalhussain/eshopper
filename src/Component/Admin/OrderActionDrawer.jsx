@@ -210,6 +210,33 @@ export default function OrderActionDrawer({
                             <span className="summary-label">Current Status</span>
                             <strong>{orderView.orderStatus || 'Pending'}</strong>
                         </div>
+                                {orderView?.cancellation && orderView.cancellation.status && orderView.cancellation.status !== 'NOT_CANCELLED' && (
+                                    <div>
+                                        <span className="summary-label">Cancellation</span>
+                                        <strong style={{ display: 'block', color: '#b45309' }}>{orderView.cancellation.status}</strong>
+                                        {orderView.cancellation.reason && <div style={{ marginTop: 6, color: '#475569' }}>{orderView.cancellation.reason}</div>}
+                                    </div>
+                                )}
+                                {orderView?.refund && orderView.refund.status && (
+                                    <div>
+                                        <span className="summary-label">Refund</span>
+                                        <strong style={{ display: 'block', color: orderView.refund.status === 'COMPLETED' ? '#16a34a' : '#b91c1c' }}>{orderView.refund.status}</strong>
+                                        {orderView.refund.amount ? <div style={{ marginTop: 6, color: '#475569' }}>{formatInr(orderView.refund.amount)}</div> : null}
+                                        {orderView.refund.status !== 'COMPLETED' && adminSecret && (
+                                            <div style={{ marginTop: 8 }}>
+                                                <button className="order-retry-btn" onClick={async () => {
+                                                    try {
+                                                        const hdr = adminSecret ? { 'x-admin-secret': adminSecret } : {};
+                                                        await axios.post(`${apiBaseUrl}/api/admin/orders/${encodeURIComponent(orderView.orderId)}/refund/retry`, {}, { headers: hdr });
+                                                        alert('Refund retried and queued');
+                                                    } catch (e) {
+                                                        alert('Failed to queue refund retry');
+                                                    }
+                                                }}>Retry Refund</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                         <div>
                             <span className="summary-label">Current ETA</span>
                             <strong>{formatOrderDate(orderView.deliverySchedule?.date || orderView.estimatedArrival)}</strong>
@@ -415,6 +442,22 @@ export default function OrderActionDrawer({
                     </section>
                 </div>
             </aside>
+            <style dangerouslySetInnerHTML={{ __html: `
+                @media (min-width: 768px) {
+                    .order-action-drawer-root {
+                        display: flex !important;
+                        justify-content: flex-end !important;
+                    }
+                    .order-action-panel {
+                        max-width: 500px !important;
+                        width: 100% !important;
+                        margin-left: auto !important;
+                        position: absolute !important;
+                        right: 0 !important;
+                        left: auto !important;
+                    }
+                }
+            `}} />
         </div>
     );
 }

@@ -3,7 +3,9 @@ import { useToast } from '../ToastNotification';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav';
-import { deleteProduct, getProduct } from '../../Store/ActionCreaters/ProductActionCreators';
+import { deleteProduct } from '../../Store/ActionCreaters/ProductActionCreators';
+import { queryClient } from '../../queries/queryClient';
+import { catalogQueryKeys } from '../../queries/catalogQueries';
 import { motion } from 'framer-motion';
 import { Plus, Edit3, Trash2, LayoutGrid, AlertTriangle, CheckCircle, Search, Package } from 'lucide-react';
 import { getSocket } from './socket';
@@ -24,13 +26,13 @@ export default function AdminProduct() {
 
     // Always fetch products on mount
     useEffect(() => {
-        dispatch(getProduct());
+        queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
         // Setup socket only once
         if (!socketRef.current) {
             const socket = getSocket('admin-dashboard');
             socketRef.current = socket;
             const handleDashboardUpdate = () => {
-                dispatch(getProduct());
+                queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
             };
             socket.on('dashboardUpdate', handleDashboardUpdate);
         }
@@ -78,7 +80,7 @@ export default function AdminProduct() {
         toast.warning(`Deleting ${selectedProducts.length} products...`, 2500);
         selectedProducts.forEach(id => dispatch(deleteProduct({id})));
         setTimeout(() => {
-            dispatch(getProduct());
+            queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
             setSelectedProducts([]);
             setSelectAll(false);
             toast.success('Products deleted successfully!', 3500);
@@ -211,7 +213,7 @@ export default function AdminProduct() {
                                                         toast.warning('Deleting product...', 2000);
                                                         dispatch(deleteProduct({id: row.id}));
                                                         setTimeout(() => {
-                                                            dispatch(getProduct());
+                                                            queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
                                                             toast.success('Product deleted successfully!', 3500);
                                                         }, 900);
                                                     }} title="Delete Product">

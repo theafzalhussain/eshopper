@@ -559,6 +559,14 @@ const CSS = `
     box-shadow: 0 8px 26px rgba(0,0,0,0.07);
     transform: translateY(-2px);
 }
+.pf2-order-item.cancelled {
+    background: linear-gradient(180deg, rgba(254,242,242,0.95), #fff);
+    border-color: rgba(239,68,68,0.16);
+}
+.pf2-order-item.cancelled:hover {
+    border-color: rgba(239,68,68,0.3);
+    box-shadow: 0 10px 30px rgba(239,68,68,0.08);
+}
 .pf2-order-item::before {
     content: '';
     position: absolute;
@@ -569,6 +577,7 @@ const CSS = `
     transition: opacity 0.22s;
 }
 .pf2-order-item:hover::before { opacity: 1; background: #C9A84C; }
+.pf2-order-item.cancelled::before { opacity: 1; background: linear-gradient(180deg, #F87171, #EF4444); }
 .pf2-order-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .pf2-order-id { font-size: 14px; font-weight: 700; color: #0f0f0f; margin-bottom: 4px; }
 .pf2-order-date { font-size: 11.5px; color: #9ca3af; display: flex; align-items: center; gap: 5px; }
@@ -576,6 +585,9 @@ const CSS = `
     display: inline-flex; align-items: center; gap: 5px;
     padding: 5px 13px; border-radius: 999px;
     font-size: 11px; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap;
+}
+.pf2-status-pill.cancelled {
+    border: 1px solid rgba(239,68,68,0.14);
 }
 .pf2-order-bottom {
     display: flex; align-items: center; justify-content: space-between;
@@ -613,9 +625,13 @@ const CSS = `
     background: #fff; border-color: #C9A84C; color: #C9A84C;
     box-shadow: 0 0 0 4px rgba(201,168,76,0.15);
 }
+.pf2-step-dot.cancelled {
+    background: #ef4444; border-color: #ef4444; color: #fff;
+}
 .pf2-step-lbl { font-size: 9px; color: #9ca3af; font-weight: 600; text-align: center; white-space: nowrap; }
 .pf2-step-lbl.done { color: #C9A84C; }
 .pf2-step-lbl.active { color: #0f0f0f; font-weight: 700; }
+.pf2-step-lbl.cancelled { color: #ef4444; font-weight: 800; }
 .pf2-step-line {
     flex: 1; height: 2px;
     background: #e5e7eb;
@@ -697,30 +713,73 @@ function getInitials(name = '') {
 }
 
 /* ORDER STEPPER */
-const STEPS = ['Ordered', 'Packed', 'Shipped', 'Delivered']
-function OrderStepper({ status }) {
+const STEPS = ['Ordered', 'Packed', 'Shipped']
+function OrderStepper({ status, statusHistory = [], cancellation = null }) {
     const norm = (s = '') => {
         const r = String(s).trim().toLowerCase()
         if (r === 'order placed' || r === 'ordered') return 0
         if (r === 'packed')    return 1
         if (r === 'shipped')   return 2
         if (r === 'delivered') return 3
+        if (r === 'cancelled' || r === 'canceled') return 3
         return 0
     }
-    const cur = norm(status)
+
+    const isCancelled = cancellation && String(cancellation.status || '').trim() !== 'NOT_CANCELLED'
+
+    // derive lastProgressIndex from history or current status
+    let lastProgress = null
+    if (Array.isArray(statusHistory) && statusHistory.length) {
+        for (let i = statusHistory.length - 1; i >= 0; i--) {
+            const s = String(statusHistory[i]?.status || '').trim().toLowerCase()
+            if (s === 'delivered') { lastProgress = 3; break }
+            if (s === 'shipped') { lastProgress = 2; break }
+            if (s === 'packed') { lastProgress = 1; break }
+            if (s === 'ordered' || s === 'order placed') { lastProgress = 0; break }
+        }
+    }
+    if (lastProgress === null) lastProgress = norm(status)
+
+    const finalLabel = isCancelled ? 'Cancel' : 'Delivered'
+
     return (
         <div className="pf2-stepper">
-            {STEPS.map((step, i) => (
-                <React.Fragment key={step}>
-                    {i > 0 && <div className={`pf2-step-line${i <= cur ? ' done' : ''}`} />}
-                    <div className="pf2-step">
-                        <div className={`pf2-step-dot${i < cur ? ' done' : i === cur ? ' active' : ''}`}>
-                            {i < cur ? <CheckCircle2 size={11} /> : i + 1}
+            {[...STEPS, finalLabel].map((step, i) => {
+                const finalIndex = 3
+                let done = false
+                let active = false
+
+                if (isCancelled) {
+                    // previous steps up to lastProgress are done; final step is active (Cancelled)
+                    done = i < lastProgress
+                    active = i === finalIndex
+                } else {
+                    // normal flow: steps up to lastProgress are done, lastProgress is active (could be delivered=3)
+                    done = i < lastProgress
+                    active = i === lastProgress
+                }
+
+                const lineDone = (() => {
+                    if (isCancelled) return i <= lastProgress
+                    return i <= lastProgress
+                })()
+
+                const dotClass = done ? ' done' : active ? ' active' : ''
+                const lblClass = done ? ' done' : active ? ' active' : ''
+                const cancelledClass = isCancelled && i === finalIndex ? ' cancelled' : ''
+
+                return (
+                    <React.Fragment key={step}>
+                        {i > 0 && <div className={`pf2-step-line${lineDone ? ' done' : ''}`} />}
+                        <div className="pf2-step">
+                            <div className={`pf2-step-dot${dotClass}${cancelledClass}`}>
+                                {done ? <CheckCircle2 size={11} /> : (isCancelled && i === finalIndex ? '✕' : i + 1)}
+                            </div>
+                            <div className={`pf2-step-lbl${lblClass}${cancelledClass}`}>{step}</div>
                         </div>
-                        <div className={`pf2-step-lbl${i < cur ? ' done' : i === cur ? ' active' : ''}`}>{step}</div>
-                    </div>
-                </React.Fragment>
-            ))}
+                    </React.Fragment>
+                )
+            })}
         </div>
     )
 }
@@ -732,6 +791,7 @@ function getStatusStyle(status) {
     if (s === 'packed')    return { bg: '#fef3c7', color: '#f59e0b' }
     if (s === 'shipped')   return { bg: '#fef9c3', color: '#ca8a04' }
     if (s === 'delivered') return { bg: '#dcfce7', color: '#16a34a' }
+    if (s === 'cancelled' || s === 'canceled') return { bg: '#fee2e2', color: '#ef4444' }
     return { bg: '#e0f2fe', color: '#0ea5e9' }
 }
 function normLabel(status) {
@@ -740,7 +800,19 @@ function normLabel(status) {
     if (s === 'packed')    return 'Packed'
     if (s === 'shipped')   return 'Shipped'
     if (s === 'delivered') return 'Delivered'
+    if (s === 'cancelled' || s === 'canceled') return 'Cancelled'
     return 'Ordered'
+}
+
+function isCancelledOrder(order = {}) {
+    const status = String(order?.orderStatus || order?.status || '').trim().toLowerCase()
+    if (status.includes('cancel')) return true
+    const cancellationStatus = String(order?.cancellation?.status || '').trim().toUpperCase()
+    return cancellationStatus && cancellationStatus !== 'NOT_CANCELLED'
+}
+
+function getOrderDisplayStatus(order = {}) {
+    return isCancelledOrder(order) ? 'Cancelled' : normLabel(order?.orderStatus || order?.status)
 }
 
 /* TIER CONFIG */
@@ -766,6 +838,7 @@ export default function Profile() {
 
     var [user, setuser] = useState(() => { try { return cachedProfileAtBoot || {} } catch (e) { return {} } })
     const [recentOrders, setRecentOrders]   = useState([])
+    const [actualOrders, setActualOrders]   = useState([])
     const [loadingRecent, setLoadingRecent] = useState(false)
     const [isLoading, setIsLoading]         = useState(true)
     const socketRef = useRef(null)
@@ -812,7 +885,13 @@ export default function Profile() {
     }
 
     /* ── EFFECTS (untouched) ── */
-    useEffect(() => { getAPIData(); loadLatestUserProfile() }, [])
+    useEffect(() => { 
+        // Force clear stale cache on mount to ensure fresh order/membership data
+        localStorage.removeItem('profile_cache')
+        localStorage.removeItem('checkout_cache')
+        getAPIData()
+        loadLatestUserProfile()
+    }, [])
 
     useEffect(() => {
         const handleProfileUpdated = (event) => {
@@ -862,12 +941,37 @@ export default function Profile() {
             try {
                 setLoadingRecent(true)
                 const { data } = await axios.get(`${BASE_URL}/api/orders/recent/${userId}?limit=4`, { timeout: 10000 })
+                // debug: log API response so you can verify server returns cancellation/statusHistory
+                console.log('Recent orders API response:', data)
                 setRecentOrders(Array.isArray(data?.orders) ? data.orders : [])
             } catch (e) { setRecentOrders([]) }
             finally { setLoadingRecent(false) }
         }
         fetchRecentOrders()
     }, [orders.length])
+
+    useEffect(() => {
+        const fetchActualOrders = async () => {
+            const userId = localStorage.getItem('userid')
+            if (!userId) {
+                setActualOrders([])
+                return
+            }
+
+            try {
+                const { data } = await axios.get(`${BASE_URL}/api/user/orders`, {
+                    params: { userId },
+                    timeout: 12000
+                })
+                const list = Array.isArray(data?.orders) ? data.orders : (Array.isArray(data) ? data : [])
+                setActualOrders(list)
+            } catch (error) {
+                setActualOrders([])
+            }
+        }
+
+        fetchActualOrders()
+    }, [user?.id, user?._id])
 
     useEffect(() => {
         const userId = localStorage.getItem("userid")
@@ -897,9 +1001,9 @@ export default function Profile() {
     /* ── DERIVED DATA ── */
     const uid             = localStorage.getItem('userid')
     const currentWishlist = wishlist.filter(x => x.userid === uid)
-    const currentOrders   = orders.filter(x => x.userid === uid)
+    const currentOrders   = actualOrders
     const resolvedTier    = String(user.membershipType || membershipType || 'Silver')
-    const resolvedOrderCount = Number(user.totalOrders ?? totalOrders ?? 0)
+    const resolvedOrderCount = Number(actualOrders.length || user.totalOrders || totalOrders || 0)
     const tierClass       = resolvedTier.toLowerCase()
     const TierIcon        = tierClass === 'elite' ? Crown : Award
     const tierConf        = TIER_CONFIG[resolvedTier] || TIER_CONFIG.Silver
@@ -913,10 +1017,15 @@ export default function Profile() {
     }, [resolvedTier, resolvedOrderCount, tierConf])
 
     /* Spending summary — from real orders */
+    const isOrderCancelled = (o = {}) => {
+        return isCancelledOrder(o)
+    }
+
     const spendingSummary = useMemo(() => {
-        const total = currentOrders.reduce((s, o) => s + Number(o.finalAmount || o.amount || 0), 0)
-        const avg   = currentOrders.length ? Math.round(total / currentOrders.length) : 0
-        const max   = currentOrders.reduce((m, o) => Math.max(m, Number(o.finalAmount || o.amount || 0)), 0)
+        const paidOrders = (currentOrders || []).filter(o => !isOrderCancelled(o))
+        const total = paidOrders.reduce((s, o) => s + Number(o.finalAmount || o.amount || 0), 0)
+        const avg   = paidOrders.length ? Math.round(total / paidOrders.length) : 0
+        const max   = paidOrders.reduce((m, o) => Math.max(m, Number(o.finalAmount || o.amount || 0)), 0)
         return { total, avg, max }
     }, [currentOrders])
 
@@ -954,8 +1063,8 @@ export default function Profile() {
         })),
         orders: recentOrders.slice(0,3).map(i => ({
             label: i.orderId || 'Order',
-            value: normLabel(i.orderStatus),
-            color: getStatusStyle(i.orderStatus).color
+            value: getOrderDisplayStatus(i),
+            color: getStatusStyle(getOrderDisplayStatus(i)).color
         })),
         spending: [
             { label: 'Total Spent', value: `₹${spendingSummary.total.toLocaleString('en-IN')}`, color: '#C9A84C' },
@@ -1319,11 +1428,13 @@ export default function Profile() {
                                     <AnimatePresence mode="wait">
                                         <motion.div>
                                             {recentOrders.map((item, idx) => {
-                                                const st  = getStatusStyle(item.orderStatus)
-                                                const lbl = normLabel(item.orderStatus)
+                                                // determine cancellation override
+                                                const isCancelledItem = isCancelledOrder(item)
+                                                const lbl = getOrderDisplayStatus(item)
+                                                const st  = getStatusStyle(lbl)
                                                 return (
                                                     <motion.div key={item.orderId}
-                                                        className="pf2-order-item"
+                                                        className={`pf2-order-item${isCancelledItem ? ' cancelled' : ''}`}
                                                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                                                         transition={{ delay: idx * 0.06 }}
                                                         onClick={() => navigate(`/order-tracking/${item.orderId}`)}
@@ -1336,9 +1447,12 @@ export default function Profile() {
                                                                     {new Date(item.updatedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                                 </div>
                                                             </div>
-                                                            <motion.span className="pf2-status-pill"
+                                                            <motion.span className={`pf2-status-pill${isCancelledItem ? ' cancelled' : ''}`}
                                                                 initial={{ scale: 0.85 }} animate={{ scale: 1 }}
-                                                                style={{ background: st.bg, color: st.color, boxShadow: `0 2px 8px ${st.color}20` }}
+                                                                style={isCancelledItem
+                                                                    ? { background: 'linear-gradient(135deg, rgba(254,226,226,0.96), rgba(255,255,255,0.96))', color: st.color, boxShadow: '0 2px 10px rgba(239,68,68,0.12)' }
+                                                                    : { background: st.bg, color: st.color, boxShadow: `0 2px 8px ${st.color}20` }
+                                                                }
                                                             >
                                                                 <Dot size={14} />
                                                                 {lbl}
@@ -1346,7 +1460,7 @@ export default function Profile() {
                                                         </div>
 
                                                         {/* Order stepper — connected to real status */}
-                                                        <OrderStepper status={item.orderStatus} />
+                                                        <OrderStepper status={item.orderStatus} statusHistory={item.statusHistory} cancellation={item.cancellation} />
 
                                                         <div className="pf2-order-bottom">
                                                             <div>

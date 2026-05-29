@@ -39,7 +39,7 @@ export default function Navbaar() {
     }, [cartCount])
 
     useEffect(() => {
-        if (localStorage.getItem('login')) dispatch(getCart())
+        if (localStorage.getItem('login') === 'true' && localStorage.getItem('userid')) dispatch(getCart())
     }, [dispatch, location.pathname])
 
     useEffect(() => {
@@ -374,6 +374,15 @@ export default function Navbaar() {
                                                 exit={{ opacity: 0, y: 18, scale: 0.99 }}
                                                 transition={{ duration: 0.2 }}
                                             >
+                                                <button
+                                                    type="button"
+                                                    className="mobile-menu-close-btn profile-menu-close-btn"
+                                                    onClick={() => setIsProfileMenuOpen(false)}
+                                                    aria-label="Close profile menu"
+                                                >
+                                                    <X size={22} />
+                                                </button>
+
                                                 <div className="dropdown-header-custom">
                                                     <div className="user-info-header">
                                                         <div className="user-avatar-large">
@@ -553,6 +562,7 @@ export default function Navbaar() {
 
             {/* --- CUSTOM CSS FOR LUXURY & RESPONSIVENESS --- */}
             <style dangerouslySetInnerHTML={{ __html: `
+                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&display=swap');
                 .header-main {
                     position: relative;
                     z-index: 1050;
@@ -574,10 +584,23 @@ export default function Navbaar() {
                 }
                 body { overflow-x: hidden; }
                 .top-premium-ribbon { 
-                    height: 40px;
-                    background: linear-gradient(90deg, #06080c 0%, #111827 35%, #35220b 68%, #080a0f 100%);
-                    font-size: 11px;
+                    height: 46px;
+                    background: linear-gradient(90deg, #05060a 0%, #0b0f14 44%, #2f1f0a 100%);
+                    font-size: 12px;
+                    border-bottom: 1px solid rgba(212,175,55,0.06);
+                    display: flex; align-items: center;
                 }
+
+                .ribbon-text { 
+                    font-family: 'Playfair Display', serif; 
+                    font-weight: 600; 
+                    color: #f4e7b7; 
+                    letter-spacing: 1px; 
+                    text-transform: uppercase; 
+                    font-size: 12px; 
+                }
+                .ribbon-link { color: rgba(244,209,108,0.95); font-weight:700; letter-spacing:0.6px; text-decoration:none }
+                .ribbon-link:hover { color: #fff8e0 ;text-decoration:none }
                 .navbar {
                     width: 100%;
                     padding: 10px 0 !important;
@@ -615,17 +638,17 @@ export default function Navbaar() {
                 .logo-wrapper { display: flex; align-items: center; gap: 8px; }
                 .logo-e {
                     background: linear-gradient(145deg, #0f172a 0%, #1e293b 55%, #0f172a 100%);
-                    color: #fff; width: 38px; height: 38px;
+                    color: #fff; width: 42px; height: 42px;
                     display: flex; align-items: center; justify-content: center;
-                    font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 800;
-                    border-radius: 4px;
+                    font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 900;
+                    border-radius: 6px;
                     border-right: 3px solid #d4af37;
-                    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+                    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.24);
                     transition: width 0.25s ease, height 0.25s ease, font-size 0.25s ease;
                 }
                 .logo-text-box { display: flex; flex-direction: column; line-height: 1; }
-                .logo-brand-name { font-weight: 800; letter-spacing: 3px; font-size: 20px; color: #111; transition: font-size 0.25s ease, letter-spacing 0.25s ease; }
-                .logo-tagline { font-size: 8px; letter-spacing: 2px; color: #9a7b1f; font-weight: 700; margin-top: 2px; transition: font-size 0.25s ease, letter-spacing 0.25s ease; }
+                .logo-brand-name { font-family: 'Playfair Display', serif; font-weight: 800; letter-spacing: 4px; font-size: 22px; color: #0b1220; transition: font-size 0.25s ease, letter-spacing 0.25s ease; }
+                .logo-tagline { font-size: 9px; letter-spacing: 2.5px; color: #b68f16; font-weight: 700; margin-top: 2px; transition: font-size 0.25s ease, letter-spacing 0.25s ease; text-transform: uppercase; }
 
                 .header-fixed .logo-e {
                     width: 34px;
@@ -652,18 +675,20 @@ export default function Navbaar() {
                     display: inline-block;
                 }
                 .premium-nav-link { 
-                    font-size: 12px !important; font-weight: 700 !important;
-                    text-transform: uppercase; color: #333 !important; 
-                    letter-spacing: 0.45px;
-                    text-decoration: none; padding: 8px 12px;
+                    font-family: 'Playfair Display', serif; font-size: 13px !important; font-weight: 700 !important;
+                    text-transform: uppercase; color: #222 !important; 
+                    letter-spacing: 1px;
+                    text-decoration: none; padding: 8px 14px;
                     position: relative;
-                    transition: all 0.3s ease;
+                    transition: all 0.28s cubic-bezier(.2,.9,.3,1);
                     display: inline-block;
                     white-space: nowrap;
+                    color-rendering: optimizeLegibility;
                 }
                 .premium-nav-link:hover {
-                    color: #8b6a12 !important;
-                    transform: translateY(-1px);
+                    color: #a9781f !important;
+                    transform: translateY(-2px) scale(1.01);
+                    text-shadow: 0 1px 0 rgba(255,255,255,0.6);
                 }
                 .premium-nav-link::after {
                     content: '';
@@ -904,9 +929,9 @@ export default function Navbaar() {
                     right: 0;
                     bottom: 0;
                     left: 0;
-                    width: 100vw;
-                    height: 100dvh;
-                    min-height: 100dvh;
+                    width: 125vw;
+                    height: 125dvh;
+                    min-height: 125dvh;
                     background: radial-gradient(circle at 15% 10%, rgba(212,175,55,0.2), rgba(0,0,0,0.96) 45%), linear-gradient(120deg, rgba(0,0,0,0.95), rgba(10,10,10,0.98));
                     z-index: 10030;
                     overflow: hidden;
@@ -920,6 +945,8 @@ export default function Navbaar() {
                     right: 0;
                     bottom: 0;
                     left: 0;
+                    width: 125vw;
+                    height: 125dvh;
                     border: 0;
                     margin: 0;
                     padding: 0;
@@ -928,9 +955,9 @@ export default function Navbaar() {
                     z-index: 10018;
                 }
                 .mobile-menu-content {
-                    width: 100%;
-                    height: 100dvh;
-                    min-height: 100dvh;
+                    width: 125vw;
+                    height: 125dvh;
+                    min-height: 125dvh;
                     padding: calc(68px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
                     display: flex;
                     flex-direction: column;
@@ -956,6 +983,22 @@ export default function Navbaar() {
                     box-shadow: 0 10px 24px rgba(0,0,0,0.28);
                     z-index: 3;
                     transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+                }
+                .profile-menu-close-btn {
+                    position: absolute;
+                    top: calc(16px + env(safe-area-inset-top));
+                    right: 16px;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    border: 1px solid rgba(255,255,255,0.2);
+                    background: rgba(17, 24, 39, 0.75);
+                    color: #fff;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
                 }
                 .mobile-menu-close-btn:hover {
                     transform: translateY(-1px);
@@ -1162,22 +1205,23 @@ export default function Navbaar() {
                         right: 0;
                         bottom: 0;
                         transform: none;
-                        top: calc(56px + env(safe-area-inset-top));
-                        width: 100vw !important;
+                        top: 0 !important;
+                        width: 125vw !important;
                         min-width: 0 !important;
-                        max-width: 100vw !important;
-                        height: calc(100dvh - 56px - env(safe-area-inset-top));
+                        max-width: 125vw !important;
+                        height: 125dvh !important;
                         max-height: none;
                         overflow-y: auto;
                         margin-top: 0 !important;
                         z-index: 10021;
                         -webkit-overflow-scrolling: touch;
-                        border-radius: 16px 16px 0 0 !important;
+                        border-radius: 0 !important;
                         background: rgba(255,255,255,0.995);
                         box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.18) !important;
                         padding-bottom: calc(16px + env(safe-area-inset-bottom));
                     }
                     .mobile-profile-menu .dropdown-header-custom {
+                        padding-top: calc(36px + env(safe-area-inset-top));
                         position: sticky;
                         top: 0;
                         z-index: 1;
@@ -1226,9 +1270,9 @@ export default function Navbaar() {
                         max-width: none;
                     }
                     .mobile-profile-menu {
-                        top: calc(52px + env(safe-area-inset-top));
-                        height: calc(100dvh - 52px - env(safe-area-inset-top));
-                        border-radius: 14px 14px 0 0 !important;
+                        top: 0 !important;
+                        height: 125dvh !important;
+                        border-radius: 0 !important;
                     }
                     .mobile-footer-btn {
                         min-height: 48px;

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useToast } from './ToastNotification';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux';
-import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
+import { queryClient } from '../queries/queryClient';
+import { catalogQueryKeys } from '../queries/catalogQueries';
 import { getMaincategory } from '../Store/ActionCreaters/MaincategoryActionCreators';
 import { getSubcategory } from '../Store/ActionCreaters/SubcategoryActionCreators';
 import { getBrand } from '../Store/ActionCreaters/BrandActionCreators';
@@ -12,9 +13,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { BASE_URL } from '../constants';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
+import VirtualProductGrid, { renderProductCard } from './Performance/VirtualProductGrid';
+import { useBrandsQuery, useMaincategoriesQuery, useProductsQuery, useSubcategoriesQuery } from '../queries/catalogQueries';
+import { getSocketClient } from './socketClient';
 
 const RECENT_KEY = 'mp_recent_viewed';
-const PAGE_SIZE = 16;
 
 export default function Shop() {
     var { maincat } = useParams()
@@ -42,20 +45,32 @@ export default function Shop() {
     const toast = useToast();
     const [reviewStats, setReviewStats] = useState({});
     var [sidebarOpen, setSidebarOpen] = useState(false)
-    var [isLoading, setIsLoading] = useState(true)
 
     // ── New premium features state ──
     const [discountFilter, setDiscountFilter] = useState(0); // 0, 10, 20, 30, 40, 50
     const [ratingFilter, setRatingFilter] = useState(0);     // 0, 3, 4
-    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const [gridMode, setGridMode] = useState('cozy');         // 'cozy' | 'compact'
     const [quickView, setQuickView] = useState(null);         // product object
+    const [quickViewImgIndex, setQuickViewImgIndex] = useState(0);
+
+    useEffect(() => { setQuickViewImgIndex(0); }, [quickView]);
     const [hoverIndex, setHoverIndex] = useState({});         // {productId: imgIdx}
     const [recentlyViewed, setRecentlyViewed] = useState([]);
     const [openSections, setOpenSections] = useState({
         highlights: true, category: true, subcategory: true, size: true, price: true,
         discount: true, rating: true, brand: true,
     });
+
+    const { data: productQueryData = [], isLoading: productsLoading } = useProductsQuery();
+    const { data: maincategoryQueryData = [] } = useMaincategoriesQuery();
+    const { data: subcategoryQueryData = [] } = useSubcategoriesQuery();
+    const { data: brandQueryData = [] } = useBrandsQuery();
+
+    const product = Array.isArray(productQueryData) ? productQueryData : [];
+    const maincategory = Array.isArray(maincategoryQueryData) ? maincategoryQueryData : [];
+    const subcategory = Array.isArray(subcategoryQueryData) ? subcategoryQueryData : [];
+    const brand = Array.isArray(brandQueryData) ? brandQueryData : [];
+    const isLoading = productsLoading && product.length === 0;
 
     // ── Admin detection (reactive) ──
     const [isAdmin, setIsAdmin] = useState(false);
@@ -117,6 +132,24 @@ export default function Shop() {
         } catch (e) {}
     }, []);
 
+    // Real-time wishlist listener (refresh wishlist when server notifies)
+    useEffect(() => {
+        try {
+            const socket = getSocketClient();
+            const handler = (payload) => {
+                try {
+                    const localUser = localStorage.getItem('userid');
+                    if (!localUser) return;
+                    if (String(payload.userId) === String(localUser)) {
+                        dispatch(getWishlist());
+                    }
+                } catch (e) { console.warn('wishlist socket handler error', e); }
+            };
+            socket.on('wishlist:updated', handler);
+            return () => socket.off('wishlist:updated', handler);
+        } catch (e) { /* ignore */ }
+    }, [dispatch]);
+
     const ALL_SIZES = ['XS','S','M','L','XL','2XL','28','30','32','34','36','38','40','42'];
 
     const normalizeCategory = (value) => String(value || '')
@@ -172,21 +205,31 @@ export default function Shop() {
         return !!firstColorOf(value);
     }
 
-    var product = useSelector((state) => state.ProductStateData)
-    var maincategory = useSelector((state) => state.MaincategoryStateData)
-    var subcategory = useSelector((state) => state.SubcategoryStateData)
-    var brand = useSelector((state) => state.BrandStateData)
     var cart = useSelector((state) => state.CartStateData)
     var wishlist = useSelector((state) => state.WishlistStateData)
 
     useEffect(() => {
-        dispatch(getProduct())
-        dispatch(getMaincategory())
-        dispatch(getSubcategory())
-        dispatch(getBrand())
-        dispatch(getCart())
-        dispatch(getWishlist())
+        if (localStorage.getItem('login') === 'true' && localStorage.getItem('userid')) {
+            dispatch(getCart())
+            dispatch(getWishlist())
+        }
     }, [dispatch])
+
+    // Realtime: when backend emits DB changes, refresh product list if products updated
+    useEffect(() => {
+        const handler = (e) => {
+            try {
+                const data = (e && e.detail) || {};
+                const coll = (data.collection || '').toString().toLowerCase();
+                if (!coll) return;
+                if (coll === 'products' || coll === 'product') {
+                    queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
+                }
+            } catch (err) { console.warn('Realtime handler error', err && err.message); }
+        };
+        window.addEventListener('realtime:dbChange', handler);
+        return () => window.removeEventListener('realtime:dbChange', handler);
+    }, []);
 
     useEffect(() => {
         async function fetchReviewStats() {
@@ -220,18 +263,7 @@ export default function Shop() {
         fetchReviewStats();
     }, [product.length]);
 
-    useEffect(() => {
-        if (product && product.length > 0) setIsLoading(false);
-        const timer = setTimeout(() => setIsLoading(false), 1500);
-        return () => clearTimeout(timer);
-    }, [product]);
-
     useEffect(() => { setmc(maincat) }, [maincat])
-
-    // Reset visible count whenever filter/sort changes
-    useEffect(() => {
-        setVisibleCount(PAGE_SIZE);
-    }, [mc, sc, br, size, min, max, search, tagFilter, sortBy, discountFilter, ratingFilter, category]);
 
     function pushRecentlyViewed(p) {
         try {
@@ -249,35 +281,48 @@ export default function Shop() {
 
     function addToCart(p, sizeFromParam = null) {
         if (!localStorage.getItem("login")) { navigate("/login"); return }
-        const selectedSize = sizeFromParam || selectedSizes[p.id]
+        const productId = p.id || p._id;
+        const selectedSize = sizeFromParam || selectedSizes[productId]
+        if (!productId) {
+            toast.error('Product id missing. Please refresh and try again.');
+            return;
+        }
         if (!selectedSize) { toast.warning('Please select a size first'); return; }
         // Color UI removed: silently send first color to backend if product has any
         const selectedColor = hasColors(p.color) ? firstColorOf(p.color) : '';
-        let existingItem = (cart.items || []).find((item) =>
-            item.productid === p.id && item.userid === localStorage.getItem("userid") &&
+        const cartItems = Array.isArray(cart) ? cart : (cart?.items || []);
+        let existingItem = cartItems.find((item) =>
+            String(item.productid || item.productId || item.product || item._id || item.id) === String(productId) && 
+            (!item.userid || String(item.userid) === String(localStorage.getItem("userid"))) &&
             item.size === selectedSize && item.color === selectedColor
         )
         if (existingItem) {
-            const currentCount = (cartNotifications[p.id] || 0) + 1;
-            setCartNotifications({...cartNotifications, [p.id]: currentCount});
+            const currentCount = (cartNotifications[productId] || 0) + 1;
+            setCartNotifications({...cartNotifications, [productId]: currentCount});
             toast.info(`Already in bag · ${currentCount}×`);
         } else {
             dispatch(addCart({
                 userId: localStorage.getItem("userid"),
-                productId: p.id,
+                productId,
                 quantity: 1,
                 size: selectedSize,
                 color: selectedColor
             }))
-            const currentCount = (cartNotifications[p.id] || 0) + 1
-            setCartNotifications({...cartNotifications, [p.id]: currentCount})
-            toast.success(`Added to bag (${currentCount})`);
+            const currentCount = (cartNotifications[productId] || 0) + 1
+            setCartNotifications({...cartNotifications, [productId]: currentCount})
+            // Success toast moved to saga-confirmation via ToastEventBridge
         }
     }
 
+    // optimistic wishlist map to toggle icon immediately
+    const [optimisticWishlist, setOptimisticWishlist] = useState({});
+
     const isInWishlist = (productId) => {
-        const userId = localStorage.getItem('userid')
-        return (wishlist || []).some((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId))
+        if (!productId) return false;
+        if (Object.prototype.hasOwnProperty.call(optimisticWishlist, productId)) {
+            return !!optimisticWishlist[productId];
+        }
+        return (wishlist || []).some((item) => String(item.productid?._id || item.productid || item.product?._id || item.product || item.productId) === String(productId))
     }
 
     function toggleWishlist(p) {
@@ -287,7 +332,7 @@ export default function Shop() {
         }
         const userId = localStorage.getItem('userid');
         const productId = p.id || p._id;
-        const existing = (wishlist || []).find((item) => String(item.productid) === String(productId) && String(item.userid) === String(userId));
+        const existing = (wishlist || []).find((item) => String(item.productid?._id || item.productid || item.product?._id || item.product || item.productId) === String(productId));
 
         let selectedSize = selectedSizes[p.id];
         if (!selectedSize) {
@@ -299,10 +344,14 @@ export default function Shop() {
             return;
         }
 
-        if (existing) {
-            dispatch(deleteWishlist({ id: existing.id || existing._id }));
-            toast.info('Removed from wishlist');
+        // optimistic toggle: update UI immediately
+        if (isInWishlist(productId)) {
+            // show as removed optimistically
+            setOptimisticWishlist(prev => ({ ...prev, [productId]: false }));
+            dispatch(deleteWishlist({ id: existing?.id || existing?._id }));
         } else {
+            // show as added optimistically
+            setOptimisticWishlist(prev => ({ ...prev, [productId]: true }));
             dispatch(addWishlist({
                 userid: userId,
                 productid: productId,
@@ -312,9 +361,24 @@ export default function Shop() {
                 price: Number(p.finalprice || 0),
                 pic: p.pic1
             }));
-            toast.success('Added to wishlist');
+            // Success toast moved to saga-confirmation via ToastEventBridge
         }
     }
+
+    // Sync optimistic map with Redux wishlist updates: clear keys when server state matches
+    useEffect(() => {
+        if (!wishlist) return;
+        const next = { ...optimisticWishlist };
+        let changed = false;
+        Object.keys(optimisticWishlist).forEach(pid => {
+            const real = (wishlist || []).some(it => String(it.productid?._id || it.productid || it.product?._id || it.product || it.productId) === String(pid));
+            if (optimisticWishlist[pid] === !!real) {
+                delete next[pid];
+                changed = true;
+            }
+        });
+        if (changed) setOptimisticWishlist(next);
+    }, [wishlist]);
 
     const calcDiscount = (item) => {
         if (item.discount && Number(item.discount) > 0) return Number(item.discount);
@@ -386,11 +450,6 @@ export default function Shop() {
         else temp.reverse();
         return temp;
     }, [product, mc, sc, br, size, min, max, search, sortBy, category, tagFilter, discountFilter, ratingFilter, reviewStats]);
-
-    const visibleProducts = useMemo(
-        () => filteredProducts.slice(0, visibleCount),
-        [filteredProducts, visibleCount]
-    );
 
     const clearAllFilters = useCallback(() => {
         setmc('All'); setsc('All'); setbr('All'); setSize('All');
@@ -664,7 +723,6 @@ export default function Shop() {
 
                 {/* ══ MAIN ══ */}
                 <main className="mp-main">
-                    {/* Desktop toolbar */}
                     <motion.div className="mp-toolbar" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
                         <div className="mp-tleft">
                             <span className="mp-tc"><strong>{filteredProducts.length}</strong> products found</span>
@@ -705,217 +763,46 @@ export default function Shop() {
                         </div>
                     </motion.div>
 
-                    {/* Grid */}
-                    <div className={`mp-grid ${gridMode === 'compact' ? 'compact' : ''}`}>
-                        <AnimatePresence>
-                            {isLoading ? (
-                                Array.from({ length: 12 }).map((_, idx) => (
-                                    <motion.div key={`skeleton-${idx}`}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -20 }}
-                                        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: idx * 0.04 }}
-                                        className="mp-card mp-skel-card"
-                                    >
-                                        <div className="mp-img-wrap mp-shimmer" />
-                                        <div className="mp-cbody">
-                                            <div className="mp-shimmer mp-skel-line" style={{ width: '40%' }} />
-                                            <div className="mp-shimmer mp-skel-line" style={{ width: '85%', height: 14 }} />
-                                            <div className="mp-shimmer mp-skel-line" style={{ width: '55%' }} />
-                                            <div className="mp-shimmer mp-skel-line" style={{ width: '70%', height: 18, marginTop: 8 }} />
-                                        </div>
-                                    </motion.div>
-                                ))
-                            ) : (
-                                visibleProducts.map((item, index) => {
-                                const stats = reviewStats[item.id];
-                                const ratingValue = stats ? stats.average : (item.rating || 0);
-                                const reviewCount = stats ? stats.count : 0;
-                                const discount = calcDiscount(item);
-                                const isBestseller = (stats && (stats.count >= 5 || stats.average >= 4.2)) || item.isBestseller;
-                                // Hover image fallback
-                                const altImg = item.pic2 || item.pic3 || item.pic4 || null;
-                                const showAlt = !!altImg && hoverIndex[item.id] === 1;
-                                const mainImg = showAlt ? altImg : item.pic1;
-                                return (<motion.div key={item.id} layout
-                                    initial={{ opacity: 0, y: 24, scale: 0.97 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.96, y: 16 }}
-                                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: Math.min(index * 0.025, 0.18) }}
-                                    className="mp-card"
-                                    onMouseEnter={() => altImg && setHoverIndex(h => ({ ...h, [item.id]: 1 }))}
-                                    onMouseLeave={() => setHoverIndex(h => ({ ...h, [item.id]: 0 }))}
-                                >
-                                    {/* Wishlist */}
-                                    <button
-                                        type="button"
-                                        className={`mp-wish ${isInWishlist(item.id) ? 'active' : ''}`}
-                                        onClick={e => { e.preventDefault(); e.stopPropagation(); toggleWishlist(item); }}
-                                        aria-label={isInWishlist(item.id) ? "Remove from Wishlist" : "Add to Wishlist"}
-                                        title={isInWishlist(item.id) ? "Wishlisted" : "Wishlist"}
-                                    >
-                                        <svg viewBox="0 0 24 24" width="18" height="18" fill={isInWishlist(item.id) ? '#e11d48' : 'none'} stroke={isInWishlist(item.id) ? '#e11d48' : '#282c3f'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                                        </svg>
-                                    </button>
+                    <VirtualProductGrid
+                        className={`mp-grid ${gridMode === 'compact' ? 'compact' : ''}`}
+                        itemMinWidth={gridMode === 'compact' ? 200 : 240}
+                        rowHeight={gridMode === 'compact' ? 460 : 520}
+                        items={isLoading ? Array.from({ length: 12 }, (_, idx) => ({ __skeleton: true, id: `skeleton-${idx}` })) : filteredProducts}
+                        renderItem={(item, index) => renderProductCard({
+                            item,
+                            index,
+                            stats: reviewStats[item.id] || reviewStats[item._id],
+                            hoverIndex,
+                            setHoverIndex,
+                            calcDiscount,
+                            isInWishlist,
+                            toggleWishlist,
+                            pushRecentlyViewed,
+                            cartNotifications,
+                            setQuickView,
+                            selectedSizes,
+                            setSelectedSizes,
+                            addToCart
+                        })}
+                    />
 
-                                    {/* Quick view */}
-                                    <button
-                                        type="button"
-                                        className="mp-qview"
-                                        onClick={e => { e.preventDefault(); e.stopPropagation(); setQuickView(item); pushRecentlyViewed(item); }}
-                                        aria-label="Quick view"
-                                        title="Quick view"
-                                    >
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                                    </button>
-
-                                    {/* Image */}
-                                    <Link
-                                        to={`/single-product/${item.id}`}
-                                        className="mp-img-wrap"
-                                        onClick={() => pushRecentlyViewed(item)}
-                                    >
-                                        <img
-                                            src={optimizeCloudinaryUrlAdvanced(mainImg, { maxWidth: 600, crop: 'fill' })}
-                                            loading="lazy" decoding="async"
-                                            className="mp-img" alt={item.name}
-                                        />
-                                        {/* Discount corner ribbon */}
-                                        {discount > 0 && (
-                                            <div className="mp-ribbon">✦ {discount}% OFF</div>
-                                        )}
-                                        {/* Badges (top-right of image, below wishlist) */}
-                                        <div className="mp-badges">
-                                            {item.newArrival && <span className="mp-badge mp-badge-new">NEW</span>}
-                                            {item.isSale && <span className="mp-badge mp-badge-sale">SALE</span>}
-                                            {!item.isSale && isBestseller && <span className="mp-badge mp-badge-best">BESTSELLER</span>}
-                                            {!item.newArrival && !item.isSale && !isBestseller && discount >= 30 && <span className="mp-badge mp-badge-deal">HOT DEAL</span>}
-                                        </div>
-
-                                        {/* Hover bar */}
-                                        <div className="mp-hover-bar">
-                                            <span className="mp-hover-text">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                                                </svg>
-                                                ADD TO BAG
-                                            </span>
-                                        </div>
-
-                                        {/* Image dot indicator if alt image exists */}
-                                        {altImg && (
-                                            <div className="mp-imgdots">
-                                                <span className={!showAlt ? 'active' : ''} />
-                                                <span className={showAlt ? 'active' : ''} />
-                                            </div>
-                                        )}
-                                    </Link>
-
-                                    {/* Body */}
-                                    <div className="mp-cbody">
-                                        <h4 className="mp-cbrand">{item.brand || 'Brand'}</h4>
-                                        <h3 className="mp-cname">
-                                            <Link to={`/single-product/${item.id}`} className="mp-cnlink" onClick={() => pushRecentlyViewed(item)}>{item.name}</Link>
-                                        </h3>
-                                        <p className="mp-ccat">{item.maincategory}{item.subcategory ? ` · ${item.subcategory}` : ''}</p>
-
-                                        {/* Rating row */}
-                                        {ratingValue > 0 ? (
-                                            <div className="mp-rating-row">
-                                                <span className="mp-rpill">
-                                                    {ratingValue.toFixed(1)}
-                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                                                </span>
-                                                <span className="mp-rcount">| {reviewCount > 999 ? `${(reviewCount/1000).toFixed(1)}k` : reviewCount}</span>
-                                            </div>
-                                        ) : (
-                                            <div className="mp-rating-row">
-                                                <span className="mp-rpill mp-rpill-new">NEW</span>
-                                            </div>
-                                        )}
-
-                                        {/* Price */}
-                                        <div className="mp-price-row">
-                                            <span className="mp-price">₹{item.finalprice}</span>
-                                            {item.baseprice > item.finalprice && (
-                                                <>
-                                                    <del className="mp-orig">₹{item.baseprice}</del>
-                                                    <span className="mp-discount">({discount}% OFF)</span>
-                                                </>
-                                            )}
-                                        </div>
-
-                                        {/* Free delivery pill */}
-                                        <div className="mp-perks">
-                                            <span className="mp-perk">
-                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                                                Free Delivery
-                                            </span>
-                                            {discount >= 20 && (
-                                                <span className="mp-perk mp-perk-hot">
-                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14a8 8 0 1 0 16 0C20 9.91 18.04 6.27 15 4.05L13.5.67z"/></svg>
-                                                    Hot Deal
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Hover actions: Sizes + Add to Bag */}
-                                        <div className="mp-actions">
-                                            <div className="mp-size-strip">
-                                                <span className="mp-size-label">SELECT SIZE</span>
-                                                <div className="mp-sbtns">
-                                                    {Array.from(new Set((Array.isArray(item.size) ? item.size : String(item.size||'').split(',')).filter(s => s && s.trim() !== 'All'))).slice(0, 8).map((s) => {
-                                                        const sz = s.trim();
-                                                        return (
-                                                            <button key={sz} type="button"
-                                                                onClick={(e) => { e.preventDefault(); setSelectedSizes({...selectedSizes,[item.id]:sz}); }}
-                                                                className={`mp-sbtn ${selectedSizes[item.id]===sz?'active':''}`}
-                                                            >{sz}</button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={() => addToCart(item, selectedSizes[item.id])}
-                                                className={`mp-addbtn ${!selectedSizes[item.id] ? 'pending' : ''}`}
-                                            >
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                                                </svg>
-                                                ADD TO BAG
-                                            </button>
-                                        </div>
-
-                                        {cartNotifications[item.id] && (
-                                            <motion.div className="mp-cbadge"
-                                                initial={{ scale: 0.8, opacity: 0 }}
-                                                animate={{ scale: 1, opacity: 1 }}
-                                                transition={{ type: 'spring', stiffness: 380, damping: 22 }}
-                                            >
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                                Added · {cartNotifications[item.id]}×
-                                            </motion.div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            )}))}
-                        </AnimatePresence>
-                    </div>
-
-                    {/* Load more */}
-                    {!isLoading && visibleCount < filteredProducts.length && (
-                        <div className="mp-loadmore-wrap">
-                            <p className="mp-loadinfo">Showing <strong>{Math.min(visibleCount, filteredProducts.length)}</strong> of <strong>{filteredProducts.length}</strong> products</p>
-                            <button className="mp-loadmore" onClick={() => setVisibleCount(c => c + PAGE_SIZE)}>
-                                Load More
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                            </button>
-                        </div>
+                    {!isLoading && filteredProducts.length === 0 && (
+                        <motion.div className="mp-empty"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                            <div className="mp-eico">
+                                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                                </svg>
+                            </div>
+                            <h4>No products found</h4>
+                            <p>Try changing your filters or search keywords</p>
+                            <button className="mp-ebtn" onClick={clearAllFilters}>Clear All Filters</button>
+                        </motion.div>
                     )}
 
-                    {/* Recently viewed */}
                     {!isLoading && recentlyViewed.length > 0 && (
                         <section className="mp-recent">
                             <div className="mp-recent-head">
@@ -946,143 +833,58 @@ export default function Shop() {
                             </div>
                         </section>
                     )}
-
-                    {!isLoading && filteredProducts.length === 0 && (
-                        <motion.div className="mp-empty"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                        >
-                            <div className="mp-eico">
-                                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                                </svg>
-                            </div>
-                            <h4>No products found</h4>
-                            <p>Try changing your filters or search keywords</p>
-                            <button className="mp-ebtn" onClick={clearAllFilters}>Clear All Filters</button>
-                        </motion.div>
-                    )}
                 </main>
-            </div>
 
-            {/* ══ QUICK VIEW MODAL ══ */}
-            <AnimatePresence>
                 {quickView && (
-                    <motion.div
-                        className="mp-qv-backdrop"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.22 }}
-                        onClick={() => setQuickView(null)}
-                    >
-                        <motion.div
-                            className="mp-qv-modal"
-                            initial={{ opacity: 0, y: 30, scale: 0.97 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 24, scale: 0.97 }}
-                            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <button className="mp-qv-close" onClick={() => setQuickView(null)} aria-label="Close">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    <div className="mp-qv-backdrop" onClick={() => setQuickView(null)}>
+                        <div className="mp-qv-modal" onClick={(e) => e.stopPropagation()}>
+                            <button className="mp-qv-close" onClick={() => setQuickView(null)} aria-label="Close quick view">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
                             </button>
                             <div className="mp-qv-img">
-                                <img src={optimizeCloudinaryUrlAdvanced(quickView.pic1, { maxWidth: 800, crop: 'fill' })} alt={quickView.name} />
-                                {calcDiscount(quickView) > 0 && (
-                                    <div className="mp-ribbon mp-ribbon-lg">✦ {calcDiscount(quickView)}% OFF</div>
-                                )}
+                                <img src={optimizeCloudinaryUrlAdvanced([quickView.pic1, quickView.pic, quickView.pic2, quickView.pic3, quickView.pic4].find(Boolean) || '', { maxWidth: 1200, crop: 'fill' })} alt={quickView.name} loading="eager" />
                             </div>
                             <div className="mp-qv-body">
-                                <p className="mp-qv-brand">{quickView.brand || 'Brand'}</p>
-                                <h2 className="mp-qv-name">{quickView.name}</h2>
-                                <p className="mp-qv-cat">{quickView.maincategory}{quickView.subcategory ? ` · ${quickView.subcategory}` : ''}</p>
-
-                                {(reviewStats[quickView.id]?.average || quickView.rating) > 0 && (
-                                    <div className="mp-rating-row">
-                                        <span className="mp-rpill">
-                                            {(reviewStats[quickView.id]?.average || quickView.rating).toFixed(1)}
-                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                                        </span>
-                                        <span className="mp-rcount">| {reviewStats[quickView.id]?.count || 0} reviews</span>
-                                    </div>
-                                )}
-
+                                <p className="mp-qv-brand">{quickView.brand}</p>
+                                <h3 className="mp-qv-name">{quickView.name}</h3>
+                                <p className="mp-qv-cat">{quickView.maincategory} {quickView.subcategory ? `· ${quickView.subcategory}` : ''}</p>
                                 <div className="mp-qv-price">
                                     <span className="mp-price">₹{quickView.finalprice}</span>
-                                    {quickView.baseprice > quickView.finalprice && (
-                                        <>
-                                            <del className="mp-orig">₹{quickView.baseprice}</del>
-                                            <span className="mp-discount">({calcDiscount(quickView)}% OFF)</span>
-                                        </>
-                                    )}
+                                    {quickView.baseprice > quickView.finalprice && <span className="mp-orig"><del>₹{quickView.baseprice}</del></span>}
+                                    <span className="mp-discount">{calcDiscount(quickView)}% off</span>
                                 </div>
-                                <p className="mp-qv-tax">inclusive of all taxes</p>
 
-                                <div className="mp-qv-section">
-                                    <p className="mp-qv-label">SELECT SIZE</p>
-                                    <div className="mp-sbtns mp-qv-sizes">
-                                        {Array.from(new Set((Array.isArray(quickView.size) ? quickView.size : String(quickView.size||'').split(',')).filter(s => s && s.trim() !== 'All'))).map((s) => {
-                                            const sz = s.trim();
-                                            return (
-                                                <button key={sz} type="button"
-                                                    onClick={() => setSelectedSizes({...selectedSizes, [quickView.id]: sz})}
-                                                    className={`mp-sbtn ${selectedSizes[quickView.id]===sz?'active':''}`}
-                                                >{sz}</button>
-                                            );
-                                        })}
+                                    <div className="mp-qv-section mp-qv-sizes">
+                                        <p className="mp-qv-label">Sizes</p>
+                                        <div className="mp-sbtns">
+                                            {
+                                                (() => {
+                                                    const qid = quickView.id || quickView._id;
+                                                    const sizesArr = Array.isArray(quickView.size) ? quickView.size : (quickView.size ? String(quickView.size).split(',') : []);
+                                                    return sizesArr.map((s) => (
+                                                        <button
+                                                            key={s}
+                                                            className={`mp-sbtn ${selectedSizes[qid] === s ? 'active' : ''}`}
+                                                            onClick={() => setSelectedSizes((prev) => ({ ...prev, [qid]: s }))}
+                                                        >{s}</button>
+                                                    ));
+                                                })()
+                                            }
+                                        </div>
                                     </div>
-                                </div>
 
                                 <div className="mp-qv-actions">
-                                    <button
-                                        className="mp-addbtn mp-qv-add"
-                                        onClick={() => { addToCart(quickView, selectedSizes[quickView.id]); }}
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                                        </svg>
-                                        ADD TO BAG
-                                    </button>
-                                    <button
-                                        className={`mp-qv-wish ${isInWishlist(quickView.id) ? 'active' : ''}`}
-                                        onClick={() => toggleWishlist(quickView)}
-                                    >
-                                        <svg viewBox="0 0 24 24" width="16" height="16" fill={isInWishlist(quickView.id) ? '#e11d48' : 'none'} stroke={isInWishlist(quickView.id) ? '#e11d48' : 'currentColor'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                                        </svg>
-                                        {isInWishlist(quickView.id) ? 'WISHLISTED' : 'WISHLIST'}
-                                    </button>
+                                    <button className={`mp-addbtn mp-qv-add`} onClick={() => { const qid = quickView.id || quickView._id; addToCart(quickView, selectedSizes[qid]); setQuickView(null); }}>Add to bag</button>
+                                    <button className={`mp-qv-wish ${isInWishlist(quickView.id || quickView._id) ? 'active' : ''}`} onClick={() => toggleWishlist(quickView)}>{isInWishlist(quickView.id || quickView._id) ? 'Wishlisted' : 'Add to wishlist'}</button>
                                 </div>
 
-                                <Link
-                                    to={`/single-product/${quickView.id}`}
-                                    className="mp-qv-viewfull"
-                                    onClick={() => { pushRecentlyViewed(quickView); setQuickView(null); }}
-                                >
-                                    View full details →
-                                </Link>
-
-                                <div className="mp-qv-perks">
-                                    <div className="mp-qv-perk">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-                                        Free Shipping above ₹499
-                                    </div>
-                                    <div className="mp-qv-perk">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9"/><polyline points="3 4 3 12 11 12"/></svg>
-                                        7-day easy returns
-                                    </div>
-                                    <div className="mp-qv-perk">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/></svg>
-                                        Cash on Delivery available
-                                    </div>
-                                </div>
+                                <Link to={`/single-product/${quickView.id || quickView._id}`} className="mp-qv-viewfull" onClick={() => setQuickView(null)}>View full product page</Link>
                             </div>
-                        </motion.div>
-                    </motion.div>
+                        </div>
+                    </div>
                 )}
-            </AnimatePresence>
+
+            </div>
 
             {/* ══ SCOPED PREMIUM STYLES ══ */}
             <style dangerouslySetInnerHTML={{ __html: `
@@ -1212,6 +1014,7 @@ export default function Shop() {
                     display: flex; align-items: flex-start;
                     max-width: 1600px; margin: 0 auto;
                     padding: 24px 24px 60px; gap: 24px;
+                    min-height: 100vh;
                 }
                 .mp-backdrop { display: none; position: fixed; inset: 0; background: rgba(40,44,63,0.5); z-index: 1040; backdrop-filter: blur(2px); }
 
@@ -1219,6 +1022,8 @@ export default function Shop() {
                 .mp-sidebar {
                     width: 268px; flex-shrink: 0;
                     position: sticky; top: 16px;
+                    height: calc(100vh - 32px);
+                    min-height: calc(100vh - 32px);
                     max-height: calc(100vh - 32px);
                     overflow-y: auto;
                     scrollbar-width: thin;
@@ -1227,6 +1032,7 @@ export default function Shop() {
                 .mp-sidebar::-webkit-scrollbar { width: 4px; }
                 .mp-sidebar::-webkit-scrollbar-thumb { background: var(--line-d); border-radius: 2px; }
                 .mp-sb-inner { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 22px 20px; box-shadow: var(--shadow); }
+                .mp-sb-inner { min-height: 100%; display: flex; flex-direction: column; }
                 .mp-sb-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); gap: 8px; }
                 .mp-sb-eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 2.5px; color: var(--ink-muted); text-transform: uppercase; margin: 0 0 4px; }
                 .mp-sb-title { font-family: var(--serif); font-size: 24px; font-weight: 600; color: var(--ink); line-height: 1; margin: 0; }
@@ -1630,6 +1436,10 @@ export default function Shop() {
                 .mp-skel-line { height: 11px; border-radius: 3px; background: #ececef; }
                 .mp-shimmer { background: linear-gradient(90deg, #ececef 25%, #f5f5f6 50%, #ececef 75%); background-size: 200% 100%; animation: mpShimmer 1.4s infinite linear; }
                 @keyframes mpShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+                .mp-skel-line { height: 11px; border-radius: 6px; background: #efefef; }
+                .mp-shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: mpShimmer 1.5s infinite ease-in-out; }
+                @keyframes mpShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+                .mp-skel-card { background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%); border: 1px solid #eee; }
 
                 @media (prefers-reduced-motion: reduce) {
                     .mp-card,.mp-img,.mp-hover-bar,.mp-addbtn,.mp-sbtn,.mp-sidebar,.mp-actions,.mp-qview { transition: none !important; animation: none !important; }

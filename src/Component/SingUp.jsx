@@ -17,11 +17,13 @@ export default function SingUp() {
     
     // ============ EMAIL SIGNUP STATES ============
     const [data, setdata] = useState({ name: "", email: "", username: "", password: "" })
+    const [confirmPassword, setConfirmPassword] = useState("")
     const [loading, setLoading] = useState(false)
+    const [googleLoading, setGoogleLoading] = useState(false)
     const [showPass, setShowPass] = useState(false)
     const [userOtp, setUserOtp] = useState("")
     
-    const [errors, setErrors] = useState({ name: "", email: "", username: "", password: "" })
+    const [errors, setErrors] = useState({ name: "", email: "", username: "", password: "", confirm: "" })
     const [usernameStatus, setUsernameStatus] = useState(null)
     const [checkingUsername, setCheckingUsername] = useState(false)
     const [generalError, setGeneralError] = useState("")
@@ -78,6 +80,12 @@ export default function SingUp() {
         if (!/[A-Z]/.test(pwd)) return "At least 1 Uppercase letter required"
         if (!/[@#$]/.test(pwd)) return "At least 1 special character (@, #, $) required"
         return "" // Valid
+    }
+
+    const validateConfirm = (pwd, confirm) => {
+        if (!confirm) return "Please confirm your password"
+        if (pwd !== confirm) return "Passwords do not match"
+        return ""
     }
 
     // EMAIL VALIDATION FUNCTION
@@ -153,12 +161,12 @@ export default function SingUp() {
 
     // ========== FIREBASE GOOGLE SIGN UP ==========
     async function handleGoogleSignUp() {
-        setLoading(true)
+        setGoogleLoading(true)
         setGeneralError("")
         try {
             if (!auth || !googleProvider) {
                 setGeneralError("Google sign-up is not configured. Please contact support or try again later.")
-                setLoading(false)
+                setGoogleLoading(false)
                 return
             }
 
@@ -241,7 +249,7 @@ export default function SingUp() {
                 setGeneralError(err.message || "Failed to sign up with Google")
             }
         } finally {
-            setLoading(false)
+            setGoogleLoading(false)
         }
     }
 
@@ -261,10 +269,11 @@ export default function SingUp() {
         const emailError = validateEmail(data.email);
         const usernameError = !data.username ? "Username is required" : (usernameStatus === 'taken' ? "Username already taken" : "");
         const passwordError = validatePassword(data.password);
+        const confirmError = validateConfirm(data.password, confirmPassword);
 
-        setErrors({ name: nameError, email: emailError, username: usernameError, password: passwordError });
+        setErrors({ name: nameError, email: emailError, username: usernameError, password: passwordError, confirm: confirmError });
 
-        if (nameError || emailError || usernameError || passwordError || usernameStatus !== 'available') {
+        if (nameError || emailError || usernameError || passwordError || confirmError || usernameStatus === 'taken') {
             setGeneralError("Please fix all errors before proceeding");
             return;
         }
@@ -350,7 +359,7 @@ export default function SingUp() {
                     <div className="signup-inner-box p-4 p-md-5 text-center">
                         
                         {/* 🔥 LOADING SPINNER OVERLAY */}
-                        {(loading) && (
+                        {(loading && !googleLoading) && (
                             <motion.div 
                                 initial={{ opacity: 0 }} 
                                 animate={{ opacity: 1 }}
@@ -466,6 +475,17 @@ export default function SingUp() {
                                         {errors.password && <p className="error-text mt-3"><AlertCircle size={14} /> {errors.password}</p>}
                                     </div>
                                     
+                                    {/* CONFIRM PASSWORD FIELD */}
+                                    <div className="p-field mb-5">
+                                        <label>CONFIRM PASSWORD</label>
+                                        <div className="p-input-box">
+                                            <Lock size={18}/>
+                                            <input type={showPass ? "text" : "password"} placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+                                            <button type="button" className="eye-btn" onClick={()=>setShowPass(!showPass)}>{showPass ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
+                                        </div>
+                                        {errors.confirm && <p className="error-text mt-3"><AlertCircle size={14} /> {errors.confirm}</p>}
+                                    </div>
+                                    
                                     {/* TERMS & CONDITIONS */}
                                     <div className="terms-checkbox mb-4">
                                         <input 
@@ -480,7 +500,7 @@ export default function SingUp() {
                                     </div>
                                     {!termsAccepted && <p className="error-text terms-error-text"><AlertCircle size={12} /> Please accept the terms to continue</p>}
                                     
-                                    <button type="submit" className="p-submit-btn shadow-lg" disabled={loading || usernameStatus !== 'available' || !termsAccepted}>{loading ? <Loader2 className="animate-spin mx-auto"/> : <>CREATE ACCOUNT <ArrowRight className="ml-2" size={18}/></>}</button>
+                                    <button type="submit" className="p-submit-btn shadow-lg" disabled={loading || googleLoading || usernameStatus === 'taken' || !termsAccepted}>{loading ? <Loader2 className="animate-spin mx-auto"/> : <>CREATE ACCOUNT <ArrowRight className="ml-2" size={18}/></>}</button>
 
                                     {/* DIVIDER */}
                                     <div className="luxury-divider my-4">
@@ -494,9 +514,10 @@ export default function SingUp() {
                                         whileTap={{ scale: 0.98 }}
                                         className="google-signup-btn mt-3 shadow-lg" 
                                         onClick={handleGoogleSignUp}
-                                        disabled={loading}
+                                        disabled={loading || googleLoading}
                                     >
-                                        <Chrome size={16} className="mr-2" /> SIGN UP WITH GOOGLE
+                                        {googleLoading ? <Loader2 size={16} className="animate-spin mr-2" /> : <Chrome size={16} className="mr-2" />}
+                                        {googleLoading ? 'CONNECTING GOOGLE...' : 'SIGN UP WITH GOOGLE'}
                                     </motion.button>
                                 </motion.form>
                             )}

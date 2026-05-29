@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { resetPasswordAPI } from '../Store/Services'
+import { resetPasswordAPI, verifyOtpAPI } from '../Store/Services'
 import { fastAPI } from '../Store/Services.jsx';
 import { motion, AnimatePresence } from 'framer-motion'
 import { KeyRound, ShieldCheck, Loader2, User, Lock, CheckCircle2, ArrowLeft, RotateCcw, AlertCircle } from 'lucide-react'
 import { useToast } from './ToastNotification'
 
 export default function ForgetPassword() {
-    const [data, setdata] = useState({ username: "", password: "", cpassword: "" })
+    const [data, setdata] = useState({ identifier: "", password: "", cpassword: "" })
     const [step, setStep] = useState(1)  // 1: Request OTP, 2: Reset Password, 3: Success
     const [loading, setLoading] = useState(false)
     const [userOtp, setUserOtp] = useState("")
@@ -15,6 +15,7 @@ export default function ForgetPassword() {
     const [resendAttempts, setResendAttempts] = useState(0)
     const [maxAttempts] = useState(10)
     const [errors, setErrors] = useState({})
+    const [otpStatus, setOtpStatus] = useState({ state: 'idle', message: '' })
     const [redirectCountdown, setRedirectCountdown] = useState(3)
     const toast = useToast()
     
@@ -39,6 +40,32 @@ export default function ForgetPassword() {
             navigate('/login');
         }
     }, [step, redirectCountdown, navigate]);
+
+    // Listen for realtime password-reset events (emitted by server)
+    useEffect(() => {
+        const onUserPasswordReset = (e) => {
+            try {
+                const payload = e?.detail || {};
+                const resetEmail = (payload.email || payload.emailAddress || '').toLowerCase();
+                if (!resetEmail) return;
+                if (resetEmail === (data.identifier || '').toLowerCase()) {
+                    // If this client triggered the reset elsewhere, show success immediately
+                    localStorage.removeItem("login");
+                    localStorage.removeItem("userid");
+                    localStorage.removeItem("name");
+                    localStorage.removeItem("username");
+                    localStorage.removeItem("role");
+                    localStorage.removeItem("userToken");
+                    localStorage.removeItem("savedCredentials");
+                    toast.success("Password updated successfully.");
+                    setStep(3);
+                }
+            } catch (err) { /* silent */ }
+        };
+
+        window.addEventListener('realtime:userPasswordReset', onUserPasswordReset);
+        return () => window.removeEventListener('realtime:userPasswordReset', onUserPasswordReset);
+    }, [data.identifier, toast]);
 
     // 🔒 PASSWORD VALIDATION FUNCTION
     const validatePassword = (password) => {
@@ -100,21 +127,23 @@ export default function ForgetPassword() {
         setErrors({});
         if (resendAttempts >= maxAttempts) {
             const attemptMsg = `Maximum resend attempts (${maxAttempts}) reached. Please try again later.`;
-            setErrors({ username: attemptMsg });
+            setErrors({ identifier: attemptMsg });
             toast.warning(attemptMsg);
             return;
         }
         setLoading(true);
         try {
-            const res = await fastAPI('/api/send-otp', 'POST', { email: data.username, type: 'forget' });
+            const res = await fastAPI('/api/send-otp', 'POST', { identifier: data.identifier, type: 'forget' });
             if (res.result === "Done") {
                 setStep(2);
+                setUserOtp("")
+                setOtpStatus({ state: 'idle', message: '' })
                 setTimer(60);
                 setResendAttempts(prev => prev + 1);
                 toast.success("OTP sent successfully. Please check your email.");
             } else {
                 const backendMsg = res.message || "Email is not registered.";
-                setErrors({ username: backendMsg });
+                setErrors({ identifier: backendMsg });
                 toast.error(backendMsg);
             }
         } catch (err) {
@@ -123,24 +152,58 @@ export default function ForgetPassword() {
 
             if (status === 429) {
                 const rateLimitMsg = "Too many requests. Please wait before trying again.";
-                setErrors({ username: rateLimitMsg });
+                setErrors({ identifier: rateLimitMsg });
                 toast.warning(rateLimitMsg);
             } else if (status === 404) {
-                const notRegisteredMsg = message || "Email is not registered.";
-                setErrors({ username: notRegisteredMsg });
+                const notRegisteredMsg = message || "Email or username is not registered.";
+                setErrors({ identifier: notRegisteredMsg });
                 toast.error(notRegisteredMsg);
             } else if (status >= 500) {
                 const serverMsg = "Server issue while sending code. Please retry in a minute.";
-                setErrors({ username: serverMsg });
+                setErrors({ identifier: serverMsg });
                 toast.error(serverMsg);
             } else {
-                const genericMsg = message || "Email is not registered.";
-                setErrors({ username: genericMsg });
+                const genericMsg = message || "Email or username is not registered.";
+                setErrors({ identifier: genericMsg });
                 toast.error(genericMsg);
             }
         }
         setLoading(false);
     }
+
+    useEffect(() => {
+        if (step !== 2) return;
+
+        if (!data.identifier || userOtp.length !== 6) {
+            if (otpStatus.state !== 'idle') {
+                setOtpStatus({ state: 'idle', message: '' })
+            }
+            return;
+        }
+
+        let cancelled = false
+        ;(async () => {
+            try {
+                setOtpStatus({ state: 'checking', message: 'Verifying OTP...' })
+                const res = await verifyOtpAPI({ identifier: data.identifier, otp: userOtp, type: 'forget' })
+                if (!cancelled && res?.verified) {
+                    setOtpStatus({ state: 'verified', message: 'OTP verified' })
+                }
+            } catch (err) {
+                if (cancelled) return
+                const msg = err?.data?.message || err?.message || 'OTP verification failed'
+                if (String(msg).toLowerCase().includes('expired')) {
+                    setOtpStatus({ state: 'invalid', message: 'OTP expired' })
+                } else {
+                    setOtpStatus({ state: 'invalid', message: msg })
+                }
+            }
+        })()
+
+        return () => {
+            cancelled = true
+        }
+    }, [step, userOtp, data.identifier])
 
     // --- STEP 2: VERIFY & RESET ---
     async function handleReset(e) {
@@ -162,11 +225,16 @@ export default function ForgetPassword() {
             return;
         }
 
+        if (otpStatus.state !== 'verified') {
+            setErrors({ otp: "Please enter and verify a valid OTP first." });
+            return;
+        }
+
         setLoading(true);
         try {
-            const res = await resetPasswordAPI({ ...data, otp: userOtp })
-            if (res.result === "Done") {
-                // Clear all login data
+            const res = await resetPasswordAPI({ identifier: data.identifier, password: data.password, cpassword: data.cpassword, otp: userOtp.trim() })
+            if (res && res.result === "Done") {
+                // Clear all login data only after backend confirms the OTP and password update
                 localStorage.removeItem("login");
                 localStorage.removeItem("userid");
                 localStorage.removeItem("name");
@@ -174,20 +242,26 @@ export default function ForgetPassword() {
                 localStorage.removeItem("role");
                 localStorage.removeItem("userToken");
                 localStorage.removeItem("savedCredentials");
-                
-                setStep(3);  // Show success screen with countdown
+                setStep(3);
+            } else {
+                throw new Error(res?.message || 'Reset failed');
             }
         } catch (err) {
             const status = err?.status
             const message = err?.data?.message || err?.message
-
-            if (status === 400 || status === 404) {
+            const lowered = String(message || '').toLowerCase()
+            if (status === 400 && (lowered.includes('current password') || lowered.includes('used previously'))) {
+                setErrors({ password: message || "Please choose a new password different from current/previous passwords." });
+                toast.warning(message || "Please choose a new password different from current/previous passwords.")
+            } else if (status === 400 || status === 404) {
                 setErrors({ otp: message || "Verification failed. Invalid or expired code." });
             } else if (status === 429) {
                 setErrors({ otp: "Too many attempts. Please wait and try again." });
             } else {
                 setErrors({ otp: message || "Reset failed due to a server issue. Please retry." });
             }
+
+            setStep(2);
         }
         setLoading(false);
     }
@@ -211,18 +285,18 @@ export default function ForgetPassword() {
                             {step === 1 ? (
                                 <motion.form key="s1" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} onSubmit={handleRequestOTP} className="text-left">
                                     <div className="premium-field mb-5">
-                                        <label className="field-label">EMAIL ADDRESS</label>
+                                        <label className="field-label">EMAIL OR USERNAME</label>
                                         <div className="input-wrap">
                                             <User size={18} className="field-icon" />
-                                            <input type="email" placeholder="enter your registered email" onChange={e => setdata({...data, username: e.target.value})} required />
+                                            <input type="text" placeholder="enter your registered email or username" value={data.identifier} onChange={e => setdata({...data, identifier: e.target.value})} required />
                                         </div>
-                                        {errors.username && (
+                                        {errors.identifier && (
                                             <motion.p 
                                                 initial={{ opacity: 0, y: -5 }} 
                                                 animate={{ opacity: 1, y: 0 }}
                                                 className="error-message"
                                             >
-                                                {errors.username}
+                                                {errors.identifier}
                                             </motion.p>
                                         )}
                                     </div>
@@ -257,11 +331,27 @@ export default function ForgetPassword() {
                                                     maxLength="6" 
                                                     placeholder="000000" 
                                                     style={{letterSpacing:'8px', fontWeight:'800', fontSize:'18px'}} 
-                                                    onChange={e => setUserOtp(e.target.value)} 
+                                                    onChange={e => {
+                                                        const clean = e.target.value.replace(/\D/g, '').slice(0, 6)
+                                                        setUserOtp(clean)
+                                                        if (clean.length !== 6) {
+                                                            setOtpStatus({ state: 'idle', message: '' })
+                                                        }
+                                                        if (errors.otp) {
+                                                            const nextErrors = { ...errors }
+                                                            delete nextErrors.otp
+                                                            setErrors(nextErrors)
+                                                        }
+                                                    }} 
                                                     required 
                                                 />
                                             </div>
                                             <div className="code-expiry">✓ Valid for 10 minutes only</div>
+                                            {otpStatus.state !== 'idle' && (
+                                                <div className="code-expiry" style={{ color: otpStatus.state === 'verified' ? '#0a7f50' : otpStatus.state === 'checking' ? '#1f2937' : '#b42318', fontWeight: 700 }}>
+                                                    {otpStatus.message}
+                                                </div>
+                                            )}
                                         </div>
                                         {errors.otp && (
                                             <motion.p 
@@ -329,7 +419,7 @@ export default function ForgetPassword() {
                                         )}
                                     </div>
                                     
-                                    <button type="submit" className="submit-lux shadow-lg" disabled={loading || Object.keys(errors).length > 0}>
+                                    <button type="submit" className="submit-lux shadow-lg" disabled={loading}>
                                         {loading ? "SYNCING..." : "UPDATE CREDENTIALS"}
                                     </button>
                                 </motion.form>

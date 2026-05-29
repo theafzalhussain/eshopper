@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { getWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators'
+import { deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators'
 import { addCart } from '../Store/ActionCreaters/CartActionCreators'
 import { Link } from 'react-router-dom'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper'
@@ -115,7 +115,6 @@ export default function Wishlist() {
             // Always fetch wishlist for the current user
             const res = await axios.get('/wishlist', { params: { user: userId } })
             setWishlist(Array.isArray(res.data) ? res.data : [])
-            dispatch(getWishlist())
         } catch (e) {
             setWishlist([])
             setLoading(false)
@@ -129,7 +128,7 @@ export default function Wishlist() {
         try {
             dispatch(deleteWishlist({ id: itemId }))
             setWishlist((prev) => prev.filter((item) => (item.id || item._id) !== itemId))
-            toast.success('Item removed from wishlist.')
+                // success toast will be shown via saga-confirmation
         } catch (e) {
             toast.error('Failed to remove item.')
         } finally {
@@ -157,7 +156,7 @@ export default function Wishlist() {
             }))
             dispatch(deleteWishlist({ id: itemId }))
             setWishlist((prev) => prev.filter(x => (x.id || x._id) !== itemId))
-            toast.success('Moved to cart successfully.')
+            // success toast will be shown by saga-confirmation
         } catch (e) {
             toast.error('Failed to move item to cart.')
         } finally {
@@ -188,7 +187,7 @@ export default function Wishlist() {
                 dispatch(deleteWishlist({ id: itemId }))
             }
             setWishlist(prev => prev.filter(x => !visibleWishlist.some(v => (v.id || v._id) === (x.id || x._id))))
-            toast.success('All visible wishlist items moved to cart.')
+            // success toast moved to saga-confirmation
         } catch (e) {
             toast.error('Failed to move all items to cart.')
         } finally {

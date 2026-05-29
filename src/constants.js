@@ -5,19 +5,30 @@ const PROD_API_URL = "https://eshopper-qtgl.onrender.com";
 const LOCAL_API_URL = "http://localhost:5000";
 const useLocalApi = process.env.REACT_APP_USE_LOCAL_API === 'true';
 const forceWebSocket = process.env.REACT_APP_FORCE_WEBSOCKET === 'true';
-const configuredProdApiUrl = process.env.REACT_APP_BASE_URL || process.env.REACT_APP_API_URL || PROD_API_URL;
+const shouldForceWebSocket = forceWebSocket;
+// Prefer explicit prod URL, but ignore envs pointing to localhost unless developer explicitly opts in.
+const envBaseUrl = process.env.REACT_APP_BASE_URL || '';
+const envApiUrl = process.env.REACT_APP_API_URL || '';
 const configuredLocalApiUrl = process.env.REACT_APP_LOCAL_API_URL || LOCAL_API_URL;
-const configuredDevApiUrl = process.env.REACT_APP_API_URL || configuredLocalApiUrl;
-
-// Dev behavior: prefer REACT_APP_API_URL/localhost by default so local data loads reliably.
+const configuredProdApiUrl = (() => {
+  // If developer explicitly requested local API usage, allow localhost envs.
+  if (useLocalApi) return envBaseUrl || envApiUrl || PROD_API_URL;
+  // Prefer non-local env values; fall back to the hardcoded PROD_API_URL.
+  const candidate = envBaseUrl || envApiUrl || PROD_API_URL;
+  if (String(candidate).includes('localhost') || String(candidate).includes('127.0.0.1')) {
+    return PROD_API_URL;
+  }
+  return candidate;
+})();
+// Dev behavior: Default to local backend during development to test new endpoints
 // Production behavior: use configured production API URL.
 export const BASE_URL = isDev
-  ? (useLocalApi ? configuredLocalApiUrl : configuredDevApiUrl)
+  ? configuredLocalApiUrl 
   : configuredProdApiUrl;
 
 // Socket transport strategy:
-// Forced websocket to prevent 400 Bad Request in PM2 cluster mode
-export const SOCKET_TRANSPORTS = ['polling', 'websocket'];
+// Force websocket in dev (and when explicitly enabled) to avoid polling 400s.
+export const SOCKET_TRANSPORTS = shouldForceWebSocket ? ['websocket'] : ['polling', 'websocket'];
 
 // ===== FRONTEND URLs =====
 // Always use production domain
@@ -36,6 +47,7 @@ export const ADMIN_URL = "https://eshopperr.me/admin";
 export const API_ENDPOINTS = {
   // Auth
   SEND_OTP: "/api/send-otp",
+  VERIFY_OTP: "/api/verify-otp",
   RESET_PASSWORD: "/api/reset-password",
   LOGIN: "/login",
   LOGIN_2FA: "/api/login-2fa",
@@ -71,7 +83,7 @@ export const API_ENDPOINTS = {
 };
 
 // ===== TIMEOUT SETTINGS =====
-export const REQUEST_TIMEOUT = 90000; // 90 seconds (Render free tier cold starts can exceed 50s)
+export const REQUEST_TIMEOUT = 60000; // Increased to 60 seconds to allow Render backend to wake up
 export const OTP_EXPIRY_TIME = 10 * 60 * 1000; // 10 minutes
 
 // ===== UI CONSTANTS =====

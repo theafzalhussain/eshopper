@@ -9,10 +9,11 @@ import autoTable from 'jspdf-autotable'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import { useToast } from './ToastNotification'
 import { useSelector, useDispatch } from 'react-redux'
-import { getProduct } from '../Store/ActionCreaters/ProductActionCreators'
+import { queryClient } from '../queries/queryClient'
+import { catalogQueryKeys } from '../queries/catalogQueries'
 import {
   Package, Archive, Truck, MapPin, BadgeCheck, Calendar,
-  RefreshCw, Copy, Clock3, Home, Phone, Mail, Sparkles, Gauge, Wallet,
+  RefreshCw, RotateCcw, Copy, Clock3, Home, Phone, Mail, Sparkles, Gauge, Wallet,
   FileText, Download, Navigation, KeyRound, ShieldCheck, PackageCheck, Star, X, Loader2, Camera
 } from 'lucide-react'
 
@@ -49,6 +50,30 @@ const normalizeStatus = (value = '') => {
   if (raw === 'out for delivery') return 'Out for Delivery'
   if (raw === 'delivered') return 'Delivered'
   return 'Ordered'
+}
+
+const getDeliveredAt = (order = {}) => {
+  const history = Array.isArray(order?.statusHistory) ? order.statusHistory : []
+  const deliveredEntry = [...history].reverse().find((entry) => normalizeStatus(entry?.status) === 'Delivered')
+  const candidate = deliveredEntry?.timestamp || order?.deliveryOtpVerifiedAt || order?.updatedAt || order?.orderDate
+  const parsed = new Date(candidate)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const isCancelableOrder = (order = {}) => {
+  const status = normalizeStatus(order?.orderStatus || order?.status)
+  if (['Shipped', 'Out for Delivery', 'Delivered'].includes(status)) return false
+  if (order?.cancellation?.status && order.cancellation.status !== 'NOT_CANCELLED') return false
+  return ['Ordered', 'Packed', 'Confirmed'].includes(status)
+}
+
+const isReturnableOrder = (order = {}) => {
+  if (normalizeStatus(order?.orderStatus || order?.status) !== 'Delivered') return false
+  if (order?.return?.status && order.return.status !== 'NOT_INITIATED') return false
+  const deliveredAt = getDeliveredAt(order)
+  if (!deliveredAt) return false
+  const diffDays = (Date.now() - deliveredAt.getTime()) / (1000 * 60 * 60 * 24)
+  return diffDays <= 7
 }
 
 const formatMoney = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`
@@ -762,6 +787,9 @@ const CSS = `
   box-shadow: 0 0 20px rgba(201,168,76,0.4);
   animation: pulse-step 2s infinite;
 }
+/* cancelled state styles */
+.ot-step-dot.cancelled { background: #fff0f0; border-color: rgba(220,38,38,0.12); color: #b91c1c }
+.ot-step-label.cancelled { color: #b91c1c }
 @keyframes pulse-step {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
@@ -1035,6 +1063,8 @@ const CSS = `
   border-color: var(--gold);
   box-shadow: 0 0 16px rgba(201,168,76,0.3);
 }
+.ot-timeline-event.cancelled { border-left-color: rgba(220,38,38,0.12); background: linear-gradient(90deg, rgba(220,38,38,0.03), transparent) }
+.ot-timeline-event.cancelled .ot-timeline-title { color: #991b1b; font-weight: 800 }
 .ot-timeline-title {
   font-size: 16px; font-weight: 700;
   color: var(--ink); margin: 0 0 4px;
@@ -1296,12 +1326,29 @@ const CSS = `
   .ot-otp-code { font-size: 26px; }
   .ot-expected-title { font-size: 18px; }
   .ot-delivered-title { font-size: 20px; }
-  .ot-mini-row, .ot-fin-extra-row { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .ot-mini-val, .ot-fin-extra-row strong { text-align: left; word-break: break-word; }
+  .ot-fin-grid { grid-template-columns: 1fr; gap: 12px; }
+  .ot-fin-block { padding: 12px; }
+  .ot-fin-value { font-size: 18px; }
+  .ot-finance-title { font-size: 18px; }
+  .ot-finance-head { gap: 6px; }
+  .ot-mini-row, .ot-fin-extra-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; }
+  .ot-mini-val, .ot-fin-extra-row strong { text-align: right; word-break: break-word; }
   .ot-map-source { flex-direction: column; align-items: flex-start; }
   .ot-map-source-value { text-align: left; margin-top: 6px; word-break: break-word; }
   .ot-btn { width: 100%; }
   .rev-modal-header, .rev-modal-body, .rev-modal-footer { padding: 16px; }
+}
+@media (max-width: 320px) {
+  .ot-page { padding: 40px 10px 60px; }
+  .ot-hero-inner { padding: 0 4px; }
+  .ot-header-title { font-size: 22px; }
+  .ot-card, .ot-mini-card, .ot-kpi { padding: 10px; }
+  .ot-fin-block { padding: 10px; }
+  .ot-fin-value { font-size: 16px; }
+  .ot-finance-title { font-size: 16px; }
+  .ot-finance-tag { font-size: 9px; padding: 5px 10px; }
+  .ot-fin-extra-row { font-size: 11px; gap: 6px; }
+  .ot-mini-row, .ot-fin-extra-row span { word-break: break-word; overflow-wrap: break-word; }
 }
 @media (max-width: 1100px) and (min-width: 769px) {
   .ot-top-premium-grid {
@@ -1618,7 +1665,7 @@ export default function OrderTracking() {
   const dispatch = useDispatch()
   const productState = useSelector((state) => state.ProductStateData) || []
   useEffect(() => {
-    dispatch(getProduct())
+    queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products })
   }, [dispatch])
 
   const [status, setStatus] = useState('Ordered')
@@ -1632,6 +1679,7 @@ export default function OrderTracking() {
   const [copiedOrderId, setCopiedOrderId] = useState(false)
   const [invoiceLoading, setInvoiceLoading] = useState(false)
   const [nowTick, setNowTick] = useState(Date.now())
+  const [orderActionBusy, setOrderActionBusy] = useState('')
 
   // Review Modal States
   const [showReviewModal, setShowReviewModal] = useState(false)
@@ -1644,8 +1692,42 @@ export default function OrderTracking() {
   const [orderReview, setOrderReview] = useState(null)
   const REVIEW_TEXT_MAX_LENGTH = 500
 
-  const activeIndex = useMemo(() => Math.max(0, STEPS.indexOf(status)), [status])
-  const progressPercent = useMemo(() => (activeIndex / (STEPS.length - 1)) * 100, [activeIndex])
+  // Determine progress index from statusHistory or current status
+  const { lastProgressIndex, isCancelledOrder } = useMemo(() => {
+    // map a status string to index in STEPS
+    const mapStatusToIndex = (s) => {
+      const normalized = normalizeStatus(s)
+      const idx = STEPS.indexOf(normalized)
+      return idx >= 0 ? idx : 0
+    }
+
+    // try statusHistory from order first
+    let lastIdx = null
+    const history = Array.isArray(order?.statusHistory) ? order.statusHistory : []
+    if (history.length) {
+      for (let i = history.length - 1; i >= 0; i--) {
+        const candidate = normalizeStatus(history[i]?.status)
+        if (STEPS.includes(candidate)) {
+          lastIdx = STEPS.indexOf(candidate)
+          break
+        }
+      }
+    }
+    if (lastIdx === null) lastIdx = mapStatusToIndex(status)
+
+    const cancelled = Boolean(order?.cancellation && String(order.cancellation.status || '').trim() !== 'NOT_CANCELLED')
+    return { lastProgressIndex: Math.max(0, lastIdx), isCancelledOrder: cancelled }
+  }, [order, status])
+
+  const progressPercent = useMemo(() => (lastProgressIndex / (STEPS.length - 1)) * 100, [lastProgressIndex])
+  const canCancelOrder = useMemo(() => {
+    if (order?.lifecycle && typeof order.lifecycle.canCancel === 'boolean') return order.lifecycle.canCancel
+    return isCancelableOrder(order || {})
+  }, [order])
+  const canReturnOrder = useMemo(() => {
+    if (order?.lifecycle && typeof order.lifecycle.canReturn === 'boolean') return order.lifecycle.canReturn
+    return isReturnableOrder(order || {})
+  }, [order])
   const orderItems = useMemo(() => {
     const candidates = [
       order?.orderItems,
@@ -1964,11 +2046,11 @@ export default function OrderTracking() {
     () => STEPS.map((step, index) => ({
       step,
       index,
-      isReached: index <= activeIndex,
+      isReached: index <= lastProgressIndex,
       timestamp: timelineEventMap[step]?.timestamp,
       details: timelineEventMap[step] || null
     })),
-    [activeIndex, timelineEventMap]
+    [lastProgressIndex, timelineEventMap]
   )
 
   const handleImageChange = (e) => {
@@ -2104,7 +2186,7 @@ export default function OrderTracking() {
   }, [getDeliveryInfo, nowTick])
   const addressText = useMemo(() => formatAddress(order?.shippingAddress || order?.address || {}), [order])
   const addressLines = useMemo(() => formatAddressLines(order?.shippingAddress || order?.address || {}), [order])
-  const completedSteps = useMemo(() => Math.max(1, activeIndex + 1), [activeIndex])
+  const completedSteps = useMemo(() => Math.max(1, lastProgressIndex + 1), [lastProgressIndex])
   const trackingSnapshot = useMemo(() => getTrackingSnapshot(order, statusTimeline), [order, statusTimeline])
 
   const latestMapUpdate = useMemo(() => {
@@ -2256,7 +2338,7 @@ export default function OrderTracking() {
     if (!silent) setLoading(true)
     setError('')
     try {
-      const { data } = await axios.get(`${BASE_URL}/api/order/${orderId}?userId=${userId}`, { timeout: 15000 })
+      const { data } = await axios.get(`${BASE_URL}/api/orders/${orderId}`, { params: { userId }, timeout: 15000 })
       const payload = data?.order && typeof data.order === 'object' ? data.order : data
       if (!payload || typeof payload !== 'object') {
         throw new Error('Invalid order response')
@@ -2280,6 +2362,41 @@ export default function OrderTracking() {
       if (!silent) setLoading(false)
     }
   }, [orderId, userId])
+
+  const handleOrderLifecycleAction = useCallback(async (action) => {
+    if (!order?.orderId || !userId || orderActionBusy) return
+
+    if (action === 'cancel' && !canCancelOrder) return
+    if (action === 'return' && !canReturnOrder) return
+
+    const promptLabel = action === 'cancel'
+      ? 'Share a cancellation reason (optional):'
+      : 'Share a return reason to continue:'
+    const reason = window.prompt(promptLabel, '')
+    if (reason === null) return
+    if (action === 'return' && !String(reason).trim()) {
+      toast.info('Return request needs a reason to continue.')
+      return
+    }
+
+    try {
+      setOrderActionBusy(action)
+      const endpoint = action === 'cancel' ? 'cancel' : 'return'
+      const { data } = await axios.post(
+        `${BASE_URL}/api/orders/${encodeURIComponent(order.orderId)}/${endpoint}`,
+        { userId, reason: String(reason).trim() },
+        { timeout: 15000 }
+      )
+      toast.success(data?.message || (action === 'cancel'
+        ? 'Order cancelled. Premium support will handle the rest.'
+        : 'Return request submitted.'))
+      await fetchOrderData({ silent: true })
+    } catch (error) {
+      toast.error(error?.response?.data?.message || `Unable to ${action} this order right now.`)
+    } finally {
+      setOrderActionBusy('')
+    }
+  }, [canCancelOrder, canReturnOrder, fetchOrderData, order?.orderId, orderActionBusy, toast, userId])
 
   const onRefresh = async () => {
     if (refreshing) return
@@ -2641,6 +2758,28 @@ export default function OrderTracking() {
                   <Copy size={13} />
                   {copiedOrderId ? 'Copied' : 'Copy ID'}
                 </button>
+                {canCancelOrder && (
+                  <button
+                    className="ot-ghost-btn"
+                    onClick={() => handleOrderLifecycleAction('cancel')}
+                    disabled={orderActionBusy === 'cancel'}
+                    style={{ borderColor: 'rgba(220,38,38,0.35)', color: '#dc2626', background: 'rgba(220,38,38,0.05)' }}
+                  >
+                    <X size={13} />
+                    {orderActionBusy === 'cancel' ? 'Cancelling' : 'Cancel'}
+                  </button>
+                )}
+                {canReturnOrder && (
+                  <button
+                    className="ot-ghost-btn"
+                    onClick={() => handleOrderLifecycleAction('return')}
+                    disabled={orderActionBusy === 'return'}
+                    style={{ borderColor: 'rgba(26,140,140,0.35)', color: '#1A8C8C', background: 'rgba(26,140,140,0.06)' }}
+                  >
+                    <RotateCcw size={13} />
+                    {orderActionBusy === 'return' ? 'Submitting' : 'Return'}
+                  </button>
+                )}
                 <button className="ot-ghost-btn" onClick={onRefresh} disabled={refreshing}>
                   <RefreshCw size={13} style={refreshing ? { animation: 'pulse-step 1s linear infinite' } : {}} />
                   {refreshing ? 'Refreshing' : 'Refresh'}
@@ -2649,12 +2788,38 @@ export default function OrderTracking() {
                   <FileText size={13} /> Preview Invoice
                 </button>
               </div>
+              {(canCancelOrder || canReturnOrder) && (
+                <div style={{ marginTop: 10, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7c6a35', fontWeight: 700, textAlign: 'right' }}>
+                  {canCancelOrder ? 'Cancel is available before shipment.' : 'Cancel is closed.'}
+                  {' '}
+                  {canReturnOrder ? 'Returns open for 7 days after delivery.' : ''}
+                </div>
+              )}
               <button className="ot-back-btn" onClick={() => navigate('/my-orders')}>← Back</button>
             </div>
           </div>
         </div>
 
         <div style={{ maxWidth: 1180, margin: '0 auto', padding: '0 28px' }}>
+          {/* Cancellation Banner - prominent and official */}
+          {order?.cancellation && order.cancellation.status && order.cancellation.status !== 'NOT_CANCELLED' && (
+            <motion.div className="ot-card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }} style={{ borderLeft: '4px solid #dc2626', background: 'linear-gradient(90deg, rgba(220,38,38,0.04), rgba(255,255,255,0))', marginBottom: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Order Cancelled</div>
+                  <div style={{ marginTop: 6, color: '#4b5563', maxWidth: 740 }}>
+                    {order.cancellation?.publicMessage || 'Your cancellation has been processed. Our premium support will handle refunds and next steps.'}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>{order.cancellation.approvedAt ? new Date(order.cancellation.approvedAt).toLocaleString() : (order.cancellation.requestedAt ? new Date(order.cancellation.requestedAt).toLocaleString() : '')}</div>
+                  <div style={{ marginTop: 6 }}>
+                    <span style={{ padding: '6px 12px', borderRadius: 6, background: '#fff', color: '#b91c1c', border: '1px solid rgba(220,38,38,0.12)', fontWeight: 700 }}>Cancelled</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
           <div className="ot-kpi-grid">
             <div className="ot-kpi">
               <div className="ot-kpi-head">
@@ -2860,7 +3025,7 @@ export default function OrderTracking() {
                   </div>
                   <div className="ot-items-grid">
                     {orderItemsDetailed.map((item, idx) => (
-                      <motion.div key={item.id} className="ot-item-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.05 }}>
+                      <motion.div key={`${item.id}-${idx}`} className="ot-item-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.05 }}>
                         {item.image ? (
                           <img src={item.image} alt={item.name} className="ot-item-image" />
                         ) : (
@@ -2885,14 +3050,17 @@ export default function OrderTracking() {
               <div className="ot-stepper">
                 {STEPS.map((step, idx) => {
                   const StepIcon = STATUS_ICON[step]
-                  const isDone = idx < activeIndex
-                  const isActive = idx === activeIndex
+                  const isFinalStep = idx === STEPS.length - 1
+                  const isDone = idx < lastProgressIndex
+                  const isActive = isCancelledOrder ? isFinalStep : idx === lastProgressIndex
+                  const dotClass = isCancelledOrder && isFinalStep ? 'cancelled' : ''
+                  const label = isCancelledOrder && isFinalStep ? 'Cancelled' : step
                   return (
-                    <motion.div key={step} className={`ot-step ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}`}>
-                      <motion.div className="ot-step-dot" animate={isActive ? { scale: 1.1 } : { scale: 1 }}>
-                        {StepIcon && <StepIcon size={20} strokeWidth={2} />}
+                    <motion.div key={step} className={`ot-step ${isDone ? 'done' : ''} ${isActive ? 'active' : ''} ${isCancelledOrder && isFinalStep ? 'cancelled' : ''}`}>
+                      <motion.div className={`ot-step-dot ${dotClass}`} animate={isActive ? { scale: 1.1 } : { scale: 1 }}>
+                        {isCancelledOrder && isFinalStep ? '✕' : (StepIcon && <StepIcon size={20} strokeWidth={2} />)}
                       </motion.div>
-                      <div className="ot-step-label">{step}</div>
+                      <div className={`ot-step-label ${isCancelledOrder && isFinalStep ? 'cancelled' : ''}`}>{label}</div>
                     </motion.div>
                   )
                 })}
@@ -2911,11 +3079,12 @@ export default function OrderTracking() {
                   <h3 className="ot-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                     <span>📍 Journey Timeline</span>
                     {expressFee > 0 ? (
-                      <span style={{ background: 'linear-gradient(135deg, #111 0%, #2a2a2a 100%)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.4)', padding: '4px 12px', borderRadius: '999px', fontSize: '10px', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 4px 15px rgba(212,175,55,0.15)', fontFamily: "'DM Sans', sans-serif" }}>
-                        <span style={{ fontSize: '12px', marginTop: '-1px', filter: 'drop-shadow(0 0 4px rgba(212,175,55,0.8))' }}>⚡</span> EXPRESS
+                      <span className="lux-express-badge" title="Premium Express Delivery">
+                        <span className="lux-express-icon">⚡</span>
+                        <span style={{ lineHeight: 1 }}>Express Delivery</span>
                       </span>
                     ) : (
-                      <span style={{ background: '#f8fafc', color: '#475569', padding: '4px 12px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', border: '1px solid #e2e8f0', fontFamily: "'DM Sans', sans-serif" }}>
+                      <span className="lux-standard-badge">
                         Est: {getDeliveryInfo ? formatDeliveryDate(getDeliveryInfo.date) : 'Pending'}
                       </span>
                     )}
@@ -2936,16 +3105,18 @@ export default function OrderTracking() {
                     </div>
                   )}
                   {timelineSteps.map((event, idx) => {
-                    const isDone = idx < activeIndex
-                    const isActive = idx === activeIndex
+                    const isDone = idx < lastProgressIndex
+                    const isActive = isCancelledOrder ? idx === (STEPS.length - 1) : idx === lastProgressIndex
                     const StepIcon = STATUS_ICON[event.step]
+                    const isDeliveredStep = String(event.step || '').trim().toLowerCase() === 'delivered'
+                    const showCancelledStep = isCancelledOrder && isDeliveredStep
                     return (
-                      <div key={event.step} className={`ot-timeline-event ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}`}>
+                      <div key={event.step} className={`ot-timeline-event ${isDone ? 'done' : ''} ${isActive ? 'active' : ''} ${showCancelledStep ? 'cancelled' : ''}`}>
                         <div className="ot-timeline-dot">
                           {StepIcon && <StepIcon size={20} strokeWidth={2} />}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <p className="ot-timeline-title">{event.step}</p>
+                          <p className="ot-timeline-title">{showCancelledStep ? 'Cancelled' : event.step}</p>
                           <p className="ot-timeline-text">{STATUS_SUBTEXT[event.step]}</p>
                           <div className="ot-timeline-time">
                             <Calendar size={12} />

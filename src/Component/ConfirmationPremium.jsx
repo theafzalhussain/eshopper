@@ -9,6 +9,13 @@ import { BASE_URL } from '../constants';
 const money = (v) => `9${Number(v || 0).toLocaleString('en-IN')}`;
 const formatDate = (d) => new Date(d || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
+const normalizeOrderPayload = (payload) => {
+  if (!payload || typeof payload !== 'object') return null;
+  if (payload.order && typeof payload.order === 'object') return payload.order;
+  if (payload.data && typeof payload.data === 'object' && payload.data.order) return payload.data.order;
+  return payload.orderId ? payload : null;
+};
+
 const ConfirmationPremium = () => {
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
@@ -27,15 +34,31 @@ const ConfirmationPremium = () => {
       if (stored) {
         try { fallbackOrder = JSON.parse(stored); } catch {}
       }
-      setOrder(fallbackOrder);
-      setLoading(false);
+
+      setOrder(normalizeOrderPayload(fallbackOrder) || fallbackOrder);
+
       // Optionally, fetch latest from backend
       if (fallbackOrder?.orderId) {
-        try {
-          const { data } = await axios.get(`${BASE_URL}/api/order/${encodeURIComponent(fallbackOrder.orderId)}?userId=${encodeURIComponent(fallbackOrder.userid)}`);
-          if (data?.orderId) setOrder(data);
-        } catch {}
+        const endpoints = [
+          `${BASE_URL}/api/orders/${encodeURIComponent(fallbackOrder.orderId)}`,
+          `${BASE_URL}/api/order/${encodeURIComponent(fallbackOrder.orderId)}`
+        ];
+
+        for (const endpoint of endpoints) {
+          try {
+            const { data } = await axios.get(endpoint, { params: { userId: fallbackOrder.userid } });
+            const normalized = normalizeOrderPayload(data);
+            if (normalized) {
+              setOrder(normalized);
+              break;
+            }
+          } catch {
+            // Try the alternate endpoint before giving up.
+          }
+        }
       }
+
+      setLoading(false);
     }
     syncOrder();
   }, []);

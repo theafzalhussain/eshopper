@@ -1,9 +1,14 @@
 import React, { lazy, Suspense, useEffect } from 'react'
+import { io } from 'socket.io-client'
+import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ToastProvider } from './ToastNotification'
+import ToastEventBridge from './ToastEventBridge'
 import Navbaar from './Navbaar'
 import Footer from './Footer'
 import { useMembership } from './MembershipContext'
+import PremiumAuthPopup from './PremiumAuthPopup'
+import CatalogQueryBridge from './CatalogQueryBridge'
 
 const ChatBot = lazy(() => import('./ChatBot'))
 const Home = lazy(() => import('./Home'))
@@ -44,6 +49,8 @@ const AdminAddProduct = lazy(() => import('./Admin/AdminAddProduct'))
 const AdminUpdateProduct = lazy(() => import('./Admin/AdminUpdateProduct'))
 const AdminOrders = lazy(() => import('./Admin/AdminOrders'))
 const AdminCoupon = lazy(() => import('./Admin/AdminCoupon'))
+const AdminDeployChecks = lazy(() => import('./Admin/AdminDeployChecks'))
+const AdminActivityLog = lazy(() => import('./Admin/AdminActivityLog'))
 
 const ScrollToTop = () => {
     const { pathname } = useLocation();
@@ -60,6 +67,8 @@ const AppShell = ({ children }) => {
     <>
       <ScrollToTop />
       <Navbaar />
+      <PremiumAuthPopup />
+      <CatalogQueryBridge />
       <Suspense fallback={null}>
         <ChatBot />
       </Suspense>
@@ -81,6 +90,43 @@ const AdminRoute = ({ children }) => {
 export default function App() {
   useMembership()
 
+  useEffect(() => {
+    try {
+      // Prefer a sane BASE_URL. Only use REACT_APP_API_URL if it does not point to localhost
+      const envSocket = process.env.REACT_APP_API_URL || '';
+      const SOCKET_ENDPOINT = (envSocket && !envSocket.includes('localhost') && !envSocket.includes('127.0.0.1'))
+        ? envSocket
+        : (BASE_URL || window.location.origin);
+      const transports = (process.env.REACT_APP_SOCKET_TRANSPORTS && process.env.REACT_APP_SOCKET_TRANSPORTS.split(',')) || SOCKET_TRANSPORTS || ['polling', 'websocket'];
+      const isAdmin = (localStorage.getItem('isAdmin') === 'true' || (localStorage.getItem('role') || '').toLowerCase() === 'admin');
+      const socketAuthUser = isAdmin ? 'admin-dashboard' : (localStorage.getItem('userid') || null);
+      const socket = io(SOCKET_ENDPOINT, {
+        auth: { userId: socketAuthUser },
+        transports
+      });
+
+      socket.on('connect', () => {
+        console.log('Realtime socket connected', socket.id);
+      });
+
+      socket.on('dbChange', (data) => {
+        console.log('Realtime dbChange received', data);
+        try { window.dispatchEvent(new CustomEvent('realtime:dbChange', { detail: data })); } catch (e) {}
+      });
+
+      // Forward userPasswordReset events to window so individual pages can react
+      socket.on('userPasswordReset', (payload) => {
+        try { window.dispatchEvent(new CustomEvent('realtime:userPasswordReset', { detail: payload })); } catch (e) {}
+      });
+
+      socket.on('connect_error', (err) => console.warn('Socket connect_error:', err && err.message));
+
+      return () => { try { socket.disconnect(); } catch (e) {} };
+    } catch (e) {
+      console.warn('Realtime socket init failed', e && e.message);
+    }
+  }, []);
+
   const routeLoader = (
     <div style={{ minHeight: '50vh', display: 'grid', placeItems: 'center', color: '#94A3B8' }}>
       Loading page...
@@ -89,6 +135,7 @@ export default function App() {
 
   return (
     <ToastProvider>
+      <ToastEventBridge />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppShell>
           <Suspense fallback={routeLoader}>
@@ -119,6 +166,8 @@ export default function App() {
               <Route path="/admin-newsletter" element={<AdminRoute><AdminNewsletter /></AdminRoute>} />
               <Route path="/admin-checkout" element={<AdminRoute><AdminCheckout /></AdminRoute>} />
               <Route path="/admin-orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+              <Route path="/admin-activities" element={<AdminRoute><AdminActivityLog /></AdminRoute>} />
+              <Route path="/admin-deploy-checks" element={<AdminRoute><AdminDeployChecks /></AdminRoute>} />
               <Route path="/admin-coupon" element={<AdminRoute><AdminCoupon /></AdminRoute>} />
               <Route path="/admin-maincategory" element={<AdminRoute><AdminMaincategory /></AdminRoute>} />
               <Route path="/admin-add-maincategory" element={<AdminRoute><AdminAddMaincategory /></AdminRoute>} />

@@ -114,12 +114,13 @@ export default function AddressSelection({ userId, selectedAddressId, setSelecte
             margin-bottom: 32px;
         }
         .lux-address-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #e7ebf0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #e7ebf0;
+          gap: 12px;
         }
         .lux-address-title {
             font-family: 'Playfair Display', serif;
@@ -129,20 +130,22 @@ export default function AddressSelection({ userId, selectedAddressId, setSelecte
             margin: 0;
         }
         .lux-address-add-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: linear-gradient(135deg, #111 0%, #2a2a2a 100%);
-            color: #D4AF37;
-            border: 1px solid #111;
-            padding: 8px 16px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: linear-gradient(135deg, #111 0%, #2a2a2a 100%);
+          color: #D4AF37;
+          border: 1px solid #111;
+          padding: 8px 14px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.6px;
+          cursor: pointer;
+          transition: all 0.22s ease;
+          white-space: nowrap;
+          max-width: 100%;
         }
         .lux-address-add-btn:hover {
             background: #D4AF37;
@@ -151,21 +154,22 @@ export default function AddressSelection({ userId, selectedAddressId, setSelecte
             box-shadow: 0 8px 16px rgba(212, 175, 55, 0.25);
         }
         .lux-address-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 16px;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 14px;
         }
         .lux-address-card {
-            background: #ffffff;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 18px;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            display: flex;
-            gap: 14px;
-            align-items: flex-start;
+          background: #ffffff;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 16px;
+          position: relative;
+          cursor: pointer;
+          transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          box-sizing: border-box;
         }
         .lux-address-card:hover {
             transform: translateY(-3px);
@@ -205,26 +209,28 @@ export default function AddressSelection({ userId, selectedAddressId, setSelecte
         }
         .lux-address-content { flex: 1; }
         .lux-address-name {
-            font-weight: 800;
-            color: #0f172a;
-            font-size: 15px;
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            letter-spacing: 0.2px;
+          font-weight: 800;
+          color: #0f172a;
+          font-size: 15px;
+          margin-bottom: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          letter-spacing: 0.2px;
+          gap: 8px;
         }
         .lux-address-type {
-            font-size: 10px;
-            font-weight: 800;
-            background: #f1f5f9;
-            color: #475569;
-            padding: 4px 10px;
-            border-radius: 999px;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            border: 1px solid #e2e8f0;
-            transition: all 0.3s ease;
+          font-size: 11px;
+          font-weight: 800;
+          background: #f1f5f9;
+          color: #475569;
+          padding: 4px 8px;
+          border-radius: 999px;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+          border: 1px solid #e2e8f0;
+          transition: all 0.22s ease;
+          white-space: nowrap;
         }
         .lux-address-card.selected .lux-address-type {
             background: #fff8e1;
@@ -271,6 +277,27 @@ export default function AddressSelection({ userId, selectedAddressId, setSelecte
             display: flex;
             flex-direction: column;
             align-items: center;
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 520px) {
+          .lux-address-header { flex-direction: column; align-items: stretch; gap: 10px; }
+          .lux-address-title { font-size: 1.15rem; }
+          .lux-address-add-btn { padding: 10px 12px; font-size: 12px; align-self: flex-end; }
+          .lux-address-grid { grid-template-columns: 1fr; gap: 12px; }
+          .lux-address-card { padding: 14px; gap: 10px; }
+          .lux-address-text { font-size: 13px; }
+          .lux-address-actions { padding-top: 10px; gap: 8px; }
+          .lux-action-btn { padding: 8px 10px; font-size: 12px; }
+          .lux-address-type { padding: 3px 8px; font-size: 10px; }
+        }
+
+        @media (max-width: 380px) {
+          .lux-address-header { padding-bottom: 8px; }
+          .lux-address-add-btn { width: 100%; justify-content: center; }
+          .lux-address-title { font-size: 1.05rem; }
+          .lux-address-card { padding: 12px; }
+          .lux-address-name { font-size: 14px; }
         }
       `}} />
     </div>

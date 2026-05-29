@@ -6,20 +6,46 @@ function* createCartSaga(action) {
     try {
         if (!action || !action.payload) return;
         console.log("Cart Saga Payload:", action.payload); // Debug log
+        // Validate required fields before calling API
+        const payload = action.payload || {};
+        const productId = payload.productId || payload.productid || payload.product;
+        const userId = payload.userId || payload.userid || payload.user;
+        if (!userId || !productId) {
+            console.warn('createCartSaga: missing userId or productId, skipping API call', { userId, productId });
+            try { window.dispatchEvent(new CustomEvent('eshopper:cart:error', { detail: { message: 'Missing userId or productId' } })); } catch (e) {}
+            return;
+        }
+        // Client-side sanity check for size/color: allow absence (product without variants),
+        // but block explicit empty strings which indicate missing selection.
+        const hasSizeField = Object.prototype.hasOwnProperty.call(payload, 'size');
+        const hasColorField = Object.prototype.hasOwnProperty.call(payload, 'color');
+        if ((hasSizeField && (payload.size === '' || payload.size === null)) || (hasColorField && (payload.color === '' || payload.color === null))) {
+            try { window.dispatchEvent(new CustomEvent('eshopper:cart:error', { detail: { message: 'Please select size and color before adding to cart.' } })); } catch (e) {}
+            return;
+        }
+
         let response = yield createCartAPI(action.payload);
         if (!response) {
             console.error("API returned undefined response in createCartSaga");
+            try { window.dispatchEvent(new CustomEvent('eshopper:cart:error', { detail: { message: 'No response from add-to-cart API' } })); } catch (e) {}
             return;
         }
         const cartData = response.cart || response;
         yield put({ type: ADD_CART_RED, data: cartData });
-    } catch (e) { console.error("❌ Cart Add Error:", e) }
+        // Refresh cart state to ensure all UI consumers have the latest data
+        yield put({ type: GET_CART });
+        // Emit a browser event so UI can show server-confirmed toasts or handle success
+        try {
+            window.dispatchEvent(new CustomEvent('eshopper:cart:confirmed', { detail: { success: true, message: (response && response.message) || 'Added to cart', cart: cartData } }));
+        } catch (e) {}
+    } catch (e) { console.error("❌ Cart Add Error:", e); try { window.dispatchEvent(new CustomEvent('eshopper:cart:error', { detail: { message: String(e?.message || 'Cart add failed') } })); } catch (err) {} }
 }
 
 function* getCartSaga() {
     try {
         const userId = localStorage.getItem("userid");
-        if (!userId) throw new Error("User ID required.");
+        const isLoggedIn = localStorage.getItem('login') === 'true';
+        if (!userId || !isLoggedIn) return;
         let response = yield getCartAPI(userId);
         if (!response) {
             console.error("API returned undefined response in getCartSaga");

@@ -9,15 +9,18 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getSocket } from './socket'
+import { getAdminHeaders } from './adminAuth'
 import SystemControlCenter from './SystemControlCenter'
 import PremiumCharts from './PremiumCharts'
 import TopProducts from './TopProducts'
 import RecentActivityFeed from './RecentActivityFeed'
+import AdminActivities from './AdminActivities'
 import './SystemControlCenter.css'
 
 // ActionCreators for live database connectivity
 import { getUser } from '../../Store/ActionCreaters/UserActionCreators'
-import { getProduct } from '../../Store/ActionCreaters/ProductActionCreators'
+import { queryClient } from '../../queries/queryClient'
+import { catalogQueryKeys } from '../../queries/catalogQueries'
 import { getCheckout } from '../../Store/ActionCreaters/CheckoutActionCreators'
 import { getContact } from '../../Store/ActionCreaters/ContactActionCreators'
 import { BASE_URL } from '../../constants'
@@ -104,13 +107,18 @@ export default function AdminHome() {
         previousMetrics: null,
         monthlyData: [],
         salesByCategory: [],
+        orderStatusBreakdown: [],
+        paymentStatusBreakdown: [],
         topProducts: [],
         lowStockCount: 0,
+        contactCount: 0,
+        recentContacts: [],
         activeSessions: 0,
         activity: {
             recentOrders: [],
             recentUsers: [],
-            lowStock: []
+            lowStock: [],
+            recentContacts: []
         }
     })
     const [isLoading, setIsLoading] = useState(true)
@@ -122,7 +130,9 @@ export default function AdminHome() {
     const testConnection = useCallback(async () => {
         try {
             console.log('🧪 Testing database connection...')
-            const response = await fetch(`${BASE_URL}/api/admin/test-connection`)
+            const response = await fetch(`${BASE_URL}/api/admin/test-connection`, {
+                headers: getAdminHeaders()
+            })
             if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
             const data = await response.json()
             console.log('✅ Test connection result:', data)
@@ -137,7 +147,9 @@ export default function AdminHome() {
     const fetchDashboardData = useCallback(async () => {
         try {
             console.log('🔄 Fetching dashboard data from:', `${BASE_URL}/api/admin/dashboard-analytics`)
-            const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`)
+            const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`, {
+                headers: getAdminHeaders()
+            })
             if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`)
             const data = await response.json()
 
@@ -148,13 +160,18 @@ export default function AdminHome() {
                 previousMetrics: data.previousMetrics,
                 monthlyData: data.monthlyData || [],
                 salesByCategory: data.salesByCategory || [],
+                orderStatusBreakdown: data.orderStatusBreakdown || [],
+                paymentStatusBreakdown: data.paymentStatusBreakdown || [],
                 topProducts: data.topProducts || [],
                 lowStockCount: data.lowStockCount || 0,
+                contactCount: data.contactCount || 0,
+                recentContacts: data.recentContacts || [],
                 activeSessions: data.activeSessions || 0,
                 activity: data.activity || {
                     recentOrders: [],
                     recentUsers: [],
-                    lowStock: []
+                    lowStock: [],
+                    recentContacts: []
                 }
             })
             setLastUpdated(new Date())
@@ -170,7 +187,9 @@ export default function AdminHome() {
 
     const checkDatabaseHealth = useCallback(async () => {
         try {
-            const response = await fetch(`${BASE_URL}/api/admin/test-connection`)
+            const response = await fetch(`${BASE_URL}/api/admin/test-connection`, {
+                headers: getAdminHeaders()
+            })
             if (!response.ok) throw new Error('DB health check failed')
             const data = await response.json()
             const online = String(data?.mongoStatus || '').toLowerCase().includes('connect')
@@ -183,7 +202,7 @@ export default function AdminHome() {
 
     useEffect(() => {
         dispatch(getUser())
-        dispatch(getProduct())
+        queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products })
         dispatch(getCheckout())
         dispatch(getContact())
         fetchDashboardData()
@@ -375,6 +394,9 @@ export default function AdminHome() {
     const resolvedTopProducts = isMeaningfulTopProducts(dashboardData.topProducts)
         ? dashboardData.topProducts
         : fallbackAnalytics.topProducts
+
+    const orderStatusCards = Array.isArray(dashboardData.orderStatusBreakdown) ? dashboardData.orderStatusBreakdown : []
+    const paymentStatusCards = Array.isArray(dashboardData.paymentStatusBreakdown) ? dashboardData.paymentStatusBreakdown : []
 
     const resolvedMonthlyData = useMemo(() => {
         const apiMonthly = Array.isArray(dashboardData.monthlyData) ? dashboardData.monthlyData : []
@@ -601,10 +623,63 @@ export default function AdminHome() {
                             />
                         </div>
 
+                        {/* Live Operations Snapshot */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.08 }}
+                            className="scc-card mb-4"
+                            style={{ padding: '1.25rem' }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
+                                <div>
+                                    <h3 style={{ color: '#fff', fontSize: '1rem', margin: 0 }}>Live Operations Snapshot</h3>
+                                    <p style={{ color: '#94A3B8', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>Direct from MongoDB and live backend events</p>
+                                </div>
+                                <div style={{ color: '#10B981', fontSize: '0.8rem', fontWeight: 600 }}>
+                                    {dashboardData.contactCount || 0} contact messages
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: '14px', padding: '0.9rem' }}>
+                                    <div style={{ color: '#94A3B8', fontSize: '0.72rem', marginBottom: '0.5rem' }}>ORDER STATUS</div>
+                                    {orderStatusCards.length > 0 ? orderStatusCards.slice(0, 4).map((item) => (
+                                        <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
+                                            <span>{item.name}</span>
+                                            <strong>{item.value}</strong>
+                                        </div>
+                                    )) : <div style={{ color: '#64748B' }}>No order status data</div>}
+                                </div>
+
+                                <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: '14px', padding: '0.9rem' }}>
+                                    <div style={{ color: '#94A3B8', fontSize: '0.72rem', marginBottom: '0.5rem' }}>PAYMENT STATUS</div>
+                                    {paymentStatusCards.length > 0 ? paymentStatusCards.slice(0, 4).map((item) => (
+                                        <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', marginBottom: '0.35rem', fontSize: '0.85rem' }}>
+                                            <span>{item.name}</span>
+                                            <strong>{item.value}</strong>
+                                        </div>
+                                    )) : <div style={{ color: '#64748B' }}>No payment status data</div>}
+                                </div>
+
+                                <div style={{ background: 'rgba(15,23,42,0.55)', border: '1px solid rgba(148,163,184,0.12)', borderRadius: '14px', padding: '0.9rem' }}>
+                                    <div style={{ color: '#94A3B8', fontSize: '0.72rem', marginBottom: '0.5rem' }}>LIVE CONTACTS</div>
+                                    {(dashboardData.recentContacts || []).length > 0 ? dashboardData.recentContacts.slice(0, 3).map((item) => (
+                                        <div key={item._id || item.id} style={{ marginBottom: '0.5rem' }}>
+                                            <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}>{item.name || item.email}</div>
+                                            <div style={{ color: '#94A3B8', fontSize: '0.72rem' }}>{String(item.message || '').slice(0, 50)}</div>
+                                        </div>
+                                    )) : <div style={{ color: '#64748B' }}>No contact messages yet</div>}
+                                </div>
+                            </div>
+                        </motion.div>
+
                         {/* Charts Section */}
                         <PremiumCharts
                             monthlyData={formattedMonthlyData}
                             salesByCategory={resolvedSalesByCategory}
+                            salesBySize={dashboardData.salesBySize || []}
+                            availableSizes={dashboardData.availableSizes || []}
                         />
 
                         <RecentActivityFeed
@@ -614,6 +689,8 @@ export default function AdminHome() {
                             activityData={dashboardData.activity}
                             isConnected={Boolean(systemHealth.api && systemHealth.database)}
                         />
+
+                        <AdminActivities />
 
                         {/* Top Products Section */}
                         <TopProducts topProducts={resolvedTopProducts} />

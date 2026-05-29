@@ -5,13 +5,15 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import { io } from 'socket.io-client'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
-import { getProduct } from '../Store/ActionCreaters/ProductActionCreators'
+import { queryClient } from '../queries/queryClient'
+import { catalogQueryKeys } from '../queries/catalogQueries'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper'
+import { useToast } from './ToastNotification'
 import {
   Clock3, PackageSearch, Search, SlidersHorizontal,
   X, ArrowLeft, ChevronRight, MessageCircle,
   MapPin, Calendar, RotateCcw, Package,
-  CreditCard, TrendingUp, CheckCircle2, Truck, KeyRound, Star
+  CreditCard, TrendingUp, CheckCircle2, Truck, KeyRound, Star, XCircle
 } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════════
@@ -137,6 +139,14 @@ const CSS = `
 }
 .mop2-stat-num.gold{color:var(--gold-dk);}
 .mop2-stat-label{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--ash);font-weight:600;}
+/* Center the Total Spent card on every screen */
+.mop2-stat:nth-child(5) {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: 100%;
+  max-width: 300px;
+  border-right: none;
+}
 @media(max-width:640px){.mop2-stats-inner{grid-template-columns:1fr 1fr;}.mop2-stat{border-bottom:1px solid rgba(201,168,76,0.1);border-right:none;}}
 
 /* MAIN */
@@ -229,6 +239,17 @@ const CSS = `
 }
 .mop2-card:hover::before{opacity:1;}
 
+/* Cancellation banner (premium) */
+.mop2-cancel-banner {
+  width: 100%; padding: 12px 16px; border-radius: 6px; margin-top: 12px;
+  background: linear-gradient(90deg, rgba(220,38,38,0.04), rgba(255,255,255,0));
+  border-left: 4px solid rgba(220,38,38,0.18);
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+}
+.mop2-cancel-left { color:#991b1b; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; font-size:12px }
+.mop2-cancel-sub { color:#6b7280; font-size:13px; max-width:720px }
+.mop2-cancel-pill { padding:6px 10px; border-radius:6px; background:#fff; color:#b91c1c; border:1px solid rgba(220,38,38,0.12); font-weight:700 }
+
 .mop2-card-head {
   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
   padding:22px 24px 20px;border-bottom:1px solid rgba(201,168,76,0.1);
@@ -303,6 +324,24 @@ const CSS = `
   letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;transition:all 0.22s;
 }
 .mop2-btn-wa:hover{background:rgba(37,211,102,0.06);border-color:#16a34a;transform:translateY(-2px);box-shadow:0 6px 18px rgba(37,211,102,0.12);}
+.mop2-btn-cancel {
+  flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px 20px;min-width:140px;
+  background:transparent;border:1.5px solid rgba(239,68,68,0.38);border-radius:4px;
+  color:#dc2626;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:800;
+  letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;transition:all 0.22s;
+}
+.mop2-btn-cancel:hover{background:rgba(239,68,68,0.06);border-color:#dc2626;transform:translateY(-2px);box-shadow:0 6px 18px rgba(239,68,68,0.12);}
+.mop2-btn-return {
+  flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px 20px;min-width:140px;
+  background:linear-gradient(135deg,#1A8C8C 0%,#0f6f6f 100%);
+  color:var(--white);border:none;border-radius:4px;
+  font-family:'DM Sans',sans-serif;font-size:11px;font-weight:800;
+  letter-spacing:0.18em;text-transform:uppercase;cursor:pointer;transition:all 0.22s;
+  box-shadow:0 4px 14px rgba(26,140,140,0.18);
+}
+.mop2-btn-return:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(26,140,140,0.28);}
 
 /* EMPTY */
 .mop2-empty{text-align:center;padding:80px 24px;background:var(--white);border:1px solid rgba(201,168,76,0.15);border-radius:10px;box-shadow:var(--shadow-soft);}
@@ -394,6 +433,35 @@ const resolveEtaDate = (order = {}) => {
   return estimated.toISOString()
 }
 
+const getDeliveredAt = (order = {}) => {
+  const history = Array.isArray(order?.statusHistory) ? order.statusHistory : []
+  const deliveredEntry = [...history].reverse().find((entry) => normalizeStatus(entry?.status) === 'Delivered')
+  return asValidDate(deliveredEntry?.timestamp || order?.deliveryOtpVerifiedAt || order?.updatedAt || order?.orderDate)
+}
+
+const isCancelledOrder = (order = {}) => {
+  const status = String(order?.orderStatus || order?.status || '').trim().toLowerCase()
+  if (status.includes('cancel')) return true
+  const cancellationStatus = String(order?.cancellation?.status || '').trim().toUpperCase()
+  return cancellationStatus && cancellationStatus !== 'NOT_CANCELLED'
+}
+
+const isCancelableOrder = (order = {}) => {
+  const status = normalizeStatus(order?.orderStatus)
+  if (['Shipped', 'Out for Delivery', 'Delivered'].includes(status)) return false
+  if (order?.cancellation?.status && order.cancellation.status !== 'NOT_CANCELLED') return false
+  return ['Ordered', 'Packed'].includes(status) || status === 'Order Placed'
+}
+
+const isReturnableOrder = (order = {}) => {
+  if (normalizeStatus(order?.orderStatus) !== 'Delivered') return false
+  if (order?.return?.status && order.return.status !== 'NOT_INITIATED') return false
+  const deliveredAt = getDeliveredAt(order)
+  if (!deliveredAt) return false
+  const diffDays = (Date.now() - deliveredAt.getTime()) / (1000 * 60 * 60 * 24)
+  return diffDays <= 7
+}
+
 const getCountdownText = (dateValue) => {
   if (!dateValue) return 'ETA unavailable'
   const eta = new Date(dateValue).getTime()
@@ -448,6 +516,7 @@ function Progress({ status, updatedAt }) {
 // ORDER CARD
 // ═══════════════════════════════════════════════════════════════════
 const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onWA, nowTick, productState }, ref) {
+  const toast = useToast()
   const norm   = normalizeStatus(item.orderStatus)
   const st     = ST[norm] || ST['Ordered']
   const items  = item.orderItems || item.products || []
@@ -487,6 +556,42 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
     void nowTick
     return getCountdownText(etaDate)
   }, [etaDate, nowTick])
+  const canCancel = isCancelableOrder(item)
+  const canReturn = isReturnableOrder(item)
+
+  const submitOrderAction = async (action) => {
+    const orderId = item?.orderId
+    if (!orderId) return
+
+    try {
+      if (action === 'cancel') {
+        const reason = window.prompt('Share a cancellation reason (optional):', '')
+        if (reason === null) return
+        const { data } = await axios.post(
+          `${BASE_URL}/api/orders/${encodeURIComponent(orderId)}/cancel`,
+          { userId: localStorage.getItem('userid'), reason: String(reason).trim() },
+          { timeout: 15000 }
+        )
+        toast.success(data?.message || 'Order cancelled. Premium support will handle the rest.')
+      } else {
+        const reason = window.prompt('Share a return reason to continue:', '')
+        if (reason === null || !String(reason).trim()) {
+          toast.info('Return request needs a reason to continue.')
+          return
+        }
+        const { data } = await axios.post(
+          `${BASE_URL}/api/orders/${encodeURIComponent(orderId)}/return`,
+          { userId: localStorage.getItem('userid'), reason: String(reason).trim() },
+          { timeout: 15000 }
+        )
+        toast.success(data?.message || 'Return request submitted.')
+      }
+
+      window.dispatchEvent(new CustomEvent('eshopper-order-lifecycle-updated', { detail: { orderId } }))
+    } catch (error) {
+      toast.error(error?.response?.data?.message || `Unable to ${action} this order right now.`)
+    }
+  }
 
   const [orderReview, setOrderReview] = useState(null)
   useEffect(() => {
@@ -519,8 +624,9 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
             <Clock3 size={11} />
             {new Date(item.updatedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
             {isExpress && (
-              <span style={{ marginLeft: '12px', background: 'linear-gradient(135deg, #111 0%, #2a2a2a 100%)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.4)', padding: '2px 8px', borderRadius: '999px', fontSize: '9px', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', display: 'inline-flex', alignItems: 'center', gap: '3px', boxShadow: '0 2px 8px rgba(212,175,55,0.15)' }}>
-                <span style={{ fontSize: '10px', marginTop: '-1px' }}>⚡</span> EXPRESS
+              <span className="lux-express-badge" style={{ marginLeft: '12px' }}>
+                <span className="lux-express-icon">⚡</span>
+                EXPRESS
               </span>
             )}
           </div>
@@ -528,6 +634,17 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <span className="mop2-chip" style={{ background:st.bg, color:st.color, borderColor:st.border }}>{norm}</span>
         </div>
+        {item?.cancellation && item.cancellation.status && item.cancellation.status !== 'NOT_CANCELLED' && (
+          <div className="mop2-cancel-banner">
+            <div>
+              <div className="mop2-cancel-left">Cancellation: {String(item.cancellation.status).replace('_',' ')}</div>
+              <div className="mop2-cancel-sub">{item.cancellation?.publicMessage || 'Your cancellation has been approved. Premium support will handle refunds and next steps.'}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div className="mop2-cancel-pill">{String(item.cancellation.status).charAt(0).toUpperCase() + String(item.cancellation.status).slice(1).toLowerCase()}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* BODY */}
@@ -620,8 +737,34 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
         {/* Progress */}
         <Progress status={item.orderStatus} updatedAt={item.updatedAt} />
 
+        {(canCancel || canReturn) && (
+          <div style={{ marginBottom: '14px', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7c6a35', fontWeight: 700 }}>
+            {canCancel ? 'Cancel available before shipment.' : 'Return window stays open for 7 days after delivery.'}
+          </div>
+        )}
+
         {/* Buttons */}
         <div className="mop2-actions" onClick={e => e.stopPropagation()}>
+          {canCancel && (
+            <motion.button
+              className="mop2-btn-cancel"
+              onClick={() => submitOrderAction('cancel')}
+              whileHover={{ scale:1.01 }} whileTap={{ scale:0.98 }}
+            >
+              <X size={13} />
+              Cancel Order
+            </motion.button>
+          )}
+          {canReturn && (
+            <motion.button
+              className="mop2-btn-return"
+              onClick={() => submitOrderAction('return')}
+              whileHover={{ scale:1.01 }} whileTap={{ scale:0.98 }}
+            >
+              <RotateCcw size={13} />
+              Return Order
+            </motion.button>
+          )}
           <motion.button
             className="mop2-btn-track"
             onClick={() => navigate(`/order-tracking/${item.orderId}`)}
@@ -675,7 +818,7 @@ export default function MyOrders() {
 
     try {
       if (!silent) setLoading(true)
-      const { data } = await axios.get(`${BASE_URL}/api/orders/${userId}`, { timeout: 15000 })
+      const { data } = await axios.get(`${BASE_URL}/api/user/orders`, { params: { userId }, timeout: 15000 })
       setOrders(Array.isArray(data?.orders) ? data.orders : [])
       setError('')
     } catch {
@@ -688,7 +831,7 @@ export default function MyOrders() {
   const syncOrderDetails = async (orderIdToSync) => {
     if (!orderIdToSync || !userId) return
     try {
-      const { data } = await axios.get(`${BASE_URL}/api/order/${encodeURIComponent(orderIdToSync)}?userId=${encodeURIComponent(userId)}`, { timeout: 12000 })
+      const { data } = await axios.get(`${BASE_URL}/api/orders/${encodeURIComponent(orderIdToSync)}`, { params: { userId }, timeout: 12000 })
       if (!data?.orderId) return
 
       setOrders((prev) => prev.map((o) => {
@@ -722,8 +865,14 @@ export default function MyOrders() {
   // FETCH
   useEffect(() => {
     fetchOrdersList()
-    dispatch(getProduct())
+    queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products })
   }, [fetchOrdersList, dispatch])
+
+  useEffect(() => {
+    const refreshFromLifecycle = () => fetchOrdersList({ silent: true })
+    window.addEventListener('eshopper-order-lifecycle-updated', refreshFromLifecycle)
+    return () => window.removeEventListener('eshopper-order-lifecycle-updated', refreshFromLifecycle)
+  }, [fetchOrdersList])
 
   // SOCKET
   useEffect(() => {
@@ -811,13 +960,15 @@ export default function MyOrders() {
   const total   = orders.length
   const transit = orders.filter(o => ['Ordered','Packed','Shipped','Out for Delivery'].includes(normalizeStatus(o.orderStatus))).length
   const done    = orders.filter(o => normalizeStatus(o.orderStatus) === 'Delivered').length
-  const spent   = orders.reduce((s,o) => s + Number(o.finalAmount||0), 0)
+  const cancelled = orders.filter(o => isCancelledOrder(o)).length
+  const spent   = orders.filter(o => !isCancelledOrder(o)).reduce((s,o) => s + Number(o.finalAmount||0), 0)
   const hasF    = search || from || to
 
   const STATS = [
     { num:total,  label:'Total Orders', gold:false, Icon:Package       },
     { num:transit,label:'In Transit',   gold:false, Icon:Truck         },
     { num:done,   label:'Delivered',    gold:false, Icon:CheckCircle2  },
+    { num:cancelled, label:'Cancelled', gold:false, Icon:XCircle       },
     { num:`₹${spent.toLocaleString('en-IN')}`, label:'Total Spent', gold:true, Icon:TrendingUp },
   ]
 
@@ -977,3 +1128,4 @@ export default function MyOrders() {
     </>
   )
 }
+ 

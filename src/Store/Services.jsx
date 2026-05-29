@@ -54,8 +54,12 @@ const getAuthToken = () => {
 
 // Rate limiting: Track API calls to prevent 429 errors
 const rateLimiter = new Map();
+const pendingRequests = new Map();
 const MAX_CALLS_PER_MINUTE = 200;
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
+
+const responseCache = new Map();
+const RESPONSE_CACHE_TTL_MS = 10 * 1000;
 
 const checkRateLimit = (endpoint) => {
     const now = Date.now();
@@ -84,22 +88,47 @@ const checkRateLimit = (endpoint) => {
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // With timeout and better error handling
-export async function fastAPI(endpoint, method = "GET", data = null, retryCount = 0, customBaseUrl = null) {
-    console.log(`API CALL: ${endpoint} ${method} ${data ? JSON.stringify(data) : ''}`); // Debug log
+export async function fastAPI(endpoint, method = "GET", data = null, retryCount = 0, customBaseUrl = null, options = {}) {
     const isFD = data instanceof FormData;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
     let responseText = "";
+    const requestBaseUrl = customBaseUrl || BASE_URL;
+    const requestKey = `${requestBaseUrl}${endpoint}:${String(method || 'GET').toUpperCase()}`;
+    let externalAbortHandler = null;
+    const normalizedMethod = String(method || 'GET').toUpperCase();
+    const cacheToken = getAuthToken();
+    const cacheKey = `${requestBaseUrl}${endpoint}:${normalizedMethod}:auth=${cacheToken || 'anon'}`;
 
     try {
         // Check rate limit before making request
         checkRateLimit(endpoint);
 
+        if (normalizedMethod === 'GET' && !data && !options.noCache) {
+            const cacheEntry = responseCache.get(cacheKey);
+            if (cacheEntry && cacheEntry.expiresAt > Date.now()) {
+                return cacheEntry.payload;
+            }
+        }
+
+        const previousRequest = pendingRequests.get(requestKey);
+        // Removed `previousRequest.abort()` to prevent cancelling concurrent duplicate calls 
+        // which caused noisy "Request timeout or abort" UI errors (especially on initial load).
+        pendingRequests.set(requestKey, controller);
+
+        if (options?.signal) {
+            if (options.signal.aborted) {
+                controller.abort();
+            } else {
+                externalAbortHandler = () => controller.abort();
+                options.signal.addEventListener('abort', externalAbortHandler, { once: true });
+            }
+        }
+
         const headers = isFD ? {} : { "content-type": "application/json" };
-        const token = getAuthToken();
+        const token = cacheToken;
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
-        const requestBaseUrl = customBaseUrl || BASE_URL;
         const res = await fetch(`${requestBaseUrl}${endpoint}`, {
             method,
             headers,
@@ -113,6 +142,12 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
         if (res.ok) {
             // Only parse as JSON if response is ok and has content
             const responseData = responseText ? JSON.parse(responseText) : { result: "Done" };
+            if (normalizedMethod === 'GET' && !data && !options.noCache) {
+                responseCache.set(cacheKey, {
+                    payload: responseData,
+                    expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS
+                });
+            }
             return responseData;
         }
 
@@ -161,22 +196,35 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
 
     } catch (err) {
         const errorMessage = String(err?.message || '');
-        const isTimeoutError = err?.name === "AbortError" || errorMessage.includes("timeout");
-        const isTransientNetworkError = errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError") || errorMessage.includes("Load failed");
+        // If our AbortController was triggered, controller.signal.aborted will be true.
+        // This can happen due to our timeout or an explicit abort from elsewhere.
+        const controllerAborted = controller && controller.signal && controller.signal.aborted;
 
-        // Retry transient failures (cold starts, temporary network hiccups)
-        if ((isTimeoutError || isTransientNetworkError) && retryCount < 2) {
+        // Consider this a timeout/abort when the controller was aborted or the error is an AbortError.
+        const isTimeoutError = controllerAborted || err?.name === "AbortError" || errorMessage.includes("timeout");
+
+        // Expand transient network heuristics to catch different browser/runtime messages.
+        const isTransientNetworkError = [
+            'Failed to fetch',
+            'NetworkError',
+            'Load failed',
+            'signal is aborted'
+        ].some(sub => errorMessage.includes(sub));
+
+        // If this was an explicit abort/timeout from our controller, do NOT retry — surface a clear timeout message.
+        if (controllerAborted || err?.name === 'AbortError') {
+            throw new Error(`Request timeout or abort after ${REQUEST_TIMEOUT}ms for ${endpoint}`);
+        }
+
+        // Retry only for transient network failures (not for timeouts/aborts)
+        if (isTransientNetworkError && retryCount < 2) {
             const retryDelay = 2000 * (retryCount + 1);
             console.warn(`🔁 Retrying ${endpoint} in ${retryDelay}ms due to transient error:`, errorMessage);
             await delay(retryDelay);
             return fastAPI(endpoint, method, data, retryCount + 1, customBaseUrl);
         }
 
-        if (err.name === "AbortError") {
-            throw new Error(`Request timeout (${REQUEST_TIMEOUT}ms) for ${endpoint}`);
-        }
-
-        // Log the exact error for debugging
+        // Log helpful debug info for JSON parse issues
         if (errorMessage.includes("JSON")) {
             console.error(`📝 JSON Parse Error on ${endpoint}:`, err);
             console.error(`📝 Raw response text:`, responseText);
@@ -185,12 +233,19 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
         throw err;
     } finally {
         clearTimeout(timeoutId);
+        if (options?.signal && externalAbortHandler) {
+            options.signal.removeEventListener('abort', externalAbortHandler);
+        }
+        if (pendingRequests.get(requestKey) === controller) {
+            pendingRequests.delete(requestKey);
+        }
     }
 }
 
 // --- ALL SYNCED EXPORTS ---
 export const loginAPI = (d) => fastAPI(API_ENDPOINTS.LOGIN, "POST", d);
 export const login2FAAPI = (d) => fastAPI(API_ENDPOINTS.LOGIN_2FA, "POST", d);
+export const verifyOtpAPI = (d) => fastAPI(API_ENDPOINTS.VERIFY_OTP, "POST", d);
 // sendOtpAPI removed as part of email/OTP system cleanup
 export const resetPasswordAPI = (d) => fastAPI(API_ENDPOINTS.RESET_PASSWORD, "POST", d);
 export const forgetPasswordAPI = (d) => fastAPI(API_ENDPOINTS.RESET_PASSWORD, "POST", d);
@@ -228,7 +283,7 @@ export const updateCartAPI = (d) => fastAPI(`${API_ENDPOINTS.CART}/${getID(d)}`,
 export const deleteCartAPI = (d) => fastAPI(`${API_ENDPOINTS.CART}/${getID(d)}`, "DELETE");
 export const clearUserCartAPI = (userid) => fastAPI(`${API_ENDPOINTS.CLEAR_CART}/${userid}`, "POST");
 
-export const getWishlistAPI = () => fastAPI(API_ENDPOINTS.WISHLIST);
+export const getWishlistAPI = (userId) => fastAPI(`${API_ENDPOINTS.WISHLIST}?userId=${userId}`);
 export const createWishlistAPI = (d) => fastAPI(API_ENDPOINTS.WISHLIST, "POST", d);
 export const updateWishlistAPI = (d) => fastAPI(`${API_ENDPOINTS.WISHLIST}/${getID(d)}`, "PUT", d);
 export const deleteWishlistAPI = (d) => fastAPI(`${API_ENDPOINTS.WISHLIST}/${getID(d)}`, "DELETE");

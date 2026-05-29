@@ -58,10 +58,28 @@ export function MembershipProvider({ children }) {
         window.addEventListener('membership-updated', handleMembershipEvent)
         window.addEventListener('focus', handleFocus)
 
+        // React to localStorage changes from other tabs or manual edits
+        const handleStorage = (e) => {
+            if (!e) return
+            const key = String(e.key || '')
+            if (['membershipType', 'totalOrders', 'profile_cache'].includes(key)) {
+                refreshMembership()
+            }
+        }
+        window.addEventListener('storage', handleStorage)
+
+        // Periodic poll to keep membership in sync (every 2 minutes)
+        const POLL_MS = 2 * 60 * 1000
+        const pollId = setInterval(() => {
+            try { refreshMembership() } catch (_) {}
+        }, POLL_MS)
+
         return () => {
             window.removeEventListener('profile-updated', handleMembershipEvent)
             window.removeEventListener('membership-updated', handleMembershipEvent)
             window.removeEventListener('focus', handleFocus)
+            window.removeEventListener('storage', handleStorage)
+            clearInterval(pollId)
         }
     }, [refreshMembership])
 

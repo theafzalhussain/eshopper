@@ -31,9 +31,8 @@ exports.addToCart = async (req, res) => {
         if (!userId || !productId) {
             return res.status(400).json({ success: false, message: 'User ID and Product ID required.' });
         }
-        if (!size || !color) {
-            return res.status(400).json({ success: false, message: 'Size and color are required.' });
-        }
+        const normalizedSize = size || '';
+        const normalizedColor = color || '';
         const qty = typeof quantity === 'number' && quantity > 0 ? quantity : 1;
         const normalizedPrice = Number(finalPrice || 0);
 
@@ -52,8 +51,8 @@ exports.addToCart = async (req, res) => {
         // Check if product with same size and color exists in cart
         const existingItem = cart.items.find(item =>
             (String(item.product) === String(productId) || String(item.productid) === String(productId) || String(item.productId) === String(productId)) &&
-            String(item.size) === String(size || '') &&
-            String(item.color) === String(color || '')
+            String(item.size) === String(normalizedSize) &&
+            String(item.color) === String(normalizedColor)
         );
         if (existingItem) {
             existingItem.quantity += qty;
@@ -72,8 +71,8 @@ exports.addToCart = async (req, res) => {
                 quantity: qty,
                 qty: qty,
                 price: normalizedPrice > 0 ? normalizedPrice : 0,
-                size: size || '',
-                color: color || '',
+                size: normalizedSize,
+                color: normalizedColor,
                 name: finalName || '',
                 pic: finalPic || '',
                 pic1: finalPic || ''
@@ -81,7 +80,13 @@ exports.addToCart = async (req, res) => {
         }
         await cart.save();
         await cart.populate('items.product savedItems.product');
+        await invalidateCartCache();
         const mappedCart = mapCartForClient(cart);
+        await logActivity(req, {
+            action: 'Cart item added',
+            userId,
+            meta: { productId, quantity: qty, size: normalizedSize, color: normalizedColor, price: normalizedPrice }
+        });
         res.json({ success: true, cart: mappedCart });
     } catch (err) {
         console.error('[ERROR] /api/cart (addToCart):', err);
@@ -170,6 +175,8 @@ exports.applyCoupon = async (req, res) => {
             { strict: false }
         );
 
+        await invalidateCartCache();
+
         return res.json({
             success: true,
             discount,
@@ -248,6 +255,8 @@ const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const Order = require('../models/Order');
 const mongoose = require('mongoose');
+const { logActivity } = require('../utils/activityLogger');
+const { clearCache } = require('../utils/cache');
 
 const DEFAULT_COUPONS = [
     {
@@ -276,6 +285,11 @@ async function ensureDefaultCoupons() {
     if (count > 0) return;
     await Coupon.insertMany(DEFAULT_COUPONS);
 }
+
+const invalidateCartCache = async () => {
+    await clearCache('/api/cart');
+    await clearCache('/api/cart/order-summary');
+};
 
 const formatDeliveryLabel = (dateValue) => {
     if (!dateValue) return '';
@@ -379,9 +393,10 @@ const mapCartForClient = (cart) => {
     return {
         _id: cart._id,
         user: cart.user,
-        items: Array.isArray(cart.items) ? cart.items.map((item) => mapCartItem(item, cart.user)) : [],
+        // Ensure we pass the string `userid` to clients so frontend filtering works reliably
+        items: Array.isArray(cart.items) ? cart.items.map((item) => mapCartItem(item, cart.userid || String(cart.user || ''))) : [],
         savedItems: Array.isArray(cart.savedItems) ? cart.savedItems.map((item) => ({
-            ...mapCartItem(item, cart.user),
+            ...mapCartItem(item, cart.userid || String(cart.user || '')),
             savedAt: item.savedAt || null,
         })) : [],
         deliveryEstimate: {
@@ -412,7 +427,11 @@ exports.getCart = async (req, res) => {
 
         let cart;
         try {
-            cart = await Cart.findOne(query).populate('items.product savedItems.product');
+            // Speed up cart fetch with Lean and Select
+            cart = await Cart.findOne(query)
+                .populate('items.product', 'name price finalprice stock pic1 color size')
+                .populate('savedItems.product', 'name price finalprice stock pic1 color size')
+                .lean();
         } catch (dbErr) {
             console.error('[ERROR] /api/cart: Invalid userId or DB error:', dbErr);
             return res.status(400).json({ success: false, message: 'Invalid userId or database error.' });
@@ -465,7 +484,13 @@ exports.updateQuantity = async (req, res) => {
         item.quantity = quantity;
         item.qty = quantity;
         await cart.save();
+        await invalidateCartCache();
         const mappedCart = mapCartForClient(cart);
+        await logActivity(req, {
+            action: 'Cart quantity updated',
+            userId,
+            meta: { itemId, quantity }
+        });
         res.json({ success: true, cart: mappedCart });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Failed to update quantity.' });
@@ -506,8 +531,56 @@ exports.removeItem = async (req, res) => {
         }
 
         if (!cart) {
+            // Fallback: try to remove the item from any cart (useful for legacy id mismatches)
+            try {
+                const oid = mongoose.Types.ObjectId.isValid(String(itemId)) ? new mongoose.Types.ObjectId(itemId) : null;
+                let globalCart = null;
+                if (oid) {
+                    globalCart = await Cart.findOneAndUpdate(
+                        { 'items._id': oid },
+                        { $pull: { items: { _id: oid } } },
+                        { new: true }
+                    );
+                }
+                if (!globalCart && oid) {
+                    globalCart = await Cart.findOneAndUpdate(
+                        { 'items.product': oid },
+                        { $pull: { items: { product: oid } } },
+                        { new: true }
+                    );
+                }
+                // Try string matches for productid if still not found
+                if (!globalCart) {
+                    globalCart = await Cart.findOneAndUpdate(
+                        { 'items.productid': String(itemId) },
+                        { $pull: { items: { productid: String(itemId) } } },
+                        { new: true }
+                    );
+                }
+
+                if (globalCart) {
+                    await logActivity(req, {
+                        action: 'Cart item removed (global fallback)',
+                        userId,
+                        meta: { itemId }
+                    });
+                    await invalidateCartCache();
+                    return res.json({ success: true, message: 'Item removed from cart.', cartId: globalCart._id, itemCount: globalCart.items.length });
+                }
+            } catch (e) {
+                console.error('[ERROR] global remove fallback failed:', e);
+            }
+
             return res.status(404).json({ success: false, message: 'Item not found in cart.' });
         }
+
+        await logActivity(req, {
+            action: 'Cart item removed',
+            userId,
+            meta: { itemId }
+        });
+
+        await invalidateCartCache();
 
         res.json({ success: true, message: 'Item removed from cart.', cartId: cart._id, itemCount: cart.items.length });
     } catch (err) {
@@ -531,7 +604,27 @@ exports.saveForLater = async (req, res) => {
             ? { $or: [{ user: new mongoose.Types.ObjectId(userId) }, { userid: userId }] }
             : { userid: userId };
 
-        const cart = await Cart.findOne(query);
+        let cart = await Cart.findOne(query);
+        // If no cart for the user, try to locate the cart by the itemId across all carts (fallback)
+        if (!cart) {
+            try {
+                const oid = mongoose.Types.ObjectId.isValid(String(itemId)) ? new mongoose.Types.ObjectId(itemId) : null;
+                if (oid) {
+                    cart = await Cart.findOne({ 'items._id': oid });
+                }
+                if (!cart && oid) {
+                    cart = await Cart.findOne({ 'items.product': oid });
+                }
+                if (!cart) {
+                    cart = await Cart.findOne({ 'items.productid': String(itemId) });
+                }
+                if (cart) {
+                    console.warn('[CART] saveForLater: using global cart fallback for itemId', itemId);
+                }
+            } catch (e) {
+                console.error('[CART] saveForLater fallback lookup error:', e && e.message);
+            }
+        }
         if (!cart) return res.status(404).json({ success: false, message: 'Cart not found.' });
 
         let srcItem = cart.items.id(itemId);
@@ -541,9 +634,8 @@ exports.saveForLater = async (req, res) => {
         if (!srcItem) return res.status(404).json({ success: false, message: 'Cart item not found.' });
 
         const existingSaved = cart.savedItems.find((entry) => String(entry.product) === String(srcItem.product) && entry.size === srcItem.size && entry.color === srcItem.color);
-        if (!srcItem.size || !srcItem.color) {
-            return res.status(400).json({ success: false, message: 'Size and color are required to save for later.' });
-        }
+        const savedSize = srcItem.size || '';
+        const savedColor = srcItem.color || '';
         if (existingSaved) {
             existingSaved.quantity += Number(srcItem.quantity || 1);
             if (Number(srcItem.price || 0) > 0) existingSaved.price = Number(srcItem.price || 0);
@@ -553,8 +645,8 @@ exports.saveForLater = async (req, res) => {
                 productid: srcItem.productid || srcItem.productId || srcItem.product,
                 quantity: Number(srcItem.quantity || srcItem.qty || 1),
                 price: Number(srcItem.price || 0),
-                size: srcItem.size,
-                color: srcItem.color,
+                size: savedSize,
+                color: savedColor,
                 name: srcItem.name || '',
                 pic: srcItem.pic || srcItem.pic1 || '',
                 savedAt: new Date(),
@@ -564,6 +656,12 @@ exports.saveForLater = async (req, res) => {
         srcItem.deleteOne();
         await cart.save();
         await cart.populate('items.product savedItems.product');
+        await invalidateCartCache();
+        await logActivity(req, {
+            action: 'Saved item created',
+            userId,
+            meta: { itemId }
+        });
         
         return res.json({ success: true, message: 'Item saved for later.', cart: mapCartForClient(cart) });
     } catch (err) {
@@ -592,9 +690,9 @@ exports.moveSavedToCart = async (req, res) => {
         }
         if (!savedItem) return res.status(404).json({ success: false, message: 'Saved item not found.' });
 
-        const finalSize = savedItem.size || req.body.size;
-        const finalColor = savedItem.color || req.body.color;
-        if (!finalSize || !finalColor) {
+        const finalSize = savedItem.size || req.body.size || '';
+        const finalColor = savedItem.color || req.body.color || '';
+        if ((finalSize && !finalColor) || (!finalSize && finalColor)) {
             return res.status(400).json({ success: false, message: 'Size and color are required to move item to cart.' });
         }
         // Find exact match (product + size + color)
@@ -620,6 +718,12 @@ exports.moveSavedToCart = async (req, res) => {
         await cart.save();
 
         const freshCart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
+        await invalidateCartCache();
+        await logActivity(req, {
+            action: 'Saved item moved to cart',
+            userId,
+            meta: { itemId }
+        });
         return res.json({ success: true, message: 'Saved item moved to cart.', cart: mapCartForClient(freshCart) });
     } catch (err) {
         console.error('[ERROR] /api/cart/move-saved-to-cart:', err);
@@ -651,6 +755,14 @@ exports.removeSavedItem = async (req, res) => {
         if (!cart) {
             return res.status(404).json({ success: false, message: 'Saved item not found.' });
         }
+
+        await logActivity(req, {
+            action: 'Saved item removed',
+            userId,
+            meta: { itemId }
+        });
+
+        await invalidateCartCache();
 
         return res.json({ success: true, message: 'Saved item removed.', cart: mapCartForClient(cart) });
     } catch (err) {
@@ -710,6 +822,7 @@ exports.setDeliveryEstimate = async (req, res) => {
 
         const freshCart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
         const label = formatDeliveryLabel(estimatedDate);
+        await invalidateCartCache();
 
         return res.json({
             success: true,
@@ -823,6 +936,14 @@ exports.updateCartOptions = async (req, res) => {
 
         if (!updatedCart) return res.status(404).json({ success: false, message: 'Cart not found.' });
 
+        await logActivity(req, {
+            action: 'Cart options updated',
+            userId,
+            meta: { deliverySpeed, insuranceAdded: Boolean(insuranceAdded) }
+        });
+
+        await invalidateCartCache();
+
         res.json({ success: true, message: 'Cart options updated', cart: mapCartForClient(updatedCart) });
     } catch (err) {
         console.error('[ERROR] /api/cart/options:', err);
@@ -849,6 +970,14 @@ exports.updateCartItem = async (req, res) => {
         ).populate('items.product savedItems.product');
 
         if (!updatedCart) return res.status(404).json({ success: false, message: 'Cart or Item not found' });
+
+        await logActivity(req, {
+            action: 'Cart item updated',
+            userId,
+            meta: { itemId, giftWrap: Boolean(giftWrap) }
+        });
+
+        await invalidateCartCache();
 
         res.json({ success: true, message: 'Item updated successfully', cart: mapCartForClient(updatedCart) });
     } catch (err) {

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, BarChart, Bar
 } from 'recharts';
 
 const revenueData = [
@@ -28,7 +28,7 @@ const salesByCategory = [
 
 const COLORS = ['#B8860B', '#FFD700', '#FFB347', '#F7C873'];
 
-export default function DashboardCharts({ monthlyData = [], salesByCategory = [] }) {
+export default function DashboardCharts({ monthlyData = [], salesByCategory = [], salesBySize = [], availableSizes = [] }) {
   const COLORS = ['#B8860B', '#FFD700', '#FFB347', '#F7C873'];
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -48,27 +48,48 @@ export default function DashboardCharts({ monthlyData = [], salesByCategory = []
         </ResponsiveContainer>
       </div>
       {/* Pie Chart */}
-      <div className="glass p-6 rounded-xl shadow-gold">
-        <h2 className="text-xl font-serif gold-accent mb-4">Sales by Category</h2>
-        <ResponsiveContainer width="100%" height={280}>
-          <PieChart>
-            <Pie
-              data={salesByCategory}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              outerRadius={100}
-              fill="#B8860B"
-              dataKey="value"
-            >
-              {salesByCategory.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip contentStyle={{ background: '#23272F', border: '1px solid #B8860B', color: '#fff' }} />
-          </PieChart>
-        </ResponsiveContainer>
+      <div className="glass p-6 rounded-xl shadow-gold flex flex-col gap-6">
+        <div>
+          <h2 className="text-xl font-serif gold-accent mb-4">Sales by Category</h2>
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie
+                data={salesByCategory}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#B8860B"
+                dataKey="value"
+              >
+                {salesByCategory.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ background: '#23272F', border: '1px solid #B8860B', color: '#fff' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-serif gold-accent mb-4">Sales by Size</h2>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={salesBySize} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#23272F" />
+              <XAxis dataKey="size" stroke="#B8860B" />
+              <YAxis stroke="#B8860B" />
+              <Tooltip contentStyle={{ background: '#23272F', border: '1px solid #B8860B', color: '#fff' }} />
+              <Bar dataKey="value" fill="#B8860B" />
+            </BarChart>
+          </ResponsiveContainer>
+
+          {Array.isArray(availableSizes) && availableSizes.length > 0 && (
+            <div className="mt-3 text-sm text-slate-300">
+              <strong>Available sizes:</strong> {availableSizes.map(s => s.size).join(', ')}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

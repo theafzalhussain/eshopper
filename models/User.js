@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
+    username: { type: String, trim: true, lowercase: true, unique: true, sparse: true },
     password: { type: String, required: true },
     name: { type: String },
     phone: { type: String },
@@ -53,7 +54,14 @@ const userSchema = new mongoose.Schema({
         },
     },
     membershipType: { type: String, default: 'Silver' },
+    isManualMembership: { type: Boolean, default: false },
     totalOrders: { type: Number, default: 0 },
+    otp: { type: String },
+    otpExpires: { type: Date },
+    passwordHistory: [{
+        hash: { type: String },
+        createdAt: { type: Date, default: Date.now }
+    }],
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -70,7 +78,12 @@ userSchema.statics.syncMembershipForUser = async function(userId, totalOrders = 
 
     const ordersCount = totalOrders === null ? Number(user.totalOrders || 0) : Number(totalOrders || 0);
     user.totalOrders = ordersCount;
-    user.membershipType = this.calculateMembershipType(ordersCount);
+    
+    // Only auto-update if not manually overridden by admin!
+    if (!user.isManualMembership) {
+        user.membershipType = this.calculateMembershipType(ordersCount);
+    }
+    
     await user.save();
     return user;
 };

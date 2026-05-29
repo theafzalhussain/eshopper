@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { Package, Truck, CheckCircle2, Download, Plus, ShieldCheck, RotateCcw, Headphones, Copy, RefreshCw, Share2, FileText, Radar, Sparkles, CreditCard, Calendar, ChevronRight } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Download, Plus, ShieldCheck, RotateCcw, Headphones, Copy, RefreshCw, Share2, FileText, Radar, Sparkles, CreditCard, Calendar, ChevronRight, X } from 'lucide-react';
 import { clearCart, getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
-import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
+import { queryClient } from '../queries/queryClient';
+import { catalogQueryKeys } from '../queries/catalogQueries';
 import { API_ENDPOINTS, BASE_URL, BRAND_LOGO_URL, FRONTEND_URL, SOCKET_TRANSPORTS } from '../constants';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import { useToast } from './ToastNotification';
@@ -14,6 +15,31 @@ import confetti from 'canvas-confetti';
 
 const money = (v) => `₹${Number(v || 0).toLocaleString('en-IN')}`;
 const formatDate = (d) => new Date(d || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+const normalizeStatus = (value = '') => {
+  const raw = String(value).trim().toLowerCase();
+  if (raw === 'order placed' || raw === 'ordered') return 'Ordered';
+  if (raw === 'confirmed') return 'Confirmed';
+  if (raw === 'packed') return 'Packed';
+  if (raw === 'shipped') return 'Shipped';
+  if (raw === 'out for delivery') return 'Out for Delivery';
+  if (raw === 'delivered') return 'Delivered';
+  return 'Ordered';
+};
+
+const isCancelableOrder = (order = {}) => {
+  const status = normalizeStatus(order?.orderStatus || order?.status);
+  if (['Shipped', 'Out for Delivery', 'Delivered'].includes(status)) return false;
+  if (order?.cancellation?.status && order.cancellation.status !== 'NOT_CANCELLED') return false;
+  return ['Ordered', 'Confirmed', 'Packed'].includes(status);
+};
+
+const normalizeOrderPayload = (payload) => {
+  if (!payload || typeof payload !== 'object') return null;
+  if (payload.order && typeof payload.order === 'object') return payload.order;
+  if (payload.data && typeof payload.data === 'object' && payload.data.order) return payload.data.order;
+  return payload.orderId ? payload : null;
+};
 
 export default function Confirmation() {
   const navigate = useNavigate();
@@ -34,6 +60,7 @@ export default function Confirmation() {
   const [quickAddedMap, setQuickAddedMap] = useState({});
   const [shared, setShared] = useState(false);
   const [heroTheme, setHeroTheme] = useState('light');
+  const [cancelling, setCancelling] = useState(false);
   const syncInProgressRef = useRef(false);
   const hasCelebratedRef = useRef(false);
   const hasClearedCartRef = useRef(false);
@@ -65,15 +92,63 @@ export default function Confirmation() {
 
   async function fetchLatestOrder(orderId, currentUserId) {
     if (!orderId || !currentUserId) return null;
-    const { data } = await axios.get(
-      `${BASE_URL}/api/order/${encodeURIComponent(orderId)}?userId=${encodeURIComponent(currentUserId)}`,
-      { timeout: 15000 }
-    );
-    return data?.orderId ? data : null;
+    const endpoints = [
+      `${BASE_URL}/api/orders/${encodeURIComponent(orderId)}`,
+      `${BASE_URL}/api/order/${encodeURIComponent(orderId)}`
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const { data } = await axios.get(endpoint, {
+          params: { userId: currentUserId },
+          timeout: 15000
+        });
+        const normalized = normalizeOrderPayload(data);
+        if (normalized) return normalized;
+      } catch (error) {
+        const status = error?.response?.status;
+        if (![400, 404].includes(status)) throw error;
+      }
+    }
+
+    return null;
   }
 
+  const canCancelOrder = useMemo(() => {
+    if (order?.lifecycle && typeof order.lifecycle.canCancel === 'boolean') {
+      return order.lifecycle.canCancel;
+    }
+    return isCancelableOrder(order || {});
+  }, [order]);
+
+  const handleCancelOrder = useCallback(async () => {
+    if (!order?.orderId || !userId || cancelling || !canCancelOrder) return;
+
+    const reason = window.prompt('Share a cancellation reason (optional):', '');
+    if (reason === null) return;
+
+    try {
+      setCancelling(true);
+      const { data } = await axios.post(
+        `${BASE_URL}/api/orders/${encodeURIComponent(order.orderId)}/cancel`,
+        { userId, reason: String(reason).trim() },
+        { timeout: 15000 }
+      );
+      toast.success(data?.message || 'Order cancelled. Premium support will handle the rest.');
+      const latest = await fetchLatestOrder(order.orderId, userId);
+      if (latest) {
+        setOrder(latest);
+        localStorage.setItem('lastPlacedOrder', JSON.stringify(latest));
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Unable to cancel this order right now.');
+    } finally {
+      setCancelling(false);
+    }
+  }, [canCancelOrder, cancelling, fetchLatestOrder, order?.orderId, toast, userId]);
+
   useEffect(() => {
-    dispatch(getProduct());
+    queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
     async function syncOrder() {
       const locationState = location.state;
       let fallbackOrder = null;
@@ -92,7 +167,7 @@ export default function Confirmation() {
       }
 
       if (fallbackOrder) {
-        setOrder(fallbackOrder);
+        setOrder(normalizeOrderPayload(fallbackOrder) || fallbackOrder);
       }
 
       const orderId = fallbackOrder?.orderId;
@@ -558,7 +633,7 @@ export default function Confirmation() {
                 ${displayMrpDiscount > 0 ? `<div class="row" style="color: #16a34a;"><span>Discount on MRP</span><strong>-${money(displayMrpDiscount)}</strong></div>` : ''}
                 ${instantDiscount > 0 ? `<div class="row" style="color: #16a34a;"><span>Instant Discount</span><strong>-${money(instantDiscount)}</strong></div>` : ''}
                 <div class="row"><span>Shipping</span><strong>${shipping === 0 ? 'FREE' : money(shipping)}</strong></div>
-                ${expressFee > 0 ? `<div class="row"><span>Express Delivery</span><strong>${money(expressFee)}</strong></div>` : ''}
+                ${expressFee > 0 ? `<div class="row"><span class="lux-express-badge"><span class="lux-express-icon">⚡</span> Express Delivery</span><strong>${money(expressFee)}</strong></div>` : ''}
                 ${taxEstimate > 0 ? `<div class="row"><span>GST (5%)</span><strong>${money(taxEstimate)}</strong></div>` : ''}
                 <div class="row"><span>Payment Fee (${displayPaymentMethod})</span><strong>${paymentFee > 0 ? money(paymentFee) : 'FREE'}</strong></div>
                 ${protectionCharge > 0 ? `<div class="row"><span>Delivery Protection</span><strong>${money(protectionCharge)}</strong></div>` : ''}
@@ -801,6 +876,12 @@ export default function Confirmation() {
               <Radar size={14} />
               <span>Track Live</span>
             </button>
+            {canCancelOrder && (
+              <button className='lux-btn lux-btn-outline' onClick={handleCancelOrder} disabled={cancelling} style={{ borderColor: 'rgba(220, 38, 38, 0.35)', color: '#dc2626', background: 'rgba(220, 38, 38, 0.04)' }}>
+                <X size={14} />
+                <span>{cancelling ? 'Cancelling...' : 'Cancel Order'}</span>
+              </button>
+            )}
             <button className='lux-btn lux-btn-outline' onClick={handleDownloadInvoice}>
               <Download size={14} />
               <span>Download Invoice</span>
@@ -818,7 +899,32 @@ export default function Confirmation() {
               <span>{shared ? 'Shared' : 'Share Order'}</span>
             </button>
           </div>
+          {canCancelOrder && (
+            <p style={{ margin: '12px 0 0', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7c6a35', fontWeight: 700 }}>
+              Cancel is available until the order enters shipment.
+            </p>
+          )}
         </motion.section>
+
+        {/* Cancellation Banner - show prominently on confirmation page when cancelled */}
+        {order?.cancellation && order.cancellation.status && order.cancellation.status !== 'NOT_CANCELLED' && (
+          <div style={{ maxWidth: 1180, margin: '16px auto', padding: '0 28px' }}>
+            <motion.div className='lux-alert' initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 }} style={{ borderRadius: 10, padding: '14px 18px', background: 'linear-gradient(90deg, rgba(220,38,38,0.06), rgba(255,255,255,0))', border: '1px solid rgba(220,38,38,0.12)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#991b1b', textTransform: 'uppercase' }}>Order Cancelled</div>
+                  <div style={{ marginTop: 6, color: '#475569' }}>{order.cancellation?.publicMessage || 'Your order has been cancelled. Our premium support is taking care of the rest.'}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>{order.cancellation.approvedAt ? new Date(order.cancellation.approvedAt).toLocaleString() : (order.cancellation.requestedAt ? new Date(order.cancellation.requestedAt).toLocaleString() : '')}</div>
+                  <div style={{ marginTop: 8 }}>
+                    <button className='lux-btn lux-btn-outline' onClick={() => navigate(`/order-tracking/${encodeURIComponent(order.orderId || '')}`)} style={{ borderColor: 'rgba(220,38,38,0.18)', color: '#b91c1c' }}>View Details</button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
         {/* Assurance Features */}
         <motion.section className='lux-assurance assurance-strip' initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>

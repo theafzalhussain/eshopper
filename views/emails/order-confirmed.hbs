@@ -5,8 +5,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Order Confirmed - {{orderId}}</title>
-  <!-- All CSS is now inlined below for maximum compatibility -->
   <style>
+    {{> theme_tokens}}
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;600&display=swap');
     a:hover { opacity: 0.85; }
     /* Premium Delivery Progress Styles */
@@ -232,12 +232,10 @@
                   </tr>
                 </table>
 
-                <a class="btn btn-primary" href="{{trackingUrl}}" target="_blank"
-                  style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:16px 12px;font-size:16px;margin-top:24px;background:linear-gradient(135deg, #d4af37 0%, #aa8222 100%);color:#000000;letter-spacing:1.5px;text-transform:uppercase;">TRACK
-                  YOUR ORDER</a>
-                <a class="btn btn-secondary" href="{{confirmationInvoiceUrl}}" target="_blank"
-                  style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:4px;padding:16px 12px;font-size:16px;margin-top:14px;background:#0a0a0c;color:#d4af37;border:1px solid #d4af37;letter-spacing:1.5px;text-transform:uppercase;">VIEW
-                  RECEIPT</a>
+                <a class="btn mobile-btn" href="{{trackingUrl}}" target="_blank"
+                  style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:8px;padding:16px 12px;font-size:16px;margin-top:24px;background:linear-gradient(135deg, #4ab75a 0%, #2e8f38 100%);color:#ffffff;letter-spacing:1.5px;text-transform:uppercase;box-shadow:0 4px 12px rgba(74,183,90,0.3);">TRACK YOUR ORDER</a>
+                <a class="btn mobile-btn" href="{{confirmationInvoiceUrl}}" target="_blank"
+                  style="display:block;text-align:center;text-decoration:none;font-weight:600;border-radius:8px;padding:16px 12px;font-size:16px;margin-top:14px;background:#151820;color:#f0d07a;border:1px solid #756225;letter-spacing:1.5px;text-transform:uppercase;box-shadow:0 4px 12px rgba(240,208,122,0.15);">VIEW RECEIPT</a>
               </div>
             </td>
           </tr>
@@ -252,13 +250,13 @@
 
           <tr>
             <td class="assist" style="padding:18px 20px;border-top:1px solid #2a2e36;text-align:center;">
-              <h4 style="font-family:'Playfair Display', Georgia, serif;margin:0 0 14px;font-size:24px;color:#d4af37;font-weight:400;">Need Assistance?</h4>
-              <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;">
-                <a href="{{whatsappUrl}}" target="_blank"
-                  style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#06140b;border:1px solid #25d366;color:#25d366;text-align:center;letter-spacing:0.5px;transition:all 0.3s ease;">WhatsApp
-                  Support</a>
-                <a href="{{instagramUrl}}" target="_blank"
-                  style="display:inline-block;width:45%;min-width:180px;margin:6px 0;padding:12px 0;border-radius:4px;text-decoration:none;font-weight:600;font-size:14px;background:#170814;border:1px solid #d84ee4;color:#d84ee4;text-align:center;letter-spacing:0.5px;margin-left:8px;transition:all 0.3s ease;">Instagram</a>
+              <h4 style="font-family:'Playfair Display', Georgia, serif;margin:0 0 10px;font-size:28px;color:#f1f2f5;font-weight:400;">Need Assistance?</h4>
+              <div style="    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;    flex-wrap: wrap;">
+                <a class="mobile-flex-btn" href="{{whatsappUrl}}" target="_blank" style="background:linear-gradient(90deg,#25d366,#1ed66d);color:#0f1912;text-decoration:none;border-radius:10px;padding:14px 20px;font-weight:800;display:inline-block;text-align:center;min-width:140px;box-shadow:0 4px 12px rgba(37,211,102,0.25);">WhatsApp Support</a>
+                <a class="mobile-flex-btn" href="{{instagramUrl}}" target="_blank" style="background:linear-gradient(90deg,#ff8d3a,#d84ee4);color:#fff;text-decoration:none;border-radius:10px;padding:14px 20px;font-weight:800;display:inline-block;text-align:center;min-width:140px;box-shadow:0 4px 12px rgba(216,78,228,0.25);">Instagram</a>
               </div>
             </td>
           </tr>

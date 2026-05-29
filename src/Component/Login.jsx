@@ -11,7 +11,7 @@ import { BASE_URL } from '../constants'
 import { useToast } from './ToastNotification'
 
 export default function Login() {
-    const [data, setdata] = useState({ username: "", password: "" })
+    const [data, setdata] = useState({ identifier: "", password: "" })
     const [showPass, setShowPass] = useState(false)
     const [loading, setLoading] = useState(false)
     const [googleLoading, setGoogleLoading] = useState(false)
@@ -62,7 +62,7 @@ export default function Login() {
         if (savedCredentials) {
             try {
                 const creds = JSON.parse(savedCredentials)
-                setdata({ username: creds.username, password: creds.password })
+                setdata({ identifier: creds.identifier || creds.username || creds.email || '', password: creds.password })
                 setRememberMe(true)
             } catch (err) {
                 console.error("Error loading saved credentials:", err)
@@ -84,12 +84,18 @@ export default function Login() {
         const resolvedId = user.id || user._id || user.uid
         const resolvedName = user.name || user.displayName || 'User'
         const resolvedUsername = user.username || (user.email ? user.email.split('@')[0] : resolvedName.split(' ')[0].toLowerCase())
+        const adminToken = user.adminToken || ''
 
         localStorage.setItem('login', true)
         localStorage.setItem('name', resolvedName)
         if (resolvedId) localStorage.setItem('userid', resolvedId)
         localStorage.setItem('role', user.role || 'User')
         localStorage.setItem('username', resolvedUsername)
+        if (adminToken && String(user.role || '').toLowerCase() === 'admin') {
+            localStorage.setItem('adminToken', adminToken)
+        } else {
+            localStorage.removeItem('adminToken')
+        }
 
         if (user.pic) {
             localStorage.setItem('pic', user.pic)
@@ -104,7 +110,8 @@ export default function Login() {
                 name: resolvedName,
                 role: user.role || 'User',
                 email: user.email || '',
-                pic: user.pic || ''
+                pic: user.pic || '',
+                adminToken: adminToken || ''
             }
             localStorage.setItem('userToken', JSON.stringify(userToken))
         } else {
@@ -167,8 +174,8 @@ export default function Login() {
         
         try {
             const user = twoFactorRequired
-                ? await login2FAAPI({ username: data.username, password: data.password, otp: otpCode })
-                : await loginAPI(data)
+                ? await login2FAAPI({ username: data.identifier, email: data.identifier, password: data.password, otp: otpCode })
+                : await loginAPI({ username: data.identifier, email: data.identifier, password: data.password })
             setLoading(false)
 
             if (user?.requiresTwoFactor) {
@@ -186,7 +193,7 @@ export default function Login() {
                 // --- REMEMBER ME: SAVE TOKEN & CREDENTIALS ---
                 if (rememberMe) {
                     localStorage.setItem("savedCredentials", JSON.stringify({
-                        username: data.username,
+                        identifier: data.identifier,
                         password: data.password
                     }))
                 } else {
@@ -285,7 +292,7 @@ export default function Login() {
                                 <label>LOGIN IDENTITY</label>
                                 <div className="input-box">
                                     <UserIcon size={18} className="icon" />
-                                    <input type="text" name="username" placeholder="Username or Email" value={data.username} onChange={getData} required disabled={twoFactorRequired} />
+                                    <input type="text" name="identifier" placeholder="Username or registered email" value={data.identifier} onChange={getData} required disabled={twoFactorRequired} />
                                 </div>
                                 <div className="input-hint">You can use your username or registered email</div>
                             </div>

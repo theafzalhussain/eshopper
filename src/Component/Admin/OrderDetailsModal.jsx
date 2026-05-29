@@ -125,6 +125,13 @@ export default function OrderDetailsModal({ order, open, onClose }) {
                                         <span className="lux-info-sub mt-1">
                                             <span className="lux-badge">{order.orderStatus || 'N/A'}</span>
                                         </span>
+                                        {order?.cancellation && order.cancellation.status && order.cancellation.status !== 'NOT_CANCELLED' && (
+                                            <div style={{ marginTop: 8 }}>
+                                                <span className="lux-info-label">Cancellation</span>
+                                                <div style={{ color: '#b45309', fontWeight: 700 }}>{order.cancellation.status}</div>
+                                                {order.cancellation.reason && <div style={{ color: '#475569', marginTop: 6 }}>{order.cancellation.reason}</div>}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

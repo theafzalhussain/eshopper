@@ -7,15 +7,177 @@ const Maincategory = require('../models/Maincategory');
 const Subcategory = require('../models/Subcategory');
 const Brand = require('../models/Brand');
 const Coupon = require('../models/Coupon');
+const { clearCache } = require('../utils/cache');
+const { clearQueryCache } = require('../utils/mongooseQueryCache');
+
+const PRODUCT_CACHE_PATTERNS = ['__express__/product*', '__express__/api/products*', '__express__/api/product*', '__express__/api/search*'];
+
+const escapeRegex = (value = '') => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const invalidateProductCaches = async () => {
+    try {
+        await Promise.allSettled([
+            ...PRODUCT_CACHE_PATTERNS.map(pattern => clearCache(pattern)),
+            Promise.resolve(clearQueryCache('product'))
+        ]);
+    } catch (err) {
+        console.warn('⚠️ invalidateProductCaches error:', err && err.message);
+    }
+};
+
+const buildProductMatch = (query = {}) => {
+    const match = {};
+    const maincategory = String(query.maincategory || query.category || '').trim();
+    const subcategory = String(query.subcategory || '').trim();
+    const brand = String(query.brand || '').trim();
+    const size = String(query.size || '').trim();
+    const search = String(query.search || '').trim();
+    const tag = String(query.tag || '').trim().toLowerCase();
+    const min = Number(query.min || 0);
+    const max = Number(query.max || Number.MAX_SAFE_INTEGER);
+    const rating = Number(query.rating || 0);
+    const discount = Number(query.discount || 0);
+
+    if (maincategory && maincategory !== 'All') match.maincategory = new RegExp(`^${escapeRegex(maincategory)}$`, 'i');
+    if (subcategory && subcategory !== 'All') match.subcategory = new RegExp(`^${escapeRegex(subcategory)}$`, 'i');
+    if (brand && brand !== 'All') match.brand = new RegExp(`^${escapeRegex(brand)}$`, 'i');
+    if (size && size !== 'All') match.size = size.toUpperCase() === '2XL'
+        ? { $in: ['2XL', 'XXL'] }
+        : { $in: [size.toUpperCase()] };
+    if (Number.isFinite(min) && min > 0) match.finalprice = { ...(match.finalprice || {}), $gte: min };
+    if (Number.isFinite(max) && max < Number.MAX_SAFE_INTEGER) match.finalprice = { ...(match.finalprice || {}), $lte: max };
+    if (search) {
+        const searchRegex = new RegExp(escapeRegex(search), 'i');
+        match.$or = [
+            { name: searchRegex },
+            { brand: searchRegex },
+            { description: searchRegex },
+            { maincategory: searchRegex },
+            { subcategory: searchRegex }
+        ];
+    }
+    if (tag === 'new arrivals') match.newArrival = true;
+    if (tag === 'sale') match.isSale = true;
+    if (tag === 'trending') match.discount = { $gte: Math.max(20, discount || 20) };
+    if (tag === 'bestsellers') {
+        match.$or = [
+            ...(match.$or || []),
+            { reviews: { $gte: 5 } },
+            { rating: { $gte: 4.2 } }
+        ];
+    }
+    if (Number.isFinite(rating) && rating > 0) match.rating = { $gte: rating };
+    if (Number.isFinite(discount) && discount > 0) match.discount = { $gte: discount };
+
+    return match;
+};
+
+const buildFacetPipeline = (query = {}) => {
+    const page = Math.max(1, Number(query.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(query.limit || 24)));
+    const skip = (page - 1) * limit;
+    const sortKey = String(query.sort || 'newest').toLowerCase();
+
+    const sortMap = {
+        low: { finalprice: 1, createdAt: -1 },
+        high: { finalprice: -1, createdAt: -1 },
+        rating: { rating: -1, reviews: -1, createdAt: -1 },
+        popular: { reviews: -1, rating: -1, createdAt: -1 },
+        discount: { discount: -1, createdAt: -1 },
+        newest: { createdAt: -1 },
+        default: { createdAt: -1 }
+    };
+
+    return [
+        { $match: buildProductMatch(query) },
+        { $sort: sortMap[sortKey] || sortMap.default },
+        {
+            $facet: {
+                items: [
+                    { $skip: skip },
+                    { $limit: limit },
+                    {
+                        $project: {
+                            name: 1,
+                            maincategory: 1,
+                            subcategory: 1,
+                            brand: 1,
+                            color: 1,
+                            size: 1,
+                            baseprice: 1,
+                            discount: 1,
+                            finalprice: 1,
+                            stock: 1,
+                            description: 1,
+                            newArrival: 1,
+                            isSale: 1,
+                            pic1: 1,
+                            pic2: 1,
+                            pic3: 1,
+                            pic4: 1,
+                            rating: 1,
+                            reviews: 1,
+                            createdAt: 1
+                        }
+                    }
+                ],
+                total: [{ $count: 'count' }],
+                brands: [{ $group: { _id: '$brand', count: { $sum: 1 } } }, { $sort: { count: -1 } }],
+                categories: [{ $group: { _id: '$maincategory', count: { $sum: 1 } } }, { $sort: { count: -1 } }],
+                subcategories: [{ $group: { _id: '$subcategory', count: { $sum: 1 } } }, { $sort: { count: -1 } }],
+                priceRange: [{ $group: { _id: null, min: { $min: '$finalprice' }, max: { $max: '$finalprice' } } }]
+            }
+        },
+        {
+            $project: {
+                items: 1,
+                total: { $ifNull: [{ $first: '$total.count' }, 0] },
+                facets: {
+                    brands: '$brands',
+                    categories: '$categories',
+                    subcategories: '$subcategories',
+                    priceRange: { $first: '$priceRange' }
+                }
+            }
+        }
+    ];
+};
 
 module.exports = {
     // Get all products
     getAllProducts: async (req, res) => {
         try {
-            const products = await Product.find().sort({ createdAt: -1 });
+            const products = await Product.find({})
+                .sort({ createdAt: -1 })
+                .lean()
+                .cache({ key: 'list' });
             res.json(products);
         } catch (err) {
             res.status(500).json({ error: 'Failed to fetch products' });
+        }
+    },
+
+    // High-velocity product search with one round-trip facet pagination
+    searchProducts: async (req, res) => {
+        try {
+            const pipeline = buildFacetPipeline(req.query || {});
+            const [result = {}] = await Product.aggregate(pipeline).allowDiskUse(true);
+
+            const items = Array.isArray(result.items) ? result.items : [];
+            const total = Number(result.total || 0);
+            const facets = result.facets || {};
+
+            res.json({
+                success: true,
+                items,
+                total,
+                page: Math.max(1, Number(req.query.page || 1)),
+                limit: Math.min(100, Math.max(1, Number(req.query.limit || 24))),
+                facets,
+                hasMore: total > ((Math.max(1, Number(req.query.page || 1)) - 1) * Math.min(100, Math.max(1, Number(req.query.limit || 24))) + items.length)
+            });
+        } catch (err) {
+            res.status(500).json({ success: false, error: 'Failed to search products', details: err.message });
         }
     },
 
@@ -49,6 +211,7 @@ module.exports = {
                 const io = req.app.get('io');
                 if (io) io.emit('dashboardUpdate');
             }
+            await invalidateProductCaches();
             res.status(201).json(product);
         } catch (err) {
             res.status(400).json({ error: 'Failed to add product', details: err.message });
@@ -88,6 +251,7 @@ module.exports = {
                 const io = req.app.get('io');
                 if (io) io.emit('dashboardUpdate');
             }
+            await invalidateProductCaches();
             res.json(product);
         } catch (err) {
             res.status(400).json({ error: 'Failed to update product', details: err.message });
@@ -211,6 +375,7 @@ module.exports = {
                 const io = req.app.get('io');
                 if (io) io.emit('dashboardUpdate');
             }
+            await invalidateProductCaches();
             res.json({ message: 'Product deleted' });
         } catch (err) {
             res.status(400).json({ error: 'Failed to delete product' });

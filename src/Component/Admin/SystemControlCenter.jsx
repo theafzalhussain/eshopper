@@ -15,6 +15,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { getSocket } from './socket';
+import { getAdminHeaders } from './adminAuth';
 import { BASE_URL } from '../../constants';
 import './SystemControlCenter.css';
 
@@ -116,7 +117,9 @@ export default function SystemControlCenter() {
   // Fetch dashboard data from API
   const fetchDashboardData = useCallback(async () => {
     try {
-      const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`);
+      const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`, {
+        headers: getAdminHeaders()
+      });
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
 
@@ -167,10 +170,31 @@ export default function SystemControlCenter() {
         metrics: prev.metrics ? {
           ...prev.metrics,
           totalRevenue: (prev.metrics.totalRevenue || 0) + (orderData.amount || 0),
-          newOrders: (prev.metrics.newOrders || 0) + 1
+          newOrders: (prev.metrics.newOrders || 0) + 1,
+          totalOrders: (prev.metrics.totalOrders || 0) + 1
         } : prev.metrics
       }));
       setLastUpdated(new Date());
+    });
+
+    // Listen for cancelled orders and subtract from revenue in real-time
+    socket.on('orderCancelled', (cancelData) => {
+      try {
+        console.log('Order cancelled received:', cancelData);
+        const amount = cancelData?.amount || cancelData?.finalAmount || 0;
+        setDashboardData(prev => ({
+          ...prev,
+          metrics: prev.metrics ? {
+            ...prev.metrics,
+            totalRevenue: Math.max((prev.metrics.totalRevenue || 0) - (amount || 0), 0),
+            // decrement total orders if present
+            totalOrders: Math.max((prev.metrics.totalOrders || 0) - 1, 0)
+          } : prev.metrics
+        }));
+        setLastUpdated(new Date());
+      } catch (err) {
+        console.error('Error handling orderCancelled socket:', err);
+      }
     });
 
     // Refresh every 30 seconds as fallback

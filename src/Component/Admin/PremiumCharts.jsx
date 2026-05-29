@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { TrendingUp, PieChart as PieIcon, Calendar, RefreshCw } from 'lucide-react';
 import { getSocket } from './socket';
+import { getAdminHeaders } from './adminAuth';
 import { BASE_URL } from '../../constants';
 import './SystemControlCenter.css';
 
@@ -88,10 +89,12 @@ const CHART_COLORS = [
   '#06B6D4', // Cyan
 ];
 
-export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }) {
+export default function PremiumCharts({ monthlyData = [], salesByCategory = [], salesBySize = [], availableSizes = [] }) {
   const [chartData, setChartData] = useState({
     monthly: monthlyData,
-    category: salesByCategory
+    category: salesByCategory,
+    size: salesBySize,
+    availableSizes: availableSizes
   });
   const [period, setPeriod] = useState('12M');
   const [isLoading, setIsLoading] = useState(false);
@@ -100,13 +103,17 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
   const fetchChartData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`);
+      const response = await fetch(`${BASE_URL}/api/admin/dashboard-analytics`, {
+        headers: getAdminHeaders()
+      });
       if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
 
       setChartData({
         monthly: data.monthlyData || [],
-        category: data.salesByCategory || []
+        category: data.salesByCategory || [],
+        size: data.salesBySize || [],
+        availableSizes: data.availableSizes || []
       });
     } catch (error) {
       console.error('Chart data fetch error:', error);
@@ -122,7 +129,9 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
     } else {
       setChartData({
         monthly: monthlyData,
-        category: salesByCategory
+        category: salesByCategory,
+        size: salesBySize,
+        availableSizes: availableSizes
       });
     }
 
@@ -215,6 +224,15 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
       concentration
     };
   }, [chartData.category]);
+
+  const sizeInsights = useMemo(() => {
+    const source = Array.isArray(chartData.size) ? chartData.size : [];
+    const list = source.map(item => ({ size: String(item.size || item._id || 'Unknown'), value: Number(item.value || 0) }))
+      .filter(i => Number.isFinite(i.value) && i.value > 0)
+      .sort((a,b) => b.value - a.value);
+    const total = list.reduce((s, it) => s + it.value, 0);
+    return { list, total };
+  }, [chartData.size]);
 
   // Custom Legend
   const renderCustomLegend = () => (
@@ -476,6 +494,30 @@ export default function PremiumCharts({ monthlyData = [], salesByCategory = [] }
             No category data available
           </div>
         )}
+
+        {/* Size distribution */}
+        <div style={{ marginTop: 18 }}>
+          <h3 style={{ color: '#fff', marginBottom: 8 }}>Size Distribution</h3>
+          {sizeInsights.list.length ? (
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart data={sizeInsights.list} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.08)" vertical={false} />
+                <XAxis dataKey="size" stroke="#64748B" />
+                <YAxis stroke="#64748B" />
+                <Tooltip contentStyle={{ background: '#0b1220', border: '1px solid rgba(148,163,184,0.12)', color: '#fff' }} />
+                <Area type="monotone" dataKey="value" stroke="#D4AF37" fill="#D4AF37" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ color: '#94A3B8' }}>No size sales data</div>
+          )}
+
+          {Array.isArray(chartData.availableSizes) && chartData.availableSizes.length > 0 && (
+            <div style={{ marginTop: 8, color: '#94A3B8', fontSize: '0.9rem' }}>
+              Available sizes: {chartData.availableSizes.map(s => s.size).join(', ')}
+            </div>
+          )}
+        </div>
 
         <div style={{
           marginTop: '12px',

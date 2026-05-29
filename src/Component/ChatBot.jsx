@@ -828,6 +828,32 @@ export default function ChatBot() {
       </AnimatePresence>
 
       <style dangerouslySetInnerHTML={{ __html: CHATBOT_STYLES }} />
+      <style dangerouslySetInnerHTML={{ __html: `
+        .chat-card.fullscreen {
+          position: fixed !important;
+          left: 0 !important; right: auto !important;
+          bottom: auto !important; top: 0 !important;
+          width: 125vw !important;
+          height: 125dvh !important;
+          max-height: 125dvh !important;
+          border-radius: 0 !important;
+          border: none !important;
+          z-index: 9200 !important;
+        }
+        @media (max-width: 500px) {
+          .chat-card {
+            position: fixed !important;
+            left: 0 !important; top: 0 !important;
+            right: auto !important; bottom: auto !important;
+            width: 125vw !important;
+            height: 125dvh !important;
+            max-height: 125dvh !important;
+            border-radius: 0 !important;
+            border: none !important;
+            z-index: 9200 !important;
+          }
+        }
+      `}} />
     </motion.div>
   )
 }

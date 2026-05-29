@@ -17,4 +17,12 @@ module.exports = {
       Buffer: ['buffer', 'Buffer'],
     }),
   ],
+  devServer: (configFunction) => (proxy, allowedHost) => {
+    const config = configFunction(proxy, allowedHost);
+    config.headers = {
+      ...(config.headers || {}),
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    };
+    return config;
+  },
 };

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getProduct } from '../Store/ActionCreaters/ProductActionCreators';
 import { getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
 import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
 import { useMembership } from './MembershipContext';
@@ -9,6 +8,7 @@ import ProductReviews from './ProductReviews';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import { BASE_URL } from '../constants';
+import { useProductQuery, useProductsQuery } from '../queries/catalogQueries';
 
 /* ─── Mock data ─────────────────────────────────────────────────────────────── */
 const QA_LIST = [
@@ -470,10 +470,13 @@ export default function ProductDetail() {
   const dispatch = useDispatch();
   const { membershipType } = useMembership();
 
-  const allProducts = useSelector(state => state.ProductStateData) || [];
   const cartState = useSelector(state => state.CartStateData) || { items: [] };
   const wishlist = useSelector(state => state.WishlistStateData) || [];
   const cartItems = Array.isArray(cartState.items) ? cartState.items : (Array.isArray(cartState) ? cartState : []);
+
+  const { data: allProductsData = [], isLoading: allProductsLoading } = useProductsQuery();
+  const { data: productData, isLoading: productLoading, error: productError } = useProductQuery(id);
+  const allProducts = Array.isArray(allProductsData) ? allProductsData : [];
 
   const [p, setp] = useState(null);
   const [mainImg, setMainImg]           = useState('');
@@ -527,9 +530,12 @@ export default function ProductDetail() {
 
   // ─── Data Fetching ───
   useEffect(() => {
-    dispatch(getProduct());
-    dispatch(getCart());
-    dispatch(getWishlist());
+    const userId = localStorage.getItem('userid');
+    const isLoggedIn = localStorage.getItem('login') === 'true';
+    if (userId && isLoggedIn) {
+      dispatch(getCart());
+      dispatch(getWishlist());
+    }
 
     // Fetch real coupons from DB
     axios.get(`${BASE_URL}/coupon`)
@@ -542,25 +548,30 @@ export default function ProductDetail() {
   }, [dispatch]);
 
   useEffect(() => {
-    const el = document.createElement('style');
-    el.setAttribute('data-pdx','1');
-    el.textContent = STYLES;
-    document.head.appendChild(el);
+      const el = document.createElement('style');
+      el.setAttribute('data-pdx','1');
+      el.textContent = STYLES;
+      document.head.appendChild(el);
+      return () => { try { document.head.removeChild(el); } catch(_) {} };
+    }, []);
+
+    useEffect(() => {
+      if (productLoading) return;
+
+      if (productData) {
+        setp(productData);
+        setMainImg(productData.pic1 || '/assets/images/noimage.png');
+        if (productData.size && typeof productData.size === 'string') setSelSize(productData.size.split(',')[0]?.trim() || '');
+        if (productData.color && typeof productData.color === 'string') setSelColor(productData.color.split(',')[0]?.trim() || '');
+        return;
+      }
+
+      if (productError || (!allProductsLoading && !productData)) {
+        setp({ notFound: true });
+      }
+    }, [productData, productLoading, productError, allProductsLoading]);
+
     
-    // Extract product on mount
-    if (allProducts.length > 0) {
-       const data = allProducts.find(item => item.id === id || item._id === id);
-       if (data) {
-         setp(data);
-         setMainImg(data.pic1 || '/assets/images/noimage.png');
-         if (data.size && typeof data.size === 'string') setSelSize(data.size.split(',')[0]?.trim() || '');
-         if (data.color && typeof data.color === 'string') setSelColor(data.color.split(',')[0]?.trim() || '');
-       } else {
-         setp({ notFound: true });
-       }
-    }
-    return () => { try { document.head.removeChild(el); } catch(_) {} };
-  }, [allProducts, id]);
 
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => setStickyVis(!e.isIntersecting), { threshold:0 });
@@ -571,7 +582,7 @@ export default function ProductDetail() {
   useEffect(() => {
     if (p && !p.notFound && wishlist.length > 0) {
        const userId = localStorage.getItem('userid');
-       const isWl = wishlist.some(item => String(item.productid?._id || item.productid || item.product?._id || item.product || item.productId) === String(p.id || p._id) && String(item.userid) === String(userId));
+       const isWl = wishlist.some(item => String(item.productid?._id || item.productid || item.product?._id || item.product || item.productId) === String(p.id || p._id));
        setWishlisted(isWl);
     }
   }, [wishlist, p]);
@@ -609,7 +620,7 @@ export default function ProductDetail() {
 
     const existing = cartItems.find(item => {
       const cartProdId = item.productid?._id || item.productid?.id || item.productid || item.product?._id || item.product || item.productId;
-      return String(cartProdId) === String(p.id || p._id) && String(item.userid) === String(userId) && String(item.size || '') === String(selSize) && String(item.color || '') === String(selColor);
+      return String(cartProdId) === String(p.id || p._id) && String(item.size || '') === String(selSize) && String(item.color || '') === String(selColor);
     });
 
     if (existing) {
@@ -628,8 +639,7 @@ export default function ProductDetail() {
        name: p.name,
        pic: p.pic1 || p.pic || ''
     }));
-    
-    toast_(`✓ Added to cart — Size ${selSize || 'Standard'}`);
+     // success toast will be shown by saga-confirmation via ToastEventBridge
     dispatch(getCart());
   }
 
@@ -679,12 +689,12 @@ export default function ProductDetail() {
     if (!userId) { navigate('/login', { state: { from: location.pathname } }); return; }
     
     if (wishlisted) {
-      const existing = wishlist.find(item => String(item.productid?._id || item.productid || item.product) === String(p.id || p._id) && String(item.userid) === String(userId));
-      if (existing) { dispatch(deleteWishlist({ id: existing.id || existing._id })); toast_('Removed from wishlist'); }
+      const existing = wishlist.find(item => String(item.productid?._id || item.productid || item.product) === String(p.id || p._id));
+      if (existing) { dispatch(deleteWishlist({ id: existing.id || existing._id })); }
       setWishlisted(false);
     } else {
-       dispatch(addWishlist({ productid: p.id || p._id, userid: userId, name: p.name, color: selColor, size: selSize, price: Number(p.finalprice || 0), pic: p.pic1 || p.pic || '' }));
-       toast_('❤️ Saved to Wishlist');
+        dispatch(addWishlist({ productid: p.id || p._id, userid: userId, name: p.name, color: selColor, size: selSize, price: Number(p.finalprice || 0), pic: p.pic1 || p.pic || '' }));
+        // wishlist success handled by saga events
        setWishlisted(true);
     }
   }
@@ -905,7 +915,7 @@ export default function ProductDetail() {
   }, [p, allProducts]);
 
   // ─── Computed Fallbacks ───
-  if (!p && !allProducts.length) return <div className="pd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Loading product...</div>;
+  if (!p && (allProductsLoading || productLoading)) return <div className="pd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Loading product...</div>;
   if (p && p.notFound) return <div className="pd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Product Not Found</div>;
   if (!p) return <div className="pd" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Loading details...</div>;
 
