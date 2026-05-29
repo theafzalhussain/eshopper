@@ -6,6 +6,7 @@ const express = require('express');
 const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const cartRoutes = require('./routes/cartRoutes');
+const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const imageProxy = require('./routes/imageProxy');
 const http = require('http');
@@ -81,7 +82,7 @@ const corsOptions = {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-admin-secret'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'x-admin-secret', 'x-admin-role', 'x-admin-userid'],
     preflightContinue: false,
     optionsSuccessStatus: 204
 };
@@ -967,6 +968,8 @@ app.get('/api/reviews/order/:orderId', async (req, res) => {
 
 app.use('/api', cartRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/user', userRoutes);
+app.use('/user', userRoutes);
 
 // Register product routes (enables /product/add and file upload endpoints)
 app.use('/product', productRoutes);
@@ -980,6 +983,41 @@ app.use(orderRoutes);
 // 🔒 SECURITY HEADERS
 // 🔒 SECURITY HEADERS
 app.use(helmet({ contentSecurityPolicy: false }));
+
+app.get('/api/membership/check', async (req, res) => {
+    try {
+        const userId = String(req.query.userId || '').trim();
+        if (!userId) {
+            return res.status(400).json({ message: 'userId is required' });
+        }
+
+        let user = null;
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+            user = await User.findById(userId).select('membershipType totalOrders').lean();
+        }
+
+        if (!user) {
+            user = await User.findOne({ $or: [{ userid: userId }, { id: userId }] }).select('membershipType totalOrders').lean();
+        }
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const totalOrders = Number(user.totalOrders || 0);
+        const membershipType = user.membershipType || getMembershipTypeFromOrders(totalOrders);
+
+        return res.json({
+            success: true,
+            userId,
+            membershipType,
+            totalOrders
+        });
+    } catch (err) {
+        console.error('Membership check error:', err && err.message ? err.message : err);
+        return res.status(500).json({ message: 'Failed to check membership' });
+    }
+});
 
 // 🔒 RATE LIMITERS
 // 🔒 RATE LIMITERS
