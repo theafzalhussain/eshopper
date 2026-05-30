@@ -24,6 +24,33 @@ let usingRedisBackend = false;
 
 const isBullMQEnabled = () => BULLMQ_ENABLED;
 
+const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
+    const opts = { maxRetriesPerRequest: null };
+    if (useTls) opts.tls = {};
+
+    try {
+        if (/^redis(s)?:\/\//i.test(redisUrl) || /^rediss?:\/\//i.test(redisUrl)) {
+            const parsed = new URL(redisUrl);
+            const urlPassword = decodeURIComponent(parsed.password || '');
+            const urlUsername = decodeURIComponent(parsed.username || '');
+            opts.host = parsed.hostname;
+            opts.port = Number(parsed.port || 6379);
+            if (urlUsername) opts.username = urlUsername;
+            if (urlPassword) opts.password = urlPassword;
+            else if (redisPassword) opts.password = redisPassword;
+            return opts;
+        }
+
+        const parts = redisUrl.split(':');
+        opts.host = parts[0];
+        opts.port = Number(parts[1] || 6379);
+        if (redisPassword) opts.password = redisPassword;
+        return opts;
+    } catch (err) {
+        return null;
+    }
+};
+
 const initializeQueues = (processors = {}) => {
     if (!isBullMQEnabled()) return null;
     if (initialized) return { queues, schedulers, workers };
@@ -39,17 +66,14 @@ const initializeQueues = (processors = {}) => {
         const redisPassword = process.env.REDIS_WORKER_PASSWORD || process.env.REDIS_PASSWORD || process.env.REDIS_PASS || '';
         const useTls = /^rediss:\/\//i.test(redisUrl) || String(process.env.REDIS_TLS || '').toLowerCase() === 'true' || String(process.env.REDIS_TLS || '') === '1';
         if (redisUrl) {
-            if (/^redis(s)?:\/\//i.test(redisUrl) || /^rediss?:\/\//i.test(redisUrl)) {
-                const opts = { password: redisPassword || undefined, maxRetriesPerRequest: null };
-                if (useTls) opts.tls = {};
-                workerRedisConnection = new IORedis(redisUrl, opts);
-            } else {
-                const parts = redisUrl.split(':');
-                const opts = { host: parts[0], port: Number(parts[1] || 6379), maxRetriesPerRequest: null };
-                if (redisPassword) opts.password = redisPassword;
-                if (useTls) opts.tls = {};
-                workerRedisConnection = new IORedis(opts);
+            const workerOpts = buildRedisOptions(redisUrl, redisPassword, useTls);
+            if (!workerOpts) {
+                throw new Error('Invalid REDIS_WORKER_URL format');
             }
+            if (!workerOpts.password) {
+                console.warn('Worker Redis password is missing. Set REDIS_WORKER_PASSWORD or embed credentials in REDIS_WORKER_URL/REDIS_URL to avoid NOAUTH errors.');
+            }
+            workerRedisConnection = new IORedis(workerOpts);
         } else {
             // fallback to another client instance using same defaults
             workerRedisConnection = createRedisClient();

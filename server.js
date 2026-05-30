@@ -59,6 +59,11 @@ app.use(compression()); // ✅ Payload size reduced by 70%
 app.use(express.urlencoded({ extended: true }));
 app.set('trust proxy', 1);
 
+// UptimeRobot / platform health checks
+app.get(['/', '/healthz'], (req, res) => {
+    res.status(200).send('Eshopper API is up');
+});
+
 // Initialize Redis client (optional). Configure using REDIS_URL and REDIS_PASSWORD in your environment.
 try {
     const redisClient = createRedisClient();

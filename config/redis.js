@@ -2,6 +2,33 @@ const Redis = require('ioredis');
 
 let redisClient = null;
 
+const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
+  const opts = { maxRetriesPerRequest: null };
+  if (useTls) opts.tls = {};
+
+  try {
+    if (/^redis(s)?:\/\//i.test(redisUrl) || /^rediss?:\/\//i.test(redisUrl)) {
+      const parsed = new URL(redisUrl);
+      const urlPassword = decodeURIComponent(parsed.password || '');
+      const urlUsername = decodeURIComponent(parsed.username || '');
+      opts.host = parsed.hostname;
+      opts.port = Number(parsed.port || 6379);
+      if (urlUsername) opts.username = urlUsername;
+      if (urlPassword) opts.password = urlPassword;
+      else if (redisPassword) opts.password = redisPassword;
+      return opts;
+    }
+
+    const parts = redisUrl.split(':');
+    opts.host = parts[0];
+    opts.port = Number(parts[1] || 6379);
+    if (redisPassword) opts.password = redisPassword;
+    return opts;
+  } catch (err) {
+    return null;
+  }
+};
+
 function createClient() {
   if (redisClient) return redisClient;
 
@@ -13,27 +40,21 @@ function createClient() {
     return null;
   }
 
-  const opts = {};
-
   // decide whether to enable TLS: use rediss:// or explicit env flag
   const useTls = /^rediss:\/\//i.test(redisUrl) || String(process.env.REDIS_TLS || '').toLowerCase() === 'true' || String(process.env.REDIS_TLS || '') === '1';
 
   // support full host:port or a full redis:// url
   try {
-    if (/^redis(s)?:\/\//i.test(redisUrl) || /^rediss?:\/\//i.test(redisUrl)) {
-      // if it's a full URL, let ioredis parse it
-      const redisOpts = { password: redisPassword || undefined, maxRetriesPerRequest: null };
-      if (useTls) redisOpts.tls = {};
-      redisClient = new Redis(redisUrl, redisOpts);
-    } else {
-      const parts = redisUrl.split(':');
-      opts.host = parts[0];
-      opts.port = Number(parts[1] || 6379);
-      opts.maxRetriesPerRequest = null;
-      if (redisPassword) opts.password = redisPassword;
-      if (useTls) opts.tls = {};
-      redisClient = new Redis(opts);
+    const redisOpts = buildRedisOptions(redisUrl, redisPassword, useTls);
+    if (!redisOpts) {
+      throw new Error('Invalid REDIS_URL format');
     }
+
+    if (!redisOpts.password) {
+      console.warn('Redis password is missing. Set REDIS_PASSWORD or use a redis:// URL with credentials to avoid NOAUTH errors.');
+    }
+
+    redisClient = new Redis(redisOpts);
 
     redisClient.on('connect', () => console.log('Redis connected'));
     redisClient.on('ready', () => console.log('Redis ready'));
