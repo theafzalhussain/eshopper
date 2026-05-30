@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 
         let inputBuffer = null;
         if (/^https?:\/\//i.test(src)) {
-            const resp = await axios.get(src, { responseType: 'arraybuffer', timeout: 10000 });
+            const resp = await axios.get(src, { responseType: 'arraybuffer', timeout: 30000 });
             inputBuffer = Buffer.from(resp.data);
         } else {
             // Treat as local path under public or build assets
@@ -62,6 +62,11 @@ router.get('/', async (req, res) => {
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         return res.send(output);
     } catch (err) {
+        const src = String(req.query.src || '').trim();
+        if (/^https?:\/\//i.test(src)) {
+            console.warn('Image proxy remote fetch failed, redirecting to origin:', err && err.message ? err.message : err);
+            return res.redirect(302, src);
+        }
         console.error('Image proxy error:', err && err.message ? err.message : err);
         return res.status(500).send('Image processing failed');
     }

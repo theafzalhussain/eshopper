@@ -603,17 +603,24 @@ io.use((socket, next) => {
 
 // 🔴 SOCKET.IO CONNECTION & ROOM SETUP
 io.on('connection', (socket) => {
-    const userRoom = `user:${socket.data.userId}`;
+    const userId = String(socket.data.userId || '').trim();
+    if (!userId) {
+        socket.emit('connected', { ok: true, room: null });
+        console.log('ℹ️ Socket connected without userId');
+        return;
+    }
+
+    const userRoom = `user:${userId}`;
     socket.join(userRoom);
     
     // Join admin room if admin-dashboard connection
-    if (socket.data.userId === 'admin-dashboard') {
+    if (userId === 'admin-dashboard') {
         socket.join('admin:dashboard');
-        console.log(`✅ Admin Dashboard connected to room admin:dashboard`);
+        console.log('✅ Admin Dashboard connected to room admin:dashboard');
     }
     
     socket.emit('connected', { ok: true, room: userRoom });
-    console.log(`✅ User ${socket.data.userId} connected to room ${userRoom}`);
+    console.log(`✅ User ${userId} connected to room ${userRoom}`);
 
     // 🛒 CART: UPDATE QUANTITY (Real-time without loading)
     socket.on('cart:update-quantity', async (data) => {
@@ -744,7 +751,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log(`❌ User ${socket.data.userId} disconnected`);
+        const disconnectedUserId = String(socket.data.userId || '').trim();
+        if (disconnectedUserId) {
+            console.log(`❌ User ${disconnectedUserId} disconnected`);
+        }
     });
 });
 
