@@ -3907,6 +3907,7 @@ const placeOrderHandler = async (req, res) => {
         await user.save();
 
         await Checkout.create({
+            user: user._id,
             userid: userId,
             paymentmode: paymentMethod || 'COD',
             orderstatus: 'Order Placed',
