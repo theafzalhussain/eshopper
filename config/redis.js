@@ -1,10 +1,42 @@
 const Redis = require('ioredis');
 
 let redisClient = null;
+let redisDisabled = false;
+let redisDisabledReason = '';
 
-const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
+const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
+const AUTH_ERROR_PATTERN = /\b(NOAUTH|WRONGPASS|authentication required|AUTH failed)\b/i;
+
+const isTruthy = (value) => /^(true|1|yes)$/i.test(String(value || '').trim());
+
+const disableRedisClient = (reason, err) => {
+  if (redisDisabled) return;
+
+  redisDisabled = true;
+  redisDisabledReason = reason || 'Redis disabled';
+
+  if (redisClient) {
+    try {
+      redisClient.removeAllListeners();
+      redisClient.disconnect();
+    } catch (disconnectErr) {
+      // ignore disconnect cleanup errors
+    }
+  }
+
+  redisClient = null;
+
+  if (err && err.message) {
+    console.warn(`${redisDisabledReason}:`, err.message);
+  } else {
+    console.warn(redisDisabledReason);
+  }
+};
+
+const buildRedisOptions = (redisUrl, redisPassword, redisUsername, useTls) => {
   const opts = { maxRetriesPerRequest: null };
   if (useTls) opts.tls = {};
+  const effectiveUsername = redisUsername || (redisPassword ? 'default' : '');
 
   try {
     if (/^redis(s)?:\/\//i.test(redisUrl) || /^rediss?:\/\//i.test(redisUrl)) {
@@ -14,6 +46,7 @@ const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
       opts.host = parsed.hostname;
       opts.port = Number(parsed.port || 6379);
       if (urlUsername) opts.username = urlUsername;
+      else if (effectiveUsername) opts.username = effectiveUsername;
       if (urlPassword) opts.password = urlPassword;
       else if (redisPassword) opts.password = redisPassword;
       return opts;
@@ -22,6 +55,7 @@ const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
     const parts = redisUrl.split(':');
     opts.host = parts[0];
     opts.port = Number(parts[1] || 6379);
+    if (effectiveUsername) opts.username = effectiveUsername;
     if (redisPassword) opts.password = redisPassword;
     return opts;
   } catch (err) {
@@ -31,9 +65,16 @@ const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
 
 function createClient() {
   if (redisClient) return redisClient;
+  if (redisDisabled) return null;
+  if (!REDIS_ENABLED) {
+    redisDisabled = true;
+    redisDisabledReason = 'Redis disabled via REDIS_ENABLED=false';
+    return null;
+  }
 
   const redisUrl = (process.env.REDIS_URL || '').trim();
   const redisPassword = process.env.REDIS_PASSWORD || process.env.REDIS_PASS || '';
+  const redisUsername = process.env.REDIS_USERNAME || process.env.REDIS_USER || '';
 
   if (!redisUrl) {
     console.warn('Redis not configured: REDIS_URL missing');
@@ -45,20 +86,39 @@ function createClient() {
 
   // support full host:port or a full redis:// url
   try {
-    const redisOpts = buildRedisOptions(redisUrl, redisPassword, useTls);
+    const redisOpts = buildRedisOptions(redisUrl, redisPassword, redisUsername, useTls);
     if (!redisOpts) {
       throw new Error('Invalid REDIS_URL format');
+    }
+
+    if (!redisOpts.password && !isTruthy(process.env.REDIS_ALLOW_UNAUTHENTICATED)) {
+      disableRedisClient('Redis credentials are missing; skipping Redis client to avoid auth errors');
+      return null;
     }
 
     if (!redisOpts.password) {
       console.warn('Redis password is missing. Set REDIS_PASSWORD or use a redis:// URL with credentials to avoid NOAUTH errors.');
     }
 
-    redisClient = new Redis(redisOpts);
+    redisClient = new Redis({
+      ...redisOpts,
+      lazyConnect: true,
+      connectTimeout: Number(process.env.REDIS_CONNECT_TIMEOUT || 5000),
+      retryStrategy(times) {
+        if (redisDisabled) return null;
+        return times >= 2 ? null : 200;
+      }
+    });
 
     redisClient.on('connect', () => console.log('Redis connected'));
     redisClient.on('ready', () => console.log('Redis ready'));
-    redisClient.on('error', (err) => console.warn('Redis error:', err && err.message));
+    redisClient.on('error', (err) => {
+      if (AUTH_ERROR_PATTERN.test(err && err.message ? err.message : '')) {
+        disableRedisClient('Redis authentication failed', err);
+        return;
+      }
+      console.warn('Redis error:', err && err.message);
+    });
   } catch (err) {
     console.warn('Failed to create Redis client:', err && err.message);
     redisClient = null;
@@ -110,5 +170,7 @@ module.exports = {
   get,
   set,
   del,
-  client: () => redisClient
+  client: () => redisClient,
+  isDisabled: () => redisDisabled,
+  disabledReason: () => redisDisabledReason
 };

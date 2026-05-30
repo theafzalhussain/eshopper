@@ -2543,6 +2543,13 @@ const generateOrderId = async () => {
     return `${prefix}${String(nextNumber).padStart(4, '0')}`;
 };
 
+const toSafeNumber = (value, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const isDuplicateKeyError = (error) => error?.code === 11000 || /E11000/i.test(String(error?.message || ''));
+
 const ensureOutForDeliveryOtp = async (orderDoc = null) => {
     if (!orderDoc) return null;
 
@@ -3717,6 +3724,10 @@ const placeOrderHandler = async (req, res) => {
             return res.status(400).json({ message: 'userId and products are required' });
         }
 
+        if (!mongoose.Types.ObjectId.isValid(String(userId))) {
+            return res.status(400).json({ message: 'Invalid userId. Please sign in again and retry checkout.' });
+        }
+
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -3738,30 +3749,31 @@ const placeOrderHandler = async (req, res) => {
                 qty: safeQty,
                 quantity: safeQty,
                 price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
-                total: Number(item?.total ?? item?.lineTotal ?? (safeQty * (Number.isFinite(normalizedPrice) ? normalizedPrice : 0))),
+                total: toSafeNumber(item?.total ?? item?.lineTotal ?? (safeQty * (Number.isFinite(normalizedPrice) ? normalizedPrice : 0))),
                 size: item.size || '',
                 color: item.color || '',
                 pic: item.pic || item.pic1 || ''
             };
         });
 
-        const orderId = await generateOrderId();
+         let orderId = await generateOrderId();
         const orderDate = new Date();
         const estimatedArrival = new Date(orderDate);
  const deliveryDays = deliverySpeed === 'express' ? 2 : 5;
         estimatedArrival.setDate(orderDate.getDate() + deliveryDays);
 
-        const total = Number(totalAmount ?? cleanProducts.reduce((sum, item) => sum + item.total, 0));
-        const shipping = Number(shippingAmount ?? ((total > 0 && total < 1000) ? 150 : 0));
-        const gst = Math.max(0, Number(gstAmount || 0));
-        const baseDiscount = Math.max(0, Number(discountAmount || 0));
-        const safeGiftWrapCharge = Math.max(0, Number(giftWrapCharge || 0));
-        const safeProtectionCharge = Math.max(0, Number(protectionCharge || 0));
-        const safeEcoCharge = Math.max(0, Number(ecoCharge || 0));
-        const safePaymentFee = Math.max(0, Number(paymentFee || 0));
+        const derivedTotal = cleanProducts.reduce((sum, item) => sum + toSafeNumber(item.total), 0);
+        const total = toSafeNumber(totalAmount, derivedTotal);
+        const shipping = toSafeNumber(shippingAmount, ((total > 0 && total < 1000) ? 150 : 0));
+        const gst = Math.max(0, toSafeNumber(gstAmount, 0));
+        const baseDiscount = Math.max(0, toSafeNumber(discountAmount, 0));
+        const safeGiftWrapCharge = Math.max(0, toSafeNumber(giftWrapCharge, 0));
+        const safeProtectionCharge = Math.max(0, toSafeNumber(protectionCharge, 0));
+        const safeEcoCharge = Math.max(0, toSafeNumber(ecoCharge, 0));
+        const safePaymentFee = Math.max(0, toSafeNumber(paymentFee, 0));
         const computedExtraCharges = safeGiftWrapCharge + safeProtectionCharge + safeEcoCharge + safePaymentFee;
-        const safeExtraCharges = Math.max(0, Number(extraCharges ?? computedExtraCharges));
-        const safePreDiscountTotal = Math.max(0, Number(preDiscountTotal ?? (total + shipping + gst + safeExtraCharges)));
+        const safeExtraCharges = Math.max(0, toSafeNumber(extraCharges, computedExtraCharges));
+        const safePreDiscountTotal = Math.max(0, toSafeNumber(preDiscountTotal, (total + shipping + gst + safeExtraCharges)));
         let validCouponCode = '';
         let validCouponDiscount = 0;
 
@@ -3816,7 +3828,7 @@ const placeOrderHandler = async (req, res) => {
             validCouponDiscount = Math.max(0, Number(couponDiscount || 0));
         }
 
-        const payable = Math.max(0, Number(finalAmount ?? (total + shipping - validCouponDiscount)));
+        const payable = Math.max(0, toSafeNumber(finalAmount, (total + shipping - validCouponDiscount)));
         // const payable = Math.max(0, Number(finalAmount ?? (total + shipping + gst + safeExtraCharges - baseDiscount - validCouponDiscount)));
 
         const addressPayload = shippingAddress || {
@@ -3829,41 +3841,53 @@ const placeOrderHandler = async (req, res) => {
             country: 'India'
         };
 
-        const orderDoc = await Order.create({
-            orderId,
-            userid: userId,
-            userName: user.name || '',
-            userEmail: user.email || '',
-            paymentMethod: paymentMethod || 'COD',
-            paymentStatus: paymentStatus || ((paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid'),
-            paidAt: paidAt || (((paymentMethod || 'COD') === 'COD') ? null : new Date()),
-            razorpayOrderId: razorpayOrderId || '',
-            razorpayPaymentId: razorpayPaymentId || '',
-            razorpaySignature: razorpaySignature || '',
-            orderStatus: 'Order Placed',
-            totalAmount: total,
-            shippingAmount: shipping,
-            finalAmount: payable,
-            couponCode: validCouponCode,
-            couponDiscount: validCouponDiscount,
-            discountAmount: baseDiscount,
-            gstAmount: gst,
-            giftWrapCharge: safeGiftWrapCharge,
-            protectionCharge: safeProtectionCharge,
-            ecoCharge: safeEcoCharge,
-            paymentFee: safePaymentFee,
-            extraCharges: safeExtraCharges,
-            preDiscountTotal: safePreDiscountTotal,
-            shippingAddress: addressPayload,
-            products: cleanProducts,
-            estimatedArrival,
-            statusHistory: [{
-                status: 'Ordered',
-                timestamp: orderDate,
-                message: 'Order placed successfully'
-            }],
-            orderDate
-        });
+        let orderDoc = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+                orderDoc = await Order.create({
+                    orderId,
+                    userid: userId,
+                    userName: user.name || '',
+                    userEmail: user.email || '',
+                    paymentMethod: paymentMethod || 'COD',
+                    paymentStatus: paymentStatus || ((paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid'),
+                    paidAt: paidAt || (((paymentMethod || 'COD') === 'COD') ? null : new Date()),
+                    razorpayOrderId: razorpayOrderId || '',
+                    razorpayPaymentId: razorpayPaymentId || '',
+                    razorpaySignature: razorpaySignature || '',
+                    orderStatus: 'Order Placed',
+                    totalAmount: total,
+                    shippingAmount: shipping,
+                    finalAmount: payable,
+                    couponCode: validCouponCode,
+                    couponDiscount: validCouponDiscount,
+                    discountAmount: baseDiscount,
+                    gstAmount: gst,
+                    giftWrapCharge: safeGiftWrapCharge,
+                    protectionCharge: safeProtectionCharge,
+                    ecoCharge: safeEcoCharge,
+                    paymentFee: safePaymentFee,
+                    extraCharges: safeExtraCharges,
+                    preDiscountTotal: safePreDiscountTotal,
+                    shippingAddress: addressPayload,
+                    products: cleanProducts,
+                    estimatedArrival,
+                    statusHistory: [{
+                        status: 'Ordered',
+                        timestamp: orderDate,
+                        message: 'Order placed successfully'
+                    }],
+                    orderDate
+                });
+                break;
+            } catch (createErr) {
+                if (attempt < 2 && isDuplicateKeyError(createErr)) {
+                    orderId = await generateOrderId();
+                    continue;
+                }
+                throw createErr;
+            }
+        }
 
         const nextTotalOrders = Number(user.totalOrders || 0) + 1;
         user.totalOrders = nextTotalOrders;

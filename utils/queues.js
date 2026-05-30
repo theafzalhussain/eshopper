@@ -1,5 +1,6 @@
 const BULLMQ_ENABLED = String(process.env.BULLMQ_ENABLED || 'true').toLowerCase() !== 'false';
 const WORKERS_ENABLED = String(process.env.BULLMQ_WORKERS_ENABLED || 'true').toLowerCase() !== 'false';
+const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
 
 const { createClient: createRedisClient } = require('../config/redis');
 const IORedis = require('ioredis');
@@ -27,6 +28,7 @@ const isBullMQEnabled = () => BULLMQ_ENABLED;
 const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
     const opts = { maxRetriesPerRequest: null };
     if (useTls) opts.tls = {};
+    const effectiveUsername = process.env.REDIS_WORKER_USERNAME || process.env.REDIS_USERNAME || process.env.REDIS_USER || (redisPassword ? 'default' : '');
 
     try {
         if (/^redis(s)?:\/\//i.test(redisUrl) || /^rediss?:\/\//i.test(redisUrl)) {
@@ -36,6 +38,7 @@ const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
             opts.host = parsed.hostname;
             opts.port = Number(parsed.port || 6379);
             if (urlUsername) opts.username = urlUsername;
+            else if (effectiveUsername) opts.username = effectiveUsername;
             if (urlPassword) opts.password = urlPassword;
             else if (redisPassword) opts.password = redisPassword;
             return opts;
@@ -44,6 +47,7 @@ const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
         const parts = redisUrl.split(':');
         opts.host = parts[0];
         opts.port = Number(parts[1] || 6379);
+        if (effectiveUsername) opts.username = effectiveUsername;
         if (redisPassword) opts.password = redisPassword;
         return opts;
     } catch (err) {
@@ -53,6 +57,7 @@ const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
 
 const initializeQueues = (processors = {}) => {
     if (!isBullMQEnabled()) return null;
+    if (!REDIS_ENABLED) return null;
     if (initialized) return { queues, schedulers, workers };
 
     processorsMap = { ...processors };
