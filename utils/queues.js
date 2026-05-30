@@ -1,12 +1,19 @@
 const BULLMQ_ENABLED = String(process.env.BULLMQ_ENABLED || 'true').toLowerCase() !== 'false';
 const WORKERS_ENABLED = String(process.env.BULLMQ_WORKERS_ENABLED || 'true').toLowerCase() !== 'false';
 
+const { createClient: createRedisClient } = require('../config/redis');
+const IORedis = require('ioredis');
+let redisConnection = null;
+let workerRedisConnection = null;
+
 const QUEUE_NAMES = {
-    email: 'eshopper:email',
-    refund: 'eshopper:refund',
-    report: 'eshopper:report',
-    image: 'eshopper:image'
+    email: 'eshopper-email',
+    refund: 'eshopper-refund',
+    report: 'eshopper-report',
+    image: 'eshopper-image'
 };
+
+const { Queue, Worker } = require('bullmq');
 
 let queues = null;
 let schedulers = null;
@@ -23,6 +30,77 @@ const initializeQueues = (processors = {}) => {
 
     processorsMap = { ...processors };
 
+    // Try to create Redis connections
+    try {
+        // main connection (used by Queue clients)
+        redisConnection = createRedisClient();
+        // create a separate connection for workers/schedulers to avoid connection sharing issues
+        const redisUrl = (process.env.REDIS_WORKER_URL || process.env.REDIS_URL || '').trim();
+        const redisPassword = process.env.REDIS_WORKER_PASSWORD || process.env.REDIS_PASSWORD || process.env.REDIS_PASS || '';
+        const useTls = /^rediss:\/\//i.test(redisUrl) || String(process.env.REDIS_TLS || '').toLowerCase() === 'true' || String(process.env.REDIS_TLS || '') === '1';
+        if (redisUrl) {
+            if (/^redis(s)?:\/\//i.test(redisUrl) || /^rediss?:\/\//i.test(redisUrl)) {
+                const opts = { password: redisPassword || undefined, maxRetriesPerRequest: null };
+                if (useTls) opts.tls = {};
+                workerRedisConnection = new IORedis(redisUrl, opts);
+            } else {
+                const parts = redisUrl.split(':');
+                const opts = { host: parts[0], port: Number(parts[1] || 6379), maxRetriesPerRequest: null };
+                if (redisPassword) opts.password = redisPassword;
+                if (useTls) opts.tls = {};
+                workerRedisConnection = new IORedis(opts);
+            }
+        } else {
+            // fallback to another client instance using same defaults
+            workerRedisConnection = createRedisClient();
+        }
+    } catch (err) {
+        console.warn('Redis connection for BullMQ failed:', err && err.message);
+        redisConnection = null;
+        workerRedisConnection = null;
+    }
+
+    if (redisConnection) {
+        try {
+            const clientConn = redisConnection;
+            const workerConn = workerRedisConnection || redisConnection;
+
+            queues = {
+                email: new Queue(QUEUE_NAMES.email, { connection: clientConn }),
+                refund: new Queue(QUEUE_NAMES.refund, { connection: clientConn }),
+                report: new Queue(QUEUE_NAMES.report, { connection: clientConn }),
+                image: new Queue(QUEUE_NAMES.image, { connection: clientConn })
+            };
+
+            // QueueScheduler may not be available in some environments; omit schedulers if unavailable
+            schedulers = {};
+
+            workers = {};
+            if (WORKERS_ENABLED) {
+                for (const key of Object.keys(queues)) {
+                    const queueKey = key;
+                    const processor = processorsMap[queueKey];
+                    if (typeof processor === 'function') {
+                        workers[queueKey] = new Worker(
+                            QUEUE_NAMES[queueKey],
+                            async (job) => processor(job),
+                            { connection: workerConn }
+                        );
+                    }
+                }
+            }
+
+            initialized = true;
+            usingRedisBackend = true;
+            console.log('✅ BullMQ initialized with Redis backend');
+            return { queues, schedulers, workers };
+        } catch (err) {
+            console.warn('BullMQ init with Redis failed, falling back to in-process:', err && err.message);
+            redisConnection = null;
+        }
+    }
+
+    // Fallback in-process queue behavior
     const createFallbackQueue = (queueName) => ({
         add: async (jobName, payload) => {
             const processor = processorsMap[queueName];
@@ -32,10 +110,10 @@ const initializeQueues = (processors = {}) => {
     });
 
     queues = {
-        email: createFallbackQueue(QUEUE_NAMES.email),
-        refund: createFallbackQueue(QUEUE_NAMES.refund),
-        report: createFallbackQueue(QUEUE_NAMES.report),
-        image: createFallbackQueue(QUEUE_NAMES.image)
+        email: createFallbackQueue('email'),
+        refund: createFallbackQueue('refund'),
+        report: createFallbackQueue('report'),
+        image: createFallbackQueue('image')
     };
     schedulers = {};
     workers = {};
@@ -54,7 +132,13 @@ const enqueueJob = async (queueName, payload, options = {}) => {
     if (!isBullMQEnabled()) return null;
     const queue = getQueue(queueName);
     if (!queue) return null;
-    return queue.add(queueName, payload, options);
+    try {
+        // bullmq Queue.add signature: add(name, data, opts)
+        return queue.add(queueName, payload, options);
+    } catch (err) {
+        console.warn('enqueueJob error:', err && err.message);
+        return null;
+    }
 };
 
 module.exports = {

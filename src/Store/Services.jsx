@@ -277,13 +277,13 @@ export const createBrandAPI = (d) => fastAPI(API_ENDPOINTS.BRAND, "POST", d);
 export const updateBrandAPI = (d) => fastAPI(`${API_ENDPOINTS.BRAND}/${getID(d)}`, "PUT", d);
 export const deleteBrandAPI = (d) => fastAPI(`${API_ENDPOINTS.BRAND}/${getID(d)}`, "DELETE");
 
-export const getCartAPI = (userId) => fastAPI(`${API_ENDPOINTS.CART}?userId=${userId}`);
+export const getCartAPI = (userId) => fastAPI(`${API_ENDPOINTS.CART}?userId=${userId}`, "GET", null, 0, null, { noCache: true });
 export const createCartAPI = (d) => fastAPI(API_ENDPOINTS.CART, "POST", d);
 export const updateCartAPI = (d) => fastAPI(`${API_ENDPOINTS.CART}/${getID(d)}`, "PUT", d);
 export const deleteCartAPI = (d) => fastAPI(`${API_ENDPOINTS.CART}/${getID(d)}`, "DELETE");
 export const clearUserCartAPI = (userid) => fastAPI(`${API_ENDPOINTS.CLEAR_CART}/${userid}`, "POST");
 
-export const getWishlistAPI = (userId) => fastAPI(`${API_ENDPOINTS.WISHLIST}?userId=${userId}`);
+export const getWishlistAPI = (userId) => fastAPI(`${API_ENDPOINTS.WISHLIST}?userId=${userId}`, "GET", null, 0, null, { noCache: true });
 export const createWishlistAPI = (d) => fastAPI(API_ENDPOINTS.WISHLIST, "POST", d);
 export const updateWishlistAPI = (d) => fastAPI(`${API_ENDPOINTS.WISHLIST}/${getID(d)}`, "PUT", d);
 export const deleteWishlistAPI = (d) => fastAPI(`${API_ENDPOINTS.WISHLIST}/${getID(d)}`, "DELETE");

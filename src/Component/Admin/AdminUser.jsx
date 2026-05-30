@@ -96,6 +96,9 @@ export default function AdminUsers() {
             console.log('Membership update response:', response.data);
             // Let the background refetch silently so we get enriched details too
             fetchAdminUsers()
+            window.dispatchEvent(new CustomEvent('membership-updated', {
+                detail: { userId, membershipType }
+            }))
             // Small delay to ensure state updates are processed
             setTimeout(() => {
                 console.log('Membership update completed for user:', userId);

@@ -32,8 +32,10 @@ const { jsPDF } = require('jspdf');
 require('jspdf-autotable');
 const QRCode = require('qrcode');
 const compression = require('compression');
+const { createClient: createRedisClient } = require('./config/redis');
 const { sendOrderStatus, registerTemplatePartials } = require('./mailController');
 const Activity = require('./models/Activity');
+const { clearCache } = require('./utils/cache');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -56,6 +58,16 @@ app.use(express.json());
 app.use(compression()); // ✅ Payload size reduced by 70%
 app.use(express.urlencoded({ extended: true }));
 app.set('trust proxy', 1);
+
+// Initialize Redis client (optional). Configure using REDIS_URL and REDIS_PASSWORD in your environment.
+try {
+    const redisClient = createRedisClient();
+    if (redisClient) {
+        app.set('redisClient', redisClient);
+    }
+} catch (redisInitErr) {
+    console.warn('Redis init skipped:', redisInitErr && redisInitErr.message);
+}
 
 const allowedOrigins = [
     String(process.env.FRONTEND_URL || '').trim().replace(/\/$/, ''),
@@ -3477,6 +3489,7 @@ app.post('/coupon', async (req, res) => {
     try {
         const doc = new Coupon(req.body);
         await doc.save();
+        try { await clearCache('__express__/coupon'); await clearCache('/api/chatbot/knowledge'); } catch(e){/*ignore*/}
         res.status(201).json(doc);
     } catch (e) {
         res.status(400).json({ message: 'Failed to create coupon', error: e.message });
@@ -3487,6 +3500,7 @@ app.put('/coupon/:id', async (req, res) => {
     try {
         const d = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!d) return res.status(404).json({ message: 'Coupon not found' });
+        try { await clearCache('__express__/coupon'); await clearCache('/api/chatbot/knowledge'); } catch(e){/*ignore*/}
         res.json(d);
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -3527,6 +3541,7 @@ app.delete('/coupon/:id', async (req, res) => {
     try {
         const d = await Coupon.findByIdAndDelete(req.params.id);
         if (!d) return res.status(404).json({ message: 'Coupon not found' });
+        try { await clearCache('__express__/coupon'); await clearCache('/api/chatbot/knowledge'); } catch(e){/*ignore*/}
         res.json({ result: 'Deleted', doc: d });
     } catch (e) {
         res.status(500).json({ error: 'Failed to delete', message: e.message });
@@ -3576,6 +3591,21 @@ compatModels.forEach(({ path, Model }) => {
         try {
             const doc = new Model(req.body);
             await doc.save();
+            // Invalidate caches for brand/category/coupon changes
+            try {
+                const modelName = (Model && Model.modelName) ? String(Model.modelName).toLowerCase() : String(path).toLowerCase();
+                if (['brand', 'maincategory', 'subcategory', 'coupon'].includes(modelName)) {
+                    await Promise.allSettled([
+                        clearCache('__express__/brand'),
+                        clearCache('__express__/maincategory'),
+                        clearCache('__express__/subcategory'),
+                        clearCache('__express__/coupon'),
+                        clearCache('/api/chatbot/knowledge')
+                    ]);
+                }
+            } catch (cacheErr) {
+                console.warn('Cache invalidation failed after create:', cacheErr && cacheErr.message);
+            }
             res.status(201).json(doc);
         } catch (e) {
             res.status(400).json({ message: 'Failed to create', error: e.message });
@@ -3586,6 +3616,20 @@ compatModels.forEach(({ path, Model }) => {
         try {
             const doc = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
             if (!doc) return res.status(404).json({ message: 'Not found' });
+            try {
+                const modelName = (Model && Model.modelName) ? String(Model.modelName).toLowerCase() : String(path).toLowerCase();
+                if (['brand', 'maincategory', 'subcategory', 'coupon'].includes(modelName)) {
+                    await Promise.allSettled([
+                        clearCache('__express__/brand'),
+                        clearCache('__express__/maincategory'),
+                        clearCache('__express__/subcategory'),
+                        clearCache('__express__/coupon'),
+                        clearCache('/api/chatbot/knowledge')
+                    ]);
+                }
+            } catch (cacheErr) {
+                console.warn('Cache invalidation failed after update:', cacheErr && cacheErr.message);
+            }
             res.json(doc);
         } catch (e) {
             res.status(400).json({ message: 'Failed to update', error: e.message });
@@ -3596,6 +3640,20 @@ compatModels.forEach(({ path, Model }) => {
         try {
             const doc = await Model.findByIdAndDelete(req.params.id);
             if (!doc) return res.status(404).json({ message: 'Not found' });
+            try {
+                const modelName = (Model && Model.modelName) ? String(Model.modelName).toLowerCase() : String(path).toLowerCase();
+                if (['brand', 'maincategory', 'subcategory', 'coupon'].includes(modelName)) {
+                    await Promise.allSettled([
+                        clearCache('__express__/brand'),
+                        clearCache('__express__/maincategory'),
+                        clearCache('__express__/subcategory'),
+                        clearCache('__express__/coupon'),
+                        clearCache('/api/chatbot/knowledge')
+                    ]);
+                }
+            } catch (cacheErr) {
+                console.warn('Cache invalidation failed after delete:', cacheErr && cacheErr.message);
+            }
             res.json({ result: 'Deleted', doc });
         } catch (e) {
             res.status(400).json({ message: 'Failed to delete', error: e.message });
@@ -3804,7 +3862,9 @@ const placeOrderHandler = async (req, res) => {
 
         const nextTotalOrders = Number(user.totalOrders || 0) + 1;
         user.totalOrders = nextTotalOrders;
-        user.membershipType = getMembershipTypeFromOrders(nextTotalOrders);
+        if (!user.isManualMembership) {
+            user.membershipType = getMembershipTypeFromOrders(nextTotalOrders);
+        }
         await user.save();
 
         await Checkout.create({
@@ -4067,10 +4127,10 @@ app.get('/api/membership/check', async (req, res) => {
 
         let user = null;
         if (mongoose.Types.ObjectId.isValid(userId)) {
-            user = await User.findById(userId).select('membershipType totalOrders name email');
+            user = await User.findById(userId).select('membershipType totalOrders isManualMembership name email');
         }
         if (!user) {
-            user = await User.findOne({ $or: [{ userid: userId }, { id: userId }] }).select('membershipType totalOrders name email');
+            user = await User.findOne({ $or: [{ userid: userId }, { id: userId }] }).select('membershipType totalOrders isManualMembership name email');
         }
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -4087,11 +4147,13 @@ app.get('/api/membership/check', async (req, res) => {
             Number(actualOrders || 0),
             Number(checkoutOrders || 0)
         );
-        const membershipType = getMembershipTypeFromOrders(totalOrders);
+        const computedMembershipType = getMembershipTypeFromOrders(totalOrders);
 
-        if (totalOrders !== storedOrders || user.membershipType !== membershipType) {
+        if (totalOrders !== storedOrders || (!user.isManualMembership && user.membershipType !== computedMembershipType)) {
             user.totalOrders = totalOrders;
-            user.membershipType = membershipType;
+            if (!user.isManualMembership) {
+                user.membershipType = computedMembershipType;
+            }
             await user.save();
         }
 
@@ -4100,7 +4162,7 @@ app.get('/api/membership/check', async (req, res) => {
             userId: user._id,
             name: user.name,
             email: user.email,
-            membershipType,
+            membershipType: user.isManualMembership ? user.membershipType : computedMembershipType,
             totalOrders
         });
     } catch (e) {
@@ -4125,6 +4187,7 @@ app.put('/api/admin/users/:id/membership', async (req, res) => {
         if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
         user.membershipType = normalizedType;
+        user.isManualMembership = true;
         if (normalizedType === 'Elite' && Number(user.totalOrders || 0) < 10) {
             user.totalOrders = 10;
         } else if (normalizedType === 'Gold' && Number(user.totalOrders || 0) < 5) {

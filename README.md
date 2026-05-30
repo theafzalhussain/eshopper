@@ -103,3 +103,61 @@ Keep both values in the backend environment only. Do not expose the secret to th
 ## BullMQ Queueing
 
 The backend uses an in-memory fallback queue for email, refund, and report jobs. No Redis configuration is required for local development.
+
+## Redis & BullMQ (Caching and Queues)
+
+This project supports Redis-backed HTTP response caching and BullMQ queues for background jobs. When Redis is configured, the app will:
+- Cache GET responses for product listings, searches, and processed images (via `/img` proxy).
+- Use BullMQ for email/refund/report/image jobs with a separate Redis connection for workers (recommended).
+
+Recommended environment variables:
+- `REDIS_URL` — your Redis host (e.g. faithful-microsteady-sweater-59212.db.redis.io:15258)
+- `REDIS_PASSWORD` — Redis password
+- `REDIS_WORKER_URL` (optional) — separate Redis URL for workers/schedulers
+- `REDIS_WORKER_PASSWORD` (optional) — password for worker Redis
+- `BULLMQ_ENABLED` — set to `false` to disable queues
+- `BULLMQ_WORKERS_ENABLED` — set to `false` to disable in-process workers
+
+Example `.env` entries:
+
+```
+REDIS_URL=faithful-microsteady-sweater-59212.db.redis.io:15258
+REDIS_PASSWORD=your_redis_password_here
+REDIS_WORKER_URL=faithful-microsteady-sweater-59212.db.redis.io:15258
+REDIS_WORKER_PASSWORD=your_redis_password_here
+BULLMQ_ENABLED=true
+BULLMQ_WORKERS_ENABLED=true
+```
+
+Smoke tests (curl) to verify cache HIT/MISS and BullMQ connectivity:
+
+- Check product list (first should be MISS, second should be HIT):
+
+```bash
+curl -i http://localhost:5000/product
+# repeat:
+curl -i http://localhost:5000/product
+```
+
+- Check image proxy (first MISS, second HIT):
+
+```bash
+curl -i "http://localhost:5000/img?src=/assets/productimages/example.jpg&w=400&q=80" > /dev/null
+curl -i "http://localhost:5000/img?src=/assets/productimages/example.jpg&w=400&q=80" > /dev/null
+```
+
+- Check BullMQ queues (enqueue test job via API or server bootstrap logs):
+
+If `BULLMQ_ENABLED=true` and `REDIS_URL` is set, server logs will show "BullMQ initialized with Redis backend" on startup. To test enqueue from Node REPL:
+
+```bash
+node -e "const { enqueueJob, QUEUE_NAMES } = require('./utils/queues'); enqueueJob('report', { days:7 }).then(console.log).catch(console.error)"
+```
+
+If you enable workers in production, prefer a separate `REDIS_WORKER_URL` to isolate scheduler and worker connections.
+
+Caching notes:
+- Product create/update/delete flows invalidate relevant caches automatically.
+- Image proxy caches transformed images for 30 days (stored in Redis as base64).
+
+Security: never commit real Redis credentials. Use `.env` or your hosting provider's secret management.
