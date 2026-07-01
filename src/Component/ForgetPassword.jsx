@@ -186,8 +186,11 @@ export default function ForgetPassword() {
             try {
                 setOtpStatus({ state: 'checking', message: 'Verifying OTP...' })
                 const res = await verifyOtpAPI({ identifier: data.identifier, otp: userOtp, type: 'forget' })
-                if (!cancelled && res?.verified) {
+                if (cancelled) return
+                if (res?.verified) {
                     setOtpStatus({ state: 'verified', message: 'OTP verified' })
+                } else {
+                    setOtpStatus({ state: 'invalid', message: res?.message || 'Invalid or expired OTP' })
                 }
             } catch (err) {
                 if (cancelled) return

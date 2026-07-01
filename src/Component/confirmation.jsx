@@ -968,6 +968,15 @@ export default function Confirmation() {
                         <div className='lux-item-meta'>
                           <span>Qty: {qty}</span> <span className="mx-2 text-muted">•</span> 
                           <span>SKU: {String(prodId).slice(0, 8).toUpperCase()}</span>
+                          {item.giftWrap && (
+                            <>
+                              <span className="mx-2 text-muted">•</span>
+                              <span style={{ color: '#a88a5a', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Gift Wrapped">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>
+                                Gift Wrapped
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className='lux-item-price'>{money(lineTotal)}</div>

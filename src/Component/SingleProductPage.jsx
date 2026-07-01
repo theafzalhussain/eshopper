@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import axios from 'axios';
 import { BASE_URL } from '../constants';
 import { useProductQuery, useProductsQuery } from '../queries/catalogQueries';
+import LazyImage from './LazyImage';
 
 /* ─── Mock data ─────────────────────────────────────────────────────────────── */
 const QA_LIST = [
@@ -1009,7 +1010,7 @@ export default function ProductDetail() {
               <div className="pd-gal-thumbs">
                 {displayPics.map((pic,i) => (
                   <div key={i} className={`pd-thumb${mainImg===pic?' on':''}`} onClick={() => switchImg(pic)}>
-                    <img src={pic} alt={`View ${i+1}`} />
+                    <LazyImage src={pic} alt={`View ${i+1}`} maxWidth={180} />
                   </div>
                 ))}
               </div>
@@ -1040,7 +1041,7 @@ export default function ProductDetail() {
                   </button>
                 </div>
 
-                <img src={mainImg} className={`pd-main-img${imgFade?' fade':''}`} alt={p.name} />
+                <LazyImage src={mainImg} className={`pd-main-img${imgFade?' fade':''}`} alt={p.name} maxWidth={1200} loading="eager" />
 
                 <div className="pd-dots">
                   {displayPics.map((pic,i) => (

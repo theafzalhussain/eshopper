@@ -6,6 +6,7 @@ let redisDisabledReason = '';
 
 const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
 const AUTH_ERROR_PATTERN = /\b(NOAUTH|WRONGPASS|authentication required|AUTH failed)\b/i;
+const CONNECTION_ERROR_PATTERN = /\b(getaddrinfo ENOTFOUND|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH)\b/i;
 
 const isTruthy = (value) => /^(true|1|yes)$/i.test(String(value || '').trim());
 
@@ -113,11 +114,16 @@ function createClient() {
     redisClient.on('connect', () => console.log('Redis connected'));
     redisClient.on('ready', () => console.log('Redis ready'));
     redisClient.on('error', (err) => {
-      if (AUTH_ERROR_PATTERN.test(err && err.message ? err.message : '')) {
+      const errorMessage = err && err.message ? err.message : '';
+      if (AUTH_ERROR_PATTERN.test(errorMessage)) {
         disableRedisClient('Redis authentication failed', err);
         return;
       }
-      console.warn('Redis error:', err && err.message);
+      if (CONNECTION_ERROR_PATTERN.test(errorMessage)) {
+        disableRedisClient('Redis connection failed; falling back to memory cache', err);
+        return;
+      }
+      console.warn('Redis error:', errorMessage);
     });
   } catch (err) {
     console.warn('Failed to create Redis client:', err && err.message);

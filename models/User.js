@@ -65,6 +65,12 @@ const userSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+// Indexes for common queries and admin filters
+// Note: `unique: true` above already creates indexes for email and username.
+// Keep composite and range indexes that help queries and admin filters.
+userSchema.index({ membershipType: 1, totalOrders: -1 });
+userSchema.index({ createdAt: -1 });
+
 userSchema.statics.calculateMembershipType = function(totalOrders = 0) {
     const orders = Number(totalOrders || 0);
     if (orders >= 10) return 'Elite';

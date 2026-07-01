@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { BASE_URL } from '../constants';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
+import LazyImage from './LazyImage';
 import VirtualProductGrid, { renderProductCard } from './Performance/VirtualProductGrid';
 import { useBrandsQuery, useMaincategoriesQuery, useProductsQuery, useSubcategoriesQuery } from '../queries/catalogQueries';
 import { getSocketClient } from './socketClient';
@@ -821,7 +822,7 @@ export default function Shop() {
                                 {recentlyViewed.map((r) => (
                                     <Link to={`/single-product/${r.id}`} key={r.id} className="mp-recent-card">
                                         <div className="mp-recent-img">
-                                            <img src={optimizeCloudinaryUrlAdvanced(r.pic1, { maxWidth: 280, crop: 'fill' })} alt={r.name} loading="lazy" />
+                                            <LazyImage src={r.pic1 || '/assets/images/noimage.png'} alt={r.name} maxWidth={280} />
                                         </div>
                                         <div className="mp-recent-body">
                                             <p className="mp-recent-brand">{r.brand}</p>
@@ -842,7 +843,7 @@ export default function Shop() {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
                             </button>
                             <div className="mp-qv-img">
-                                <img src={optimizeCloudinaryUrlAdvanced([quickView.pic1, quickView.pic, quickView.pic2, quickView.pic3, quickView.pic4].find(Boolean) || '', { maxWidth: 1200, crop: 'fill' })} alt={quickView.name} loading="eager" />
+                                <LazyImage src={[quickView.pic1, quickView.pic, quickView.pic2, quickView.pic3, quickView.pic4].find(Boolean) || ''} alt={quickView.name} maxWidth={1200} loading="eager" />
                             </div>
                             <div className="mp-qv-body">
                                 <p className="mp-qv-brand">{quickView.brand}</p>

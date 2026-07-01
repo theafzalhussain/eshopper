@@ -88,7 +88,8 @@ const normalizeProductRow = (product = {}, index = 0) => {
     quantity,
     unitPrice,
     lineTotal,
-    imageSrc
+    imageSrc,
+    giftWrap: Boolean(product?.giftWrap)
   };
 };
 
@@ -408,7 +409,15 @@ export default function OrderDetailsDrawer({ open, onClose, order, onOrderRemove
                                                 )}
                                                 <div className="lux-item-details">
                                                     <strong className="lux-item-name">{product.name}</strong>
-                                                    <span className="lux-item-qty">Qty {product.quantity} × {formatAmount(product.unitPrice)}</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                                        <span className="lux-item-qty">Qty {product.quantity} × {formatAmount(product.unitPrice)}</span>
+                                                        {product.giftWrap && (
+                                                            <span style={{ color: '#a88a5a', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px', background: 'rgba(212,175,55,0.08)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(212,175,55,0.3)' }} title="Gift Wrapped">
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></svg>
+                                                                Gift Wrapped
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="lux-item-price text-right">
                                                     {formatAmount(product.lineTotal)}

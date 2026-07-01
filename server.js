@@ -12,6 +12,8 @@ const imageProxy = require('./routes/imageProxy');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
+// Load profiler early to patch mongoose query execution (logs slow queries)
+try { require('./utils/mongooseQueryProfiler'); } catch(e) { console.warn('Mongoose profiler not loaded:', e && e.message); }
 const cors = require('cors');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -33,6 +35,7 @@ require('jspdf-autotable');
 const QRCode = require('qrcode');
 const compression = require('compression');
 const { createClient: createRedisClient } = require('./config/redis');
+const redisHelper = require('./config/redis');
 const { sendOrderStatus, registerTemplatePartials } = require('./mailController');
 const Activity = require('./models/Activity');
 const { clearCache } = require('./utils/cache');
@@ -58,6 +61,40 @@ app.use(express.json());
 app.use(compression()); // ✅ Payload size reduced by 70%
 app.use(express.urlencoded({ extended: true }));
 app.set('trust proxy', 1);
+
+// Serve frontend `build/` with aggressive caching in production
+try {
+    const isProd = String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+    const buildPath = path.join(__dirname, 'build');
+    if (isProd && fs.existsSync(buildPath)) {
+        app.use(express.static(buildPath, {
+            maxAge: '30d',
+            setHeaders: (res, filePath) => {
+                // Always avoid caching HTML index page (SPA) so clients get latest shell
+                if (filePath.endsWith('.html')) {
+                    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                } else if (/\.[0-9a-f]{8,}\./.test(filePath)) {
+                    // fingerprinted assets -> long immutable cache
+                    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+                } else {
+                    // other static assets: 30 days
+                    res.setHeader('Cache-Control', 'public, max-age=2592000');
+                }
+            }
+        }));
+
+        // SPA fallback for non-API routes (only in production)
+        app.get('*', (req, res, next) => {
+            if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
+            res.sendFile(path.join(buildPath, 'index.html'), (err) => {
+                if (err) next(err);
+            });
+        });
+        console.log('✅ Serving build/ with aggressive caching (production)');
+    }
+} catch (serveErr) {
+    console.warn('⚠️ Static build serving skipped:', serveErr && serveErr.message);
+}
 
 // UptimeRobot / platform health checks
 app.get(['/', '/healthz'], (req, res) => {
@@ -90,7 +127,8 @@ const extraAllowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
     .filter(Boolean);
 
 const isVercelPreviewOrigin = (origin = '') => /^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin);
-const isTrustedOrigin = (origin = '') => allowedOrigins.includes(origin) || extraAllowedOrigins.includes(origin) || isVercelPreviewOrigin(origin);
+const isPrivateNetworkOrigin = (origin = '') => /^https?:\/\/(localhost|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?::\d+)?$/i.test(origin);
+const isTrustedOrigin = (origin = '') => allowedOrigins.includes(origin) || extraAllowedOrigins.includes(origin) || isVercelPreviewOrigin(origin) || isPrivateNetworkOrigin(origin);
 
 const corsOptions = {
     origin(origin, callback) {
@@ -2964,20 +3002,17 @@ app.post('/api/auth-sync', async (req, res) => {
 
 app.post('/api/send-otp', authLimiter, async (req, res) => {
     try {
-        const { email, type } = req.body;
-        if (!email || !type) return res.status(400).json({ message: "Email and type are required." });
+        const { email, identifier, type } = req.body;
+        const rawEmail = String(email || identifier || '').trim();
+        if (!rawEmail || !type) return res.status(400).json({ message: "Email/username and type are required." });
 
-        const normalizedEmail = email.toLowerCase().trim();
+        const normalizedEmail = rawEmail.toLowerCase().trim();
         const normalizedType = String(type).toLowerCase().trim();
-        const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
-        if (!isValidEmail) {
-            return res.status(400).json({ message: "Invalid email format." });
-        }
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Forgot password must validate against registered email only.
+        // Forgot password accepts either a registered email or username, then sends OTP to the account email.
         if (normalizedType === 'forget') {
-            const forgetUser = await User.findOne({ email: normalizedEmail });
+            const forgetUser = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedEmail }] });
             if (!forgetUser) {
                 return res.status(404).json({ message: "Email is not registered." });
             }
@@ -2988,6 +3023,11 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
 
             await sendMail(forgetUser.email, otp);
             return res.json({ result: "Done", message: "OTP sent successfully" });
+        }
+
+        const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+        if (!isValidEmail) {
+            return res.status(400).json({ message: "Invalid email format." });
         }
 
         const user = await User.findOne({ $or: [{ email: normalizedEmail }, { username: normalizedEmail }] });
@@ -3011,11 +3051,47 @@ app.post('/api/send-otp', authLimiter, async (req, res) => {
     }
 });
 
+app.post('/api/verify-otp', authLimiter, async (req, res) => {
+    try {
+        const requestedIdentifier = String(req.body?.identifier || req.body?.username || req.body?.email || '').toLowerCase().trim();
+        const otp = String(req.body?.otp || '').replace(/\D/g, '').trim();
+
+        if (!requestedIdentifier || !otp) {
+            return res.json({ verified: false, message: "Email/username and OTP are required." });
+        }
+
+        const user = await User.findOne({ $or: [{ email: requestedIdentifier }, { username: requestedIdentifier }] });
+        const otpRecordEmail = String(user?.email || requestedIdentifier).toLowerCase().trim();
+        const otpRecord = await OTPRecord.findOne({ email: otpRecordEmail }).sort({ createdAt: -1 });
+
+        if (!user && !otpRecord) {
+            return res.json({ verified: false, message: "User not found." });
+        }
+
+        const storedOtp = String(user?.otp || otpRecord?.otp || '').trim();
+        const expiresAt = user?.otpExpires || (otpRecord?.createdAt ? new Date(new Date(otpRecord.createdAt).getTime() + 5 * 60000) : null);
+        const isOtpValid = storedOtp && expiresAt && Date.now() <= new Date(expiresAt).getTime() && storedOtp === otp;
+
+        if (!isOtpValid) {
+            return res.json({ verified: false, message: "Invalid or expired OTP." });
+        }
+
+        return res.json({ verified: true, message: "OTP verified successfully." });
+    } catch (e) {
+        console.error("❌ OTP Verify Error:", e.message);
+        return res.status(500).json({ verified: false, message: "Failed to verify OTP." });
+    }
+});
+
 app.post('/api/reset-password', authLimiter, async (req, res) => {
     try {
-        const searchTerm = req.body.username.toLowerCase().trim();
+        const searchTerm = String(req.body.username || req.body.email || req.body.identifier || '').toLowerCase().trim();
         const newPassword = req.body.password;
-        const otp = req.body.otp;
+        const otp = String(req.body.otp || '').replace(/\D/g, '').trim();
+
+        if (!searchTerm) {
+            return res.status(400).json({ message: "Email/username is required." });
+        }
 
         // 🔒 BACKEND PASSWORD VALIDATION
         if (!newPassword || newPassword.length < 8) {
@@ -3043,7 +3119,7 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
             return res.status(400).json({ message: "No OTP found. Please request a new code." });
         }
 
-        if (Date.now() > user.otpExpires) {
+        if (Date.now() > new Date(user.otpExpires).getTime()) {
             // Clean expired OTP
             user.otp = undefined;
             user.otpExpires = undefined;
@@ -4339,12 +4415,63 @@ app.get('/api/user', async (req, res) => {
 
 app.get('/api/products', async (req, res) => {
     try {
-        const query = String(req.query.query || '').toLowerCase().trim();
+        const q = String(req.query.query || '').trim();
+        const query = q.length ? q : null;
         const limit = Math.max(1, Math.min(24, Number(req.query.limit) || 6));
 
-        const products = await Product.find().sort({ _id: -1 }).lean();
+        // Build a MongoDB query object. Prefer text search when query is present
+        const mongoQuery = {};
+        const projection = {
+            name: 1,
+            maincategory: 1,
+            subcategory: 1,
+            brand: 1,
+            finalprice: 1,
+            pic1: 1,
+            pic2: 1,
+            pic3: 1,
+            pic4: 1,
+            rating: 1,
+            reviews: 1,
+            createdAt: 1
+        };
 
-        const normalized = products.map((p) => {
+        let cursor;
+        if (query) {
+            // Use text search if index exists, otherwise fallback to case-insensitive regex on name/brand/category
+            try {
+                cursor = Product.find({ $text: { $search: query } }, { score: { $meta: 'textScore' }, ...projection })
+                    .sort({ score: { $meta: 'textScore' }, _id: -1 })
+                    .limit(limit)
+                    .lean()
+                    .cache({ ttlMs: 60000 });
+            } catch (e) {
+                const re = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+                cursor = Product.find({ $or: [ { name: re }, { brand: re }, { maincategory: re }, { subcategory: re } ] }, projection)
+                    .sort({ _id: -1 })
+                    .limit(limit)
+                    .lean()
+                    .cache({ ttlMs: 60000 });
+            }
+        } else {
+            // no query — return latest products using the _id index and limit
+            cursor = Product.find(mongoQuery, projection).sort({ _id: -1 }).limit(limit).lean().cache({ ttlMs: 60000 });
+        }
+
+        // Try HTTP-level Redis cache first (shared across workers)
+        const cacheKey = `products:query:${q || '__all__'}:limit:${limit}`;
+        try {
+            const cached = await redisHelper.get(cacheKey);
+            if (cached && Array.isArray(cached.products)) {
+                return res.json({ products: cached.products.slice(0, limit) });
+            }
+        } catch (cacheErr) {
+            // ignore cache errors and continue to DB
+        }
+
+        const products = await cursor;
+
+        const normalized = (products || []).map((p) => {
             const data = typeof p.toObject === 'function' ? p.toObject() : p;
             return {
                 ...data,
@@ -4356,14 +4483,14 @@ app.get('/api/products', async (req, res) => {
             };
         });
 
-        const filtered = query
-            ? normalized.filter((item) => {
-                const bag = `${item.name || ''} ${item.maincategory || ''} ${item.subcategory || ''} ${item.brand || ''}`.toLowerCase();
-                return bag.includes(query);
-            })
-            : normalized;
+        // Cache the normalized products (short TTL)
+        try {
+            await redisHelper.set(cacheKey, { products: normalized }, 60);
+        } catch (cacheErr) {
+            // ignore
+        }
 
-        res.json({ products: filtered.slice(0, limit) });
+        res.json({ products: normalized.slice(0, limit) });
     } catch (e) {
         res.status(500).json({ message: 'Failed to fetch products', products: [] });
     }
@@ -5923,4 +6050,25 @@ mongoose.connection.on('disconnected', () => {
     }, 5000);
 });
 
-startServer();
+// Optional clustering: set `ENABLE_CLUSTER=true` to run multiple worker processes
+try {
+    const cluster = require('cluster');
+    const os = require('os');
+    const isMaster = cluster.isMaster || cluster.isPrimary || false;
+
+    if (String(process.env.ENABLE_CLUSTER || '').toLowerCase() === 'true' && isMaster) {
+        const numWorkers = Number(process.env.WEB_CONCURRENCY) || os.cpus().length || 1;
+        console.log(`🚦 Master process starting ${numWorkers} workers`);
+        for (let i = 0; i < numWorkers; i++) cluster.fork();
+
+        cluster.on('exit', (worker, code, signal) => {
+            console.warn(`⚠️ Worker ${worker.process.pid} exited (${code || signal}). Respawning...`);
+            try { cluster.fork(); } catch (e) { console.error('Cluster respawn failed:', e && e.message); }
+        });
+    } else {
+        startServer();
+    }
+} catch (clusterErr) {
+    console.warn('⚠️ Cluster setup skipped:', clusterErr && clusterErr.message);
+    startServer();
+}

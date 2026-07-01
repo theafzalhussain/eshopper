@@ -20,6 +20,7 @@ import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import axios from 'axios';
 import { BASE_URL } from '../constants';
 import { useToast } from './ToastNotification';
+import LazyImage from './LazyImage';
 
 // ─────────────────────────────────────────────
 // CONSTANTS
@@ -722,7 +723,7 @@ export default function Home() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05, duration: 0.5 }}
               >
-                <img src={optimizeCloudinaryUrlAdvanced(brand.img, { maxWidth: 400, crop: 'fill' })} alt={brand.name} className="hx-brand-img" loading="lazy" />
+                <LazyImage src={brand.img || '/assets/images/noimage.png'} alt={brand.name} className="hx-brand-img" maxWidth={400} />
                 <div className="hx-brand-overlay" />
                 <div className="hx-brand-content">
                   <h3 className="hx-brand-name">{brand.name}</h3>
@@ -783,12 +784,11 @@ export default function Home() {
                   {/* IMAGE AREA */}
                   <div className="hx-pcard-img-wrap">
                     <Link to={`/single-product/${item.id}`}>
-                      <img
-                        src={optimizeCloudinaryUrlAdvanced(item.pic1, { maxWidth: 500, crop: 'fill' })}
-                        loading="lazy"
-                        decoding="async"
+                      <LazyImage
+                        src={item.pic1 || '/assets/images/noimage.png'}
                         className="hx-pcard-img"
                         alt={item.name}
+                        maxWidth={500}
                       />
                     </Link>
 

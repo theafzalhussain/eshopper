@@ -1,0 +1,493 @@
+.return-wizard-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: 'Inter', sans-serif;
+}
+
+.rw-header {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.rw-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: color 0.2s;
+}
+
+.rw-back-btn:hover {
+    color: #0f172a;
+}
+
+.rw-header h2 {
+    font-size: 28px;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+    font-weight: 800;
+}
+
+.rw-header p {
+    color: #64748b;
+    margin: 0;
+    font-size: 15px;
+}
+
+/* Stepper */
+.rw-stepper {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.rw-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+}
+
+.rw-step-indicator {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    border: 2px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+}
+
+.rw-step.active .rw-step-indicator {
+    border-color: #0ea5e9;
+    color: #0ea5e9;
+    background: #f0f9ff;
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+}
+
+.rw-step.completed .rw-step-indicator {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+}
+
+.rw-step-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rw-step.active .rw-step-label {
+    color: #0f172a;
+}
+
+.rw-step-line {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background: #e2e8f0;
+    z-index: -1;
+}
+
+.rw-step.completed .rw-step-line {
+    background: #10b981;
+}
+
+/* Content Area */
+.rw-content-card {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    min-height: 400px;
+}
+
+.rw-section-title {
+    font-size: 20px;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+}
+
+.rw-section-subtitle {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0 0 24px 0;
+}
+
+/* Step 1: Products */
+.rw-product-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rw-product-item {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rw-product-item:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.rw-product-item.selected {
+    border-color: #0ea5e9;
+    background: #f0f9ff;
+}
+
+.rw-checkbox {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #cbd5e1;
+    border-radius: 6px;
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rw-product-item.selected .rw-checkbox {
+    background: #0ea5e9;
+    border-color: #0ea5e9;
+}
+
+.rw-product-img {
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-right: 16px;
+}
+
+.rw-product-details h4 {
+    margin: 0 0 4px 0;
+    color: #0f172a;
+    font-size: 16px;
+}
+
+.rw-product-details p {
+    margin: 0 0 4px 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.rw-price {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 15px;
+}
+
+/* Step 2: Reasons & Conditions */
+.rw-form-group {
+    margin-bottom: 24px;
+}
+
+.rw-form-group label {
+    display: block;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.rw-reason-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.rw-reason-chip {
+    padding: 10px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    background: white;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.rw-reason-chip:hover {
+    background: #f8fafc;
+}
+
+.rw-reason-chip.active {
+    background: #0f172a;
+    color: white;
+    border-color: #0f172a;
+}
+
+/* Radio Cards */
+.rw-radio-group {
+    display: flex;
+    gap: 16px;
+}
+
+.rw-radio-card {
+    flex: 1;
+    padding: 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rw-radio-card.active {
+    border-color: #0ea5e9;
+    background: #f0f9ff;
+    font-weight: 600;
+}
+
+/* Textarea */
+.rw-form-group textarea {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    outline: none;
+}
+
+.rw-form-group textarea:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+/* Step 3: Refund Cards */
+.rw-refund-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rw-refund-card {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.rw-refund-card:hover {
+    border-color: #cbd5e1;
+}
+
+.rw-refund-card.active {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.rw-rc-icon {
+    width: 48px;
+    height: 48px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    margin-right: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.rw-refund-card.active .rw-rc-icon {
+    color: #10b981;
+}
+
+.rw-rc-details {
+    flex: 1;
+}
+
+.rw-rc-details h4 {
+    margin: 0 0 4px 0;
+    color: #0f172a;
+    font-size: 16px;
+}
+
+.rw-rc-details p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.rw-rc-radio {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #cbd5e1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rw-refund-card.active .rw-rc-radio {
+    border-color: #10b981;
+}
+
+.rw-rc-radio .dot {
+    width: 12px;
+    height: 12px;
+    background: #10b981;
+    border-radius: 50%;
+}
+
+.rw-address-box {
+    background: #f8fafc;
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.6;
+}
+
+/* Step 4: Summary */
+.rw-summary-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.rw-summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 15px;
+    color: #475569;
+}
+
+.rw-summary-row strong {
+    color: #0f172a;
+}
+
+.rw-summary-divider {
+    height: 1px;
+    background: #cbd5e1;
+    margin: 16px 0;
+}
+
+.rw-total {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.rw-total strong {
+    color: #10b981;
+}
+
+.rw-disclaimer {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    color: #92400e;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Footer Actions */
+.rw-footer-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.rw-btn {
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.rw-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.rw-btn-outline {
+    background: white;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+}
+
+.rw-btn-outline:hover:not(:disabled) {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.rw-btn-primary {
+    background: #0f172a;
+    border: 1px solid #0f172a;
+    color: white;
+}
+
+.rw-btn-primary:hover:not(:disabled) {
+    background: #1e293b;
+}
+
+.rw-btn-success {
+    background: #10b981;
+    border: 1px solid #10b981;
+    color: white;
+}
+
+.rw-btn-success:hover:not(:disabled) {
+    background: #059669;
+}
+
+/* Loader */
+.wizard-loader, .wizard-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 50vh;
+    color: #64748b;
+    font-weight: 500;
+    gap: 16px;
+}

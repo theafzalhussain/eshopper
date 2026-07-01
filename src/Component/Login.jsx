@@ -22,6 +22,14 @@ export default function Login() {
     const [rememberMe, setRememberMe] = useState(false)
     const [autoLoginAttempted, setAutoLoginAttempted] = useState(false)
     const toast = useToast()
+
+    const getSafePicValue = (pic) => {
+        const value = String(pic || '').trim()
+        if (!value) return ''
+        if (value.startsWith('data:')) return ''
+        if (value.length > 1000) return ''
+        return value
+    }
     
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -43,8 +51,9 @@ export default function Login() {
                     localStorage.setItem("userid", user.id)
                     localStorage.setItem("role", user.role)
                     localStorage.setItem("username", user.username)
-                    if (user.pic) {
-                        localStorage.setItem("pic", user.pic)
+                    const safePic = getSafePicValue(user.pic)
+                    if (safePic) {
+                        localStorage.setItem("pic", safePic)
                     }
                     navigate(user.role === "Admin" ? "/admin-home" : "/profile")
                 }
@@ -97,8 +106,9 @@ export default function Login() {
             localStorage.removeItem('adminToken')
         }
 
-        if (user.pic) {
-            localStorage.setItem('pic', user.pic)
+        const safePic = getSafePicValue(user.pic)
+        if (safePic) {
+            localStorage.setItem('pic', safePic)
         } else {
             localStorage.removeItem('pic')
         }
@@ -110,7 +120,7 @@ export default function Login() {
                 name: resolvedName,
                 role: user.role || 'User',
                 email: user.email || '',
-                pic: user.pic || '',
+                pic: getSafePicValue(user.pic),
                 adminToken: adminToken || ''
             }
             localStorage.setItem('userToken', JSON.stringify(userToken))

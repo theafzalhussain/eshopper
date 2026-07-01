@@ -20,6 +20,9 @@ body {
   color: #fff;
   font-family: 'Roboto', Arial, sans-serif;
 }
+/* Ensure the app container has a non-static position so scroll
+   offset calculations (eg. Floating UI) work correctly. */
+#root { position: relative; }
 *, *::before, *::after {
   box-sizing: inherit;
 }

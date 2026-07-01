@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { optimizeCloudinaryUrlAdvanced } from '../../utils/cloudinaryHelper';
+import LazyImage from '../LazyImage';
 
 const SkeletonCard = memo(() => (
     <div className="mp-card mp-skel-card">
@@ -121,13 +122,13 @@ export const renderProductCard = ({
             </button>
 
             <Link to={`/single-product/${productId}`} className="mp-img-wrap" onClick={() => pushRecentlyViewed(item)}>
-                <img
-                    src={optimizeCloudinaryUrlAdvanced(mainImg, { maxWidth: 600, crop: 'fill' })}
+                <LazyImage
+                    src={mainImg || '/assets/images/noimage.png'}
                     loading={priority ? 'eager' : 'lazy'}
                     fetchpriority={priority ? 'high' : 'auto'}
-                    decoding="async"
                     className="mp-img"
                     alt={item.name}
+                    maxWidth={600}
                 />
                 {discount > 0 && <div className="mp-ribbon">✦ {discount}% OFF</div>}
                 <div className="mp-badges">

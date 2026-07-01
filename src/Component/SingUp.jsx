@@ -33,6 +33,14 @@ export default function SingUp() {
     const [passwordStrength, setPasswordStrength] = useState(null)
     const [showTerms, setShowTerms] = useState(false)
     const toast = useToast()
+
+    const getSafePicValue = (pic) => {
+        const value = String(pic || '').trim()
+        if (!value) return ''
+        if (value.startsWith('data:')) return ''
+        if (value.length > 1000) return ''
+        return value
+    }
     
     const navigate = useNavigate()
 
@@ -220,10 +228,9 @@ export default function SingUp() {
                 localStorage.setItem("role", backendUser.role || "User")
                 localStorage.setItem("username", backendUser.username)
                 localStorage.setItem("userToken", idToken)
-                if (backendUser.pic) {
-                    localStorage.setItem("pic", backendUser.pic)
-                } else if (user.photoURL) {
-                    localStorage.setItem("pic", user.photoURL)
+                const safePic = getSafePicValue(backendUser.pic || user.photoURL)
+                if (safePic) {
+                    localStorage.setItem("pic", safePic)
                 }
                 
                 toast.success("Welcome! Account created successfully!")
