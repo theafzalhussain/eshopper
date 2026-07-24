@@ -5,8 +5,6 @@ import { ADD_CART, ADD_CART_RED, CLEAR_CART, CLEAR_CART_RED, DELETE_CART, DELETE
 function* createCartSaga(action) {
     try {
         if (!action || !action.payload) return;
-        console.log("Cart Saga Payload:", action.payload); // Debug log
-        // Validate required fields before calling API
         const payload = action.payload || {};
         const productId = payload.productId || payload.productid || payload.product;
         const userId = payload.userId || payload.userid || payload.user;
@@ -15,14 +13,17 @@ function* createCartSaga(action) {
             try { window.dispatchEvent(new CustomEvent('eshopper:cart:error', { detail: { message: 'Missing userId or productId' } })); } catch (e) {}
             return;
         }
-        // Client-side sanity check for size/color: allow absence (product without variants),
-        // but block explicit empty strings which indicate missing selection.
         const hasSizeField = Object.prototype.hasOwnProperty.call(payload, 'size');
         const hasColorField = Object.prototype.hasOwnProperty.call(payload, 'color');
         if ((hasSizeField && (payload.size === '' || payload.size === null)) || (hasColorField && (payload.color === '' || payload.color === null))) {
             try { window.dispatchEvent(new CustomEvent('eshopper:cart:error', { detail: { message: 'Please select size and color before adding to cart.' } })); } catch (e) {}
             return;
         }
+
+        // Emit optimistic confirmation IMMEDIATELY (before API call)
+        try {
+            window.dispatchEvent(new CustomEvent('eshopper:cart:confirmed', { detail: { success: true, message: 'Added to cart', optimistic: true } }));
+        } catch (e) {}
 
         let response = yield createCartAPI(action.payload);
         if (!response) {
@@ -32,9 +33,8 @@ function* createCartSaga(action) {
         }
         const cartData = response.cart || response;
         yield put({ type: ADD_CART_RED, data: cartData });
-        // Refresh cart state to ensure all UI consumers have the latest data
         yield put({ type: GET_CART });
-        // Emit a browser event so UI can show server-confirmed toasts or handle success
+        // Emit final server-confirmed event
         try {
             window.dispatchEvent(new CustomEvent('eshopper:cart:confirmed', { detail: { success: true, message: (response && response.message) || 'Added to cart', cart: cartData } }));
         } catch (e) {}
@@ -66,6 +66,8 @@ function* deleteCartSaga(action) {
         }
         const cartData = response.cart || response;
         yield put({ type: DELETE_CART_RED, data: cartData });
+        // Re-fetch cart to ensure UI is in sync with backend
+        yield put({ type: GET_CART });
     } catch (e) { console.error("❌ Cart Delete Error:", e) }
 }
 
@@ -79,6 +81,8 @@ function* updateCartSaga(action) {
         }
         const cartData = response.cart || response;
         yield put({ type: UPDATE_CART_RED, data: cartData });
+        // Re-fetch cart to ensure UI is in sync with backend
+        yield put({ type: GET_CART });
     } catch (e) { console.error("❌ Cart Update Error:", e) }
 }
 

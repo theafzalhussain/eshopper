@@ -59,7 +59,7 @@ const MAX_CALLS_PER_MINUTE = 200;
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 
 const responseCache = new Map();
-const RESPONSE_CACHE_TTL_MS = 10 * 1000;
+const RESPONSE_CACHE_TTL_MS = 2 * 60 * 1000;
 
 const checkRateLimit = (endpoint) => {
     const now = Date.now();

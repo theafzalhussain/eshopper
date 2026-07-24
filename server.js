@@ -38,7 +38,7 @@ const { createClient: createRedisClient } = require('./config/redis');
 const redisHelper = require('./config/redis');
 const { sendOrderStatus, registerTemplatePartials } = require('./mailController');
 const Activity = require('./models/Activity');
-const { clearCache } = require('./utils/cache');
+const { clearCache, cacheMiddleware } = require('./utils/cache');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -3399,9 +3399,11 @@ const conditionalUpload = (req, res, next) => {
     return next();
 };
 
-const handle = (path, Model, useUpload = false) => {
-    // GET all or by query
-    app.get(path, async (req, res) => {
+const handle = (path, Model, useUpload = false, options = {}) => {
+    const skipCache = options.noCache === true;
+    // GET all or by query — cached 5 minutes for catalog data (skip for user-specific data)
+    const middlewares = skipCache ? [] : [cacheMiddleware(300)];
+    app.get(path, ...middlewares, async (req, res) => {
         try {
             if (req.query.id || req.query._id) {
                 const id = req.query.id || req.query._id;
@@ -3548,26 +3550,17 @@ const handle = (path, Model, useUpload = false) => {
 };
 
 
-handle('/user', User, true);
-handle('/product', Product, true);
-// Compatibility: GET /product returns all products (for frontend)
-app.get('/product', async (req, res) => {
-    try {
-        const products = await Product.find().sort({ createdAt: -1 }).lean();
-        res.json(products);
-    } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch products' });
-    }
-});
+handle('/user', User, true, { noCache: true });
+// Note: /product is handled by productRoutes mounted at line 1045 (with cache)
 handle('/maincategory', Maincategory);
 handle('/subcategory', Subcategory);
 handle('/brand', Brand);
-handle('/cart', Cart);
+handle('/cart', Cart, false, { noCache: true });
 handle('/coupon', Coupon);
-handle('/wishlist', Wishlist);
-handle('/api/wishlist', Wishlist);
-handle('/checkout', Checkout);
-handle('/contact', Contact);
+handle('/wishlist', Wishlist, false, { noCache: true });
+handle('/api/wishlist', Wishlist, false, { noCache: true });
+handle('/checkout', Checkout, false, { noCache: true });
+handle('/contact', Contact, false, { noCache: true });
 handle('/newslatter', Newslatter);
 
 // 🔴 EXPLICIT /coupon ENDPOINTS (Ensure they always work)
@@ -5977,7 +5970,7 @@ Guidelines:
                 const { usingRedisBackend } = require('./utils/queues');
                 console.log(usingRedisBackend() ? '✅ BullMQ queues connected and working from server bootstrap' : '✅ BullMQ local fallback queues connected and working from server bootstrap');
             } else {
-                console.log('ℹ️ BullMQ fallback unavailable; queue system disabled');
+                console.log('✅ BullMQ disabled (using in-memory job processing) — this is normal for Upstash Redis');
             }
 
             initializeCronJobs(app.get('io'));

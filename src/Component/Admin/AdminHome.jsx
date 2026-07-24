@@ -434,7 +434,7 @@ export default function AdminHome() {
 
             {/* Main Content Area with responsive margin */}
             <div className="admin-main-content">
-                <div className="container-fluid px-lg-4">
+                <div className="px-3 px-lg-4 w-100" style={{ maxWidth: '100%' }}>
                         {/* MAIN DASHBOARD */}
                         <div className="w-100">
                         {/* Header */}

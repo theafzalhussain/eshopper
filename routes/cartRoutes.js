@@ -12,8 +12,8 @@ router.post('/cart/apply-coupon', cartController.applyCoupon);
 // List active coupons
 router.get('/cart/coupons', cacheMiddleware(300), cartController.getAvailableCoupons);
 
-// Get cart for current user
-router.get('/cart', cacheMiddleware(120), cartController.getCart);
+// Get cart for current user (NO cache - changes on every add/remove)
+router.get('/cart', cartController.getCart);
 
 // Update quantity for a cart item
 router.put('/cart/update-quantity/:itemId', cartController.updateQuantity);
@@ -29,8 +29,8 @@ router.delete('/cart/remove-saved-item/:itemId', cartController.removeSavedItem)
 // Delivery estimate by pincode
 router.post('/cart/delivery-estimate', cartController.setDeliveryEstimate);
 
-// Get order summary for current cart
-router.get('/cart/order-summary', cacheMiddleware(120), cartController.getOrderSummary);
+// Get order summary for current cart (NO cache - depends on cart state)
+router.get('/cart/order-summary', cartController.getOrderSummary);
 
 // Update Cart Options (Delivery Speed & Insurance)
 router.post('/cart/options', cartController.updateCartOptions);

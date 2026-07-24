@@ -2,8 +2,16 @@ const BULLMQ_ENABLED = String(process.env.BULLMQ_ENABLED || 'true').toLowerCase(
 const WORKERS_ENABLED = String(process.env.BULLMQ_WORKERS_ENABLED || 'true').toLowerCase() !== 'false';
 const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
 
-const { createClient: createRedisClient } = require('../config/redis');
-const IORedis = require('ioredis');
+// Only load BullMQ dependencies if enabled
+let createRedisClient, IORedis, Queue, Worker;
+if (BULLMQ_ENABLED) {
+    createRedisClient = require('../config/redis').createClient;
+    IORedis = require('ioredis');
+    const bullmq = require('bullmq');
+    Queue = bullmq.Queue;
+    Worker = bullmq.Worker;
+}
+
 let redisConnection = null;
 let workerRedisConnection = null;
 
@@ -13,8 +21,6 @@ const QUEUE_NAMES = {
     report: 'eshopper-report',
     image: 'eshopper-image'
 };
-
-const { Queue, Worker } = require('bullmq');
 
 let queues = null;
 let schedulers = null;

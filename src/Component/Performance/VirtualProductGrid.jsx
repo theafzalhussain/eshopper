@@ -31,7 +31,7 @@ export default function VirtualProductGrid({
             className={className}
             style={{
                 display: 'grid',
-                gridTemplateColumns: `repeat(auto-fit, minmax(${itemMinWidth}px, 1fr))`,
+                gridTemplateColumns: `repeat(auto-fill, minmax(${itemMinWidth}px, 1fr))`,
                 gap,
                 alignItems: 'start'
             }}

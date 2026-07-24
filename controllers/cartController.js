@@ -80,7 +80,7 @@ exports.addToCart = async (req, res) => {
         }
         await cart.save();
         await cart.populate('items.product savedItems.product');
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {}); // fire and forget - don't block response
         const mappedCart = mapCartForClient(cart);
         await logActivity(req, {
             action: 'Cart item added',
@@ -175,7 +175,7 @@ exports.applyCoupon = async (req, res) => {
             { strict: false }
         );
 
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {});
 
         return res.json({
             success: true,
@@ -484,7 +484,7 @@ exports.updateQuantity = async (req, res) => {
         item.quantity = quantity;
         item.qty = quantity;
         await cart.save();
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {});
         const mappedCart = mapCartForClient(cart);
         await logActivity(req, {
             action: 'Cart quantity updated',
@@ -564,7 +564,7 @@ exports.removeItem = async (req, res) => {
                         userId,
                         meta: { itemId }
                     });
-                    await invalidateCartCache();
+                    invalidateCartCache().catch(() => {});
                     return res.json({ success: true, message: 'Item removed from cart.', cartId: globalCart._id, itemCount: globalCart.items.length });
                 }
             } catch (e) {
@@ -580,7 +580,7 @@ exports.removeItem = async (req, res) => {
             meta: { itemId }
         });
 
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {});
 
         res.json({ success: true, message: 'Item removed from cart.', cartId: cart._id, itemCount: cart.items.length });
     } catch (err) {
@@ -656,7 +656,7 @@ exports.saveForLater = async (req, res) => {
         srcItem.deleteOne();
         await cart.save();
         await cart.populate('items.product savedItems.product');
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {});
         await logActivity(req, {
             action: 'Saved item created',
             userId,
@@ -718,7 +718,7 @@ exports.moveSavedToCart = async (req, res) => {
         await cart.save();
 
         const freshCart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {});
         await logActivity(req, {
             action: 'Saved item moved to cart',
             userId,
@@ -762,7 +762,7 @@ exports.removeSavedItem = async (req, res) => {
             meta: { itemId }
         });
 
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {});
 
         return res.json({ success: true, message: 'Saved item removed.', cart: mapCartForClient(cart) });
     } catch (err) {
@@ -822,7 +822,7 @@ exports.setDeliveryEstimate = async (req, res) => {
 
         const freshCart = await Cart.findById(cart._id).populate('items.product').populate('savedItems.product');
         const label = formatDeliveryLabel(estimatedDate);
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {});
 
         return res.json({
             success: true,
@@ -942,7 +942,7 @@ exports.updateCartOptions = async (req, res) => {
             meta: { deliverySpeed, insuranceAdded: Boolean(insuranceAdded) }
         });
 
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {});
 
         res.json({ success: true, message: 'Cart options updated', cart: mapCartForClient(updatedCart) });
     } catch (err) {
@@ -977,7 +977,7 @@ exports.updateCartItem = async (req, res) => {
             meta: { itemId, giftWrap: Boolean(giftWrap) }
         });
 
-        await invalidateCartCache();
+        invalidateCartCache().catch(() => {});
 
         res.json({ success: true, message: 'Item updated successfully', cart: mapCartForClient(updatedCart) });
     } catch (err) {

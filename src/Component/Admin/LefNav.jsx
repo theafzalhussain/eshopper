@@ -215,7 +215,7 @@ export default function LefNav() {
                 /* Mobile Toggle Button - Always Visible on Mobile */
                 .premium-mobile-toggle {
                     position: fixed;
-                    top: 85px; /* Below mobile header */
+                    top: 85px;
                     left: 20px;
                     z-index: 1100;
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -279,11 +279,11 @@ export default function LefNav() {
                 /* Premium Sidebar Container */
                 .premium-admin-sidebar {
                     position: fixed;
-                    top: 110px; /* Below header (40px ribbon + ~70px navbar) */
+                    top: 110px;
                     bottom: 0;
                     left: 0;
                     height: auto;
-                    min-height: calc(100vh - 110px); /* Full height minus header */
+                    min-height: calc(100vh - 110px);
                     width: 260px;
                     background: rgba(248, 250, 252, 0.96);
                     border-right: 1px solid rgba(203, 213, 225, 0.6);
@@ -307,9 +307,10 @@ export default function LefNav() {
                     overflow-y: auto;
                 }
 
-                /* Custom Scrollbar */
+                /* Custom Scrollbar - Hidden but functional */
                 .premium-admin-sidebar::-webkit-scrollbar {
-                    width: 6px;
+                    width: 0px;
+                    display: none;
                 }
 
                 .premium-admin-sidebar::-webkit-scrollbar-track {
@@ -317,15 +318,20 @@ export default function LefNav() {
                 }
 
                 .premium-admin-sidebar::-webkit-scrollbar-thumb {
-                    background: #94a3b8;
+                    background: transparent;
                     border-radius: 10px;
+                }
+
+                .premium-admin-sidebar {
+                    scrollbar-width: none; /* Firefox */
+                    -ms-overflow-style: none; /* IE/Edge */
                 }
 
                 /* Mobile & Tablet Styles - Hide Sidebar by Default (max-width: 991px) */
                 @media (max-width: 991px) {
                     .premium-admin-sidebar {
                         position: fixed;
-                        top: 75px; /* Below mobile header (35px ribbon + ~40px navbar) */
+                        top: 75px;
                         bottom: 0;
                         height: auto;
                         min-height: calc(100vh - 75px); /* Full height minus mobile header */

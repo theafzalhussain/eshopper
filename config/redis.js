@@ -103,12 +103,12 @@ function createClient() {
 
     redisClient = new Redis({
       ...redisOpts,
-      lazyConnect: true,
-      connectTimeout: Number(process.env.REDIS_CONNECT_TIMEOUT || 5000),
-      commandTimeout: 3000,
+      lazyConnect: false,
+      connectTimeout: Number(process.env.REDIS_CONNECT_TIMEOUT || 10000),
       retryStrategy(times) {
         if (redisDisabled) return null;
-        return times >= 3 ? null : Math.min(times * 200, 1000);
+        if (times >= 5) return null;
+        return Math.min(times * 500, 3000);
       }
     });
 

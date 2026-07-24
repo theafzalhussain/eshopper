@@ -61,7 +61,8 @@ const ScrollToTop = () => {
 const AppShell = ({ children }) => {
   const { pathname } = useLocation();
   const hideFooterRoutes = ['/login', '/signup'];
-  const shouldShowFooter = !hideFooterRoutes.includes(pathname);
+  const isAdminRoute = pathname.startsWith('/admin');
+  const shouldShowFooter = !hideFooterRoutes.includes(pathname) && !isAdminRoute;
 
   return (
     <>

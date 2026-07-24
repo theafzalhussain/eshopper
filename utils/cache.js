@@ -1,31 +1,88 @@
 const memoryCache = new Map();
-const { createClient: createRedisClient, client: getRedisClient, isDisabled: isRedisDisabled } = require('../config/redis');
+
+// Create a DEDICATED Redis client for caching only (separate from BullMQ)
+let redis = null;
+let redisDisabled = false;
+
+const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
+const REDIS_CACHE_TIMEOUT = 2000; // Max 2 seconds for any Redis cache operation
+
+function initCacheRedis() {
+    if (!REDIS_ENABLED || redisDisabled) return null;
+
+    const redisUrl = (process.env.REDIS_URL || '').trim();
+    const redisPassword = process.env.REDIS_PASSWORD || '';
+
+    if (!redisUrl || !redisPassword) return null;
+
+    try {
+        const Redis = require('ioredis');
+        const useTls = /^rediss:\/\//i.test(redisUrl) || String(process.env.REDIS_TLS || '').toLowerCase() === 'true';
+
+        const client = new Redis(redisUrl, {
+            password: redisPassword,
+            tls: useTls ? {} : undefined,
+            maxRetriesPerRequest: 1,
+            connectTimeout: 5000,
+            lazyConnect: false,
+            enableReadyCheck: true,
+            retryStrategy(times) {
+                if (times >= 3) {
+                    redisDisabled = true;
+                    console.warn('⚠️ Redis cache disabled after 3 failed retries');
+                    return null;
+                }
+                return Math.min(times * 500, 2000);
+            }
+        });
+
+        client.on('ready', () => console.log('✅ Redis cache client ready'));
+        client.on('error', (err) => {
+            if (err.message && (err.message.includes('EVAL') || err.message.includes('dispatch'))) {
+                // Ignore BullMQ-related errors on this connection
+                return;
+            }
+            console.warn('Redis cache error:', err.message);
+        });
+
+        return client;
+    } catch (err) {
+        console.warn('Failed to create Redis cache client:', err.message);
+        return null;
+    }
+}
+
+// Initialize on first require
+redis = initCacheRedis();
 
 const cacheKey = (req) => `__express__${req.originalUrl || req.url}`;
 
-let redis = null;
-try {
-    redis = createRedisClient();
-} catch (e) {
-    redis = getRedisClient();
-}
-
-// Helper: only use redis if client exists, is not disabled, and is in ready state
 const isRedisReady = () => {
-    if (!redis) return false;
-    if (typeof isRedisDisabled === 'function' && isRedisDisabled()) return false;
-    if (redis.status && redis.status !== 'ready' && redis.status !== 'connect') return false;
-    return true;
+    if (!redis || redisDisabled) return false;
+    return redis.status === 'ready';
+};
+
+// Timeout wrapper - NEVER let Redis hang a request
+const redisGetSafe = async (key) => {
+    if (!isRedisReady()) return null;
+    return Promise.race([
+        redis.get(key),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), REDIS_CACHE_TIMEOUT))
+    ]).catch(() => null);
+};
+
+const redisSetSafe = async (key, value, ttl) => {
+    if (!isRedisReady()) return;
+    Promise.race([
+        ttl > 0 ? redis.set(key, value, 'EX', ttl) : redis.set(key, value),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), REDIS_CACHE_TIMEOUT))
+    ]).catch(() => {});
 };
 
 const _serializeBody = (body) => {
     if (Buffer.isBuffer(body)) return body.toString('utf8');
     if (typeof body === 'string') return body;
-    try {
-        return JSON.stringify(body);
-    } catch (err) {
-        return String(body);
-    }
+    try { return JSON.stringify(body); } catch (err) { return String(body); }
 };
 
 const cacheMiddleware = (duration = 300) => {
@@ -34,57 +91,38 @@ const cacheMiddleware = (duration = 300) => {
 
         const key = cacheKey(req);
 
-        // Try Redis first
-        try {
-            if (isRedisReady()) {
-                const cached = await redis.get(key);
-                if (cached) {
-                    res.setHeader('X-Cache', 'HIT');
-                    const parsed = cached;
-                    const contentType = (res.getHeader('Content-Type') || 'application/json');
-                    res.setHeader('Content-Type', contentType);
-                    return res.send(parsed);
-                }
-            }
-        } catch (err) {
-            // ignore redis errors and fallback to memory cache
-            console.warn('Redis cache read error:', err && err.message);
+        // Try Redis (with timeout - never hang)
+        const cached = await redisGetSafe(key);
+        if (cached) {
+            res.setHeader('X-Cache', 'HIT-REDIS');
+            res.setHeader('Content-Type', 'application/json');
+            return res.send(cached);
         }
 
-        // Memory fallback
+        // Try memory cache
         const entry = memoryCache.get(key);
-        const expiresAt = entry?.expiresAt || 0;
-        if (entry && expiresAt > Date.now()) {
-            res.setHeader('X-Cache', 'HIT');
+        if (entry && entry.expiresAt > Date.now()) {
+            res.setHeader('X-Cache', 'HIT-MEM');
             if (entry.contentType) res.setHeader('Content-Type', entry.contentType);
             return res.send(entry.body);
         }
 
+        // Cache miss - proceed to handler and cache the response
         const originalSend = res.send.bind(res);
-        res.send = async (body) => {
+        res.send = (body) => {
             if (res.statusCode === 200) {
                 const serialized = _serializeBody(body);
                 const contentType = res.getHeader('Content-Type');
 
-                // store in memory
+                // Store in memory
                 memoryCache.set(key, {
                     body: serialized,
                     contentType,
-                    expiresAt: Date.now() + (Math.max(1, Number(duration) || 300) * 1000)
+                    expiresAt: Date.now() + (duration * 1000)
                 });
 
-                // store in redis if available
-                try {
-                    if (isRedisReady()) {
-                        if (Number(duration) > 0) {
-                            await redis.set(key, serialized, 'EX', Number(duration));
-                        } else {
-                            await redis.set(key, serialized);
-                        }
-                    }
-                } catch (err) {
-                    console.warn('Redis cache write error:', err && err.message);
-                }
+                // Store in Redis (fire and forget - never block response)
+                redisSetSafe(key, serialized, duration);
             }
             return originalSend(body);
         };
@@ -104,31 +142,28 @@ const clearCache = async (pattern = '') => {
         if (key.includes(normalized)) memoryCache.delete(key);
     }
 
-    try {
-        if (isRedisReady()) {
-            const keys = await redis.keys(`*${normalized}*`);
-            if (keys && keys.length) await redis.del(...keys);
-        }
-    } catch (err) {
-        console.warn('Redis clearCache error:', err && err.message);
+    if (isRedisReady()) {
+        try {
+            const keys = await Promise.race([
+                redis.keys(`*${normalized}*`),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), REDIS_CACHE_TIMEOUT))
+            ]);
+            if (keys && keys.length) {
+                await Promise.race([
+                    redis.del(...keys),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), REDIS_CACHE_TIMEOUT))
+                ]);
+            }
+        } catch (err) { /* ignore timeout/redis errors */ }
     }
-
 };
 
 const getCacheValue = async (key) => {
     if (!key) return null;
-    try {
-        if (isRedisReady()) {
-            const val = await redis.get(key);
-            return val;
-        }
-    } catch (err) {
-        console.warn('Redis getCacheValue error:', err && err.message);
-    }
-
+    const val = await redisGetSafe(key);
+    if (val) return val;
     const entry = memoryCache.get(key);
     if (entry && entry.expiresAt > Date.now()) return entry.body;
-
     return null;
 };
 
@@ -136,17 +171,7 @@ const setCacheValue = async (key, value, ttlSeconds = 60) => {
     if (!key) return;
     const serialized = typeof value === 'string' ? value : JSON.stringify(value);
     memoryCache.set(key, { body: serialized, expiresAt: Date.now() + (ttlSeconds * 1000) });
-
-    try {
-        if (isRedisReady()) {
-            if (Number(ttlSeconds) > 0) await redis.set(key, serialized, 'EX', Number(ttlSeconds));
-            else await redis.set(key, serialized);
-        }
-    } catch (err) {
-        console.warn('Redis setCacheValue error:', err && err.message);
-    }
-
-    return;
+    redisSetSafe(key, serialized, ttlSeconds);
 };
 
 module.exports = { cacheMiddleware, clearCache, getCacheValue, setCacheValue };

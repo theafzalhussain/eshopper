@@ -226,10 +226,14 @@ export default function Cart() {
 
     function syncCartFromResponse(responseData) {
         const cartData = responseData?.cart;
-        if (!cartData) return;
-        dispatch({ type: GET_CART_RED, data: cartData });
-        if (cartData.deliverySpeed) setDeliverySpeed(cartData.deliverySpeed);
-        if (cartData.insuranceAdded !== undefined) setInsuranceAdded(cartData.insuranceAdded);
+        if (cartData) {
+            dispatch({ type: GET_CART_RED, data: cartData });
+            if (cartData.deliverySpeed) setDeliverySpeed(cartData.deliverySpeed);
+            if (cartData.insuranceAdded !== undefined) setInsuranceAdded(cartData.insuranceAdded);
+        } else {
+            // If backend didn't return cart data, re-fetch to stay in sync
+            dispatch(getCart());
+        }
     }
 
     // ── Backend-connected actions for new features ──
@@ -336,15 +340,31 @@ export default function Cart() {
         let currentQty = Number(item.quantity ?? item.qty ?? 1);
         if (op === "dec" && currentQty === 1) return;
         let newQty = (op === "dec") ? currentQty - 1 : currentQty + 1;
+
+        // Optimistic UI update - instant feedback
+        const updatedItems = cart.map(i => (i._id || i.id) === (item._id || item.id)
+            ? { ...i, quantity: newQty, qty: newQty }
+            : i);
+        dispatch({
+            type: GET_CART_RED,
+            data: { ...cartState, items: updatedItems }
+        });
+
+        // Optimistic summary update (instant total recalculation)
+        const priceDiff = Number(item.price || item.finalprice || 0) * (op === 'dec' ? -1 : 1);
+        setSummary(prev => ({
+            ...prev,
+            subtotal: Math.max(0, prev.subtotal + priceDiff),
+            grandTotal: Math.max(0, prev.grandTotal + priceDiff)
+        }));
+
         try {
             await axios.put(`/api/cart/update-quantity/${item._id || item.id}`, { userId, quantity: newQty });
-            await dispatch(getCart());
-            await refreshSummaryOnly();
-            toast.success('Quantity updated!');
-            if (socketRef.current && socketRef.current.connected) {
-                socketRef.current.emit('cart:recalculate', { userId });
-            }
+            dispatch(getCart());
+            refreshSummaryOnly(); // fire and forget — don't await
         } catch (e) {
+            dispatch(getCart());
+            refreshSummaryOnly();
             if (e.response?.data?.message?.includes('Out of Stock')) {
                 toast.error(e.response.data.message);
             } else {
@@ -355,18 +375,35 @@ export default function Cart() {
 
     async function removeProduct(id, silent = false) {
         setRemovingIds((prev) => [...prev, id]);
+
+        // Get item price for optimistic summary update
+        const removedItem = cart.find(i => (i._id || i.id) === id);
+        const itemTotal = removedItem ? Number(removedItem.price || removedItem.finalprice || 0) * Number(removedItem.quantity || removedItem.qty || 1) : 0;
+
+        // Optimistic UI update - remove instantly from view
+        dispatch({
+            type: GET_CART_RED,
+            data: { ...cartState, items: cart.filter(i => (i._id || i.id) !== id) }
+        });
+
+        // Optimistic summary update
+        setSummary(prev => ({
+            ...prev,
+            subtotal: Math.max(0, prev.subtotal - itemTotal),
+            grandTotal: Math.max(0, prev.grandTotal - itemTotal)
+        }));
+
         try {
             await axios.delete(`/api/cart/remove-item/${id}`, {
                 params: { userId, userid: userId },
                 data: { userId, userid: userId }
             });
-            await dispatch(getCart());
-            await refreshSummaryOnly();
+            dispatch(getCart());
+            refreshSummaryOnly(); // fire and forget
             if (!silent) toast.info('Item removed from cart.');
-            if (socketRef.current && socketRef.current.connected) {
-                socketRef.current.emit('cart:recalculate', { userId });
-            }
         } catch (e) {
+            dispatch(getCart());
+            refreshSummaryOnly();
             const msg = e?.response?.data?.message || e?.response?.data?.error || 'Failed to remove item.';
             toast.error(msg);
         } finally {

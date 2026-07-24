@@ -61,18 +61,18 @@ export const useProductsQuery = () => useQuery({
     queryKey: catalogQueryKeys.products,
     queryFn: ({ signal }) => fetchProducts({ signal }),
     placeholderData: keepPreviousData,
-    staleTime: 30_000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: true
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false
 });
 
 export const useProductQuery = (id) => useQuery({
     queryKey: catalogQueryKeys.product(id),
     queryFn: ({ signal }) => fetchProductById(id, { signal }),
     enabled: Boolean(id),
-    staleTime: 60_000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: true
+    staleTime: 3 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false
 });
 
 export const useMaincategoriesQuery = () => useQuery({
