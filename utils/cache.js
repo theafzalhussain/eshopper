@@ -1,5 +1,5 @@
 const memoryCache = new Map();
-const { createClient: createRedisClient, client: getRedisClient } = require('../config/redis');
+const { createClient: createRedisClient, client: getRedisClient, isDisabled: isRedisDisabled } = require('../config/redis');
 
 const cacheKey = (req) => `__express__${req.originalUrl || req.url}`;
 
@@ -9,6 +9,14 @@ try {
 } catch (e) {
     redis = getRedisClient();
 }
+
+// Helper: only use redis if client exists, is not disabled, and is in ready state
+const isRedisReady = () => {
+    if (!redis) return false;
+    if (typeof isRedisDisabled === 'function' && isRedisDisabled()) return false;
+    if (redis.status && redis.status !== 'ready' && redis.status !== 'connect') return false;
+    return true;
+};
 
 const _serializeBody = (body) => {
     if (Buffer.isBuffer(body)) return body.toString('utf8');
@@ -28,7 +36,7 @@ const cacheMiddleware = (duration = 300) => {
 
         // Try Redis first
         try {
-            if (redis) {
+            if (isRedisReady()) {
                 const cached = await redis.get(key);
                 if (cached) {
                     res.setHeader('X-Cache', 'HIT');
@@ -67,7 +75,7 @@ const cacheMiddleware = (duration = 300) => {
 
                 // store in redis if available
                 try {
-                    if (redis) {
+                    if (isRedisReady()) {
                         if (Number(duration) > 0) {
                             await redis.set(key, serialized, 'EX', Number(duration));
                         } else {
@@ -97,7 +105,7 @@ const clearCache = async (pattern = '') => {
     }
 
     try {
-        if (redis) {
+        if (isRedisReady()) {
             const keys = await redis.keys(`*${normalized}*`);
             if (keys && keys.length) await redis.del(...keys);
         }
@@ -110,7 +118,7 @@ const clearCache = async (pattern = '') => {
 const getCacheValue = async (key) => {
     if (!key) return null;
     try {
-        if (redis) {
+        if (isRedisReady()) {
             const val = await redis.get(key);
             return val;
         }
@@ -130,7 +138,7 @@ const setCacheValue = async (key, value, ttlSeconds = 60) => {
     memoryCache.set(key, { body: serialized, expiresAt: Date.now() + (ttlSeconds * 1000) });
 
     try {
-        if (redis) {
+        if (isRedisReady()) {
             if (Number(ttlSeconds) > 0) await redis.set(key, serialized, 'EX', Number(ttlSeconds));
             else await redis.set(key, serialized);
         }

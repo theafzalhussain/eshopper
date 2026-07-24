@@ -105,9 +105,10 @@ function createClient() {
       ...redisOpts,
       lazyConnect: true,
       connectTimeout: Number(process.env.REDIS_CONNECT_TIMEOUT || 5000),
+      commandTimeout: 3000,
       retryStrategy(times) {
         if (redisDisabled) return null;
-        return times >= 2 ? null : 200;
+        return times >= 3 ? null : Math.min(times * 200, 1000);
       }
     });
 
