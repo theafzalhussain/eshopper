@@ -689,14 +689,18 @@ export default function Checkout() {
 
             const razorpayInstance = new window.Razorpay(options)
             razorpayInstance.on('payment.failed', (response) => {
-                console.error('Razorpay payment failed:', response?.error)
+                console.error('Razorpay payment failed:', JSON.stringify(response?.error || response, null, 2))
+                console.error('Razorpay payment failed - full response:', response)
                 setPaymentProcessing(false)
-                toast.error(response?.error?.description || 'Payment failed. Please try again.')
+                const errorDesc = response?.error?.description || response?.error?.reason || 'Payment failed. Please try again.'
+                const errorCode = response?.error?.code || ''
+                toast.error(`${errorDesc}${errorCode ? ` (${errorCode})` : ''}`)
             })
             razorpayInstance.open()
         } catch (error) {
-            console.error('Razorpay checkout error:', error)
-            toast.error(error?.message || 'Unable to start payment checkout.')
+            console.error('Razorpay checkout error:', error?.response?.data || error?.message || error)
+            const msg = error?.response?.data?.message || error?.message || 'Unable to start payment checkout.'
+            toast.error(msg)
             setPaymentProcessing(false)
         }
     }

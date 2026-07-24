@@ -2364,6 +2364,13 @@ const FooterConfig = mongoose.models.FooterConfig || mongoose.model('FooterConfi
 const RAZORPAY_KEY_ID = String(process.env.RAZORPAY_KEY_ID || '').trim();
 const RAZORPAY_KEY_SECRET = String(process.env.RAZORPAY_KEY_SECRET || '').trim();
 
+// Startup validation log for Razorpay credentials
+if (RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
+    console.log(`✅ Razorpay credentials loaded: ${RAZORPAY_KEY_ID.slice(0, 12)}...${RAZORPAY_KEY_ID.slice(-4)} (${RAZORPAY_KEY_ID.includes('test') ? 'TEST' : 'LIVE'} mode)`);
+} else {
+    console.warn('⚠️ Razorpay credentials missing! RAZORPAY_KEY_ID:', RAZORPAY_KEY_ID ? 'SET' : 'MISSING', '| RAZORPAY_KEY_SECRET:', RAZORPAY_KEY_SECRET ? 'SET' : 'MISSING');
+}
+
 const buildRazorpayReceipt = (userId, prefix = 'eshopper') => {
     const safeUserId = String(userId || 'guest').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) || 'guest';
     // Compose receipt string
@@ -4203,8 +4210,24 @@ app.post('/api/razorpay/create-order', async (req, res) => {
                 console.error('❌ Razorpay API error:', {
                     status: razorpayError.response.status,
                     data: razorpayError.response.data,
-                    headers: razorpayError.response.headers
+                    headers: razorpayError.response.headers,
+                    keyUsed: RAZORPAY_KEY_ID ? `${RAZORPAY_KEY_ID.slice(0, 12)}...` : 'NOT SET',
+                    secretSet: Boolean(RAZORPAY_KEY_SECRET)
                 });
+
+                // Special handling for 401 - credentials are invalid/mismatched
+                if (razorpayError.response.status === 401) {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Razorpay authentication failed. API key and secret may be invalid or mismatched. Please regenerate and update credentials.',
+                        errorCode: 'RAZORPAY_AUTH_FAILED',
+                        meta: {
+                            keyIdPrefix: RAZORPAY_KEY_ID ? RAZORPAY_KEY_ID.slice(0, 12) : 'MISSING',
+                            secretConfigured: Boolean(RAZORPAY_KEY_SECRET),
+                            razorpayError: razorpayError.response.data?.error || razorpayError.response.data
+                        }
+                    });
+                }
             } else {
                 console.error('❌ Razorpay create-order error:', razorpayError.message, razorpayError);
             }
