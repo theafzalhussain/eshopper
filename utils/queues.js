@@ -57,13 +57,13 @@ const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
 
 const initializeQueues = (processors = {}) => {
     if (!isBullMQEnabled()) return null;
-    if (!REDIS_ENABLED) return null;
     if (initialized) return { queues, schedulers, workers };
 
     processorsMap = { ...processors };
 
-    // Try to create Redis connections
+    // Try to create Redis connections (only if Redis is enabled and configured)
     try {
+        if (!REDIS_ENABLED) throw new Error('Redis disabled via env');
         // main connection (used by Queue clients)
         redisConnection = createRedisClient();
         // create a separate connection for workers/schedulers to avoid connection sharing issues

@@ -15,6 +15,7 @@ import {
   MapPin, Calendar, RotateCcw, Package,
   CreditCard, TrendingUp, CheckCircle2, Truck, KeyRound, Star, XCircle
 } from 'lucide-react'
+import ReturnRequestForm from './ReturnRequestForm'
 
 // ═══════════════════════════════════════════════════════════════════
 // CSS
@@ -558,6 +559,7 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
   }, [etaDate, nowTick])
   const canCancel = isCancelableOrder(item)
   const canReturn = isReturnableOrder(item)
+  const [showReturnModal, setShowReturnModal] = useState(false)
 
   const submitOrderAction = async (action) => {
     const orderId = item?.orderId
@@ -574,17 +576,9 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
         )
         toast.success(data?.message || 'Order cancelled. Premium support will handle the rest.')
       } else {
-        const reason = window.prompt('Share a return reason to continue:', '')
-        if (reason === null || !String(reason).trim()) {
-          toast.info('Return request needs a reason to continue.')
-          return
-        }
-        const { data } = await axios.post(
-          `${BASE_URL}/api/orders/${encodeURIComponent(orderId)}/return`,
-          { userId: localStorage.getItem('userid'), reason: String(reason).trim() },
-          { timeout: 15000 }
-        )
-        toast.success(data?.message || 'Return request submitted.')
+        // Open return modal instead of window.prompt
+        setShowReturnModal(true)
+        return
       }
 
       window.dispatchEvent(new CustomEvent('eshopper-order-lifecycle-updated', { detail: { orderId } }))
@@ -783,7 +777,35 @@ const OrderCard = React.forwardRef(function OrderCard({ item, idx, navigate, onW
             WhatsApp Support
           </motion.button>
         </div>
+
+        {/* Return Status Banner */}
+        {item?.return && item.return.status && item.return.status !== 'NOT_INITIATED' && (
+          <div className="mop2-return-banner" style={{ marginTop: '14px', padding: '12px 16px', borderRadius: '10px', background: 'rgba(26,140,140,0.05)', border: '1px solid rgba(26,140,140,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <RotateCcw size={14} style={{ color: '#1A8C8C' }} />
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Return {String(item.return.status).replace(/_/g, ' ')}</span>
+            </div>
+            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+              {item.return.returnTrackingId || ''}
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* Return Request Modal */}
+      {showReturnModal && (
+        <div onClick={e => e.stopPropagation()}>
+          <ReturnRequestForm
+            order={{ orderId: item.orderId, finalAmount: item.finalAmount }}
+            userId={localStorage.getItem('userid')}
+            isOpen={showReturnModal}
+            onClose={() => setShowReturnModal(false)}
+            onSuccess={() => {
+              window.dispatchEvent(new CustomEvent('eshopper-order-lifecycle-updated', { detail: { orderId: item.orderId } }))
+            }}
+          />
+        </div>
+      )}
     </motion.div>
   )
 })

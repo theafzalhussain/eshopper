@@ -16,6 +16,8 @@ import {
   RefreshCw, RotateCcw, Copy, Clock3, Home, Phone, Mail, Sparkles, Gauge, Wallet,
   FileText, Download, Navigation, KeyRound, ShieldCheck, PackageCheck, Star, X, Loader2, Camera
 } from 'lucide-react'
+import ReturnRequestForm from './ReturnRequestForm'
+import ReturnProcessWizard from './ReturnProcessWizard'
 
 const STEPS = ['Ordered', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered']
 const STATUS_COLOR = {
@@ -1680,6 +1682,7 @@ export default function OrderTracking() {
   const [invoiceLoading, setInvoiceLoading] = useState(false)
   const [nowTick, setNowTick] = useState(Date.now())
   const [orderActionBusy, setOrderActionBusy] = useState('')
+  const [showReturnModal, setShowReturnModal] = useState(false)
 
   // Review Modal States
   const [showReviewModal, setShowReviewModal] = useState(false)
@@ -2369,30 +2372,26 @@ export default function OrderTracking() {
     if (action === 'cancel' && !canCancelOrder) return
     if (action === 'return' && !canReturnOrder) return
 
-    const promptLabel = action === 'cancel'
-      ? 'Share a cancellation reason (optional):'
-      : 'Share a return reason to continue:'
-    const reason = window.prompt(promptLabel, '')
-    if (reason === null) return
-    if (action === 'return' && !String(reason).trim()) {
-      toast.info('Return request needs a reason to continue.')
+    if (action === 'return') {
+      // Open return modal instead of window.prompt
+      setShowReturnModal(true)
       return
     }
 
+    const reason = window.prompt('Share a cancellation reason (optional):', '')
+    if (reason === null) return
+
     try {
       setOrderActionBusy(action)
-      const endpoint = action === 'cancel' ? 'cancel' : 'return'
       const { data } = await axios.post(
-        `${BASE_URL}/api/orders/${encodeURIComponent(order.orderId)}/${endpoint}`,
+        `${BASE_URL}/api/orders/${encodeURIComponent(order.orderId)}/cancel`,
         { userId, reason: String(reason).trim() },
         { timeout: 15000 }
       )
-      toast.success(data?.message || (action === 'cancel'
-        ? 'Order cancelled. Premium support will handle the rest.'
-        : 'Return request submitted.'))
+      toast.success(data?.message || 'Order cancelled. Premium support will handle the rest.')
       await fetchOrderData({ silent: true })
     } catch (error) {
-      toast.error(error?.response?.data?.message || `Unable to ${action} this order right now.`)
+      toast.error(error?.response?.data?.message || `Unable to cancel this order right now.`)
     } finally {
       setOrderActionBusy('')
     }
@@ -2820,6 +2819,12 @@ export default function OrderTracking() {
               </div>
             </motion.div>
           )}
+
+          {/* Return Progress Section */}
+          {order?.return && order.return.status && order.return.status !== 'NOT_INITIATED' && (
+            <ReturnProcessWizard returnData={order.return} orderAmount={order.finalAmount} />
+          )}
+
           <div className="ot-kpi-grid">
             <div className="ot-kpi">
               <div className="ot-kpi-head">
@@ -3365,6 +3370,20 @@ export default function OrderTracking() {
           </p>
         </div>
       </div>
+
+      {/* Return Request Modal */}
+      {showReturnModal && order && (
+        <ReturnRequestForm
+          order={{ orderId: order.orderId, finalAmount: order.finalAmount }}
+          userId={userId}
+          isOpen={showReturnModal}
+          onClose={() => setShowReturnModal(false)}
+          onSuccess={() => {
+            setShowReturnModal(false)
+            fetchOrderData({ silent: true })
+          }}
+        />
+      )}
     </>
   )
 }
