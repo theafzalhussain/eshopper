@@ -557,6 +557,19 @@ export default function ProductDetail() {
     }, []);
 
     useEffect(() => {
+      // Instant display: try Redux cached products first (already loaded by CatalogQueryBridge)
+      if (!p && !productData && allProducts.length > 0 && id) {
+        const cached = allProducts.find(item => String(item._id || item.id) === String(id));
+        if (cached) {
+          setp(cached);
+          setMainImg(cached.pic1 || '/assets/images/noimage.png');
+          if (cached.size && typeof cached.size === 'string') setSelSize(cached.size.split(',')[0]?.trim() || '');
+          if (cached.color && typeof cached.color === 'string') setSelColor(cached.color.split(',')[0]?.trim() || '');
+        }
+      }
+    }, [allProducts, id, p, productData]);
+
+    useEffect(() => {
       if (productLoading) return;
 
       if (productData) {

@@ -61,8 +61,8 @@ export const useProductsQuery = () => useQuery({
     queryKey: catalogQueryKeys.products,
     queryFn: ({ signal }) => fetchProducts({ signal }),
     placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false
 });
 
@@ -72,7 +72,15 @@ export const useProductQuery = (id) => useQuery({
     enabled: Boolean(id),
     staleTime: 3 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    // Use cached product from the products list for instant display while fetching fresh data
+    placeholderData: () => {
+        const cachedProducts = queryClient.getQueryData(catalogQueryKeys.products);
+        if (Array.isArray(cachedProducts) && id) {
+            return cachedProducts.find(p => String(p._id || p.id) === String(id)) || undefined;
+        }
+        return undefined;
+    }
 });
 
 export const useMaincategoriesQuery = () => useQuery({

@@ -2560,6 +2560,18 @@ export default function OrderTracking() {
           }
         }
       })
+
+      // Real-time return status updates
+      const handleReturnUpdate = (payload) => {
+        if (payload?.orderId === orderId) {
+          // Re-fetch full order data to get updated return fields
+          fetchOrderData({ silent: true })
+        }
+      }
+      socketRef.on('orderReturnUpdated', handleReturnUpdate)
+      socketRef.on('orderReturnReceived', handleReturnUpdate)
+      socketRef.on('orderRefundProcessed', handleReturnUpdate)
+      socketRef.on('orderReturnRequested', handleReturnUpdate)
     }
 
     init()

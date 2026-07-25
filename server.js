@@ -30,6 +30,21 @@ const fs = require('fs');
 const path = require('path');
 const handlebars = require('handlebars');
 const Sentry = require('@sentry/node');
+
+// Initialize Sentry for backend error tracking
+Sentry.init({
+  dsn: "https://9a338081afe9842d896054b81c3ce5f6@o4510951293976576.ingest.us.sentry.io/4510951305379840",
+  tracesSampleRate: 1.0,
+  environment: process.env.NODE_ENV || 'production',
+  // Don't send noisy errors
+  beforeSend(event) {
+    const msg = String(event?.exception?.values?.[0]?.value || '');
+    if (msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('socket hang up')) return null;
+    return event;
+  }
+});
+console.log('✅ Sentry error tracking initialized (DSN: ...sentry.io/4510951305379840)');
+console.log('🐕 Datadog RUM configured on frontend (site: us5.datadoghq.com, service: eshopper-frontend)');
 const puppeteer = require('puppeteer');
 const { jsPDF } = require('jspdf');
 require('jspdf-autotable');
@@ -5948,6 +5963,9 @@ Guidelines:
             }
         });
         // --- server.js AI REFACTOR END ---
+
+        // Sentry error handler — captures unhandled Express errors (v7 API)
+        app.use(Sentry.Handlers.errorHandler());
 
         // ═══════════════════════════════════════════════════════════════════════
         // SPA FALLBACK — MUST be the LAST route, AFTER all API routes

@@ -99,8 +99,17 @@ exports.removeFromWishlist = async (req, res) => {
     let user = req.body.user || req.query.user || req.body.userId || req.body.userid || req.query.userId || req.query.userid;
     const { id } = req.params;
 
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Item ID required.' });
+    }
+
     const shouldRemoveItem = (item) => {
-      return String(item?._id) === String(id) || String(item?.product) === String(id) || String(item?.productid) === String(id);
+      const itemId = String(item?._id || '');
+      const itemProduct = String(item?.product?._id || item?.product || '');
+      const itemProductid = String(item?.productid?._id || item?.productid || '');
+      const itemProductId = String(item?.productId?._id || item?.productId || '');
+      const target = String(id);
+      return itemId === target || itemProduct === target || itemProductid === target || itemProductId === target;
     };
 
     // Fallback: try Authorization header (frontend stores userid as bearer token)
@@ -115,55 +124,73 @@ exports.removeFromWishlist = async (req, res) => {
       }
     }
 
-    const query = mongoose.Types.ObjectId.isValid(user) 
-        ? { $or: [{ user: new mongoose.Types.ObjectId(user) }, { userid: user }] }
-        : { userid: user };
+    console.log('[WISHLIST] removeFromWishlist params:', { user: user || 'NONE', id });
 
-    console.log('[WISHLIST] removeFromWishlist params:', { user, id });
-    let wishlist = await Wishlist.findOne(query);
+    // Strategy 1: Find user's wishlist and remove item
+    if (user) {
+      const query = mongoose.Types.ObjectId.isValid(user) 
+          ? { $or: [{ user: new mongoose.Types.ObjectId(user) }, { userid: user }] }
+          : { userid: user };
 
-    // If no user-specific wishlist is found, fall back to removing the item from any wishlist that contains it.
-    if (!wishlist) {
-      const matchedWishlists = await Wishlist.find({
-        $or: [
-          { 'products._id': id },
-          { 'products.product': mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id },
-          { 'products.productid': mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id },
-          { 'products.productid': id }
-        ]
-      });
+      const wishlist = await Wishlist.findOne(query);
 
-      let modifiedCount = 0;
-      for (const doc of matchedWishlists) {
-        const before = doc.products.length;
-        doc.products = doc.products.filter((item) => !shouldRemoveItem(item));
-        if (doc.products.length !== before) {
-          await doc.save();
-          modifiedCount += 1;
+      if (wishlist) {
+        const before = wishlist.products.length;
+        wishlist.products = wishlist.products.filter((item) => !shouldRemoveItem(item));
+        
+        if (wishlist.products.length !== before) {
+          await wishlist.save();
+          return res.json({ success: true, message: 'Removed from wishlist.' });
         }
       }
-
-      console.log('[WISHLIST] global removal result:', { matched: matchedWishlists.length, modified: modifiedCount });
-      if (modifiedCount > 0) {
-        await logActivity(req, {
-          action: 'Wishlist item removed (global)',
-          userId: user,
-          meta: { itemId: id }
-        });
-        return res.json({ success: true, message: 'Removed from wishlist.' });
-      }
-
-      return res.status(404).json({ success: false, message: 'Wishlist not found.' });
     }
 
-    wishlist.products = wishlist.products.filter((item) => !shouldRemoveItem(item));
-    await wishlist.save();
-    await logActivity(req, {
-      action: 'Wishlist item removed',
-      userId: user,
-      meta: { itemId: id }
-    });
-    res.json({ success: true, message: 'Removed from wishlist.' });
+    // Strategy 2: Direct removal using MongoDB $pull (works even without user match)
+    const idAsObjectId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null;
+    
+    // Try pulling by _id first
+    let updateResult = await Wishlist.updateMany(
+      { 'products._id': idAsObjectId || id },
+      { $pull: { products: { _id: idAsObjectId || id } } }
+    );
+
+    if (updateResult.modifiedCount > 0) {
+      return res.json({ success: true, message: 'Removed from wishlist.' });
+    }
+
+    // Try pulling by product field
+    if (idAsObjectId) {
+      updateResult = await Wishlist.updateMany(
+        { $or: [{ 'products.product': idAsObjectId }, { 'products.productid': idAsObjectId }] },
+        { $pull: { products: { $or: [{ product: idAsObjectId }, { productid: idAsObjectId }] } } }
+      );
+
+      if (updateResult.modifiedCount > 0) {
+        return res.json({ success: true, message: 'Removed from wishlist.' });
+      }
+    }
+
+    // Strategy 3: Manual scan fallback
+    const idStr = String(id);
+    const findQuery = user 
+      ? (mongoose.Types.ObjectId.isValid(user) 
+          ? { $or: [{ user: new mongoose.Types.ObjectId(user) }, { userid: user }] }
+          : { userid: user })
+      : {};
+
+    const allWishlists = await Wishlist.find(findQuery);
+
+    for (const doc of allWishlists) {
+      const before = doc.products.length;
+      doc.products = doc.products.filter((item) => !shouldRemoveItem(item));
+      if (doc.products.length !== before) {
+        await doc.save();
+        return res.json({ success: true, message: 'Removed from wishlist.' });
+      }
+    }
+
+    // Even if not found, return success (item already gone)
+    return res.json({ success: true, message: 'Item removed.' });
   } catch (err) {
     console.error('[WISHLIST] removeFromWishlist error:', err);
     res.status(500).json({ success: false, message: 'Failed to remove from wishlist.' });
