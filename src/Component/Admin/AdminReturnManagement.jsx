@@ -6,9 +6,9 @@ import {
   ChevronDown, Search, Filter, Calendar, MapPin, Truck, DollarSign,
   AlertCircle, Loader, Send, Edit, Eye
 } from 'lucide-react'
-import { BASE_URL } from '../constants'
-import { useToast } from './ToastNotification'
-import '../styles/AdminReturnManagement.css'
+import { BASE_URL } from '../../constants'
+import { useToast } from '../ToastNotification'
+import '../../styles/AdminReturnManagement.css'
 
 const AdminReturnManagement = () => {
   const { showToast } = useToast()
@@ -92,12 +92,22 @@ const AdminReturnManagement = () => {
     return () => clearInterval(interval)
   }, [fetchStats])
 
+  // Real-time updates: listen for return status changes via Socket.IO (forwarded through window event)
+  useEffect(() => {
+    const handleRealTimeUpdate = () => {
+      fetchReturns()
+      fetchStats()
+    }
+    window.addEventListener('admin:returnStatusUpdate', handleRealTimeUpdate)
+    return () => window.removeEventListener('admin:returnStatusUpdate', handleRealTimeUpdate)
+  }, [fetchReturns, fetchStats])
+
   // Handle return status update
-  const handleUpdateStatus = async (orderId, newStatus) => {
+  const handleUpdateStatus = async (orderId, newStatus, extraData = {}) => {
     try {
       const response = await axios.put(
         `${BASE_URL}/api/admin/returns/${orderId}/status`,
-        { status: newStatus },
+        { status: newStatus, ...extraData },
         { headers: { 'x-admin-secret': adminSecret } }
       )
 
@@ -150,6 +160,32 @@ const AdminReturnManagement = () => {
       }
     } catch (error) {
       showToast(error.response?.data?.message || 'Failed to process refund', 'error')
+    }
+  }
+
+  // Handle schedule pickup (APPROVED → PICKED_UP)
+  const handleSchedulePickup = async (orderId) => {
+    try {
+      const response = await axios.put(
+        `${BASE_URL}/api/admin/returns/${orderId}/status`,
+        { 
+          status: 'PICKED_UP',
+          pickupDate: actionData.pickupDate || new Date().toISOString(),
+          pickupAgent: actionData.pickupAgent || '',
+          riderPhone: actionData.riderPhone || ''
+        },
+        { headers: { 'x-admin-secret': adminSecret } }
+      )
+
+      if (response.data.success) {
+        showToast('Pickup scheduled successfully!', 'success')
+        fetchReturns()
+        fetchStats()
+        setShowActionModal(false)
+        setActionData({})
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Failed to schedule pickup', 'error')
     }
   }
 
@@ -329,12 +365,49 @@ const AdminReturnManagement = () => {
                     </button>
 
                     {item.return.status === 'REQUESTED' && (
+                      <>
+                        <button
+                          className="arm-action-btn arm-approve-btn"
+                          onClick={() => handleUpdateStatus(item.orderId, 'APPROVED')}
+                        >
+                          <CheckCircle2 size={16} />
+                          Approve
+                        </button>
+                        <button
+                          className="arm-action-btn arm-reject-btn"
+                          onClick={() => {
+                            setSelectedReturn(item)
+                            setActionType('reject')
+                            setShowActionModal(true)
+                          }}
+                        >
+                          <X size={16} />
+                          Reject
+                        </button>
+                      </>
+                    )}
+
+                    {item.return.status === 'APPROVED' && (
                       <button
-                        className="arm-action-btn arm-approve-btn"
-                        onClick={() => handleUpdateStatus(item.orderId, 'APPROVED')}
+                        className="arm-action-btn arm-pickup-btn"
+                        onClick={() => {
+                          setSelectedReturn(item)
+                          setActionType('schedule-pickup')
+                          setShowActionModal(true)
+                        }}
                       >
-                        <CheckCircle2 size={16} />
-                        Approve
+                        <Truck size={16} />
+                        Schedule Pickup
+                      </button>
+                    )}
+
+                    {item.return.status === 'PICKED_UP' && (
+                      <button
+                        className="arm-action-btn arm-transit-btn"
+                        onClick={() => handleUpdateStatus(item.orderId, 'IN_TRANSIT')}
+                      >
+                        <MapPin size={16} />
+                        Mark In Transit
                       </button>
                     )}
 
@@ -348,7 +421,7 @@ const AdminReturnManagement = () => {
                         }}
                       >
                         <Package size={16} />
-                        Receive
+                        Mark Received
                       </button>
                     )}
 
@@ -362,7 +435,7 @@ const AdminReturnManagement = () => {
                         }}
                       >
                         <DollarSign size={16} />
-                        Refund
+                        Process Refund
                       </button>
                     )}
                   </div>
@@ -501,7 +574,10 @@ const AdminReturnManagement = () => {
             >
               <div className="arm-modal-header">
                 <h2>
-                  {actionType === 'mark-received' ? 'Mark Item as Received' : 'Process Refund'}
+                  {actionType === 'mark-received' && 'Mark Item as Received'}
+                  {actionType === 'process-refund' && 'Process Refund'}
+                  {actionType === 'reject' && 'Reject Return Request'}
+                  {actionType === 'schedule-pickup' && 'Schedule Pickup'}
                 </h2>
                 <button onClick={() => setShowActionModal(false)}>
                   <X size={24} />
@@ -510,26 +586,84 @@ const AdminReturnManagement = () => {
 
               <div className="arm-modal-body">
                 <div className="arm-action-form">
-                  <div className="arm-form-group">
-                    <label>Admin Notes (Optional)</label>
-                    <textarea
-                      value={actionData.notes || ''}
-                      onChange={(e) => setActionData({ ...actionData, notes: e.target.value })}
-                      placeholder="Add inspection notes or additional details..."
-                      rows={4}
-                    />
-                  </div>
 
+                  {/* Rejection reason field */}
+                  {actionType === 'reject' && (
+                    <div className="arm-form-group">
+                      <label>Rejection Reason *</label>
+                      <textarea
+                        value={actionData.rejectionReason || ''}
+                        onChange={(e) => setActionData({ ...actionData, rejectionReason: e.target.value })}
+                        placeholder="Enter reason for rejecting this return request..."
+                        rows={3}
+                        style={{ borderColor: !actionData.rejectionReason ? '#fecaca' : undefined }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Pickup scheduling fields */}
+                  {actionType === 'schedule-pickup' && (
+                    <>
+                      <div className="arm-form-group">
+                        <label>Pickup Date</label>
+                        <input
+                          type="date"
+                          value={actionData.pickupDate || ''}
+                          onChange={(e) => setActionData({ ...actionData, pickupDate: e.target.value })}
+                          style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', width: '100%' }}
+                        />
+                      </div>
+                      <div className="arm-form-group">
+                        <label>Pickup Agent Name</label>
+                        <input
+                          type="text"
+                          value={actionData.pickupAgent || ''}
+                          onChange={(e) => setActionData({ ...actionData, pickupAgent: e.target.value })}
+                          placeholder="Enter agent/rider name..."
+                          style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', width: '100%' }}
+                        />
+                      </div>
+                      <div className="arm-form-group">
+                        <label>Agent Phone (Optional)</label>
+                        <input
+                          type="tel"
+                          value={actionData.riderPhone || ''}
+                          onChange={(e) => setActionData({ ...actionData, riderPhone: e.target.value })}
+                          placeholder="Enter agent phone number..."
+                          style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '14px', width: '100%' }}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Admin notes field (for mark-received and process-refund) */}
+                  {(actionType === 'mark-received' || actionType === 'process-refund') && (
+                    <div className="arm-form-group">
+                      <label>Admin Notes (Optional)</label>
+                      <textarea
+                        value={actionData.notes || ''}
+                        onChange={(e) => setActionData({ ...actionData, notes: e.target.value })}
+                        placeholder="Add inspection notes or additional details..."
+                        rows={4}
+                      />
+                    </div>
+                  )}
+
+                  {/* Info boxes */}
                   <div className="arm-form-info">
                     <AlertCircle size={18} />
                     <div>
                       <p className="arm-form-info-title">
-                        {actionType === 'mark-received' ? 'Auto-Refund Schedule' : 'Process Refund'}
+                        {actionType === 'mark-received' && 'Auto-Refund Schedule'}
+                        {actionType === 'process-refund' && 'Process Refund'}
+                        {actionType === 'reject' && 'Reject Return'}
+                        {actionType === 'schedule-pickup' && 'Pickup Scheduling'}
                       </p>
                       <p className="arm-form-info-text">
-                        {actionType === 'mark-received'
-                          ? 'Once marked as received, refund will be automatically processed after 24 hours.'
-                          : `Refund of ₹${selectedReturn.finalAmount} will be processed to the customer's payment method.`}
+                        {actionType === 'mark-received' && 'Once marked as received, refund will be automatically processed after 24 hours.'}
+                        {actionType === 'process-refund' && `Refund of ₹${(selectedReturn.return?.returnRefundAmount || selectedReturn.finalAmount || 0).toLocaleString('en-IN')} will be processed to the customer's payment method.`}
+                        {actionType === 'reject' && 'The customer will be notified that their return request has been rejected with the reason provided.'}
+                        {actionType === 'schedule-pickup' && 'Pickup will be scheduled and customer will be notified. Status will change to PICKED_UP.'}
                       </p>
                     </div>
                   </div>
@@ -537,22 +671,36 @@ const AdminReturnManagement = () => {
                   <div className="arm-form-actions">
                     <button
                       className="arm-form-btn arm-form-cancel"
-                      onClick={() => setShowActionModal(false)}
+                      onClick={() => { setShowActionModal(false); setActionData({}); }}
                     >
                       Cancel
                     </button>
                     <button
                       className="arm-form-btn arm-form-submit"
+                      style={actionType === 'reject' ? { background: '#DC2626' } : {}}
                       onClick={() => {
                         if (actionType === 'mark-received') {
                           handleMarkReceived(selectedReturn.orderId)
-                        } else {
+                        } else if (actionType === 'process-refund') {
                           handleProcessRefund(selectedReturn.orderId)
+                        } else if (actionType === 'reject') {
+                          if (!actionData.rejectionReason?.trim()) {
+                            showToast('Please provide a rejection reason', 'error')
+                            return
+                          }
+                          handleUpdateStatus(selectedReturn.orderId, 'REJECTED', { rejectionReason: actionData.rejectionReason.trim() })
+                          setShowActionModal(false)
+                          setActionData({})
+                        } else if (actionType === 'schedule-pickup') {
+                          handleSchedulePickup(selectedReturn.orderId)
                         }
                       }}
                     >
                       <Send size={16} />
-                      {actionType === 'mark-received' ? 'Mark as Received' : 'Process Refund'}
+                      {actionType === 'mark-received' && 'Mark as Received'}
+                      {actionType === 'process-refund' && 'Process Refund'}
+                      {actionType === 'reject' && 'Reject Return'}
+                      {actionType === 'schedule-pickup' && 'Schedule Pickup'}
                     </button>
                   </div>
                 </div>

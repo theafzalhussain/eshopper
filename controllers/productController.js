@@ -144,6 +144,23 @@ const buildFacetPipeline = (query = {}) => {
 };
 
 module.exports = {
+    // Get single product by ID
+    getProductById: async (req, res) => {
+        try {
+            const product = await Product.findById(req.params.id).lean();
+            if (!product) {
+                return res.status(404).json({ error: 'Product not found' });
+            }
+            res.json(product);
+        } catch (err) {
+            // Invalid ObjectId format
+            if (err.name === 'CastError') {
+                return res.status(404).json({ error: 'Product not found' });
+            }
+            res.status(500).json({ error: 'Failed to fetch product' });
+        }
+    },
+
     // Get all products
     getAllProducts: async (req, res) => {
         try {

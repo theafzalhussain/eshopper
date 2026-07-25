@@ -6,6 +6,8 @@
     "node": "20.x"
   },
   "dependencies": {
+    "@datadog/browser-rum": "^7.6.1",
+    "@datadog/browser-rum-react": "^7.6.1",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
     "@getbrevo/brevo": "^4.0.1",

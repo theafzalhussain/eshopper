@@ -12,7 +12,8 @@ import {
     SlidersHorizontal,
     Sparkles,
     Truck,
-    Trash2
+    Trash2,
+    RotateCcw
 } from 'lucide-react';
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
@@ -22,6 +23,7 @@ import { SOCKET_TRANSPORTS } from '../../constants';
 import LefNav from './LefNav';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
 import OrderActionDrawer from './OrderActionDrawer';
+import AdminReturnManagement from './AdminReturnManagement';
 import { motion } from 'framer-motion';
 import { BASE_URL as SHARED_BASE_URL } from '../../constants';
 import './AdminOrders.css';
@@ -196,6 +198,7 @@ const normalizePaymentStatus = (order = {}) => {
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('orders');
     const [search, setSearch] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('All');
@@ -348,8 +351,29 @@ export default function AdminOrders() {
         });
 
         socket.on('statusUpdate', handleStatusUpdate);
+
+        // Listen for return status updates (real-time)
+        const handleReturnStatusUpdate = (payload) => {
+            if (payload && payload.orderId) {
+                // Dispatch a custom event so AdminReturnManagement can react
+                try {
+                    window.dispatchEvent(new CustomEvent('admin:returnStatusUpdate', { detail: payload }));
+                } catch (e) {}
+            }
+        };
+        socket.on('returnStatusUpdate', handleReturnStatusUpdate);
+        socket.on('orderReturnUpdated', handleReturnStatusUpdate);
+        socket.on('orderReturnRequested', handleReturnStatusUpdate);
+        socket.on('orderReturnReceived', handleReturnStatusUpdate);
+        socket.on('orderRefundProcessed', handleReturnStatusUpdate);
+
         return () => {
             socket.off('statusUpdate', handleStatusUpdate);
+            socket.off('returnStatusUpdate', handleReturnStatusUpdate);
+            socket.off('orderReturnUpdated', handleReturnStatusUpdate);
+            socket.off('orderReturnRequested', handleReturnStatusUpdate);
+            socket.off('orderReturnReceived', handleReturnStatusUpdate);
+            socket.off('orderRefundProcessed', handleReturnStatusUpdate);
             socket.disconnect();
         };
     }, [apiBaseUrl]);
@@ -876,6 +900,58 @@ export default function AdminOrders() {
                         </motion.div>
                     )}
 
+                    {/* Tab Navigation */}
+                    <div className="ao-tabs mb-4" style={{ display: 'flex', gap: '0', borderBottom: '2px solid #e2e8f0', marginBottom: '24px' }}>
+                        <button 
+                            className={`ao-tab-btn ${activeTab === 'orders' ? 'ao-tab-active' : ''}`}
+                            onClick={() => setActiveTab('orders')}
+                            style={{
+                                padding: '12px 28px',
+                                border: 'none',
+                                background: activeTab === 'orders' ? '#fff' : 'transparent',
+                                color: activeTab === 'orders' ? '#0f172a' : '#64748b',
+                                fontWeight: activeTab === 'orders' ? '700' : '500',
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                                borderBottom: activeTab === 'orders' ? '3px solid #D4AF37' : '3px solid transparent',
+                                marginBottom: '-2px',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                letterSpacing: '0.3px'
+                            }}
+                        >
+                            <Package size={16} /> Orders
+                        </button>
+                        <button 
+                            className={`ao-tab-btn ${activeTab === 'returns' ? 'ao-tab-active' : ''}`}
+                            onClick={() => setActiveTab('returns')}
+                            style={{
+                                padding: '12px 28px',
+                                border: 'none',
+                                background: activeTab === 'returns' ? '#fff' : 'transparent',
+                                color: activeTab === 'returns' ? '#0f172a' : '#64748b',
+                                fontWeight: activeTab === 'returns' ? '700' : '500',
+                                fontSize: '14px',
+                                cursor: 'pointer',
+                                borderBottom: activeTab === 'returns' ? '3px solid #D4AF37' : '3px solid transparent',
+                                marginBottom: '-2px',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                letterSpacing: '0.3px'
+                            }}
+                        >
+                            <RotateCcw size={16} /> Returns
+                        </button>
+                    </div>
+
+                    {/* Conditional Content based on active tab */}
+                    {activeTab === 'returns' ? (
+                        <AdminReturnManagement />
+                    ) : (
                     <motion.div 
                         initial={{opacity:0, y:20}} 
                         animate={{opacity:1, y:0}} 
@@ -1140,6 +1216,7 @@ export default function AdminOrders() {
                             </div>
                         )}
                     </motion.div>
+                    )}
                 </div>
             </div>
 

@@ -8,6 +8,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
+const wishlistRoutes = require('./routes/wishlistRoutes');
 const imageProxy = require('./routes/imageProxy');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -83,13 +84,7 @@ try {
             }
         }));
 
-        // SPA fallback for non-API routes (only in production)
-        app.get('*', (req, res, next) => {
-            if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) return next();
-            res.sendFile(path.join(buildPath, 'index.html'), (err) => {
-                if (err) next(err);
-            });
-        });
+        // SPA fallback is registered AFTER all API routes (at the bottom of this file)
         console.log('✅ Serving build/ with aggressive caching (production)');
     }
 } catch (serveErr) {
@@ -1043,6 +1038,10 @@ app.use('/user', userRoutes);
 
 // Register product routes (enables /product/add and file upload endpoints)
 app.use('/product', productRoutes);
+
+// Register wishlist routes (proper filtering by userId, takes priority over generic handle)
+app.use('/wishlist', wishlistRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 
 // Image proxy for Cloudinary/local images (used by frontend optimize helpers)
 app.use('/img', imageProxy);
@@ -5949,6 +5948,21 @@ Guidelines:
             }
         });
         // --- server.js AI REFACTOR END ---
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // SPA FALLBACK — MUST be the LAST route, AFTER all API routes
+        // ═══════════════════════════════════════════════════════════════════════
+        const buildPath = path.join(__dirname, 'build');
+        const isProdBuild = String(process.env.NODE_ENV || '').toLowerCase() === 'production' && fs.existsSync(buildPath);
+        if (isProdBuild) {
+            const API_PREFIXES = ['/api', '/socket.io', '/product', '/maincategory', '/subcategory', '/brand', '/user', '/wishlist', '/cart', '/coupon', '/checkout', '/contact', '/newslatter', '/login', '/img', '/healthz', '/test'];
+            app.get('*', (req, res, next) => {
+                if (API_PREFIXES.some(prefix => req.path.startsWith(prefix)) || req.path === '/') return next();
+                res.sendFile(path.join(buildPath, 'index.html'), (err) => {
+                    if (err) next(err);
+                });
+            });
+        }
 
         const server = httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`🚀 Master Server Live on ${PORT}`);
