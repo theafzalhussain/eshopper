@@ -161,14 +161,22 @@ module.exports = {
         }
     },
 
-    // Get all products
+    // Get all products (listing view — lean projection for speed)
     getAllProducts: async (req, res) => {
         try {
+            const page = Math.max(1, Number(req.query.page || 1));
+            const limit = Math.min(100, Math.max(1, Number(req.query.limit || 50)));
+            const skip = (page - 1) * limit;
+
             const products = await Product.find({})
+                .select('name maincategory subcategory brand color size baseprice discount finalprice stock pic1 rating reviews newArrival isSale createdAt')
                 .sort({ createdAt: -1 })
-                .lean()
-                .cache({ key: 'list' });
-            res.json(products);
+                .skip(skip)
+                .limit(limit)
+                .lean();
+
+            const total = await Product.estimatedDocumentCount();
+            res.json({ products, total, page, limit, hasMore: skip + products.length < total });
         } catch (err) {
             res.status(500).json({ error: 'Failed to fetch products' });
         }
