@@ -3007,20 +3007,22 @@ app.put('/coupon/:id', async (req, res) => {
 });
 
 // Chatbot knowledge endpoint: returns categories, subcategories, brands, products snapshot, and active coupons
-app.get('/api/chatbot/knowledge', async (req, res) => {
+app.get('/api/chatbot/knowledge', cacheMiddleware(300), async (req, res) => {
     try {
-        const maincats = typeof Maincategory !== 'undefined' ? await Maincategory.find().lean() : [];
-        const subcats = typeof Subcategory !== 'undefined' ? await Subcategory.find().lean() : [];
-        const brands = typeof Brand !== 'undefined' ? await Brand.find().lean() : [];
-        const products = typeof Product !== 'undefined'
-            ? await Product.find({}, 'name maincategory subcategory brand color size baseprice discount finalprice stock description rating reviews newArrival isSale createdAt pic1')
-                .sort({ createdAt: -1 }).limit(1000).lean()
-            : [];
-        let coupons = typeof Coupon !== 'undefined' ? await Coupon.find().sort({ createdAt: -1 }).lean() : [];
+        const [maincats, subcats, brands, products, allCoupons] = await Promise.all([
+            typeof Maincategory !== 'undefined' ? Maincategory.find({}, 'name').lean() : Promise.resolve([]),
+            typeof Subcategory !== 'undefined' ? Subcategory.find({}, 'name').lean() : Promise.resolve([]),
+            typeof Brand !== 'undefined' ? Brand.find({}, 'name').lean() : Promise.resolve([]),
+            typeof Product !== 'undefined'
+                ? Product.find({}, 'name maincategory subcategory brand color size baseprice discount finalprice stock description rating reviews newArrival isSale createdAt pic1')
+                    .sort({ createdAt: -1 }).limit(1000).lean()
+                : Promise.resolve([]),
+            typeof Coupon !== 'undefined' ? Coupon.find({ isActive: { $ne: false } }).sort({ createdAt: -1 }).limit(30).lean() : Promise.resolve([])
+        ]);
 
         // Filter active coupons by startsAt/expiresAt similar to cartController
         const now = new Date();
-        coupons = (coupons || []).filter((c) => {
+        const coupons = (allCoupons || []).filter((c) => {
             if (c.isActive === false) return false;
             if (c.startsAt && now < new Date(c.startsAt)) return false;
             if (c.expiresAt && now > new Date(c.expiresAt)) return false;
@@ -3929,7 +3931,14 @@ async function startServer() {
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
             retryWrites: true,
-            w: 'majority'
+            w: 'majority',
+            /* Reuse warm sockets instead of re-handshaking on every burst —
+               this is what removes the random 300-800ms spikes under load. */
+            maxPoolSize: Number(process.env.MONGO_MAX_POOL || 20),
+            minPoolSize: Number(process.env.MONGO_MIN_POOL || 2),
+            maxIdleTimeMS: 60000,
+            waitQueueTimeoutMS: 8000,
+            compressors: ['zlib']
         });
 
         console.log("✅ MongoDB connected successfully");

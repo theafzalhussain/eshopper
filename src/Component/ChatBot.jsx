@@ -270,8 +270,17 @@ export default function ChatBot() {
     }
   }, [isOpen])
 
-  /* ── bootstrap user + full catalog knowledge ── */
+  /* ── bootstrap user + full catalog knowledge ──
+     Both are only needed once the customer actually opens the chat, so
+     nothing here touches the network on a normal page load. */
+  const bootstrapped = useRef(false)
+
   useEffect(() => {
+    if (!isOpen || bootstrapped.current) return
+    bootstrapped.current = true
+
+    let cancelled = false
+
     const loadUser = async () => {
       const localName = localStorage.getItem('name')
       const localPic = localStorage.getItem('pic')
@@ -280,12 +289,13 @@ export default function ChatBot() {
         || localStorage.getItem('userpic')
         || ''
 
-      setUser((p) => ({ ...p, name: localName || p.name, pic: localPic || p.pic }))
+      if (!cancelled) setUser((p) => ({ ...p, name: localName || p.name, pic: localPic || p.pic }))
 
       try {
         const uid = localStorage.getItem('userid')
         if (!uid) return
         const { data } = await axios.get(`${BASE_URL}/user/${uid}`, { timeout: 9000 })
+        if (cancelled) return
         setUser({
           name: data.name || localName || 'User',
           email: data.email || '',
@@ -300,6 +310,7 @@ export default function ChatBot() {
       /* One call gives products + admin sections + brands + live coupons */
       try {
         const { data } = await axios.get(`${BASE_URL}/api/chatbot/knowledge`, { timeout: 15000 })
+        if (cancelled) return
         const list = Array.isArray(data?.products) ? data.products : []
 
         const admin = {
@@ -320,13 +331,15 @@ export default function ChatBot() {
 
       try {
         const list = await getApiProducts()
-        if (list.length > 0) setProductCache(list)
+        if (!cancelled && list.length > 0) setProductCache(list)
       } catch { /* offline — search will retry on demand */ }
     }
 
     loadUser()
     loadKnowledge()
-  }, [])
+
+    return () => { cancelled = true }
+  }, [isOpen])
 
   /* ══════════════════════════════════════════
      PRODUCT RESOLUTION FOR A TURN

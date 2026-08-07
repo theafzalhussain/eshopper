@@ -1,17 +1,18 @@
-import React, { lazy, Suspense, useEffect } from 'react'
-import { io } from 'socket.io-client'
+import React, { lazy, Suspense, useEffect, useState } from 'react'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ToastProvider } from './ToastNotification'
 import ToastEventBridge from './ToastEventBridge'
 import Navbaar from './Navbaar'
-import Footer from './Footer'
 import { useMembership } from './MembershipContext'
-import PremiumAuthPopup from './PremiumAuthPopup'
 import CatalogQueryBridge from './CatalogQueryBridge'
 import SEO, { organizationJsonLd, websiteJsonLd } from './SEO'
 
+/* Below-the-fold and on-demand shells stay out of the initial bundle */
+const Footer = lazy(() => import('./Footer'))
+const PremiumAuthPopup = lazy(() => import('./PremiumAuthPopup'))
 const ChatBot = lazy(() => import('./ChatBot'))
+
 const Home = lazy(() => import('./Home'))
 const About = lazy(() => import('./About'))
 const Contact = lazy(() => import('./Contact'))
@@ -59,6 +60,68 @@ const ScrollToTop = () => {
     return null;
 }
 
+/* ══════════════════════════════════════════════════════════
+   IDLE MOUNT
+   Non-critical widgets (chat, auth nudge) wait until the main
+   thread is free, so they never compete with first paint or
+   make a low-end phone feel janky on load.
+══════════════════════════════════════════════════════════ */
+const useIdle = (delay = 1200) => {
+    const [ready, setReady] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        let idleId = null;
+        let timerId = null;
+
+        const go = () => { if (!cancelled) setReady(true); };
+
+        const schedule = () => {
+            if (typeof window.requestIdleCallback === 'function') {
+                idleId = window.requestIdleCallback(go, { timeout: delay + 2000 });
+            } else {
+                timerId = setTimeout(go, delay);
+            }
+        };
+
+        if (document.readyState === 'complete') timerId = setTimeout(schedule, delay);
+        else window.addEventListener('load', schedule, { once: true });
+
+        return () => {
+            cancelled = true;
+            if (timerId) clearTimeout(timerId);
+            if (idleId && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId);
+        };
+    }, [delay]);
+
+    return ready;
+}
+
+const IdleMount = ({ children, delay }) => {
+    const ready = useIdle(delay);
+    if (!ready) return null;
+    return <Suspense fallback={null}>{children}</Suspense>;
+}
+
+/* Footer is below the fold — render it only once it is close to view */
+const LazyFooter = () => {
+    const [show, setShow] = useState(false);
+    const [node, setNode] = useState(null);
+
+    useEffect(() => {
+        if (!node || show) return;
+        if (!('IntersectionObserver' in window)) { setShow(true); return; }
+        const obs = new IntersectionObserver((entries) => {
+            if (entries.some((e) => e.isIntersecting)) { setShow(true); obs.disconnect(); }
+        }, { rootMargin: '600px' });
+        obs.observe(node);
+        return () => obs.disconnect();
+    }, [node, show]);
+
+    if (show) return <Suspense fallback={null}><Footer /></Suspense>;
+    return <div ref={setNode} style={{ minHeight: 1 }} aria-hidden="true" />;
+}
+
 const AppShell = ({ children }) => {
   const { pathname } = useLocation();
   const hideFooterRoutes = ['/login', '/signup'];
@@ -69,13 +132,11 @@ const AppShell = ({ children }) => {
     <>
       <ScrollToTop />
       <Navbaar />
-      <PremiumAuthPopup />
       <CatalogQueryBridge />
-      <Suspense fallback={null}>
-        <ChatBot />
-      </Suspense>
       {children}
-      {shouldShowFooter && <Footer />}
+      {shouldShowFooter && <LazyFooter />}
+      <IdleMount delay={900}><PremiumAuthPopup /></IdleMount>
+      <IdleMount delay={1500}><ChatBot /></IdleMount>
     </>
   );
 }
@@ -163,42 +224,71 @@ function PublicSeo() {
 export default function App() {
   useMembership()
 
+  /* Realtime socket is not needed for first paint — connect once idle.
+     socket.io-client (~40 kB) is dynamically imported so it never lands
+     in the initial bundle. */
   useEffect(() => {
-    try {
-      // Prefer a sane BASE_URL. Only use REACT_APP_API_URL if it does not point to localhost
-      const envSocket = process.env.REACT_APP_API_URL || '';
-      const SOCKET_ENDPOINT = (envSocket && !envSocket.includes('localhost') && !envSocket.includes('127.0.0.1'))
-        ? envSocket
-        : (BASE_URL || window.location.origin);
-      const transports = (process.env.REACT_APP_SOCKET_TRANSPORTS && process.env.REACT_APP_SOCKET_TRANSPORTS.split(',')) || SOCKET_TRANSPORTS || ['polling', 'websocket'];
-      const isAdmin = (localStorage.getItem('isAdmin') === 'true' || (localStorage.getItem('role') || '').toLowerCase() === 'admin');
-      const socketAuthUser = isAdmin ? 'admin-dashboard' : (localStorage.getItem('userid') || null);
-      const socket = io(SOCKET_ENDPOINT, {
-        auth: { userId: socketAuthUser },
-        transports
-      });
+    let socket = null
+    let disposed = false
+    let idleId = null
+    let timerId = null
 
-      socket.on('connect', () => {
-        console.log('Realtime socket connected', socket.id);
-      });
+    const connect = async () => {
+      if (disposed) return
+      try {
+        const { io } = await import('socket.io-client')
+        if (disposed) return
 
-      socket.on('dbChange', (data) => {
-        console.log('Realtime dbChange received', data);
-        try { window.dispatchEvent(new CustomEvent('realtime:dbChange', { detail: data })); } catch (e) {}
-      });
+        const envSocket = process.env.REACT_APP_API_URL || ''
+        const SOCKET_ENDPOINT = (envSocket && !envSocket.includes('localhost') && !envSocket.includes('127.0.0.1'))
+          ? envSocket
+          : (BASE_URL || window.location.origin)
+        const transports = (process.env.REACT_APP_SOCKET_TRANSPORTS && process.env.REACT_APP_SOCKET_TRANSPORTS.split(','))
+          || SOCKET_TRANSPORTS
+          || ['websocket', 'polling']
+        const isAdmin = (localStorage.getItem('isAdmin') === 'true' || (localStorage.getItem('role') || '').toLowerCase() === 'admin')
+        const socketAuthUser = isAdmin ? 'admin-dashboard' : (localStorage.getItem('userid') || null)
 
-      // Forward userPasswordReset events to window so individual pages can react
-      socket.on('userPasswordReset', (payload) => {
-        try { window.dispatchEvent(new CustomEvent('realtime:userPasswordReset', { detail: payload })); } catch (e) {}
-      });
+        socket = io(SOCKET_ENDPOINT, {
+          auth: { userId: socketAuthUser },
+          transports,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 8000,
+          timeout: 12000
+        })
 
-      socket.on('connect_error', (err) => console.warn('Socket connect_error:', err && err.message));
+        socket.on('dbChange', (data) => {
+          try { window.dispatchEvent(new CustomEvent('realtime:dbChange', { detail: data })) } catch (e) { /* ignore */ }
+        })
 
-      return () => { try { socket.disconnect(); } catch (e) {} };
-    } catch (e) {
-      console.warn('Realtime socket init failed', e && e.message);
+        socket.on('userPasswordReset', (payload) => {
+          try { window.dispatchEvent(new CustomEvent('realtime:userPasswordReset', { detail: payload })) } catch (e) { /* ignore */ }
+        })
+
+        socket.on('connect_error', (err) => console.warn('Socket connect_error:', err && err.message))
+      } catch (e) {
+        console.warn('Realtime socket init failed', e && e.message)
+      }
     }
-  }, []);
+
+    const schedule = () => {
+      if (typeof window.requestIdleCallback === 'function') {
+        idleId = window.requestIdleCallback(connect, { timeout: 3000 })
+      } else {
+        timerId = setTimeout(connect, 1200)
+      }
+    }
+
+    if (document.readyState === 'complete') schedule()
+    else window.addEventListener('load', schedule, { once: true })
+
+    return () => {
+      disposed = true
+      if (timerId) clearTimeout(timerId)
+      if (idleId && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId)
+      try { if (socket) socket.disconnect() } catch (e) { /* ignore */ }
+    }
+  }, [])
 
   const routeLoader = (
     <div style={{ minHeight: '50vh', display: 'grid', placeItems: 'center', color: '#94A3B8' }}>

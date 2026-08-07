@@ -1,7 +1,6 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { optimizeCloudinaryUrlAdvanced } from '../../utils/cloudinaryHelper';
 import LazyImage from '../LazyImage';
 
 const SkeletonCard = memo(() => (
@@ -16,6 +15,21 @@ const SkeletonCard = memo(() => (
     </div>
 ));
 
+/* ══════════════════════════════════════════════════════════
+   PROGRESSIVE GRID
+   The old version rendered every product at once (despite the
+   name) which meant 100+ heavy cards in the DOM, each with a
+   framer-motion `layout` animation. That measure pass on every
+   state change is what made filtering and scrolling stutter.
+
+   Now we render a first batch immediately and append more as the
+   customer approaches the end of the list. The DOM stays small,
+   scrolling stays at 60fps, and nothing is lost — the full list
+   still renders as you scroll.
+══════════════════════════════════════════════════════════ */
+const FIRST_BATCH = 12;
+const BATCH_STEP = 12;
+
 export default function VirtualProductGrid({
     items = [],
     renderItem,
@@ -26,56 +40,105 @@ export default function VirtualProductGrid({
     const safeItems = Array.isArray(items) ? items : [];
     const safeRenderItem = typeof renderItem === 'function' ? renderItem : null;
 
-    return (
-        <div
-            className={className}
-            style={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(auto-fill, minmax(${itemMinWidth}px, 1fr))`,
-                gap,
-                alignItems: 'start'
-            }}
-        >
-            {safeItems.map((item, index) => {
-                if (!item) return null;
+    const [visibleCount, setVisibleCount] = useState(FIRST_BATCH);
+    const sentinelRef = useRef(null);
 
-                if (item.__skeleton) {
+    /* reset the window whenever the result set changes (filter, sort, search) */
+    useEffect(() => {
+        setVisibleCount(FIRST_BATCH);
+    }, [safeItems.length]);
+
+    const showMore = useCallback(() => {
+        setVisibleCount((c) => (c >= safeItems.length ? c : c + BATCH_STEP));
+    }, [safeItems.length]);
+
+    useEffect(() => {
+        const node = sentinelRef.current;
+        if (!node) return;
+        if (visibleCount >= safeItems.length) return;
+
+        if (!('IntersectionObserver' in window)) { setVisibleCount(safeItems.length); return; }
+
+        const obs = new IntersectionObserver((entries) => {
+            if (entries.some((e) => e.isIntersecting)) showMore();
+        }, { rootMargin: '800px 0px' });
+
+        obs.observe(node);
+        return () => obs.disconnect();
+    }, [visibleCount, safeItems.length, showMore]);
+
+    const shown = safeItems.slice(0, visibleCount);
+    const remaining = safeItems.length - shown.length;
+
+    return (
+        <>
+            <div
+                className={className}
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(auto-fill, minmax(${itemMinWidth}px, 1fr))`,
+                    gap,
+                    alignItems: 'start',
+                    /* isolate the grid so card paints never invalidate the page */
+                    contain: 'layout paint style'
+                }}
+            >
+                {shown.map((item, index) => {
+                    if (!item) return null;
+
+                    if (item.__skeleton) {
+                        return (
+                            <div key={item.id || `skeleton-${index}`}>
+                                <SkeletonCard />
+                            </div>
+                        );
+                    }
+
+                    if (!safeRenderItem) return null;
+
                     return (
-                        <div key={item.id || `skeleton-${index}`}>
-                            <SkeletonCard />
+                        <div key={item.id || item._id || index}>
+                            {safeRenderItem(item, index)}
                         </div>
                     );
-                }
+                })}
+            </div>
 
-                if (!safeRenderItem) return null;
-
-                return (
-                    <div key={item.id || index}>
-                        {safeRenderItem(item, index)}
-                    </div>
-                );
-            })}
-        </div>
+            {remaining > 0 && (
+                <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
+            )}
+        </>
     );
 }
 
-export const renderProductCard = ({
+/* ══════════════════════════════════════════════════════════
+   PRODUCT CARD
+   A real memoised component. Previously this was a plain
+   function returning JSX, so React re-rendered every card on
+   every hover, wishlist toggle and size selection.
+
+   Hover state now lives inside the card, so moving the mouse
+   across a grid repaints one card instead of all of them.
+══════════════════════════════════════════════════════════ */
+const ProductCardInner = ({
     item,
     index,
     stats,
-    hoverIndex,
-    setHoverIndex,
+    onHoverChange,
     calcDiscount,
-    isInWishlist,
+    isWishlisted,
     toggleWishlist,
     pushRecentlyViewed,
-    cartNotifications,
+    cartCount,
     setQuickView,
-    selectedSizes,
+    selectedSize,
     setSelectedSizes,
+    selectedSizes,
     addToCart
 }) => {
     const productId = item.id || item._id;
+    const [hovered, setHovered] = useState(false);
+
     if (!productId) return null;
 
     const ratingValue = stats ? stats.average : (item.rating || 0);
@@ -83,30 +146,35 @@ export const renderProductCard = ({
     const discount = calcDiscount(item);
     const isBestseller = (stats && (stats.count >= 5 || stats.average >= 4.2)) || item.isBestseller;
     const altImg = (item.pic2 && String(item.pic2).trim()) || (item.pic3 && String(item.pic3).trim()) || (item.pic4 && String(item.pic4).trim()) || null;
-    const showAlt = !!altImg && hoverIndex && hoverIndex[productId] === 1;
+    const showAlt = !!altImg && hovered;
     const mainImg = showAlt ? altImg : (item.pic1 && String(item.pic1).trim() ? item.pic1 : altImg);
     const priority = index < 4;
 
+    const enter = (v) => {
+        if (!altImg) return;
+        setHovered(v);
+        if (onHoverChange) onHoverChange(productId, v ? 1 : 0);
+    };
+
     return (
         <motion.div
-            key={productId}
-            layout
-            initial={{ opacity: 0, y: 24, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96, y: 16 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: Math.min(index * 0.025, 0.18) }}
+            /* `layout` removed on purpose: measuring every card on every
+               render was the single biggest source of scroll jank. */
+            initial={index < FIRST_BATCH ? { opacity: 0, y: 18 } : false}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1], delay: Math.min(index * 0.02, 0.14) }}
             className="mp-card"
-            onMouseEnter={() => altImg && setHoverIndex((h) => ({ ...h, [productId]: 1 }))}
-            onMouseLeave={() => setHoverIndex((h) => ({ ...h, [productId]: 0 }))}
+            onMouseEnter={() => enter(true)}
+            onMouseLeave={() => enter(false)}
         >
             <button
                 type="button"
-                className={`mp-wish ${isInWishlist(productId) ? 'active' : ''}`}
+                className={`mp-wish ${isWishlisted ? 'active' : ''}`}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(item); }}
-                aria-label={isInWishlist(productId) ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                title={isInWishlist(productId) ? 'Wishlisted' : 'Wishlist'}
+                aria-label={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                title={isWishlisted ? 'Wishlisted' : 'Wishlist'}
             >
-                <svg viewBox="0 0 24 24" width="18" height="18" fill={isInWishlist(productId) ? '#e11d48' : 'none'} stroke={isInWishlist(productId) ? '#e11d48' : '#282c3f'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill={isWishlisted ? '#e11d48' : 'none'} stroke={isWishlisted ? '#e11d48' : '#282c3f'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
             </button>
@@ -124,8 +192,7 @@ export const renderProductCard = ({
             <Link to={`/single-product/${productId}`} className="mp-img-wrap" onClick={() => pushRecentlyViewed(item)}>
                 <LazyImage
                     src={mainImg || '/assets/images/noimage.png'}
-                    loading={priority ? 'eager' : 'lazy'}
-                    fetchpriority={priority ? 'high' : 'auto'}
+                    eager={priority}
                     className="mp-img"
                     alt={item.name}
                     maxWidth={600}
@@ -191,11 +258,11 @@ export const renderProductCard = ({
                                     <button
                                         key={sz}
                                         type="button"
-                                        className={`mp-sbtn ${selectedSizes && selectedSizes[productId] === sz ? 'active' : ''}`}
+                                        className={`mp-sbtn ${selectedSize === sz ? 'active' : ''}`}
                                         onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            if (setSelectedSizes) setSelectedSizes({ ...selectedSizes, [productId]: sz });
+                                            if (setSelectedSizes) setSelectedSizes({ ...(selectedSizes || {}), [productId]: sz });
                                         }}
                                     >
                                         {sz}
@@ -206,26 +273,81 @@ export const renderProductCard = ({
                     )}
                     <button
                         type="button"
-                        className={`mp-addbtn ${cartNotifications && cartNotifications[productId] ? 'pending' : ''}`}
+                        className={`mp-addbtn ${cartCount ? 'pending' : ''}`}
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (addToCart) addToCart(item, selectedSizes ? selectedSizes[productId] : null);
+                            if (addToCart) addToCart(item, selectedSize || null);
                         }}
                     >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                        {cartNotifications && cartNotifications[productId] ? 'Add More' : 'Add to Bag'}
+                        {cartCount ? 'Add More' : 'Add to Bag'}
                     </button>
                 </div>
             </div>
 
-            {cartNotifications && cartNotifications[productId] && (
+            {cartCount ? (
                 <motion.div className="mp-cbadge" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 380, damping: 22 }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                    Added · {cartNotifications[productId]}×
+                    Added · {cartCount}×
                 </motion.div>
-            )}
-            {reviewCount > 0 && <span style={{ display: 'none' }}>{ratingValue}</span>}
+            ) : null}
         </motion.div>
+    );
+};
+
+/* Only re-render a card when something it actually displays changed.
+   Callback identity is deliberately ignored — Shop recreates those on
+   every render and comparing them would defeat the memo entirely. */
+const areEqual = (a, b) => (
+    (a.item?.id || a.item?._id) === (b.item?.id || b.item?._id)
+    && a.item === b.item
+    && a.index === b.index
+    && a.isWishlisted === b.isWishlisted
+    && a.cartCount === b.cartCount
+    && a.selectedSize === b.selectedSize
+    && a.stats?.average === b.stats?.average
+    && a.stats?.count === b.stats?.count
+);
+
+export const ProductCard = memo(ProductCardInner, areEqual);
+
+/* Backwards-compatible wrapper so existing call sites keep working */
+export const renderProductCard = ({
+    item,
+    index,
+    stats,
+    hoverIndex,
+    setHoverIndex,
+    calcDiscount,
+    isInWishlist,
+    toggleWishlist,
+    pushRecentlyViewed,
+    cartNotifications,
+    setQuickView,
+    selectedSizes,
+    setSelectedSizes,
+    addToCart
+}) => {
+    const productId = item?.id || item?._id;
+    if (!productId) return null;
+
+    return (
+        <ProductCard
+            item={item}
+            index={index}
+            stats={stats}
+            calcDiscount={calcDiscount}
+            isWishlisted={typeof isInWishlist === 'function' ? Boolean(isInWishlist(productId)) : false}
+            toggleWishlist={toggleWishlist}
+            pushRecentlyViewed={pushRecentlyViewed}
+            cartCount={cartNotifications ? cartNotifications[productId] : 0}
+            setQuickView={setQuickView}
+            selectedSize={selectedSizes ? selectedSizes[productId] : undefined}
+            selectedSizes={selectedSizes}
+            setSelectedSizes={setSelectedSizes}
+            addToCart={addToCart}
+            onHoverChange={setHoverIndex ? (id, v) => setHoverIndex((h) => ({ ...h, [id]: v })) : undefined}
+        />
     );
 };

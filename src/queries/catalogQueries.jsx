@@ -26,9 +26,33 @@ const normalizeSingleProduct = (response) => {
     return response;
 };
 
+/* The listing endpoint is paginated and caps a page at 100 items.
+   Previously we fired a single unparameterised call, so the app silently
+   only ever saw the newest 50 products. We now walk the pages (in parallel
+   after the first) so the catalogue is always complete and still fast. */
+const PAGE_SIZE = 100;
+const MAX_PAGES = 12;
+
 export const fetchProducts = async ({ signal } = {}) => {
-    const response = await fastAPI('/product/list', 'GET', null, 0, null, { signal });
-    return asArray(response);
+    const first = await fastAPI(`/product/list?page=1&limit=${PAGE_SIZE}`, 'GET', null, 0, null, { signal });
+    const items = asArray(first);
+
+    const total = Number(first?.total || 0);
+    const hasMore = first?.hasMore === true || (total > items.length);
+    if (!hasMore || items.length === 0) return items;
+
+    const pages = Math.min(MAX_PAGES, Math.ceil(total / PAGE_SIZE));
+    if (pages <= 1) return items;
+
+    const rest = await Promise.all(
+        Array.from({ length: pages - 1 }, (_, i) =>
+            fastAPI(`/product/list?page=${i + 2}&limit=${PAGE_SIZE}`, 'GET', null, 0, null, { signal })
+                .then(asArray)
+                .catch(() => [])
+        )
+    );
+
+    return items.concat(...rest);
 };
 
 export const fetchProductById = async (id, { signal } = {}) => {

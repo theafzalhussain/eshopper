@@ -30,6 +30,18 @@ productSchema.index({ maincategory: 1, subcategory: 1, brand: 1, createdAt: -1 }
 productSchema.index({ maincategory: 1, brand: 1, finalprice: 1, createdAt: -1 });
 productSchema.index({ name: 'text', brand: 'text', description: 'text' }); // For text search
 
+// Default listing sort (no filter) — without this Mongo does a full collection scan
+productSchema.index({ createdAt: -1 });
+// Price sorting / budget range filters
+productSchema.index({ finalprice: 1, createdAt: -1 });
+// Tag pages: new arrivals, sale, trending, top rated
+productSchema.index({ newArrival: 1, createdAt: -1 });
+productSchema.index({ isSale: 1, createdAt: -1 });
+productSchema.index({ discount: -1, createdAt: -1 });
+productSchema.index({ rating: -1, reviews: -1, createdAt: -1 });
+// Subcategory landing pages hit this without a maincategory prefix
+productSchema.index({ subcategory: 1, createdAt: -1 });
+
 productSchema.plugin(applyMongooseQueryCache, {
     namespace: 'product',
     defaultTtlMs: 30000
