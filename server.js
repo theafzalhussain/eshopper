@@ -103,6 +103,46 @@ try {
 
         // SPA fallback is registered AFTER all API routes (at the bottom of this file)
         console.log('✅ Serving build/ with aggressive caching (production)');
+
+        // ═══════════════════════════════════════════════════════════════════
+        // SPA NAVIGATION GUARD  —  must run BEFORE the API routes
+        // Several frontend routes share a path with an API route
+        // (/cart, /checkout, /contact, /login, /wishlist). Those API routes
+        // matched first, so opening or refreshing eshopperr.me/cart returned
+        // raw JSON instead of the app — and leaked other customers' records.
+        //
+        // Browser navigation always sends `Accept: text/html`; axios and
+        // fetch never do. We use that to hand navigations the app shell
+        // while leaving every API client completely untouched.
+        // ═══════════════════════════════════════════════════════════════════
+        const SPA_EXACT_ROUTES = new Set([
+            '/about', '/contact', '/faq', '/terms', '/return-policy', '/privacy-policy',
+            '/login', '/signup', '/forget-password', '/profile', '/update-profile',
+            '/my-orders', '/cart', '/wishlist', '/checkout', '/confirmation', '/blog'
+        ]);
+        const SPA_PREFIXES = ['/shop/', '/single-product/', '/order-tracking/', '/admin-', '/blog/'];
+        const indexFile = path.join(buildPath, 'index.html');
+
+        app.use((req, res, next) => {
+            if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+
+            const accept = String(req.headers.accept || '');
+            // API traffic (axios sends application/json, fetch sends */*) passes through
+            if (!accept.includes('text/html')) return next();
+            if (req.xhr) return next();
+
+            const p = req.path || '';
+            if (p.startsWith('/api/') || p.startsWith('/socket.io')) return next();
+            if (p.includes('.')) return next(); // static asset / sitemap / robots
+
+            const isSpaRoute = SPA_EXACT_ROUTES.has(p) || SPA_PREFIXES.some((pre) => p.startsWith(pre));
+            if (!isSpaRoute) return next();
+
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            return res.sendFile(indexFile, (err) => { if (err) next(); });
+        });
+        console.log('✅ SPA navigation guard active (deep links + refresh work on every route)');
     }
 } catch (serveErr) {
     console.warn('⚠️ Static build serving skipped:', serveErr && serveErr.message);
@@ -5837,6 +5877,11 @@ ${relevantBlock}`;
                     return next();
                 }
 
+                /* express.static's setHeaders does not run for sendFile, so
+                   set it here too — otherwise a CDN can pin an old app shell
+                   and users keep loading stale JS after a deploy. */
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                res.setHeader('Pragma', 'no-cache');
                 res.sendFile(path.join(buildPath, 'index.html'), (err) => {
                     if (err) next(err);
                 });

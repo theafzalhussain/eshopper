@@ -154,11 +154,13 @@ const extractSizes = (text) => {
 }
 
 const extractSort = (text) => {
-  if (/\b(cheapest|lowest price|sasta|sabse sasta|low to high|budget friendly|kam price|kam daam)\b/.test(text)) return 'price_asc'
-  if (/\b(most expensive|highest price|premium|luxury|high to low|mehnga|sabse mehnga)\b/.test(text)) return 'price_desc'
-  if (/\b(best rated|top rated|highest rated|best reviewed|most loved)\b/.test(text)) return 'rating'
-  if (/\b(newest|latest|new arrival|new arrivals|just launched|fresh|naya|nayi)\b/.test(text)) return 'newest'
-  if (/\b(biggest discount|max discount|highest discount|best deal|best offer|sabse zyada discount)\b/.test(text)) return 'discount'
+  /* plurals matter here: "biggest discounts" used to miss entirely
+     because of a trailing \b after "discount" */
+  if (/\b(cheapest|lowest price|sasta|sabse sasta|low to high|budget friendly|kam price|kam daam)/.test(text)) return 'price_asc'
+  if (/\b(most expensive|highest price|premium|luxury|high to low|mehnga|sabse mehnga)/.test(text)) return 'price_desc'
+  if (/\b(best rated|top rated|highest rated|best reviewed|most loved)/.test(text)) return 'rating'
+  if (/\b(newest|latest|new arrival|just launched|fresh|naya|nayi)/.test(text)) return 'newest'
+  if (/\b(biggest discount|max discount|maximum discount|highest discount|best deal|best offer|biggest offer|top deal|sabse zyada discount|sabse bada discount)/.test(text)) return 'discount'
   return null
 }
 
