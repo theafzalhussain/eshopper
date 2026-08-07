@@ -3012,7 +3012,10 @@ app.get('/api/chatbot/knowledge', async (req, res) => {
         const maincats = typeof Maincategory !== 'undefined' ? await Maincategory.find().lean() : [];
         const subcats = typeof Subcategory !== 'undefined' ? await Subcategory.find().lean() : [];
         const brands = typeof Brand !== 'undefined' ? await Brand.find().lean() : [];
-        const products = typeof Product !== 'undefined' ? await Product.find().sort({ createdAt: -1 }).limit(1000).lean() : [];
+        const products = typeof Product !== 'undefined'
+            ? await Product.find({}, 'name maincategory subcategory brand color size baseprice discount finalprice stock description rating reviews newArrival isSale createdAt pic1')
+                .sort({ createdAt: -1 }).limit(1000).lean()
+            : [];
         let coupons = typeof Coupon !== 'undefined' ? await Coupon.find().sort({ createdAt: -1 }).lean() : [];
 
         // Filter active coupons by startsAt/expiresAt similar to cartController
@@ -4017,44 +4020,354 @@ async function startServer() {
             devLog(`Cooling down model ${modelName} for ${Math.ceil(retryMs / 1000)}s due to rate limit`);
         };
 
-        const generateWithRest = async (modelName, fullPrompt) => {
+        const generateWithRest = async (modelName, fullPrompt, systemInstruction = '', contents = null) => {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
             const payload = {
-                contents: [
-                    {
-                        role: 'user',
-                        parts: [{ text: fullPrompt }]
-                    }
-                ],
+                contents: Array.isArray(contents) && contents.length > 0
+                    ? contents
+                    : [{ role: 'user', parts: [{ text: fullPrompt }] }],
                 generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 300
+                    temperature: 0.85,
+                    topP: 0.95,
+                    topK: 40,
+                    maxOutputTokens: 1400
                 }
             };
+
+            if (systemInstruction) {
+                payload.systemInstruction = { role: 'system', parts: [{ text: systemInstruction }] };
+            }
 
             const response = await axios.post(url, payload, {
                 headers: {
                     'Content-Type': 'application/json',
                     'x-goog-api-key': geminiApiKey
-                }
+                },
+                timeout: 22000
             });
 
             return extractGeminiText(response.data);
         };
 
-        const getChatCatalogSummary = async () => {
+        // ═══════════════════════════════════════════════════════════════
+        // CHAT KNOWLEDGE PACK
+        // The consultant persona is only as good as the data it sees.
+        // We build a full picture of the catalogue once every 5 minutes:
+        // stats, category tree, brands, price bands, live deals, stock
+        // reality and active coupons — plus a searchable product index.
+        // ═══════════════════════════════════════════════════════════════
+        let cachedChatKnowledge = null;
+        let cachedChatKnowledgeAt = 0;
+
+        const stockState = (stock) => {
+            if (stock === undefined || stock === null || stock === '') return { inStock: true, label: 'In stock' };
+            if (typeof stock === 'boolean') return { inStock: stock, label: stock ? 'In stock' : 'Out of stock' };
+            const raw = String(stock).trim();
+            const num = Number(raw.replace(/[^\d.-]/g, ''));
+            if (Number.isFinite(num) && /\d/.test(raw)) {
+                if (num <= 0) return { inStock: false, label: 'Out of stock' };
+                if (num <= 5) return { inStock: true, label: `Only ${num} left` };
+                return { inStock: true, label: 'In stock' };
+            }
+            if (/(out of stock|unavailable|sold out|no stock)/i.test(raw)) return { inStock: false, label: 'Out of stock' };
+            if (/(low stock|limited|few left)/i.test(raw)) return { inStock: true, label: 'Limited stock' };
+            return { inStock: true, label: 'In stock' };
+        };
+
+        // Audience classifier — "women" literally contains "men", so a naive
+        // substring check leaks women's products into men's results. We blank
+        // out the female terms first, then look for male terms.
+        const scrubAudience = (text) => ` ${String(text || '').toLowerCase()} `
+            .replace(/[^a-z0-9\s']/g, ' ')
+            .replace(/\bwom[ae]n'?s?\b/g, ' @fem@ ')
+            .replace(/\bladies\b|\blady\b|\bfemale'?s?\b/g, ' @fem@ ')
+            .replace(/\bgirl'?s?\b|\bgirls\b/g, ' @girl@ ')
+            .replace(/\bboy'?s?\b|\bboys\b/g, ' @boy@ ')
+            .replace(/\bkid'?s?\b|\bkids\b|\bchildren\b|\bchild\b|\btoddler'?s?\b|\bbaby\b|\binfant'?s?\b|\bjunior'?s?\b/g, ' @kid@ ')
+            .replace(/\bmen'?s?\b|\bmens\b|\bmale'?s?\b|\bgent'?s?\b|\bgents\b/g, ' @male@ ')
+            .replace(/\bunisex\b/g, ' @uni@ ')
+
+        const audienceTags = (p) => {
+            const out = [];
+            const scan = (t) => {
+                if (t.includes('@fem@') && !out.includes('women')) out.push('women');
+                if (t.includes('@girl@')) { if (!out.includes('girls')) out.push('girls'); if (!out.includes('kids')) out.push('kids'); }
+                if (t.includes('@boy@')) { if (!out.includes('boys')) out.push('boys'); if (!out.includes('kids')) out.push('kids'); }
+                if (t.includes('@kid@') && !out.includes('kids')) out.push('kids');
+                if (t.includes('@male@') && !out.includes('men')) out.push('men');
+                if (t.includes('@uni@') && !out.includes('unisex')) out.push('unisex');
+            };
+            scan(scrubAudience(`${p.maincategory || ''} ${p.subcategory || ''}`));
+            if (out.length === 0) scan(scrubAudience(`${p.name || ''} ${p.description || ''}`));
+            return out;
+        };
+
+        const shapeChatProduct = (p) => {
+            const mrp = Number(p.baseprice || 0);
+            const price = Number(p.finalprice || 0);
+            const computed = mrp > 0 && price > 0 && mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+            const discount = computed > 0 ? computed : Math.max(0, Math.round(Number(p.discount || 0)));
+            const st = stockState(p.stock);
+            return {
+                name: p.name || 'Product',
+                main: p.maincategory || '',
+                sub: p.subcategory || '',
+                brand: p.brand || '',
+                color: p.color || '',
+                sizes: Array.isArray(p.size) ? p.size.join('/') : String(p.size || ''),
+                mrp,
+                price,
+                discount,
+                savings: mrp > price ? Math.round(mrp - price) : 0,
+                rating: Number(p.rating || 0),
+                reviews: Number(p.reviews || 0),
+                inStock: st.inStock,
+                stockLabel: st.label,
+                newArrival: Boolean(p.newArrival),
+                isSale: Boolean(p.isSale),
+                createdAt: p.createdAt || null,
+                audiences: audienceTags(p),
+                haystack: [p.name, p.maincategory, p.subcategory, p.brand, p.color, p.description]
+                    .filter(Boolean).join(' ').toLowerCase()
+            };
+        };
+
+        const chatProductLine = (p) => [
+            p.name,
+            p.brand ? `brand=${p.brand}` : '',
+            [p.main, p.sub].filter(Boolean).join('>') ? `cat=${[p.main, p.sub].filter(Boolean).join('>')}` : '',
+            p.audiences && p.audiences.length ? `for=${p.audiences.join('/')}` : 'for=unisex',
+            p.price > 0 ? `price=Rs.${p.price}` : '',
+            p.mrp > p.price ? `mrp=Rs.${p.mrp}` : '',
+            p.discount > 0 ? `discount=${p.discount}%` : '',
+            p.savings > 0 ? `save=Rs.${p.savings}` : '',
+            p.color ? `color=${p.color}` : '',
+            p.sizes ? `sizes=${p.sizes}` : '',
+            p.rating > 0 ? `rating=${p.rating}${p.reviews > 0 ? `(${p.reviews})` : ''}` : '',
+            `stock=${p.stockLabel}`,
+            p.newArrival ? 'NEW' : '',
+            p.isSale ? 'ON-SALE' : ''
+        ].filter(Boolean).join(' | ');
+
+        const PRICE_BANDS = [
+            { label: 'Under Rs.499', min: 0, max: 499 },
+            { label: 'Rs.500-999', min: 500, max: 999 },
+            { label: 'Rs.1000-1999', min: 1000, max: 1999 },
+            { label: 'Rs.2000-3499', min: 2000, max: 3499 },
+            { label: 'Rs.3500-4999', min: 3500, max: 4999 },
+            { label: 'Rs.5000+', min: 5000, max: Infinity }
+        ];
+
+        const getChatKnowledge = async () => {
             const now = Date.now();
-            if (cachedChatCatalog && (now - cachedChatCatalogAt) < CHAT_CATALOG_TTL_MS) {
-                return cachedChatCatalog;
+            if (cachedChatKnowledge && (now - cachedChatKnowledgeAt) < CHAT_CATALOG_TTL_MS) {
+                return cachedChatKnowledge;
             }
 
-            const allProducts = await Product.find({}, 'name baseprice maincategory');
-            cachedChatCatalog = allProducts
-                .map(p => `- ${p.name} | ${p.maincategory || 'General'} | Rs.${p.baseprice}`)
-                .slice(0, 18)
-                .join("\n");
+            const [rawProducts, rawCoupons, rawMain, rawSub, rawBrand] = await Promise.all([
+                Product.find({}, 'name maincategory subcategory brand color size baseprice discount finalprice stock description rating reviews newArrival isSale createdAt')
+                    .sort({ createdAt: -1 }).limit(1200).lean(),
+                Coupon.find({ isActive: { $ne: false } }).sort({ createdAt: -1 }).limit(20).lean().catch(() => []),
+                Maincategory.find().lean().catch(() => []),
+                Subcategory.find().lean().catch(() => []),
+                Brand.find().lean().catch(() => [])
+            ]);
+
+            const products = (rawProducts || []).map(shapeChatProduct);
+            const adminSections = (rawMain || []).map(r => r.name).filter(Boolean);
+            const adminSubs = (rawSub || []).map(r => r.name).filter(Boolean);
+            const adminBrands = (rawBrand || []).map(r => r.name).filter(Boolean);
+
+            const audienceCounts = { men: 0, women: 0, kids: 0, boys: 0, girls: 0, neutral: 0 };
+            products.forEach((p) => {
+                const a = p.audiences || [];
+                if (a.includes('men')) audienceCounts.men += 1;
+                if (a.includes('women')) audienceCounts.women += 1;
+                if (a.includes('kids')) audienceCounts.kids += 1;
+                if (a.includes('boys')) audienceCounts.boys += 1;
+                if (a.includes('girls')) audienceCounts.girls += 1;
+                if (a.length === 0 || (a.length === 1 && a[0] === 'unisex')) audienceCounts.neutral += 1;
+            });
+
+            const tree = new Map();
+            const brandMap = new Map();
+            const colorMap = new Map();
+            const sizeMap = new Map();
+            const prices = [];
+            const discounts = [];
+            const bands = PRICE_BANDS.map(b => ({ ...b, count: 0 }));
+            let inStock = 0, outOfStock = 0, newArrivals = 0, onSale = 0;
+
+            products.forEach((p) => {
+                const main = p.main || 'Other';
+                if (!tree.has(main)) tree.set(main, { count: 0, subs: new Map(), prices: [] });
+                const node = tree.get(main);
+                node.count += 1;
+                if (p.price > 0) node.prices.push(p.price);
+                if (p.sub) node.subs.set(p.sub, (node.subs.get(p.sub) || 0) + 1);
+
+                if (p.brand) {
+                    if (!brandMap.has(p.brand)) brandMap.set(p.brand, { count: 0, prices: [] });
+                    const b = brandMap.get(p.brand);
+                    b.count += 1;
+                    if (p.price > 0) b.prices.push(p.price);
+                }
+
+                String(p.color || '').split(/[,/|]+/).map(c => c.trim().toLowerCase()).filter(Boolean)
+                    .forEach(c => colorMap.set(c, (colorMap.get(c) || 0) + 1));
+                String(p.sizes || '').split(/[,/|\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean)
+                    .forEach(s => sizeMap.set(s, (sizeMap.get(s) || 0) + 1));
+
+                if (p.price > 0) {
+                    prices.push(p.price);
+                    const band = bands.find(b => p.price >= b.min && p.price <= b.max);
+                    if (band) band.count += 1;
+                }
+                if (p.discount > 0) discounts.push(p.discount);
+                if (p.inStock) inStock += 1; else outOfStock += 1;
+                if (p.newArrival) newArrivals += 1;
+                if (p.isSale || p.discount >= 10) onSale += 1;
+            });
+
+            const avg = (arr) => (arr.length ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : 0);
+
+            const categoryLines = Array.from(tree.entries())
+                .sort((a, b) => b[1].count - a[1].count)
+                .slice(0, 14)
+                .map(([name, node]) => {
+                    const subs = Array.from(node.subs.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                        .map(([s, c]) => `${s}(${c})`).join(', ');
+                    const lo = node.prices.length ? Math.min(...node.prices) : 0;
+                    const hi = node.prices.length ? Math.max(...node.prices) : 0;
+                    return `  - ${name}: ${node.count} items, Rs.${lo}-Rs.${hi}${subs ? ` | sub: ${subs}` : ''}`;
+                }).join('\n');
+
+            const brandLine = Array.from(brandMap.entries())
+                .sort((a, b) => b[1].count - a[1].count).slice(0, 15)
+                .map(([name, b]) => `${name}(${b.count}, Rs.${b.prices.length ? Math.min(...b.prices) : 0}-${b.prices.length ? Math.max(...b.prices) : 0})`)
+                .join(', ');
+
+            const bestDeals = [...products].filter(p => p.discount > 0)
+                .sort((a, b) => b.discount - a.discount).slice(0, 8);
+            const topRated = [...products].filter(p => p.rating > 0)
+                .sort((a, b) => (b.rating * 100 + Math.min(b.reviews, 99)) - (a.rating * 100 + Math.min(a.reviews, 99))).slice(0, 8);
+            const newest = [...products].filter(p => p.newArrival || p.createdAt).slice(0, 8);
+            const cheapest = [...products].filter(p => p.price > 0).sort((a, b) => a.price - b.price).slice(0, 6);
+            const premium = [...products].filter(p => p.price > 0).sort((a, b) => b.price - a.price).slice(0, 6);
+
+            const activeCoupons = (rawCoupons || []).filter((c) => {
+                const n = new Date();
+                if (c.startsAt && n < new Date(c.startsAt)) return false;
+                if (c.expiresAt && n > new Date(c.expiresAt)) return false;
+                return true;
+            });
+
+            const couponLine = activeCoupons.length
+                ? activeCoupons.slice(0, 8).map((c) => {
+                    const value = c.type === 'percent' ? `${c.value}% off` : `Rs.${c.value} off`;
+                    const min = c.minCartValue ? ` (min cart Rs.${c.minCartValue})` : '';
+                    const cap = c.maxDiscount ? ` (max Rs.${c.maxDiscount})` : '';
+                    return `${c.code}: ${value}${min}${cap}`;
+                }).join(' | ')
+                : 'No coupons are currently active.';
+
+            const overview = [
+                'LIVE CATALOG SNAPSHOT (authoritative — never contradict these numbers)',
+                `- Total products: ${products.length} (in stock ${inStock}, out of stock ${outOfStock})`,
+                `- By shopper: men ${audienceCounts.men} | women ${audienceCounts.women} | kids ${audienceCounts.kids} (boys ${audienceCounts.boys}, girls ${audienceCounts.girls}) | gender-neutral ${audienceCounts.neutral}`,
+                prices.length ? `- Price range: Rs.${Math.min(...prices)} - Rs.${Math.max(...prices)} (avg Rs.${avg(prices)})` : '',
+                `- Discounted items: ${discounts.length}, avg ${avg(discounts)}%, max ${discounts.length ? Math.max(...discounts) : 0}%`,
+                `- New arrivals: ${newArrivals} | On sale: ${onSale}`,
+                `- Price buckets: ${bands.filter(b => b.count > 0).map(b => `${b.label}: ${b.count}`).join(' | ')}`,
+                `- Sections:\n${categoryLines}`,
+                adminSections.length ? `- Official sections created by the store admin: ${adminSections.join(', ')}` : '',
+                adminSubs.length ? `- Official subcategories: ${adminSubs.slice(0, 40).join(', ')}` : '',
+                adminBrands.length ? `- Official brand list: ${adminBrands.slice(0, 30).join(', ')}` : '',
+                brandLine ? `- Brands with stock: ${brandLine}` : '',
+                `- Colours in stock: ${Array.from(colorMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([n, c]) => `${n}(${c})`).join(', ')}`,
+                `- Sizes in stock: ${Array.from(sizeMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([n, c]) => `${n}(${c})`).join(', ')}`,
+                `- Biggest live discounts: ${bestDeals.slice(0, 5).map(p => `${p.name} ${p.discount}% off @Rs.${p.price}`).join('; ')}`,
+                `- Highest rated: ${topRated.slice(0, 5).map(p => `${p.name} ${p.rating}/5`).join('; ')}`,
+                `- Most affordable: ${cheapest.slice(0, 4).map(p => `${p.name} Rs.${p.price}`).join('; ')}`,
+                `- Most premium: ${premium.slice(0, 4).map(p => `${p.name} Rs.${p.price}`).join('; ')}`,
+                `- Active coupons: ${couponLine}`
+            ].filter(Boolean).join('\n');
+
+            cachedChatKnowledge = { products, overview, bestDeals, topRated, newest, cheapest, premium, activeCoupons, audienceCounts, adminSections, adminSubs, adminBrands };
+            cachedChatKnowledgeAt = now;
+            cachedChatCatalog = overview;
             cachedChatCatalogAt = now;
-            return cachedChatCatalog;
+            return cachedChatKnowledge;
+        };
+
+        const audienceAllows = (tags = [], want) => {
+            if (!want) return true;
+            const has = (a) => tags.includes(a);
+            const neutral = tags.length === 0 || (tags.length === 1 && tags[0] === 'unisex');
+            switch (want) {
+                case 'men':
+                    if (has('women') || has('kids') || has('boys') || has('girls')) return false;
+                    return has('men') || neutral;
+                case 'women':
+                    if (has('men') || has('kids') || has('boys') || has('girls')) return false;
+                    return has('women') || neutral;
+                case 'kids': return has('kids') || has('boys') || has('girls');
+                case 'boys': return has('boys') || (has('kids') && !has('girls'));
+                case 'girls': return has('girls') || (has('kids') && !has('boys'));
+                default: return true;
+            }
+        };
+
+        // Pick the products most relevant to this specific question so the
+        // model always has full detail on what it is talking about.
+        const selectRelevantProducts = (prompt, knowledge, take = 30, audience = null) => {
+            const pool = knowledge?.products || [];
+            if (pool.length === 0) return [];
+
+            // A gendered request must never see another section's products
+            let products = audience ? pool.filter(p => audienceAllows(p.audiences, audience)) : pool;
+            if (products.length === 0) return [];
+
+            const tokens = String(prompt || '').toLowerCase()
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .split(/\s+/)
+                .filter(t => t.length > 2)
+                .slice(0, 40);
+
+            if (tokens.length === 0) return products.slice(0, take);
+
+            const scored = products.map((p) => {
+                let score = 0;
+                tokens.forEach((t) => {
+                    if (p.name.toLowerCase().includes(t)) score += 5;
+                    else if (p.haystack.includes(t)) score += 2;
+                });
+                if (p.rating >= 4.5) score += 1;
+                if (p.discount >= 20) score += 1;
+                if (!p.inStock) score -= 3;
+                return { p, score };
+            }).filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+
+            if (scored.length === 0) {
+                // no lexical hit — give a representative spread from the allowed pool
+                const allowed = new Set(products.map(p => p.name));
+                return [
+                    ...(knowledge.bestDeals || []),
+                    ...(knowledge.topRated || []),
+                    ...(knowledge.newest || []),
+                    ...(knowledge.cheapest || [])
+                ].filter(p => allowed.has(p.name))
+                    .filter((v, i, a) => a.findIndex(x => x.name === v.name) === i)
+                    .slice(0, take);
+            }
+
+            return scored.slice(0, take).map(r => r.p);
+        };
+
+        // Kept for backward compatibility with any other caller
+        const getChatCatalogSummary = async () => {
+            const knowledge = await getChatKnowledge();
+            return knowledge.overview;
         };
 
         // 🔴 REAL-TIME ORDER TRACKING - Get single order
@@ -5219,6 +5532,12 @@ async function startServer() {
             try {
                 const prompt = (req.body?.prompt || req.body?.message || '').trim();
                 const history = req.body?.history || req.body?.conversationHistory || [];
+                const reqAudience = ['men', 'women', 'kids', 'boys', 'girls'].includes(req.body?.audience)
+                    ? req.body.audience
+                    : null;
+                const reqLanguage = ['hi', 'hinglish', 'en', 'user'].includes(req.body?.language)
+                    ? req.body.language
+                    : null;
 
                 if (!prompt) {
                     console.error("⚠️ No prompt received from frontend");
@@ -5228,29 +5547,120 @@ async function startServer() {
                 if (!genAI) {
                     console.error("⚠️ GEMINI_API_KEY missing or invalid");
                     return res.json({
-                        text: "I’m here to help with fashion recommendations. Our AI service is refreshing right now—please try again in a moment.",
-                        fallback: true
+                        text: "",
+                        fallback: true,
+                        reason: 'ai-key-missing'
                     });
                 }
 
                 console.log(`💬 AI Context check for: ${prompt.substring(0, 30)}...`);
 
-                // 📊 DATABASE SYNC: Products की लिस्ट निकाल रहे हैं
-                const productDataSummary = await getChatCatalogSummary();
+                // 📊 FULL CATALOG KNOWLEDGE: stats, sections, brands, deals, stock, coupons
+                let knowledge = null;
+                try {
+                    knowledge = await getChatKnowledge();
+                } catch (kErr) {
+                    devWarn(`Chat knowledge build failed: ${kErr.message}`);
+                }
 
-                const systemInstruction = `You are Eshopper's AI Fashion Consultant.
-Catalog (use only these items):\n${productDataSummary}\n
-Guidelines:
-- Reply in the user's language (English/Hinglish).
-- Be professional, warm, and concise (3-6 short lines).
-- Ask one clarifying question if the request is unclear.
-- Do not invent product names or prices.`;
+                const relevant = knowledge ? selectRelevantProducts(prompt, knowledge, 30, reqAudience) : [];
+                const relevantBlock = relevant.length
+                    ? `PRODUCTS MOST RELEVANT TO THIS QUESTION (full live data — quote only from here):\n${relevant.map((p, i) => `${i + 1}. ${chatProductLine(p)}`).join('\n')}`
+                    : '';
+
+                const audienceBlock = reqAudience
+                    ? `STRICT SECTION RULE (highest priority)
+The customer is shopping in the ${reqAudience} section. Every product listed below has already been filtered to that section.
+- Talk ONLY about ${reqAudience} items. Never mention or recommend a product from another section.
+- Do not say "you could also check the women's/men's/kids' range" unless the customer explicitly asks.
+- If there is nothing suitable, say plainly that the ${reqAudience} section has nothing matching right now and ask them to loosen one requirement. Never substitute another section.`
+                    : '';
+
+                const languageBlock = (() => {
+                    if (reqLanguage === 'hi') {
+                        return `LANGUAGE: Reply in natural conversational Hindi in Devanagari script, the way a warm Indian shop assistant speaks. Product names, brands, sizes and numbers stay in Latin script/digits.`;
+                    }
+                    if (reqLanguage === 'hinglish') {
+                        return `LANGUAGE: Reply in natural Hinglish written in Roman script — exactly how Indians chat on WhatsApp. Mix Hindi and English freely. Do NOT use Devanagari and do NOT switch to formal English.`;
+                    }
+                    if (reqLanguage === 'user') {
+                        return `LANGUAGE: Reply in exactly the same language and script the customer used.`;
+                    }
+                    if (reqLanguage === 'en') {
+                        return `LANGUAGE: Reply in clear, friendly English. English is the default for this store. NEVER switch to Hindi, Hinglish or Devanagari unless the customer's own message is in Hindi/Hinglish or they explicitly asked. Do not sprinkle Hindi words into an English reply.`;
+                    }
+                    return `LANGUAGE: English is the default. Only reply in Hindi (Devanagari) or Hinglish (Roman) if the customer's own message is written that way.`;
+                })();
+
+                const systemInstruction = `You are "Aria", the senior personal shopping consultant at Eshopper (an Indian online fashion store).
+
+WHO YOU ARE
+You are a real consultant, not a search box and not a FAQ bot. You are the friendly, sharp-eyed stylist a customer trusts — part expert, part good friend. You listen, form an opinion, and recommend with reasons.
+
+HOW YOU SPEAK
+- Natural, human, conversational. Short sentences. Contractions are fine.
+- Warm and welcoming — greet people properly and make them feel looked after. At most one or two emoji (🌸 😊 ✨), only where natural.
+- You are fully fluent in English, Hindi (Devanagari) and Hinglish (Roman Hindi), but English is the DEFAULT. Only use Hindi or Hinglish when the customer writes that way.
+- Acknowledge what the customer actually said before answering, so it never reads like a template.
+- Share a real opinion: say which option you would pick and why, and where the other option wins instead.
+- Never open two replies in the same conversation with the same sentence.
+- No corporate filler ("I hope this helps", "As an AI", "Feel free to").
+
+DO NOT VOLUNTEER STORE STATISTICS (important)
+The catalogue snapshot below is background knowledge for YOU, not a script to read out.
+- Never open with, or casually drop in, total product counts, how many sections exist, the overall price range, average discount, "up to X% off", how many items are on sale, or which coupon codes are running.
+- Only state those facts when the customer directly asks (for example "any offers?", "what do you sell?", "kitne products hain?"). Then answer precisely and factually from the data.
+- When the customer asks for products, quote the price and discount OF THOSE SPECIFIC ITEMS — that is expected. Do not turn it into a store-wide sale pitch.
+- Never push offers or discounts the customer did not ask about.
+- Greetings and small talk must contain no statistics, no discounts and no offers at all.
+
+${languageBlock}
+
+${audienceBlock}
+
+HOW YOU RECOMMEND
+- Every recommendation must carry a reason tied to the customer's stated need: occasion, budget, colour, fabric, fit, size availability or rating.
+- Always use the real numbers from the data: price, MRP, discount %, rupees saved, rating, review count, stock status, sizes, fabric, colour.
+- When you show several options, end with a clear verdict: your top pick, the best-value pick, and the budget pick where relevant.
+- Ask at most ONE follow-up question, and only when it would genuinely improve the recommendation.
+
+HARD RULES
+- NEVER invent a product, price, discount, size, colour, rating, stock number, coupon code or policy. If it is not in the data below, say you will check rather than guessing.
+- NEVER show or suggest a product from a different gender section than the one the customer asked for.
+- If an item is out of stock, say so honestly and offer the closest available alternative.
+- Money is written like ₹1,299.
+- Plain conversational text only: short paragraphs or "•" bullets. No markdown headings, no tables, no bold syntax, no links or image URLs (product cards are rendered separately by the app).
+- Length: 3-8 short lines normally; up to 12 lines only for comparisons or full-outfit answers.
+- Never reply with an empty message. Always give the customer something useful.
+
+STORE POLICIES (the only policy facts you may state)
+- Returns: 7 days from delivery for eligible items; unused, unwashed, with tags, invoice and original packaging.
+- Non-returnable: innerwear and socks, opened beauty, gift cards and freebies, final-sale items.
+- Exchange: one free exchange within 7 days on eligible items at serviceable pincodes; exchange delivery 3-5 business days.
+- Refunds: 3-7 business days after quality check for prepaid; COD refunds to a verified bank account or UPI.
+- Delivery: metro 2-4 business days, tier-2/3 4-7 business days; sale events can add 1-2 days.
+- Payments: UPI, cards and netbanking via Razorpay, plus COD where the pincode is serviceable. Card details are never stored.
+- Cancellation: free until the order is packed; after dispatch use the return flow.
+- Order tracking: the My Orders page shows live status, timeline and ETA.
+- Coupons: applied on the cart page, one coupon per order, minimum-order and usage limits may apply.
+- Sizes: XXS to 6XL depending on the product; every product page has a size chart.
+- Support: support@eshopperr.me, +91 8447859784, 10 AM - 8 PM.
+
+${knowledge ? knowledge.overview : 'Catalog data is temporarily unavailable — do not quote any product or price.'}
+
+${relevantBlock}`;
 
                 // 🛠️ ROLE FIX: Roles normalized for stable prompt composition
                 let cleanHistory = (history || []).map(m => ({
                     role: (m.role === 'ai' || m.role === 'model' || m.role === 'bot' || m.sender === 'ai' || m.sender === 'model' || m.sender === 'bot') ? 'model' : 'user',
                     parts: [{ text: m.text || m.parts?.[0]?.text || "" }]
-                }));
+                })).filter(m => m.parts[0].text && m.parts[0].text.trim());
+
+                // Gemini multi-turn requires history to start with a user turn
+                while (cleanHistory.length > 0 && cleanHistory[0].role !== 'user') {
+                    cleanHistory.shift();
+                }
+                cleanHistory = cleanHistory.slice(-10);
 
                 const discoveredModels = await getAvailableGeminiModels();
                 const preferredOrder = [
@@ -5273,17 +5683,24 @@ Guidelines:
 
                 const historyText = cleanHistory
                     .map((item) => {
-                        const roleLabel = item.role === 'model' ? 'Assistant' : 'User';
+                        const roleLabel = item.role === 'model' ? 'Aria' : 'Customer';
                         const text = String(item.parts?.[0]?.text || '').trim();
                         return text ? `${roleLabel}: ${text}` : '';
                     })
                     .filter(Boolean)
-                    .slice(-12)
                     .join('\n');
 
-                const fullPrompt = `${systemInstruction}\n\nConversation So Far:\n${historyText || 'No previous conversation.'}\n\nCurrent User Query: ${prompt}`;
+                const fullPrompt = `${systemInstruction}\n\nCONVERSATION SO FAR:\n${historyText || 'This is the first message.'}\n\nCUSTOMER'S CURRENT MESSAGE:\n${prompt}\n\nReply as Aria now.`;
+
+                const generationConfig = {
+                    temperature: 0.85,
+                    topP: 0.95,
+                    topK: 40,
+                    maxOutputTokens: 1400
+                };
 
                 let textResponse = "";
+                let usedModel = "";
                 let lastModelError = null;
 
                 for (const modelName of candidateModels) {
@@ -5294,14 +5711,24 @@ Guidelines:
                     try {
                         const model = genAI.getGenerativeModel({
                             model: modelName,
-                            systemInstruction
+                            systemInstruction,
+                            generationConfig
                         });
 
-                        const result = await model.generateContent(fullPrompt);
+                        // Real multi-turn: prior turns go in as history, not as text
+                        let result;
+                        if (cleanHistory.length > 0) {
+                            const chat = model.startChat({ history: cleanHistory });
+                            result = await chat.sendMessage(prompt);
+                        } else {
+                            result = await model.generateContent(prompt);
+                        }
+
                         const response = await result.response;
                         textResponse = response.text();
 
                         if (textResponse && textResponse.trim()) {
+                            usedModel = modelName;
                             console.log(`✅ AI responded successfully using model: ${modelName}`);
                             break;
                         }
@@ -5318,9 +5745,14 @@ Guidelines:
                         devWarn(`Gemini SDK failed (${modelName}): ${modelError.message}`);
 
                         try {
-                            const restText = await generateWithRest(modelName, fullPrompt);
+                            const restContents = [
+                                ...cleanHistory,
+                                { role: 'user', parts: [{ text: prompt }] }
+                            ];
+                            const restText = await generateWithRest(modelName, fullPrompt, systemInstruction, restContents);
                             if (restText && restText.trim()) {
                                 textResponse = restText;
+                                usedModel = `${modelName}(rest)`;
                                 devLog(`AI responded via REST fallback using model: ${modelName}`);
                                 break;
                             }
@@ -5339,13 +5771,19 @@ Guidelines:
                     throw lastModelError || new Error("No Gemini model returned a valid response");
                 }
 
-                res.json({ text: textResponse });
+                res.json({
+                    text: textResponse.trim(),
+                    model: usedModel || undefined,
+                    catalogSize: knowledge?.products?.length || 0,
+                    groundedOn: relevant.length
+                });
 
             } catch (error) {
                 console.error("❌ Chat API Error:", error.message);
                 res.json({
-                    text: "I’m having trouble syncing live AI right now. Please try again in 30 seconds for fresh styling suggestions.",
-                    fallback: true
+                    text: "",
+                    fallback: true,
+                    reason: 'ai-unavailable'
                 });
             }
         });

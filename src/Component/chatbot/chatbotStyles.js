@@ -1163,3 +1163,156 @@ export const CHATBOT_STYLES = `
     }
   }
 `
+
+/* ══════════════════════════════════════════════════════════
+   CONSULTANT UPGRADE — extra styles
+   Multi-line replies, richer product cards (brand, savings,
+   match reason, stock), and dynamic follow-up chips.
+══════════════════════════════════════════════════════════ */
+export const CHATBOT_STYLES_EXTRA = `
+  /* ─── multi-line bot replies ─── */
+  .chatbot-wrapper .bubble-line {
+    display: block;
+    min-height: 1px;
+  }
+  .chatbot-wrapper .bubble-line:empty { height: 7px; }
+
+  /* ─── product card additions ─── */
+  .chatbot-wrapper .p-brand {
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: #a8823a;
+    margin: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .chatbot-wrapper .p-save {
+    font-size: 9px;
+    font-weight: 700;
+    color: #1f8a4c;
+    margin: 0;
+  }
+
+  .chatbot-wrapper .p-reason {
+    font-size: 8.8px;
+    line-height: 1.45;
+    color: #7c6a48;
+    background: rgba(201,169,110,0.1);
+    border-left: 2px solid rgba(201,169,110,0.55);
+    border-radius: 0 5px 5px 0;
+    padding: 3px 5px;
+    margin: 3px 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .chatbot-wrapper .p-stock {
+    font-size: 8.8px;
+    font-weight: 700;
+    margin: 2px 0 0;
+    letter-spacing: 0.2px;
+  }
+  .chatbot-wrapper .p-stock.low { color: #c4700c; }
+  .chatbot-wrapper .p-stock.out { color: #c0392b; }
+
+  .chatbot-wrapper .p-badge-new {
+    left: auto;
+    right: 6px;
+    background: linear-gradient(135deg, #1c7a4a, #26a765);
+    color: #f2fff8;
+    box-shadow: 0 2px 8px rgba(28,122,74,0.4);
+  }
+
+  .chatbot-wrapper .p-sold {
+    position: absolute;
+    inset: auto 0 0 0;
+    background: rgba(14,14,16,0.82);
+    color: #ffd9d2;
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 3px 0;
+  }
+
+  .chatbot-wrapper .product-card.is-out { opacity: 0.72; }
+  .chatbot-wrapper .product-card.is-out .p-img img { filter: grayscale(0.55); }
+
+  .chatbot-wrapper .avatar-col small {
+    max-width: 40px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .chatbot-wrapper .avatar {
+    background-clip: padding-box;
+  }
+
+  .chatbot-wrapper .bot-av {
+    background: linear-gradient(145deg, #1a1a20 0%, #2c2008 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-color: rgba(201,169,110,0.55);
+  }
+
+  .chatbot-wrapper .bot-av svg { width: 26px; height: 26px; }
+
+  .chatbot-wrapper .user-av {
+    border-color: rgba(201,169,110,0.5);
+  }
+
+  /* ─── dynamic follow-up chips under the last reply ─── */
+  .chatbot-wrapper .followup-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 4px;
+  }
+
+  .chatbot-wrapper .followup-chip {
+    font-family: var(--font-ui);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    color: #5f4713;
+    background: linear-gradient(135deg, #fffdf6 0%, #f4efdf 100%);
+    border: 1px solid rgba(201,169,110,0.42);
+    border-radius: 999px;
+    padding: 5px 11px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(201,169,110,0.14);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .chatbot-wrapper .followup-chip:hover,
+  .chatbot-wrapper .followup-chip:active {
+    background: linear-gradient(135deg, var(--g2) 0%, var(--g1) 100%);
+    color: #1a0e00;
+    border-color: var(--g1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(201,169,110,0.34);
+  }
+
+  /* wider bubbles — consultant replies are longer than one-liners */
+  .chatbot-wrapper .msg-content { max-width: min(320px, calc(100vw - 96px)); }
+
+  @media (max-width: 640px) {
+    .chatbot-wrapper .msg-content { max-width: calc(100vw - 84px); }
+    .chatbot-wrapper .followup-chip { font-size: 10px; padding: 5px 10px; }
+  }
+
+  @media (max-width: 500px) {
+    .chatbot-wrapper .msg-content { max-width: calc(100vw - 76px); }
+  }
+`
