@@ -2,5 +2,37 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": "build",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "headers": [
+    {
+      "source": "/robots.txt",
+      "headers": [
+        { "key": "Content-Type", "value": "text/plain; charset=utf-8" },
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
+      ]
+    },
+    {
+      "source": "/sitemap(.*).xml",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=1800" }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://eshopper-qtgl.onrender.com/sitemap.xml"
+    },
+    {
+      "source": "/sitemap-static.xml",
+      "destination": "https://eshopper-qtgl.onrender.com/sitemap-static.xml"
+    },
+    {
+      "source": "/sitemap-products.xml",
+      "destination": "https://eshopper-qtgl.onrender.com/sitemap-products.xml"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

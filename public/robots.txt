@@ -1,3 +1,27 @@
-# https://www.robotstxt.org/robotstxt.html
+# https://eshopperr.me/robots.txt
 User-agent: *
-Disallow:
+Allow: /
+
+# Private / app pages — do not index
+Disallow: /admin
+Disallow: /admin-
+Disallow: /cart
+Disallow: /checkout
+Disallow: /wishlist
+Disallow: /profile
+Disallow: /update-profile
+Disallow: /my-orders
+Disallow: /order-tracking
+Disallow: /login
+Disallow: /signup
+Disallow: /forget-password
+Disallow: /confirmation
+
+# AI training bots (optional — keep search bots allowed)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+Sitemap: https://eshopperr.me/sitemap.xml

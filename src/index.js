@@ -33,6 +33,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { HelmetProvider } from 'react-helmet-async';
 import App from './Component/App.jsx';
 import { Provider } from 'react-redux';
 import Store from "./Store/Store"
@@ -59,12 +60,14 @@ console.error = (...args) => {
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-   <QueryClientProvider client={queryClient}>
-    <Provider store={Store}>
-     <MembershipProvider>
-      <App />
-     </MembershipProvider>
-    </Provider>
-   </QueryClientProvider>
+   <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+     <Provider store={Store}>
+      <MembershipProvider>
+       <App />
+      </MembershipProvider>
+     </Provider>
+    </QueryClientProvider>
+   </HelmetProvider>
   </React.StrictMode>
 );

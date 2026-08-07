@@ -9,6 +9,7 @@ import Footer from './Footer'
 import { useMembership } from './MembershipContext'
 import PremiumAuthPopup from './PremiumAuthPopup'
 import CatalogQueryBridge from './CatalogQueryBridge'
+import SEO, { organizationJsonLd, websiteJsonLd } from './SEO'
 
 const ChatBot = lazy(() => import('./ChatBot'))
 const Home = lazy(() => import('./Home'))
@@ -88,6 +89,77 @@ const AdminRoute = ({ children }) => {
     return children;
 }
 
+
+function PublicSeo() {
+  const { pathname } = useLocation()
+  const path = pathname || '/'
+
+  // Private app surfaces should not be indexed
+  const noindexPrefixes = [
+    '/admin', '/cart', '/checkout', '/wishlist', '/profile', '/update-profile',
+    '/my-orders', '/order-tracking', '/login', '/signup', '/forget-password', '/confirmation'
+  ]
+  const noindex = noindexPrefixes.some((p) => path === p || path.startsWith(p + '/') || path.startsWith('/admin'))
+
+  if (path === '/') {
+    return (
+      <SEO
+        title="Eshopper – Premium Fashion Boutique | Men, Women & Kids"
+        description="Shop premium fashion at Eshopper (eshopperr.me). Luxury clothing for men, women and kids with free shipping above ₹999 and easy 30-day returns."
+        path="/"
+        keywords="eshopper, eshopperr, eshopperr.me, premium fashion India, luxury boutique, men women kids clothing"
+        jsonLd={[organizationJsonLd(), websiteJsonLd()]}
+      />
+    )
+  }
+  if (path.startsWith('/shop/')) {
+    const cat = decodeURIComponent(path.split('/')[2] || 'All')
+    const label = cat === 'All' ? 'All Products' : cat
+    return (
+      <SEO
+        title={`${label} Fashion Collection`}
+        description={`Shop ${label} at Eshopper – premium styles, exclusive drops, free shipping above ₹999.`}
+        path={path}
+        keywords={`eshopper ${label}, ${label} clothing, buy ${label} online India`}
+      />
+    )
+  }
+  if (path.startsWith('/single-product/')) {
+    // Product page sets richer SEO itself; keep a safe fallback
+    return (
+      <SEO
+        title="Product"
+        description="Premium product details at Eshopper boutique."
+        path={path}
+      />
+    )
+  }
+  if (path === '/about') {
+    return <SEO title="About Us" description="Learn about Eshopper – a premium fashion boutique crafting elevated essentials for men, women and kids." path="/about" />
+  }
+  if (path === '/contact') {
+    return <SEO title="Contact Us" description="Contact Eshopper support for orders, styling help and partnership enquiries." path="/contact" />
+  }
+  if (path === '/faq') {
+    return <SEO title="FAQs" description="Frequently asked questions about shipping, returns, payments and membership at Eshopper." path="/faq" />
+  }
+  if (path === '/return-policy' || path === '/privacy-policy') {
+    return <SEO title={path === '/privacy-policy' ? 'Privacy Policy' : 'Return Policy'} description="Eshopper policies for returns, refunds and customer privacy." path={path} />
+  }
+  if (path === '/terms') {
+    return <SEO title="Terms & Conditions" description="Terms and conditions for shopping at Eshopper." path="/terms" />
+  }
+  return (
+    <SEO
+      title={noindex ? 'Eshopper' : 'Eshopper'}
+      description="Eshopper premium fashion boutique."
+      path={path}
+      noindex={noindex}
+    />
+  )
+}
+
+
 export default function App() {
   useMembership()
 
@@ -138,6 +210,7 @@ export default function App() {
     <ToastProvider>
       <ToastEventBridge />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <PublicSeo />
         <AppShell>
           <Suspense fallback={routeLoader}>
             <Routes>

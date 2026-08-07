@@ -10,6 +10,7 @@ import axios from 'axios';
 import { BASE_URL } from '../constants';
 import { useProductQuery, useProductsQuery } from '../queries/catalogQueries';
 import LazyImage from './LazyImage';
+import SEO, { productJsonLd, breadcrumbJsonLd } from './SEO';
 
 /* ─── Mock data ─────────────────────────────────────────────────────────────── */
 const QA_LIST = [
@@ -992,7 +993,28 @@ export default function ProductDetail() {
     setTimeout(() => dispatch(getCart()), 500);
   }
 
+  const productSeo = !p || p.notFound ? null : (
+    <SEO
+      title={`${p.name}${p.brand ? ` by ${p.brand}` : ''}`}
+      description={p.description || `Buy ${p.name} online at Eshopper. Premium ${[p.maincategory, p.subcategory].filter(Boolean).join(' ')} fashion with easy returns.`}
+      path={`/single-product/${p._id || p.id || id}`}
+      image={p.pic1 || mainImg}
+      type="product"
+      keywords={[p.name, p.brand, p.maincategory, p.subcategory, 'eshopper', 'buy online India'].filter(Boolean).join(', ')}
+      jsonLd={[
+        productJsonLd(p),
+        breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: p.maincategory || 'Shop', path: `/shop/${encodeURIComponent(p.maincategory || 'All')}` },
+          { name: p.name, path: `/single-product/${p._id || p.id || id}` },
+        ]),
+      ]}
+    />
+  );
+
   return (
+    <>
+      {productSeo}
     <div className="pd">
 
       {/* Proof bar */}
@@ -1611,5 +1633,6 @@ export default function ProductDetail() {
 
       <div className={`pd-toast${toastVis?' show':''}`}>{toast}</div>
     </div>
+    </>
   );
 }

@@ -7,6 +7,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const userRoutes = require('./routes/userRoutes');
+const seoRoutes = require('./routes/seoRoutes');
 const productRoutes = require('./routes/productRoutes');
 const wishlistRoutes = require('./routes/wishlistRoutes');
 const imageProxy = require('./routes/imageProxy');
@@ -748,7 +749,7 @@ app.use('/user', userRoutes);
 
 // Register product routes (enables /product/add and file upload endpoints)
 app.use('/product', productRoutes);
-
+app.use(seoRoutes);
 // Register wishlist routes (proper filtering by userId, takes priority over generic handle)
 app.use('/wishlist', wishlistRoutes);
 app.use('/api/wishlist', wishlistRoutes);
@@ -5359,9 +5360,36 @@ Guidelines:
         const buildPath = path.join(__dirname, 'build');
         const isProdBuild = String(process.env.NODE_ENV || '').toLowerCase() === 'production' && fs.existsSync(buildPath);
         if (isProdBuild) {
-            const API_PREFIXES = ['/api', '/socket.io', '/product', '/maincategory', '/subcategory', '/brand', '/user', '/wishlist', '/cart', '/coupon', '/checkout', '/contact', '/newslatter', '/login', '/img', '/healthz', '/test'];
+            const API_PREFIXES = [
+                '/api',
+                '/socket.io',
+                '/product',
+                '/maincategory',
+                '/subcategory',
+                '/brand',
+                '/user',
+                '/wishlist',
+                '/cart',
+                '/coupon',
+                '/checkout',
+                '/contact',
+                '/newslatter',
+                '/login',
+                '/img',
+                '/healthz',
+                '/test'
+            ];
+
             app.get('*', (req, res, next) => {
-                if (API_PREFIXES.some(prefix => req.path.startsWith(prefix)) || req.path === '/') return next();
+                if (
+                    API_PREFIXES.some(prefix => req.path.startsWith(prefix)) ||
+                    req.path === '/' ||
+                    req.path.endsWith('.xml') ||
+                    req.path === '/robots.txt'
+                ) {
+                    return next();
+                }
+
                 res.sendFile(path.join(buildPath, 'index.html'), (err) => {
                     if (err) next(err);
                 });
