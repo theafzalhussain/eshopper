@@ -58,6 +58,7 @@ const { sendOrderStatus, registerTemplatePartials } = require('./mailController'
 const Activity = require('./models/Activity');
 const { clearCache, cacheMiddleware } = require('./utils/cache');
 const { isAssetRequest } = require('./utils/assetPath');
+const { socketIdentityMiddleware, joinIdentityRooms } = require('./utils/socketAuth');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -377,38 +378,27 @@ const generateInvoicePdfBufferLegacy = async (invoiceData) => {
     }
     };
 
-// 🔴 SOCKET.IO AUTH MIDDLEWARE: Copy userId from handshake.auth to socket.data.userId
-io.use((socket, next) => {
-    const userId = socket.handshake.auth && socket.handshake.auth.userId;
-    if (userId) {
-        socket.data.userId = userId;
-    }
-    next();
-});
+// 🔒 SOCKET.IO AUTH MIDDLEWARE: identity is derived server-side.
+// A client can no longer pick its own room by sending a userId string.
+io.use(socketIdentityMiddleware());
 
 // 🔴 SOCKET.IO CONNECTION & ROOM SETUP
 io.on('connection', (socket) => {
-    const userId = String(socket.data.userId || '').trim();
-    if (!userId) {
-        socket.emit('connected', { ok: true, room: null });
+    const isAdmin = Boolean(socket.data.isAdmin);
+    const rooms = joinIdentityRooms(socket);
+
+    socket.emit('connected', { ok: true, room: rooms[0] || null, rooms, admin: isAdmin });
+
+    if (!rooms.length) {
         // Expected for guests; noisy in production where most traffic is anonymous.
         if (process.env.NODE_ENV !== 'production') {
-            console.log('ℹ️ Socket connected without userId (guest)');
+            console.log('ℹ️ Socket connected without a verified identity (guest)');
         }
         return;
     }
 
-    const userRoom = `user:${userId}`;
-    socket.join(userRoom);
-    
-    // Join admin room if admin-dashboard connection
-    if (userId === 'admin-dashboard') {
-        socket.join('admin:dashboard');
-        console.log('✅ Admin Dashboard connected to room admin:dashboard');
-    }
-    
-    socket.emit('connected', { ok: true, room: userRoom });
-    console.log(`✅ User ${userId} connected to room ${userRoom}`);
+    if (isAdmin) console.log('✅ Verified admin connected to room admin:dashboard');
+    console.log(`✅ Socket joined ${rooms.join(', ')}`);
 
     // 🛒 CART: UPDATE QUANTITY (Real-time without loading)
     socket.on('cart:update-quantity', async (data) => {

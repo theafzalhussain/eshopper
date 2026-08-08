@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
-import { AUTH_CHANGED_EVENT, socketUserId } from '../utils/authEvents'
+import { AUTH_CHANGED_EVENT, socketHandshakeAuth, socketIdentityKey } from '../utils/authEvents'
 
 /* ════════════════════════════════════════════════════════════════════
    APP-LEVEL REALTIME SOCKET
@@ -9,6 +9,7 @@ import { AUTH_CHANGED_EVENT, socketUserId } from '../utils/authEvents'
      is dynamically imported, so it never lands in the initial bundle)
    - re-connects whenever the session changes, so a user who logs in after
      page load stops being an anonymous socket and joins their own room
+   - the server verifies the handshake, so the room is decided there
    - re-broadcasts server events as window events for the rest of the app
 ════════════════════════════════════════════════════════════════════ */
 
@@ -24,13 +25,13 @@ export function resolveTransports() {
 }
 
 export default function useRealtimeSocket({ connectDelay = 1200 } = {}) {
-    const [authUser, setAuthUser] = useState(() => socketUserId())
+    const [identity, setIdentity] = useState(() => socketIdentityKey())
 
     /* Keep the handshake identity in sync with login / logout.
        setState with an unchanged value is a no-op, so the socket is only
        rebuilt when the identity actually changes. */
     useEffect(() => {
-        const sync = () => setAuthUser(socketUserId())
+        const sync = () => setIdentity(socketIdentityKey())
         window.addEventListener(AUTH_CHANGED_EVENT, sync)
         window.addEventListener('storage', sync)   // login/logout in another tab
         window.addEventListener('focus', sync)     // safety net
@@ -54,7 +55,7 @@ export default function useRealtimeSocket({ connectDelay = 1200 } = {}) {
                 if (disposed) return
 
                 socket = io(resolveSocketEndpoint(), {
-                    auth: { userId: authUser },
+                    auth: socketHandshakeAuth(),
                     transports: resolveTransports(),
                     reconnectionDelay: 1000,
                     reconnectionDelayMax: 8000,
@@ -92,7 +93,7 @@ export default function useRealtimeSocket({ connectDelay = 1200 } = {}) {
             if (idleId && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId)
             try { if (socket) socket.disconnect() } catch (e) { /* ignore */ }
         }
-    }, [authUser, connectDelay])
+    }, [identity, connectDelay])
 
-    return authUser
+    return identity
 }

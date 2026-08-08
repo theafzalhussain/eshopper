@@ -216,20 +216,29 @@ export default function Shop() {
         }
     }, [dispatch])
 
-    // Realtime: when backend emits DB changes, refresh product list if products updated
+    // Realtime: when backend emits DB changes, refresh product list if products updated.
+    // Debounced, so a bulk admin edit (many events in a row) triggers one refetch.
     useEffect(() => {
+        let timer = null;
         const handler = (e) => {
             try {
                 const data = (e && e.detail) || {};
                 const coll = (data.collection || '').toString().toLowerCase();
                 if (!coll) return;
                 if (coll === 'products' || coll === 'product') {
-                    queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
+                    if (timer) clearTimeout(timer);
+                    timer = setTimeout(() => {
+                        timer = null;
+                        queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
+                    }, 400);
                 }
             } catch (err) { console.warn('Realtime handler error', err && err.message); }
         };
         window.addEventListener('realtime:dbChange', handler);
-        return () => window.removeEventListener('realtime:dbChange', handler);
+        return () => {
+            if (timer) clearTimeout(timer);
+            window.removeEventListener('realtime:dbChange', handler);
+        };
     }, []);
 
     useEffect(() => {

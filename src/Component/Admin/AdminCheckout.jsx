@@ -4,6 +4,7 @@ import axios from 'axios'
 import LefNav from './LefNav'
 import { getCheckout, updateCheckout } from '../../Store/ActionCreaters/CheckoutActionCreators'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../../constants'
+import { socketHandshakeAuth } from '../../utils/authEvents'
 import { ShoppingBag, Truck, AlertCircle, ChevronDown, Send, Search, Package } from 'lucide-react'
 import io from 'socket.io-client'
 import { motion } from 'framer-motion'
@@ -53,9 +54,8 @@ export default function AdminCheckout() {
 
     // 🔄 Socket.io setup for real-time updates
     useEffect(() => {
-        const userId = localStorage.getItem('userid');
         const newSocket = io(BASE_URL, {
-            auth: { userId },
+            auth: socketHandshakeAuth(),
             transports: SOCKET_TRANSPORTS,
             reconnection: true,
             reconnectionDelay: 3000,

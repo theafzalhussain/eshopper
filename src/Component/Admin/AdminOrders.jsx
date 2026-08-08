@@ -20,6 +20,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import io from 'socket.io-client';
 import { SOCKET_TRANSPORTS } from '../../constants';
+import { socketHandshakeAuth } from '../../utils/authEvents';
 import LefNav from './LefNav';
 import OrderDetailsDrawer from './OrderDetailsDrawer';
 import OrderActionDrawer from './OrderActionDrawer';
@@ -302,20 +303,15 @@ export default function AdminOrders() {
     }, [apiBaseUrl, autoRefresh, page, rowsPerPage, search, selectedStatus, fromDate, toDate, paymentStatus]);
 
     useEffect(() => {
-        // Get userId from localStorage or use admin-dashboard identifier
-        const userId = localStorage.getItem('userId') || 'admin-dashboard';
-        
+        // Identity is verified server-side from this handshake (admin token)
+        const handshakeAuth = socketHandshakeAuth();
+
         const socket = io(apiBaseUrl, {
             transports: SOCKET_TRANSPORTS,
             withCredentials: true,
             reconnectionAttempts: 3,
             timeout: 8000,
-            auth: {
-                userId: userId
-            },
-            query: {
-                userId: userId
-            }
+            auth: handshakeAuth
         });
 
         const handleStatusUpdate = (payload) => {

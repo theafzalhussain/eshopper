@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { resetPasswordAPI, verifyOtpAPI } from '../Store/Services'
 import { notifyAuthChanged } from '../utils/authEvents'
+import { sha256Hex } from '../utils/hash'
 import { fastAPI } from '../Store/Services.jsx';
 import { motion, AnimatePresence } from 'framer-motion'
 import { KeyRound, ShieldCheck, Loader2, User, Lock, CheckCircle2, ArrowLeft, RotateCcw, AlertCircle } from 'lucide-react'
@@ -42,26 +43,31 @@ export default function ForgetPassword() {
         }
     }, [step, redirectCountdown, navigate]);
 
-    // Listen for realtime password-reset events (emitted by server)
+    // Listen for realtime password-reset events (emitted by server).
+    // The event is a broadcast, so the server sends a sha256 of the email
+    // instead of the address itself — we hash what this user typed and compare.
     useEffect(() => {
-        const onUserPasswordReset = (e) => {
+        const onUserPasswordReset = async (e) => {
             try {
                 const payload = e?.detail || {};
-                const resetEmail = (payload.email || payload.emailAddress || '').toLowerCase();
-                if (!resetEmail) return;
-                if (resetEmail === (data.identifier || '').toLowerCase()) {
-                    // If this client triggered the reset elsewhere, show success immediately
-                    localStorage.removeItem("login");
-                    localStorage.removeItem("userid");
-                    localStorage.removeItem("name");
-                    localStorage.removeItem("username");
-                    localStorage.removeItem("role");
-                    localStorage.removeItem("userToken");
-                    localStorage.removeItem("savedCredentials");
-                    notifyAuthChanged();
-                    toast.success("Password updated successfully.");
-                    setStep(3);
-                }
+                const resetHash = String(payload.emailHash || '').toLowerCase();
+                const typed = (data.identifier || '').trim().toLowerCase();
+                if (!resetHash || !typed) return;
+
+                const typedHash = await sha256Hex(typed);
+                if (!typedHash || typedHash !== resetHash) return;
+
+                // If this client triggered the reset elsewhere, show success immediately
+                localStorage.removeItem("login");
+                localStorage.removeItem("userid");
+                localStorage.removeItem("name");
+                localStorage.removeItem("username");
+                localStorage.removeItem("role");
+                localStorage.removeItem("userToken");
+                localStorage.removeItem("savedCredentials");
+                notifyAuthChanged();
+                toast.success("Password updated successfully.");
+                setStep(3);
             } catch (err) { /* silent */ }
         };
 

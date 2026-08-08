@@ -1,14 +1,15 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { io } from 'socket.io-client'
 import useRealtimeSocket from '../hooks/useRealtimeSocket'
-import { notifyAuthChanged, socketUserId } from '../utils/authEvents'
+import { notifyAuthChanged, socketHandshakeAuth, socketIdentityKey } from '../utils/authEvents'
 
 jest.mock('socket.io-client', () => ({ io: jest.fn() }))
 
 const sockets = []
 const ioMock = io
 
-const lastHandshakeUserId = () => sockets[sockets.length - 1].opts.auth.userId
+const lastHandshake = () => sockets[sockets.length - 1].opts.auth
+const lastHandshakeUserId = () => lastHandshake().userId
 
 /* The hook waits for an idle callback; jsdom has none, so it falls back to
    setTimeout — advance it and let the dynamic import resolve. */
@@ -37,19 +38,30 @@ afterEach(() => {
     localStorage.clear()
 })
 
-describe('socketUserId', () => {
-    test('guest → null, user → id, admin → shared admin room id', () => {
-        expect(socketUserId()).toBeNull()
+describe('socket handshake payload', () => {
+    test('guest sends no id, user sends its id, admin also sends the admin token', () => {
+        expect(socketHandshakeAuth()).toEqual({ userId: null })
 
         localStorage.setItem('userid', 'u123')
-        expect(socketUserId()).toBe('u123')
+        expect(socketHandshakeAuth()).toEqual({ userId: 'u123' })
 
         localStorage.setItem('role', 'Admin')
-        expect(socketUserId()).toBe('admin-dashboard')
+        localStorage.setItem('adminToken', 'jwt.token.value')
+        expect(socketHandshakeAuth()).toEqual({ userId: 'u123', adminToken: 'jwt.token.value' })
+    })
 
-        localStorage.setItem('role', 'User')
+    test('never sends a self-declared admin room name', () => {
+        localStorage.setItem('userid', 'u123')
+        localStorage.setItem('role', 'Admin')
         localStorage.setItem('isAdmin', 'true')
-        expect(socketUserId()).toBe('admin-dashboard')
+        expect(JSON.stringify(socketHandshakeAuth())).not.toContain('admin-dashboard')
+    })
+
+    test('identity key changes when the admin token appears', () => {
+        localStorage.setItem('userid', 'u123')
+        const asUser = socketIdentityKey()
+        localStorage.setItem('adminToken', 'jwt.token.value')
+        expect(socketIdentityKey()).not.toBe(asUser)
     })
 })
 
@@ -80,16 +92,17 @@ describe('useRealtimeSocket', () => {
         expect(guestSocket.disconnect).toHaveBeenCalled()
     })
 
-    test('an admin login joins the admin-dashboard identity', async () => {
+    test('an admin login sends its id plus the admin token', async () => {
         renderHook(() => useRealtimeSocket())
         await flushConnect()
 
         localStorage.setItem('userid', 'a1')
         localStorage.setItem('role', 'Admin')
+        localStorage.setItem('adminToken', 'jwt.token.value')
         await act(async () => { notifyAuthChanged() })
         await flushConnect()
 
-        expect(lastHandshakeUserId()).toBe('admin-dashboard')
+        expect(lastHandshake()).toEqual({ userId: 'a1', adminToken: 'jwt.token.value' })
     })
 
     test('logout drops back to a guest connection', async () => {

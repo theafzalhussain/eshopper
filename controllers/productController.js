@@ -14,6 +14,19 @@ const PRODUCT_CACHE_PATTERNS = ['__express__/product*', '__express__/api/product
 
 const escapeRegex = (value = '') => String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/* Tell every connected client that the catalog changed. Shop.jsx listens for
+   this and invalidates its React Query cache, so shoppers see new products,
+   prices and stock without refreshing.
+   The payload carries no product or customer data — it is only a signal, and
+   it is a broadcast, so nothing sensitive may go in here. */
+const emitCatalogChange = (io, action) => {
+    try {
+        if (io) io.emit('dbChange', { collection: 'products', action });
+    } catch (err) {
+        console.warn('dbChange emit failed:', err && err.message);
+    }
+};
+
 const invalidateProductCaches = async () => {
     try {
         await Promise.allSettled([
@@ -239,6 +252,7 @@ module.exports = {
             if (typeof req.app.get === 'function') {
                 const io = req.app.get('io');
                 if (io) io.emit('dashboardUpdate');
+                emitCatalogChange(io, 'created');
             }
             await invalidateProductCaches();
             res.status(201).json(product);
@@ -279,6 +293,7 @@ module.exports = {
             if (typeof req.app.get === 'function') {
                 const io = req.app.get('io');
                 if (io) io.emit('dashboardUpdate');
+                emitCatalogChange(io, 'updated');
             }
             await invalidateProductCaches();
             res.json(product);
@@ -403,6 +418,7 @@ module.exports = {
             if (typeof req.app.get === 'function') {
                 const io = req.app.get('io');
                 if (io) io.emit('dashboardUpdate');
+                emitCatalogChange(io, 'deleted');
             }
             await invalidateProductCaches();
             res.json({ message: 'Product deleted' });

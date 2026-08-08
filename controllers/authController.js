@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const { admin, firebaseAdminReady } = require('../config/firebase');
 const Sentry = require('@sentry/node');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { sendTransactionalEmail } = require('../src/utils/email');
 const { sendEmail: sendTemplatedEmail } = require('../emailService');
 const { logActivity } = require('../utils/activityLogger');
@@ -360,11 +361,17 @@ exports.resetPassword = async (req, res) => {
         user.otpExpires = undefined;
         await user.save();
 
-        // emit realtime event so frontend can update instantly
+        // emit realtime event so frontend can update instantly.
+        // Only a hash of the email goes on the wire — this is a broadcast, so
+        // sending the address itself leaked it to every connected client.
         try {
             const io = req.app && req.app.get ? req.app.get('io') : null;
             if (io) {
-                io.emit('userPasswordReset', { userId: user._id.toString(), email: user.email });
+                const emailHash = crypto
+                    .createHash('sha256')
+                    .update(String(user.email || '').trim().toLowerCase())
+                    .digest('hex');
+                io.emit('userPasswordReset', { userId: user._id.toString(), emailHash });
             }
         } catch (e) { console.warn('Realtime emit failed', e && e.message ? e.message : e); }
 

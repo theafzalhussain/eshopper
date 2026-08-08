@@ -1,15 +1,25 @@
 import { io } from 'socket.io-client';
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants';
+import { AUTH_CHANGED_EVENT, socketHandshakeAuth } from '../utils/authEvents';
 
 const SOCKET_URL = BASE_URL;
 let socketClient;
 
+/* Drop the shared socket on login/logout so it never keeps a previous
+   session's identity (and rooms). */
+if (typeof window !== 'undefined') {
+  window.addEventListener(AUTH_CHANGED_EVENT, () => {
+    if (!socketClient) return;
+    try { socketClient.disconnect(); } catch (_) { /* ignore */ }
+    socketClient = undefined;
+  });
+}
+
 export function getSocketClient() {
   if (!socketClient) {
-    const userId = localStorage.getItem('userid') || 'guest';
     socketClient = io(SOCKET_URL, {
       transports: SOCKET_TRANSPORTS,
-      auth: { userId },
+      auth: socketHandshakeAuth(),
       reconnection: true,
     });
 
