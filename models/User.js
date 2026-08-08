@@ -3,7 +3,24 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     username: { type: String, trim: true, lowercase: true, unique: true, sparse: true },
-    password: { type: String, required: true },
+    /* Password is only required for accounts created with email + password.
+       Social sign-ins (Google, phone) have no password of their own — before
+       this, Firebase sign-up failed schema validation and /api/auth-sync
+       answered 500 "Authentication sync failed" for every new user. */
+    password: {
+        type: String,
+        required: function () {
+            return !this.uid && !this.provider;
+        }
+    },
+    /* Firebase identity. These four were missing from the schema, so Mongoose
+       (strict by default) silently dropped them on save: uid never persisted,
+       so social logins could never be found by uid, and role/provider updates
+       were lost. */
+    uid: { type: String, trim: true, index: true, sparse: true },
+    provider: { type: String, trim: true },
+    role: { type: String, trim: true, default: 'User' },
+    lastLogin: { type: Date },
     name: { type: String },
     phone: { type: String },
     addressline1: { type: String },

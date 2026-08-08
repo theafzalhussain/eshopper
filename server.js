@@ -796,7 +796,13 @@ app.use('/img', imageProxy);
 
 // 🔒 SECURITY HEADERS
 // 🔒 SECURITY HEADERS
-app.use(helmet({ contentSecurityPolicy: false }));
+/* helmet's default Cross-Origin-Opener-Policy is `same-origin`, which breaks
+   the Firebase sign-in popup ("Cross-Origin-Opener-Policy policy would block
+   the window.closed call"). Allow popups while keeping the rest of helmet. */
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
+}));
 
 app.post('/api/activity-log', async (req, res) => {
     try {
@@ -2436,7 +2442,16 @@ app.post('/api/auth-sync', async (req, res) => {
 
         res.json(safeUser);
     } catch (err) {
-        console.error("❌ Auth Sync Error:", err.message);
+        // Log enough to identify schema/validation problems (a missing required
+        // field used to surface only as a generic 500 to the user)
+        console.error("❌ Auth Sync Error:", err.name, err.message);
+        if (err.name === 'ValidationError' && err.errors) {
+            console.error("❌ Auth Sync validation fields:", Object.keys(err.errors).join(', '));
+            return res.status(400).json({
+                message: "Could not create your account. Please contact support.",
+                fields: Object.keys(err.errors)
+            });
+        }
         if (err.code === 11000) {
             return res.status(409).json({ message: "Account already exists. Please login with your existing account." });
         }
