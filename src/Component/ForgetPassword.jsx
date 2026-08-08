@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { resetPasswordAPI, verifyOtpAPI } from '../Store/Services'
+import { notifyAuthChanged } from '../utils/authEvents'
 import { fastAPI } from '../Store/Services.jsx';
 import { motion, AnimatePresence } from 'framer-motion'
 import { KeyRound, ShieldCheck, Loader2, User, Lock, CheckCircle2, ArrowLeft, RotateCcw, AlertCircle } from 'lucide-react'
@@ -57,6 +58,7 @@ export default function ForgetPassword() {
                     localStorage.removeItem("role");
                     localStorage.removeItem("userToken");
                     localStorage.removeItem("savedCredentials");
+                    notifyAuthChanged();
                     toast.success("Password updated successfully.");
                     setStep(3);
                 }
@@ -245,6 +247,7 @@ export default function ForgetPassword() {
                 localStorage.removeItem("role");
                 localStorage.removeItem("userToken");
                 localStorage.removeItem("savedCredentials");
+                notifyAuthChanged();
                 setStep(3);
             } else {
                 throw new Error(res?.message || 'Reset failed');

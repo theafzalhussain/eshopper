@@ -1068,8 +1068,75 @@ export const CHATBOT_STYLES = `
     .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
-    /* ════════════════════════════════════════════
-      SMALL MOBILE  (max 500px)  — full-screen chat view
+  /* ════════════════════════════════════════════
+     MOBILE FULLSCREEN  (max 767px)
+     Phones (and any small window) get the whole viewport — a floating
+     380px card left too little room for product cards and the keyboard.
+
+     NOTE: index.css sets html { zoom: 0.8 }, so viewport units are also
+     scaled to 80% — width: 100vw covered only 80% of the screen. A fixed
+     box with all four insets at 0 and auto width/height fills the viewport
+     regardless of zoom, so that is what we use here.
+     Declared after the tablet/mobile blocks so it wins.
+  ════════════════════════════════════════════ */
+  @media (max-width: 767px) {
+    /* The wrapper is a draggable motion.div; any transform on it would make
+       the fixed card position against the wrapper instead of the viewport. */
+    .chatbot-wrapper:has(.chat-card) { transform: none !important; }
+
+    .chat-card,
+    .chat-card.fullscreen {
+      position: fixed !important;
+      inset: 0 !important;
+      top: 0 !important; right: 0 !important; bottom: 0 !important; left: 0 !important;
+      width: auto !important;
+      height: auto !important;
+      min-width: 0 !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      border: none !important;
+      z-index: 9200 !important;
+    }
+
+    /* no rounded top accent on a full-bleed sheet */
+    .chat-card::before { border-radius: 0 !important; }
+
+    /* the bubble sits under the sheet — hide it so it cannot be tapped */
+    .chatbot-wrapper:has(.chat-card) .chatbot-bubble,
+    .chatbot-wrapper:has(.chat-card) .grip-handle { display: none !important; }
+
+    .chat-header {
+      padding-top: max(14px, calc(env(safe-area-inset-top) + 10px)) !important;
+    }
+    .chat-footer {
+      padding-bottom: max(12px, calc(env(safe-area-inset-bottom) + 10px)) !important;
+    }
+
+    .chat-body   { padding: 14px 12px; }
+    /* percentages, not vw: html zoom 0.8 shrinks viewport units */
+    .msg-content { max-width: calc(100% - 76px); }
+    .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /* Landscape phones: viewport is short, so full-bleed helps even more */
+  @media (max-height: 480px) and (orientation: landscape) {
+    .chat-card,
+    .chat-card.fullscreen {
+      position: fixed !important;
+      inset: 0 !important;
+      width: auto !important;
+      height: auto !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      border: none !important;
+      z-index: 9200 !important;
+    }
+  }
+
+  /* ════════════════════════════════════════════
+      SMALL MOBILE  (max 500px)  — tighter typography
     ════════════════════════════════════════════ */
   @media (max-width: 500px) {
     .chatbot-wrapper {
@@ -1088,25 +1155,6 @@ export const CHATBOT_STYLES = `
     .robot-shell { width: 42px; height: 42px; }
     .grip-handle { bottom: 68px; padding: 5px; }
 
-    .chat-card {
-      position: fixed !important;
-      inset: 0 !important;
-      width: 100vw !important;
-      height: 100dvh !important;
-      max-height: 100dvh !important;
-      border-radius: 0 !important;
-      border: none !important;
-      z-index: 9200 !important;
-    }
-
-    .chat-card.fullscreen {
-      inset: 0 !important;
-      width: 100vw !important;
-      height: 100dvh !important;
-      max-height: 100dvh !important;
-      border-radius: 0 !important;
-    }
-
     .chat-header {
       padding: max(14px, calc(env(safe-area-inset-top) + 8px)) 16px 14px;
     }
@@ -1118,7 +1166,7 @@ export const CHATBOT_STYLES = `
       padding: 12px;
       padding-bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
     }
-    .msg-content { max-width: calc(100vw - 80px); }
+    .msg-content { max-width: calc(100% - 76px); }
     .bubble { font-size: 12.5px; padding: 10px 13px; }
 
     .p-img { height: 140px; }
@@ -1308,11 +1356,11 @@ export const CHATBOT_STYLES_EXTRA = `
   .chatbot-wrapper .msg-content { max-width: min(320px, calc(100vw - 96px)); }
 
   @media (max-width: 640px) {
-    .chatbot-wrapper .msg-content { max-width: calc(100vw - 84px); }
+    .chatbot-wrapper .msg-content { max-width: calc(100% - 76px); }
     .chatbot-wrapper .followup-chip { font-size: 10px; padding: 5px 10px; }
   }
 
   @media (max-width: 500px) {
-    .chatbot-wrapper .msg-content { max-width: calc(100vw - 76px); }
+    .chatbot-wrapper .msg-content { max-width: calc(100% - 70px); }
   }
 `

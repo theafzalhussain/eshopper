@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ShoppingCart, User, Sparkles, Phone, Mail } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { BASE_URL } from '../constants'
+import { notifyAuthChanged } from '../utils/authEvents'
 import { getCart } from '../Store/ActionCreaters/CartActionCreators'
 
 export default function Navbaar() {
@@ -126,7 +127,7 @@ export default function Navbaar() {
         window.scrollTo(0, 0);
     };
 
-    const logout = () => { localStorage.clear(); handleTransitionNavigate("/login") }
+    const logout = () => { localStorage.clear(); notifyAuthChanged(); handleTransitionNavigate("/login") }
     const isActive = (path) => location.pathname === path
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen((prev) => {

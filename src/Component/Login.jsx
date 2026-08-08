@@ -7,6 +7,7 @@ import { LogIn, User as UserIcon, Lock, Eye, EyeOff, AlertCircle, ChevronRight, 
 import { signInWithPopup, getIdToken } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
 import { loginAPI, login2FAAPI } from '../Store/Services'
+import { notifyAuthChanged } from '../utils/authEvents'
 import { BASE_URL } from '../constants'
 import { useToast } from './ToastNotification'
 
@@ -55,6 +56,7 @@ export default function Login() {
                     if (safePic) {
                         localStorage.setItem("pic", safePic)
                     }
+                    notifyAuthChanged()
                     navigate(user.role === "Admin" ? "/admin-home" : "/profile")
                 }
             } catch (err) {
@@ -127,6 +129,9 @@ export default function Login() {
         } else {
             localStorage.removeItem('userToken')
         }
+
+        /* the app socket reconnects with this identity (no reload needed) */
+        notifyAuthChanged()
     }
 
     async function handleGoogleLogin() {

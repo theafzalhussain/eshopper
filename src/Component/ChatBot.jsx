@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import { BASE_URL } from '../constants'
-import { BOT_AVATAR, POSITION_STORAGE_KEY, SLOT_MEMORY_KEY } from './chatbot/constants'
+import { BOT_AVATAR, POSITION_STORAGE_KEY, SLOT_MEMORY_KEY, MOBILE_FULLSCREEN_QUERY } from './chatbot/constants'
 import {
   loadTranscript, saveTranscript, clearTranscript, hasUserTurn, lastFollowUps
 } from './chatbot/chatTranscript'
@@ -243,9 +243,13 @@ export default function ChatBot() {
     }
   }, [])
 
+  /* ── fullscreen on phones / small screens (mirrors the CSS breakpoint) ── */
   useEffect(() => {
-    const onResize = () => {
-      if (window.innerWidth <= 500) {
+    const mq = window.matchMedia?.(MOBILE_FULLSCREEN_QUERY)
+
+    const apply = () => {
+      const small = mq ? mq.matches : window.innerWidth <= 767
+      if (small) {
         setIsMobileFS(true)
         setPosition({ x: 0, y: 0 })
         return
@@ -253,10 +257,30 @@ export default function ChatBot() {
       setIsMobileFS(false)
       setPosition((p) => clamp(p))
     }
-    onResize()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+
+    apply()
+    // 'change' covers orientation flips and devtools resizing on modern browsers
+    mq?.addEventListener?.('change', apply)
+    window.addEventListener('resize', apply)
+    window.addEventListener('orientationchange', apply)
+    return () => {
+      mq?.removeEventListener?.('change', apply)
+      window.removeEventListener('resize', apply)
+      window.removeEventListener('orientationchange', apply)
+    }
   }, [isOpen])
+
+  /* Fullscreen chat should not let the page scroll behind it */
+  useEffect(() => {
+    if (!isOpen || !isMobileFS) return
+    const { overflow, touchAction } = document.body.style
+    document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
+    return () => {
+      document.body.style.overflow = overflow
+      document.body.style.touchAction = touchAction
+    }
+  }, [isOpen, isMobileFS])
 
   useEffect(() => {
     const t = setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 60)
@@ -674,6 +698,9 @@ export default function ChatBot() {
         {isOpen && (
           <motion.div
             className={`chat-card ${isMobileFS ? 'fullscreen' : ''}`}
+            role="dialog"
+            aria-modal={isMobileFS ? 'true' : 'false'}
+            aria-label="Aria style consultant chat"
             initial={{ opacity: 0, y: 44, scale: 0.93 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 28, scale: 0.97 }}

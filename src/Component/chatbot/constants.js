@@ -1,6 +1,10 @@
 export const BOT_AVATAR = '/assets/images/chatbot-avatar.png'
 export const POSITION_STORAGE_KEY = 'chatbot_position_v2'
 export const SLOT_MEMORY_KEY = 'chatbot_slot_memory_v1'
+
+/* Below this width the chat window takes over the whole screen.
+   Keep this in sync with the fullscreen media query in chatbotStyles.js. */
+export const MOBILE_FULLSCREEN_QUERY = '(max-width: 767px)'
 export const TRANSCRIPT_KEY = 'chatbot_transcript_v1'
 
 /* ══════════════════════════════════════════════════════════

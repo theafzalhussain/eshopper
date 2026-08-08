@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createUserAPI } from '../Store/Services'
 import { fastAPI } from '../Store/Services.jsx';
 import { BASE_URL } from '../constants'
+import { notifyAuthChanged } from '../utils/authEvents'
 import { ShieldCheck, User, Mail, Lock, Loader2, ArrowRight, UserPlus, Eye, EyeOff, CheckCircle, AlertCircle, Chrome } from 'lucide-react'
 import { signInWithPopup } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
@@ -232,6 +233,7 @@ export default function SingUp() {
                 if (safePic) {
                     localStorage.setItem("pic", safePic)
                 }
+                notifyAuthChanged()
                 
                 toast.success("Welcome! Account created successfully!")
                 navigate("/profile")

@@ -10,6 +10,7 @@ import { MembershipProvider } from './Component/MembershipContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './queries/queryClient';
 import { startMonitoring } from './monitoring';
+import { isChunkLoadFailure, recoverFromChunkError } from './utils/chunkRecovery';
 
 /* ════════════════════════════════════════════════════════════
    EARLY ERROR BUFFER
@@ -37,45 +38,9 @@ window.addEventListener('unhandledrejection', onRejection);
      ChunkLoadError: Loading chunk X failed
      Uncaught SyntaxError: Unexpected token '<'
    (because the missing chunk URL returns index.html)
-   Fix: reload once so the browser picks up the latest main.js.
+   Detection + one-time cache-busted reload live in utils/chunkRecovery
+   so App.jsx's error boundary uses exactly the same rules.
 ════════════════════════════════════════════════════════════ */
-const CHUNK_RELOAD_KEY = 'eshopper_chunk_reload_ts';
-
-function isChunkLoadFailure(value) {
-  const msg = String(
-    value?.message ||
-    value?.reason?.message ||
-    value?.error?.message ||
-    value ||
-    ''
-  );
-  const name = String(value?.name || value?.reason?.name || value?.error?.name || '');
-  return (
-    name === 'ChunkLoadError' ||
-    /Loading chunk [\w-]+ failed/i.test(msg) ||
-    /ChunkLoadError/i.test(msg) ||
-    /Failed to fetch dynamically imported module/i.test(msg) ||
-    /Importing a module script failed/i.test(msg)
-  );
-}
-
-function recoverFromChunkError(source) {
-  try {
-    const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
-    const now = Date.now();
-    // Prevent infinite reload loops
-    if (now - last < 15000) return;
-    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(now));
-    console.warn('[Eshopper] Chunk load failed after deploy. Reloading once...', source);
-    // cache-bust reload
-    const url = new URL(window.location.href);
-    url.searchParams.set('_r', String(now));
-    window.location.replace(url.toString());
-  } catch (_) {
-    window.location.reload();
-  }
-}
-
 window.addEventListener('error', (e) => {
   if (isChunkLoadFailure(e?.error) || isChunkLoadFailure(e?.message)) {
     recoverFromChunkError(e?.message || e?.error);

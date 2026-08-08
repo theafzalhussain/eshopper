@@ -57,6 +57,7 @@ const redisHelper = require('./config/redis');
 const { sendOrderStatus, registerTemplatePartials } = require('./mailController');
 const Activity = require('./models/Activity');
 const { clearCache, cacheMiddleware } = require('./utils/cache');
+const { isAssetRequest } = require('./utils/assetPath');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -390,7 +391,10 @@ io.on('connection', (socket) => {
     const userId = String(socket.data.userId || '').trim();
     if (!userId) {
         socket.emit('connected', { ok: true, room: null });
-        console.log('ℹ️ Socket connected without userId');
+        // Expected for guests; noisy in production where most traffic is anonymous.
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('ℹ️ Socket connected without userId (guest)');
+        }
         return;
     }
 
@@ -5875,6 +5879,18 @@ ${relevantBlock}`;
                     req.path === '/robots.txt'
                 ) {
                     return next();
+                }
+
+                /* NEVER hand the app shell to an asset request.
+                   A stale tab can ask for a chunk hash that this build no
+                   longer contains (/static/js/5361.<old>.chunk.js). Replying
+                   with index.html makes the browser parse HTML as JavaScript
+                   -> "SyntaxError: Unexpected token '<'" -> React.lazy throws
+                   -> blank page. A clean 404 becomes a ChunkLoadError, which
+                   the frontend recovers from with one cache-busted reload. */
+                if (isAssetRequest(req.path)) {
+                    res.setHeader('Cache-Control', 'no-store');
+                    return res.status(404).type('text/plain').send('Asset not found');
                 }
 
                 /* express.static's setHeaders does not run for sendFile, so

@@ -1,5 +1,8 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react'
-import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
+import React, { Suspense, useEffect, useState } from 'react'
+import lazyWithRetry from '../utils/lazyRetry'
+import RouteErrorBoundary from './RouteErrorBoundary'
+import { resetChunkRecoveryState } from '../utils/chunkRecovery'
+import useRealtimeSocket from '../hooks/useRealtimeSocket'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ToastProvider } from './ToastNotification'
 import ToastEventBridge from './ToastEventBridge'
@@ -7,6 +10,10 @@ import Navbaar from './Navbaar'
 import { useMembership } from './MembershipContext'
 import CatalogQueryBridge from './CatalogQueryBridge'
 import SEO, { organizationJsonLd, websiteJsonLd } from './SEO'
+
+/* Every route/shell chunk retries before it gives up, and a failure is
+   caught by RouteErrorBoundary instead of blanking the whole app. */
+const lazy = lazyWithRetry
 
 /* Below-the-fold and on-demand shells stay out of the initial bundle */
 const Footer = lazy(() => import('./Footer'))
@@ -224,71 +231,16 @@ function PublicSeo() {
 export default function App() {
   useMembership()
 
-  /* Realtime socket is not needed for first paint — connect once idle.
-     socket.io-client (~40 kB) is dynamically imported so it never lands
-     in the initial bundle. */
+  /* The app mounted, so whatever stale-build reload happened earlier is
+     resolved — clear the counter so the next deploy gets fresh attempts. */
   useEffect(() => {
-    let socket = null
-    let disposed = false
-    let idleId = null
-    let timerId = null
-
-    const connect = async () => {
-      if (disposed) return
-      try {
-        const { io } = await import('socket.io-client')
-        if (disposed) return
-
-        const envSocket = process.env.REACT_APP_API_URL || ''
-        const SOCKET_ENDPOINT = (envSocket && !envSocket.includes('localhost') && !envSocket.includes('127.0.0.1'))
-          ? envSocket
-          : (BASE_URL || window.location.origin)
-        const transports = (process.env.REACT_APP_SOCKET_TRANSPORTS && process.env.REACT_APP_SOCKET_TRANSPORTS.split(','))
-          || SOCKET_TRANSPORTS
-          || ['websocket', 'polling']
-        const isAdmin = (localStorage.getItem('isAdmin') === 'true' || (localStorage.getItem('role') || '').toLowerCase() === 'admin')
-        const socketAuthUser = isAdmin ? 'admin-dashboard' : (localStorage.getItem('userid') || null)
-
-        socket = io(SOCKET_ENDPOINT, {
-          auth: { userId: socketAuthUser },
-          transports,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 8000,
-          timeout: 12000
-        })
-
-        socket.on('dbChange', (data) => {
-          try { window.dispatchEvent(new CustomEvent('realtime:dbChange', { detail: data })) } catch (e) { /* ignore */ }
-        })
-
-        socket.on('userPasswordReset', (payload) => {
-          try { window.dispatchEvent(new CustomEvent('realtime:userPasswordReset', { detail: payload })) } catch (e) { /* ignore */ }
-        })
-
-        socket.on('connect_error', (err) => console.warn('Socket connect_error:', err && err.message))
-      } catch (e) {
-        console.warn('Realtime socket init failed', e && e.message)
-      }
-    }
-
-    const schedule = () => {
-      if (typeof window.requestIdleCallback === 'function') {
-        idleId = window.requestIdleCallback(connect, { timeout: 3000 })
-      } else {
-        timerId = setTimeout(connect, 1200)
-      }
-    }
-
-    if (document.readyState === 'complete') schedule()
-    else window.addEventListener('load', schedule, { once: true })
-
-    return () => {
-      disposed = true
-      if (timerId) clearTimeout(timerId)
-      if (idleId && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idleId)
-      try { if (socket) socket.disconnect() } catch (e) { /* ignore */ }
-    }
+    const id = setTimeout(resetChunkRecoveryState, 4000)
+    return () => clearTimeout(id)
   }, [])
+
+  /* Realtime socket: connects once idle and reconnects on login/logout
+     so the handshake always carries the current user id. */
+  useRealtimeSocket()
 
   const routeLoader = (
     <div style={{ minHeight: '50vh', display: 'grid', placeItems: 'center', color: '#94A3B8' }}>
@@ -302,8 +254,9 @@ export default function App() {
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <PublicSeo />
         <AppShell>
-          <Suspense fallback={routeLoader}>
-            <Routes>
+          <RouteErrorBoundary>
+            <Suspense fallback={routeLoader}>
+              <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
@@ -346,8 +299,9 @@ export default function App() {
               <Route path="/admin-add-product" element={<AdminRoute><AdminAddProduct /></AdminRoute>} />
               <Route path="/admin-update-product/:id" element={<AdminRoute><AdminUpdateProduct /></AdminRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+              </Routes>
+            </Suspense>
+          </RouteErrorBoundary>
         </AppShell>
       </BrowserRouter>
     </ToastProvider>

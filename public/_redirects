@@ -1,1 +1,6 @@
-/* /index.html 200
+# SPA fallback, but NEVER for asset requests.
+# A missing hashed chunk must return 404 (which the app recovers from),
+# not index.html — HTML served as JS crashes the app with
+# "SyntaxError: Unexpected token '<'".
+/static/*  /static/:splat  404
+/*         /index.html     200
