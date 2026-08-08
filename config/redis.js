@@ -7,8 +7,24 @@ let redisDisabledReason = '';
 const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
 const AUTH_ERROR_PATTERN = /\b(NOAUTH|WRONGPASS|authentication required|AUTH failed)\b/i;
 const CONNECTION_ERROR_PATTERN = /\b(getaddrinfo ENOTFOUND|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH)\b/i;
+/* Managed Redis (Upstash and friends) rejects every command once the plan's
+   request quota is used up. Retrying only burns more quota and floods the logs,
+   so treat it like an auth failure: drop the client and use the memory cache. */
+const QUOTA_ERROR_PATTERN = /max (requests|daily request|monthly request|commands) limit exceeded|quota exceeded|ERR max requests/i;
 
 const isTruthy = (value) => /^(true|1|yes)$/i.test(String(value || '').trim());
+
+/**
+ * Classifies a Redis error so callers know whether retrying is pointless.
+ * @returns {'auth'|'quota'|'connection'|'other'}
+ */
+const classifyRedisError = (message) => {
+  const text = String((message && message.message) || message || '');
+  if (AUTH_ERROR_PATTERN.test(text)) return 'auth';
+  if (QUOTA_ERROR_PATTERN.test(text)) return 'quota';
+  if (CONNECTION_ERROR_PATTERN.test(text)) return 'connection';
+  return 'other';
+};
 
 const disableRedisClient = (reason, err) => {
   if (redisDisabled) return;
@@ -116,15 +132,19 @@ function createClient() {
     redisClient.on('ready', () => console.log('Redis ready'));
     redisClient.on('error', (err) => {
       const errorMessage = err && err.message ? err.message : '';
-      if (AUTH_ERROR_PATTERN.test(errorMessage)) {
-        disableRedisClient('Redis authentication failed', err);
-        return;
+      switch (classifyRedisError(errorMessage)) {
+        case 'auth':
+          disableRedisClient('Redis authentication failed', err);
+          return;
+        case 'quota':
+          disableRedisClient('Redis request quota exhausted; falling back to memory cache', err);
+          return;
+        case 'connection':
+          disableRedisClient('Redis connection failed; falling back to memory cache', err);
+          return;
+        default:
+          console.warn('Redis error:', errorMessage);
       }
-      if (CONNECTION_ERROR_PATTERN.test(errorMessage)) {
-        disableRedisClient('Redis connection failed; falling back to memory cache', err);
-        return;
-      }
-      console.warn('Redis error:', errorMessage);
     });
   } catch (err) {
     console.warn('Failed to create Redis client:', err && err.message);
@@ -177,6 +197,7 @@ module.exports = {
   get,
   set,
   del,
+  classifyRedisError,
   client: () => redisClient,
   isDisabled: () => redisDisabled,
   disabledReason: () => redisDisabledReason

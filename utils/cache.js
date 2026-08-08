@@ -6,6 +6,9 @@ let redisDisabled = false;
 
 const REDIS_ENABLED = String(process.env.REDIS_ENABLED || 'true').toLowerCase() !== 'false';
 const REDIS_CACHE_TIMEOUT = 2000; // Max 2 seconds for any Redis cache operation
+/* Managed Redis plans reject every command once the request quota is spent —
+   retrying just burns more quota, so we fall back to the memory cache. */
+const { classifyRedisError } = require('../config/redis');
 
 function initCacheRedis() {
     if (!REDIS_ENABLED || redisDisabled) return null;
@@ -38,11 +41,23 @@ function initCacheRedis() {
 
         client.on('ready', () => console.log('✅ Redis cache client ready'));
         client.on('error', (err) => {
-            if (err.message && (err.message.includes('EVAL') || err.message.includes('dispatch'))) {
+            const message = (err && err.message) || '';
+            if (message.includes('EVAL') || message.includes('dispatch')) {
                 // Ignore BullMQ-related errors on this connection
                 return;
             }
-            console.warn('Redis cache error:', err.message);
+            /* Plan quota used up (e.g. Upstash "max requests limit exceeded"):
+               every further command fails, so stop using Redis and serve from
+               the in-memory cache instead of retrying and spamming the logs. */
+            if (classifyRedisError(message) === 'quota') {
+                if (!redisDisabled) {
+                    redisDisabled = true;
+                    console.warn('⚠️ Redis cache disabled: request quota exhausted — using memory cache');
+                    try { client.disconnect(); } catch (_) { /* ignore */ }
+                }
+                return;
+            }
+            console.warn('Redis cache error:', message);
         });
 
         return client;

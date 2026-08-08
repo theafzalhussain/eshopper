@@ -98,7 +98,7 @@
     "fix:user-settings:dry": "node backfill-user-settings.js --dry-run",
     "fix:user-settings": "node backfill-user-settings.js --apply",
     "test": "react-app-rewired test",
-    "test:server": "node --test \"utils/*.test.js\"",
+    "test:server": "node --test \"utils/*.test.js\" \"config/*.test.js\"",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

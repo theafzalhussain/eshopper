@@ -390,15 +390,18 @@ io.on('connection', (socket) => {
     socket.emit('connected', { ok: true, room: rooms[0] || null, rooms, admin: isAdmin });
 
     if (!rooms.length) {
-        // Expected for guests; noisy in production where most traffic is anonymous.
-        if (process.env.NODE_ENV !== 'production') {
+        // Guests are the normal case (most visitors are not logged in), so this
+        // is off unless SOCKET_DEBUG=true.
+        if (String(process.env.SOCKET_DEBUG || '').toLowerCase() === 'true') {
             console.log('ℹ️ Socket connected without a verified identity (guest)');
         }
         return;
     }
 
     if (isAdmin) console.log('✅ Verified admin connected to room admin:dashboard');
-    console.log(`✅ Socket joined ${rooms.join(', ')}`);
+    else if (String(process.env.SOCKET_DEBUG || '').toLowerCase() === 'true') {
+        console.log(`✅ Socket joined ${rooms.join(', ')}`);
+    }
 
     // 🛒 CART: UPDATE QUANTITY (Real-time without loading)
     socket.on('cart:update-quantity', async (data) => {
