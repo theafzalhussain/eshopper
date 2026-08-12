@@ -229,19 +229,39 @@ function shippingDetails(price) {
         maxValue: 7,
         unitCode: 'DAY',
       },
+      businessDays: {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: [
+          'https://schema.org/Monday',
+          'https://schema.org/Tuesday',
+          'https://schema.org/Wednesday',
+          'https://schema.org/Thursday',
+          'https://schema.org/Friday',
+          'https://schema.org/Saturday',
+        ],
+      },
     },
   };
 }
 
 function returnPolicy() {
-  // Site policy: easy 30-day returns.
+  // Industry standard for Indian fashion e-commerce (Myntra/Ajio/Amazon Fashion):
+  // 30-day window, free return pickup, full refund.
   return {
     '@type': 'MerchantReturnPolicy',
     applicableCountry: 'IN',
+    returnPolicyCountry: 'IN',
     returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
     merchantReturnDays: 30,
     returnMethod: 'https://schema.org/ReturnByMail',
     returnFees: 'https://schema.org/FreeReturn',
+    refundType: 'https://schema.org/FullRefund',
+    returnShippingFeesAmount: {
+      '@type': 'MonetaryAmount',
+      value: '0',
+      currency: 'INR',
+    },
+    merchantReturnLink: `${SITE_URL}/return-policy`,
   };
 }
 
@@ -286,6 +306,7 @@ function buildProductJsonLd(product, canonical) {
     image: images.length ? images : [`${SITE_URL}/assets/images/CR-1.png`],
     category: [product.maincategory, product.subcategory].filter(Boolean).join(' > ') || undefined,
     ...(product.color ? { color: product.color } : {}),
+    url: canonical,
     offers,
   };
 
