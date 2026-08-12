@@ -132,6 +132,77 @@ export function breadcrumbJsonLd(items = []) {
   };
 }
 
+/** Merchant fields Google looks for in Product rich results. */
+function priceValidUntilDate() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function offerShippingDetails(price) {
+  // Site policy: free shipping on orders above ₹999 (India).
+  if (!Number.isFinite(price) || price < 999) return undefined;
+  return {
+    '@type': 'OfferShippingDetails',
+    shippingRate: {
+      '@type': 'MonetaryAmount',
+      value: '0',
+      currency: 'INR',
+    },
+    shippingDestination: {
+      '@type': 'DefinedRegion',
+      addressCountry: 'IN',
+    },
+    deliveryTime: {
+      '@type': 'ShippingDeliveryTime',
+      handlingTime: {
+        '@type': 'QuantitativeValue',
+        minValue: 1,
+        maxValue: 2,
+        unitCode: 'DAY',
+      },
+      transitTime: {
+        '@type': 'QuantitativeValue',
+        minValue: 2,
+        maxValue: 7,
+        unitCode: 'DAY',
+      },
+      businessDays: {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: [
+          'https://schema.org/Monday',
+          'https://schema.org/Tuesday',
+          'https://schema.org/Wednesday',
+          'https://schema.org/Thursday',
+          'https://schema.org/Friday',
+          'https://schema.org/Saturday',
+        ],
+      },
+    },
+  };
+}
+
+function merchantReturnPolicy() {
+  // Industry standard for Indian fashion e-commerce (Myntra/Ajio/Amazon Fashion):
+  // 30-day window, free return pickup, full refund.
+  return {
+    '@type': 'MerchantReturnPolicy',
+    applicableCountry: 'IN',
+    returnPolicyCountry: 'IN',
+    returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    merchantReturnDays: 30,
+    returnMethod: 'https://schema.org/ReturnByMail',
+    returnFees: 'https://schema.org/FreeReturn',
+    refundType: 'https://schema.org/FullRefund',
+    returnShippingFeesAmount: {
+      '@type': 'MonetaryAmount',
+      value: '0',
+      currency: 'INR',
+    },
+    merchantReturnLink: `${FRONTEND_URL}/return-policy`,
+  };
+}
+
 export function productJsonLd(product = {}) {
   if (!product || product.notFound) return null;
   const id = product._id || product.id;
@@ -153,29 +224,39 @@ export function productJsonLd(product = {}) {
       ? rawDesc
       : `Buy ${product.name}${product.brand ? ` by ${product.brand}` : ''} online at Eshopper. Premium ${[product.maincategory, product.subcategory].filter(Boolean).join(' ')} fashion with free shipping above ₹999.`;
 
+  const offers = {
+    '@type': 'Offer',
+    url,
+    priceCurrency: 'INR',
+    price: Number.isFinite(price) ? price.toFixed(2) : undefined,
+    priceValidUntil: priceValidUntilDate(),
+    availability,
+    itemCondition: 'https://schema.org/NewCondition',
+    seller: {
+      '@type': 'Organization',
+      name: SITE_NAME,
+    },
+    hasMerchantReturnPolicy: merchantReturnPolicy(),
+  };
+
+  const shipping = offerShippingDetails(price);
+  if (shipping) offers.shippingDetails = shipping;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
     description: toPlainText(description, 5000),
     sku: String(id || ''),
+    mpn: String(id || ''),
     brand: product.brand
       ? { '@type': 'Brand', name: product.brand }
       : { '@type': 'Brand', name: SITE_NAME },
     image: images.length ? images : [DEFAULT_IMAGE],
     category: [product.maincategory, product.subcategory].filter(Boolean).join(' > ') || undefined,
-    offers: {
-      '@type': 'Offer',
-      url,
-      priceCurrency: 'INR',
-      price: Number.isFinite(price) ? price.toFixed(2) : undefined,
-      availability,
-      itemCondition: 'https://schema.org/NewCondition',
-      seller: {
-        '@type': 'Organization',
-        name: SITE_NAME,
-      },
-    },
+    ...(product.color ? { color: product.color } : {}),
+    url,
+    offers,
     ...(Number(product.rating) > 0 && Number(product.reviews) > 0
       ? {
           aggregateRating: {

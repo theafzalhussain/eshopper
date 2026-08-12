@@ -194,6 +194,57 @@ function shopMeta(path) {
   };
 }
 
+/** Merchant fields Google looks for in Product rich results. */
+function priceValidUntil() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function shippingDetails(price) {
+  // Site policy: free shipping on orders above ₹999 (India).
+  if (!Number.isFinite(price) || price < 999) return undefined;
+  return {
+    '@type': 'OfferShippingDetails',
+    shippingRate: {
+      '@type': 'MonetaryAmount',
+      value: '0',
+      currency: 'INR',
+    },
+    shippingDestination: {
+      '@type': 'DefinedRegion',
+      addressCountry: 'IN',
+    },
+    deliveryTime: {
+      '@type': 'ShippingDeliveryTime',
+      handlingTime: {
+        '@type': 'QuantitativeValue',
+        minValue: 1,
+        maxValue: 2,
+        unitCode: 'DAY',
+      },
+      transitTime: {
+        '@type': 'QuantitativeValue',
+        minValue: 2,
+        maxValue: 7,
+        unitCode: 'DAY',
+      },
+    },
+  };
+}
+
+function returnPolicy() {
+  // Site policy: easy 30-day returns.
+  return {
+    '@type': 'MerchantReturnPolicy',
+    applicableCountry: 'IN',
+    returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    merchantReturnDays: 30,
+    returnMethod: 'https://schema.org/ReturnByMail',
+    returnFees: 'https://schema.org/FreeReturn',
+  };
+}
+
 function buildProductJsonLd(product, canonical) {
   const images = [product.pic1, product.pic2, product.pic3, product.pic4].filter(Boolean);
   const price = Number(product.finalprice || product.baseprice || 0);
@@ -207,26 +258,35 @@ function buildProductJsonLd(product, canonical) {
     ? product.description
     : `Buy ${product.name}${product.brand ? ` by ${product.brand}` : ''} online at Eshopper. Premium ${[product.maincategory, product.subcategory].filter(Boolean).join(' ')} fashion with easy returns.`;
 
+  const offers = {
+    '@type': 'Offer',
+    url: canonical,
+    priceCurrency: 'INR',
+    price: Number.isFinite(price) ? price.toFixed(2) : undefined,
+    priceValidUntil: priceValidUntil(),
+    availability,
+    itemCondition: 'https://schema.org/NewCondition',
+    seller: { '@type': 'Organization', name: 'Eshopper' },
+    hasMerchantReturnPolicy: returnPolicy(),
+  };
+
+  const shipping = shippingDetails(price);
+  if (shipping) offers.shippingDetails = shipping;
+
   const data = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
     description: toPlainText(descRaw, 5000),
     sku: String(product._id || ''),
+    mpn: String(product._id || ''),
     brand: product.brand
       ? { '@type': 'Brand', name: product.brand }
       : { '@type': 'Brand', name: 'Eshopper' },
     image: images.length ? images : [`${SITE_URL}/assets/images/CR-1.png`],
     category: [product.maincategory, product.subcategory].filter(Boolean).join(' > ') || undefined,
-    offers: {
-      '@type': 'Offer',
-      url: canonical,
-      priceCurrency: 'INR',
-      price: Number.isFinite(price) ? price.toFixed(2) : undefined,
-      availability,
-      itemCondition: 'https://schema.org/NewCondition',
-      seller: { '@type': 'Organization', name: 'Eshopper' },
-    },
+    ...(product.color ? { color: product.color } : {}),
+    offers,
   };
 
   if (Number(product.rating) > 0 && Number(product.reviews) > 0) {
