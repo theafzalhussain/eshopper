@@ -11,6 +11,8 @@ const STATIC_PAGES = [
   { path: '/shop/Men', changefreq: 'daily', priority: '0.8' },
   { path: '/shop/Women', changefreq: 'daily', priority: '0.8' },
   { path: '/shop/Kids', changefreq: 'daily', priority: '0.8' },
+  // Match live nav categories (Women/Womens both appear in data)
+  { path: '/shop/Womens', changefreq: 'daily', priority: '0.8' },
   { path: '/about', changefreq: 'monthly', priority: '0.6' },
   { path: '/contact', changefreq: 'monthly', priority: '0.6' },
   { path: '/faq', changefreq: 'monthly', priority: '0.5' },

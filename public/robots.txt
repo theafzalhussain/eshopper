@@ -5,6 +5,7 @@ Allow: /
 # Private / app pages — do not index
 Disallow: /admin
 Disallow: /admin-
+Disallow: /admin-home
 Disallow: /cart
 Disallow: /checkout
 Disallow: /wishlist
@@ -17,11 +18,14 @@ Disallow: /signup
 Disallow: /forget-password
 Disallow: /confirmation
 
-# AI training bots (optional — keep search bots allowed)
+# AI training bots (search bots still allowed)
 User-agent: GPTBot
 Disallow: /
 
 User-agent: CCBot
+Disallow: /
+
+User-agent: Google-Extended
 Disallow: /
 
 Sitemap: https://eshopperr.me/sitemap.xml

@@ -1,18 +1,16 @@
 import { Helmet } from 'react-helmet-async';
 import { FRONTEND_URL, BRAND_LOGO_URL } from '../constants';
+import { absSeoUrl, normalizeSeoPath } from '../utils/seoPath';
 
 const SITE_NAME = 'Eshopper';
 const DEFAULT_TITLE = 'Eshopper – Premium Fashion Boutique | Men, Women & Kids';
 const DEFAULT_DESCRIPTION =
   'Shop premium fashion at Eshopper (eshopperr.me). Discover luxury clothing for men, women and kids with free shipping above ₹999, easy 30-day returns, and exclusive member drops.';
-const DEFAULT_IMAGE = `${FRONTEND_URL}${BRAND_LOGO_URL?.startsWith('http') ? '' : BRAND_LOGO_URL || '/logo512.png'}`;
+const DEFAULT_IMAGE = `${FRONTEND_URL}/og-default.jpg`;
 const TWITTER_HANDLE = '@eshopperr';
 
 function absUrl(pathOrUrl = '/') {
-  if (!pathOrUrl) return FRONTEND_URL;
-  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  const path = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
-  return `${FRONTEND_URL}${path}`;
+  return absSeoUrl(pathOrUrl);
 }
 
 function toPlainText(value = '', max = 160) {
@@ -53,7 +51,7 @@ export default function SEO({
 
   return (
     <Helmet prioritizeSeoTags>
-      <html lang="en" />
+      <html lang="en-IN" />
       <title>{fullTitle}</title>
       <meta name="description" content={desc} />
       {keywords ? <meta name="keywords" content={keywords} /> : null}
@@ -92,8 +90,9 @@ export function organizationJsonLd() {
     '@type': 'Organization',
     name: SITE_NAME,
     alternateName: ['Eshopper Boutique', 'Eshopperr', 'eshopperr.me'],
-    url: FRONTEND_URL,
+    url: `${FRONTEND_URL}/`,
     logo: absUrl(BRAND_LOGO_URL || '/logo512.png'),
+    image: DEFAULT_IMAGE,
     sameAs: [],
     contactPoint: [
       {
@@ -111,7 +110,7 @@ export function websiteJsonLd() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: SITE_NAME,
-    url: FRONTEND_URL,
+    url: `${FRONTEND_URL}/`,
     potentialAction: {
       '@type': 'SearchAction',
       target: `${FRONTEND_URL}/shop/All?search={search_term_string}`,
@@ -148,16 +147,22 @@ export function productJsonLd(product = {}) {
       ? 'https://schema.org/OutOfStock'
       : 'https://schema.org/InStock';
 
+  const rawDesc = product.description || '';
+  const description =
+    rawDesc && !/^this is sample product$/i.test(String(rawDesc).trim())
+      ? rawDesc
+      : `Buy ${product.name}${product.brand ? ` by ${product.brand}` : ''} online at Eshopper. Premium ${[product.maincategory, product.subcategory].filter(Boolean).join(' ')} fashion with free shipping above ₹999.`;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
-    description: toPlainText(product.description || product.name, 5000),
+    description: toPlainText(description, 5000),
     sku: String(id || ''),
     brand: product.brand
       ? { '@type': 'Brand', name: product.brand }
       : { '@type': 'Brand', name: SITE_NAME },
-    image: images.length ? images : [absUrl('/logo512.png')],
+    image: images.length ? images : [DEFAULT_IMAGE],
     category: [product.maincategory, product.subcategory].filter(Boolean).join(' > ') || undefined,
     offers: {
       '@type': 'Offer',
@@ -189,3 +194,5 @@ export const SEO_DEFAULTS = {
   DEFAULT_DESCRIPTION,
   DEFAULT_IMAGE,
 };
+
+export { normalizeSeoPath, absUrl as absSeoUrl };

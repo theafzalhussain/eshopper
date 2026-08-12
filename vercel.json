@@ -17,6 +17,12 @@
       ]
     },
     {
+      "source": "/og-default.jpg",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=604800" }
+      ]
+    },
+    {
       "source": "/index.html",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
@@ -31,8 +37,22 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/shop/All/",
+      "destination": "/shop/All",
+      "permanent": true
+    },
+    {
+      "source": "/single-product/:id/",
+      "destination": "/single-product/:id",
+      "permanent": true
     }
   ],
   "rewrites": [
@@ -49,7 +69,7 @@
       "destination": "https://eshopper-qtgl.onrender.com/sitemap-products.xml"
     },
     {
-      "source": "/:path((?!static/|assets/)[^.]*)",
+      "source": "/:path((?!static/|assets/|api/|middleware)[^.]*)",
       "destination": "/index.html"
     }
   ]

@@ -158,9 +158,22 @@ const AdminRoute = ({ children }) => {
 }
 
 
+/** Collapse /shop/All/ → /shop/All so crawlers and users share one URL. */
+function TrailingSlashRedirect() {
+  const location = useLocation()
+  const { pathname, search, hash } = location
+  if (pathname !== '/' && pathname.endsWith('/')) {
+    return <Navigate to={`${pathname.replace(/\/+$/, '')}${search || ''}${hash || ''}`} replace />
+  }
+  return null
+}
+
 function PublicSeo() {
   const { pathname } = useLocation()
-  const path = pathname || '/'
+  // Strip trailing slash so /shop/All/ and /shop/All share one canonical
+  const path = (pathname || '/').length > 1
+    ? (pathname || '/').replace(/\/+$/, '')
+    : (pathname || '/')
 
   // Private app surfaces should not be indexed
   const noindexPrefixes = [
@@ -175,7 +188,7 @@ function PublicSeo() {
         title="Eshopper – Premium Fashion Boutique | Men, Women & Kids"
         description="Shop premium fashion at Eshopper (eshopperr.me). Luxury clothing for men, women and kids with free shipping above ₹999 and easy 30-day returns."
         path="/"
-        keywords="eshopper, eshopperr, eshopperr.me, premium fashion India, luxury boutique, men women kids clothing"
+        keywords="eshopper, eshopperr, eshopperr.me, premium fashion India, luxury boutique, men women kids clothing, online shopping India"
         jsonLd={[organizationJsonLd(), websiteJsonLd()]}
       />
     )
@@ -188,12 +201,12 @@ function PublicSeo() {
         title={`${label} Fashion Collection`}
         description={`Shop ${label} at Eshopper – premium styles, exclusive drops, free shipping above ₹999.`}
         path={path}
-        keywords={`eshopper ${label}, ${label} clothing, buy ${label} online India`}
+        keywords={`eshopper ${label}, ${label} clothing, buy ${label} online India, premium fashion`}
       />
     )
   }
   if (path.startsWith('/single-product/')) {
-    // Product page sets richer SEO itself; keep a safe fallback
+    // Product page sets richer SEO itself; keep a path-correct fallback for crawlers
     return (
       <SEO
         title="Product"
@@ -219,7 +232,7 @@ function PublicSeo() {
   }
   return (
     <SEO
-      title={noindex ? 'Eshopper' : 'Eshopper'}
+      title="Eshopper"
       description="Eshopper premium fashion boutique."
       path={path}
       noindex={noindex}
@@ -252,6 +265,7 @@ export default function App() {
     <ToastProvider>
       <ToastEventBridge />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <TrailingSlashRedirect />
         <PublicSeo />
         <AppShell>
           <RouteErrorBoundary>

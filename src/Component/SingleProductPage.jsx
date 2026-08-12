@@ -993,20 +993,37 @@ export default function ProductDetail() {
     setTimeout(() => dispatch(getCart()), 500);
   }
 
+  const productPath = `/single-product/${p?._id || p?.id || id}`;
+  const productDescRaw = String(p?.description || '').trim();
+  const productDescription =
+    productDescRaw && !/^this is sample product$/i.test(productDescRaw)
+      ? productDescRaw
+      : `Buy ${p?.name || 'this product'}${p?.brand ? ` by ${p.brand}` : ''} online at Eshopper. Premium ${[p?.maincategory, p?.subcategory].filter(Boolean).join(' ')} fashion with free shipping above ₹999 and easy returns.`;
+
+  const notFoundSeo = p?.notFound ? (
+    <SEO
+      title="Product Not Found"
+      description="This product is unavailable on Eshopper."
+      path={productPath}
+      noindex
+    />
+  ) : null;
+
   const productSeo = !p || p.notFound ? null : (
     <SEO
       title={`${p.name}${p.brand ? ` by ${p.brand}` : ''}`}
-      description={p.description || `Buy ${p.name} online at Eshopper. Premium ${[p.maincategory, p.subcategory].filter(Boolean).join(' ')} fashion with easy returns.`}
-      path={`/single-product/${p._id || p.id || id}`}
+      description={productDescription}
+      path={productPath}
       image={p.pic1 || mainImg}
       type="product"
-      keywords={[p.name, p.brand, p.maincategory, p.subcategory, 'eshopper', 'buy online India'].filter(Boolean).join(', ')}
+      keywords={[p.name, p.brand, p.maincategory, p.subcategory, 'eshopper', 'buy online India', 'premium fashion'].filter(Boolean).join(', ')}
       jsonLd={[
-        productJsonLd(p),
+        productJsonLd({ ...p, description: productDescription }),
         breadcrumbJsonLd([
           { name: 'Home', path: '/' },
-          { name: p.maincategory || 'Shop', path: `/shop/${encodeURIComponent(p.maincategory || 'All')}` },
-          { name: p.name, path: `/single-product/${p._id || p.id || id}` },
+          { name: 'Shop', path: '/shop/All' },
+          { name: p.maincategory || 'Collection', path: `/shop/${encodeURIComponent(p.maincategory || 'All')}` },
+          { name: p.name, path: productPath },
         ]),
       ]}
     />
@@ -1014,7 +1031,7 @@ export default function ProductDetail() {
 
   return (
     <>
-      {productSeo}
+      {notFoundSeo}{productSeo}
     <div className="pd">
 
       {/* Proof bar */}
@@ -1025,13 +1042,13 @@ export default function ProductDetail() {
         <Countdown end={saleEnd} />
       </div>
 
-      {/* Breadcrumb */}
+      {/* Breadcrumb — real internal links help crawl product hierarchy */}
       <div className="pd-bc">
         <div className="pd-bc-inner">
-          <a href="#">Home</a><span className="pd-bc-sep">›</span>
-          <a href="#">Shop</a><span className="pd-bc-sep">›</span>
-          <a href="#">{p.maincategory}</a><span className="pd-bc-sep">›</span>
-          <a href="#">{p.subcategory}</a><span className="pd-bc-sep">›</span>
+          <Link to="/">Home</Link><span className="pd-bc-sep">›</span>
+          <Link to="/shop/All">Shop</Link><span className="pd-bc-sep">›</span>
+          <Link to={`/shop/${encodeURIComponent(p.maincategory || 'All')}`}>{p.maincategory || 'Collection'}</Link><span className="pd-bc-sep">›</span>
+          {p.subcategory ? (<><span>{p.subcategory}</span><span className="pd-bc-sep">›</span></>) : null}
           <span className="pd-bc-cur">{p.name}</span>
         </div>
       </div>
