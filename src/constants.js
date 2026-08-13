@@ -27,8 +27,10 @@ export const BASE_URL = isDev
   : configuredProdApiUrl;
 
 // Socket transport strategy:
-// Force websocket in dev (and when explicitly enabled) to avoid polling 400s.
-export const SOCKET_TRANSPORTS = shouldForceWebSocket ? ['websocket'] : ['polling', 'websocket'];
+// WebSocket first, polling only as a fallback. Long-polling first meant every
+// cold start of the Render API produced an "xhr poll error" before the upgrade
+// (Datadog counts console errors, so those landed in the error dashboard).
+export const SOCKET_TRANSPORTS = shouldForceWebSocket ? ['websocket'] : ['websocket', 'polling'];
 
 // ===== FRONTEND URLs =====
 // Always use production domain

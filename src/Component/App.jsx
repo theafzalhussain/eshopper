@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect, useState } from 'react'
 import lazyWithRetry from '../utils/lazyRetry'
 import RouteErrorBoundary from './RouteErrorBoundary'
+import WidgetErrorBoundary from './WidgetErrorBoundary'
 import { resetChunkRecoveryState } from '../utils/chunkRecovery'
 import useRealtimeSocket from '../hooks/useRealtimeSocket'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
@@ -104,10 +105,14 @@ const useIdle = (delay = 1200) => {
     return ready;
 }
 
-const IdleMount = ({ children, delay }) => {
+const IdleMount = ({ children, delay, name }) => {
     const ready = useIdle(delay);
     if (!ready) return null;
-    return <Suspense fallback={null}>{children}</Suspense>;
+    return (
+        <WidgetErrorBoundary name={name}>
+            <Suspense fallback={null}>{children}</Suspense>
+        </WidgetErrorBoundary>
+    );
 }
 
 /* Footer is below the fold — render it only once it is close to view */
@@ -125,7 +130,11 @@ const LazyFooter = () => {
         return () => obs.disconnect();
     }, [node, show]);
 
-    if (show) return <Suspense fallback={null}><Footer /></Suspense>;
+    if (show) return (
+        <WidgetErrorBoundary name="Footer">
+            <Suspense fallback={null}><Footer /></Suspense>
+        </WidgetErrorBoundary>
+    );
     return <div ref={setNode} style={{ minHeight: 1 }} aria-hidden="true" />;
 }
 
@@ -138,12 +147,16 @@ const AppShell = ({ children }) => {
   return (
     <>
       <ScrollToTop />
-      <Navbaar />
-      <CatalogQueryBridge />
+      <WidgetErrorBoundary name="Navbaar">
+        <Navbaar />
+      </WidgetErrorBoundary>
+      <WidgetErrorBoundary name="CatalogQueryBridge">
+        <CatalogQueryBridge />
+      </WidgetErrorBoundary>
       {children}
       {shouldShowFooter && <LazyFooter />}
-      <IdleMount delay={900}><PremiumAuthPopup /></IdleMount>
-      <IdleMount delay={1500}><ChatBot /></IdleMount>
+      <IdleMount delay={900} name="PremiumAuthPopup"><PremiumAuthPopup /></IdleMount>
+      <IdleMount delay={1500} name="ChatBot"><ChatBot /></IdleMount>
     </>
   );
 }

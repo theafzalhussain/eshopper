@@ -26,8 +26,9 @@ export function getSocket() {
       transports: SOCKET_TRANSPORTS,
       auth: socketHandshakeAuth(),
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 8000,
     });
 
     // Add connection event listeners for debugging
@@ -40,7 +41,7 @@ export function getSocket() {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('🔴 Socket connection error:', error.message);
+      console.warn('Admin socket connect_error:', error && error.message);
     });
   }
   return socket;

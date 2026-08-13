@@ -21,11 +21,17 @@ export function getSocketClient() {
       transports: SOCKET_TRANSPORTS,
       auth: socketHandshakeAuth(),
       reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 8000,
+      timeout: 12000,
     });
 
     socketClient.on('connect', () => console.log('✅ Socket client connected'));
     socketClient.on('disconnect', () => console.log('❌ Socket client disconnected'));
-    socketClient.on('connect_error', (err) => console.error('🔴 Socket client error', err && err.message));
+    /* A transport hiccup is retried automatically — warn, never console.error,
+       so a cold-starting API does not register as an app error in RUM. */
+    socketClient.on('connect_error', (err) => console.warn('Socket client connect_error:', err && err.message));
   }
   return socketClient;
 }

@@ -22,7 +22,13 @@ const MAX_BUFFERED = 20;
 
 const bufferError = (message, error) => {
   if (earlyErrors.length >= MAX_BUFFERED) return;
-  earlyErrors.push({ message: String(message || ''), error });
+  earlyErrors.push({
+    message: String(message || ''),
+    error,
+    /* kept separately: an extension error often has no Error instance,
+       and monitoring.js needs the frames to tell ours from theirs */
+    stack: String(error?.stack || '')
+  });
 };
 
 const onWindowError = (e) => bufferError(e?.message || e?.error?.message, e?.error);

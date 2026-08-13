@@ -8,6 +8,7 @@ import { signInWithPopup, getIdToken } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
 import { loginAPI, login2FAAPI } from '../Store/Services'
 import { notifyAuthChanged } from '../utils/authEvents'
+import { logAuthFailure } from '../utils/authErrors'
 import { BASE_URL } from '../constants'
 import { useToast } from './ToastNotification'
 
@@ -166,7 +167,7 @@ export default function Login() {
             toast.success('Signed in with Google successfully.')
             navigate(user.role === 'Admin' ? '/admin-home' : '/profile')
         } catch (err) {
-            console.error('Google login error:', err)
+            logAuthFailure('Google login error:', err)
             if (err.code === 'auth/popup-closed-by-user') {
                 setErrorMsg('Google sign-in was cancelled.')
                 toast.warning('Google sign-in was cancelled.')
