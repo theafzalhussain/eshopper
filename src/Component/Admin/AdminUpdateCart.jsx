@@ -88,11 +88,6 @@ export default function AdminUpdateCart() {
         </div>
     )
 }
-                </div>
-            </div>
-        </>
-    )
-}
 
 
 

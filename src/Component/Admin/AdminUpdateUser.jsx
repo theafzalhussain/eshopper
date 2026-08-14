@@ -87,11 +87,6 @@ export default function AdminUpdateUser() {
         </div>
     )
 }
-                </div>
-            </div>
-        </>
-    )
-}
 
 
 

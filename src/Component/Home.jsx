@@ -308,6 +308,10 @@ export default function Home() {
           size: sizeStr,
           price: Number(p.finalprice),
           pic: p.pic1,
+          /* This page shows its own .hx-toast below, so tell the saga not to
+             raise the generic one as well — one click was producing both
+             "Added to Wishlist" and "Added to wishlist". */
+          silent: true,
         }));
         setWishlistToast({ show: true, text: "Added to Wishlist ✦" });
       }
@@ -388,7 +392,7 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15, duration: 0.3 }}
-              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', color: '#c8a96e', letterSpacing: '4px', textTransform: 'uppercase' }}
+              style={{ fontFamily: "'Cormorant Garamond', 'Cormorant Fallback', Georgia, serif", fontSize: '24px', color: '#c8a96e', letterSpacing: '4px', textTransform: 'uppercase' }}
             >
               Curating Selection
             </motion.div>
@@ -872,13 +876,51 @@ export default function Home() {
               )})}
             </div>
           ) : (
+            /* ══ CLS FIX — /, Datadog CLS 0.123 ══════════════════════════
+               Two separate mismatches between this placeholder and the
+               loaded grid, both of which moved the page:
+
+               1. displayProducts is sliced to 8 and .hx-product-grid is
+                  four columns, so the loaded state is always two rows.
+                  This rendered 4 skeletons — one row — so a whole second
+                  row appeared when products arrived.
+               2. .hx-skel-img was a hardcoded 280px tall while the real
+                  .hx-pcard-img-wrap is aspect-ratio 3/4, which is ~409px
+                  at desktop column width, and the placeholder body was
+                  missing the category and chip rows. Every row grew by
+                  ~200px.
+
+               The placeholder now mirrors .hx-pcard element for element
+               and reuses its wrapper classes, and .hx-loading-state is
+               bound to the same column rules as .hx-product-grid, so
+               placeholder and loaded grid occupy identical space at every
+               breakpoint. */
             <div className="hx-loading-state">
-              {[1,2,3,4].map(i => (
+              {[1,2,3,4,5,6,7,8].map(i => (
                 <div key={i} className="hx-skeleton">
                   <div className="hx-skel-img hx-shimmer" />
-                  <div className="hx-skel-line hx-shimmer" style={{ width: '60%', marginTop: 16 }} />
-                  <div className="hx-skel-line hx-shimmer" style={{ width: '80%', marginTop: 8 }} />
-                  <div className="hx-skel-line hx-shimmer" style={{ width: '40%', marginTop: 8 }} />
+                  {/* Reuses the real card's wrappers (.hx-pcard-body,
+                      .hx-pcard-top, .hx-chips, .hx-pcard-price-row) so the
+                      padding, gaps, margins and the price row's border-top
+                      are inherited rather than duplicated. Only the leaf
+                      placeholders below need explicit heights. */}
+                  <div className="hx-pcard-body">
+                    <div className="hx-pcard-top">
+                      <div className="hx-skel-line hx-skel-brand-line hx-shimmer" />
+                      <div className="hx-skel-line hx-skel-rating-line hx-shimmer" />
+                    </div>
+                    <div className="hx-skel-line hx-skel-name-line hx-shimmer" />
+                    <div className="hx-skel-line hx-skel-name-line hx-skel-name-last hx-shimmer" />
+                    <div className="hx-skel-line hx-skel-cat-line hx-shimmer" />
+                    <div className="hx-chips">
+                      <div className="hx-skel-chip hx-shimmer" />
+                      <div className="hx-skel-chip hx-shimmer" />
+                      <div className="hx-skel-chip hx-shimmer" />
+                    </div>
+                    <div className="hx-pcard-price-row">
+                      <div className="hx-skel-line hx-skel-price-line hx-shimmer" />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1060,7 +1102,7 @@ export default function Home() {
         /* ── RESET & BASE ── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         .hx-root {
-          font-family: 'DM Sans', sans-serif;
+          font-family: 'DM Sans', 'DM Sans Fallback', sans-serif;
           background: #0a0a0a;
           color: #1a1a1a;
           overflow-x: hidden;
@@ -1137,7 +1179,7 @@ export default function Home() {
           right: -20px;
           top: 50%;
           transform: translateY(-50%) rotate(90deg);
-          font-family: 'Cormorant Garamond', serif;
+          font-family: 'Cormorant Garamond', 'Cormorant Fallback', Georgia, serif;
           font-size: clamp(120px, 15vw, 200px);
           font-weight: 700;
           color: rgba(0,0,0,0.04);
@@ -1172,7 +1214,7 @@ export default function Home() {
         }
         @keyframes hxPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.8)} }
         .hx-hero-title {
-          font-family: 'Cormorant Garamond', serif;
+          font-family: 'Cormorant Garamond', 'Cormorant Fallback', Georgia, serif;
           font-size: clamp(3.5rem, 7vw, 7rem);
           font-weight: 700;
           line-height: 0.95;
@@ -1248,7 +1290,7 @@ export default function Home() {
           border-top: 1px solid rgba(0,0,0,0.1);
         }
         .hx-stat { display:flex; flex-direction:column; }
-        .hx-stat-num { font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:700; color:#0a0a0a; line-height:1; }
+        .hx-stat-num { font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif; font-size:28px; font-weight:700; color:#0a0a0a; line-height:1; }
         .hx-stat-label { font-size:11px; font-weight:600; letter-spacing:1px; color:#888; margin-top:4px; text-transform:uppercase; }
         .hx-stat-div { width:1px; height:36px; background:#ddd; }
 
@@ -1351,7 +1393,7 @@ export default function Home() {
           box-shadow: 0 2px 12px 0 rgba(30,198,230,0.18);
         }
         .hx-hero-counter {
-          font-family: 'Cormorant Garamond', serif;
+          font-family: 'Cormorant Garamond', 'Cormorant Fallback', Georgia, serif;
           display: flex;
           align-items: baseline;
           font-size: 1.2rem;
@@ -1415,7 +1457,7 @@ export default function Home() {
         }
         .hx-eyebrow-gold { color:#c8a96e !important; }
         .hx-section-title {
-          font-family:'Cormorant Garamond',serif;
+          font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif;
           font-size:clamp(2.5rem, 5vw, 4.5rem);
           font-weight:700;
           color:#0a0a0a;
@@ -1454,7 +1496,7 @@ export default function Home() {
           margin-bottom:14px;
         }
         .hx-ed-heading {
-          font-family:'Cormorant Garamond',serif;
+          font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif;
           font-size:clamp(1.8rem, 3vw, 3.5rem);
           font-weight:700; color:#fff;
           line-height:1.05; letter-spacing:-0.5px;
@@ -1491,7 +1533,7 @@ export default function Home() {
         .hx-deals-left { flex:1; }
         .hx-deals-eyebrow { font-size:11px; font-weight:800; letter-spacing:3px; color:#c8a96e; display:block; margin-bottom:20px; }
         .hx-deals-title {
-          font-family:'Cormorant Garamond',serif;
+          font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif;
           font-size:clamp(3rem, 5vw, 5.5rem);
           font-weight:700; color:#fff;
           line-height:1; letter-spacing:-2px;
@@ -1506,7 +1548,7 @@ export default function Home() {
           border-radius:12px; padding:16px 24px; min-width:80px;
         }
         .hx-cd-num {
-          font-family:'Cormorant Garamond',serif;
+          font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif;
           font-size:42px; font-weight:700; color:#fff;
           line-height:1;
         }
@@ -1576,7 +1618,7 @@ export default function Home() {
         z-index: 3;
         }
         .hx-brand-name {
-          font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: #fff;
+          font-family: 'Cormorant Garamond', 'Cormorant Fallback', Georgia, serif; font-size: 22px; font-weight: 600; color: #fff;
           letter-spacing: 2px; margin: 0 0 10px; text-transform: uppercase;
           text-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
@@ -1600,33 +1642,47 @@ export default function Home() {
         }
         .hx-filter-pill:hover { border-color:#c8a96e; color:#c8a96e; }
         .hx-filter-active { background:#0a0a0a !important; color:#fff !important; border-color:#0a0a0a !important; }
-        .hx-product-grid {
+        /* .hx-loading-state (the skeleton grid) is bound to every
+           .hx-product-grid column rule rather than declaring its own set.
+           These breakpoints are overridden again in the RESPONSIVE
+           section near the end of this stylesheet, so a separate — even
+           if identical — set of rules for the skeleton would resolve
+           differently and put the placeholder on a different number of
+           rows than the loaded grid. Sharing the selector makes them
+           impossible to diverge. (CLS 0.123 on /) */
+        .hx-product-grid,
+        .hx-loading-state {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 24px;
         }
         @media (max-width: 1200px) {
-          .hx-product-grid {
+          .hx-product-grid,
+          .hx-loading-state {
             grid-template-columns: repeat(3, 1fr);
           }
         }
         @media (max-width: 800px) {
-          .hx-product-grid {
+          .hx-product-grid,
+          .hx-loading-state {
             grid-template-columns: repeat(2, 1fr);
           }
         }
         @media (max-width: 500px) {
-          .hx-product-grid {
+          .hx-product-grid,
+          .hx-loading-state {
             grid-template-columns: 1fr;
           }
         }
         @media (max-width: 800px) {
-          .hx-product-grid {
+          .hx-product-grid,
+          .hx-loading-state {
             grid-template-columns: repeat(2, 1fr);
           }
         }
         @media (max-width: 550px) {
-          .hx-product-grid {
+          .hx-product-grid,
+          .hx-loading-state {
             grid-template-columns: 1fr;
           }
         }
@@ -1725,7 +1781,7 @@ export default function Home() {
         .hx-chip-stock { background:#e3f2fd; color:#1565c0; border:1px solid #90caf9; }
         .hx-pcard-price-row { display:flex; align-items:center; justify-content:space-between; border-top:1px solid #f0ede8; padding-top:14px; }
         .hx-pcard-prices { display:flex; align-items:center; gap:8px; }
-        .hx-price { font-family:'Cormorant Garamond',serif; font-size:24px; font-weight:700; color:#0a0a0a; }
+        .hx-price { font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif; font-size:24px; font-weight:700; color:#0a0a0a; }
         .hx-orig-price { font-size:14px; color:#bbb; text-decoration:line-through; }
         .hx-save-badge { font-size:9px; font-weight:800; letter-spacing:1px; color:#c8a96e; background:rgba(200,169,110,0.12); border:1px solid rgba(200,169,110,0.3); padding:4px 10px; border-radius:999px; }
         /* View all */
@@ -1757,11 +1813,34 @@ export default function Home() {
         }
         .hx-view-all-btn span, .hx-va-arrow { position:relative; z-index:1; transition: transform 0.3s ease; }
         .hx-view-all-btn:hover .hx-va-arrow { transform: translateX(6px); }
-        /* Skeleton */
-        .hx-loading-state { display:grid; grid-template-columns:repeat(4,1fr); gap:24px; }
-        .hx-skeleton { background:#fff; border-radius:16px; overflow:hidden; padding:0 0 20px; }
-        .hx-skel-img { height:280px; background:#f0ede8; }
-        .hx-skel-line { height:12px; background:#f0ede8; border-radius:6px; margin:0 16px; }
+        /* Skeleton — geometry mirrors .hx-pcard exactly (see the CLS note
+           at the render site). Column layout is inherited from the
+           shared .hx-product-grid rules above, and the body wrappers are
+           the real card's own classes, so only the leaf placeholders are
+           sized here. Each height is the line box of the element it
+           stands in for:
+
+             .hx-pcard-top      17px + 8px margin   =  25
+             .hx-pcard-name     21px x 2 + 6 margin =  48
+             .hx-pcard-cat      13px + 12px margin  =  25
+             .hx-chips          19px + 14px margin  =  33
+             .hx-pcard-price-row 1px border + 14 pad + 29 = 44
+             .hx-pcard-body     20px padding x 2    =  40
+                                                      ---
+                                                      215px
+
+           which is the populated card body height, so a skeleton row and
+           a loaded row are the same height. */
+        .hx-skeleton { background:#fff; border-radius:16px; overflow:hidden; border:1px solid rgba(0,0,0,0.06); }
+        .hx-skel-img { aspect-ratio:3/4; background:#f0ede8; }   /* matches .hx-pcard-img-wrap */
+        .hx-skel-line { height:12px; background:#f0ede8; border-radius:6px; margin:0; }
+        .hx-skel-brand-line  { height:17px; width:45%; }   /* .hx-pcard-brand */
+        .hx-skel-rating-line { height:17px; width:28%; }   /* .hx-pcard-rating */
+        .hx-skel-name-line   { height:21px; width:95%; }   /* .hx-pcard-name 15px/1.4 */
+        .hx-skel-name-last   { width:70%; margin-bottom:6px; }
+        .hx-skel-cat-line    { height:13px; width:60%; margin-bottom:12px; }  /* .hx-pcard-cat */
+        .hx-skel-chip        { height:19px; width:58px; border-radius:999px; }  /* .hx-chip */
+        .hx-skel-price-line  { height:29px; width:55%; }   /* .hx-price 24px */
         .hx-shimmer { background:linear-gradient(90deg, #f0ede8 25%, #e8e5e0 50%, #f0ede8 75%); background-size:200% 100%; animation:hxShimmer 1.5s infinite; }
         @keyframes hxShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
@@ -1770,7 +1849,7 @@ export default function Home() {
         .hx-story-bg-text {
           position:absolute; top:50%; left:-40px;
           transform:translateY(-50%);
-          font-family:'Cormorant Garamond',serif;
+          font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif;
           font-size:220px; font-weight:700;
           color:rgba(200,169,110,0.04);
           letter-spacing:-10px; user-select:none; pointer-events:none;
@@ -1779,7 +1858,7 @@ export default function Home() {
         .hx-story-inner { display:flex; align-items:center; gap:80px; position:relative; z-index:1; }
         .hx-story-text { flex:1; }
         .hx-story-title {
-          font-family:'Cormorant Garamond',serif;
+          font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif;
           font-size:clamp(2.5rem, 4vw, 4rem);
           font-weight:700; color:#0a0a0a;
           line-height:1.1; letter-spacing:-1px;
@@ -1807,7 +1886,7 @@ export default function Home() {
           padding:20px 24px; border-radius:16px;
           box-shadow:0 20px 40px rgba(0,0,0,0.25);
         }
-        .hx-sbf-num { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:700; color:#c8a96e; display:block; line-height:1; }
+        .hx-sbf-num { font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif; font-size:32px; font-weight:700; color:#c8a96e; display:block; line-height:1; }
         .hx-sbf-label { font-size:10px; font-weight:700; letter-spacing:1.5px; color:rgba(255,255,255,0.6); margin-top:4px; display:block; }
 
         /* ── LOOKBOOK ── */
@@ -1831,7 +1910,7 @@ export default function Home() {
         .hx-lb-overlay { position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 60%); }
         .hx-lb-info { position:absolute; bottom:0; left:0; right:0; padding:24px; }
         .hx-lb-tag { display:block; font-size:9px; font-weight:800; letter-spacing:3px; color:#c8a96e; margin-bottom:6px; }
-        .hx-lb-label { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:600; color:#fff; line-height:1.2; }
+        .hx-lb-label { font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif; font-size:22px; font-weight:600; color:#fff; line-height:1.2; }
 
         /* === RESPONSIVE LOOKBOOK === */
         @media (max-width: 900px) {
@@ -1867,7 +1946,7 @@ export default function Home() {
         .hx-test-bg-text {
           position:absolute; top:50%; right:-60px;
           transform:translateY(-50%);
-          font-family:'Cormorant Garamond',serif;
+          font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif;
           font-size:240px; font-weight:700;
           color:rgba(200,169,110,0.05);
           letter-spacing:-10px; user-select:none; pointer-events:none;
@@ -1939,7 +2018,7 @@ export default function Home() {
         }
         .hx-nl-inner { position:relative; z-index:1; }
         .hx-nl-title {
-          font-family:'Cormorant Garamond',serif;
+          font-family:'Cormorant Garamond','Cormorant Fallback',Georgia,serif;
           font-size:clamp(3rem, 5vw, 5rem);
           font-weight:700; color:#fff;
           letter-spacing:-1px; margin-bottom:16px;
@@ -1951,7 +2030,7 @@ export default function Home() {
           background:rgba(255,255,255,0.08);
           border:1.5px solid rgba(255,255,255,0.12);
           border-right:none; border-radius:6px 0 0 6px;
-          color:#fff; font-size:14px; font-family:'DM Sans',sans-serif;
+          color:#fff; font-size:14px; font-family:'DM Sans','DM Sans Fallback',sans-serif;
           outline:none;
         }
         .hx-nl-input::placeholder { color:rgba(255,255,255,0.35); }

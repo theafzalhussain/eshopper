@@ -67,14 +67,12 @@ function formatDateTime(dateStr) {
 }
 
 export default function ReturnProcessWizard({ returnData, orderAmount }) {
-  if (!returnData || returnData.status === 'NOT_INITIATED') return null
-
-  const currentStatus = returnData.status || 'REQUESTED'
-  const isRejected = currentStatus === 'REJECTED'
-  const isRefundFailed = currentStatus === 'REFUND_FAILED'
-  const isCompleted = currentStatus === 'REFUND_COMPLETED'
-
-  const statusConfig = STATUS_COLORS[currentStatus] || STATUS_COLORS.REQUESTED
+  /* Hooks must run on every render, so they sit above the early return.
+     Previously the `return null` below came first, which meant a render with
+     return data ran two useMemo calls and a render without it ran none —
+     React then throws "Rendered fewer hooks than expected" the moment a
+     return flips between NOT_INITIATED and an active status. */
+  const currentStatus = returnData?.status || 'REQUESTED'
 
   // Calculate which step index we're at
   const currentStepIndex = useMemo(() => {
@@ -85,12 +83,21 @@ export default function ReturnProcessWizard({ returnData, orderAmount }) {
   // Timeline events
   const timelineEvents = useMemo(() => {
     const events = []
+    if (!returnData) return events
     if (returnData.requestedAt) events.push({ label: 'Return Requested', date: returnData.requestedAt, icon: RotateCcw })
     if (returnData.approvedAt) events.push({ label: 'Return Approved', date: returnData.approvedAt, icon: CheckCircle2 })
     if (returnData.pickupDate) events.push({ label: 'Pickup Scheduled', date: returnData.pickupDate, icon: MapPin })
     if (returnData.deliveredBackDate) events.push({ label: 'Item Received at Warehouse', date: returnData.deliveredBackDate, icon: Package })
     return events
   }, [returnData])
+
+  if (!returnData || returnData.status === 'NOT_INITIATED') return null
+
+  const isRejected = currentStatus === 'REJECTED'
+  const isRefundFailed = currentStatus === 'REFUND_FAILED'
+  const isCompleted = currentStatus === 'REFUND_COMPLETED'
+
+  const statusConfig = STATUS_COLORS[currentStatus] || STATUS_COLORS.REQUESTED
 
   return (
     <motion.div

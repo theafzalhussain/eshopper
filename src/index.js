@@ -1,5 +1,9 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
+/* Loaded after index.css on purpose: these rules reserve layout space for
+   async content and must win on equal specificity. See the file header for
+   the Datadog RUM findings each block addresses. */
+import './styles/cls-fixes.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';

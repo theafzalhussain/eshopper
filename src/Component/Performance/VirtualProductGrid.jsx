@@ -3,14 +3,53 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import LazyImage from '../LazyImage';
 
+/* ══════════════════════════════════════════════════════════
+   SKELETON CARD  —  /shop/All, Datadog CLS 0.250
+   The previous version was a stub: image box plus four short
+   lines. A real .mp-card additionally carries a rating pill,
+   a price row, a perks row and — on touch devices, where
+   .mp-actions is expanded rather than collapsed — a size strip
+   and an add-to-bag button. The skeleton was roughly 40px
+   shorter than a real card on desktop and ~260px shorter on
+   mobile, so every grid row grew when products arrived.
+
+   It now mirrors the real card element for element and reuses
+   the same class names, which means .mp-actions inherits the
+   same collapsed-on-desktop / expanded-on-touch behaviour as
+   the real card. Height parity is structural rather than a
+   hardcoded number, so it survives future style changes.
+══════════════════════════════════════════════════════════ */
 const SkeletonCard = memo(() => (
-    <div className="mp-card mp-skel-card">
+    <div className="mp-card mp-skel-card" aria-hidden="true">
         <div className="mp-img-wrap mp-shimmer" />
         <div className="mp-cbody">
-            <div className="mp-shimmer mp-skel-line" style={{ width: '40%' }} />
-            <div className="mp-shimmer mp-skel-line" style={{ width: '85%', height: 14 }} />
-            <div className="mp-shimmer mp-skel-line" style={{ width: '55%' }} />
-            <div className="mp-shimmer mp-skel-line" style={{ width: '70%', height: 18, marginTop: 8 }} />
+            <div className="mp-shimmer mp-skel-line mp-skel-brand" />
+            <div className="mp-shimmer mp-skel-line mp-skel-name" />
+            <div className="mp-shimmer mp-skel-line mp-skel-cat" />
+
+            <div className="mp-rating-row">
+                <div className="mp-shimmer mp-skel-pill" />
+            </div>
+
+            <div className="mp-price-row">
+                <div className="mp-shimmer mp-skel-line mp-skel-price" />
+            </div>
+
+            <div className="mp-perks">
+                <div className="mp-shimmer mp-skel-line mp-skel-perk" />
+            </div>
+
+            <div className="mp-actions">
+                <div className="mp-size-strip">
+                    <div className="mp-shimmer mp-skel-line mp-skel-sizelabel" />
+                    <div className="mp-sbtns">
+                        {[0, 1, 2, 3].map((i) => (
+                            <div key={i} className="mp-shimmer mp-skel-sbtn" />
+                        ))}
+                    </div>
+                </div>
+                <div className="mp-shimmer mp-skel-addbtn" />
+            </div>
         </div>
     </div>
 ));

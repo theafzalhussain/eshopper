@@ -87,11 +87,6 @@ export default function AdminUpdateWishlist() {
         </div>
     )
 }
-                </div>
-            </div>
-        </>
-    )
-}
 
 
 

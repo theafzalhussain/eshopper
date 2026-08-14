@@ -80,9 +80,26 @@
   }
 }
 
+/* ══ CLS FIX — /admin-home, Datadog CLS 0.544 ══════════════════════════
+   This decorative ambient glow used to be position:absolute at
+   200% x 200% of .scc-container. .scc-container is the dashboard layout
+   root, so its height grows as stats, charts and tables stream in — and
+   the glow's box was resized on every one of those steps. Datadog
+   attributed the whole 0.544 shift to this pseudo-element.
+
+   position:fixed pins the glow to the viewport, which severs the link to
+   container height so it can never shift again. Paint order is
+   unaffected: fixed and absolute both position with z-index:auto, and
+   ::before still paints before the element's children, so LefNav and
+   .admin-main-content stack exactly as before.
+
+   Do NOT move .scc-container itself out of flow. It is a flex row
+   holding the sidebar plus main content at min-height:100vh; making it
+   fixed would collapse the dashboard and detach the sidebar.
+   ════════════════════════════════════════════════════════════════════ */
 .scc-container::before {
   content: '';
-  position: absolute;
+  position: fixed;
   top: -50%;
   left: -50%;
   width: 200%;
@@ -92,6 +109,8 @@
   opacity: 0.3;
   animation: ambientGlow 20s ease-in-out infinite;
   pointer-events: none;
+  /* keeps the 20s animation on the compositor, off the layout path */
+  will-change: transform;
 }
 
 @keyframes ambientGlow {
@@ -173,6 +192,27 @@
   position: relative;
   z-index: 10;
   width: 100%;
+}
+
+/* ══ CLS FIX — /admin-home ═════════════════════════════════════════════
+   Each stat card swaps a skeleton for its real value, then *additionally*
+   reveals the percent-change chip, progress bar and report link, all of
+   which are rendered only once data exists. Every reveal grew the card,
+   and with a 4-column grid each growth re-flowed the whole row.
+
+   Reserving the fully-populated height up front means the reveals fill
+   space that was already allocated, so nothing below the grid moves.
+   Scoped to the stats grid: .scc-card is reused for the much taller
+   panels further down the page, which must stay auto-height.
+   ════════════════════════════════════════════════════════════════════ */
+.scc-stats-grid > .scc-card {
+  min-height: 208px;
+}
+
+@media (max-width: 991px) {
+  .scc-stats-grid > .scc-card {
+    min-height: 196px;
+  }
 }
 
 /* ======= PREMIUM STATS CARD ======= */

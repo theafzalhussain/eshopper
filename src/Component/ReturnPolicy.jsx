@@ -110,10 +110,36 @@ export default function ReturnPolicy() {
           min-height: 100vh;
           background: linear-gradient(180deg, #f8f6f2 0%, #fcfbf8 45%, #f7f3ea 100%);
         }
+        /* ══ CLS FIX — /return-policy, Datadog CLS 0.179 ═════════════════
+           This page has no async data, so the 695px -> 636px shrink
+           Datadog recorded was a web font re-wrap: the <h1> below is
+           clamp(2rem, 4vw, 3.1rem) Playfair Display, and the fallback
+           used at first paint is wider, so the heading rendered on two
+           lines and collapsed to one — about 59px — once the real font
+           arrived. Everything below the hero moved up with it.
+
+           Two-part fix. src/styles/cls-fixes.css declares a
+           'Playfair Fallback' family with Playfair's own metrics so the
+           swap is width- and height-neutral, and the h1 stack below
+           references it. This min-height is then the safety net: the
+           hero is reserved at its two-line height and its content is
+           centred inside, so even if a heading does re-wrap (a longer
+           translation, an unusual viewport) the shift is absorbed here
+           instead of pushing the page.
+           ════════════════════════════════════════════════════════════ */
         .return-policy-hero {
           background: radial-gradient(circle at 15% 20%, rgba(212, 175, 55, 0.22), transparent 35%), linear-gradient(135deg, #0f0f0f 0%, #1f1f1f 60%, #313131 100%);
           color: #fff;
           padding: 72px 0 52px;
+          min-height: 320px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        @media (max-width: 767px) {
+          .return-policy-hero {
+            min-height: 280px;
+          }
         }
         .return-kicker {
           margin: 0 0 10px;
@@ -124,7 +150,7 @@ export default function ReturnPolicy() {
         }
         .return-policy-hero h1 {
           margin: 0;
-          font-family: 'Playfair Display', serif;
+          font-family: 'Playfair Display', 'Playfair Fallback', Georgia, serif;
           font-weight: 500;
           letter-spacing: 0.02em;
           font-size: clamp(2rem, 4vw, 3.1rem);
@@ -147,7 +173,7 @@ export default function ReturnPolicy() {
           box-shadow: 0 14px 28px rgba(20, 20, 20, 0.06);
         }
         .policy-main-card h2 {
-          font-family: 'Playfair Display', serif;
+          font-family: 'Playfair Display', 'Playfair Fallback', Georgia, serif;
           margin: 0 0 8px;
           font-size: 1.7rem;
           color: #1c1c1c;
@@ -205,7 +231,7 @@ export default function ReturnPolicy() {
         }
         .policy-side-card h3 {
           margin: 0 0 12px;
-          font-family: 'Playfair Display', serif;
+          font-family: 'Playfair Display', 'Playfair Fallback', Georgia, serif;
           font-size: 1.4rem;
         }
         .policy-side-card ul {

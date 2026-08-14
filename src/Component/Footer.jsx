@@ -58,6 +58,74 @@ const fallbackFooterData = {
   ]
 }
 
+/* Footer keeps a fixed number of category rows so the block never changes
+   height between the first paint and the redux/API hydration (CLS = 0). */
+const CATEGORY_SLOTS = 5
+const FALLBACK_CATEGORIES = [
+  { name: 'Mens', label: 'Mens' },
+  { name: 'Women', label: 'Women' },
+  { name: 'Kids', label: 'Kids' },
+  { name: 'Boys', label: 'Boys' },
+  { name: 'Fashion', label: 'Fashion Essentials' }
+]
+
+const buildFooterCategories = (list) => {
+  const cleaned = (Array.isArray(list) ? list : []).filter((item) => {
+    const name = String(item?.name || '').trim().toLowerCase()
+    return name && name !== 'ladies' && name !== 'lady'
+  })
+
+  if (!cleaned.length) return FALLBACK_CATEGORIES
+
+  const menCategory = cleaned.find((item) => String(item.name).trim().toLowerCase() === 'mens')
+  const ordered = menCategory
+    ? [menCategory, ...cleaned.filter((item) => item !== menCategory)]
+    : [{ name: 'Mens' }, ...cleaned]
+
+  const rows = ordered.slice(0, CATEGORY_SLOTS).map((item) => ({
+    ...item,
+    name: String(item.name).trim(),
+    label: String(item.name).trim()
+  }))
+
+  /* pad short lists so the row count (and therefore the height) is constant */
+  for (const fallback of FALLBACK_CATEGORIES) {
+    if (rows.length >= CATEGORY_SLOTS) break
+    if (!rows.some((row) => row.name.toLowerCase() === fallback.name.toLowerCase())) rows.push(fallback)
+  }
+
+  return rows.slice(0, CATEGORY_SLOTS)
+}
+
+/* Read once, synchronously — an admin flag that flips after mount would swap
+   the stats grid for the feature grid and shift the whole footer. */
+const detectAdminFromStorage = () => {
+  try {
+    const isAdminLS = localStorage.getItem('isAdmin')
+    const roleLS = localStorage.getItem('role')
+    const adminEmails = ['admin@gmail.com', 'theafzalhussain@gmail.com', 'theafzalhussain786@gmail.com']
+    const adminUserIds = [
+      '1',
+      'admin',
+      'your-admin-id',
+      '699af12865bfff087143211c' // Afzal Hussain's MongoDB ObjectId
+    ]
+    const userEmail = localStorage.getItem('email') || ''
+    const userId = localStorage.getItem('userid') || ''
+
+    return (
+      isAdminLS === 'true' ||
+      isAdminLS === '1' ||
+      roleLS === 'admin' ||
+      roleLS === '1' ||
+      adminEmails.includes(userEmail) ||
+      adminUserIds.includes(userId)
+    )
+  } catch {
+    return false
+  }
+}
+
 const Footer = () => {
   const navigate = useNavigate()
   const [isTransitioning, setIsTransitioning] = useState(false)
@@ -65,34 +133,10 @@ const Footer = () => {
   const reduxMainCategories = useSelector((state) => state.MaincategoryStateData) || []
   // Robust admin detection (same as Shop.jsx)
   const [role, setRole] = useState(() => String(localStorage.getItem('role') || '').toLowerCase())
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => detectAdminFromStorage());
 
   useEffect(() => {
-    const checkAdmin = () => {
-      const isAdminLS = localStorage.getItem("isAdmin");
-      const roleLS = localStorage.getItem("role");
-      const adminEmails = ["admin@gmail.com", "theafzalhussain@gmail.com", "theafzalhussain786@gmail.com"];
-      const adminUserIds = [
-        "1",
-        "admin",
-        "your-admin-id",
-        "699af12865bfff087143211c" // Afzal Hussain's MongoDB ObjectId
-      ];
-      const userEmail = localStorage.getItem("email") || "";
-      const userId = localStorage.getItem("userid") || "";
-      setIsAdmin(
-        isAdminLS === true ||
-        isAdminLS === "true" ||
-        isAdminLS === 1 ||
-        isAdminLS === "1" ||
-        roleLS === "admin" ||
-        roleLS === true ||
-        roleLS === 1 ||
-        roleLS === "1" ||
-        adminEmails.includes(userEmail) ||
-        adminUserIds.includes(userId)
-      );
-    };
+    const checkAdmin = () => setIsAdmin(detectAdminFromStorage());
     checkAdmin();
     window.addEventListener('storage', checkAdmin);
     window.addEventListener('focus', checkAdmin);
@@ -104,20 +148,10 @@ const Footer = () => {
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [submittingNewsletter, setSubmittingNewsletter] = useState(false)
   const [footerData, setFooterData] = useState(fallbackFooterData)
-  const [mainCategories, setMainCategories] = useState([])
+  const [mainCategories, setMainCategories] = useState(() => buildFooterCategories(reduxMainCategories))
 
   useEffect(() => {
-    const categoryList = Array.isArray(reduxMainCategories) ? reduxMainCategories : []
-    const menCategory = categoryList.find((item) => String(item?.name || '').trim().toLowerCase() === 'mens')
-    const orderedCategories = menCategory
-      ? [menCategory, ...categoryList.filter((item) => item !== menCategory)]
-      : [{ name: 'Mens' }, ...categoryList]
-    const filteredCategories = orderedCategories.filter((item) => {
-      const name = String(item?.name || '').trim().toLowerCase()
-      return name !== 'ladies' && name !== 'lady'
-    })
-
-    setMainCategories(filteredCategories.slice(0, 5))
+    setMainCategories(buildFooterCategories(reduxMainCategories))
   }, [reduxMainCategories])
 
   useEffect(() => {
@@ -279,7 +313,7 @@ const Footer = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.15, duration: 0.3 }}
-              style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', color: '#c8a96e', letterSpacing: '4px', textTransform: 'uppercase' }}
+              style={{ fontFamily: "'Cormorant Garamond', 'Cormorant Fallback', Georgia, serif", fontSize: '24px', color: '#c8a96e', letterSpacing: '4px', textTransform: 'uppercase' }}
             >
               Curating Selection
             </motion.div>
@@ -326,24 +360,18 @@ const Footer = () => {
           <div className="esh-footer-links">
             <h3>Top Categories</h3>
             <ul>
-              {mainCategories.length > 0 ? (
-                mainCategories.map((cat) => {
-                  const categoryName = String(cat?.name || '').trim()
-                  const categoryKey = categoryName.toLowerCase().replace(/\s+/g, '-')
-                    const path = `/shop/${encodeURIComponent(categoryName)}`;
-                    return <li key={cat.id || cat._id || categoryKey}><Link to={path} onClick={(e) => { e.preventDefault(); handleTransitionNavigate(path); }}>{cat.name}</Link></li>
-                })
-              ) : (
-                <>
-                    <li><Link to="/shop/Mens" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Mens'); }}>Mens</Link></li>
-                    <li><Link to="/shop/Women" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Women'); }}>Women</Link></li>
-                    <li><Link to="/shop/Kids" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Kids'); }}>Kids</Link></li>
-                    <li><Link to="/shop/Boys" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Boys'); }}>Boys</Link></li>
-                    <li><Link to="/shop/Fashion" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Fashion'); }}>Fashion Essentials</Link></li>
-                    <li><Link to="/shop/Beauty" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Beauty'); }}>Beauty & Care</Link></li>
-                    <li><Link to="/shop/Electronics" onClick={(e) => { e.preventDefault(); handleTransitionNavigate('/shop/Electronics'); }}>Electronics</Link></li>
-                </>
-              )}
+              {mainCategories.map((cat) => {
+                const categoryName = String(cat?.name || '').trim()
+                const categoryKey = categoryName.toLowerCase().replace(/\s+/g, '-')
+                const path = `/shop/${encodeURIComponent(categoryName)}`
+                return (
+                  <li key={cat.id || cat._id || categoryKey}>
+                    <Link to={path} onClick={(e) => { e.preventDefault(); handleTransitionNavigate(path); }}>
+                      {cat.label || categoryName}
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           </div>
 
@@ -409,9 +437,22 @@ const Footer = () => {
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        /* ══ CLS FIX — /update-profile, Datadog CLS 0.121 ═══════════════
+           App.jsx mounts this footer lazily once it is within 600px of
+           the viewport. Its placeholder (.esh-footer-reserve, declared in
+           src/styles/cls-fixes.css) reserves the height below, so the
+           placeholder-to-footer swap does not change document height.
+
+           These two values must stay in step — if you change the footer's
+           layout, update .esh-footer-reserve to match. The breakpoints
+           mirror this stylesheet's own 1100px / 767px / 430px steps,
+           where the footer grid collapses to fewer columns and gets
+           considerably taller.
+           ════════════════════════════════════════════════════════════ */
         .esh-footer-shell {
           position: relative;
           margin-top: 80px;
+          min-height: 460px;
           color: #e6edf7;
           overflow: hidden;
           background:
@@ -447,7 +488,7 @@ const Footer = () => {
 
         .esh-brand-block h2 {
           margin: 10px 0 8px;
-          font-family: 'Playfair Display', Georgia, serif;
+          font-family: 'Playfair Display', 'Playfair Fallback', Georgia, serif;
           font-size: 1.95rem;
           letter-spacing: 1.5px;
           color: #f4f7fb;
@@ -469,7 +510,7 @@ const Footer = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          font-family: 'Playfair Display', serif;
+          font-family: 'Playfair Display', 'Playfair Fallback', Georgia, serif;
           font-size: 24px;
           font-weight: 800;
           border-radius: 4px;
@@ -800,6 +841,10 @@ const Footer = () => {
         }
 
         @media (max-width: 1100px) {
+          .esh-footer-shell {
+            min-height: 620px;
+          }
+
           .esh-footer-top {
             grid-template-columns: 1fr 1fr;
           }
@@ -812,6 +857,7 @@ const Footer = () => {
         @media (max-width: 767px) {
           .esh-footer-shell {
             margin-top: 44px;
+            min-height: 860px;
           }
 
           .esh-footer-container {

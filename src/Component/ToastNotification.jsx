@@ -14,10 +14,15 @@ export const useToast = () => {
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-  const showToast = useCallback((message, type = 'info', duration = 3500) => {
+  /* `options` is optional and backwards compatible.
+     Supported keys:
+       action: { label, onClick } — renders a button inside the toast, for
+               recoverable failures where the user can retry the operation
+               that just failed instead of hunting for the control again. */
+  const showToast = useCallback((message, type = 'info', duration = 3500, options = {}) => {
     const id = Date.now() + Math.random();
-    const toast = { id, message, type, duration };
-    
+    const toast = { id, message, type, duration, action: options.action };
+
     setToasts((prev) => [...prev, toast]);
 
     setTimeout(() => {
@@ -31,10 +36,10 @@ export const ToastProvider = ({ children }) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const success = useCallback((message, duration) => showToast(message, 'success', duration), [showToast]);
-  const error = useCallback((message, duration) => showToast(message, 'error', duration), [showToast]);
-  const info = useCallback((message, duration) => showToast(message, 'info', duration), [showToast]);
-  const warning = useCallback((message, duration) => showToast(message, 'warning', duration), [showToast]);
+  const success = useCallback((message, duration, options) => showToast(message, 'success', duration, options), [showToast]);
+  const error = useCallback((message, duration, options) => showToast(message, 'error', duration, options), [showToast]);
+  const info = useCallback((message, duration, options) => showToast(message, 'info', duration, options), [showToast]);
+  const warning = useCallback((message, duration, options) => showToast(message, 'warning', duration, options), [showToast]);
 
   return (
     <ToastContext.Provider value={{ showToast, removeToast, success, error, info, warning }}>
@@ -56,17 +61,19 @@ const ToastContainer = ({ toasts, onRemove }) => {
   );
 };
 
-const Toast = ({ id, message, type, onRemove }) => {
+const Toast = ({ id, message, type, duration = 3500, action, onRemove }) => {
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
+    /* Exit animation is 300ms, so start it early enough that the toast is
+       gone exactly when the provider drops it from state. */
     const timer = setTimeout(() => {
       setIsExiting(true);
       setTimeout(onRemove, 300);
-    }, 3200);
+    }, Math.max(0, duration - 300));
 
     return () => clearTimeout(timer);
-  }, [onRemove]);
+  }, [onRemove, duration]);
 
   const icons = {
     success: '✅',
@@ -97,6 +104,17 @@ const Toast = ({ id, message, type, onRemove }) => {
     >
       <div className="toast-icon">{icons[type]}</div>
       <div className="toast-message">{message}</div>
+      {action && (
+        <button
+          type="button"
+          className="toast-action"
+          /* stopPropagation: the toast body itself dismisses on click, which
+             would otherwise swallow the action before it runs. */
+          onClick={(e) => { e.stopPropagation(); action.onClick(); onRemove(); }}
+        >
+          {action.label}
+        </button>
+      )}
       <button className="toast-close" onClick={onRemove} aria-label="Close">
         ×
       </button>

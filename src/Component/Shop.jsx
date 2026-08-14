@@ -920,8 +920,8 @@ export default function Shop() {
                     --shadow-lg:  0 8px 28px rgba(40,44,63,0.12), 0 2px 6px rgba(40,44,63,0.06);
                     --r:          6px;
                     --r-lg:       10px;
-                    --serif:      'Playfair Display', Georgia, serif;
-                    --sans:       'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    --serif:      'Playfair Display', 'Playfair Fallback', Georgia, serif;
+                    --sans:       'Assistant', 'Assistant Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                     background: var(--bg);
                     font-family: var(--sans);
                     color: var(--ink);
@@ -1442,7 +1442,6 @@ export default function Shop() {
                 /* Skeleton */
                 .mp-skel-card { border-color: var(--line); box-shadow: none; pointer-events: none; }
                 .mp-skel-card .mp-img-wrap { background: #ececef; }
-                .mp-skel-card .mp-cbody { gap: 10px; }
                 .mp-skel-line { height: 11px; border-radius: 3px; background: #ececef; }
                 .mp-shimmer { background: linear-gradient(90deg, #ececef 25%, #f5f5f6 50%, #ececef 75%); background-size: 200% 100%; animation: mpShimmer 1.4s infinite linear; }
                 @keyframes mpShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -1450,6 +1449,36 @@ export default function Shop() {
                 .mp-shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: mpShimmer 1.5s infinite ease-in-out; }
                 @keyframes mpShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
                 .mp-skel-card { background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%); border: 1px solid #eee; }
+
+                /* ══ CLS FIX — /shop/All, Datadog CLS 0.250 ══════════════
+                   The skeleton reuses the real card's wrappers
+                   (.mp-cbody, .mp-rating-row, .mp-price-row, .mp-perks,
+                   .mp-actions, .mp-size-strip), so it inherits their gaps,
+                   margins and the collapsed-on-desktop /
+                   expanded-on-touch behaviour of .mp-actions for free.
+
+                   Only the leaf placeholders need sizing, and each one is
+                   matched to the line box of the element it stands in for,
+                   so a skeleton row and a populated row are the same
+                   height and swapping between them shifts nothing.
+
+                   Note .mp-skel-card .mp-cbody must NOT override the gap
+                   here — the old "gap: 10px" was itself part of the
+                   mismatch against the real body's 4px.
+                   ═══════════════════════════════════════════════════ */
+                .mp-skel-brand     { height: 17px; width: 45%; }   /* .mp-cbrand  14px/1.2 */
+                .mp-skel-name      { height: 17px; width: 85%; }   /* .mp-cname   13px/1.3 */
+                .mp-skel-cat       { height: 13px; width: 60%; margin-bottom: 4px; } /* .mp-ccat */
+                .mp-skel-pill      { height: 19px; width: 46px; border-radius: 3px; } /* .mp-rpill */
+                .mp-skel-price     { height: 20px; width: 70%; }   /* .mp-price-row */
+                .mp-skel-perk      { height: 18px; width: 55%; border-radius: 4px; } /* .mp-perk */
+                .mp-skel-sizelabel { height: 11px; width: 40%; }   /* .mp-size-label */
+                .mp-skel-sbtn      { min-width: 28px; height: 26px; border-radius: 4px; } /* .mp-sbtn */
+                .mp-skel-addbtn    { height: 41px; width: 100%; border-radius: var(--r); } /* .mp-addbtn */
+
+                @media (max-width: 575px) {
+                    .mp-skel-sbtn { min-width: 24px; height: 22px; }
+                }
 
                 @media (prefers-reduced-motion: reduce) {
                     .mp-card,.mp-img,.mp-hover-bar,.mp-addbtn,.mp-sbtn,.mp-sidebar,.mp-actions,.mp-qview { transition: none !important; animation: none !important; }

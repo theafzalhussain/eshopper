@@ -1,0 +1,181 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   CLS (CUMULATIVE LAYOUT SHIFT) GUARDS — GLOBAL LAYER
+   ───────────────────────────────────────────────────────────────────────
+   Datadog RUM flagged six routes over the 0.1 CLS budget:
+
+     /admin-home       0.544   .scc-container::before
+     /single-product   0.481   .pd-fbt
+     /shop/All         0.250   .mp-shop
+     /return-policy    0.179   .return-policy-wrap
+     /                 0.123   .hx-root
+     /update-profile   0.121   .esh-footer-shell
+
+   SCOPE OF THIS FILE: only fixes that are genuinely global.
+
+   Page-level fixes deliberately live next to the markup they affect,
+   because most page styles in this app are injected as <style> tags from
+   inside the component (or arrive in a lazily loaded chunk's CSS). Those
+   land in the DOM *after* this file, so on equal specificity they would
+   win and a global override here would silently do nothing. See:
+
+     src/Component/Admin/SystemControlCenter.css   (.scc-container)
+     src/Component/SingleProductPage.jsx           (.pd-fbt)
+     src/Component/Shop.jsx                        (.mp-shop)
+     src/Component/ReturnPolicy.jsx                (.return-policy-wrap)
+     src/Component/Home.jsx                        (.hx-root)
+     src/Component/Footer.jsx                      (.esh-footer-shell)
+     src/Component/App.jsx                         (footer lazy mount)
+
+   Imported last in src/index.js so it wins over index.css without
+   needing !important.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+
+/* ══ 1. MEDIA — an image must never resize the layout ══════════════════
+   When an <img> carries width and height attributes the browser derives
+   an intrinsic aspect-ratio from them, so `height: auto` is all that is
+   needed to keep the box reserved while the file downloads.
+
+   Note: `aspect-ratio: attr(width) / attr(height)` is NOT implemented in
+   any shipping browser — attr() is only supported for the `content`
+   property — so it would be dropped silently and reserve nothing. The
+   rules below are the pattern that actually works.
+   ════════════════════════════════════════════════════════════════════ */
+img,
+video,
+canvas,
+svg,
+iframe {
+  max-width: 100%;
+}
+
+img[width][height] {
+  height: auto;
+}
+
+
+/* ══ 2. WEB FONT FALLBACK METRICS ══════════════════════════════════════
+   The page fonts load with `display=swap`, so first paint uses a local
+   fallback and text is re-laid-out when the real font arrives. If the
+   fallback's line box or advance widths differ, headings re-wrap and
+   everything below moves — that is what shrank .return-policy-wrap from
+   695px to 636px after render.
+
+   These @font-face blocks download nothing. Each re-declares a *local*
+   system font with the vertical metrics of the intended web font so the
+   fallback occupies the same height, then the component font stacks
+   reference it ahead of the plain generic family.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Playfair Display — unitsPerEm 1000, ascender 1082, descender 251 */
+@font-face {
+  font-family: 'Playfair Fallback';
+  src: local('Georgia'), local('Times New Roman'), local('Times');
+  ascent-override: 108.2%;
+  descent-override: 25.1%;
+  line-gap-override: 0%;
+  size-adjust: 96%;
+}
+
+/* Cormorant Garamond — unitsPerEm 1000, ascender 1006, descender 281 */
+@font-face {
+  font-family: 'Cormorant Fallback';
+  src: local('Georgia'), local('Times New Roman'), local('Times');
+  ascent-override: 100.6%;
+  descent-override: 28.1%;
+  line-gap-override: 0%;
+  size-adjust: 92%;
+}
+
+/* DM Sans — unitsPerEm 1000, ascender 992, descender 298 */
+@font-face {
+  font-family: 'DM Sans Fallback';
+  src: local('Arial'), local('Helvetica'), local('Segoe UI');
+  ascent-override: 99.2%;
+  descent-override: 29.8%;
+  line-gap-override: 0%;
+  size-adjust: 100%;
+}
+
+/* Assistant — unitsPerEm 2048, ascender 1994, descender 528 */
+@font-face {
+  font-family: 'Assistant Fallback';
+  src: local('Arial'), local('Helvetica'), local('Segoe UI');
+  ascent-override: 97.4%;
+  descent-override: 25.8%;
+  line-gap-override: 0%;
+  size-adjust: 100%;
+}
+
+/* Jost — unitsPerEm 1000, ascender 1000, descender 300 */
+@font-face {
+  font-family: 'Jost Fallback';
+  src: local('Arial'), local('Helvetica'), local('Segoe UI');
+  ascent-override: 100%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+  size-adjust: 97%;
+}
+
+
+/* ══ 3. LAZY-MOUNT PLACEHOLDER ═════════════════════════════════════════
+   App.jsx mounts the footer only once it is within 600px of the
+   viewport, holding its place with a sentinel div. Swapping a 1px
+   sentinel for a ~460px footer is the shift reported on /update-profile.
+
+   This class is the sentinel and is declared nowhere else, so a global
+   rule is safe here. The values below mirror .esh-footer-shell's own
+   min-height and margin-top at each of Footer.jsx's breakpoints
+   (1100px / 767px), so the swap is height-neutral. Keep the two in step:
+   the footer's floor lives in Footer.jsx, whose injected <style> would
+   otherwise override this file.
+   ════════════════════════════════════════════════════════════════════ */
+.esh-footer-reserve {
+  min-height: 460px;
+  margin-top: 80px;
+}
+
+@media (max-width: 1100px) {
+  .esh-footer-reserve {
+    min-height: 620px;
+  }
+}
+
+@media (max-width: 767px) {
+  .esh-footer-reserve {
+    min-height: 860px;
+    margin-top: 44px;
+  }
+}
+
+
+/* ══ 4. SKELETON SHIMMER ═══════════════════════════════════════════════
+   Shared keyframes so a skeleton can animate without any component
+   needing to re-declare them.
+   ════════════════════════════════════════════════════════════════════ */
+@keyframes clsShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.cls-shimmer {
+  background: linear-gradient(90deg, #ececef 25%, #f6f6f7 50%, #ececef 75%);
+  background-size: 200% 100%;
+  animation: clsShimmer 1.4s infinite linear;
+}
+
+
+/* ══ 5. RESPECT REDUCED MOTION ═════════════════════════════════════════
+   Entry animations that translate content are also perceived as shift,
+   and framer-motion's `y` transitions are used heavily across the app.
+   ════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

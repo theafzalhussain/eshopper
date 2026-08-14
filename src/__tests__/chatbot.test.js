@@ -160,7 +160,16 @@ describe('product search', () => {
     const slots = extractSlots('women saree')
     const r = searchProducts({ slots, products: PRODUCTS })
     const saree = r.products.find((p) => p.name.includes('Saree'))
-    if (saree) expect(saree.inStock).toBe(false)
+
+    /* Asserted unconditionally: the fixture's only saree is flagged
+       'Out of Stock', so a missing result is itself a failure. Guarding this
+       behind `if (saree)` let the test pass while checking nothing. */
+    expect(saree).toBeDefined()
+    expect(saree.inStock).toBe(false)
+
+    // ...and "pushed down" means nothing in stock ranks below it.
+    const after = r.products.slice(r.products.indexOf(saree) + 1)
+    expect(after.filter((p) => p.inStock)).toHaveLength(0)
   })
 
   test('every pick explains itself', () => {

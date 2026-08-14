@@ -115,7 +115,18 @@ const IdleMount = ({ children, delay, name }) => {
     );
 }
 
-/* Footer is below the fold — render it only once it is close to view */
+/* Footer is below the fold — render it only once it is close to view.
+
+   CLS FIX — /update-profile, Datadog CLS 0.121.
+   The placeholder used to be `style={{ minHeight: 1 }}`, so mounting the
+   real footer swapped 1px for roughly 420px and shoved the bottom of the
+   document down. The sentinel now reserves the footer's real height via
+   .esh-footer-reserve (src/styles/cls-fixes.css), which also mirrors the
+   footer's own 80px margin-top, making the swap height-neutral.
+
+   The reserved height is kept in CSS rather than inline so it can carry
+   the same responsive breakpoints as the footer itself — the footer
+   stacks to a much taller column on small screens. */
 const LazyFooter = () => {
     const [show, setShow] = useState(false);
     const [node, setNode] = useState(null);
@@ -135,7 +146,7 @@ const LazyFooter = () => {
             <Suspense fallback={null}><Footer /></Suspense>
         </WidgetErrorBoundary>
     );
-    return <div ref={setNode} style={{ minHeight: 1 }} aria-hidden="true" />;
+    return <div ref={setNode} className="esh-footer-reserve" aria-hidden="true" />;
 }
 
 const AppShell = ({ children }) => {

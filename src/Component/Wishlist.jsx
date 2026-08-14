@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators'
-import { addCart } from '../Store/ActionCreaters/CartActionCreators'
+import { getWishlist } from '../Store/ActionCreaters/WishlistActionCreators'
+import { getCart } from '../Store/ActionCreaters/CartActionCreators'
+/* The cart write goes through the shared service wrapper so the endpoint
+   and its rate-limit/retry handling stay defined in one place, while this
+   page keeps the call awaitable. */
+import { createCartAPI } from '../Store/Services'
 import { Link } from 'react-router-dom'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper'
 import axios from 'axios'
@@ -122,77 +126,279 @@ export default function Wishlist() {
         setLoading(false)
     }
 
+    /* ══════════════════════════════════════════════════════════════════
+       WISHLIST DELETE  —  Datadog: "Failed to remove from wishlist"
+       ──────────────────────────────────────────────────────────────────
+       The previous version could not report a failure at all. It wrapped
+       `dispatch(deleteWishlist(...))` in try/catch, but dispatch is
+       synchronous: the actual DELETE happens later inside
+       deleteWishlistSaga, so the catch block was unreachable and the
+       saga swallowed the error with a console.error. The row had already
+       been removed optimistically, so a failed delete looked like a
+       success until the next reload brought the item back.
+
+       Now the request is awaited here, which makes three things possible:
+         - transient failures are retried automatically with backoff
+         - a genuine failure rolls the row back to its original position
+         - the user gets a toast with a Retry button
+
+       Redux is still the source of truth for the header count, so a
+       successful delete dispatches getWishlist() to resync it. We no
+       longer dispatch deleteWishlist(), which would issue a second
+       DELETE for the same id.
+       ══════════════════════════════════════════════════════════════════ */
+
+    /* Two different clients are in play here: `axios` for the wishlist
+       endpoints and `createCartAPI` (which wraps fastAPI) for the cart.
+       They report the status in different places, so read both. */
+    const statusOf = (e) => (e?.response?.status !== undefined ? e.response.status : e?.status)
+
+    /* 502/503/504 and timeouts are worth another attempt; 401/403/404 are
+       not — the item is already gone or the caller is not allowed.
+
+       429 is deliberately NOT retried here. createCartAPI goes through
+       fastAPI, which already retries a rate limit up to three times while
+       honouring Retry-After. Retrying on top of that turned one sustained
+       429 into as many as twelve requests for a single item. Letting it fail
+       fast is also better behaviour: the toast carries a Retry button, so the
+       customer decides when to try again instead of us hammering a limiter
+       that is asking us to stop. */
+    function isRetryableError(e) {
+        const status = statusOf(e)
+        if (status === undefined) return true          // network / timeout
+        return status >= 500
+    }
+
+    const messageOf = (e) =>
+        e?.response?.data?.message || e?.response?.data?.error || e?.data?.message || e?.data?.error
+
+    const RETRY_DELAYS = [400, 1200]
+
+    /* Runs `attempt` up to 3 times, backing off between tries, but only for
+       failures where a retry could plausibly succeed. */
+    async function withRetry(attempt) {
+        let lastError
+        for (let i = 0; i <= RETRY_DELAYS.length; i++) {
+            try {
+                return await attempt()
+            } catch (e) {
+                lastError = e
+                if (!isRetryableError(e) || i === RETRY_DELAYS.length) break
+                await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[i]))
+            }
+        }
+        throw lastError
+    }
+
+    const deleteWishlistItemWithRetry = (itemId) =>
+        withRetry(() => axios.delete(`/wishlist/${itemId}`))
+
+    /* The cart API expects a flat payload; the wishlist row stores the
+       product either inline or as a populated ref, hence the unwrapping. */
+    function cartPayloadFor(item) {
+        const itemId = item.id || item._id
+        const rawProduct = item.productid || item.product || itemId
+        const productId = (rawProduct && (rawProduct._id || rawProduct.id))
+            ? (rawProduct._id || rawProduct.id)
+            : rawProduct
+
+        return {
+            userId,
+            productId,
+            quantity: item.quantity || item.qty || 1,
+            size: item.size || '',
+            color: item.color || '',
+            name: item.name,
+            price: item.price,
+            pic: item.pic || item.pic1,
+        }
+    }
+
     async function removeFromWishlist(itemId) {
+        /* Snapshot for rollback: the item and where it sat in the list, so a
+           restore does not reorder the user's wishlist. */
+        const index = wishlist.findIndex((item) => (item.id || item._id) === itemId)
+        if (index === -1) return
+        const snapshot = wishlist[index]
+
         setRemovingIds((prev) => [...prev, itemId])
         setActionLoading(true)
+
+        // Optimistic removal — the list feels instant on the happy path.
+        setWishlist((prev) => prev.filter((item) => (item.id || item._id) !== itemId))
+
         try {
-            dispatch(deleteWishlist({ id: itemId }))
-            setWishlist((prev) => prev.filter((item) => (item.id || item._id) !== itemId))
-                // success toast will be shown via saga-confirmation
+            await deleteWishlistItemWithRetry(itemId)
+            dispatch(getWishlist())
+            toast.success('Removed from wishlist.')
         } catch (e) {
-            toast.error('Failed to remove item.')
+            // Put the row back exactly where it was.
+            setWishlist((prev) => {
+                if (prev.some((item) => (item.id || item._id) === itemId)) return prev
+                const restored = [...prev]
+                restored.splice(Math.min(index, restored.length), 0, snapshot)
+                return restored
+            })
+
+            const serverMessage = messageOf(e)
+            toast.error(
+                serverMessage || 'Could not remove item. Please try again.',
+                8000,
+                { action: { label: 'Retry', onClick: () => removeFromWishlist(itemId) } }
+            )
         } finally {
             setRemovingIds((prev) => prev.filter((id) => id !== itemId))
             setActionLoading(false)
         }
     }
 
-    async function moveToCart(item) {
+    /* ══════════════════════════════════════════════════════════════════
+       MOVE TO CART
+       ──────────────────────────────────────────────────────────────────
+       This had the same three faults as the delete path, plus one of its
+       own that produced the contradictory toasts users were seeing
+       ("Added to cart" and "Failed to move all items to cart." at once):
+
+       1. It dispatched `addCart` and `deleteWishlist` and wrapped them in
+          try/catch. Both are synchronous saga dispatches, so an API
+          failure could never reach the catch.
+       2. `deleteWishlist` had been dropped from this file's imports, so
+          the reference threw a ReferenceError. That WAS reaching the
+          catch — after the addCart dispatch had already fired — which is
+          why one click produced success and failure toasts together.
+       3. createCartSaga emits `eshopper:cart:confirmed` twice per add
+          (once optimistically, once server-confirmed), and
+          ToastEventBridge toasts both, so a single item produced two
+          "Added to cart" toasts and a bulk move produced 2N.
+
+       Calling the cart API directly here means the operation is awaited,
+       failures are real, and the page owns its own messaging: exactly one
+       toast per user action. Redux is resynced afterwards so the header
+       cart count and wishlist badge stay correct.
+       ══════════════════════════════════════════════════════════════════ */
+
+    /* `alreadyInCart` exists so a retry after a partial failure (cart add
+       succeeded, wishlist delete did not) does not add the item twice. */
+    async function moveItem(item, alreadyInCart = false) {
         const itemId = item.id || item._id
-        const rawProduct = item.productid || item.product || itemId
-        const productId = (rawProduct && (rawProduct._id || rawProduct.id)) ? (rawProduct._id || rawProduct.id) : rawProduct
+        if (!alreadyInCart) await withRetry(() => createCartAPI(cartPayloadFor(item)))
+        try {
+            await deleteWishlistItemWithRetry(itemId)
+        } catch (e) {
+            e.cartAddSucceeded = true
+            throw e
+        }
+    }
+
+    async function moveToCart(item, alreadyInCart = false) {
+        const itemId = item.id || item._id
+        const index = wishlist.findIndex((x) => (x.id || x._id) === itemId)
+        const snapshot = index === -1 ? item : wishlist[index]
+
         setMovingIds((prev) => [...prev, itemId])
         setActionLoading(true)
+
+        // Optimistic removal — the row leaves the list immediately.
+        setWishlist((prev) => prev.filter((x) => (x.id || x._id) !== itemId))
+
         try {
-            dispatch(addCart({
-                userId,
-                productId,
-                quantity: item.quantity || item.qty || 1,
-                size: item.size || "",
-                color: item.color || "",
-                name: item.name,
-                price: item.price,
-                pic: item.pic || item.pic1,
-            }))
-            dispatch(deleteWishlist({ id: itemId }))
-            setWishlist((prev) => prev.filter(x => (x.id || x._id) !== itemId))
-            // success toast will be shown by saga-confirmation
+            await moveItem(item, alreadyInCart)
+            dispatch(getCart())
+            dispatch(getWishlist())
+            toast.success('Moved to cart.')
         } catch (e) {
-            toast.error('Failed to move item to cart.')
+            setWishlist((prev) => {
+                if (prev.some((x) => (x.id || x._id) === itemId)) return prev
+                const restored = [...prev]
+                restored.splice(Math.min(index === -1 ? prev.length : index, restored.length), 0, snapshot)
+                return restored
+            })
+
+            const cartAddSucceeded = Boolean(e.cartAddSucceeded)
+            toast.error(
+                messageOf(e) || 'Could not move item to cart. Please try again.',
+                8000,
+                { action: { label: 'Retry', onClick: () => moveToCart(item, cartAddSucceeded) } }
+            )
         } finally {
             setMovingIds((prev) => prev.filter((id) => id !== itemId))
             setActionLoading(false)
         }
     }
 
-    async function moveAllToCart() {
-        if (!visibleWishlist.length) return
+    async function moveAllToCart(batchOverride) {
+        /* Array check, not a truthiness check: this is also used directly as
+           an onClick handler, which would otherwise pass the click event in
+           as the batch and silently move nothing. */
+        const batch = Array.isArray(batchOverride) ? batchOverride : visibleWishlist
+        if (!batch.length) return
 
+        const ids = new Set(batch.map((item) => item.id || item._id))
+        /* Snapshot before the optimistic clear so failed rows can be put back
+           where they were. Appending them instead made surviving items appear
+           to jump to the bottom of the list. */
+        const before = wishlist
         setActionLoading(true)
-        try {
-            for (const item of visibleWishlist) {
-                    const itemId = item.id || item._id
-                    const rawProduct = item.productid || item.product || itemId
-                    const productId = (rawProduct && (rawProduct._id || rawProduct.id)) ? (rawProduct._id || rawProduct.id) : rawProduct
-                dispatch(addCart({
-                    userId,
-                    productId,
-                    quantity: item.quantity || item.qty || 1,
-                    size: item.size || "",
-                    color: item.color || "",
-                    name: item.name,
-                    price: item.price,
-                    pic: item.pic || item.pic1,
-                }))
-                dispatch(deleteWishlist({ id: itemId }))
+
+        // Optimistic: clear the whole batch, then put back only what failed.
+        setWishlist((prev) => prev.filter((x) => !ids.has(x.id || x._id)))
+
+        const failed = []
+        let moved = 0
+
+        /* Sequential on purpose: firing N cart writes at once trips the
+           API's rate limiter, and fastAPI would then back off on each one. */
+        for (const item of batch) {
+            try {
+                await moveItem(item)
+                moved++
+            } catch (e) {
+                failed.push({ item, alreadyInCart: Boolean(e.cartAddSucceeded) })
             }
-            setWishlist(prev => prev.filter(x => !visibleWishlist.some(v => (v.id || v._id) === (x.id || x._id))))
-            // success toast moved to saga-confirmation
-        } catch (e) {
-            toast.error('Failed to move all items to cart.')
-        } finally {
-            setActionLoading(false)
         }
+
+        if (failed.length) {
+            const failedIds = new Set(failed.map((f) => f.item.id || f.item._id))
+            setWishlist((prev) => {
+                /* Rebuild from the snapshot, keeping only rows that were never
+                   in the batch or that failed, which preserves the original
+                   order. Anything added to the list while the batch ran is
+                   appended so it is not lost. */
+                const restored = before.filter((x) => {
+                    const id = x.id || x._id
+                    return !ids.has(id) || failedIds.has(id)
+                })
+                const knownIds = new Set(restored.map((x) => x.id || x._id))
+                const newSinceStart = prev.filter((x) => !knownIds.has(x.id || x._id))
+                return [...restored, ...newSinceStart]
+            })
+        }
+
+        dispatch(getCart())
+        dispatch(getWishlist())
+
+        // Exactly one toast, whatever the outcome.
+        const plural = (n) => `${n} item${n === 1 ? '' : 's'}`
+        if (!failed.length) {
+            toast.success(`${plural(moved)} moved to cart.`)
+        } else {
+            const retryFailed = () => moveAllToCart(failed.map((f) => f.item))
+            if (moved > 0) {
+                toast.warning(
+                    `${plural(moved)} moved to cart, ${failed.length} could not be moved.`,
+                    8000,
+                    { action: { label: 'Retry', onClick: retryFailed } }
+                )
+            } else {
+                toast.error(
+                    'Could not move items to cart. Please try again.',
+                    8000,
+                    { action: { label: 'Retry', onClick: retryFailed } }
+                )
+            }
+        }
+
+        setActionLoading(false)
     }
 
     function buildWishlistShareText() {
@@ -241,7 +447,7 @@ export default function Wishlist() {
                             <h2 className="mb-3">My Wishlist</h2>
                             <p className="mb-4">A premium curated shelf for products you love, with instant move-to-cart, share, and smart filtering.</p>
                             <div className="wishlist-hero-actions">
-                                <button type="button" className="wishlist-hero-btn primary" onClick={moveAllToCart} disabled={!visibleWishlist.length || actionLoading}>
+                                <button type="button" className="wishlist-hero-btn primary" onClick={() => moveAllToCart()} disabled={!visibleWishlist.length || actionLoading}>
                                     <ShoppingCart size={15} />
                                     Move All to Cart
                                 </button>

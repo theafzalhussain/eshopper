@@ -33,7 +33,7 @@ import {
   formatPreferences, loadTypingSpeed, saveTypingSpeed,
   detectTypingSpeedPreference, buildTypingSpeedReply
 } from './chatbot/preferences'
-import { STREAMING_SPEEDS, STREAMING_CHUNKS, streamText } from './chatbot/streamingUtils'
+import { STREAMING_SPEEDS, STREAMING_CHUNKS, STREAMING_MAX_MS, streamText } from './chatbot/streamingUtils'
 
 /* ─── helpers ─── */
 const toInit = (name) => (name || 'U').trim().charAt(0).toUpperCase()
@@ -44,6 +44,18 @@ const spring = { type: 'spring', stiffness: 310, damping: 26 }
 const RESPONSE_CACHE_TTL_MS = 4 * 60 * 1000
 const RESPONSE_CACHE_MAX = 60
 const AI_TIMEOUT_MS = 26000
+
+/* Hand the main thread back to the browser so the click that started a turn
+   can paint immediately. Everything after this runs in a later task, which
+   keeps the interaction out of the INP measurement window. */
+const yieldToPaint = () => new Promise((resolve) => {
+  if (typeof window === 'undefined') { resolve(); return }
+  if (typeof window.scheduler?.yield === 'function') {
+    window.scheduler.yield().then(resolve, resolve)
+    return
+  }
+  requestAnimationFrame(() => setTimeout(resolve, 0))
+})
 
 /* The very first thing a visitor reads. Always English, always warm,
    and deliberately free of product counts, discounts or offers. */
@@ -191,6 +203,9 @@ export default function ChatBot() {
         text: text || '',
         speedMs: STREAMING_SPEEDS[sk] ?? STREAMING_SPEEDS.fast,
         chunkSize: STREAMING_CHUNKS[sk] ?? STREAMING_CHUNKS.fast,
+        /* Bounds the reveal so a long answer cannot add seconds of waiting
+           on top of the model's own response time. */
+        maxDurationMs: STREAMING_MAX_MS[sk] ?? STREAMING_MAX_MS.fast,
         onUpdate: (partial, done) => {
           setMessages((prev) => prev.map((m) =>
             m.id === messageId ? { ...m, typing: !done, text: partial, products, followUps: done ? followUps : null } : m
@@ -450,6 +465,11 @@ export default function ChatBot() {
 
     const typingId = Date.now() + 1000
     setMessages((p) => [...p, { id: typingId, sender: 'bot', text: '', timestamp: new Date(), products: [], typing: true }])
+
+    /* The bubbles above are all the user needs to see on click. Yield here so
+       language detection, intent analysis and catalog search never block the
+       response to the tap. */
+    await yieldToPaint()
 
     let intent = INTENTS.GENERAL
     let slots = {}
