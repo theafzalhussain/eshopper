@@ -1,163 +1,252 @@
-# Getting Started with Create React App
+# EShopper — Full-Stack E-Commerce Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A production-grade e-commerce web application built with React and Node.js, featuring payment processing, order management, a returns workflow, coupon engine, premium memberships, real-time notifications, and an admin analytics dashboard.
 
-## Available Scripts
+**🔗 Live Demo:** https://eshopper-pi.vercel.app
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## Overview
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+EShopper is a complete online shopping platform covering the full commercial lifecycle — product discovery, cart, checkout with live payments, order fulfilment, returns and refunds, and customer retention through coupons and premium memberships.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+The project is built as a single repository containing a React single-page frontend, an Express REST API, and a background worker process for asynchronous jobs.
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Features
 
-### `npm run build`
+### Storefront
+- Product catalogue with search, category filtering, and sorting
+- Product detail pages with image galleries served through a CDN
+- Persistent shopping cart and wishlist
+- Virtualised product lists for smooth scrolling over large catalogues
+- Skeleton loading states and optimistic UI updates
+- Fully responsive across mobile, tablet, and desktop
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Authentication & Accounts
+- Email/password registration and login with hashed credentials
+- JWT-based session handling with protected routes
+- Firebase authentication integration
+- User profile and address book management
+- Role-based access control separating customer and admin capabilities
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Checkout & Payments
+- Razorpay payment gateway integration for live transactions
+- Server-side order total calculation with a detailed pricing breakdown
+- Coupon and discount engine with per-user redemption limits
+- Automatic PDF invoice generation and QR codes for orders
+- Order confirmation emails sent through a transactional email provider
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Orders & Returns
+- Full order lifecycle tracking from placement to delivery
+- Customer-initiated return and refund request workflow
+- Admin approval and rejection flow for returns
+- Order history with status timeline
 
-### `npm run eject`
+### Premium Membership
+- Subscription tier granting member-only pricing and benefits
+- Subscription lifecycle handling and renewal logic
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Admin Dashboard
+- Product, order, user, and coupon management
+- Sales and revenue analytics with interactive charts
+- Data grid views with server-side pagination
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Real-Time & Background Processing
+- Socket.io for live order status updates and notifications
+- Redis-backed job queue for email, invoice, and other deferred work
+- Scheduled cron jobs for recurring tasks
+- Separate worker process so heavy jobs never block API requests
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Production Engineering
+- Error tracking on both client and server
+- Real user monitoring and Core Web Vitals reporting
+- Prometheus metrics endpoint for operational visibility
+- API rate limiting and security headers
+- Response compression and in-process caching
+- Idempotent data-migration scripts with `--dry-run` and `--apply` modes
+- Memory-leak detection tooling
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## Tech Stack
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+**Frontend**
+| Area | Technology |
+|---|---|
+| Framework | React |
+| State management | Redux Toolkit, Redux Saga |
+| Server state | TanStack React Query |
+| Routing | React Router |
+| UI | Material UI, Emotion, Bootstrap |
+| Animation | Framer Motion |
+| Charts | Recharts |
+| Performance | react-window, web-vitals |
+| Testing | React Testing Library |
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+**Backend**
+| Area | Technology |
+|---|---|
+| Runtime | Node.js |
+| Framework | Express |
+| Database | MongoDB with Mongoose |
+| Cache & queues | Redis, BullMQ |
+| Real-time | Socket.io |
+| Auth | JSON Web Tokens, bcrypt, Firebase Admin |
+| Payments | Razorpay |
+| Media | Cloudinary |
+| Email | Nodemailer, Brevo |
+| Documents | jsPDF, QR code generation |
+| Scheduling | node-cron |
 
-### Code Splitting
+**Operations**
+| Area | Technology |
+|---|---|
+| Monitoring | Sentry, Datadog RUM, Prometheus |
+| Security | Helmet, CORS, express-rate-limit |
+| Deployment | Vercel (frontend), Railway (API) |
+| Containerisation | Docker |
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+---
 
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-
-## Razorpay Payment Setup
-
-The checkout flow supports Razorpay for `UPI` and `Card / NetBanking` payments. `COD` still uses the existing direct order path.
-
-### Required environment variables
-
-- `RAZORPAY_KEY_ID`
-- `RAZORPAY_KEY_SECRET`
-
-Keep both values in the backend environment only. Do not expose the secret to the frontend.
-
-### How it works
-
-1. The frontend loads the Razorpay checkout script when a paid payment method is selected.
-2. The backend creates a Razorpay order using the final checkout amount.
-3. Razorpay returns `order_id`, `payment_id`, and `signature`.
-4. The backend verifies the signature before the order is placed.
-5. The order record stores the Razorpay references for tracking and audit.
-
-### Test mode checklist
-
-- Use Razorpay test credentials.
-- Make sure the backend server is running with the payment env vars set.
-- Test one UPI flow and one card flow from the checkout page.
-- Confirm the order appears in order tracking with the payment reference.
-
-### Notes
-
-- If Razorpay checkout does not open, verify that the browser can load `https://checkout.razorpay.com/v1/checkout.js`.
-- If payment verification fails, rotate the secret if it has been exposed and recheck the signature logic.
-
-## BullMQ Queueing
-
-The backend uses an in-memory fallback queue for email, refund, and report jobs. No Redis configuration is required for local development.
-
-## Redis & BullMQ (Caching and Queues)
-
-This project supports Redis-backed HTTP response caching and BullMQ queues for background jobs. When Redis is configured, the app will:
-- Cache GET responses for product listings, searches, and processed images (via `/img` proxy).
-- Use BullMQ for email/refund/report/image jobs with a separate Redis connection for workers (recommended).
-
-Recommended environment variables:
-- `REDIS_URL` — your Redis host (e.g. faithful-microsteady-sweater-59212.db.redis.io:15258)
-- `REDIS_PASSWORD` — Redis password
-- `REDIS_WORKER_URL` (optional) — separate Redis URL for workers/schedulers
-- `REDIS_WORKER_PASSWORD` (optional) — password for worker Redis
-- `BULLMQ_ENABLED` — set to `false` to disable queues
-- `BULLMQ_WORKERS_ENABLED` — set to `false` to disable in-process workers
-
-Example `.env` entries:
+## Architecture
 
 ```
-REDIS_URL=faithful-microsteady-sweater-59212.db.redis.io:15258
-REDIS_PASSWORD=your_redis_password_here
-REDIS_WORKER_URL=faithful-microsteady-sweater-59212.db.redis.io:15258
-REDIS_WORKER_PASSWORD=your_redis_password_here
-BULLMQ_ENABLED=true
-BULLMQ_WORKERS_ENABLED=true
+Browser (React SPA)
+   │
+   │  REST over HTTPS  +  WebSocket
+   ▼
+Express API ──────────────┐
+   │                      │
+   │  Mongoose            │  enqueue jobs
+   ▼                      ▼
+MongoDB              Redis / BullMQ
+                          │
+                          ▼
+                    Worker process
+                 (email, invoices, cron)
 ```
 
-Smoke tests (curl) to verify cache HIT/MISS and BullMQ connectivity:
+The API stays responsive by pushing slow work — sending mail, generating invoices, syncing third-party services — onto a Redis-backed queue consumed by a separate worker process.
 
-- Check product list (first should be MISS, second should be HIT):
+---
+
+## Project Structure
+
+```
+├── src/                 React frontend application
+├── routes/              Express route definitions
+├── controllers/         Request handlers
+├── models/              Mongoose schemas
+├── middleware/          Auth, validation, error handling
+├── utils/               Shared helpers
+├── config/              Environment and service configuration
+├── scripts/             Maintenance and diagnostic tooling
+├── views/               Email templates
+├── public/              Static assets
+├── server.js            API entry point
+└── worker.js            Background job consumer
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js (see `.nvmrc` for the target version)
+- MongoDB instance
+- Redis instance
+- Razorpay, Cloudinary, and email provider accounts
+
+### Installation
 
 ```bash
-curl -i http://localhost:5000/product
-# repeat:
-curl -i http://localhost:5000/product
+git clone https://github.com/theafzalhussain/eshopper.git
+cd eshopper
+npm install
 ```
 
-- Check image proxy (first MISS, second HIT):
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+# Server
+PORT=5000
+NODE_ENV=development
+
+# Database
+MONGODB_URI=your_mongodb_connection_string
+
+# Cache & queues
+REDIS_URL=your_redis_connection_string
+
+# Auth
+JWT_SECRET=your_jwt_secret
+
+# Payments
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+
+# Media
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Email
+SMTP_HOST=your_smtp_host
+SMTP_USER=your_smtp_user
+SMTP_PASS=your_smtp_password
+```
+
+### Running Locally
 
 ```bash
-curl -i "http://localhost:5000/img?src=/assets/productimages/example.jpg&w=400&q=80" > /dev/null
-curl -i "http://localhost:5000/img?src=/assets/productimages/example.jpg&w=400&q=80" > /dev/null
+npm start      # React dev server
+npm run server # Express API
+npm run worker # Background worker
 ```
 
-- Check BullMQ queues (enqueue test job via API or server bootstrap logs):
+The frontend runs on `http://localhost:3000` and the API on `http://localhost:5000`.
 
-If `BULLMQ_ENABLED=true` and `REDIS_URL` is set, server logs will show "BullMQ initialized with Redis backend" on startup. To test enqueue from Node REPL:
+### Testing
 
 ```bash
-node -e "const { enqueueJob, QUEUE_NAMES } = require('./utils/queues'); enqueueJob('report', { days:7 }).then(console.log).catch(console.error)"
+npm test            # Frontend component tests
+npm run test:server # Backend unit tests
 ```
 
-If you enable workers in production, prefer a separate `REDIS_WORKER_URL` to isolate scheduler and worker connections.
+### Maintenance Scripts
 
-Caching notes:
-- Product create/update/delete flows invalidate relevant caches automatically.
-- Image proxy caches transformed images for 30 days (stored in Redis as base64).
+Every migration supports a dry run before it writes anything:
 
-Security: never commit real Redis credentials. Use `.env` or your hosting provider's secret management.
+```bash
+npm run fix:order-qty:dry        # Preview changes
+npm run fix:order-qty            # Apply changes
+npm run fix:order-breakdown:dry
+npm run fix:user-settings:dry
+npm run mem:watch                # Memory leak detection
+```
+
+---
+
+## Deployment
+
+The React frontend deploys to Vercel via `vercel.json`. The Express API and worker deploy to Railway via `railway.json`. A Dockerfile-compatible setup is included for container-based hosting.
+
+---
+
+## Author
+
+**Afzal Hussain** — Frontend Developer
+
+- Portfolio: https://portfolio-sigma-gold-ukyv01n96y.vercel.app
+- GitHub: https://github.com/theafzalhussain
+- Email: theafzalhussain786@gmail.com
+
+---
+
+## License
+
+Available for review as part of my development portfolio.
