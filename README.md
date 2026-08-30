@@ -2,7 +2,7 @@
 
 A production-grade e-commerce web application built with React and Node.js, featuring payment processing, order management, a returns workflow, coupon engine, premium memberships, real-time notifications, and an admin analytics dashboard.
 
-**🔗 Live Demo:** https://eshopper-pi.vercel.app
+**🔗 Live Demo:** https://eshopperr.me
 
 ---
 
@@ -241,7 +241,7 @@ The React frontend deploys to Vercel via `vercel.json`. The Express API and work
 
 **Afzal Hussain** — Frontend Developer
 
-- Portfolio: https://portfolio-sigma-gold-ukyv01n96y.vercel.app
+- Portfolio: https://afzalhussain.tech
 - GitHub: https://github.com/theafzalhussain
 - Email: theafzalhussain786@gmail.com
 
