@@ -206,28 +206,55 @@ exports.getAvailableCoupons = async (req, res) => {
         await ensureDefaultCoupons();
         const userId = req.query.userId;
         const now = new Date();
-        const coupons = await Coupon.find({ isActive: true }).sort({ createdAt: -1 });
+        const coupons = await Coupon.find({ isActive: true }).sort({ createdAt: -1 }).lean();
+
+        /* Only coupons still inside their validity window need usage checks. */
+        const inWindow = coupons.filter((c) => {
+            if (c.startsAt && now < c.startsAt) return false;
+            if (c.expiresAt && now > c.expiresAt) return false;
+            return true;
+        });
+
+        /* Usage counting used to be up to three sequential countDocuments per
+           coupon inside a for-loop — ten coupons meant thirty serial queries on a
+           request that blocks the cart page. Now it is at most three
+           aggregate/count queries in total, run in parallel. */
+        const capCodes = inWindow
+            .filter((c) => Number(c.totalUsageCap || 0) > 0)
+            .map((c) => c.code);
+
+        const needsPerUser = Boolean(userId) && inWindow.some((c) => c.perUserOnce);
+        const needsFirstOrder = Boolean(userId) && inWindow.some((c) => c.firstOrderOnly);
+
+        const [totalUsageRows, userUsageRows, userOrderCount] = await Promise.all([
+            capCodes.length
+                ? Order.aggregate([
+                    { $match: { couponCode: { $in: capCodes } } },
+                    { $group: { _id: '$couponCode', used: { $sum: 1 } } }
+                ])
+                : Promise.resolve([]),
+            needsPerUser
+                ? Order.aggregate([
+                    { $match: { userid: String(userId), couponCode: { $ne: null } } },
+                    { $group: { _id: '$couponCode', used: { $sum: 1 } } }
+                ])
+                : Promise.resolve([]),
+            needsFirstOrder
+                ? Order.countDocuments({ userid: String(userId) })
+                : Promise.resolve(0)
+        ]);
+
+        const totalUsed = new Map(totalUsageRows.map((r) => [r._id, r.used]));
+        const userUsed = new Map(userUsageRows.map((r) => [r._id, r.used]));
 
         const activeCoupons = [];
-        for (const c of coupons) {
-            if (c.startsAt && now < c.startsAt) continue;
-            if (c.expiresAt && now > c.expiresAt) continue;
-
-            if (Number(c.totalUsageCap || 0) > 0) {
-                const totalUsed = await Order.countDocuments({ couponCode: c.code });
-                if (totalUsed >= Number(c.totalUsageCap)) continue;
-            }
+        for (const c of inWindow) {
+            const cap = Number(c.totalUsageCap || 0);
+            if (cap > 0 && (totalUsed.get(c.code) || 0) >= cap) continue;
 
             if (userId) {
-                if (c.perUserOnce) {
-                    const userUsed = await Order.countDocuments({ userid: String(userId), couponCode: c.code });
-                    if (userUsed > 0) continue;
-                }
-
-                if (c.firstOrderOnly) {
-                    const completedOrders = await Order.countDocuments({ userid: String(userId) });
-                    if (completedOrders > 0) continue;
-                }
+                if (c.perUserOnce && (userUsed.get(c.code) || 0) > 0) continue;
+                if (c.firstOrderOnly && userOrderCount > 0) continue;
             }
 
             activeCoupons.push({
@@ -280,10 +307,23 @@ const DEFAULT_COUPONS = [
     },
 ];
 
+/* Seeding is a startup concern, not a per-request one. This ran a countDocuments
+   (and possibly an insertMany) on every applyCoupon and every coupon listing — a
+   write-path check bolted onto a read request. The result is now remembered for
+   the life of the process, so the count happens once. */
+let defaultCouponsEnsured = false;
+
 async function ensureDefaultCoupons() {
-    const count = await Coupon.countDocuments();
-    if (count > 0) return;
-    await Coupon.insertMany(DEFAULT_COUPONS);
+    if (defaultCouponsEnsured) return;
+
+    try {
+        const count = await Coupon.countDocuments();
+        if (count === 0) await Coupon.insertMany(DEFAULT_COUPONS);
+        defaultCouponsEnsured = true;
+    } catch (err) {
+        /* leave the flag unset so a transient failure is retried next time */
+        console.warn('ensureDefaultCoupons failed:', err && err.message);
+    }
 }
 
 const invalidateCartCache = async () => {

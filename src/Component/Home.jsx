@@ -17,6 +17,7 @@ import { getUser } from '../Store/ActionCreaters/UserActionCreators';
 import { getWishlist, addWishlist, deleteWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
+import { staticImage } from '../utils/staticImage';
 import axios from 'axios';
 import { BASE_URL } from '../constants';
 import { useToast } from './ToastNotification';
@@ -502,11 +503,13 @@ export default function Home() {
                   transition={{ duration: 1.2 }}
                 />
                 <motion.img
-                  src={slide.img}
+                  {...staticImage(slide.img, { sizes: '(max-width: 900px) 100vw, 50vw' })}
+                  key={slide.img}
                   alt={slide.title}
                   className="hx-hero-img"
                   loading="eager"
                   fetchpriority="high"
+                  decoding="sync"
                   initial={{ scale: 0.85, opacity: 0, y: 30 }}
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
@@ -1008,7 +1011,12 @@ export default function Home() {
                 onClick={() => handleTransitionNavigate(`/shop/${l.tag === 'WOMEN' ? 'Women' : l.tag === 'MEN' ? 'Men' : 'Kids'}`)}
                 whileHover={{ scale: 0.98 }}
               >
-                <img src={l.img} alt={l.label} className="hx-lb-img" loading="lazy" />
+                <img
+                  {...staticImage(l.img, { sizes: '(max-width: 700px) 50vw, 25vw' })}
+                  alt={l.label}
+                  className="hx-lb-img"
+                  loading="lazy"
+                />
                 <div className="hx-lb-overlay" />
                 <div className="hx-lb-info">
                   <span className="hx-lb-tag">{l.tag}</span>

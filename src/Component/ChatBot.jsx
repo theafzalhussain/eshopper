@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { thumbUrl } from '../utils/cloudinaryHelper';
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Send, X, Loader2, GripVertical,
@@ -870,7 +871,7 @@ export default function ChatBot() {
                               >
                                 <div className="p-img">
                                   {p.image
-                                    ? <img src={p.image} alt={p.name} loading="lazy" />
+                                    ? <img src={thumbUrl(p.image, 120)} alt={p.name} loading="lazy" decoding="async" />
                                     : <div className="p-no-img"><span>🛍️</span><span>No Image</span></div>}
                                   {p.discount > 0 && <span className="p-badge">{p.discount}% OFF</span>}
                                   {p.newArrival && <span className="p-badge p-badge-new">NEW</span>}

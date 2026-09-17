@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
+const verifyAdmin = require('../middleware/verifyAdmin');
 
 // ════════════════════════════════════════════════════════════════════════════
 // USER APIS
@@ -16,6 +17,16 @@ router.post('/api/orders/:orderId/return', orderController.requestReturn);
 // ════════════════════════════════════════════════════════════════════════════
 // ADMIN APIS - ORDER MANAGEMENT
 // ════════════════════════════════════════════════════════════════════════════
+
+/* One gate in front of everything under /api/admin here.
+   These routes previously relied on each handler checking the x-admin-secret
+   header itself — and that secret had to be shipped to the browser through
+   REACT_APP_ADMIN_SECRET, which CRA inlines into the JS bundle, so anyone
+   could read it from the deployed app and use it. verifyAdmin accepts a signed
+   admin JWT or a userid whose admin role it verifies against the database, so
+   the browser no longer needs a shared secret at all. It also sets req.user,
+   which is what the handlers' own isAdminAuthorized() check reads. */
+router.use('/api/admin', verifyAdmin);
 
 // Order details
 router.get('/api/admin/order/:orderId', orderController.getAdminOrderDetails);

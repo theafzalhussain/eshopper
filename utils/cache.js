@@ -1,4 +1,26 @@
-const memoryCache = new Map();
+/* ── In-process response cache ────────────────────────────────────
+   This was a bare `new Map()`. Nothing ever evicted from it: expiry was only
+   *checked* on read, and keys are full URLs including query strings, so any
+   crawler walking ?page=&brand=… grew it permanently. The image proxy made it
+   worse by storing base64 image payloads (+33% over binary) with a 30-day TTL —
+   a few hundred MB of heap in the same process that serves requests, ending in
+   OOM restarts.
+
+   An LRU with both an entry cap and a byte budget makes the worst case bounded
+   and predictable. Redis remains the shared cache; this is only the local tier
+   in front of it. */
+const { LRUCache } = require('lru-cache');
+
+const MEMORY_CACHE_MAX_ENTRIES = Number(process.env.CACHE_MEM_MAX_ENTRIES || 500);
+const MEMORY_CACHE_MAX_BYTES = Number(process.env.CACHE_MEM_MAX_MB || 64) * 1024 * 1024;
+
+const memoryCache = new LRUCache({
+    max: MEMORY_CACHE_MAX_ENTRIES,
+    maxSize: MEMORY_CACHE_MAX_BYTES,
+    /* rough but adequate: JS strings are UTF-16, so 2 bytes per char */
+    sizeCalculation: (entry) => (entry && entry.body ? entry.body.length * 2 : 1) + 200,
+    ttlAutopurge: false
+});
 
 // Create a DEDICATED Redis client for caching only (separate from BullMQ)
 let redis = null;
@@ -201,7 +223,7 @@ const cacheMiddleware = (duration = 300) => {
                     body: serialized,
                     contentType,
                     expiresAt: Date.now() + (duration * 1000)
-                });
+                }, { ttl: Math.max(1000, duration * 1000) });
 
                 // Store in Redis (fire and forget - never block response)
                 redisSetSafe(key, serialized, duration);
@@ -245,8 +267,22 @@ const getCacheValue = async (key) => {
 const setCacheValue = async (key, value, ttlSeconds = 60) => {
     if (!key) return;
     const serialized = typeof value === 'string' ? value : JSON.stringify(value);
-    memoryCache.set(key, { body: serialized, expiresAt: Date.now() + (ttlSeconds * 1000) });
+    memoryCache.set(
+        key,
+        { body: serialized, expiresAt: Date.now() + (ttlSeconds * 1000) },
+        { ttl: Math.max(1000, ttlSeconds * 1000) }
+    );
     redisSetSafe(key, serialized, ttlSeconds);
 };
 
-module.exports = { cacheMiddleware, clearCache, getCacheValue, setCacheValue };
+/* Exposed for health checks: the memory tier is bounded now, so its size is a
+   useful signal rather than an unbounded mystery. */
+const cacheStats = () => ({
+    memoryEntries: memoryCache.size,
+    memoryBytes: memoryCache.calculatedSize,
+    memoryMaxBytes: MEMORY_CACHE_MAX_BYTES,
+    redisReady: isRedisReady(),
+    version: CACHE_VERSION
+});
+
+module.exports = { cacheMiddleware, clearCache, getCacheValue, setCacheValue, cacheStats };

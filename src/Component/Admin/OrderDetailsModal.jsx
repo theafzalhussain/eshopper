@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { thumbUrl } from '../../utils/cloudinaryHelper';
 import OrderTimeline from './OrderTimeline';
 import { Copy, Printer, FileText, X, Package, User, MapPin, CreditCard, ShoppingBag, Clock, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -157,7 +158,7 @@ export default function OrderDetailsModal({ order, open, onClose }) {
                                 ) : (
                                     items.map((item, idx) => (
                                         <div key={idx} className="lux-item-row">
-                                            <img src={item.pic1 || item.image || item.thumbnail || '/assets/images/noimage.png'} alt="" className="lux-item-img" />
+                                            <img src={thumbUrl(item.pic1 || item.image || item.thumbnail, 90) || '/assets/images/noimage.png'} alt="" className="lux-item-img" />
                                             <div className="lux-item-details">
                                                 <strong className="lux-item-name">{item.name || item.title || 'N/A'}</strong>
                                                 <span className="lux-item-qty">Qty: {getItemQty(item)}</span>

@@ -99,7 +99,7 @@ export default function AdminContact() {
                                             <th>Name</th>
                                             <th>Contact Info</th>
                                             <th>Subject</th>
-                                            <th className="hide-mobile">Message</th>
+                                            <th className="lux-msg-col">Message</th>
                                             <th className="text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -126,8 +126,10 @@ export default function AdminContact() {
                                                     </div>
                                                 </td>
                                                 <td className="color-muted">{item.subject}</td>
-                                                <td className="hide-mobile" style={{maxWidth: "300px"}}>
-                                                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.message}</div>
+                                                <td className="lux-msg-cell" title={item.message || ''}>
+                                                    {item.message
+                                                        ? <div className="lux-msg-text">{item.message}</div>
+                                                        : <span className="lux-msg-empty">—</span>}
                                                 </td>
                                                 <td className="text-right">
                                                     <div className="lux-action-cell">
@@ -175,6 +177,35 @@ export default function AdminContact() {
                 .lux-table td { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 14px; }
                 .lux-table-row:hover td { background: #fafbfc; }
                 .color-ink { color: #0f172a; } .color-muted { color: #64748b; }
+
+                /* ── Message column ──────────────────────────────────────────
+                   This cell used to be a single nowrap line with
+                   overflow:hidden and a max-width on the <td>. That made it the
+                   only column in the table whose minimum content width was 0 —
+                   every other column has a real minimum set by its longest
+                   word (an email address, a subject). In an auto-layout table
+                   the browser takes the space it needs from whichever column
+                   can legally shrink, so under any width pressure this one
+                   collapsed and the message disappeared entirely, even though
+                   the text was right there in the DOM.
+
+                   A real min-width plus wrapping removes that failure mode: the
+                   column can no longer be squeezed away, and the text is
+                   clamped to three lines instead of being clipped to none.
+                   The colour is explicit so the cell can never inherit an
+                   invisible one either. */
+                .lux-msg-col { min-width: 240px; }
+                .lux-msg-cell { min-width: 240px; max-width: 420px; color: #334155; }
+                .lux-msg-text {
+                    display: -webkit-box;
+                    -webkit-line-clamp: 3;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    white-space: pre-wrap;   /* keep the user's own line breaks */
+                    overflow-wrap: anywhere; /* a pasted URL must not widen the table */
+                    line-height: 1.45;
+                }
+                .lux-msg-empty { color: #cbd5e1; }
                 .lux-contact-meta { display: flex; flex-direction: column; gap: 4px; }
                 .lux-contact-item { display: flex; align-items: center; gap: 6px; color: #475569; font-size: 12px; }
                 .lux-action-cell { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }

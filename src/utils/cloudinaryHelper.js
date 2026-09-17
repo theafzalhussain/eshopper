@@ -1,101 +1,103 @@
-import { BASE_URL } from '../constants';
-
-const buildProxyUrl = (src, options = {}) => {
-  if (!src) return src;
-  const encodedSrc = encodeURIComponent(src);
-  const params = [];
-  if (options.maxWidth) params.push(`w=${Number(options.maxWidth)}`);
-  if (options.quality) params.push(`q=${Number(options.quality)}`);
-  const query = params.length ? `&${params.join('&')}` : '';
-  return `${BASE_URL}/img?src=${encodedSrc}${query}`;
-};
+/*
+ * Cloudinary URL helpers.
+ *
+ * These used to append every optimized Cloudinary URL to the app's own
+ * `${BASE_URL}/img?src=…` proxy. The effect was an inverted pipeline: the browser
+ * asked our Node server for each image, Node downloaded it from the CDN,
+ * re-encoded it with sharp (effort 6, on libuv's 4-thread pool — the same pool
+ * bcrypt and fs use), base64'd it and kept it in an in-process Map. So Cloudinary
+ * was paid for and then bypassed, the origin became the image server for the whole
+ * catalog, and one shopper scrolling the grid could add latency to someone else's
+ * login.
+ *
+ * Now the transformed Cloudinary URL is returned directly. Two consequences worth
+ * knowing:
+ *   • `w_auto` and `dpr_auto` are gone. Both need Sec-CH-Width/Sec-CH-DPR client
+ *     hints; server-side fetches never sent them, so `w_auto` silently resolved to
+ *     the ORIGINAL width — the images were never downscaled. Explicit `w_<n>` plus
+ *     srcset (see LazyImage) is deterministic instead.
+ *   • the <link rel="preconnect" href="res.cloudinary.com"> in index.html finally
+ *     does something.
+ */
 
 const isProxyUrl = (url) => {
   if (!url) return false;
   return url.includes('/img?src=');
 };
 
+/* Cloudinary delivery URLs look like
+   https://res.cloudinary.com/<cloud>/image/upload/<transforms?>/<public_id> */
+const splitUpload = (url) => {
+  const match = url.match(/(.+\/upload\/)(.+)/);
+  if (!match) return null;
+  return { baseUrl: match[1], imagePath: match[2] };
+};
+
+const isCloudinary = (url) => url.includes('res.cloudinary.com') || url.includes('cloudinary.com');
+
 /**
- * Optimizes Cloudinary URLs with automatic format and quality compression
- * @param {string} url - The original image URL
- * @returns {string} - Optimized Cloudinary URL with f_auto,q_auto parameters
+ * Format/quality optimization with no resize.
+ * Prefer optimizeCloudinaryUrlAdvanced with an explicit maxWidth — an unresized
+ * image is usually far larger than the slot it is painted into.
+ * @param {string} url
+ * @returns {string}
  */
 export const optimizeCloudinaryUrl = (url) => {
   if (!url) return url;
   if (isProxyUrl(url) || url.startsWith('data:')) return url;
+  if (!isCloudinary(url)) return url;
 
-  // Check if it's a Cloudinary URL
-  if (!url.includes('cloudinary')) {
-    return url;
-  }
+  const parts = splitUpload(url);
+  if (!parts) return url;
 
-  // Extract the base URL and the path after /upload/
-  const cloudinaryMatch = url.match(/(.+\/upload\/)(.+)/);
-  if (!cloudinaryMatch) {
-    return url;
-  }
+  /* already carries a transformation — leave it alone rather than stacking */
+  if (parts.imagePath.includes('f_auto') || parts.imagePath.includes('q_auto')) return url;
 
-  const baseUrl = cloudinaryMatch[1];
-  const imagePath = cloudinaryMatch[2];
-
-  // Check if optimization params already exist
-  if (imagePath.includes('f_auto') || imagePath.includes('q_auto')) {
-    return url;
-  }
-
-  // Insert optimized transforms after /upload/
-  // You can customize the transformation parameters as needed:
-  // - f_auto: Auto-detect and serve the optimal format
-  // - q_auto: Auto-detect and apply the optimal quality
-  // - w_auto: Auto-scale based on device width
-  // - dpr_auto: Auto-detect device pixel ratio
-  const optimizedUrl = `${baseUrl}f_auto,q_auto:good,dpr_auto,w_auto/${imagePath}`;
-  return buildProxyUrl(optimizedUrl);
+  return `${parts.baseUrl}f_auto,q_auto:good/${parts.imagePath}`;
 };
 
 /**
- * Advanced Cloudinary URL optimization with additional transformations
- * @param {string} url - The original image URL
- * @param {object} options - Optional configuration
- * @param {number} options.maxWidth - Max width for responsive images
- * @param {string} options.crop - Crop strategy (cover, fill, pad, etc.)
- * @returns {string} - Optimized Cloudinary URL
+ * Optimization with an explicit target width and optional crop.
+ * @param {string} url
+ * @param {object} [options]
+ * @param {number} [options.maxWidth] target width in CSS px (1x)
+ * @param {string} [options.crop]     Cloudinary crop mode: fill, fit, pad, …
+ * @param {number} [options.quality]  1-100; omit for q_auto:good
+ * @returns {string}
  */
 export const optimizeCloudinaryUrlAdvanced = (url, options = {}) => {
   if (!url) return url;
   if (isProxyUrl(url) || url.startsWith('data:')) return url;
+  if (!isCloudinary(url)) return url;
 
-  // Check if it's a Cloudinary URL
-  if (!url.includes('cloudinary')) {
-    return url;
-  }
+  const parts = splitUpload(url);
+  if (!parts) return url;
+  if (parts.imagePath.includes('f_auto') || parts.imagePath.includes('q_auto')) return url;
 
-  const cloudinaryMatch = url.match(/(.+\/upload\/)(.+)/);
-  if (!cloudinaryMatch) {
-    return url;
-  }
+  const transformations = ['f_auto'];
 
-  const baseUrl = cloudinaryMatch[1];
-  const imagePath = cloudinaryMatch[2];
+  const quality = Number(options.quality);
+  transformations.push(Number.isFinite(quality) && quality > 0 && quality <= 100
+    ? `q_${Math.round(quality)}`
+    : 'q_auto:good');
 
-  // Build transformation string
-  let transformations = ['f_auto', 'q_auto:good', 'dpr_auto'];
-
-  if (options.maxWidth) {
-    transformations.push(`w_${options.maxWidth}`);
-  }
+  if (options.maxWidth) transformations.push(`w_${Math.round(Number(options.maxWidth))}`);
 
   if (options.crop) {
     transformations.push(`c_${options.crop}`);
+    /* g_auto lets Cloudinary keep the subject in frame when cropping */
+    if (options.crop !== 'pad') transformations.push('g_auto');
   }
 
-  // Add gravity for consistent cropping
-  if (options.crop && options.crop !== 'pad') {
-    transformations.push('g_auto');
-  }
-
-  const transformationString = transformations.join(',');
-
-  const optimizedUrl = `${baseUrl}${transformationString}/${imagePath}`;
-  return buildProxyUrl(optimizedUrl, { maxWidth: options.maxWidth });
+  return `${parts.baseUrl}${transformations.join(',')}/${parts.imagePath}`;
 };
+
+/**
+ * Small square thumbnail — admin tables, order lines, review avatars. Those sites
+ * were rendering full-resolution originals into 40-80px boxes.
+ * @param {string} url
+ * @param {number} [size=80] rendered box size in CSS px
+ * @returns {string}
+ */
+export const thumbUrl = (url, size = 80) =>
+  optimizeCloudinaryUrlAdvanced(url, { maxWidth: size * 2, crop: 'fill' });

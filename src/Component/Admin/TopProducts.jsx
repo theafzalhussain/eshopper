@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { thumbUrl } from '../../utils/cloudinaryHelper';
 import { motion } from 'framer-motion';
 import { Trophy, TrendingUp, ShoppingBag, ArrowRight, RefreshCw, Star } from 'lucide-react';
 import { getSocket } from './socket';
@@ -113,7 +114,9 @@ export default function TopProducts({ topProducts = [] }) {
               </div>
 
               <img
-                src={product.pic1 || '/assets/images/noimage.png'}
+                src={thumbUrl(product.pic1, 80) || '/assets/images/noimage.png'}
+                loading="lazy"
+                decoding="async"
                 alt={product.name}
                 className="scc-product-img"
                 onError={(e) => {

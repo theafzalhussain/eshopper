@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import './OrderDetailsDrawer.css';
 import { BASE_URL } from '../../constants';
+import { getAdminHeaders } from './adminAuth';
 
 // Helper functions to format dates safely
 const formatDate = (dateString) => {
@@ -214,11 +215,9 @@ export default function OrderDetailsDrawer({ open, onClose, order, onOrderRemove
     
     setLoading(true);
     try {
-      const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
       const response = await axios.get(`${BASE_URL}/api/admin/order/${order.orderId}`, {
-        headers: adminSecret ? { 'x-admin-secret': adminSecret } : {}
+        headers: getAdminHeaders()
       });
-
       const payload = resolveOrderPayload(response.data);
       if (payload) {
         setFullOrderData(payload);
@@ -252,9 +251,8 @@ export default function OrderDetailsDrawer({ open, onClose, order, onOrderRemove
     if (!order?.orderId) return;
     setNotesLoading(true);
     try {
-      const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
       const res = await fetch(`${BASE_URL}/api/admin/order/${order.orderId}/notes`, {
-        headers: adminSecret ? { 'x-admin-secret': adminSecret } : {}
+        headers: getAdminHeaders()
       });
       const data = await res.json();
       if (data.success) setNotes(data.notes);
@@ -268,12 +266,11 @@ export default function OrderDetailsDrawer({ open, onClose, order, onOrderRemove
     if (!newNote.trim() || !order?.orderId) return;
     setSaving(true);
     try {
-      const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
       const res = await fetch(`${BASE_URL}/api/admin/order/${order.orderId}/notes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(adminSecret ? { 'x-admin-secret': adminSecret } : {})
+          ...getAdminHeaders()
         },
         body: JSON.stringify({ note: newNote, author: localStorage.getItem('name') || 'Admin' })
       });

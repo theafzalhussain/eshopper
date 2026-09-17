@@ -5,8 +5,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import { io } from 'socket.io-client'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
-import { queryClient } from '../queries/queryClient'
-import { catalogQueryKeys } from '../queries/catalogQueries'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper'
 import { useToast } from './ToastNotification'
 import {
@@ -887,7 +885,7 @@ export default function MyOrders() {
   // FETCH
   useEffect(() => {
     fetchOrdersList()
-    queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products })
+    /* see CatalogQueryBridge — catalog refetch is realtime-driven now */
   }, [fetchOrdersList, dispatch])
 
   useEffect(() => {

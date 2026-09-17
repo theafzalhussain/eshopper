@@ -1150,7 +1150,7 @@ export default function ProductDetail() {
                   </button>
                 </div>
 
-                <LazyImage src={mainImg} className={`pd-main-img${imgFade?' fade':''}`} alt={p.name} maxWidth={1200} loading="eager" />
+                <LazyImage src={mainImg} className={`pd-main-img${imgFade?' fade':''}`} alt={p.name} maxWidth={1200} eager sizes="(max-width: 900px) 100vw, 620px" />
 
                 <div className="pd-dots">
                   {displayPics.map((pic,i) => (

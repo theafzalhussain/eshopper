@@ -1,4 +1,5 @@
 import { BASE_URL, API_ENDPOINTS, REQUEST_TIMEOUT } from "../constants";
+import { getAdminHeaders } from "../Component/Admin/adminAuth";
 
 const isDevHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const RAZORPAY_API_BASE_URL = isDevHost
@@ -128,6 +129,11 @@ export async function fastAPI(endpoint, method = "GET", data = null, retryCount 
         const headers = isFD ? {} : { "content-type": "application/json" };
         const token = cacheToken;
         if (token) headers["Authorization"] = `Bearer ${token}`;
+        /* Callers may add headers — used by the admin-only endpoints to send
+           the credentials verifyAdmin expects (x-admin-secret, or
+           x-admin-userid + x-admin-role). Spread last so an explicit
+           Authorization from the caller wins over the ambient one. */
+        if (options && options.headers) Object.assign(headers, options.headers);
 
         const res = await fetch(`${requestBaseUrl}${endpoint}`, {
             method,
@@ -297,15 +303,21 @@ export const getRazorpayConfigAPI = () => fastAPI(API_ENDPOINTS.RAZORPAY_CONFIG,
 export const createRazorpayOrderAPI = (d) => fastAPI(API_ENDPOINTS.RAZORPAY_CREATE_ORDER, "POST", d, 0, RAZORPAY_API_BASE_URL);
 export const verifyRazorpayPaymentAPI = (d) => fastAPI(API_ENDPOINTS.RAZORPAY_VERIFY_PAYMENT, "POST", d, 0, RAZORPAY_API_BASE_URL);
 
-export const getContactAPI = () => fastAPI(API_ENDPOINTS.CONTACT);
-export const createContactAPI = (d) => fastAPI(API_ENDPOINTS.CONTACT, "POST", d);
-export const updateContactAPI = (d) => fastAPI(`${API_ENDPOINTS.CONTACT}/${getID(d)}`, "PUT", d);
-export const deleteContactAPI = (d) => fastAPI(`${API_ENDPOINTS.CONTACT}/${getID(d)}`, "DELETE");
+/* Contact and newsletter reads are admin-only on the server now: they return
+   customer names, emails, phone numbers and message bodies, and used to be
+   readable by anyone who knew the URL. The create calls stay unauthenticated —
+   that is the visitor submitting the form or subscribing. */
+const adminOpts = () => ({ headers: getAdminHeaders() });
 
-export const getNewslatterAPI = () => fastAPI(API_ENDPOINTS.NEWSLETTER);
+export const getContactAPI = () => fastAPI(API_ENDPOINTS.CONTACT, "GET", null, 0, null, adminOpts());
+export const createContactAPI = (d) => fastAPI(API_ENDPOINTS.CONTACT, "POST", d);
+export const updateContactAPI = (d) => fastAPI(`${API_ENDPOINTS.CONTACT}/${getID(d)}`, "PUT", d, 0, null, adminOpts());
+export const deleteContactAPI = (d) => fastAPI(`${API_ENDPOINTS.CONTACT}/${getID(d)}`, "DELETE", null, 0, null, adminOpts());
+
+export const getNewslatterAPI = () => fastAPI(API_ENDPOINTS.NEWSLETTER, "GET", null, 0, null, adminOpts());
 export const createNewslatterAPI = (d) => fastAPI(API_ENDPOINTS.NEWSLETTER, "POST", d);
-export const updateNewslatterAPI = (d) => fastAPI(`${API_ENDPOINTS.NEWSLETTER}/${getID(d)}`, "PUT", d);
-export const deleteNewslatterAPI = (d) => fastAPI(`${API_ENDPOINTS.NEWSLETTER}/${getID(d)}`, "DELETE");
+export const updateNewslatterAPI = (d) => fastAPI(`${API_ENDPOINTS.NEWSLETTER}/${getID(d)}`, "PUT", d, 0, null, adminOpts());
+export const deleteNewslatterAPI = (d) => fastAPI(`${API_ENDPOINTS.NEWSLETTER}/${getID(d)}`, "DELETE", null, 0, null, adminOpts());
 export const getFooterDataAPI = () => fastAPI(API_ENDPOINTS.FOOTER_DATA);
 
 export const getAdminFooterConfigAPI = (adminSecret) => {

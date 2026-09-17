@@ -240,37 +240,25 @@ export default function Shop() {
         };
     }, []);
 
+    /* Rating badges come from an aggregated endpoint now. This used to pull the
+       entire reviews collection and reduce it in the browser, and because the
+       effect keyed off `product.length` — which goes 0 -> N as the catalog
+       arrives — it ran at least twice on every visit. The stats are the same for
+       every shopper, so the server caches them. */
     useEffect(() => {
-        async function fetchReviewStats() {
-          try {
-            const response = await axios.get(`${BASE_URL}/api/reviews`);
-            if (response.data.success) {
-              const statsMap = {};
-              response.data.reviews.forEach(review => {
-                if (review.products && Array.isArray(review.products)) {
-                  review.products.forEach(productId => {
-                    if (!statsMap[productId]) {
-                      statsMap[productId] = { totalRating: 0, count: 0 };
-                    }
-                    statsMap[productId].totalRating += Number(review.rating) || 0;
-                    statsMap[productId].count += 1;
-                  });
-                }
-              });
+        let cancelled = false;
 
-              const finalStats = {};
-              for (const productId in statsMap) {
-                finalStats[productId] = {
-                  count: statsMap[productId].count,
-                  average: parseFloat((statsMap[productId].totalRating / statsMap[productId].count).toFixed(1))
-                };
-              }
-              setReviewStats(finalStats);
-            }
-          } catch (error) {}
-        }
-        fetchReviewStats();
-    }, [product.length]);
+        (async () => {
+            try {
+                const response = await axios.get(`${BASE_URL}/api/reviews/stats`);
+                if (!cancelled && response.data && response.data.success) {
+                    setReviewStats(response.data.stats || {});
+                }
+            } catch (error) { /* badges are optional — a failure must not block the grid */ }
+        })();
+
+        return () => { cancelled = true; };
+    }, []);
 
     useEffect(() => { setmc(maincat) }, [maincat])
 
@@ -849,7 +837,7 @@ export default function Shop() {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
                             </button>
                             <div className="mp-qv-img">
-                                <LazyImage src={[quickView.pic1, quickView.pic, quickView.pic2, quickView.pic3, quickView.pic4].find(Boolean) || ''} alt={quickView.name} maxWidth={1200} loading="eager" />
+                                <LazyImage src={[quickView.pic1, quickView.pic, quickView.pic2, quickView.pic3, quickView.pic4].find(Boolean) || ''} alt={quickView.name} maxWidth={900} eager sizes="(max-width: 700px) 90vw, 520px" />
                             </div>
                             <div className="mp-qv-body">
                                 <p className="mp-qv-brand">{quickView.brand}</p>

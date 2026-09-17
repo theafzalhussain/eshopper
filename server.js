@@ -852,20 +852,35 @@ app.get('/api/review/:productId', async (req, res) => {
             ]
         }).sort({ createdAt: -1 }).lean();
 
-        // Attach user details dynamically for a richer review display
-        for (let r of reviews) {
-            if (r.userId) {
-                try {
-                    const cleanUserId = String(r.userId).replace(/['"]/g, '');
-                    const userDoc = await User.findById(cleanUserId).select('name username pic').lean();
-                    
+        // Attach user details dynamically for a richer review display.
+        /* This was a sequential `await User.findById(...)` inside a for-loop: 40
+           reviews on a product page meant 40 serial round-trips on an uncached
+           endpoint. One $in batch replaces the whole loop, and repeat reviewers
+           are fetched once rather than once each. */
+        const userIds = [...new Set(
+            reviews
+                .map((r) => (r.userId ? String(r.userId).replace(/['"]/g, '') : null))
+                .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
+        )];
+
+        if (userIds.length) {
+            try {
+                const users = await User.find({ _id: { $in: userIds } })
+                    .select('name username pic')
+                    .lean();
+
+                const byId = new Map(users.map((u) => [String(u._id), u]));
+
+                for (const r of reviews) {
+                    if (!r.userId) continue;
+                    const userDoc = byId.get(String(r.userId).replace(/['"]/g, ''));
                     if (userDoc) {
                         r.userName = userDoc.name || userDoc.username || 'Verified Customer';
                         r.userPic = userDoc.pic;
                     }
-                } catch (e) { 
-                    console.error('⚠️ Review user fetch error:', e.message);
                 }
+            } catch (e) {
+                console.error('⚠️ Review user fetch error:', e.message);
             }
         }
 
@@ -878,9 +893,52 @@ app.get('/api/review/:productId', async (req, res) => {
 });
 
 // 🔴 GET ALL REVIEWS (Optional - for admin dashboard)
+/* Rating rollups per product, aggregated in Mongo.
+   The shop grid needs only {average, count} per product to draw its rating
+   badges, but it was downloading the entire reviews collection and reducing it in
+   the browser — twice, because its effect depended on the product count, which
+   goes 0 -> N as the catalog arrives. This returns a few bytes per product
+   instead, and is cacheable because it is identical for everyone. */
+app.get('/api/reviews/stats', cacheMiddleware(120), async (req, res) => {
+    try {
+        const rows = await Review.aggregate([
+            { $match: { rating: { $type: 'number' } } },
+            { $unwind: '$products' },
+            {
+                $group: {
+                    _id: { $toString: '$products' },
+                    average: { $avg: '$rating' },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const stats = {};
+        for (const row of rows) {
+            if (!row._id) continue;
+            stats[row._id] = {
+                average: Math.round((row.average || 0) * 10) / 10,
+                count: row.count || 0
+            };
+        }
+
+        res.status(200).json({ success: true, stats });
+    } catch (error) {
+        console.error('❌ Review stats error:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to fetch review stats' });
+    }
+});
+
 app.get('/api/reviews', async (req, res) => {
     try {
-        const reviews = await Review.find().sort({ createdAt: -1 });
+        /* .lean() and a ceiling added deliberately: this returned every review as
+           a full Mongoose document, and the shop grid used to call it to build its
+           rating badges. The cap is far above the real collection size — it exists
+           so the endpoint cannot become unbounded. */
+        const reviews = await Review.find()
+            .sort({ createdAt: -1 })
+            .limit(Math.min(Number(req.query.limit) || 2000, 5000))
+            .lean();
         res.status(200).json({ success: true, reviews });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Failed to fetch reviews' });
@@ -5005,7 +5063,19 @@ async function startServer() {
 
                 // Filter by payment status (case-insensitive)
                 if (paymentStatus) {
-                    query.paymentStatus = { $regex: `^${paymentStatus}$`, $options: 'i' };
+                    /* Was `{ $regex: '^value$', $options: 'i' }`. An anchored
+                       case-insensitive regex cannot be turned into index bounds, so
+                       this filter forced a collection scan even though
+                       { paymentStatus: 1, createdAt: -1 } exists — and the
+                       countDocuments below ran the same unindexable filter again.
+                       paymentStatus has no enum on the schema, so the incoming
+                       value is normalised against the statuses the app actually
+                       writes and then matched by equality. */
+                    const KNOWN_PAYMENT_STATUSES = ['Pending', 'Paid', 'Failed', 'Refunded', 'Verified', 'Partially Refunded'];
+                    const canonical = KNOWN_PAYMENT_STATUSES.find(
+                        (s) => s.toLowerCase() === paymentStatus.toLowerCase()
+                    );
+                    query.paymentStatus = canonical || { $regex: `^${paymentStatus}$`, $options: 'i' };
                 }
 
                 // Filter by date range (createdAt)

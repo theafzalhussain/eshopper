@@ -1,0 +1,520 @@
+{
+  "/assets/images/CR-6.png": {
+    "width": 4000,
+    "height": 6000,
+    "originalBytes": 21436438,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/CR-6-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/CR-6-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/CR-6-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/CR-5.png": {
+    "width": 3744,
+    "height": 5616,
+    "originalBytes": 15270096,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/CR-5-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/CR-5-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/CR-5-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/CR-3.png": {
+    "width": 4000,
+    "height": 6000,
+    "originalBytes": 15087002,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/CR-3-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/CR-3-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/CR-3-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/CR-2.png": {
+    "width": 3456,
+    "height": 5184,
+    "originalBytes": 12681033,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/CR-2-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/CR-2-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/CR-2-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/CR-1.png": {
+    "width": 3376,
+    "height": 6000,
+    "originalBytes": 10117467,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/CR-1-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/CR-1-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/CR-1-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/kids3.png": {
+    "width": 5760,
+    "height": 3840,
+    "originalBytes": 8443829,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/kids3-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/kids3-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/kids3-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/CR-7.png": {
+    "width": 2919,
+    "height": 3649,
+    "originalBytes": 7105246,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/CR-7-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/CR-7-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/CR-7-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/banner-3.png": {
+    "width": 2556,
+    "height": 3549,
+    "originalBytes": 6785829,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/banner-3-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/banner-3-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/banner-3-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/CR-4.png": {
+    "width": 3309,
+    "height": 4963,
+    "originalBytes": 5708988,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/CR-4-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/CR-4-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/CR-4-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/prod-1.png": {
+    "width": 1920,
+    "height": 1280,
+    "originalBytes": 2015871,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/prod-1-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/prod-1-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/prod-1-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/bn-5.png": {
+    "width": 2300,
+    "height": 2300,
+    "originalBytes": 1981525,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/bn-5-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/bn-5-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/bn-5-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/kids 2.png": {
+    "width": 1024,
+    "height": 1536,
+    "originalBytes": 1778573,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/kids 2-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/kids 2-960.webp"
+      }
+    ]
+  },
+  "/assets/images/banner-1.png": {
+    "width": 2000,
+    "height": 1625,
+    "originalBytes": 1731060,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/banner-1-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/banner-1-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/banner-1-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/prod-2.png": {
+    "width": 2000,
+    "height": 1335,
+    "originalBytes": 1612221,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/prod-2-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/prod-2-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/prod-2-1600.webp"
+      }
+    ]
+  },
+  "/assets/images/summer2.png": {
+    "width": 1024,
+    "height": 1536,
+    "originalBytes": 1514682,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/summer2-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/summer2-960.webp"
+      }
+    ]
+  },
+  "/assets/images/urban2.png": {
+    "width": 1024,
+    "height": 1536,
+    "originalBytes": 1380312,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/urban2-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/urban2-960.webp"
+      }
+    ]
+  },
+  "/assets/images/Exclusive Deals 2.png": {
+    "width": 1024,
+    "height": 1024,
+    "originalBytes": 1035505,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/Exclusive Deals 2-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/Exclusive Deals 2-960.webp"
+      }
+    ]
+  },
+  "/assets/images/bn-2.png": {
+    "width": 802,
+    "height": 1460,
+    "originalBytes": 981023,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/bn-2-480.webp"
+      }
+    ]
+  },
+  "/assets/images/product-9.png": {
+    "width": 1180,
+    "height": 805,
+    "originalBytes": 768337,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/product-9-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/product-9-960.webp"
+      }
+    ]
+  },
+  "/assets/images/banner-2.png": {
+    "width": 1000,
+    "height": 750,
+    "originalBytes": 617603,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/banner-2-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/banner-2-960.webp"
+      }
+    ]
+  },
+  "/assets/images/about.jpg": {
+    "width": 1000,
+    "height": 750,
+    "originalBytes": 602280,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/about-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/about-960.webp"
+      }
+    ]
+  },
+  "/assets/images/product-8.png": {
+    "width": 800,
+    "height": 1200,
+    "originalBytes": 537741,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/product-8-480.webp"
+      }
+    ]
+  },
+  "/assets/images/product-6.png": {
+    "width": 800,
+    "height": 1200,
+    "originalBytes": 528082,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/product-6-480.webp"
+      }
+    ]
+  },
+  "/assets/images/product-2.png": {
+    "width": 800,
+    "height": 1200,
+    "originalBytes": 517924,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/product-2-480.webp"
+      }
+    ]
+  },
+  "/assets/images/product-5.png": {
+    "width": 800,
+    "height": 1200,
+    "originalBytes": 492585,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/product-5-480.webp"
+      }
+    ]
+  },
+  "/assets/images/product-4.png": {
+    "width": 800,
+    "height": 1200,
+    "originalBytes": 483508,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/product-4-480.webp"
+      }
+    ]
+  },
+  "/assets/images/product-1.png": {
+    "width": 800,
+    "height": 1200,
+    "originalBytes": 477021,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/product-1-480.webp"
+      }
+    ]
+  },
+  "/assets/images/bg_1.jpg": {
+    "width": 1000,
+    "height": 1205,
+    "originalBytes": 476211,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/bg_1-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/bg_1-960.webp"
+      }
+    ]
+  },
+  "/assets/images/product-7.png": {
+    "width": 800,
+    "height": 1200,
+    "originalBytes": 473091,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/product-7-480.webp"
+      }
+    ]
+  },
+  "/assets/images/bn-1.png": {
+    "width": 718,
+    "height": 1651,
+    "originalBytes": 461106,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/bn-1-480.webp"
+      }
+    ]
+  },
+  "/assets/images/bn-3.png": {
+    "width": 534,
+    "height": 800,
+    "originalBytes": 366877,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/bn-3-480.webp"
+      }
+    ]
+  },
+  "/assets/images/product-3.png": {
+    "width": 800,
+    "height": 1200,
+    "originalBytes": 345457,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/product-3-480.webp"
+      }
+    ]
+  },
+  "/assets/images/Bg-1.png": {
+    "width": 572,
+    "height": 723,
+    "originalBytes": 289185,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/Bg-1-480.webp"
+      }
+    ]
+  },
+  "/assets/images/choose-2.jpg": {
+    "width": 3000,
+    "height": 1625,
+    "originalBytes": 282241,
+    "variants": [
+      {
+        "width": 480,
+        "src": "/assets/images/choose-2-480.webp"
+      },
+      {
+        "width": 960,
+        "src": "/assets/images/choose-2-960.webp"
+      },
+      {
+        "width": 1600,
+        "src": "/assets/images/choose-2-1600.webp"
+      }
+    ]
+  }
+}

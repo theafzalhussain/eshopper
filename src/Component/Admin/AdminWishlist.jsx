@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { thumbUrl } from '../../utils/cloudinaryHelper';
 import { useSelector, useDispatch } from 'react-redux';
 import LefNav from './LefNav'
 import { deleteWishlist, getWishlist } from '../../Store/ActionCreaters/WishlistActionCreators';
@@ -45,7 +46,7 @@ export default function AdminWishlist() {
                                         {wishlist.length ? wishlist.map((row) => (
                                             <tr key={row.id}>
                                                 <td className="small d-none d-md-table-cell">{row.id}</td>
-                                                <td><img src={row.pic} height="40px" width="40px" className="rounded shadow-sm" style={{objectFit:'cover'}} alt="" /></td>
+                                                <td><img src={thumbUrl(row.pic, 40)} height="40px" width="40px" loading="lazy" decoding="async" className="rounded shadow-sm" style={{objectFit:'cover'}} alt="" /></td>
                                                 <td className="small font-weight-bold">{row.name}</td>
                                                 <td className="text-muted small d-none d-lg-table-cell">{row.userid}</td>
                                                 <td className="text-info font-weight-bold">₹{row.price}</td>

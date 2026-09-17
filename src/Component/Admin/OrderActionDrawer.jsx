@@ -16,6 +16,7 @@ import {
     X
 } from 'lucide-react';
 import './OrderActionDrawer.css';
+import { getAdminHeaders } from './adminAuth';
 
 const formatOrderDate = (value) => {
     if (!value) return 'N/A';
@@ -76,7 +77,6 @@ export default function OrderActionDrawer({
     order,
     updating,
     apiBaseUrl,
-    adminSecret,
     allowedStatuses,
     deliveryTimeSlots,
     status,
@@ -125,7 +125,7 @@ export default function OrderActionDrawer({
             try {
                 setLoadingOrder(true);
                 const response = await axios.get(`${apiBaseUrl}/api/admin/order/${order.orderId}`, {
-                    headers: adminSecret ? { 'x-admin-secret': adminSecret } : {}
+                    headers: getAdminHeaders()
                 });
 
                 const payload = response?.data?.order && typeof response.data.order === 'object'
@@ -158,7 +158,7 @@ export default function OrderActionDrawer({
         return () => {
             isMounted = false;
         };
-    }, [open, order?.orderId, apiBaseUrl, adminSecret]);
+    }, [open, order?.orderId, apiBaseUrl]);
 
     const orderView = fullOrder || order || {};
 
@@ -222,12 +222,11 @@ export default function OrderActionDrawer({
                                         <span className="summary-label">Refund</span>
                                         <strong style={{ display: 'block', color: orderView.refund.status === 'COMPLETED' ? '#16a34a' : '#b91c1c' }}>{orderView.refund.status}</strong>
                                         {orderView.refund.amount ? <div style={{ marginTop: 6, color: '#475569' }}>{formatInr(orderView.refund.amount)}</div> : null}
-                                        {orderView.refund.status !== 'COMPLETED' && adminSecret && (
+                                        {orderView.refund.status !== 'COMPLETED' && (
                                             <div style={{ marginTop: 8 }}>
                                                 <button className="order-retry-btn" onClick={async () => {
                                                     try {
-                                                        const hdr = adminSecret ? { 'x-admin-secret': adminSecret } : {};
-                                                        await axios.post(`${apiBaseUrl}/api/admin/orders/${encodeURIComponent(orderView.orderId)}/refund/retry`, {}, { headers: hdr });
+                                                        await axios.post(`${apiBaseUrl}/api/admin/orders/${encodeURIComponent(orderView.orderId)}/refund/retry`, {}, { headers: getAdminHeaders() });
                                                         alert('Refund retried and queued');
                                                     } catch (e) {
                                                         alert('Failed to queue refund retry');

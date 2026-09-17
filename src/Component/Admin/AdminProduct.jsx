@@ -9,6 +9,7 @@ import { catalogQueryKeys } from '../../queries/catalogQueries';
 import { motion } from 'framer-motion';
 import { Plus, Edit3, Trash2, LayoutGrid, AlertTriangle, CheckCircle, Search, Package } from 'lucide-react';
 import { getSocket } from './socket';
+import { thumbUrl } from '../../utils/cloudinaryHelper';
 import './SystemControlCenter.css';
 
 export default function AdminProduct() {
@@ -185,7 +186,7 @@ export default function AdminProduct() {
                                                         onChange={() => handleProductSelect(row.id)} 
                                                     />
                                                 </td>
-                                                <td><img src={row.pic1} height="50px" width="50px" style={{objectFit:'cover', borderRadius:'10px'}} alt="" /></td>
+                                                <td><img src={thumbUrl(row.pic1, 50)} height="50px" width="50px" loading="lazy" decoding="async" style={{objectFit:'cover', borderRadius:'10px'}} alt="" /></td>
                                                 <td className="font-weight-bold color-ink">{row.name}</td>
                                                 <td className="color-muted">{row.maincategory}</td>
                                                 <td className="color-muted">{row.brand}</td>

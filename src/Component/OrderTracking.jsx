@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { thumbUrl } from '../utils/cloudinaryHelper';
 import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { io } from 'socket.io-client'
@@ -9,8 +10,6 @@ import autoTable from 'jspdf-autotable'
 import { BASE_URL, SOCKET_TRANSPORTS } from '../constants'
 import { useToast } from './ToastNotification'
 import { useSelector, useDispatch } from 'react-redux'
-import { queryClient } from '../queries/queryClient'
-import { catalogQueryKeys } from '../queries/catalogQueries'
 import {
   Package, Archive, Truck, MapPin, BadgeCheck, Calendar,
   RefreshCw, RotateCcw, Copy, Clock3, Home, Phone, Mail, Sparkles, Gauge, Wallet,
@@ -1667,7 +1666,8 @@ export default function OrderTracking() {
   const dispatch = useDispatch()
   const productState = useSelector((state) => state.ProductStateData) || []
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products })
+    /* see CatalogQueryBridge — an order-tracking page has no reason to
+       re-download the entire shop catalog */
   }, [dispatch])
 
   const [status, setStatus] = useState('Ordered')
@@ -2646,7 +2646,7 @@ export default function OrderTracking() {
                   {/* Product Info */}
                   {orderItemsDetailed.length > 0 && (
                     <div className="rev-product-info">
-                      <img src={orderItemsDetailed[0].image} alt={orderItemsDetailed[0].name} className="rev-product-img" />
+                      <img src={thumbUrl(orderItemsDetailed[0].image, 120)} alt={orderItemsDetailed[0].name} className="rev-product-img" loading="lazy" decoding="async" />
                       <div>
                         <p className="rev-product-name">{orderItemsDetailed[0].name}</p>
                         {orderItemsDetailed.length > 1 && (
@@ -3044,7 +3044,7 @@ export default function OrderTracking() {
                     {orderItemsDetailed.map((item, idx) => (
                       <motion.div key={`${item.id}-${idx}`} className="ot-item-card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: idx * 0.05 }}>
                         {item.image ? (
-                          <img src={item.image} alt={item.name} className="ot-item-image" />
+                          <img src={thumbUrl(item.image, 110)} alt={item.name} className="ot-item-image" loading="lazy" decoding="async" />
                         ) : (
                           <div className="ot-item-image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>No Image</div>
                         )}

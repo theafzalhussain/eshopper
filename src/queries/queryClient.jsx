@@ -13,8 +13,12 @@ export const queryClient = new QueryClient({
             refetchOnMount: false,
             retry: 1,
             retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
-            /* keep showing cached data instead of flashing a spinner */
-            notifyOnChangeProps: ['data', 'error', 'isLoading', 'isFetching']
+            /* keep showing cached data instead of flashing a spinner.
+               `isFetching` was in this list, which meant every observer of a query
+               re-rendered twice per background refetch — once when it started, once
+               when it ended. Nothing in the app reads isFetching from these
+               queries, so those renders bought nothing. */
+            notifyOnChangeProps: ['data', 'error', 'isLoading']
         },
         mutations: {
             retry: 0

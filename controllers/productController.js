@@ -31,11 +31,79 @@ const invalidateProductCaches = async () => {
     try {
         await Promise.allSettled([
             ...PRODUCT_CACHE_PATTERNS.map(pattern => clearCache(pattern)),
-            Promise.resolve(clearQueryCache('product'))
+            Promise.resolve(clearQueryCache('product')),
+            /* A new brand or category only becomes filterable once the
+               canonical-value snapshot knows about it. */
+            refreshFacetValues()
         ]);
     } catch (err) {
         console.warn('⚠️ invalidateProductCaches error:', err && err.message);
     }
+};
+
+/* ── Canonical facet values ──────────────────────────────────────────
+   The category/brand filters were built as anchored case-insensitive regexes:
+   /^Mens$/i. Mongo can only turn a *case-sensitive* prefix regex into index
+   bounds, so /^x$/i is unindexable — which meant every one of the ten Product
+   indexes was unreachable from /product/search. The $match became a full
+   collection scan, then a $sort, then a $facet with four $group stages over the
+   entire matched set, recomputed for every page of every filter combination.
+
+   Rather than force callers to send exact casing, the incoming value is resolved
+   against the values actually stored (checked live: 5 maincategories, 14
+   subcategories, 8 brands, with no case variants and no stray whitespace), and
+   the query then uses plain equality — which does use the indexes. If a value
+   cannot be resolved, the old regex is used as a fallback so nothing that used to
+   match silently stops matching. */
+const FACET_FIELDS = ['maincategory', 'subcategory', 'brand'];
+const FACET_CACHE_TTL_MS = 5 * 60 * 1000;
+
+let facetValues = null;        // { field: Map(lowercased -> stored value) }
+let facetValuesAt = 0;
+let facetRefreshInFlight = null;
+
+const refreshFacetValues = async () => {
+    if (facetRefreshInFlight) return facetRefreshInFlight;
+
+    facetRefreshInFlight = (async () => {
+        try {
+            const entries = await Promise.all(
+                FACET_FIELDS.map(async (field) => {
+                    const values = await Product.distinct(field);
+                    const map = new Map();
+                    for (const value of values) {
+                        if (typeof value !== 'string' || !value.trim()) continue;
+                        map.set(value.trim().toLowerCase(), value);
+                    }
+                    return [field, map];
+                })
+            );
+            facetValues = Object.fromEntries(entries);
+            facetValuesAt = Date.now();
+        } catch (err) {
+            console.warn('Facet value refresh failed:', err && err.message);
+        } finally {
+            facetRefreshInFlight = null;
+        }
+    })();
+
+    return facetRefreshInFlight;
+};
+
+/* Synchronous read of the snapshot, with a background refresh when stale. Kept
+   sync deliberately: buildProductMatch is called from a sync pipeline builder,
+   and making it async would ripple through every caller. */
+const canonicalFacetValue = (field, value) => {
+    const stale = !facetValues || (Date.now() - facetValuesAt) > FACET_CACHE_TTL_MS;
+    if (stale) refreshFacetValues();
+    if (!facetValues || !facetValues[field]) return null;
+    return facetValues[field].get(String(value).trim().toLowerCase()) || null;
+};
+
+/* Equality when we can resolve the value (index-friendly), regex otherwise. */
+const facetMatcher = (field, value) => {
+    const canonical = canonicalFacetValue(field, value);
+    return canonical !== null ? canonical : new RegExp(`^${escapeRegex(value)}$`, 'i');
 };
 
 const buildProductMatch = (query = {}) => {
@@ -51,9 +119,9 @@ const buildProductMatch = (query = {}) => {
     const rating = Number(query.rating || 0);
     const discount = Number(query.discount || 0);
 
-    if (maincategory && maincategory !== 'All') match.maincategory = new RegExp(`^${escapeRegex(maincategory)}$`, 'i');
-    if (subcategory && subcategory !== 'All') match.subcategory = new RegExp(`^${escapeRegex(subcategory)}$`, 'i');
-    if (brand && brand !== 'All') match.brand = new RegExp(`^${escapeRegex(brand)}$`, 'i');
+    if (maincategory && maincategory !== 'All') match.maincategory = facetMatcher('maincategory', maincategory);
+    if (subcategory && subcategory !== 'All') match.subcategory = facetMatcher('subcategory', subcategory);
+    if (brand && brand !== 'All') match.brand = facetMatcher('brand', brand);
     if (size && size !== 'All') match.size = size.toUpperCase() === '2XL'
         ? { $in: ['2XL', 'XXL'] }
         : { $in: [size.toUpperCase()] };
