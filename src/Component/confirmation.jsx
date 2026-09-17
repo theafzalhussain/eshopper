@@ -5,8 +5,6 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { Package, Truck, CheckCircle2, Download, Plus, ShieldCheck, RotateCcw, Headphones, Copy, RefreshCw, Share2, FileText, Radar, Sparkles, CreditCard, Calendar, ChevronRight, X } from 'lucide-react';
 import { clearCart, getCart, addCart } from '../Store/ActionCreaters/CartActionCreators';
-import { queryClient } from '../queries/queryClient';
-import { catalogQueryKeys } from '../queries/catalogQueries';
 import { API_ENDPOINTS, BASE_URL, BRAND_LOGO_URL, FRONTEND_URL, SOCKET_TRANSPORTS } from '../constants';
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
 import { useToast } from './ToastNotification';
@@ -148,7 +146,7 @@ export default function Confirmation() {
   }, [canCancelOrder, cancelling, fetchLatestOrder, order?.orderId, toast, userId]);
 
   useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
+    /* see CatalogQueryBridge — catalog refetch is realtime-driven now */
     async function syncOrder() {
       const locationState = location.state;
       let fallbackOrder = null;

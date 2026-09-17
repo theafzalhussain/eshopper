@@ -1,33 +1,28 @@
-import React, { useState, useEffect, memo } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import { addNewslatter, getNewslatter } from "../Store/ActionCreaters/NewslatterActionCreators"
+import React, { useState, memo } from 'react'
+import { useDispatch } from 'react-redux'
+import { addNewslatter } from "../Store/ActionCreaters/NewslatterActionCreators"
 import { motion } from 'framer-motion'
 
 const Newslatter = () => {
     var [email, setemail] = useState("")
     var [show, setshow] = useState(false)
     var [msg, setmsg] = useState("")
-    
-    var newslatter = useSelector((state) => state.NewslatterStateData)
+
     var dispatch = useDispatch()
 
+    /* The duplicate check used to run in the browser against the full
+       subscriber list, which this component downloaded on mount — so every
+       visitor received every subscriber's email address. The email field is
+       unique in the database and the API already answers with an
+       "email already exists" message, so the check belongs on the server.
+       Reading the list is admin-only now. */
     function postData(e) {
         e.preventDefault()
-        var d = newslatter.find((item) => item.email === email)
-        if (d) {
-            setshow(true)
-            setmsg("This email is already our VIP member!")
-        } else {
-            dispatch(addNewslatter({ email: email }))
-            setshow(true)
-            setmsg("Welcome! You've successfully subscribed.")
-            setemail("")
-        }
+        dispatch(addNewslatter({ email: email }))
+        setshow(true)
+        setmsg("Welcome! You've successfully subscribed.")
+        setemail("")
     }
-
-    useEffect(() => {
-        dispatch(getNewslatter())
-    }, [newslatter.length, dispatch])
 
     return (
         <section className="py-5" style={{ background: '#1a1a1a' }}>

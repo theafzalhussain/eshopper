@@ -5,8 +5,6 @@ import { useSelector, useDispatch } from 'react-redux'
 import axios from 'axios'
 import { getUser } from "../Store/ActionCreaters/UserActionCreators"
 import { clearCart, getCart } from "../Store/ActionCreaters/CartActionCreators"
-import { queryClient } from '../queries/queryClient';
-import { catalogQueryKeys } from '../queries/catalogQueries';
 import { useMembership } from './MembershipContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { optimizeCloudinaryUrlAdvanced } from '../utils/cloudinaryHelper';
@@ -311,7 +309,8 @@ export default function Checkout() {
 
     useEffect(() => {
         dispatch(getUser())
-        queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
+        /* see CatalogQueryBridge — the catalog is refreshed on realtime dbChange,
+           not on every checkout mount */
         if (!location.state?.direct) {
             dispatch(getCart())
         }

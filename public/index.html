@@ -36,6 +36,27 @@
   <link rel="dns-prefetch" href="https://media.istockphoto.com" />
   <link rel="dns-prefetch" href="https://assets.myntassets.com" />
   <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+
+  <!-- ═══════════════════════════════════════════════════════════════════
+       HERO PRELOAD — the home page's LCP element.
+
+       The hero was a 14.4 MB PNG (the next slide 20.4 MB) discovered only after
+       React had mounted, parsed the route chunk and rendered Home. These WebP
+       variants are 33 KB / 95 KB / 212 KB, and preloading the first slide lets
+       the browser start it while the JS is still parsing.
+
+       Only slide 1 is preloaded on purpose — the remaining slides must stay lazy
+       or the saving is handed straight back. imagesrcset/sizes mirror the <img>
+       in Home.jsx so the browser picks the same file and does not download two.
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <link
+    rel="preload"
+    as="image"
+    href="%PUBLIC_URL%/assets/images/CR-3-960.webp"
+    imagesrcset="%PUBLIC_URL%/assets/images/CR-3-480.webp 480w, %PUBLIC_URL%/assets/images/CR-3-960.webp 960w, %PUBLIC_URL%/assets/images/CR-3-1600.webp 1600w"
+    imagesizes="(max-width: 900px) 100vw, 50vw"
+    fetchpriority="high"
+  />
   <style>
     /* Prevent browser text auto-zoom on mobile and ensure consistent UI rendering across all devices */
     html {

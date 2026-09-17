@@ -82,10 +82,18 @@ export default function VirtualProductGrid({
     const [visibleCount, setVisibleCount] = useState(FIRST_BATCH);
     const sentinelRef = useRef(null);
 
-    /* reset the window whenever the result set changes (filter, sort, search) */
+    /* Reset the window when the *result set* changes — a filter, sort or search.
+       This used to key off `safeItems.length`, which also fires when a background
+       catalog refetch or a rating-stats update merely changes the count, throwing
+       away everything the shopper had scrolled past. Keying off the identity of
+       the first and last item distinguishes "different results" from "same browse,
+       slightly different length". */
+    const firstId = safeItems.length ? (safeItems[0].id || safeItems[0]._id) : null;
+    const lastId = safeItems.length ? (safeItems[safeItems.length - 1].id || safeItems[safeItems.length - 1]._id) : null;
+
     useEffect(() => {
         setVisibleCount(FIRST_BATCH);
-    }, [safeItems.length]);
+    }, [firstId, lastId]);
 
     const showMore = useCallback(() => {
         setVisibleCount((c) => (c >= safeItems.length ? c : c + BATCH_STEP));
@@ -258,7 +266,8 @@ const ProductCardInner = ({
                     eager={priority}
                     className="mp-img mp-img-primary"
                     alt={item.name}
-                    maxWidth={600}
+                    maxWidth={320}
+                    sizes="(max-width: 600px) 50vw, (max-width: 1100px) 33vw, 300px"
                 />
                 {altMounted && altImg && (
                     <LazyImage
@@ -266,7 +275,8 @@ const ProductCardInner = ({
                         className={`mp-img mp-img-alt${altReady ? ' is-ready' : ''}`}
                         alt=""
                         aria-hidden="true"
-                        maxWidth={600}
+                        maxWidth={320}
+                    sizes="(max-width: 600px) 50vw, (max-width: 1100px) 33vw, 300px"
                         onLoad={(e) => { if (e.currentTarget && e.currentTarget.naturalWidth > 0) setAltReady(true); }}
                     />
                 )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+﻿import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { BASE_URL } from '../../constants'
 import { useToast } from '../ToastNotification'
+import { getAdminHeaders } from './adminAuth'
 import '../../styles/AdminReturnManagement.css'
 
 const AdminReturnManagement = () => {
@@ -23,17 +24,16 @@ const AdminReturnManagement = () => {
   const [showActionModal, setShowActionModal] = useState(false)
   const [actionType, setActionType] = useState(null)
   const [actionData, setActionData] = useState({})
-  const [adminSecret] = useState(localStorage.getItem('adminSecret') || process.env.REACT_APP_ADMIN_SECRET)
 
   const returnStatuses = [
-    { value: 'all', label: '📋 All Returns', color: '#9A9490' },
-    { value: 'REQUESTED', label: '📝 Requested', color: '#1A8C8C' },
-    { value: 'APPROVED', label: '✅ Approved', color: '#16A34A' },
-    { value: 'PICKED_UP', label: '🚚 Picked Up', color: '#F59E0B' },
-    { value: 'IN_TRANSIT', label: '📦 In Transit', color: '#3B82F6' },
-    { value: 'RECEIVED', label: '📥 Received', color: '#8B5CF6' },
-    { value: 'REFUND_COMPLETED', label: '💰 Refunded', color: '#10B981' },
-    { value: 'REJECTED', label: '❌ Rejected', color: '#DC2626' }
+    { value: 'all', label: 'ðŸ“‹ All Returns', color: '#9A9490' },
+    { value: 'REQUESTED', label: 'ðŸ“ Requested', color: '#1A8C8C' },
+    { value: 'APPROVED', label: 'âœ… Approved', color: '#16A34A' },
+    { value: 'PICKED_UP', label: 'ðŸšš Picked Up', color: '#F59E0B' },
+    { value: 'IN_TRANSIT', label: 'ðŸ“¦ In Transit', color: '#3B82F6' },
+    { value: 'RECEIVED', label: 'ðŸ“¥ Received', color: '#8B5CF6' },
+    { value: 'REFUND_COMPLETED', label: 'ðŸ’° Refunded', color: '#10B981' },
+    { value: 'REJECTED', label: 'âŒ Rejected', color: '#DC2626' }
   ]
 
   // Fetch returns data
@@ -50,7 +50,7 @@ const AdminReturnManagement = () => {
       const response = await axios.get(
         `${BASE_URL}/api/admin/returns?${params}`,
         {
-          headers: { 'x-admin-secret': adminSecret }
+          headers: getAdminHeaders()
         }
       )
 
@@ -62,7 +62,7 @@ const AdminReturnManagement = () => {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter, searchQuery, page, adminSecret, showToast])
+  }, [statusFilter, searchQuery, page, showToast])
 
   // Fetch stats
   const fetchStats = useCallback(async () => {
@@ -70,7 +70,7 @@ const AdminReturnManagement = () => {
       const response = await axios.get(
         `${BASE_URL}/api/admin/returns/stats`,
         {
-          headers: { 'x-admin-secret': adminSecret }
+          headers: getAdminHeaders()
         }
       )
 
@@ -80,7 +80,7 @@ const AdminReturnManagement = () => {
     } catch (error) {
       console.error('Failed to fetch stats:', error)
     }
-  }, [adminSecret])
+  }, [])
 
   useEffect(() => {
     fetchReturns()
@@ -108,7 +108,7 @@ const AdminReturnManagement = () => {
       const response = await axios.put(
         `${BASE_URL}/api/admin/returns/${orderId}/status`,
         { status: newStatus, ...extraData },
-        { headers: { 'x-admin-secret': adminSecret } }
+        { headers: getAdminHeaders() }
       )
 
       if (response.data.success) {
@@ -127,7 +127,7 @@ const AdminReturnManagement = () => {
       const response = await axios.post(
         `${BASE_URL}/api/admin/returns/${orderId}/mark-received`,
         { adminInspectionNotes: actionData.notes || '' },
-        { headers: { 'x-admin-secret': adminSecret } }
+        { headers: getAdminHeaders() }
       )
 
       if (response.data.success) {
@@ -148,7 +148,7 @@ const AdminReturnManagement = () => {
       const response = await axios.post(
         `${BASE_URL}/api/admin/returns/${orderId}/refund`,
         { adminNotes: actionData.notes || '' },
-        { headers: { 'x-admin-secret': adminSecret } }
+        { headers: getAdminHeaders() }
       )
 
       if (response.data.success) {
@@ -163,7 +163,7 @@ const AdminReturnManagement = () => {
     }
   }
 
-  // Handle schedule pickup (APPROVED → PICKED_UP)
+  // Handle schedule pickup (APPROVED â†’ PICKED_UP)
   const handleSchedulePickup = async (orderId) => {
     try {
       const response = await axios.put(
@@ -174,7 +174,7 @@ const AdminReturnManagement = () => {
           pickupAgent: actionData.pickupAgent || '',
           riderPhone: actionData.riderPhone || ''
         },
-        { headers: { 'x-admin-secret': adminSecret } }
+        { headers: getAdminHeaders() }
       )
 
       if (response.data.success) {
@@ -248,7 +248,7 @@ const AdminReturnManagement = () => {
             </div>
             <div className="arm-stat-content">
               <p className="arm-stat-label">Total Refunded</p>
-              <p className="arm-stat-value">₹{(stats.totalRefundAmount || 0).toLocaleString('en-IN')}</p>
+              <p className="arm-stat-value">â‚¹{(stats.totalRefundAmount || 0).toLocaleString('en-IN')}</p>
             </div>
           </motion.div>
         </div>
@@ -337,7 +337,7 @@ const AdminReturnManagement = () => {
                   <div className="arm-card-body">
                     <div className="arm-detail-row">
                       <span className="arm-detail-label">Amount:</span>
-                      <span className="arm-detail-value">₹{item.finalAmount.toLocaleString('en-IN')}</span>
+                      <span className="arm-detail-value">â‚¹{item.finalAmount.toLocaleString('en-IN')}</span>
                     </div>
                     <div className="arm-detail-row">
                       <span className="arm-detail-label">Reason:</span>
@@ -530,7 +530,7 @@ const AdminReturnManagement = () => {
                     </div>
                     <div className="arm-detail-item">
                       <span className="arm-detail-label">Return Amount:</span>
-                      <span className="arm-detail-value">₹{selectedReturn.return.returnRefundAmount || selectedReturn.finalAmount}</span>
+                      <span className="arm-detail-value">â‚¹{selectedReturn.return.returnRefundAmount || selectedReturn.finalAmount}</span>
                     </div>
                     <div className="arm-detail-item">
                       <span className="arm-detail-label">Refund Status:</span>
@@ -661,7 +661,7 @@ const AdminReturnManagement = () => {
                       </p>
                       <p className="arm-form-info-text">
                         {actionType === 'mark-received' && 'Once marked as received, refund will be automatically processed after 24 hours.'}
-                        {actionType === 'process-refund' && `Refund of ₹${(selectedReturn.return?.returnRefundAmount || selectedReturn.finalAmount || 0).toLocaleString('en-IN')} will be processed to the customer's payment method.`}
+                        {actionType === 'process-refund' && `Refund of â‚¹${(selectedReturn.return?.returnRefundAmount || selectedReturn.finalAmount || 0).toLocaleString('en-IN')} will be processed to the customer's payment method.`}
                         {actionType === 'reject' && 'The customer will be notified that their return request has been rejected with the reason provided.'}
                         {actionType === 'schedule-pickup' && 'Pickup will be scheduled and customer will be notified. Status will change to PICKED_UP.'}
                       </p>

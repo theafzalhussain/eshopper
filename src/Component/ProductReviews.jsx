@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { thumbUrl } from '../utils/cloudinaryHelper';
 import axios from 'axios';
 import { Star, User, BadgeCheck, ThumbsUp, X, Loader2, Camera, Sparkles, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -396,7 +397,7 @@ export default function ProductReviews({ productId, onStatsUpdate }) {
                                 <div className="d-flex align-items-start mb-3">
                                     <div className="rounded-circle d-flex align-items-center justify-content-center mr-3 overflow-hidden" style={{ width: '50px', height: '50px', background: "#f8f9fa", border: "1px solid rgba(212,175,55,0.3)", color: "#D4AF37", flexShrink: 0 }}>
                                         {review.userPic ? (
-                                            <img src={review.userPic} alt="User" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                            <img src={thumbUrl(review.userPic, 50)} alt="User" loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                         ) : (
                                             <User size={24} />
                                         )}

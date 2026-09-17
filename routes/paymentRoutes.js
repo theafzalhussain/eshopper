@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const Order = require('../models/Order');
+const realtimeBus = require('../utils/realtimeBus');
 
 // Razorpay webhook endpoint
 router.post('/api/payments/razorpay/webhook', express.json({ type: '*/*' }), async (req, res) => {
@@ -38,7 +39,14 @@ router.post('/api/payments/razorpay/webhook', express.json({ type: '*/*' }), asy
           try { order.statusHistory = Array.isArray(order.statusHistory) ? order.statusHistory : []; order.statusHistory.push({ status: 'Refunded', timestamp: new Date(), message: `Refund processed via webhook: ${razorpayRefundId || ''}` }); } catch (e) {}
           await order.save();
           // Emit socket if available
-          try { const app = require('../server').getApp(); const io = app.get('io'); if (io) io.emit('orderRefundProcessed', { orderId: order.orderId, refundId: razorpayRefundId, status: order.refund.status }); } catch (e) {}
+          /* was `require('../server').getApp()` — server.js has no
+             module.exports, so this threw a TypeError into an empty catch and the
+             webhook's realtime notification never fired. */
+          {
+            const payload = { orderId: order.orderId, refundId: razorpayRefundId, status: order.refund.status };
+            realtimeBus.emit('orderRefundProcessed', payload, `user:${order.userid}`);
+            realtimeBus.emit('orderRefundProcessed', payload, 'admin:dashboard');
+          }
         }
       }
     }

@@ -8,8 +8,6 @@ import CartItemCard from './CartItemCard';
 import CartOrderSummary from './CartOrderSummary';
 import { getCart } from '../Store/ActionCreaters/CartActionCreators';
 import { getWishlist } from '../Store/ActionCreaters/WishlistActionCreators';
-import { queryClient } from '../queries/queryClient';
-import { catalogQueryKeys } from '../queries/catalogQueries';
 import { GET_CART_RED } from '../Store/Constant';
 import { useToast } from './ToastNotification';
 import axios from 'axios';
@@ -548,7 +546,9 @@ export default function Cart() {
         }
 
         fetchCartAndSummary();
-        queryClient.invalidateQueries({ queryKey: catalogQueryKeys.products });
+        /* Catalog refetching moved to CatalogQueryBridge, which reacts to the
+           realtime dbChange event. Invalidating here forced a full re-download
+           of the catalog every time the cart was opened. */
 
         return () => {
             if (socketRef.current) {

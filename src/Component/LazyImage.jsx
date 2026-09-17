@@ -31,6 +31,18 @@ const getObserver = () => {
   return sharedObserver;
 };
 
+/* A 1x1 transparent GIF. The previous placeholder was an empty string, and per
+   the HTML spec src="" resolves against the document base URL — so every
+   below-the-fold image asked the server for the page HTML again and then fired an
+   `error` event. On a 50-card grid that was ~46 wasted document requests plus a
+   broken-image glyph flashing in each slot. */
+const BLANK = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+/* Widths offered to the browser via srcset. The grid slot is ~240-300 CSS px
+   (Shop.jsx .mp-grid uses minmax(240px,1fr)), so without a srcset a phone was
+   downloading the same 600px asset as a 2x desktop. */
+const SRCSET_STEPS = [0.5, 0.75, 1, 1.5];
+
 const LazyImage = ({
   src,
   alt = '',
@@ -42,6 +54,7 @@ const LazyImage = ({
   width,
   height,
   aspectRatio,
+  sizes,
   ...rest
 }) => {
   const imgRef = useRef(null);
@@ -72,11 +85,30 @@ const LazyImage = ({
     };
   }, [eager, visible]);
 
-  const finalSrc = visible
-    ? (optimizeCloudinaryUrlAdvanced
-      ? optimizeCloudinaryUrlAdvanced(src, { maxWidth, quality })
-      : optimizeCloudinaryUrl(src))
-    : (placeholder || '');
+  const optimize = (targetWidth) => (optimizeCloudinaryUrlAdvanced
+    ? optimizeCloudinaryUrlAdvanced(src, { maxWidth: targetWidth, quality })
+    : optimizeCloudinaryUrl(src));
+
+  const finalSrc = visible ? optimize(maxWidth) : (placeholder || BLANK);
+
+  /* Only build a srcset once the image is in play and a target width is known.
+     Cloudinary is the only source we can resize on demand, so a plain local path
+     correctly yields a single candidate and is skipped. */
+  const srcSet = (() => {
+    if (!visible || !maxWidth || !src) return undefined;
+
+    const candidates = SRCSET_STEPS
+      .map((step) => Math.round(maxWidth * step))
+      .filter((w, i, arr) => w >= 80 && arr.indexOf(w) === i)
+      .map((w) => ({ w, url: optimize(w) }));
+
+    /* If the helper ignored the width (non-Cloudinary URL) every candidate is the
+       same string — a srcset would then only add bytes to the HTML. */
+    const distinct = new Set(candidates.map((c) => c.url));
+    if (distinct.size < 2) return undefined;
+
+    return candidates.map((c) => `${c.url} ${c.w}w`).join(', ');
+  })();
 
   /* Reserving the box stops the layout jumping as images arrive,
      which is the main cause of the page feeling "jumpy" while scrolling. */
@@ -85,19 +117,28 @@ const LazyImage = ({
     ...(aspectRatio && !height ? { aspectRatio } : {})
   };
 
+  /* `rest` is spread FIRST on purpose. It used to come last, which let a caller
+     passing loading="eager" silently overwrite the managed attributes and end up
+     with an image that was neither high-priority nor lazily gated. Anything the
+     component manages itself now wins. */
   return (
     <img
+      {...rest}
       ref={imgRef}
       src={finalSrc}
+      srcSet={srcSet}
+      sizes={srcSet ? (sizes || `${maxWidth}px`) : undefined}
       alt={alt}
       className={className + (loaded ? ' loaded' : ' loading')}
-      loading={eager ? 'eager' : (rest.loading || 'lazy')}
+      loading={eager ? 'eager' : 'lazy'}
       decoding={eager ? 'sync' : 'async'}
       fetchpriority={eager ? 'high' : undefined}
       width={width}
       height={height}
-      onLoad={() => setLoaded(true)}
-      {...rest}
+      onLoad={(e) => {
+        setLoaded(true);
+        if (typeof rest.onLoad === 'function') rest.onLoad(e);
+      }}
       style={style}
     />
   );

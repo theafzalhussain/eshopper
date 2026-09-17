@@ -14,7 +14,21 @@ const storage = new CloudinaryStorage({
     params: {
         folder: 'eshoper_master',
         allowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
-        resource_type: 'auto'
+        resource_type: 'auto',
+        /* Store a sane master instead of the raw camera file. The only limit here
+           used to be 20 MB of *bytes*, so a 6000x8000 phone photo was kept at full
+           resolution — and every later request for it had to be downscaled on the
+           fly. 2000px on the long edge is more than the product zoom needs.
+           `limit` only ever shrinks: a smaller upload is stored untouched. */
+        transformation: [{ width: 2000, height: 2000, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' }],
+        /* Pre-generate the two sizes the app actually renders — the grid card and
+           the admin/order thumbnail — so the first visitor to see a new product
+           does not pay for a cold transform. eager_async keeps the upload fast. */
+        eager: [
+            { width: 640, crop: 'limit', quality: 'auto:good', fetch_format: 'auto' },
+            { width: 160, height: 160, crop: 'fill', gravity: 'auto', quality: 'auto:good', fetch_format: 'auto' }
+        ],
+        eager_async: true
     }
 });
 

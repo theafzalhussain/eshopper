@@ -3,8 +3,11 @@ exports.getAdminOrderDetails = async (req, res) => {
     try {
         const { orderId } = req.params;
         if (!orderId) return res.status(400).json({ success: false, message: 'Order ID required.' });
-        // Security: Only allow admin (x-admin-secret header)
-        if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+        /* Accepts any credential verifyAdmin recognises — it runs as middleware
+           on /api/admin (routes/orderRoutes.js) and sets req.user. Comparing the
+           x-admin-secret header directly here is what forced that secret to be
+           shipped to the browser. */
+        if (!isAdminAuthorized(req)) {
             return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
         const order = await Order.findOne({ orderId });
@@ -21,8 +24,11 @@ exports.deleteOrders = async (req, res) => {
         if (!Array.isArray(orderIds) || !orderIds.length) {
             return res.status(400).json({ success: false, message: 'No orderIds provided.' });
         }
-        // Security: Only allow admin (x-admin-secret header)
-        if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+        /* Accepts any credential verifyAdmin recognises — it runs as middleware
+           on /api/admin (routes/orderRoutes.js) and sets req.user. Comparing the
+           x-admin-secret header directly here is what forced that secret to be
+           shipped to the browser. */
+        if (!isAdminAuthorized(req)) {
             return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
         const result = await Order.deleteMany({ orderId: { $in: orderIds } });
@@ -68,7 +74,12 @@ const getRequestUserId = (req) => String(req.body?.userId || req.body?.userid ||
 
 const isAdminAuthorized = (req) => {
     if (req.user && (req.user.isAdmin || String(req.user.role || '').toLowerCase() === 'admin')) return true;
-    return req.headers['x-admin-secret'] === process.env.ADMIN_SECRET;
+    /* The shared secret is kept for server-to-server callers only. It must never
+       be given to the browser: REACT_APP_* values are inlined into the CRA
+       bundle, so a client-side copy is public. Browser admins authenticate via
+       verifyAdmin, which validates the role against the database. */
+    const secret = String(process.env.ADMIN_SECRET || '');
+    return Boolean(secret) && req.headers['x-admin-secret'] === secret;
 };
 
 const getStatusTimestamp = (order, targetStatus) => {
@@ -524,8 +535,11 @@ exports.getOrderNotes = async (req, res) => {
     try {
         const { orderId } = req.params;
         if (!orderId) return res.status(400).json({ success: false, message: 'Order ID required.' });
-        // Security: Only allow admin (x-admin-secret header)
-        if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+        /* Accepts any credential verifyAdmin recognises — it runs as middleware
+           on /api/admin (routes/orderRoutes.js) and sets req.user. Comparing the
+           x-admin-secret header directly here is what forced that secret to be
+           shipped to the browser. */
+        if (!isAdminAuthorized(req)) {
             return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
         const order = await Order.findOne({ orderId });
@@ -542,8 +556,11 @@ exports.addOrderNote = async (req, res) => {
         const { orderId } = req.params;
         const { note, author } = req.body;
         if (!orderId || !note) return res.status(400).json({ success: false, message: 'Order ID and note required.' });
-        // Security: Only allow admin (x-admin-secret header)
-        if (req.headers['x-admin-secret'] !== process.env.ADMIN_SECRET) {
+        /* Accepts any credential verifyAdmin recognises — it runs as middleware
+           on /api/admin (routes/orderRoutes.js) and sets req.user. Comparing the
+           x-admin-secret header directly here is what forced that secret to be
+           shipped to the browser. */
+        if (!isAdminAuthorized(req)) {
             return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
         const order = await Order.findOne({ orderId });
@@ -930,19 +947,34 @@ exports.adminGetReturnStats = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
 
-        const stats = {
-            totalRequests: await Order.countDocuments({ 'return.status': { $ne: 'NOT_INITIATED' } }),
-            pending: await Order.countDocuments({ 'return.status': 'REQUESTED' }),
-            approved: await Order.countDocuments({ 'return.status': 'APPROVED' }),
-            pickedUp: await Order.countDocuments({ 'return.status': 'PICKED_UP' }),
-            inTransit: await Order.countDocuments({ 'return.status': 'IN_TRANSIT' }),
-            received: await Order.countDocuments({ 'return.status': 'RECEIVED' }),
-            refundCompleted: await Order.countDocuments({ 'return.status': 'REFUND_COMPLETED' }),
-            rejected: await Order.countDocuments({ 'return.status': 'REJECTED' }),
-            totalRefundAmount: (await Order.aggregate([
+        /* This was eight sequential countDocuments plus an aggregate, all
+           evaluated one after another inside an object literal — nine serial
+           collection passes for one dashboard panel. A single $group over the same
+           documents produces every bucket in one pass. */
+        const [buckets, refundTotal] = await Promise.all([
+            Order.aggregate([
+                { $match: { 'return.status': { $exists: true, $ne: 'NOT_INITIATED' } } },
+                { $group: { _id: '$return.status', count: { $sum: 1 } } }
+            ]),
+            Order.aggregate([
                 { $match: { 'return.status': 'REFUND_COMPLETED', 'refund.status': 'COMPLETED' } },
                 { $group: { _id: null, total: { $sum: '$refund.amount' } } }
-            ]))[0]?.total || 0
+            ])
+        ]);
+
+        const byStatus = new Map(buckets.map((b) => [b._id, b.count]));
+        const countOf = (status) => byStatus.get(status) || 0;
+
+        const stats = {
+            totalRequests: buckets.reduce((sum, b) => sum + b.count, 0),
+            pending: countOf('REQUESTED'),
+            approved: countOf('APPROVED'),
+            pickedUp: countOf('PICKED_UP'),
+            inTransit: countOf('IN_TRANSIT'),
+            received: countOf('RECEIVED'),
+            refundCompleted: countOf('REFUND_COMPLETED'),
+            rejected: countOf('REJECTED'),
+            totalRefundAmount: (refundTotal[0] && refundTotal[0].total) || 0
         };
 
         return res.json({ success: true, stats });

@@ -165,4 +165,37 @@ orderSchema.index({ orderStatus: 1, createdAt: -1 });
 orderSchema.index({ paymentStatus: 1, createdAt: -1 });
 orderSchema.index({ createdAt: -1 });
 
+/* Added after an audit found these queries running unindexed:
+   · the user and admin order lists sort by { updatedAt: -1 } — with no
+     updatedAt index Mongo did an in-memory sort, which hard-fails at the
+     32 MB sort limit once an account has enough orders
+   · admin search filters on userEmail
+   · the return dashboard filters on return.status nine times in one handler,
+     and the 5-minute auto-refund sweep filters on refund.status and
+     cancellation.status
+   · coupon usage caps count on { userid, couponCode } together */
+orderSchema.index({ userid: 1, updatedAt: -1 });
+orderSchema.index({ updatedAt: -1 });
+orderSchema.index({ userEmail: 1, createdAt: -1 });
+orderSchema.index({ userid: 1, couponCode: 1 });
+orderSchema.index({ 'return.status': 1, createdAt: -1 });
+orderSchema.index({ 'refund.status': 1, createdAt: -1 });
+orderSchema.index({ 'cancellation.status': 1, createdAt: -1 });
+
+/* One Razorpay payment, one order — enforced by the database, not by hope.
+   The application checks before inserting too, but two concurrent requests can
+   both pass that check; only a unique index settles the race.
+
+   It has to be PARTIAL: every COD order stores razorpayPaymentId as '', and a
+   plain unique index would allow exactly one COD order in the whole collection.
+   The filter keeps empty values out of the index entirely. */
+orderSchema.index(
+    { razorpayPaymentId: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { razorpayPaymentId: { $type: 'string', $gt: '' } },
+        name: 'razorpayPaymentId_unique_nonempty'
+    }
+);
+
 module.exports = mongoose.model('Order', orderSchema);

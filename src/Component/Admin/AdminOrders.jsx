@@ -16,6 +16,7 @@ import {
     RotateCcw
 } from 'lucide-react';
 import axios from 'axios';
+import { getAdminHeaders } from './adminAuth';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import io from 'socket.io-client';
@@ -241,7 +242,9 @@ export default function AdminOrders() {
             ? envBase
             : (SHARED_BASE_URL || envApi || 'https://eshopper-qtgl.onrender.com');
         const [apiBaseUrl, setApiBaseUrl] = useState(isLocalHost && process.env.REACT_APP_USE_LOCAL_API === 'true' ? localApiUrl : remoteApiUrl);
-    const adminSecret = process.env.REACT_APP_ADMIN_SECRET;
+    /* Admin credentials are read fresh on each call rather than captured once
+       from REACT_APP_ADMIN_SECRET — that build-time value ended up inside the
+       public JS bundle. See adminAuth.js. */
 
     const showNotification = (message, type = 'info') => {
         setNotification({ message, type });
@@ -258,13 +261,12 @@ export default function AdminOrders() {
                 ...(selectedStatus && { status: selectedStatus }),
                 ...(fromDate && { fromDate }),
                 ...(toDate && { toDate }),
-                ...(paymentStatus !== 'All' && { paymentStatus }),
-                ...(adminSecret && { adminSecret })
+                ...(paymentStatus !== 'All' && { paymentStatus })
             };
 
             const response = await axios.get(`${apiBaseUrl}/api/admin/orders`, {
                 params,
-                headers: adminSecret ? { 'x-admin-secret': adminSecret } : {}
+                headers: getAdminHeaders()
             });
             setOrders(response.data.orders || []);
             setTotalPages(response.data.pages || 0);
@@ -606,7 +608,7 @@ export default function AdminOrders() {
             const response = await axios.post(
                 endpoint,
                 payload,
-                { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} }
+                { headers: getAdminHeaders() }
             );
 
             if (response.data.success) {
@@ -726,7 +728,7 @@ export default function AdminOrders() {
                     ? `${apiBaseUrl}/api/admin/confirm-order`
                     : `${apiBaseUrl}/api/update-order-status`;
 
-                const config = { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} };
+                const config = { headers: getAdminHeaders() };
 
                 const payload = bulkStatus === 'Confirmed'
                     ? { orderId }
@@ -766,7 +768,7 @@ export default function AdminOrders() {
             const response = await axios.post(
                 `${apiBaseUrl}/api/admin/delete-orders`,
                 { orderIds },
-                { headers: adminSecret ? { 'x-admin-secret': adminSecret } : {} }
+                { headers: getAdminHeaders() }
             );
 
             if (response.data?.success) {
@@ -1237,7 +1239,6 @@ export default function AdminOrders() {
                 order={actionOrder}
                 updating={Boolean(actionOrder && updating === actionOrder.orderId)}
                 apiBaseUrl={apiBaseUrl}
-                adminSecret={adminSecret}
                 allowedStatuses={ALLOWED_STATUSES}
                 deliveryTimeSlots={DELIVERY_TIME_SLOTS}
                 status={actionStatus}

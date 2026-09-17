@@ -61,11 +61,15 @@ const buildRedisOptions = (redisUrl, redisPassword, useTls) => {
     }
 };
 
-const initializeQueues = (processors = {}) => {
+const initializeQueues = (processors = {}, options = {}) => {
     if (!isBullMQEnabled()) return null;
     if (initialized) return { queues, schedulers, workers };
 
     processorsMap = { ...processors };
+    /* A process may hold queue clients (to enqueue) without consuming jobs. Both
+       server.js and worker.js used to attach workers unconditionally, so running
+       them together put two consumers on the same refund queue. */
+    const attachWorkers = options.attachWorkers !== false;
 
     // Try to create Redis connections (only if Redis is enabled and configured)
     try {
@@ -111,7 +115,7 @@ const initializeQueues = (processors = {}) => {
             schedulers = {};
 
             workers = {};
-            if (WORKERS_ENABLED) {
+            if (WORKERS_ENABLED && attachWorkers) {
                 for (const key of Object.keys(queues)) {
                     const queueKey = key;
                     const processor = processorsMap[queueKey];
@@ -136,11 +140,25 @@ const initializeQueues = (processors = {}) => {
     }
 
     // Fallback in-process queue behavior
+    /* A trap worth naming: `add` used to invoke the processor directly and return
+       its promise, so an "enqueue" became a synchronous call inside the HTTP
+       request. With Redis unreachable that meant a Razorpay refund (a 20s network
+       call) ran on the checkout/admin request, and nothing was durable across a
+       crash. The processor is now detached with setImmediate and its failure is
+       logged rather than thrown into the caller — the RefundJob row stays PENDING
+       and the polling worker retries it. */
     const createFallbackQueue = (queueName) => ({
         add: async (jobName, payload) => {
             const processor = processorsMap[queueName];
             if (typeof processor !== 'function') return { fallback: true, queued: false, jobName, payload };
-            return processor({ name: jobName, data: payload || {} });
+
+            setImmediate(() => {
+                Promise.resolve()
+                    .then(() => processor({ name: jobName, data: payload || {} }))
+                    .catch((err) => console.warn(`fallback queue "${queueName}" job failed:`, err && err.message));
+            });
+
+            return { fallback: true, queued: true, jobName };
         }
     });
 

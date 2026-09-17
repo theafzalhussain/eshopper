@@ -62,12 +62,28 @@ export default function useRealtimeSocket({ connectDelay = 1200 } = {}) {
                     timeout: 12000
                 })
 
-                socket.on('dbChange', (data) => {
-                    try { window.dispatchEvent(new CustomEvent('realtime:dbChange', { detail: data })) } catch (e) { /* ignore */ }
-                })
+                /* Server events re-broadcast as window events so any component can
+                   react without opening its own socket. `dbChange` and
+                   `userPasswordReset` were the only two forwarded, which is why an
+                   admin changing an order status only reached the pages that had
+                   built their own connection — everywhere else needed a manual
+                   refresh. */
+                const FORWARDED = [
+                    'dbChange',
+                    'userPasswordReset',
+                    'statusUpdate',
+                    'orderStatusUpdate',
+                    'orderRefundProcessed',
+                    'newOrder',
+                    'dashboardUpdate'
+                ]
 
-                socket.on('userPasswordReset', (payload) => {
-                    try { window.dispatchEvent(new CustomEvent('realtime:userPasswordReset', { detail: payload })) } catch (e) { /* ignore */ }
+                FORWARDED.forEach((name) => {
+                    socket.on(name, (payload) => {
+                        try {
+                            window.dispatchEvent(new CustomEvent(`realtime:${name}`, { detail: payload }))
+                        } catch (e) { /* ignore */ }
+                    })
                 })
 
                 socket.on('connect_error', (err) => console.warn('Socket connect_error:', err && err.message))

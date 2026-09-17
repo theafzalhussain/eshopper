@@ -22,7 +22,7 @@ async function main() {
     initializeQueues({
         refund: async (job) => processRefundJobData(job.data || job),
         report: async (job) => getRefundReport(Number(job.data?.days || 7))
-    });
+    }, { attachWorkers: true });
 
     console.log(usingRedisBackend() ? '✅ Worker connected to Redis-backed BullMQ queues' : 'ℹ️ Worker running with local fallback queues');
     console.log('🚀 BullMQ worker process is running');
