@@ -55,7 +55,6 @@ export default function Shop() {
     const [quickViewImgIndex, setQuickViewImgIndex] = useState(0);
 
     useEffect(() => { setQuickViewImgIndex(0); }, [quickView]);
-    const [hoverIndex, setHoverIndex] = useState({});         // {productId: imgIdx}
     const [recentlyViewed, setRecentlyViewed] = useState([]);
     const [openSections, setOpenSections] = useState({
         highlights: true, category: true, subcategory: true, size: true, price: true,
@@ -782,8 +781,6 @@ export default function Shop() {
                             item,
                             index,
                             stats: reviewStats[item.id] || reviewStats[item._id],
-                            hoverIndex,
-                            setHoverIndex,
                             calcDiscount,
                             isInWishlist,
                             toggleWishlist,
@@ -1189,6 +1186,13 @@ export default function Shop() {
                 .mp-img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s cubic-bezier(0.16,1,0.3,1), opacity 0.35s ease; will-change: transform, opacity; }
                 .mp-card:hover .mp-img { transform: scale(1.06); }
 
+                /* Hover swap: the second product shot sits on top of the first
+                   at opacity 0 and fades in on hover. The is-ready class is
+                   added only once the file has actually decoded, so a slow
+                   image can never flash a blank box over the primary one. */
+                .mp-img-alt { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+                .mp-card:hover .mp-img-alt.is-ready { opacity: 1; }
+
                 /* Discount corner ribbon */
                 .mp-ribbon {
                     position: absolute; top: 0; left: 0;
@@ -1486,6 +1490,7 @@ export default function Shop() {
                 @media (hover: none) and (pointer: coarse) {
                     .mp-card:hover { transform: none; box-shadow: var(--shadow); border-color: var(--line); }
                     .mp-card:hover .mp-img { transform: none; }
+                    .mp-img-alt { display: none; }
                     .mp-hover-bar { display: none; }
                     .mp-actions { max-height: 220px; opacity: 1; pointer-events: auto; margin-top: 10px; }
                     .mp-qview { opacity: 1; transform: none; }

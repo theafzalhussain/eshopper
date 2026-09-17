@@ -163,7 +163,6 @@ const ProductCardInner = ({
     item,
     index,
     stats,
-    onHoverChange,
     calcDiscount,
     isWishlisted,
     toggleWishlist,
@@ -176,7 +175,42 @@ const ProductCardInner = ({
     addToCart
 }) => {
     const productId = item.id || item._id;
-    const [hovered, setHovered] = useState(false);
+
+    /* Hover image swap. pic2 (falling back to pic3/pic4) is the "second
+       look" the admin uploaded. Both images sit in the DOM and cross-fade
+       purely in CSS, so moving the mouse across the grid repaints instead
+       of re-rendering — the earlier version swapped the `src` of a single
+       <img>, which flashed an empty box while the new file downloaded. */
+    const altImg = (item.pic2 && String(item.pic2).trim())
+        || (item.pic3 && String(item.pic3).trim())
+        || (item.pic4 && String(item.pic4).trim())
+        || null;
+    const primaryImg = (item.pic1 && String(item.pic1).trim()) || altImg || null;
+
+    /* The second image is attached lazily. Fetching it next to the primary
+       would double the grid's image payload and drag down LCP, so we wait
+       for the browser to go idle — or for the first hover, if the customer
+       gets there first. Touch devices have no hover, so they never pay for
+       it at all. */
+    const [altMounted, setAltMounted] = useState(false);
+    const [altReady, setAltReady] = useState(false);
+
+    useEffect(() => {
+        if (!altImg || altMounted) return;
+        if (typeof window === 'undefined') return;
+        if (window.matchMedia && !window.matchMedia('(hover: hover)').matches) return;
+
+        const arm = () => setAltMounted(true);
+        const canIdle = typeof window.requestIdleCallback === 'function';
+        const handle = canIdle
+            ? window.requestIdleCallback(arm, { timeout: 2500 })
+            : window.setTimeout(arm, 1200);
+
+        return () => {
+            if (canIdle) window.cancelIdleCallback(handle);
+            else window.clearTimeout(handle);
+        };
+    }, [altImg, altMounted]);
 
     if (!productId) return null;
 
@@ -184,16 +218,7 @@ const ProductCardInner = ({
     const reviewCount = stats ? stats.count : 0;
     const discount = calcDiscount(item);
     const isBestseller = (stats && (stats.count >= 5 || stats.average >= 4.2)) || item.isBestseller;
-    const altImg = (item.pic2 && String(item.pic2).trim()) || (item.pic3 && String(item.pic3).trim()) || (item.pic4 && String(item.pic4).trim()) || null;
-    const showAlt = !!altImg && hovered;
-    const mainImg = showAlt ? altImg : (item.pic1 && String(item.pic1).trim() ? item.pic1 : altImg);
     const priority = index < 4;
-
-    const enter = (v) => {
-        if (!altImg) return;
-        setHovered(v);
-        if (onHoverChange) onHoverChange(productId, v ? 1 : 0);
-    };
 
     return (
         <motion.div
@@ -203,8 +228,7 @@ const ProductCardInner = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1], delay: Math.min(index * 0.02, 0.14) }}
             className="mp-card"
-            onMouseEnter={() => enter(true)}
-            onMouseLeave={() => enter(false)}
+            onMouseEnter={() => { if (altImg && !altMounted) setAltMounted(true); }}
         >
             <button
                 type="button"
@@ -230,12 +254,22 @@ const ProductCardInner = ({
 
             <Link to={`/single-product/${productId}`} className="mp-img-wrap" onClick={() => pushRecentlyViewed(item)}>
                 <LazyImage
-                    src={mainImg || '/assets/images/noimage.png'}
+                    src={primaryImg || '/assets/images/noimage.png'}
                     eager={priority}
-                    className="mp-img"
+                    className="mp-img mp-img-primary"
                     alt={item.name}
                     maxWidth={600}
                 />
+                {altMounted && altImg && (
+                    <LazyImage
+                        src={altImg}
+                        className={`mp-img mp-img-alt${altReady ? ' is-ready' : ''}`}
+                        alt=""
+                        aria-hidden="true"
+                        maxWidth={600}
+                        onLoad={(e) => { if (e.currentTarget && e.currentTarget.naturalWidth > 0) setAltReady(true); }}
+                    />
+                )}
                 {discount > 0 && <div className="mp-ribbon">✦ {discount}% OFF</div>}
                 <div className="mp-badges">
                     {item.newArrival && <span className="mp-badge mp-badge-new">NEW</span>}
@@ -356,8 +390,6 @@ export const renderProductCard = ({
     item,
     index,
     stats,
-    hoverIndex,
-    setHoverIndex,
     calcDiscount,
     isInWishlist,
     toggleWishlist,
@@ -386,7 +418,6 @@ export const renderProductCard = ({
             selectedSizes={selectedSizes}
             setSelectedSizes={setSelectedSizes}
             addToCart={addToCart}
-            onHoverChange={setHoverIndex ? (id, v) => setHoverIndex((h) => ({ ...h, [id]: v })) : undefined}
         />
     );
 };

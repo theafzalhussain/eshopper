@@ -70,7 +70,43 @@ function initCacheRedis() {
 // Initialize on first require
 redis = initCacheRedis();
 
-const cacheKey = (req) => `__express__${req.originalUrl || req.url}`;
+/* ── Cache namespace ──────────────────────────────────────────────
+   Response caches are keyed by URL alone, which is fine while only the
+   data changes: every product write calls clearCache(). It breaks when
+   the *shape* of a response changes in code — a new field in a Mongo
+   projection, for example. Redis happily keeps serving the old payload
+   (it survives restarts), so the deploy looks like it did nothing until
+   the TTL runs out.
+
+   Stamping the key with a build identity makes that self-healing:
+     • production — the commit of the running deploy (Render/Vercel set
+       these), falling back to the package version
+     • development — the process start time, so restarting the server is
+       always enough to see your own change
+   Old keys are simply orphaned and expire on their own TTL. */
+const CACHE_VERSION = (() => {
+    const explicit = String(process.env.CACHE_VERSION || '').trim();
+    if (explicit) return explicit;
+
+    const commit = String(
+        process.env.RENDER_GIT_COMMIT
+        || process.env.VERCEL_GIT_COMMIT_SHA
+        || process.env.GIT_COMMIT
+        || ''
+    ).trim();
+    if (commit) return commit.slice(0, 12);
+
+    if (process.env.NODE_ENV === 'production') {
+        try { return String(require('../package.json').version || '0'); } catch (err) { return '0'; }
+    }
+
+    return `dev-${Date.now()}`;
+})();
+
+/* The version sits after the `__express__` prefix and before the path so
+   that existing clearCache('__express__/product*') patterns — which match
+   on the path as a substring — keep working unchanged. */
+const cacheKey = (req) => `__express__${CACHE_VERSION}|${req.originalUrl || req.url}`;
 
 const isRedisReady = () => {
     if (!redis || redisDisabled) return false;
@@ -92,6 +128,37 @@ const redisSetSafe = async (key, value, ttl) => {
         ttl > 0 ? redis.set(key, value, 'EX', ttl) : redis.set(key, value),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), REDIS_CACHE_TIMEOUT))
     ]).catch(() => {});
+};
+
+/* SCAN rather than KEYS: KEYS blocks the Redis server for the whole sweep,
+   which on a shared/managed plan means blocking every other request too. */
+const redisDeleteMatching = async (match) => {
+    if (!isRedisReady()) return 0;
+
+    let cursor = '0';
+    let deleted = 0;
+
+    try {
+        do {
+            const [next, keys] = await Promise.race([
+                redis.scan(cursor, 'MATCH', match, 'COUNT', 200),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), REDIS_CACHE_TIMEOUT))
+            ]);
+            cursor = next;
+
+            if (keys && keys.length) {
+                await Promise.race([
+                    redis.del(...keys),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), REDIS_CACHE_TIMEOUT))
+                ]);
+                deleted += keys.length;
+            }
+        } while (cursor !== '0');
+    } catch (err) {
+        /* a timeout mid-sweep is not fatal: whatever is left expires on TTL */
+    }
+
+    return deleted;
 };
 
 const _serializeBody = (body) => {
@@ -148,8 +215,14 @@ const cacheMiddleware = (duration = 300) => {
 
 const clearCache = async (pattern = '') => {
     const normalized = String(pattern || '').replace(/^__express__/, '').replace(/\*+$/, '');
+
     if (!normalized) {
+        /* No pattern: wipe every response-cache entry. The memory map is
+           local to this process, so Redis has to be swept as well — a
+           restart-proof cache that no one can flush is how a stale payload
+           outlives the deploy that fixed it. */
         memoryCache.clear();
+        await redisDeleteMatching('__express__*');
         return;
     }
 
@@ -157,20 +230,7 @@ const clearCache = async (pattern = '') => {
         if (key.includes(normalized)) memoryCache.delete(key);
     }
 
-    if (isRedisReady()) {
-        try {
-            const keys = await Promise.race([
-                redis.keys(`*${normalized}*`),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), REDIS_CACHE_TIMEOUT))
-            ]);
-            if (keys && keys.length) {
-                await Promise.race([
-                    redis.del(...keys),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), REDIS_CACHE_TIMEOUT))
-                ]);
-            }
-        } catch (err) { /* ignore timeout/redis errors */ }
-    }
+    await redisDeleteMatching(`*${normalized}*`);
 };
 
 const getCacheValue = async (key) => {

@@ -175,6 +175,8 @@ module.exports = {
     },
 
     // Get all products (listing view — lean projection for speed)
+    // pic2..pic4 are included: the shop grid cross-fades to the second shot
+    // on hover, and without them the card has nothing to swap to.
     getAllProducts: async (req, res) => {
         try {
             const page = Math.max(1, Number(req.query.page || 1));
@@ -185,7 +187,7 @@ module.exports = {
                halves the time-to-first-byte on this hot endpoint. */
             const [products, total] = await Promise.all([
                 Product.find({})
-                    .select('name maincategory subcategory brand color size baseprice discount finalprice stock pic1 rating reviews newArrival isSale createdAt')
+                    .select('name maincategory subcategory brand color size baseprice discount finalprice stock pic1 pic2 pic3 pic4 rating reviews newArrival isSale createdAt')
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit)
