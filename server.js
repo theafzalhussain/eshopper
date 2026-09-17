@@ -59,6 +59,7 @@ const Activity = require('./models/Activity');
 const { clearCache, cacheMiddleware } = require('./utils/cache');
 const { isAssetRequest } = require('./utils/assetPath');
 const { socketIdentityMiddleware, joinIdentityRooms } = require('./utils/socketAuth');
+const verifyAdmin = require('./middleware/verifyAdmin');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -199,6 +200,86 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+
+/* ══════════════════════════════════════════════════════════════════════
+   SECURITY + OBSERVABILITY MIDDLEWARE — registered here on purpose.
+
+   Express runs middleware in registration order, and these three used to sit
+   ~700 lines further down, below every route mount. The consequence was that
+   /api/admin/*, the order routes, /product/*, the review endpoints and the
+   /img proxy got no helmet headers and no rate limiting whatsoever, while the
+   logger never saw any of that traffic.
+
+   Anything added below this point is covered automatically.
+══════════════════════════════════════════════════════════════════════ */
+// 🔒 SECURITY HEADERS
+// 🔒 SECURITY HEADERS
+/* helmet's default Cross-Origin-Opener-Policy is `same-origin`, which breaks
+   the Firebase sign-in popup ("Cross-Origin-Opener-Policy policy would block
+   the window.closed call"). Allow popups while keeping the rest of helmet. */
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
+}));
+
+// 🔒 RATE LIMITERS
+// 🔒 RATE LIMITERS
+const isLocalDevelopment = String(process.env.NODE_ENV || '').toLowerCase() !== 'production';
+
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: Number(process.env.GLOBAL_RATE_LIMIT_MAX || 2000),
+    standardHeaders: true,
+    legacyHeaders: false,
+    // In local dev + realtime UI, these endpoints can burst (React StrictMode/socket refreshes).
+    skip: (req) => {
+        if (isLocalDevelopment) return true;
+
+        if (req.path.startsWith('/socket.io/') || req.method === 'OPTIONS') return true;
+
+        /* Read-only catalog traffic is exempt. Writes to /product go through
+           adminRoutes and are not exempt. */
+        if (req.method === 'GET') {
+            if (
+                req.path.startsWith('/product') ||
+                req.path.startsWith('/img') ||
+                req.path.startsWith('/api/reviews') ||
+                req.path.startsWith('/maincategory') ||
+                req.path.startsWith('/subcategory') ||
+                req.path.startsWith('/brand') ||
+                req.path.startsWith('/sitemap') ||
+                req.path === '/robots.txt'
+            ) return true;
+        }
+
+        return (
+            req.path.startsWith('/user/') ||
+            req.path.startsWith('/api/orders/') ||
+            req.path.startsWith('/api/membership/check')
+        );
+    }
+});
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
+if (!isLocalDevelopment) {
+    app.use(globalLimiter);
+} else {
+    console.log('⚙️ Global rate limiter disabled for local development');
+}
+
+// 📊 REQUEST LOGGING MIDDLEWARE (with CORS origin info)
+/* Opt-in: on by default in development, in production only with
+   REQUEST_LOG=true. Sentry and Datadog already carry production telemetry. */
+const REQUEST_LOG_ENABLED = String(process.env.REQUEST_LOG || '').toLowerCase() === 'true' || isLocalDevelopment;
+
+if (REQUEST_LOG_ENABLED) {
+    app.use((req, res, next) => {
+        if (req.path.startsWith('/static/') || req.path.startsWith('/assets/')) return next();
+        const origin = req.headers.origin || 'NO-ORIGIN';
+        console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} | Origin: ${origin}`);
+        next();
+    });
+}
+
 
 let firebaseAdminReady = false;
 
@@ -403,16 +484,40 @@ io.on('connection', (socket) => {
         console.log(`✅ Socket joined ${rooms.join(', ')}`);
     }
 
+    /* ══════════════════════════════════════════════════════════════
+       The cart handlers below take the owner from the VERIFIED handshake
+       identity, never from the message payload.
+
+       They used to read `const { userId } = data`, which made
+       socketIdentityMiddleware pointless for cart mutations: any connected
+       socket — including a guest — could send someone else's user id and change
+       quantities in, or delete items from, that person's cart. `cart:recalculate`
+       additionally returned the whole item list of the named cart.
+    ══════════════════════════════════════════════════════════════ */
+    const verifiedUserId = String(socket.data.userId || '').trim();
+
+    const cartOwnerFilter = () => {
+        const filters = [{ userid: verifiedUserId }, { user: verifiedUserId }];
+        if (mongoose.Types.ObjectId.isValid(verifiedUserId)) {
+            filters.push({ user: new mongoose.Types.ObjectId(verifiedUserId) });
+        }
+        return { $or: filters };
+    };
+
     // 🛒 CART: UPDATE QUANTITY (Real-time without loading)
     socket.on('cart:update-quantity', async (data) => {
         try {
-            const { userId, productId, quantity } = data;
-            if (!userId || !productId || quantity < 1) {
+            const { productId, quantity } = data || {};
+            if (!verifiedUserId) {
+                socket.emit('cart:error', { message: 'Please sign in to change your cart' });
+                return;
+            }
+            if (!productId || Number(quantity) < 1) {
                 socket.emit('cart:error', { message: 'Invalid request' });
                 return;
             }
 
-            const cart = await Cart.findOne({ $or: [{ userid: userId }, { user: userId }] });
+            const cart = await Cart.findOne(cartOwnerFilter());
             if (!cart) {
                 socket.emit('cart:error', { message: 'Cart not found' });
                 return;
@@ -449,13 +554,17 @@ io.on('connection', (socket) => {
     // 🛒 CART: REMOVE ITEM (Real-time without loading)
     socket.on('cart:remove-item', async (data) => {
         try {
-            const { userId, productId } = data;
-            if (!userId || !productId) {
+            const { productId } = data || {};
+            if (!verifiedUserId) {
+                socket.emit('cart:error', { message: 'Please sign in to change your cart' });
+                return;
+            }
+            if (!productId) {
                 socket.emit('cart:error', { message: 'Invalid request' });
                 return;
             }
 
-            const cart = await Cart.findOne({ $or: [{ userid: userId }, { user: userId }] });
+            const cart = await Cart.findOne(cartOwnerFilter());
             if (!cart) {
                 socket.emit('cart:error', { message: 'Cart not found' });
                 return;
@@ -485,13 +594,12 @@ io.on('connection', (socket) => {
     // 🛒 CART: RECALCULATE SUMMARY (Get fresh totals)
     socket.on('cart:recalculate', async (data) => {
         try {
-            const { userId } = data;
-            if (!userId) {
-                socket.emit('cart:error', { message: 'Invalid userId' });
+            if (!verifiedUserId) {
+                socket.emit('cart:error', { message: 'Please sign in to view your cart' });
                 return;
             }
 
-            const cart = await Cart.findOne({ $or: [{ userid: userId }, { user: userId }] }).populate('items.productid').populate('items.product').populate('items.productId');
+            const cart = await Cart.findOne(cartOwnerFilter()).populate('items.productid').populate('items.product').populate('items.productId');
             if (!cart || !cart.items.length) {
                 socket.emit('cart:summary-updated', { 
                     subtotal: 0, 
@@ -540,17 +648,31 @@ io.on('connection', (socket) => {
 });
 
 // 1. Sabse pehle Models wale section mein Review model confirm karein
-const Review = mongoose.models.Review || mongoose.model('Review', new mongoose.Schema({ 
-    userId: String, 
-    orderId: String, 
-    rating: Number, 
-    title: String, 
-    comment: String, 
-    products: Array, 
+/* Indexes added deliberately. This collection had none, and the product page
+   filters on `products` (a multikey array of product ids) while the order flow
+   filters on `orderId` — so every review lookup was a full collection scan.
+   Note models/Review.js declares a *different* Review shape, but it is only
+   required by routes/reviewRoutes.js, which is never mounted; the live schema is
+   this one, which is why stored documents carry title/pics/helpfulVotes and
+   timestamps. */
+const reviewSchema = new mongoose.Schema({
+    userId: String,
+    orderId: String,
+    rating: Number,
+    title: String,
+    comment: String,
+    products: Array,
     pic: String,
     pics: Array,
     helpfulVotes: { type: [String], default: [] }
-}, { timestamps: true }));
+}, { timestamps: true });
+
+reviewSchema.index({ products: 1, createdAt: -1 });
+reviewSchema.index({ orderId: 1 });
+reviewSchema.index({ userId: 1, createdAt: -1 });
+reviewSchema.index({ createdAt: -1 });
+
+const Review = mongoose.models.Review || mongoose.model('Review', reviewSchema);
 
 app.put('/api/review/:id/helpful', async (req, res) => {
     try {
@@ -794,15 +916,6 @@ app.use('/api/wishlist', wishlistRoutes);
 // Image proxy for Cloudinary/local images (used by frontend optimize helpers)
 app.use('/img', imageProxy);
 
-// 🔒 SECURITY HEADERS
-// 🔒 SECURITY HEADERS
-/* helmet's default Cross-Origin-Opener-Policy is `same-origin`, which breaks
-   the Firebase sign-in popup ("Cross-Origin-Opener-Policy policy would block
-   the window.closed call"). Allow popups while keeping the rest of helmet. */
-app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
-}));
 
 app.post('/api/activity-log', async (req, res) => {
     try {
@@ -838,43 +951,8 @@ app.post('/api/activity-log', async (req, res) => {
     }
 });
 
-// 🔒 RATE LIMITERS
-// 🔒 RATE LIMITERS
-const isLocalDevelopment = String(process.env.NODE_ENV || '').toLowerCase() !== 'production';
-
-const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: Number(process.env.GLOBAL_RATE_LIMIT_MAX || 2000),
-    standardHeaders: true,
-    legacyHeaders: false,
-    // In local dev + realtime UI, these endpoints can burst (React StrictMode/socket refreshes).
-    skip: (req) => {
-        if (isLocalDevelopment) return true;
-
-        if (req.path.startsWith('/socket.io/') || req.method === 'OPTIONS') return true;
-
-        return (
-            req.path.startsWith('/user/') ||
-            req.path === '/product' ||
-            req.path.startsWith('/api/orders/') ||
-            req.path.startsWith('/api/membership/check')
-        );
-    }
-});
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many attempts. Try again later." }, standardHeaders: true, legacyHeaders: false });
-if (!isLocalDevelopment) {
-    app.use(globalLimiter);
-} else {
-    console.log('⚙️ Global rate limiter disabled for local development');
-}
 
 
-// 📊 REQUEST LOGGING MIDDLEWARE (with CORS origin info)
-app.use((req, res, next) => {
-    const origin = req.headers.origin || 'NO-ORIGIN';
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} | Origin: ${origin}`);
-    next();
-});
 
 // 🛡️ GLOBAL ERROR HANDLER FOR MALFORMED REQUESTS & CORS
 // 🛡️ GLOBAL ERROR HANDLER FOR MALFORMED REQUESTS & CORS
@@ -1309,19 +1387,49 @@ const renderTemplateEmailHtml = async (status, payload = {}) => {
     }
 };
 
+/* Build the invoice attachment at send time.
+ *
+ * placeOrderHandler used to generate the PDF inline, before responding: jsPDF
+ * plus autoTable plus doc.output('arraybuffer') is pure synchronous CPU with no
+ * await inside, so the entire Node event loop was parked for its duration —
+ * every other in-flight request stalled, not just the checkout. Then the buffer
+ * was base64'd (another sync pass plus a ~1.33x string copy) and carried into
+ * the email queue.
+ *
+ * Callers may now pass `invoiceRequest` (the data) instead of `invoiceBase64`
+ * (the rendered bytes) and the work happens inside the email job, off the
+ * customer's critical path. `invoiceBase64` is still honoured so callers that
+ * already hold a buffer keep working unchanged.
+ */
+const buildInvoiceAttachment = async (payload = {}) => {
+    const filename = `TaxInvoice-${payload.orderId || 'order'}.pdf`;
+
+    if (payload.invoiceBase64) {
+        return { filename, content: payload.invoiceBase64, contentType: 'application/pdf' };
+    }
+
+    if (!payload.invoiceRequest || !FEATURE_INVOICE_SYSTEM) return null;
+
+    try {
+        const buffer = await generateInvoicePdfBuffer(payload.invoiceRequest);
+        if (!buffer) return null;
+        return { filename, content: buffer.toString('base64'), contentType: 'application/pdf' };
+    } catch (err) {
+        /* An invoice is a nice-to-have on the email; never lose the email over it */
+        console.error('Invoice PDF generation failed inside email job:', err.message);
+        if (process.env.SENTRY_DSN && Sentry) Sentry.captureException(err);
+        return null;
+    }
+};
+
 const sendOrderPlacedEmail = async (payload = {}) => {
     const toEmail = String(payload.toEmail || '').trim();
     if (!toEmail) return { skipped: true, reason: 'missing-email' };
     const subject = `Order Received - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`;
     const html = await renderTemplateEmailHtml('Order Placed', payload);
     const attachments = [];
-    if (payload.invoiceBase64) {
-        attachments.push({
-            filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
-            content: payload.invoiceBase64,
-            contentType: 'application/pdf'
-        });
-    }
+    const invoice = await buildInvoiceAttachment(payload);
+    if (invoice) attachments.push(invoice);
     return sendTransactionalEmail({ toEmail, toName: payload.userName, subject, htmlContent: html, attachments });
 };
 
@@ -1331,13 +1439,8 @@ const sendOrderConfirmationEmail = async (payload = {}) => {
     const subject = `Order Confirmed - ${payload.orderId || 'ESHOPPER'} | eShopper Luxe`;
     const html = await renderTemplateEmailHtml('Confirmed', payload);
     const attachments = [];
-    if (payload.invoiceBase64) {
-        attachments.push({
-            filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
-            content: payload.invoiceBase64,
-            contentType: 'application/pdf'
-        });
-    }
+    const invoice = await buildInvoiceAttachment(payload);
+    if (invoice) attachments.push(invoice);
     return sendTransactionalEmail({ toEmail, toName: payload.userName, subject, htmlContent: html, attachments });
 };
 
@@ -1360,13 +1463,8 @@ const sendOrderStatusEmail = async (payload = {}) => {
         estimatedArrival: payload.estimatedDelivery || payload.estimatedArrival
     });
     const attachments = [];
-    if (payload.invoiceBase64) {
-        attachments.push({
-            filename: `TaxInvoice-${payload.orderId || 'order'}.pdf`,
-            content: payload.invoiceBase64,
-            contentType: 'application/pdf'
-        });
-    }
+    const invoice = await buildInvoiceAttachment(payload);
+    if (invoice) attachments.push(invoice);
     return sendTransactionalEmail({ toEmail, toName: payload.customerName || payload.userName, subject, htmlContent: html, attachments });
 };
 
@@ -1884,7 +1982,14 @@ const verifyRazorpaySignature = ({ razorpay_order_id, razorpay_payment_id, razor
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)
         .digest('hex');
 
-    if (expectedSignature !== razorpay_signature) {
+    /* Constant-time comparison. A plain `!==` on strings short-circuits at the
+       first differing byte, which leaks how much of a guessed signature was
+       correct. timingSafeEqual needs equal lengths, so length is checked first —
+       that is not secret, the digest length is fixed. */
+    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+    const providedBuf = Buffer.from(String(razorpay_signature), 'utf8');
+
+    if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
         return { verified: false, message: 'Invalid Razorpay signature' };
     }
 
@@ -1997,13 +2102,13 @@ app.get('/api/footer-data', async (req, res) => {
     }
 });
 
-app.get('/api/admin/footer-config', async (req, res) => {
+/* verifyAdmin replaces the inline secret comparison these two used to do.
+   Besides removing the need for a browser-side secret, it closes a second hole:
+   the old check was `if (process.env.ADMIN_SECRET && ...)`, so on any deployment
+   where ADMIN_SECRET happened to be unset the guard evaluated to false and the
+   endpoint was wide open — including the PUT that rewrites the site footer. */
+app.get('/api/admin/footer-config', verifyAdmin, async (req, res) => {
     try {
-        const adminSecret = req.headers['x-admin-secret'] || req.query.adminSecret;
-        if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
-            return res.status(403).json({ success: false, message: 'Unauthorized' });
-        }
-
         const footerConfigDoc = await FooterConfig.findOne({}).lean();
         return res.json({ success: true, config: sanitizeFooterConfigInput(footerConfigDoc || {}) });
     } catch (e) {
@@ -2012,13 +2117,8 @@ app.get('/api/admin/footer-config', async (req, res) => {
     }
 });
 
-app.put('/api/admin/footer-config', async (req, res) => {
+app.put('/api/admin/footer-config', verifyAdmin, async (req, res) => {
     try {
-        const adminSecret = req.headers['x-admin-secret'] || req.body?.adminSecret || req.query.adminSecret;
-        if (process.env.ADMIN_SECRET && adminSecret !== process.env.ADMIN_SECRET) {
-            return res.status(403).json({ success: false, message: 'Unauthorized' });
-        }
-
         const sanitizedConfig = sanitizeFooterConfigInput(req.body || {});
         const updated = await FooterConfig.findOneAndUpdate(
             {},
@@ -2048,6 +2148,21 @@ const toSafeNumber = (value, fallback = 0) => {
 };
 
 const isDuplicateKeyError = (error) => error?.code === 11000 || /E11000/i.test(String(error?.message || ''));
+
+/* Which index a duplicate-key error came from. Needed because an orderId
+   collision must be retried with a fresh id, while a razorpayPaymentId collision
+   means the order already exists and must be returned as-is. */
+const duplicateKeyFields = (error) => {
+    const fromPattern = Object.keys(error?.keyPattern || {});
+    if (fromPattern.length) return fromPattern;
+
+    const fromValue = Object.keys(error?.keyValue || {});
+    if (fromValue.length) return fromValue;
+
+    /* older drivers only put the index name in the message */
+    const match = String(error?.message || '').match(/index:\s+([a-zA-Z0-9_.]+?)_-?1/i);
+    return match ? [match[1]] : [];
+};
 
 const ensureOutForDeliveryOtp = async (orderDoc = null) => {
     if (!orderDoc) return null;
@@ -2854,9 +2969,18 @@ const conditionalUpload = (req, res, next) => {
 
 const handle = (path, Model, useUpload = false, options = {}) => {
     const skipCache = options.noCache === true;
+
+    /* Reads on some of these collections are customer data, not catalog data.
+       `adminOnly` guards the reads and the mutations while leaving POST public,
+       because POST is how a visitor submits the contact form or subscribes to
+       the newsletter. Without this, GET /contact returned every submission —
+       name, email, phone and message — to anyone who knew the URL, and GET
+       /newslatter returned the whole subscriber list (cached for 300s at that). */
+    const readGuard = options.adminOnly === true ? [verifyAdmin] : [];
+
     // GET all or by query — cached 5 minutes for catalog data (skip for user-specific data)
     const middlewares = skipCache ? [] : [cacheMiddleware(300)];
-    app.get(path, ...middlewares, async (req, res) => {
+    app.get(path, ...readGuard, ...middlewares, async (req, res) => {
         try {
             if (req.query.id || req.query._id) {
                 const id = req.query.id || req.query._id;
@@ -2871,7 +2995,7 @@ const handle = (path, Model, useUpload = false, options = {}) => {
         }
     });
     // GET by id (param)
-    app.get(`${path}/:id`, async (req, res) => {
+    app.get(`${path}/:id`, ...readGuard, async (req, res) => {
         try {
             const doc = await Model.findById(req.params.id);
             if (!doc) return res.status(404).json({ message: 'Not found' });
@@ -2907,6 +3031,10 @@ const handle = (path, Model, useUpload = false, options = {}) => {
             }
             const doc = new Model(data);
             await doc.save();
+            /* The cached GET for this same path was never invalidated by its own
+               writes, so a new brand or category stayed invisible for up to 300s
+               while the parallel compat routes below cleared theirs. */
+            if (!skipCache) { try { await clearCache(path); } catch (cacheErr) { /* cache is best-effort */ } }
             res.status(201).json(path === '/user' ? normalizeUserDocument(doc) : doc);
         } catch (e) {
             const mongoDup = e?.code === 11000 || /E11000/i.test(String(e?.message || ''));
@@ -2922,7 +3050,7 @@ const handle = (path, Model, useUpload = false, options = {}) => {
             res.status(400).json({ message: e.message || 'Failed to create', error: e.message });
         }
     });
-    app.put(`${path}/:id`, useUpload ? upload : (req, res, next) => next(), async (req, res) => {
+    app.put(`${path}/:id`, ...readGuard, useUpload ? upload : (req, res, next) => next(), async (req, res) => {
         try {
             let upData = { ...req.body };
             if (req.files) {
@@ -2986,14 +3114,16 @@ const handle = (path, Model, useUpload = false, options = {}) => {
                 });
             }
 
+            if (!skipCache) { try { await clearCache(path); } catch (cacheErr) { /* cache is best-effort */ } }
             res.json(path === '/user' ? normalizeUserDocument(d) : d);
         } catch (e) {
             res.status(500).json({ error: e.message });
         }
     });
-    app.delete(`${path}/:id`, async (req, res) => {
+    app.delete(`${path}/:id`, ...readGuard, async (req, res) => {
         try {
             await Model.findByIdAndDelete(req.params.id);
+            if (!skipCache) { try { await clearCache(path); } catch (cacheErr) { /* cache is best-effort */ } }
             res.json({ result: "Done" });
         } catch (e) {
             console.error(`❌ Error deleting from ${path}:`, e.message);
@@ -3013,8 +3143,11 @@ handle('/coupon', Coupon);
 handle('/wishlist', Wishlist, false, { noCache: true });
 handle('/api/wishlist', Wishlist, false, { noCache: true });
 handle('/checkout', Checkout, false, { noCache: true });
-handle('/contact', Contact, false, { noCache: true });
-handle('/newslatter', Newslatter);
+handle('/contact', Contact, false, { noCache: true, adminOnly: true });
+/* Reading the subscriber list is admin-only, and no longer cached — a 300s
+   cache of customer email addresses is a liability with no upside.
+   POST stays public: that is the subscribe action itself. */
+handle('/newslatter', Newslatter, false, { noCache: true, adminOnly: true });
 
 // 🔴 EXPLICIT /coupon ENDPOINTS (Ensure they always work)
 app.get('/coupon', async (req, res) => {
@@ -3272,6 +3405,71 @@ const placeOrderHandler = async (req, res) => {
             return res.status(400).json({ message: 'Invalid userId. Please sign in again and retry checkout.' });
         }
 
+        /* ══════════════════════════════════════════════════════════════
+           PAYMENT TRUTH IS DECIDED HERE, NOT BY THE CLIENT.
+
+           `paymentStatus` and `paidAt` used to be taken straight from the
+           request body and stored verbatim, and verifyRazorpaySignature was
+           never called on this path — it existed only in the standalone
+           /api/razorpay/verify-payment endpoint, which records nothing. So a
+           handcrafted POST with { paymentMethod: 'Razorpay', paymentStatus:
+           'Paid' } produced a fully paid order without a rupee moving.
+
+           Now: COD is Pending, and anything else must present a Razorpay
+           signature that verifies against our own secret. The client still
+           sends paymentStatus/paidAt; both are ignored.
+        ══════════════════════════════════════════════════════════════ */
+        const resolvedMethod = String(paymentMethod || 'COD').trim() || 'COD';
+        const isCashOnDelivery = resolvedMethod.toUpperCase() === 'COD';
+
+        let resolvedPaymentStatus = 'Pending';
+        let resolvedPaidAt = null;
+        let verifiedPaymentId = '';
+        let verifiedOrderId = '';
+        let verifiedSignature = '';
+
+        if (!isCashOnDelivery) {
+            const verification = verifyRazorpaySignature({
+                razorpay_order_id: razorpayOrderId,
+                razorpay_payment_id: razorpayPaymentId,
+                razorpay_signature: razorpaySignature
+            });
+
+            if (!verification.verified) {
+                console.warn(`⛔ Rejected ${resolvedMethod} order for user ${userId}: ${verification.message}`);
+                return res.status(400).json({
+                    success: false,
+                    message: verification.message || 'Payment could not be verified. No order was created.'
+                });
+            }
+
+            resolvedPaymentStatus = 'Paid';
+            resolvedPaidAt = new Date();
+            verifiedOrderId = String(razorpayOrderId);
+            verifiedPaymentId = String(razorpayPaymentId);
+            verifiedSignature = String(razorpaySignature);
+        }
+
+        /* ── Idempotency ──────────────────────────────────────────────
+           One Razorpay payment must map to exactly one order. There was no such
+           guarantee: a double-click, the Razorpay handler firing twice, or the
+           client retrying after its 20s timeout each created a second order, a
+           second Checkout document and a second totalOrders increment (which can
+           push the customer up a membership tier). Returning the existing order
+           makes a retry harmless. */
+        if (verifiedPaymentId) {
+            const existing = await Order.findOne({ razorpayPaymentId: verifiedPaymentId }).lean();
+            if (existing) {
+                console.log(`♻️  Duplicate place-order for payment ${verifiedPaymentId} — returning existing order ${existing.orderId}`);
+                return res.status(200).json({
+                    success: true,
+                    message: 'Order already placed for this payment',
+                    duplicate: true,
+                    order: existing
+                });
+            }
+        }
+
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -3393,12 +3591,12 @@ const placeOrderHandler = async (req, res) => {
                     userid: userId,
                     userName: user.name || '',
                     userEmail: user.email || '',
-                    paymentMethod: paymentMethod || 'COD',
-                    paymentStatus: paymentStatus || ((paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid'),
-                    paidAt: paidAt || (((paymentMethod || 'COD') === 'COD') ? null : new Date()),
-                    razorpayOrderId: razorpayOrderId || '',
-                    razorpayPaymentId: razorpayPaymentId || '',
-                    razorpaySignature: razorpaySignature || '',
+                    paymentMethod: resolvedMethod,
+                    paymentStatus: resolvedPaymentStatus,
+                    paidAt: resolvedPaidAt,
+                    razorpayOrderId: verifiedOrderId,
+                    razorpayPaymentId: verifiedPaymentId,
+                    razorpaySignature: verifiedSignature,
                     orderStatus: 'Order Placed',
                     totalAmount: total,
                     shippingAmount: shipping,
@@ -3425,6 +3623,25 @@ const placeOrderHandler = async (req, res) => {
                 });
                 break;
             } catch (createErr) {
+                /* Only an orderId collision may be retried with a fresh id. This
+                   used to regenerate the orderId on *any* duplicate key, which
+                   turned the razorpayPaymentId uniqueness guarantee into three
+                   futile retries followed by a 500 — the opposite of dedupe. A
+                   payment-id collision means a concurrent request won the race,
+                   so return that order instead. */
+                if (isDuplicateKeyError(createErr) && duplicateKeyFields(createErr).includes('razorpayPaymentId')) {
+                    const winner = await Order.findOne({ razorpayPaymentId: verifiedPaymentId }).lean();
+                    if (winner) {
+                        console.log(`♻️  Concurrent place-order for payment ${verifiedPaymentId} — returning order ${winner.orderId}`);
+                        return res.status(200).json({
+                            success: true,
+                            message: 'Order already placed for this payment',
+                            duplicate: true,
+                            order: winner
+                        });
+                    }
+                }
+
                 if (attempt < 2 && isDuplicateKeyError(createErr)) {
                     orderId = await generateOrderId();
                     continue;
@@ -3443,13 +3660,13 @@ const placeOrderHandler = async (req, res) => {
         await Checkout.create({
             user: user._id,
             userid: userId,
-            paymentmode: paymentMethod || 'COD',
+            paymentmode: resolvedMethod,
             orderstatus: 'Order Placed',
-            paymentstatus: paymentStatus || ((paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid'),
-            razorpayOrderId: razorpayOrderId || '',
-            razorpayPaymentId: razorpayPaymentId || '',
-            razorpaySignature: razorpaySignature || '',
-            paidAt: paidAt || (((paymentMethod || 'COD') === 'COD') ? null : new Date()),
+            paymentstatus: resolvedPaymentStatus,
+            razorpayOrderId: verifiedOrderId,
+            razorpayPaymentId: verifiedPaymentId,
+            razorpaySignature: verifiedSignature,
+            paidAt: resolvedPaidAt,
             totalAmount: total,
             shippingAmount: shipping,
             finalAmount: payable,
@@ -3475,39 +3692,37 @@ const placeOrderHandler = async (req, res) => {
 
         await Cart.deleteMany({ $or: clearFilters });
 
-        let invoiceBuffer = null;
-        if (FEATURE_INVOICE_SYSTEM) {
-            try {
-                invoiceBuffer = await generateInvoicePdfBuffer({
-                    orderId,
-                    userName: user.name,
-                    userEmail: user.email,
-                    paymentMethod: paymentMethod || 'COD',
-                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
-                    finalAmount: payable,
-                    totalAmount: total,
-                    shippingAmount: shipping,
-                    couponDiscount: validCouponDiscount,
-                    discountAmount: baseDiscount,
-                    gstAmount: gst,
-                    giftWrapCharge: safeGiftWrapCharge,
-                    protectionCharge: safeProtectionCharge,
-                    ecoCharge: safeEcoCharge,
-                    paymentFee: safePaymentFee,
-                    extraCharges: safeExtraCharges,
-                    preDiscountTotal: safePreDiscountTotal,
-                    shippingAddress: addressPayload,
-                    products: cleanProducts,
-                    orderDate,
-                    orderStatus: 'Order Placed',
-                    pdfType: 'placed',
-                    isDelivered: false
-                });
-            } catch (invoiceError) {
-                console.error('Invoice PDF generation failed:', invoiceError.message);
-                if (process.env.SENTRY_DSN) Sentry.captureException(invoiceError);
-            }
-        }
+        /* The invoice used to be rendered right here, before the response. It is
+           now only *described*; the email job renders it — see
+           buildInvoiceAttachment. That takes a fully synchronous
+           jsPDF + autoTable + base64 pass off the checkout critical path, and
+           with it the event-loop stall that slowed every other request whenever
+           somebody paid. */
+        const invoiceRequest = FEATURE_INVOICE_SYSTEM ? {
+            orderId,
+            userName: user.name,
+            userEmail: user.email,
+            paymentMethod: resolvedMethod,
+            paymentStatus: resolvedPaymentStatus,
+            finalAmount: payable,
+            totalAmount: total,
+            shippingAmount: shipping,
+            couponDiscount: validCouponDiscount,
+            discountAmount: baseDiscount,
+            gstAmount: gst,
+            giftWrapCharge: safeGiftWrapCharge,
+            protectionCharge: safeProtectionCharge,
+            ecoCharge: safeEcoCharge,
+            paymentFee: safePaymentFee,
+            extraCharges: safeExtraCharges,
+            preDiscountTotal: safePreDiscountTotal,
+            shippingAddress: addressPayload,
+            products: cleanProducts,
+            orderDate,
+            orderStatus: 'Order Placed',
+            pdfType: 'placed',
+            isDelivered: false
+        } : null;
 
         const recipientEmail = String(user.email || addressPayload?.email || '').trim();
 
@@ -3518,8 +3733,8 @@ const placeOrderHandler = async (req, res) => {
                     userId,
                     userName: user.name,
                     orderId,
-                    paymentMethod: paymentMethod || 'COD',
-                    paymentStatus: (paymentMethod || 'COD') === 'COD' ? 'Pending' : 'Paid',
+                    paymentMethod: resolvedMethod,
+                    paymentStatus: resolvedPaymentStatus,
                     finalAmount: payable,
                     totalAmount: total,
                     shippingAmount: shipping,
@@ -3527,7 +3742,7 @@ const placeOrderHandler = async (req, res) => {
                     products: cleanProducts,
                     estimatedArrival,
                     orderDate,
-                    invoiceBase64: invoiceBuffer ? invoiceBuffer.toString('base64') : null,
+                    invoiceRequest,
                     status: 'Order Placed'
                 });
             } catch (emailErr) {
@@ -5378,13 +5593,13 @@ async function startServer() {
                             }
 
                             const resolvedUserName = order.userName || userDoc?.name || 'Customer';
-                            let invoiceBase64 = null;
+                            let invoiceRequestForStatus = null;
 
                             // Confirmed and Delivered statuses should carry invoice attachments.
                             if (FEATURE_INVOICE_SYSTEM && (normalized === 'Confirmed' || normalized === 'Delivered')) {
                                 try {
                                     const invoiceTypeForStatus = normalized === 'Confirmed' ? 'confirmation' : 'final';
-                                    const invoiceBuffer = await generateInvoicePdfBuffer({
+                                    invoiceRequestForStatus = ({
                                         orderId: order.orderId,
                                         userName: resolvedUserName,
                                         userEmail: toEmail,
@@ -5401,10 +5616,7 @@ async function startServer() {
                                         pdfType: invoiceTypeForStatus,
                                         isDelivered: normalized === 'Delivered'
                                     });
-
-                                    if (invoiceBuffer) {
-                                        invoiceBase64 = invoiceBuffer.toString('base64');
-                                    }
+                                    /* rendered later, inside the email job */
                                 } catch (pdfErr) {
                                     console.warn(`⚠️ Final invoice generation failed for ${order.orderId}: ${pdfErr.message}`);
                                     if (process.env.SENTRY_DSN) Sentry.captureException(pdfErr);
@@ -5412,6 +5624,7 @@ async function startServer() {
                             }
 
                             await enqueueEmailJob('order-status', {
+                                invoiceRequest: invoiceRequestForStatus,
                                 toEmail,
                                 userId: order.userid,
                                 userName: resolvedUserName,
@@ -5433,7 +5646,7 @@ async function startServer() {
                                 agentContact: order.deliverySchedule?.riderPhone || null,
                                 deliverySlot: order.deliverySchedule?.time || null,
                                 statusUpdatedAt: new Date(),
-                                invoiceBase64
+
                             });
                         })().catch((emailErr) => {
                             console.error(`⚠️ Status email queue failed for ${order.orderId}:`, emailErr.message);
@@ -5513,10 +5726,10 @@ async function startServer() {
                 const recipientName = order.userName || userDoc?.name || 'Customer';
 
                 // Generate Proforma PDF for Email #2 (Confirmed)
-                let invoiceBase64 = null;
+                let invoiceRequestForStatus = null;
                 if (FEATURE_INVOICE_SYSTEM) {
                     try {
-                        const invoiceBuffer = await generateInvoicePdfBuffer({
+                        invoiceRequestForStatus = ({
                             orderId: order.orderId,
                             userName: order.userName,
                             userEmail: order.userEmail,
@@ -5533,9 +5746,7 @@ async function startServer() {
                             orderStatus: 'Confirmed',
                             pdfType: 'confirmation'
                         });
-                        if (invoiceBuffer) {
-                            invoiceBase64 = invoiceBuffer.toString('base64');
-                        }
+                        /* rendered later, inside the email job */
                     } catch (pdfError) {
                         console.error('❌ PDF generation for Email #2 failed:', pdfError.message);
                     }
@@ -5559,7 +5770,7 @@ async function startServer() {
                             products: normalizeOrderProducts(order.products),
                             orderDate: order.orderDate || order.createdAt,
                             estimatedArrival: order.estimatedArrival,
-                            invoiceBase64: invoiceBase64,
+                            invoiceRequest: invoiceRequestForStatus,
                             orderStatus: 'Confirmed'
                         });
                     } catch (confirmQueueErr) {
@@ -6064,19 +6275,41 @@ ${relevantBlock}`;
         try {
             const { initializeQueues } = require('./utils/queues');
             const { initializeCronJobs } = require('./utils/cronJobs');
-            const { processRefundJobData } = require('./utils/refundWorker');
+            const { processRefundJobData, startRefundWorker } = require('./utils/refundWorker');
             const { getRefundReport } = require('./utils/autoRefundScheduler');
+
+            /* Background code reaches socket.io through this bus instead of
+               `require('./server').getApp()`, which never existed. */
+            require('./utils/realtimeBus').setIo(app.get('io'));
+
+            /* Only attach BullMQ *workers* here when this process is meant to
+               consume jobs. worker.js registers the very same processors, so with
+               both running they competed for the same refund queue — and a refund
+               handled twice is a refund paid twice. Set BULLMQ_API_WORKERS=false
+               on the API service when running the dedicated worker process. */
+            const apiWorkersEnabled = String(process.env.BULLMQ_API_WORKERS || 'true').toLowerCase() !== 'false';
 
             const bullmqState = initializeQueues({
                 refund: async (job) => processRefundJobData(job.data || job),
                 report: async (job) => getRefundReport(Number(job.data?.days || 7))
-            });
+            }, { attachWorkers: apiWorkersEnabled });
 
             if (bullmqState) {
                 const { usingRedisBackend } = require('./utils/queues');
                 console.log(usingRedisBackend() ? '✅ BullMQ queues connected and working from server bootstrap' : '✅ BullMQ local fallback queues connected and working from server bootstrap');
+                if (!apiWorkersEnabled) console.log('ℹ️ API process enqueues only — job processing left to the worker process');
             } else {
                 console.log('✅ BullMQ disabled (using in-memory job processing) — this is normal for Upstash Redis');
+            }
+
+            /* Safety net for refunds. With BULLMQ_ENABLED=false, enqueueJob
+               returns null and the refund job is silently dropped — the RefundJob
+               row is written and then nothing ever reads it, because
+               startRefundWorker had no call site anywhere in the repo. Polling the
+               collection means a queued refund always gets processed, queue or no
+               queue. */
+            if (!bullmqState && apiWorkersEnabled) {
+                startRefundWorker();
             }
 
             initializeCronJobs(app.get('io'));
