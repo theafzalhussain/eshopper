@@ -91,6 +91,7 @@
     "worker": "node worker.js",
     "build": "react-app-rewired build",
     "mem:watch": "node --expose-gc scripts/memory-leak-detect.js",
+    "cache:clear": "node scripts/clear-cache.js",
     "fix:order-qty:dry": "node fix-order-quantities.js --dry-run",
     "fix:order-qty": "node fix-order-quantities.js --apply",
     "fix:order-breakdown:dry": "node backfill-order-pricing-breakdown.js --dry-run",
